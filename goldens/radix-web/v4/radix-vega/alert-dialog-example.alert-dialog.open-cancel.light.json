@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseUrl": "http://localhost:4000",
+  "baseUrl": "http://localhost:4020",
   "base": "radix",
   "style": "vega",
   "baseColor": "neutral",
@@ -13,12 +13,12 @@
   "item": "alert-dialog-example",
   "primitive": "alert-dialog",
   "scenario": "open-cancel",
-  "url": "http://localhost:4000/preview/radix/alert-dialog-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "url": "http://localhost:4020/preview/radix/alert-dialog-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
   "steps": [
     {
       "action": {
         "kind": "load",
-        "url": "http://localhost:4000/preview/radix/alert-dialog-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+        "url": "http://localhost:4020/preview/radix/alert-dialog-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
       },
       "snapshot": {
         "focus": {
@@ -100,12 +100,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 364.859375,
+                                    "y": 246,
+                                    "w": 70.28125,
+                                    "h": 36
+                                  },
                                   "text": "Default"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 221,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Default"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 185,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "BasicDefault"
                         },
                         {
@@ -151,12 +169,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 850.75,
+                                    "y": 246,
+                                    "w": 58.484375,
+                                    "h": 36
+                                  },
                                   "text": "Small"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 221,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Small"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 185,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "SmallSmall"
                         },
                         {
@@ -202,12 +238,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 337.265625,
+                                    "y": 400,
+                                    "w": 125.46875,
+                                    "h": 36
+                                  },
                                   "text": "Default (Media)"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 375,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Default (Media)"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 339,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With MediaDefault (Media)"
                         },
                         {
@@ -253,12 +307,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 823.15625,
+                                    "y": 400,
+                                    "w": 113.671875,
+                                    "h": 36
+                                  },
                                   "text": "Small (Media)"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 375,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Small (Media)"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 339,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Small With MediaSmall (Media)"
                         },
                         {
@@ -304,12 +376,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 349.953125,
+                                    "y": 554,
+                                    "w": 100.078125,
+                                    "h": 36
+                                  },
                                   "text": "Delete Chat"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 529,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Delete Chat"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 493,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "DestructiveDelete Chat"
                         },
                         {
@@ -355,21 +445,57 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 827.984375,
+                                    "y": 554,
+                                    "w": 104.015625,
+                                    "h": 36
+                                  },
                                   "text": "Open Dialog"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 529,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Open Dialog"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 493,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "In DialogOpen Dialog"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 800
+                      },
                       "text": "BasicDefaultSmallSmallWith MediaDefault (Media)Small With MediaSmall (Media)DestructiveDelete ChatIn DialogOpen Dialog"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 800
+                  },
                   "text": "BasicDefaultSmallSmallWith MediaDefault (Media)Small With MediaSmall (Media)DestructiveDelete ChatIn DialogOpen Dialog"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 800
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -384,9 +510,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 800,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 800
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -447,30 +585,6 @@
               "haspopup": "dialog"
             },
             {
-              "role": "StaticText",
-              "name": "xs"
-            },
-            {
-              "role": "StaticText",
-              "name": "sm"
-            },
-            {
-              "role": "StaticText",
-              "name": "md"
-            },
-            {
-              "role": "StaticText",
-              "name": "lg"
-            },
-            {
-              "role": "StaticText",
-              "name": "xl"
-            },
-            {
-              "role": "StaticText",
-              "name": "2xl"
-            },
-            {
               "role": "region",
               "name": "Notifications alt+T"
             }
@@ -487,7 +601,7 @@
         "focus": {
           "tag": "button",
           "path": [
-            96,
+            49,
             1,
             0
           ],
@@ -510,7 +624,13 @@
                 "tabindex": "0",
                 "aria-hidden": "true"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 0,
+                "h": 0
+              }
             },
             {
               "tag": "div",
@@ -520,7 +640,13 @@
               "attrs": {
                 "aria-hidden": "true"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 0,
+                "h": 0
+              }
             },
             {
               "tag": "div",
@@ -593,12 +719,30 @@
                                     "data-state": "open"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 364.859375,
+                                    "y": 246,
+                                    "w": 70.28125,
+                                    "h": 36
+                                  },
                                   "text": "Default"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 221,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Default"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 185,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "BasicDefault"
                         },
                         {
@@ -644,12 +788,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 850.75,
+                                    "y": 246,
+                                    "w": 58.484375,
+                                    "h": 36
+                                  },
                                   "text": "Small"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 221,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Small"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 185,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "SmallSmall"
                         },
                         {
@@ -695,12 +857,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 337.265625,
+                                    "y": 400,
+                                    "w": 125.46875,
+                                    "h": 36
+                                  },
                                   "text": "Default (Media)"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 375,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Default (Media)"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 339,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With MediaDefault (Media)"
                         },
                         {
@@ -746,12 +926,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 823.15625,
+                                    "y": 400,
+                                    "w": 113.671875,
+                                    "h": 36
+                                  },
                                   "text": "Small (Media)"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 375,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Small (Media)"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 339,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Small With MediaSmall (Media)"
                         },
                         {
@@ -797,12 +995,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 349.953125,
+                                    "y": 554,
+                                    "w": 100.078125,
+                                    "h": 36
+                                  },
                                   "text": "Delete Chat"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 529,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Delete Chat"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 493,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "DestructiveDelete Chat"
                         },
                         {
@@ -848,33 +1064,57 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 827.984375,
+                                    "y": 554,
+                                    "w": 104.015625,
+                                    "h": 36
+                                  },
                                   "text": "Open Dialog"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 529,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Open Dialog"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 493,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "In DialogOpen Dialog"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 800
+                      },
                       "text": "BasicDefaultSmallSmallWith MediaDefault (Media)Small With MediaSmall (Media)DestructiveDelete ChatIn DialogOpen Dialog"
                     }
                   ],
-                  "text": "BasicDefaultSmallSmallWith MediaDefault (Media)Small With MediaSmall (Media)DestructiveDelete ChatIn DialogOpen Dialog"
-                },
-                {
-                  "tag": "div",
-                  "path": [
-                    3,
-                    4
-                  ],
-                  "attrs": {
-                    "aria-hidden": "true"
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 800
                   },
-                  "children": [],
-                  "text": "xssmmdlgxl2xl"
+                  "text": "BasicDefaultSmallSmallWith MediaDefault (Media)Small With MediaSmall (Media)DestructiveDelete ChatIn DialogOpen Dialog"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 800
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -889,215 +1129,52 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 800,
+                "w": 1280,
+                "h": 0
+              }
             },
             {
-              "tag": "title",
+              "tag": "next-route-announcer",
               "path": [
-                8
+                47
               ],
               "attrs": {
                 "aria-hidden": "true"
               },
               "children": [],
-              "text": "alert-dialog-example - shadcn/ui"
-            },
-            {
-              "tag": "link",
-              "path": [
-                9
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                10
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "link",
-              "path": [
-                11
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                12
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                13
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                14
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                15
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                16
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                17
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                18
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                19
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                20
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                21
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                22
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                23
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                24
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "link",
-              "path": [
-                25
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "next-route-announcer",
-              "path": [
-                94
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
+              "rect": {
+                "x": 0,
+                "y": 800,
+                "w": 0,
+                "h": 0
+              }
             },
             {
               "tag": "div",
               "path": [
-                95
+                48
               ],
               "attrs": {
                 "data-state": "open",
                 "data-slot": "alert-dialog-overlay",
                 "aria-hidden": "true"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 800
+              }
             },
             {
               "tag": "div",
               "path": [
-                96
+                49
               ],
               "attrs": {
                 "role": "alertdialog",
@@ -1111,7 +1188,7 @@
                 {
                   "tag": "div",
                   "path": [
-                    96,
+                    49,
                     0
                   ],
                   "attrs": {
@@ -1121,7 +1198,7 @@
                     {
                       "tag": "h2",
                       "path": [
-                        96,
+                        49,
                         0,
                         0
                       ],
@@ -1129,12 +1206,18 @@
                         "data-slot": "alert-dialog-title"
                       },
                       "children": [],
+                      "rect": {
+                        "x": 408,
+                        "y": 333,
+                        "w": 212.078125,
+                        "h": 28
+                      },
                       "text": "Are you absolutely sure?"
                     },
                     {
                       "tag": "p",
                       "path": [
-                        96,
+                        49,
                         0,
                         1
                       ],
@@ -1142,15 +1225,27 @@
                         "data-slot": "alert-dialog-description"
                       },
                       "children": [],
+                      "rect": {
+                        "x": 408,
+                        "y": 367,
+                        "w": 464,
+                        "h": 40
+                      },
                       "text": "This action cannot be undone. This will permanently delete your account and remove your data from our servers."
                     }
                   ],
+                  "rect": {
+                    "x": 408,
+                    "y": 333,
+                    "w": 464,
+                    "h": 74
+                  },
                   "text": "Are you absolutely sure?This action cannot be undone. This will permanently delete your account and remove your data fro…"
                 },
                 {
                   "tag": "div",
                   "path": [
-                    96,
+                    49,
                     1
                   ],
                   "attrs": {
@@ -1160,7 +1255,7 @@
                     {
                       "tag": "button",
                       "path": [
-                        96,
+                        49,
                         1,
                         0
                       ],
@@ -1168,12 +1263,18 @@
                         "data-slot": "alert-dialog-cancel"
                       },
                       "children": [],
+                      "rect": {
+                        "x": 713,
+                        "y": 431,
+                        "w": 68.484375,
+                        "h": 36
+                      },
                       "text": "Cancel"
                     },
                     {
                       "tag": "button",
                       "path": [
-                        96,
+                        49,
                         1,
                         1
                       ],
@@ -1181,26 +1282,56 @@
                         "data-slot": "alert-dialog-action"
                       },
                       "children": [],
+                      "rect": {
+                        "x": 789.484375,
+                        "y": 431,
+                        "w": 82.515625,
+                        "h": 36
+                      },
                       "text": "Continue"
                     }
                   ],
+                  "rect": {
+                    "x": 408,
+                    "y": 431,
+                    "w": 464,
+                    "h": 36
+                  },
                   "text": "CancelContinue"
                 }
               ],
+              "rect": {
+                "x": 384,
+                "y": 309,
+                "w": 512,
+                "h": 182
+              },
               "text": "Are you absolutely sure?This action cannot be undone. This will permanently delete your account and remove your data fro…"
             },
             {
               "tag": "span",
               "path": [
-                97
+                50
               ],
               "attrs": {
                 "tabindex": "0",
                 "aria-hidden": "true"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 800,
+                "w": 0,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 800
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -1338,12 +1469,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 364.859375,
+                                    "y": 246,
+                                    "w": 70.28125,
+                                    "h": 36
+                                  },
                                   "text": "Default"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 221,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Default"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 185,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "BasicDefault"
                         },
                         {
@@ -1389,12 +1538,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 850.75,
+                                    "y": 246,
+                                    "w": 58.484375,
+                                    "h": 36
+                                  },
                                   "text": "Small"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 221,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Small"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 185,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "SmallSmall"
                         },
                         {
@@ -1440,12 +1607,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 337.265625,
+                                    "y": 400,
+                                    "w": 125.46875,
+                                    "h": 36
+                                  },
                                   "text": "Default (Media)"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 375,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Default (Media)"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 339,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With MediaDefault (Media)"
                         },
                         {
@@ -1491,12 +1676,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 823.15625,
+                                    "y": 400,
+                                    "w": 113.671875,
+                                    "h": 36
+                                  },
                                   "text": "Small (Media)"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 375,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Small (Media)"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 339,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Small With MediaSmall (Media)"
                         },
                         {
@@ -1542,12 +1745,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 349.953125,
+                                    "y": 554,
+                                    "w": 100.078125,
+                                    "h": 36
+                                  },
                                   "text": "Delete Chat"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 529,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Delete Chat"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 493,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "DestructiveDelete Chat"
                         },
                         {
@@ -1593,21 +1814,57 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 827.984375,
+                                    "y": 554,
+                                    "w": 104.015625,
+                                    "h": 36
+                                  },
                                   "text": "Open Dialog"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 529,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Open Dialog"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 493,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "In DialogOpen Dialog"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 800
+                      },
                       "text": "BasicDefaultSmallSmallWith MediaDefault (Media)Small With MediaSmall (Media)DestructiveDelete ChatIn DialogOpen Dialog"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 800
+                  },
                   "text": "BasicDefaultSmallSmallWith MediaDefault (Media)Small With MediaSmall (Media)DestructiveDelete ChatIn DialogOpen Dialog"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 800
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -1622,9 +1879,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 800,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 800
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -1684,30 +1953,6 @@
               "role": "button",
               "name": "Open Dialog",
               "haspopup": "dialog"
-            },
-            {
-              "role": "StaticText",
-              "name": "xs"
-            },
-            {
-              "role": "StaticText",
-              "name": "sm"
-            },
-            {
-              "role": "StaticText",
-              "name": "md"
-            },
-            {
-              "role": "StaticText",
-              "name": "lg"
-            },
-            {
-              "role": "StaticText",
-              "name": "xl"
-            },
-            {
-              "role": "StaticText",
-              "name": "2xl"
             },
             {
               "role": "region",

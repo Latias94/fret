@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseUrl": "http://localhost:4000",
+  "baseUrl": "http://localhost:4020",
   "base": "radix",
   "style": "vega",
   "baseColor": "neutral",
@@ -13,12 +13,12 @@
   "item": "tooltip-example",
   "primitive": "tooltip",
   "scenario": "hover-show-hide",
-  "url": "http://localhost:4000/preview/radix/tooltip-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "url": "http://localhost:4020/preview/radix/tooltip-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
   "steps": [
     {
       "action": {
         "kind": "load",
-        "url": "http://localhost:4000/preview/radix/tooltip-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+        "url": "http://localhost:4020/preview/radix/tooltip-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
       },
       "snapshot": {
         "focus": {
@@ -774,19 +774,19 @@
             },
             {
               "role": "button",
-              "name": "top"
+              "name": "Top"
             },
             {
               "role": "button",
-              "name": "right"
+              "name": "Right"
             },
             {
               "role": "button",
-              "name": "bottom"
+              "name": "Bottom"
             },
             {
               "role": "button",
-              "name": "left"
+              "name": "Left"
             },
             {
               "role": "StaticText",
@@ -836,30 +836,6 @@
             {
               "role": "button",
               "name": "Status"
-            },
-            {
-              "role": "StaticText",
-              "name": "xs"
-            },
-            {
-              "role": "StaticText",
-              "name": "sm"
-            },
-            {
-              "role": "StaticText",
-              "name": "md"
-            },
-            {
-              "role": "StaticText",
-              "name": "lg"
-            },
-            {
-              "role": "StaticText",
-              "name": "xl"
-            },
-            {
-              "role": "StaticText",
-              "name": "2xl"
             },
             {
               "role": "region",
@@ -1606,18 +1582,18 @@
             {
               "tag": "div",
               "path": [
-                56
+                26
               ],
               "attrs": {},
               "children": [
                 {
                   "tag": "div",
                   "path": [
-                    56,
+                    26,
                     0
                   ],
                   "attrs": {
-                    "data-side": "bottom",
+                    "data-side": "top",
                     "data-align": "center",
                     "data-state": "delayed-open",
                     "data-slot": "tooltip-content"
@@ -1626,7 +1602,7 @@
                     {
                       "tag": "span",
                       "path": [
-                        56,
+                        26,
                         0,
                         2
                       ],
@@ -1635,8 +1611,8 @@
                       },
                       "children": [],
                       "rect": {
-                        "x": 216.01419067382812,
-                        "y": 152.0635986328125,
+                        "x": 216.01402282714844,
+                        "y": 152.0628204345703,
                         "w": 0.9996490478515625,
                         "h": 0.9996490478515625
                       },
@@ -1644,10 +1620,10 @@
                     }
                   ],
                   "rect": {
-                    "x": 205.0181427001953,
-                    "y": 131.07115173339844,
-                    "w": 100.55760192871094,
-                    "h": 27.989944458007812
+                    "x": 205.01792907714844,
+                    "y": 131.0702667236328,
+                    "w": 100.55802917480469,
+                    "h": 27.990066528320312
                   },
                   "text": "Add to libraryAdd to library"
                 }
@@ -1687,19 +1663,19 @@
             },
             {
               "role": "button",
-              "name": "top"
+              "name": "Top"
             },
             {
               "role": "button",
-              "name": "right"
+              "name": "Right"
             },
             {
               "role": "button",
-              "name": "bottom"
+              "name": "Bottom"
             },
             {
               "role": "button",
-              "name": "left"
+              "name": "Left"
             },
             {
               "role": "StaticText",
@@ -1749,30 +1725,6 @@
             {
               "role": "button",
               "name": "Status"
-            },
-            {
-              "role": "StaticText",
-              "name": "xs"
-            },
-            {
-              "role": "StaticText",
-              "name": "sm"
-            },
-            {
-              "role": "StaticText",
-              "name": "md"
-            },
-            {
-              "role": "StaticText",
-              "name": "lg"
-            },
-            {
-              "role": "StaticText",
-              "name": "xl"
-            },
-            {
-              "role": "StaticText",
-              "name": "2xl"
             },
             {
               "role": "region",
@@ -2549,19 +2501,19 @@
             },
             {
               "role": "button",
-              "name": "top"
+              "name": "Top"
             },
             {
               "role": "button",
-              "name": "right"
+              "name": "Right"
             },
             {
               "role": "button",
-              "name": "bottom"
+              "name": "Bottom"
             },
             {
               "role": "button",
-              "name": "left"
+              "name": "Left"
             },
             {
               "role": "StaticText",
@@ -2611,30 +2563,6 @@
             {
               "role": "button",
               "name": "Status"
-            },
-            {
-              "role": "StaticText",
-              "name": "xs"
-            },
-            {
-              "role": "StaticText",
-              "name": "sm"
-            },
-            {
-              "role": "StaticText",
-              "name": "md"
-            },
-            {
-              "role": "StaticText",
-              "name": "lg"
-            },
-            {
-              "role": "StaticText",
-              "name": "xl"
-            },
-            {
-              "role": "StaticText",
-              "name": "2xl"
             },
             {
               "role": "region",

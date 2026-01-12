@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseUrl": "http://localhost:4000",
+  "baseUrl": "http://localhost:4020",
   "base": "radix",
   "style": "vega",
   "baseColor": "neutral",
@@ -13,12 +13,12 @@
   "item": "hover-card-example",
   "primitive": "hover-card",
   "scenario": "hover",
-  "url": "http://localhost:4000/preview/radix/hover-card-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "url": "http://localhost:4020/preview/radix/hover-card-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
   "steps": [
     {
       "action": {
         "kind": "load",
-        "url": "http://localhost:4000/preview/radix/hover-card-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+        "url": "http://localhost:4020/preview/radix/hover-card-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
       },
       "snapshot": {
         "focus": {
@@ -110,6 +110,12 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 265.375,
+                                        "y": 400,
+                                        "w": 47.15625,
+                                        "h": 36
+                                      },
                                       "text": "top"
                                     },
                                     {
@@ -128,6 +134,12 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 328.53125,
+                                        "y": 400,
+                                        "w": 56.46875,
+                                        "h": 36
+                                      },
                                       "text": "right"
                                     },
                                     {
@@ -146,6 +158,12 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 401,
+                                        "y": 400,
+                                        "w": 69.890625,
+                                        "h": 36
+                                      },
                                       "text": "bottom"
                                     },
                                     {
@@ -164,15 +182,39 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 486.890625,
+                                        "y": 400,
+                                        "w": 47.71875,
+                                        "h": 36
+                                      },
                                       "text": "left"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 400,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "toprightbottomleft"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 375,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "toprightbottomleft"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 339,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Sidestoprightbottomleft"
                         },
                         {
@@ -218,21 +260,57 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 400,
+                                    "w": 104.015625,
+                                    "h": 36
+                                  },
                                   "text": "Open Dialog"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 375,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Open Dialog"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 339,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "In DialogOpen Dialog"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 800
+                      },
                       "text": "SidestoprightbottomleftIn DialogOpen Dialog"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 800
+                  },
                   "text": "SidestoprightbottomleftIn DialogOpen Dialog"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 800
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -247,9 +325,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 800,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 800
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -261,19 +351,19 @@
             },
             {
               "role": "button",
-              "name": "top"
+              "name": "Top"
             },
             {
               "role": "button",
-              "name": "right"
+              "name": "Right"
             },
             {
               "role": "button",
-              "name": "bottom"
+              "name": "Bottom"
             },
             {
               "role": "button",
-              "name": "left"
+              "name": "Left"
             },
             {
               "role": "StaticText",
@@ -283,30 +373,6 @@
               "role": "button",
               "name": "Open Dialog",
               "haspopup": "dialog"
-            },
-            {
-              "role": "StaticText",
-              "name": "xs"
-            },
-            {
-              "role": "StaticText",
-              "name": "sm"
-            },
-            {
-              "role": "StaticText",
-              "name": "md"
-            },
-            {
-              "role": "StaticText",
-              "name": "lg"
-            },
-            {
-              "role": "StaticText",
-              "name": "xl"
-            },
-            {
-              "role": "StaticText",
-              "name": "2xl"
             },
             {
               "role": "region",
@@ -411,6 +477,12 @@
                                         "data-state": "open"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 265.375,
+                                        "y": 400,
+                                        "w": 47.15625,
+                                        "h": 36
+                                      },
                                       "text": "top"
                                     },
                                     {
@@ -429,6 +501,12 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 328.53125,
+                                        "y": 400,
+                                        "w": 56.46875,
+                                        "h": 36
+                                      },
                                       "text": "right"
                                     },
                                     {
@@ -447,6 +525,12 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 401,
+                                        "y": 400,
+                                        "w": 69.890625,
+                                        "h": 36
+                                      },
                                       "text": "bottom"
                                     },
                                     {
@@ -465,15 +549,39 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 486.890625,
+                                        "y": 400,
+                                        "w": 47.71875,
+                                        "h": 36
+                                      },
                                       "text": "left"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 400,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "toprightbottomleft"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 375,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "toprightbottomleft"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 339,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Sidestoprightbottomleft"
                         },
                         {
@@ -519,21 +627,57 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 400,
+                                    "w": 104.015625,
+                                    "h": 36
+                                  },
                                   "text": "Open Dialog"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 375,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Open Dialog"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 339,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "In DialogOpen Dialog"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 800
+                      },
                       "text": "SidestoprightbottomleftIn DialogOpen Dialog"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 800
+                  },
                   "text": "SidestoprightbottomleftIn DialogOpen Dialog"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 800
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -548,34 +692,58 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 800,
+                "w": 1280,
+                "h": 0
+              }
             },
             {
               "tag": "div",
               "path": [
-                82
+                36
               ],
               "attrs": {},
               "children": [
                 {
                   "tag": "div",
                   "path": [
-                    82,
+                    36,
                     0
                   ],
                   "attrs": {
-                    "data-side": "bottom",
+                    "data-side": "top",
                     "data-align": "center",
                     "data-state": "open",
                     "data-slot": "hover-card-content"
                   },
                   "children": [],
+                  "rect": {
+                    "x": 161.10757446289062,
+                    "y": 296.2178039550781,
+                    "w": 255.78485107421875,
+                    "h": 99.91595458984375
+                  },
                   "text": "Hover CardThis hover card appears on the top side of the trigger."
                 }
               ],
+              "rect": {
+                "x": 161,
+                "y": 296,
+                "w": 256,
+                "h": 100
+              },
               "text": "Hover CardThis hover card appears on the top side of the trigger."
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 800
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -587,19 +755,19 @@
             },
             {
               "role": "button",
-              "name": "top"
+              "name": "Top"
             },
             {
               "role": "button",
-              "name": "right"
+              "name": "Right"
             },
             {
               "role": "button",
-              "name": "bottom"
+              "name": "Bottom"
             },
             {
               "role": "button",
-              "name": "left"
+              "name": "Left"
             },
             {
               "role": "StaticText",
@@ -609,30 +777,6 @@
               "role": "button",
               "name": "Open Dialog",
               "haspopup": "dialog"
-            },
-            {
-              "role": "StaticText",
-              "name": "xs"
-            },
-            {
-              "role": "StaticText",
-              "name": "sm"
-            },
-            {
-              "role": "StaticText",
-              "name": "md"
-            },
-            {
-              "role": "StaticText",
-              "name": "lg"
-            },
-            {
-              "role": "StaticText",
-              "name": "xl"
-            },
-            {
-              "role": "StaticText",
-              "name": "2xl"
             },
             {
               "role": "region",
@@ -754,6 +898,12 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 265.375,
+                                        "y": 400,
+                                        "w": 47.15625,
+                                        "h": 36
+                                      },
                                       "text": "top"
                                     },
                                     {
@@ -772,6 +922,12 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 328.53125,
+                                        "y": 400,
+                                        "w": 56.46875,
+                                        "h": 36
+                                      },
                                       "text": "right"
                                     },
                                     {
@@ -790,6 +946,12 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 401,
+                                        "y": 400,
+                                        "w": 69.890625,
+                                        "h": 36
+                                      },
                                       "text": "bottom"
                                     },
                                     {
@@ -808,15 +970,39 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 486.890625,
+                                        "y": 400,
+                                        "w": 47.71875,
+                                        "h": 36
+                                      },
                                       "text": "left"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 400,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "toprightbottomleft"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 375,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "toprightbottomleft"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 339,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Sidestoprightbottomleft"
                         },
                         {
@@ -862,21 +1048,57 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 400,
+                                    "w": 104.015625,
+                                    "h": 36
+                                  },
                                   "text": "Open Dialog"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 375,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Open Dialog"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 339,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "In DialogOpen Dialog"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 800
+                      },
                       "text": "SidestoprightbottomleftIn DialogOpen Dialog"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 800
+                  },
                   "text": "SidestoprightbottomleftIn DialogOpen Dialog"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 800
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -891,9 +1113,58 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 800,
+                "w": 1280,
+                "h": 0
+              }
+            },
+            {
+              "tag": "div",
+              "path": [
+                36
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    36,
+                    0
+                  ],
+                  "attrs": {
+                    "data-side": "top",
+                    "data-align": "center",
+                    "data-state": "closed",
+                    "data-slot": "hover-card-content"
+                  },
+                  "children": [],
+                  "rect": {
+                    "x": 167.29513549804688,
+                    "y": 300.9180603027344,
+                    "w": 243.40972900390625,
+                    "h": 95.08193969726562
+                  },
+                  "text": "Hover CardThis hover card appears on the top side of the trigger."
+                }
+              ],
+              "rect": {
+                "x": 161,
+                "y": 296,
+                "w": 256,
+                "h": 100
+              },
+              "text": "Hover CardThis hover card appears on the top side of the trigger."
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 800
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -905,19 +1176,19 @@
             },
             {
               "role": "button",
-              "name": "top"
+              "name": "Top"
             },
             {
               "role": "button",
-              "name": "right"
+              "name": "Right"
             },
             {
               "role": "button",
-              "name": "bottom"
+              "name": "Bottom"
             },
             {
               "role": "button",
-              "name": "left"
+              "name": "Left"
             },
             {
               "role": "StaticText",
@@ -929,32 +1200,25 @@
               "haspopup": "dialog"
             },
             {
-              "role": "StaticText",
-              "name": "xs"
-            },
-            {
-              "role": "StaticText",
-              "name": "sm"
-            },
-            {
-              "role": "StaticText",
-              "name": "md"
-            },
-            {
-              "role": "StaticText",
-              "name": "lg"
-            },
-            {
-              "role": "StaticText",
-              "name": "xl"
-            },
-            {
-              "role": "StaticText",
-              "name": "2xl"
-            },
-            {
               "role": "region",
               "name": "Notifications alt+T"
+            },
+            {
+              "role": "heading",
+              "name": "Hover Card",
+              "level": 4
+            },
+            {
+              "role": "StaticText",
+              "name": "This hover card appears on the "
+            },
+            {
+              "role": "StaticText",
+              "name": "top"
+            },
+            {
+              "role": "StaticText",
+              "name": " side of the trigger."
             }
           ]
         }

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseUrl": "http://localhost:4000",
+  "baseUrl": "http://localhost:4020",
   "base": "radix",
   "style": "vega",
   "baseColor": "neutral",
@@ -13,12 +13,12 @@
   "item": "select-example",
   "primitive": "select",
   "scenario": "open-navigate-select",
-  "url": "http://localhost:4000/preview/radix/select-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "url": "http://localhost:4020/preview/radix/select-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
   "steps": [
     {
       "action": {
         "kind": "load",
-        "url": "http://localhost:4000/preview/radix/select-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+        "url": "http://localhost:4020/preview/radix/select-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
       },
       "snapshot": {
         "focus": {
@@ -116,6 +116,12 @@
                                         "data-slot": "select-value"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 212,
+                                        "y": 117,
+                                        "w": 83.71875,
+                                        "h": 20
+                                      },
                                       "text": "Select a fruit"
                                     },
                                     {
@@ -132,15 +138,39 @@
                                       "attrs": {
                                         "aria-hidden": "true"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 301.71875,
+                                        "y": 119,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 109,
+                                    "w": 125.71875,
+                                    "h": 36
+                                  },
                                   "text": "Select a fruit"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 84,
+                                "w": 448,
+                                "h": 134
+                              },
                               "text": "Select a fruit"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 48,
+                            "w": 448,
+                            "h": 170
+                          },
                           "text": "BasicSelect a fruit"
                         },
                         {
@@ -216,6 +246,12 @@
                                             "data-slot": "select-value"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 692,
+                                            "y": 115,
+                                            "w": 95.140625,
+                                            "h": 20
+                                          },
                                           "text": "Chart Type"
                                         },
                                         {
@@ -233,9 +269,21 @@
                                           "attrs": {
                                             "aria-hidden": "true"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 793.140625,
+                                            "y": 117,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 109,
+                                        "w": 137.140625,
+                                        "h": 32
+                                      },
                                       "text": "Chart Type"
                                     },
                                     {
@@ -274,6 +322,12 @@
                                             "data-slot": "select-value"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 692,
+                                            "y": 165,
+                                            "w": 95.140625,
+                                            "h": 20
+                                          },
                                           "text": "Chart Type"
                                         },
                                         {
@@ -291,18 +345,48 @@
                                           "attrs": {
                                             "aria-hidden": "true"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 793.140625,
+                                            "y": 167,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 157,
+                                        "w": 137.140625,
+                                        "h": 36
+                                      },
                                       "text": "Chart Type"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 109,
+                                    "w": 398,
+                                    "h": 84
+                                  },
                                   "text": "Chart TypeChart Type"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 84,
+                                "w": 448,
+                                "h": 134
+                              },
                               "text": "Chart TypeChart Type"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 48,
+                            "w": 448,
+                            "h": 170
+                          },
                           "text": "With IconsChart TypeChart Type"
                         },
                         {
@@ -364,6 +448,12 @@
                                         "data-slot": "select-value"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 212,
+                                        "y": 319,
+                                        "w": 83.71875,
+                                        "h": 20
+                                      },
                                       "text": "Select a fruit"
                                     },
                                     {
@@ -380,15 +470,39 @@
                                       "attrs": {
                                         "aria-hidden": "true"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 301.71875,
+                                        "y": 321,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 311,
+                                    "w": 125.71875,
+                                    "h": 36
+                                  },
                                   "text": "Select a fruit"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 286,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Select a fruit"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 250,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With Groups & LabelsSelect a fruit"
                         },
                         {
@@ -450,6 +564,12 @@
                                         "data-slot": "select-value"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 692,
+                                        "y": 319,
+                                        "w": 93.546875,
+                                        "h": 20
+                                      },
                                       "text": "Select an item"
                                     },
                                     {
@@ -466,15 +586,39 @@
                                       "attrs": {
                                         "aria-hidden": "true"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 791.546875,
+                                        "y": 321,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 311,
+                                    "w": 135.546875,
+                                    "h": 36
+                                  },
                                   "text": "Select an item"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 286,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Select an item"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 250,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Large ListSelect an item"
                         },
                         {
@@ -550,6 +694,12 @@
                                             "data-slot": "select-value"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 212,
+                                            "y": 471,
+                                            "w": 66.296875,
+                                            "h": 20
+                                          },
                                           "text": "Small size"
                                         },
                                         {
@@ -567,9 +717,21 @@
                                           "attrs": {
                                             "aria-hidden": "true"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 284.296875,
+                                            "y": 473,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 465,
+                                        "w": 108.296875,
+                                        "h": 32
+                                      },
                                       "text": "Small size"
                                     },
                                     {
@@ -608,6 +770,12 @@
                                             "data-slot": "select-value"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 212,
+                                            "y": 521,
+                                            "w": 77.953125,
+                                            "h": 20
+                                          },
                                           "text": "Default size"
                                         },
                                         {
@@ -625,18 +793,48 @@
                                           "attrs": {
                                             "aria-hidden": "true"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 295.953125,
+                                            "y": 523,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 513,
+                                        "w": 119.953125,
+                                        "h": 36
+                                      },
                                       "text": "Default size"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 465,
+                                    "w": 398,
+                                    "h": 84
+                                  },
                                   "text": "Small sizeDefault size"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 440,
+                                "w": 448,
+                                "h": 134
+                              },
                               "text": "Small sizeDefault size"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 404,
+                            "w": 448,
+                            "h": 170
+                          },
                           "text": "SizesSmall sizeDefault size"
                         },
                         {
@@ -749,6 +947,12 @@
                                                     "data-slot": "item-title"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 693,
+                                                    "y": 475,
+                                                    "w": 45.75,
+                                                    "h": 19.25
+                                                  },
                                                   "text": "Starter"
                                                 },
                                                 {
@@ -769,15 +973,39 @@
                                                     "data-slot": "item-description"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 693,
+                                                    "y": 494.25,
+                                                    "w": 213.734375,
+                                                    "h": 18
+                                                  },
                                                   "text": "Perfect for individuals getting started."
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 693,
+                                                "y": 475,
+                                                "w": 213.734375,
+                                                "h": 37.25
+                                              },
                                               "text": "StarterPerfect for individuals getting started."
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 692,
+                                            "y": 474,
+                                            "w": 215.734375,
+                                            "h": 39.25
+                                          },
                                           "text": "StarterPerfect for individuals getting started."
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 692,
+                                        "y": 474,
+                                        "w": 215.734375,
+                                        "h": 39.25
+                                      },
                                       "text": "StarterPerfect for individuals getting started."
                                     },
                                     {
@@ -794,15 +1022,39 @@
                                       "attrs": {
                                         "aria-hidden": "true"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 944,
+                                        "y": 485.625,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 465,
+                                    "w": 288,
+                                    "h": 57.25
+                                  },
                                   "text": "StarterPerfect for individuals getting started."
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 440,
+                                "w": 448,
+                                "h": 134
+                              },
                               "text": "StarterPerfect for individuals getting started."
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 404,
+                            "w": 448,
+                            "h": 170
+                          },
                           "text": "Subscription PlanStarterPerfect for individuals getting started."
                         },
                         {
@@ -893,6 +1145,12 @@
                                                 "data-slot": "select-value"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 212,
+                                                "y": 673,
+                                                "w": 35.890625,
+                                                "h": 20
+                                              },
                                               "text": "Small"
                                             },
                                             {
@@ -911,9 +1169,21 @@
                                               "attrs": {
                                                 "aria-hidden": "true"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 253.890625,
+                                                "y": 675,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 667,
+                                            "w": 77.890625,
+                                            "h": 32
+                                          },
                                           "text": "Small"
                                         },
                                         {
@@ -932,9 +1202,21 @@
                                             "data-slot": "button"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 286.890625,
+                                            "y": 667,
+                                            "w": 68.859375,
+                                            "h": 32
+                                          },
                                           "text": "Submit"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 667,
+                                        "w": 398,
+                                        "h": 32
+                                      },
                                       "text": "SmallSubmit"
                                     },
                                     {
@@ -988,6 +1270,12 @@
                                                 "data-slot": "select-value"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 212,
+                                                "y": 723,
+                                                "w": 47.546875,
+                                                "h": 20
+                                              },
                                               "text": "Default"
                                             },
                                             {
@@ -1006,9 +1294,21 @@
                                               "attrs": {
                                                 "aria-hidden": "true"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 265.546875,
+                                                "y": 725,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 715,
+                                            "w": 89.546875,
+                                            "h": 36
+                                          },
                                           "text": "Default"
                                         },
                                         {
@@ -1027,18 +1327,48 @@
                                             "data-slot": "button"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 298.546875,
+                                            "y": 715,
+                                            "w": 68.859375,
+                                            "h": 36
+                                          },
                                           "text": "Submit"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 715,
+                                        "w": 398,
+                                        "h": 36
+                                      },
                                       "text": "DefaultSubmit"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 667,
+                                    "w": 398,
+                                    "h": 84
+                                  },
                                   "text": "SmallSubmitDefaultSubmit"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 642,
+                                "w": 448,
+                                "h": 134
+                              },
                               "text": "SmallSubmitDefaultSubmit"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 606,
+                            "w": 448,
+                            "h": 170
+                          },
                           "text": "With ButtonSmallSubmitDefaultSubmit"
                         },
                         {
@@ -1100,6 +1430,12 @@
                                         "data-slot": "select-value"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 692,
+                                        "y": 675,
+                                        "w": 83.71875,
+                                        "h": 20
+                                      },
                                       "text": "Select a fruit"
                                     },
                                     {
@@ -1116,15 +1452,39 @@
                                       "attrs": {
                                         "aria-hidden": "true"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 781.71875,
+                                        "y": 677,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 667,
+                                    "w": 125.71875,
+                                    "h": 36
+                                  },
                                   "text": "Select a fruit"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 642,
+                                "w": 448,
+                                "h": 134
+                              },
                               "text": "Select a fruit"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 606,
+                            "w": 448,
+                            "h": 170
+                          },
                           "text": "PopperSelect a fruit"
                         },
                         {
@@ -1183,6 +1543,12 @@
                                         "data-slot": "field-label"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 869,
+                                        "w": 398,
+                                        "h": 19.25
+                                      },
                                       "text": "Favorite Fruit"
                                     },
                                     {
@@ -1221,6 +1587,12 @@
                                             "data-slot": "select-value"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 212,
+                                            "y": 908.25,
+                                            "w": 83.71875,
+                                            "h": 20
+                                          },
                                           "text": "Select a fruit"
                                         },
                                         {
@@ -1238,9 +1610,21 @@
                                           "attrs": {
                                             "aria-hidden": "true"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 574,
+                                            "y": 910.25,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 900.25,
+                                        "w": 398,
+                                        "h": 36
+                                      },
                                       "text": "Select a fruit"
                                     },
                                     {
@@ -1258,15 +1642,39 @@
                                         "data-slot": "field-description"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 948.25,
+                                        "w": 398,
+                                        "h": 21
+                                      },
                                       "text": "Choose your favorite fruit from the list."
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 869,
+                                    "w": 398,
+                                    "h": 100.25
+                                  },
                                   "text": "Favorite FruitSelect a fruitChoose your favorite fruit from the list."
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 844,
+                                "w": 448,
+                                "h": 201.25
+                              },
                               "text": "Favorite FruitSelect a fruitChoose your favorite fruit from the list."
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 808,
+                            "w": 448,
+                            "h": 237.25
+                          },
                           "text": "With FieldFavorite FruitSelect a fruitChoose your favorite fruit from the list."
                         },
                         {
@@ -1343,6 +1751,12 @@
                                             "data-slot": "select-value"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 692,
+                                            "y": 877,
+                                            "w": 83.71875,
+                                            "h": 20
+                                          },
                                           "text": "Select a fruit"
                                         },
                                         {
@@ -1360,9 +1774,21 @@
                                           "attrs": {
                                             "aria-hidden": "true"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 781.71875,
+                                            "y": 879,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 869,
+                                        "w": 125.71875,
+                                        "h": 36
+                                      },
                                       "text": "Select a fruit"
                                     },
                                     {
@@ -1398,6 +1824,12 @@
                                             "data-slot": "field-label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 921,
+                                            "w": 398,
+                                            "h": 19.25
+                                          },
                                           "text": "Favorite Fruit"
                                         },
                                         {
@@ -1439,6 +1871,12 @@
                                                 "data-slot": "select-value"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 692,
+                                                "y": 960.25,
+                                                "w": 83.71875,
+                                                "h": 20
+                                              },
                                               "text": "Select a fruit"
                                             },
                                             {
@@ -1457,9 +1895,21 @@
                                               "attrs": {
                                                 "aria-hidden": "true"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 1054,
+                                                "y": 962.25,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 952.25,
+                                            "w": 398,
+                                            "h": 36
+                                          },
                                           "text": "Select a fruit"
                                         },
                                         {
@@ -1479,18 +1929,48 @@
                                             "data-slot": "field-error"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 1000.25,
+                                            "w": 398,
+                                            "h": 20
+                                          },
                                           "text": "Please select a valid fruit."
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 921,
+                                        "w": 398,
+                                        "h": 99.25
+                                      },
                                       "text": "Favorite FruitSelect a fruitPlease select a valid fruit."
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 869,
+                                    "w": 398,
+                                    "h": 151.25
+                                  },
                                   "text": "Select a fruitFavorite FruitSelect a fruitPlease select a valid fruit."
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 844,
+                                "w": 448,
+                                "h": 201.25
+                              },
                               "text": "Select a fruitFavorite FruitSelect a fruitPlease select a valid fruit."
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 808,
+                            "w": 448,
+                            "h": 237.25
+                          },
                           "text": "InvalidSelect a fruitFavorite FruitSelect a fruitPlease select a valid fruit."
                         },
                         {
@@ -1544,7 +2024,13 @@
                                       "attrs": {
                                         "data-slot": "input"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 1138.25,
+                                        "w": 102,
+                                        "h": 36
+                                      }
                                     },
                                     {
                                       "tag": "button",
@@ -1582,6 +2068,12 @@
                                             "data-slot": "select-value"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 322,
+                                            "y": 1146.25,
+                                            "w": 33.140625,
+                                            "h": 20
+                                          },
                                           "text": "Filter"
                                         },
                                         {
@@ -1599,9 +2091,21 @@
                                           "attrs": {
                                             "aria-hidden": "true"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 426,
+                                            "y": 1148.25,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 311,
+                                        "y": 1138.25,
+                                        "w": 140,
+                                        "h": 36
+                                      },
                                       "text": "Filter"
                                     },
                                     {
@@ -1652,6 +2156,12 @@
                                                 "data-slot": "native-select-option"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 0,
+                                                "y": 0,
+                                                "w": 0,
+                                                "h": 0
+                                              },
                                               "text": "Sort by"
                                             },
                                             {
@@ -1671,6 +2181,12 @@
                                                 "data-slot": "native-select-option"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 0,
+                                                "y": 0,
+                                                "w": 0,
+                                                "h": 0
+                                              },
                                               "text": "Name"
                                             },
                                             {
@@ -1690,6 +2206,12 @@
                                                 "data-slot": "native-select-option"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 0,
+                                                "y": 0,
+                                                "w": 0,
+                                                "h": 0
+                                              },
                                               "text": "Date"
                                             },
                                             {
@@ -1709,9 +2231,21 @@
                                                 "data-slot": "native-select-option"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 0,
+                                                "y": 0,
+                                                "w": 0,
+                                                "h": 0
+                                              },
                                               "text": "Status"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 459,
+                                            "y": 1138.25,
+                                            "w": 140,
+                                            "h": 36
+                                          },
                                           "text": "Sort byNameDateStatus"
                                         },
                                         {
@@ -1730,18 +2264,48 @@
                                             "aria-hidden": "true",
                                             "data-slot": "native-select-icon"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 573,
+                                            "y": 1148.25,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 459,
+                                        "y": 1138.25,
+                                        "w": 140,
+                                        "h": 36
+                                      },
                                       "text": "Sort byNameDateStatus"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 1138.25,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "FilterSort byNameDateStatus"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 1113.25,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "FilterSort byNameDateStatus"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 1077.25,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Inline with Input & NativeSelectFilterSort byNameDateStatus"
                         },
                         {
@@ -1804,6 +2368,12 @@
                                         "data-slot": "select-value"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 692,
+                                        "y": 1146.25,
+                                        "w": 57.453125,
+                                        "h": 20
+                                      },
                                       "text": "Disabled"
                                     },
                                     {
@@ -1820,15 +2390,39 @@
                                       "attrs": {
                                         "aria-hidden": "true"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 755.453125,
+                                        "y": 1148.25,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 1138.25,
+                                    "w": 99.453125,
+                                    "h": 36
+                                  },
                                   "text": "Disabled"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 1113.25,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Disabled"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 1077.25,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "DisabledDisabled"
                         },
                         {
@@ -1874,21 +2468,57 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 1292.25,
+                                    "w": 104.015625,
+                                    "h": 36
+                                  },
                                   "text": "Open Dialog"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 1267.25,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Open Dialog"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 1231.25,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "In DialogOpen Dialog"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 1401.25
+                      },
                       "text": "BasicSelect a fruitWith IconsChart TypeChart TypeWith Groups & LabelsSelect a fruitLarge ListSelect an itemSizesSmall si…"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 1401.25
+                  },
                   "text": "BasicSelect a fruitWith IconsChart TypeChart TypeWith Groups & LabelsSelect a fruitLarge ListSelect an itemSizesSmall si…"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 1401.25
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -1903,9 +2533,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 1401.25,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 1401.25
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -2121,30 +2763,6 @@
               "haspopup": "dialog"
             },
             {
-              "role": "StaticText",
-              "name": "xs"
-            },
-            {
-              "role": "StaticText",
-              "name": "sm"
-            },
-            {
-              "role": "StaticText",
-              "name": "md"
-            },
-            {
-              "role": "StaticText",
-              "name": "lg"
-            },
-            {
-              "role": "StaticText",
-              "name": "xl"
-            },
-            {
-              "role": "StaticText",
-              "name": "2xl"
-            },
-            {
               "role": "region",
               "name": "Notifications alt+T"
             }
@@ -2161,7 +2779,7 @@
         "focus": {
           "tag": "div",
           "path": [
-            57,
+            27,
             0,
             1,
             0,
@@ -2193,7 +2811,13 @@
                 "tabindex": "0",
                 "aria-hidden": "true"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 0,
+                "h": 0
+              }
             },
             {
               "tag": "div",
@@ -2203,7 +2827,13 @@
               "attrs": {
                 "aria-hidden": "true"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 0,
+                "h": 0
+              }
             },
             {
               "tag": "div",
@@ -2292,6 +2922,12 @@
                                         "data-slot": "select-value"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 212,
+                                        "y": 117,
+                                        "w": 83.71875,
+                                        "h": 20
+                                      },
                                       "text": "Select a fruit"
                                     },
                                     {
@@ -2308,15 +2944,39 @@
                                       "attrs": {
                                         "aria-hidden": "true"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 301.71875,
+                                        "y": 119,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 109,
+                                    "w": 125.71875,
+                                    "h": 36
+                                  },
                                   "text": "Select a fruit"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 84,
+                                "w": 448,
+                                "h": 134
+                              },
                               "text": "Select a fruit"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 48,
+                            "w": 448,
+                            "h": 170
+                          },
                           "text": "BasicSelect a fruit"
                         },
                         {
@@ -2392,6 +3052,12 @@
                                             "data-slot": "select-value"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 692,
+                                            "y": 115,
+                                            "w": 95.140625,
+                                            "h": 20
+                                          },
                                           "text": "Chart Type"
                                         },
                                         {
@@ -2409,9 +3075,21 @@
                                           "attrs": {
                                             "aria-hidden": "true"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 793.140625,
+                                            "y": 117,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 109,
+                                        "w": 137.140625,
+                                        "h": 32
+                                      },
                                       "text": "Chart Type"
                                     },
                                     {
@@ -2450,6 +3128,12 @@
                                             "data-slot": "select-value"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 692,
+                                            "y": 165,
+                                            "w": 95.140625,
+                                            "h": 20
+                                          },
                                           "text": "Chart Type"
                                         },
                                         {
@@ -2467,18 +3151,48 @@
                                           "attrs": {
                                             "aria-hidden": "true"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 793.140625,
+                                            "y": 167,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 157,
+                                        "w": 137.140625,
+                                        "h": 36
+                                      },
                                       "text": "Chart Type"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 109,
+                                    "w": 398,
+                                    "h": 84
+                                  },
                                   "text": "Chart TypeChart Type"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 84,
+                                "w": 448,
+                                "h": 134
+                              },
                               "text": "Chart TypeChart Type"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 48,
+                            "w": 448,
+                            "h": 170
+                          },
                           "text": "With IconsChart TypeChart Type"
                         },
                         {
@@ -2540,6 +3254,12 @@
                                         "data-slot": "select-value"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 212,
+                                        "y": 319,
+                                        "w": 83.71875,
+                                        "h": 20
+                                      },
                                       "text": "Select a fruit"
                                     },
                                     {
@@ -2556,15 +3276,39 @@
                                       "attrs": {
                                         "aria-hidden": "true"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 301.71875,
+                                        "y": 321,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 311,
+                                    "w": 125.71875,
+                                    "h": 36
+                                  },
                                   "text": "Select a fruit"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 286,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Select a fruit"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 250,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With Groups & LabelsSelect a fruit"
                         },
                         {
@@ -2626,6 +3370,12 @@
                                         "data-slot": "select-value"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 692,
+                                        "y": 319,
+                                        "w": 93.546875,
+                                        "h": 20
+                                      },
                                       "text": "Select an item"
                                     },
                                     {
@@ -2642,15 +3392,39 @@
                                       "attrs": {
                                         "aria-hidden": "true"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 791.546875,
+                                        "y": 321,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 311,
+                                    "w": 135.546875,
+                                    "h": 36
+                                  },
                                   "text": "Select an item"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 286,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Select an item"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 250,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Large ListSelect an item"
                         },
                         {
@@ -2726,6 +3500,12 @@
                                             "data-slot": "select-value"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 212,
+                                            "y": 471,
+                                            "w": 66.296875,
+                                            "h": 20
+                                          },
                                           "text": "Small size"
                                         },
                                         {
@@ -2743,9 +3523,21 @@
                                           "attrs": {
                                             "aria-hidden": "true"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 284.296875,
+                                            "y": 473,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 465,
+                                        "w": 108.296875,
+                                        "h": 32
+                                      },
                                       "text": "Small size"
                                     },
                                     {
@@ -2784,6 +3576,12 @@
                                             "data-slot": "select-value"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 212,
+                                            "y": 521,
+                                            "w": 77.953125,
+                                            "h": 20
+                                          },
                                           "text": "Default size"
                                         },
                                         {
@@ -2801,18 +3599,48 @@
                                           "attrs": {
                                             "aria-hidden": "true"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 295.953125,
+                                            "y": 523,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 513,
+                                        "w": 119.953125,
+                                        "h": 36
+                                      },
                                       "text": "Default size"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 465,
+                                    "w": 398,
+                                    "h": 84
+                                  },
                                   "text": "Small sizeDefault size"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 440,
+                                "w": 448,
+                                "h": 134
+                              },
                               "text": "Small sizeDefault size"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 404,
+                            "w": 448,
+                            "h": 170
+                          },
                           "text": "SizesSmall sizeDefault size"
                         },
                         {
@@ -2925,6 +3753,12 @@
                                                     "data-slot": "item-title"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 693,
+                                                    "y": 475,
+                                                    "w": 45.75,
+                                                    "h": 19.25
+                                                  },
                                                   "text": "Starter"
                                                 },
                                                 {
@@ -2945,15 +3779,39 @@
                                                     "data-slot": "item-description"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 693,
+                                                    "y": 494.25,
+                                                    "w": 213.734375,
+                                                    "h": 18
+                                                  },
                                                   "text": "Perfect for individuals getting started."
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 693,
+                                                "y": 475,
+                                                "w": 213.734375,
+                                                "h": 37.25
+                                              },
                                               "text": "StarterPerfect for individuals getting started."
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 692,
+                                            "y": 474,
+                                            "w": 215.734375,
+                                            "h": 39.25
+                                          },
                                           "text": "StarterPerfect for individuals getting started."
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 692,
+                                        "y": 474,
+                                        "w": 215.734375,
+                                        "h": 39.25
+                                      },
                                       "text": "StarterPerfect for individuals getting started."
                                     },
                                     {
@@ -2970,15 +3828,39 @@
                                       "attrs": {
                                         "aria-hidden": "true"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 944,
+                                        "y": 485.625,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 465,
+                                    "w": 288,
+                                    "h": 57.25
+                                  },
                                   "text": "StarterPerfect for individuals getting started."
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 440,
+                                "w": 448,
+                                "h": 134
+                              },
                               "text": "StarterPerfect for individuals getting started."
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 404,
+                            "w": 448,
+                            "h": 170
+                          },
                           "text": "Subscription PlanStarterPerfect for individuals getting started."
                         },
                         {
@@ -3069,6 +3951,12 @@
                                                 "data-slot": "select-value"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 212,
+                                                "y": 673,
+                                                "w": 35.890625,
+                                                "h": 20
+                                              },
                                               "text": "Small"
                                             },
                                             {
@@ -3087,9 +3975,21 @@
                                               "attrs": {
                                                 "aria-hidden": "true"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 253.890625,
+                                                "y": 675,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 667,
+                                            "w": 77.890625,
+                                            "h": 32
+                                          },
                                           "text": "Small"
                                         },
                                         {
@@ -3108,9 +4008,21 @@
                                             "data-slot": "button"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 286.890625,
+                                            "y": 667,
+                                            "w": 68.859375,
+                                            "h": 32
+                                          },
                                           "text": "Submit"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 667,
+                                        "w": 398,
+                                        "h": 32
+                                      },
                                       "text": "SmallSubmit"
                                     },
                                     {
@@ -3164,6 +4076,12 @@
                                                 "data-slot": "select-value"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 212,
+                                                "y": 723,
+                                                "w": 47.546875,
+                                                "h": 20
+                                              },
                                               "text": "Default"
                                             },
                                             {
@@ -3182,9 +4100,21 @@
                                               "attrs": {
                                                 "aria-hidden": "true"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 265.546875,
+                                                "y": 725,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 715,
+                                            "w": 89.546875,
+                                            "h": 36
+                                          },
                                           "text": "Default"
                                         },
                                         {
@@ -3203,18 +4133,48 @@
                                             "data-slot": "button"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 298.546875,
+                                            "y": 715,
+                                            "w": 68.859375,
+                                            "h": 36
+                                          },
                                           "text": "Submit"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 715,
+                                        "w": 398,
+                                        "h": 36
+                                      },
                                       "text": "DefaultSubmit"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 667,
+                                    "w": 398,
+                                    "h": 84
+                                  },
                                   "text": "SmallSubmitDefaultSubmit"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 642,
+                                "w": 448,
+                                "h": 134
+                              },
                               "text": "SmallSubmitDefaultSubmit"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 606,
+                            "w": 448,
+                            "h": 170
+                          },
                           "text": "With ButtonSmallSubmitDefaultSubmit"
                         },
                         {
@@ -3276,6 +4236,12 @@
                                         "data-slot": "select-value"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 692,
+                                        "y": 675,
+                                        "w": 83.71875,
+                                        "h": 20
+                                      },
                                       "text": "Select a fruit"
                                     },
                                     {
@@ -3292,15 +4258,39 @@
                                       "attrs": {
                                         "aria-hidden": "true"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 781.71875,
+                                        "y": 677,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 667,
+                                    "w": 125.71875,
+                                    "h": 36
+                                  },
                                   "text": "Select a fruit"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 642,
+                                "w": 448,
+                                "h": 134
+                              },
                               "text": "Select a fruit"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 606,
+                            "w": 448,
+                            "h": 170
+                          },
                           "text": "PopperSelect a fruit"
                         },
                         {
@@ -3359,6 +4349,12 @@
                                         "data-slot": "field-label"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 869,
+                                        "w": 398,
+                                        "h": 19.25
+                                      },
                                       "text": "Favorite Fruit"
                                     },
                                     {
@@ -3397,6 +4393,12 @@
                                             "data-slot": "select-value"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 212,
+                                            "y": 908.25,
+                                            "w": 83.71875,
+                                            "h": 20
+                                          },
                                           "text": "Select a fruit"
                                         },
                                         {
@@ -3414,9 +4416,21 @@
                                           "attrs": {
                                             "aria-hidden": "true"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 574,
+                                            "y": 910.25,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 900.25,
+                                        "w": 398,
+                                        "h": 36
+                                      },
                                       "text": "Select a fruit"
                                     },
                                     {
@@ -3434,15 +4448,39 @@
                                         "data-slot": "field-description"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 948.25,
+                                        "w": 398,
+                                        "h": 21
+                                      },
                                       "text": "Choose your favorite fruit from the list."
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 869,
+                                    "w": 398,
+                                    "h": 100.25
+                                  },
                                   "text": "Favorite FruitSelect a fruitChoose your favorite fruit from the list."
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 844,
+                                "w": 448,
+                                "h": 201.25
+                              },
                               "text": "Favorite FruitSelect a fruitChoose your favorite fruit from the list."
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 808,
+                            "w": 448,
+                            "h": 237.25
+                          },
                           "text": "With FieldFavorite FruitSelect a fruitChoose your favorite fruit from the list."
                         },
                         {
@@ -3519,6 +4557,12 @@
                                             "data-slot": "select-value"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 692,
+                                            "y": 877,
+                                            "w": 83.71875,
+                                            "h": 20
+                                          },
                                           "text": "Select a fruit"
                                         },
                                         {
@@ -3536,9 +4580,21 @@
                                           "attrs": {
                                             "aria-hidden": "true"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 781.71875,
+                                            "y": 879,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 869,
+                                        "w": 125.71875,
+                                        "h": 36
+                                      },
                                       "text": "Select a fruit"
                                     },
                                     {
@@ -3574,6 +4630,12 @@
                                             "data-slot": "field-label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 921,
+                                            "w": 398,
+                                            "h": 19.25
+                                          },
                                           "text": "Favorite Fruit"
                                         },
                                         {
@@ -3615,6 +4677,12 @@
                                                 "data-slot": "select-value"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 692,
+                                                "y": 960.25,
+                                                "w": 83.71875,
+                                                "h": 20
+                                              },
                                               "text": "Select a fruit"
                                             },
                                             {
@@ -3633,9 +4701,21 @@
                                               "attrs": {
                                                 "aria-hidden": "true"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 1054,
+                                                "y": 962.25,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 952.25,
+                                            "w": 398,
+                                            "h": 36
+                                          },
                                           "text": "Select a fruit"
                                         },
                                         {
@@ -3655,18 +4735,48 @@
                                             "data-slot": "field-error"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 1000.25,
+                                            "w": 398,
+                                            "h": 20
+                                          },
                                           "text": "Please select a valid fruit."
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 921,
+                                        "w": 398,
+                                        "h": 99.25
+                                      },
                                       "text": "Favorite FruitSelect a fruitPlease select a valid fruit."
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 869,
+                                    "w": 398,
+                                    "h": 151.25
+                                  },
                                   "text": "Select a fruitFavorite FruitSelect a fruitPlease select a valid fruit."
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 844,
+                                "w": 448,
+                                "h": 201.25
+                              },
                               "text": "Select a fruitFavorite FruitSelect a fruitPlease select a valid fruit."
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 808,
+                            "w": 448,
+                            "h": 237.25
+                          },
                           "text": "InvalidSelect a fruitFavorite FruitSelect a fruitPlease select a valid fruit."
                         },
                         {
@@ -3720,7 +4830,13 @@
                                       "attrs": {
                                         "data-slot": "input"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 1138.25,
+                                        "w": 102,
+                                        "h": 36
+                                      }
                                     },
                                     {
                                       "tag": "button",
@@ -3758,6 +4874,12 @@
                                             "data-slot": "select-value"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 322,
+                                            "y": 1146.25,
+                                            "w": 33.140625,
+                                            "h": 20
+                                          },
                                           "text": "Filter"
                                         },
                                         {
@@ -3775,9 +4897,21 @@
                                           "attrs": {
                                             "aria-hidden": "true"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 426,
+                                            "y": 1148.25,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 311,
+                                        "y": 1138.25,
+                                        "w": 140,
+                                        "h": 36
+                                      },
                                       "text": "Filter"
                                     },
                                     {
@@ -3828,6 +4962,12 @@
                                                 "data-slot": "native-select-option"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 0,
+                                                "y": 0,
+                                                "w": 0,
+                                                "h": 0
+                                              },
                                               "text": "Sort by"
                                             },
                                             {
@@ -3847,6 +4987,12 @@
                                                 "data-slot": "native-select-option"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 0,
+                                                "y": 0,
+                                                "w": 0,
+                                                "h": 0
+                                              },
                                               "text": "Name"
                                             },
                                             {
@@ -3866,6 +5012,12 @@
                                                 "data-slot": "native-select-option"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 0,
+                                                "y": 0,
+                                                "w": 0,
+                                                "h": 0
+                                              },
                                               "text": "Date"
                                             },
                                             {
@@ -3885,9 +5037,21 @@
                                                 "data-slot": "native-select-option"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 0,
+                                                "y": 0,
+                                                "w": 0,
+                                                "h": 0
+                                              },
                                               "text": "Status"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 459,
+                                            "y": 1138.25,
+                                            "w": 140,
+                                            "h": 36
+                                          },
                                           "text": "Sort byNameDateStatus"
                                         },
                                         {
@@ -3906,18 +5070,48 @@
                                             "aria-hidden": "true",
                                             "data-slot": "native-select-icon"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 573,
+                                            "y": 1148.25,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 459,
+                                        "y": 1138.25,
+                                        "w": 140,
+                                        "h": 36
+                                      },
                                       "text": "Sort byNameDateStatus"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 1138.25,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "FilterSort byNameDateStatus"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 1113.25,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "FilterSort byNameDateStatus"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 1077.25,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Inline with Input & NativeSelectFilterSort byNameDateStatus"
                         },
                         {
@@ -3980,6 +5174,12 @@
                                         "data-slot": "select-value"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 692,
+                                        "y": 1146.25,
+                                        "w": 57.453125,
+                                        "h": 20
+                                      },
                                       "text": "Disabled"
                                     },
                                     {
@@ -3996,15 +5196,39 @@
                                       "attrs": {
                                         "aria-hidden": "true"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 755.453125,
+                                        "y": 1148.25,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 1138.25,
+                                    "w": 99.453125,
+                                    "h": 36
+                                  },
                                   "text": "Disabled"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 1113.25,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Disabled"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 1077.25,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "DisabledDisabled"
                         },
                         {
@@ -4050,33 +5274,57 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 1292.25,
+                                    "w": 104.015625,
+                                    "h": 36
+                                  },
                                   "text": "Open Dialog"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 1267.25,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Open Dialog"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 1231.25,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "In DialogOpen Dialog"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 1401.25
+                      },
                       "text": "BasicSelect a fruitWith IconsChart TypeChart TypeWith Groups & LabelsSelect a fruitLarge ListSelect an itemSizesSmall si…"
                     }
                   ],
-                  "text": "BasicSelect a fruitWith IconsChart TypeChart TypeWith Groups & LabelsSelect a fruitLarge ListSelect an itemSizesSmall si…"
-                },
-                {
-                  "tag": "div",
-                  "path": [
-                    3,
-                    4
-                  ],
-                  "attrs": {
-                    "aria-hidden": "true"
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 1401.25
                   },
-                  "children": [],
-                  "text": "xssmmdlgxl2xl"
+                  "text": "BasicSelect a fruitWith IconsChart TypeChart TypeWith Groups & LabelsSelect a fruitLarge ListSelect an itemSizesSmall si…"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 1401.25
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -4091,210 +5339,41 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 1401.25,
+                "w": 1280,
+                "h": 0
+              }
             },
             {
-              "tag": "title",
+              "tag": "next-route-announcer",
               "path": [
-                8
+                26
               ],
               "attrs": {
                 "aria-hidden": "true"
               },
               "children": [],
-              "text": "select-example - shadcn/ui"
-            },
-            {
-              "tag": "link",
-              "path": [
-                9
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                10
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "link",
-              "path": [
-                11
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                12
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                13
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                14
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                15
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                16
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                17
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                18
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                19
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                20
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                21
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                22
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                23
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                24
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "link",
-              "path": [
-                25
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "next-route-announcer",
-              "path": [
-                56
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
+              "rect": {
+                "x": 0,
+                "y": 1401.25,
+                "w": 0,
+                "h": 0
+              }
             },
             {
               "tag": "div",
               "path": [
-                57
+                27
               ],
               "attrs": {},
               "children": [
                 {
                   "tag": "div",
                   "path": [
-                    57,
+                    27,
                     0
                   ],
                   "attrs": {
@@ -4307,7 +5386,7 @@
                     {
                       "tag": "div",
                       "path": [
-                        57,
+                        27,
                         0,
                         1
                       ],
@@ -4318,7 +5397,7 @@
                         {
                           "tag": "div",
                           "path": [
-                            57,
+                            27,
                             0,
                             1,
                             0
@@ -4332,7 +5411,7 @@
                             {
                               "tag": "div",
                               "path": [
-                                57,
+                                27,
                                 0,
                                 1,
                                 0,
@@ -4349,12 +5428,18 @@
                                 "data-highlighted": ""
                               },
                               "children": [],
+                              "rect": {
+                                "x": 204.59375,
+                                "y": 111,
+                                "w": 136,
+                                "h": 32
+                              },
                               "text": "Apple"
                             },
                             {
                               "tag": "div",
                               "path": [
-                                57,
+                                27,
                                 0,
                                 1,
                                 0,
@@ -4370,12 +5455,18 @@
                                 "data-radix-collection-item": ""
                               },
                               "children": [],
+                              "rect": {
+                                "x": 204.59375,
+                                "y": 143,
+                                "w": 136,
+                                "h": 32
+                              },
                               "text": "Banana"
                             },
                             {
                               "tag": "div",
                               "path": [
-                                57,
+                                27,
                                 0,
                                 1,
                                 0,
@@ -4391,12 +5482,18 @@
                                 "data-radix-collection-item": ""
                               },
                               "children": [],
+                              "rect": {
+                                "x": 204.59375,
+                                "y": 175,
+                                "w": 136,
+                                "h": 32
+                              },
                               "text": "Blueberry"
                             },
                             {
                               "tag": "div",
                               "path": [
-                                57,
+                                27,
                                 0,
                                 1,
                                 0,
@@ -4413,12 +5510,18 @@
                                 "data-radix-collection-item": ""
                               },
                               "children": [],
+                              "rect": {
+                                "x": 204.59375,
+                                "y": 207,
+                                "w": 136,
+                                "h": 32
+                              },
                               "text": "Grapes"
                             },
                             {
                               "tag": "div",
                               "path": [
-                                57,
+                                27,
                                 0,
                                 1,
                                 0,
@@ -4434,32 +5537,74 @@
                                 "data-radix-collection-item": ""
                               },
                               "children": [],
+                              "rect": {
+                                "x": 204.59375,
+                                "y": 239,
+                                "w": 136,
+                                "h": 32
+                              },
                               "text": "Pineapple"
                             }
                           ],
+                          "rect": {
+                            "x": 200.59375,
+                            "y": 107,
+                            "w": 144,
+                            "h": 168
+                          },
                           "text": "AppleBananaBlueberryGrapesPineapple"
                         }
                       ],
+                      "rect": {
+                        "x": 200.59375,
+                        "y": 107,
+                        "w": 144,
+                        "h": 168
+                      },
                       "text": "AppleBananaBlueberryGrapesPineapple"
                     }
                   ],
+                  "rect": {
+                    "x": 200.59375,
+                    "y": 107,
+                    "w": 144,
+                    "h": 168
+                  },
                   "text": "[data-radix-select-viewport]{scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;}[data-radix-…"
                 }
               ],
+              "rect": {
+                "x": 200.59375,
+                "y": 107,
+                "w": 144,
+                "h": 683
+              },
               "text": "[data-radix-select-viewport]{scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;}[data-radix-…"
             },
             {
               "tag": "span",
               "path": [
-                58
+                28
               ],
               "attrs": {
                 "tabindex": "0",
                 "aria-hidden": "true"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 1401.25,
+                "w": 0,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 1401.25
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -4521,7 +5666,7 @@
             "data-state": "closed",
             "data-slot": "select-trigger"
           },
-          "text": "Banana"
+          "text": "Apple"
         },
         "dom": {
           "tag": "body",
@@ -4613,7 +5758,13 @@
                                         "data-slot": "select-value"
                                       },
                                       "children": [],
-                                      "text": "Banana"
+                                      "rect": {
+                                        "x": 212,
+                                        "y": 117,
+                                        "w": 38.359375,
+                                        "h": 20
+                                      },
+                                      "text": "Apple"
                                     },
                                     {
                                       "tag": "svg",
@@ -4629,16 +5780,40 @@
                                       "attrs": {
                                         "aria-hidden": "true"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 256.359375,
+                                        "y": 119,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     }
                                   ],
-                                  "text": "Banana"
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 109,
+                                    "w": 80.359375,
+                                    "h": 36
+                                  },
+                                  "text": "Apple"
                                 }
                               ],
-                              "text": "Banana"
+                              "rect": {
+                                "x": 176,
+                                "y": 84,
+                                "w": 448,
+                                "h": 134
+                              },
+                              "text": "Apple"
                             }
                           ],
-                          "text": "BasicBanana"
+                          "rect": {
+                            "x": 176,
+                            "y": 48,
+                            "w": 448,
+                            "h": 170
+                          },
+                          "text": "BasicApple"
                         },
                         {
                           "tag": "div",
@@ -4713,6 +5888,12 @@
                                             "data-slot": "select-value"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 692,
+                                            "y": 115,
+                                            "w": 95.140625,
+                                            "h": 20
+                                          },
                                           "text": "Chart Type"
                                         },
                                         {
@@ -4730,9 +5911,21 @@
                                           "attrs": {
                                             "aria-hidden": "true"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 793.140625,
+                                            "y": 117,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 109,
+                                        "w": 137.140625,
+                                        "h": 32
+                                      },
                                       "text": "Chart Type"
                                     },
                                     {
@@ -4771,6 +5964,12 @@
                                             "data-slot": "select-value"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 692,
+                                            "y": 165,
+                                            "w": 95.140625,
+                                            "h": 20
+                                          },
                                           "text": "Chart Type"
                                         },
                                         {
@@ -4788,18 +5987,48 @@
                                           "attrs": {
                                             "aria-hidden": "true"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 793.140625,
+                                            "y": 167,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 157,
+                                        "w": 137.140625,
+                                        "h": 36
+                                      },
                                       "text": "Chart Type"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 109,
+                                    "w": 398,
+                                    "h": 84
+                                  },
                                   "text": "Chart TypeChart Type"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 84,
+                                "w": 448,
+                                "h": 134
+                              },
                               "text": "Chart TypeChart Type"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 48,
+                            "w": 448,
+                            "h": 170
+                          },
                           "text": "With IconsChart TypeChart Type"
                         },
                         {
@@ -4861,6 +6090,12 @@
                                         "data-slot": "select-value"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 212,
+                                        "y": 319,
+                                        "w": 83.71875,
+                                        "h": 20
+                                      },
                                       "text": "Select a fruit"
                                     },
                                     {
@@ -4877,15 +6112,39 @@
                                       "attrs": {
                                         "aria-hidden": "true"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 301.71875,
+                                        "y": 321,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 311,
+                                    "w": 125.71875,
+                                    "h": 36
+                                  },
                                   "text": "Select a fruit"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 286,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Select a fruit"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 250,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With Groups & LabelsSelect a fruit"
                         },
                         {
@@ -4947,6 +6206,12 @@
                                         "data-slot": "select-value"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 692,
+                                        "y": 319,
+                                        "w": 93.546875,
+                                        "h": 20
+                                      },
                                       "text": "Select an item"
                                     },
                                     {
@@ -4963,15 +6228,39 @@
                                       "attrs": {
                                         "aria-hidden": "true"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 791.546875,
+                                        "y": 321,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 311,
+                                    "w": 135.546875,
+                                    "h": 36
+                                  },
                                   "text": "Select an item"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 286,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Select an item"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 250,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Large ListSelect an item"
                         },
                         {
@@ -5047,6 +6336,12 @@
                                             "data-slot": "select-value"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 212,
+                                            "y": 471,
+                                            "w": 66.296875,
+                                            "h": 20
+                                          },
                                           "text": "Small size"
                                         },
                                         {
@@ -5064,9 +6359,21 @@
                                           "attrs": {
                                             "aria-hidden": "true"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 284.296875,
+                                            "y": 473,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 465,
+                                        "w": 108.296875,
+                                        "h": 32
+                                      },
                                       "text": "Small size"
                                     },
                                     {
@@ -5105,6 +6412,12 @@
                                             "data-slot": "select-value"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 212,
+                                            "y": 521,
+                                            "w": 77.953125,
+                                            "h": 20
+                                          },
                                           "text": "Default size"
                                         },
                                         {
@@ -5122,18 +6435,48 @@
                                           "attrs": {
                                             "aria-hidden": "true"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 295.953125,
+                                            "y": 523,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 513,
+                                        "w": 119.953125,
+                                        "h": 36
+                                      },
                                       "text": "Default size"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 465,
+                                    "w": 398,
+                                    "h": 84
+                                  },
                                   "text": "Small sizeDefault size"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 440,
+                                "w": 448,
+                                "h": 134
+                              },
                               "text": "Small sizeDefault size"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 404,
+                            "w": 448,
+                            "h": 170
+                          },
                           "text": "SizesSmall sizeDefault size"
                         },
                         {
@@ -5246,6 +6589,12 @@
                                                     "data-slot": "item-title"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 693,
+                                                    "y": 475,
+                                                    "w": 45.75,
+                                                    "h": 19.25
+                                                  },
                                                   "text": "Starter"
                                                 },
                                                 {
@@ -5266,15 +6615,39 @@
                                                     "data-slot": "item-description"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 693,
+                                                    "y": 494.25,
+                                                    "w": 213.734375,
+                                                    "h": 18
+                                                  },
                                                   "text": "Perfect for individuals getting started."
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 693,
+                                                "y": 475,
+                                                "w": 213.734375,
+                                                "h": 37.25
+                                              },
                                               "text": "StarterPerfect for individuals getting started."
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 692,
+                                            "y": 474,
+                                            "w": 215.734375,
+                                            "h": 39.25
+                                          },
                                           "text": "StarterPerfect for individuals getting started."
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 692,
+                                        "y": 474,
+                                        "w": 215.734375,
+                                        "h": 39.25
+                                      },
                                       "text": "StarterPerfect for individuals getting started."
                                     },
                                     {
@@ -5291,15 +6664,39 @@
                                       "attrs": {
                                         "aria-hidden": "true"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 944,
+                                        "y": 485.625,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 465,
+                                    "w": 288,
+                                    "h": 57.25
+                                  },
                                   "text": "StarterPerfect for individuals getting started."
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 440,
+                                "w": 448,
+                                "h": 134
+                              },
                               "text": "StarterPerfect for individuals getting started."
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 404,
+                            "w": 448,
+                            "h": 170
+                          },
                           "text": "Subscription PlanStarterPerfect for individuals getting started."
                         },
                         {
@@ -5390,6 +6787,12 @@
                                                 "data-slot": "select-value"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 212,
+                                                "y": 673,
+                                                "w": 35.890625,
+                                                "h": 20
+                                              },
                                               "text": "Small"
                                             },
                                             {
@@ -5408,9 +6811,21 @@
                                               "attrs": {
                                                 "aria-hidden": "true"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 253.890625,
+                                                "y": 675,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 667,
+                                            "w": 77.890625,
+                                            "h": 32
+                                          },
                                           "text": "Small"
                                         },
                                         {
@@ -5429,9 +6844,21 @@
                                             "data-slot": "button"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 286.890625,
+                                            "y": 667,
+                                            "w": 68.859375,
+                                            "h": 32
+                                          },
                                           "text": "Submit"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 667,
+                                        "w": 398,
+                                        "h": 32
+                                      },
                                       "text": "SmallSubmit"
                                     },
                                     {
@@ -5485,6 +6912,12 @@
                                                 "data-slot": "select-value"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 212,
+                                                "y": 723,
+                                                "w": 47.546875,
+                                                "h": 20
+                                              },
                                               "text": "Default"
                                             },
                                             {
@@ -5503,9 +6936,21 @@
                                               "attrs": {
                                                 "aria-hidden": "true"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 265.546875,
+                                                "y": 725,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 715,
+                                            "w": 89.546875,
+                                            "h": 36
+                                          },
                                           "text": "Default"
                                         },
                                         {
@@ -5524,18 +6969,48 @@
                                             "data-slot": "button"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 298.546875,
+                                            "y": 715,
+                                            "w": 68.859375,
+                                            "h": 36
+                                          },
                                           "text": "Submit"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 715,
+                                        "w": 398,
+                                        "h": 36
+                                      },
                                       "text": "DefaultSubmit"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 667,
+                                    "w": 398,
+                                    "h": 84
+                                  },
                                   "text": "SmallSubmitDefaultSubmit"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 642,
+                                "w": 448,
+                                "h": 134
+                              },
                               "text": "SmallSubmitDefaultSubmit"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 606,
+                            "w": 448,
+                            "h": 170
+                          },
                           "text": "With ButtonSmallSubmitDefaultSubmit"
                         },
                         {
@@ -5597,6 +7072,12 @@
                                         "data-slot": "select-value"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 692,
+                                        "y": 675,
+                                        "w": 83.71875,
+                                        "h": 20
+                                      },
                                       "text": "Select a fruit"
                                     },
                                     {
@@ -5613,15 +7094,39 @@
                                       "attrs": {
                                         "aria-hidden": "true"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 781.71875,
+                                        "y": 677,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 667,
+                                    "w": 125.71875,
+                                    "h": 36
+                                  },
                                   "text": "Select a fruit"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 642,
+                                "w": 448,
+                                "h": 134
+                              },
                               "text": "Select a fruit"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 606,
+                            "w": 448,
+                            "h": 170
+                          },
                           "text": "PopperSelect a fruit"
                         },
                         {
@@ -5680,6 +7185,12 @@
                                         "data-slot": "field-label"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 869,
+                                        "w": 398,
+                                        "h": 19.25
+                                      },
                                       "text": "Favorite Fruit"
                                     },
                                     {
@@ -5718,6 +7229,12 @@
                                             "data-slot": "select-value"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 212,
+                                            "y": 908.25,
+                                            "w": 83.71875,
+                                            "h": 20
+                                          },
                                           "text": "Select a fruit"
                                         },
                                         {
@@ -5735,9 +7252,21 @@
                                           "attrs": {
                                             "aria-hidden": "true"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 574,
+                                            "y": 910.25,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 900.25,
+                                        "w": 398,
+                                        "h": 36
+                                      },
                                       "text": "Select a fruit"
                                     },
                                     {
@@ -5755,15 +7284,39 @@
                                         "data-slot": "field-description"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 948.25,
+                                        "w": 398,
+                                        "h": 21
+                                      },
                                       "text": "Choose your favorite fruit from the list."
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 869,
+                                    "w": 398,
+                                    "h": 100.25
+                                  },
                                   "text": "Favorite FruitSelect a fruitChoose your favorite fruit from the list."
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 844,
+                                "w": 448,
+                                "h": 201.25
+                              },
                               "text": "Favorite FruitSelect a fruitChoose your favorite fruit from the list."
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 808,
+                            "w": 448,
+                            "h": 237.25
+                          },
                           "text": "With FieldFavorite FruitSelect a fruitChoose your favorite fruit from the list."
                         },
                         {
@@ -5840,6 +7393,12 @@
                                             "data-slot": "select-value"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 692,
+                                            "y": 877,
+                                            "w": 83.71875,
+                                            "h": 20
+                                          },
                                           "text": "Select a fruit"
                                         },
                                         {
@@ -5857,9 +7416,21 @@
                                           "attrs": {
                                             "aria-hidden": "true"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 781.71875,
+                                            "y": 879,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 869,
+                                        "w": 125.71875,
+                                        "h": 36
+                                      },
                                       "text": "Select a fruit"
                                     },
                                     {
@@ -5895,6 +7466,12 @@
                                             "data-slot": "field-label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 921,
+                                            "w": 398,
+                                            "h": 19.25
+                                          },
                                           "text": "Favorite Fruit"
                                         },
                                         {
@@ -5936,6 +7513,12 @@
                                                 "data-slot": "select-value"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 692,
+                                                "y": 960.25,
+                                                "w": 83.71875,
+                                                "h": 20
+                                              },
                                               "text": "Select a fruit"
                                             },
                                             {
@@ -5954,9 +7537,21 @@
                                               "attrs": {
                                                 "aria-hidden": "true"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 1054,
+                                                "y": 962.25,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 952.25,
+                                            "w": 398,
+                                            "h": 36
+                                          },
                                           "text": "Select a fruit"
                                         },
                                         {
@@ -5976,18 +7571,48 @@
                                             "data-slot": "field-error"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 1000.25,
+                                            "w": 398,
+                                            "h": 20
+                                          },
                                           "text": "Please select a valid fruit."
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 921,
+                                        "w": 398,
+                                        "h": 99.25
+                                      },
                                       "text": "Favorite FruitSelect a fruitPlease select a valid fruit."
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 869,
+                                    "w": 398,
+                                    "h": 151.25
+                                  },
                                   "text": "Select a fruitFavorite FruitSelect a fruitPlease select a valid fruit."
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 844,
+                                "w": 448,
+                                "h": 201.25
+                              },
                               "text": "Select a fruitFavorite FruitSelect a fruitPlease select a valid fruit."
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 808,
+                            "w": 448,
+                            "h": 237.25
+                          },
                           "text": "InvalidSelect a fruitFavorite FruitSelect a fruitPlease select a valid fruit."
                         },
                         {
@@ -6041,7 +7666,13 @@
                                       "attrs": {
                                         "data-slot": "input"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 1138.25,
+                                        "w": 102,
+                                        "h": 36
+                                      }
                                     },
                                     {
                                       "tag": "button",
@@ -6079,6 +7710,12 @@
                                             "data-slot": "select-value"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 322,
+                                            "y": 1146.25,
+                                            "w": 33.140625,
+                                            "h": 20
+                                          },
                                           "text": "Filter"
                                         },
                                         {
@@ -6096,9 +7733,21 @@
                                           "attrs": {
                                             "aria-hidden": "true"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 426,
+                                            "y": 1148.25,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 311,
+                                        "y": 1138.25,
+                                        "w": 140,
+                                        "h": 36
+                                      },
                                       "text": "Filter"
                                     },
                                     {
@@ -6149,6 +7798,12 @@
                                                 "data-slot": "native-select-option"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 0,
+                                                "y": 0,
+                                                "w": 0,
+                                                "h": 0
+                                              },
                                               "text": "Sort by"
                                             },
                                             {
@@ -6168,6 +7823,12 @@
                                                 "data-slot": "native-select-option"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 0,
+                                                "y": 0,
+                                                "w": 0,
+                                                "h": 0
+                                              },
                                               "text": "Name"
                                             },
                                             {
@@ -6187,6 +7848,12 @@
                                                 "data-slot": "native-select-option"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 0,
+                                                "y": 0,
+                                                "w": 0,
+                                                "h": 0
+                                              },
                                               "text": "Date"
                                             },
                                             {
@@ -6206,9 +7873,21 @@
                                                 "data-slot": "native-select-option"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 0,
+                                                "y": 0,
+                                                "w": 0,
+                                                "h": 0
+                                              },
                                               "text": "Status"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 459,
+                                            "y": 1138.25,
+                                            "w": 140,
+                                            "h": 36
+                                          },
                                           "text": "Sort byNameDateStatus"
                                         },
                                         {
@@ -6227,18 +7906,48 @@
                                             "aria-hidden": "true",
                                             "data-slot": "native-select-icon"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 573,
+                                            "y": 1148.25,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 459,
+                                        "y": 1138.25,
+                                        "w": 140,
+                                        "h": 36
+                                      },
                                       "text": "Sort byNameDateStatus"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 1138.25,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "FilterSort byNameDateStatus"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 1113.25,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "FilterSort byNameDateStatus"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 1077.25,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Inline with Input & NativeSelectFilterSort byNameDateStatus"
                         },
                         {
@@ -6301,6 +8010,12 @@
                                         "data-slot": "select-value"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 692,
+                                        "y": 1146.25,
+                                        "w": 57.453125,
+                                        "h": 20
+                                      },
                                       "text": "Disabled"
                                     },
                                     {
@@ -6317,15 +8032,39 @@
                                       "attrs": {
                                         "aria-hidden": "true"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 755.453125,
+                                        "y": 1148.25,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 1138.25,
+                                    "w": 99.453125,
+                                    "h": 36
+                                  },
                                   "text": "Disabled"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 1113.25,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Disabled"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 1077.25,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "DisabledDisabled"
                         },
                         {
@@ -6371,21 +8110,57 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 1292.25,
+                                    "w": 104.015625,
+                                    "h": 36
+                                  },
                                   "text": "Open Dialog"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 1267.25,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Open Dialog"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 1231.25,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "In DialogOpen Dialog"
                         }
                       ],
-                      "text": "BasicBananaWith IconsChart TypeChart TypeWith Groups & LabelsSelect a fruitLarge ListSelect an itemSizesSmall sizeDefaul…"
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 1401.25
+                      },
+                      "text": "BasicAppleWith IconsChart TypeChart TypeWith Groups & LabelsSelect a fruitLarge ListSelect an itemSizesSmall sizeDefault…"
                     }
                   ],
-                  "text": "BasicBananaWith IconsChart TypeChart TypeWith Groups & LabelsSelect a fruitLarge ListSelect an itemSizesSmall sizeDefaul…"
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 1401.25
+                  },
+                  "text": "BasicAppleWith IconsChart TypeChart TypeWith Groups & LabelsSelect a fruitLarge ListSelect an itemSizesSmall sizeDefault…"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 1401.25
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -6400,9 +8175,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 1401.25,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 1401.25
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -6415,7 +8202,7 @@
             {
               "role": "combobox",
               "name": "",
-              "value": "Banana",
+              "value": "Apple",
               "focused": true,
               "haspopup": "listbox"
             },
@@ -6617,30 +8404,6 @@
               "role": "button",
               "name": "Open Dialog",
               "haspopup": "dialog"
-            },
-            {
-              "role": "StaticText",
-              "name": "xs"
-            },
-            {
-              "role": "StaticText",
-              "name": "sm"
-            },
-            {
-              "role": "StaticText",
-              "name": "md"
-            },
-            {
-              "role": "StaticText",
-              "name": "lg"
-            },
-            {
-              "role": "StaticText",
-              "name": "xl"
-            },
-            {
-              "role": "StaticText",
-              "name": "2xl"
             },
             {
               "role": "region",
