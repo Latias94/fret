@@ -21,7 +21,13 @@ pub mod style;
 pub use a11y::NodeGraphA11yActiveDescendant;
 pub use a11y::{NodeGraphA11yFocusedEdge, NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort};
 pub use canvas::NodeGraphCanvas;
+pub use canvas::NodeGraphCanvasWith;
 pub use canvas::NodeResizeHandle;
+pub use canvas::{
+    NodeGraphCanvasCommandOutcome, NodeGraphCanvasCommitOutcome, NodeGraphCanvasEventOutcome,
+    NodeGraphCanvasMiddleware, NodeGraphCanvasMiddlewareChain, NodeGraphCanvasMiddlewareCx,
+    NoopNodeGraphCanvasMiddleware,
+};
 pub use commands::register_node_graph_commands;
 pub use edge_types::{EdgeTypeKey, NodeGraphEdgeTypes};
 pub use edit_queue::NodeGraphEditQueue;

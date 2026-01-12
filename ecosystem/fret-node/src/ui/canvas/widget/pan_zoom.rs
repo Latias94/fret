@@ -4,12 +4,12 @@ use fret_core::{MouseButton, Point};
 use fret_runtime::Effect;
 use fret_ui::UiHost;
 
-use super::{NodeGraphCanvas, ViewSnapshot};
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot};
 use crate::core::CanvasPoint;
 use crate::runtime::callbacks::{ViewportMoveEndOutcome, ViewportMoveKind};
 
-pub(super) fn begin_panning<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn begin_panning<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     start_pos: Point,
@@ -70,8 +70,8 @@ pub(super) fn begin_panning<H: UiHost>(
     true
 }
 
-pub(super) fn handle_panning_move<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_panning_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,

@@ -3,10 +3,10 @@ use fret_ui::UiHost;
 
 use super::super::searcher::SearcherRowKind;
 use super::super::state::PendingInsertNodeDrag;
-use super::NodeGraphCanvas;
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
-pub(super) fn handle_searcher_escape<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_searcher_escape<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
 ) -> bool {
     if canvas.interaction.searcher.take().is_some() {
@@ -20,8 +20,8 @@ pub(super) fn handle_searcher_escape<H: UiHost>(
     false
 }
 
-pub(super) fn handle_searcher_key_down<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_searcher_key_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     key: fret_core::KeyCode,
     modifiers: Modifiers,
@@ -58,14 +58,14 @@ pub(super) fn handle_searcher_key_down<H: UiHost>(
                     if searcher
                         .rows
                         .get(ix)
-                        .is_some_and(NodeGraphCanvas::searcher_is_selectable_row)
+                        .is_some_and(NodeGraphCanvasWith::<M>::searcher_is_selectable_row)
                     {
                         searcher.active_row = ix;
                         break;
                     }
                     ix = (ix + 1) % n;
                 }
-                NodeGraphCanvas::ensure_searcher_active_visible(searcher);
+                NodeGraphCanvasWith::<M>::ensure_searcher_active_visible(searcher);
             }
             cx.stop_propagation();
             cx.request_redraw();
@@ -84,14 +84,14 @@ pub(super) fn handle_searcher_key_down<H: UiHost>(
                     if searcher
                         .rows
                         .get(ix)
-                        .is_some_and(NodeGraphCanvas::searcher_is_selectable_row)
+                        .is_some_and(NodeGraphCanvasWith::<M>::searcher_is_selectable_row)
                     {
                         searcher.active_row = ix;
                         break;
                     }
                     ix = if ix == 0 { n - 1 } else { ix - 1 };
                 }
-                NodeGraphCanvas::ensure_searcher_active_visible(searcher);
+                NodeGraphCanvasWith::<M>::ensure_searcher_active_visible(searcher);
             }
             cx.stop_propagation();
             cx.request_redraw();
@@ -101,7 +101,7 @@ pub(super) fn handle_searcher_key_down<H: UiHost>(
         fret_core::KeyCode::Backspace => {
             if !searcher.query.is_empty() {
                 searcher.query.pop();
-                NodeGraphCanvas::rebuild_searcher_rows(searcher);
+                NodeGraphCanvasWith::<M>::rebuild_searcher_rows(searcher);
                 cx.stop_propagation();
                 cx.request_redraw();
                 cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
@@ -116,7 +116,7 @@ pub(super) fn handle_searcher_key_down<H: UiHost>(
         && let Some(ch) = fret_core::keycode_to_ascii_lowercase(key)
     {
         searcher.query.push(ch);
-        NodeGraphCanvas::rebuild_searcher_rows(searcher);
+        NodeGraphCanvasWith::<M>::rebuild_searcher_rows(searcher);
         cx.stop_propagation();
         cx.request_redraw();
         cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
@@ -126,8 +126,8 @@ pub(super) fn handle_searcher_key_down<H: UiHost>(
     false
 }
 
-pub(super) fn handle_searcher_pointer_down<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_searcher_pointer_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     position: Point,
     button: MouseButton,
@@ -155,7 +155,8 @@ pub(super) fn handle_searcher_pointer_down<H: UiHost>(
                     .searcher
                     .as_ref()
                     .and_then(|s| s.rows.get(row_ix));
-                let selectable = row.is_some_and(NodeGraphCanvas::searcher_is_selectable_row);
+                let selectable =
+                    row.is_some_and(NodeGraphCanvasWith::<M>::searcher_is_selectable_row);
                 if selectable {
                     let candidate = canvas
                         .interaction
@@ -180,7 +181,7 @@ pub(super) fn handle_searcher_pointer_down<H: UiHost>(
                     && selectable
                 {
                     searcher.active_row = row_ix;
-                    NodeGraphCanvas::ensure_searcher_active_visible(searcher);
+                    NodeGraphCanvasWith::<M>::ensure_searcher_active_visible(searcher);
                 }
             } else if !inside {
                 canvas.interaction.searcher = None;
@@ -213,8 +214,8 @@ pub(super) fn handle_searcher_pointer_down<H: UiHost>(
     }
 }
 
-pub(super) fn handle_searcher_pointer_up<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_searcher_pointer_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     position: Point,
     button: MouseButton,
@@ -254,8 +255,8 @@ pub(super) fn handle_searcher_pointer_up<H: UiHost>(
     false
 }
 
-pub(super) fn handle_searcher_pointer_move<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_searcher_pointer_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     position: Point,
     zoom: f32,
@@ -271,10 +272,10 @@ pub(super) fn handle_searcher_pointer_move<H: UiHost>(
             && searcher
                 .rows
                 .get(ix)
-                .is_some_and(NodeGraphCanvas::searcher_is_selectable_row)
+                .is_some_and(NodeGraphCanvasWith::<M>::searcher_is_selectable_row)
         {
             searcher.active_row = ix;
-            NodeGraphCanvas::ensure_searcher_active_visible(searcher);
+            NodeGraphCanvasWith::<M>::ensure_searcher_active_visible(searcher);
         }
         cx.request_redraw();
         cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
@@ -282,8 +283,8 @@ pub(super) fn handle_searcher_pointer_move<H: UiHost>(
     true
 }
 
-pub(super) fn handle_searcher_wheel<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_searcher_wheel<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     delta: Point,
     modifiers: Modifiers,
@@ -310,7 +311,7 @@ pub(super) fn handle_searcher_wheel<H: UiHost>(
         searcher.scroll = (searcher.scroll + 1).min(max_scroll);
     }
 
-    NodeGraphCanvas::ensure_searcher_active_visible(searcher);
+    NodeGraphCanvasWith::<M>::ensure_searcher_active_visible(searcher);
     cx.request_redraw();
     cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
     true

@@ -10,7 +10,7 @@ use super::super::state::{
     PendingNodeDrag, PendingNodeResize, PendingNodeSelectAction, PendingWireDrag, ViewSnapshot,
     WireDragKind,
 };
-use super::NodeGraphCanvas;
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
 fn node_header_hit(rect: Rect, header_height_screen: f32, zoom: f32, position: Point) -> bool {
     let zoom = if zoom.is_finite() && zoom > 0.0 {
@@ -31,8 +31,8 @@ fn node_header_hit(rect: Rect, header_height_screen: f32, zoom: f32, position: P
         && header_h > 0.0
 }
 
-pub(super) fn handle_left_click_pointer_down<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_left_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,
@@ -141,7 +141,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                             continue;
                         }
                         let hit_rect = this.node_resize_handle_rect(rect, handle, zoom);
-                        if NodeGraphCanvas::rect_contains(hit_rect, position) {
+                        if NodeGraphCanvasWith::<M>::rect_contains(hit_rect, position) {
                             return Hit::Resize(node, rect, handle);
                         }
                     }
@@ -198,7 +198,11 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             let port_base_connectable = canvas
                 .graph
                 .read_ref(cx.app, |graph| {
-                    NodeGraphCanvas::port_is_connectable_base(graph, &snapshot.interaction, port)
+                    NodeGraphCanvasWith::<M>::port_is_connectable_base(
+                        graph,
+                        &snapshot.interaction,
+                        port,
+                    )
                 })
                 .ok()
                 .unwrap_or(false);
@@ -206,7 +210,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                 && canvas
                     .graph
                     .read_ref(cx.app, |graph| {
-                        NodeGraphCanvas::port_is_connectable_start(
+                        NodeGraphCanvasWith::<M>::port_is_connectable_start(
                             graph,
                             &snapshot.interaction,
                             port,
@@ -218,7 +222,11 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                 && canvas
                     .graph
                     .read_ref(cx.app, |graph| {
-                        NodeGraphCanvas::port_is_connectable_end(graph, &snapshot.interaction, port)
+                        NodeGraphCanvasWith::<M>::port_is_connectable_end(
+                            graph,
+                            &snapshot.interaction,
+                            port,
+                        )
                     })
                     .ok()
                     .unwrap_or(false);
@@ -307,7 +315,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             let edge_selectable = canvas
                 .graph
                 .read_ref(cx.app, |g| {
-                    NodeGraphCanvas::edge_is_selectable(g, &snapshot.interaction, edge)
+                    NodeGraphCanvasWith::<M>::edge_is_selectable(g, &snapshot.interaction, edge)
                 })
                 .ok()
                 .unwrap_or(false);
@@ -456,14 +464,14 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             let node_selectable = canvas
                 .graph
                 .read_ref(cx.app, |g| {
-                    NodeGraphCanvas::node_is_selectable(g, &snapshot.interaction, node)
+                    NodeGraphCanvasWith::<M>::node_is_selectable(g, &snapshot.interaction, node)
                 })
                 .ok()
                 .unwrap_or(false);
             let node_draggable = canvas
                 .graph
                 .read_ref(cx.app, |g| {
-                    NodeGraphCanvas::node_is_draggable(g, &snapshot.interaction, node)
+                    NodeGraphCanvasWith::<M>::node_is_draggable(g, &snapshot.interaction, node)
                 })
                 .ok()
                 .unwrap_or(false);
@@ -502,7 +510,11 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                         .iter()
                         .copied()
                         .filter(|id| {
-                            NodeGraphCanvas::node_is_draggable(g, &snapshot.interaction, *id)
+                            NodeGraphCanvasWith::<M>::node_is_draggable(
+                                g,
+                                &snapshot.interaction,
+                                *id,
+                            )
                         })
                         .collect::<Vec<_>>()
                 })
@@ -549,7 +561,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             let edge_selectable = canvas
                 .graph
                 .read_ref(cx.app, |g| {
-                    NodeGraphCanvas::edge_is_selectable(g, &snapshot.interaction, edge)
+                    NodeGraphCanvasWith::<M>::edge_is_selectable(g, &snapshot.interaction, edge)
                 })
                 .ok()
                 .unwrap_or(false);

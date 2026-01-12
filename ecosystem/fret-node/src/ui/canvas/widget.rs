@@ -63,6 +63,10 @@ use crate::ui::{
     NodeGraphInternalsStore, NodeGraphOverlayState,
 };
 
+use super::middleware::{
+    NodeGraphCanvasCommandOutcome, NodeGraphCanvasCommitOutcome, NodeGraphCanvasEventOutcome,
+    NodeGraphCanvasMiddleware, NodeGraphCanvasMiddlewareCx, NoopNodeGraphCanvasMiddleware,
+};
 use super::paint::CanvasPaintCache;
 use super::state::ViewportMoveDebounceState;
 
@@ -137,7 +141,9 @@ enum PortNavDir {
 /// - zoom (Ctrl+wheel, centered),
 /// - node drag (LMB),
 /// - connect ports (LMB drag pin -> pin).
-pub struct NodeGraphCanvas {
+pub type NodeGraphCanvas = NodeGraphCanvasWith<NoopNodeGraphCanvasMiddleware>;
+
+pub struct NodeGraphCanvasWith<M> {
     graph: Model<Graph>,
     view_state: Model<NodeGraphViewState>,
     store: Option<Model<NodeGraphStore>>,
@@ -145,6 +151,7 @@ pub struct NodeGraphCanvas {
     presenter: Box<dyn NodeGraphPresenter>,
     edge_types: Option<NodeGraphEdgeTypes>,
     callbacks: Option<Box<dyn NodeGraphCallbacks>>,
+    middleware: M,
     style: NodeGraphStyle,
     close_command: Option<CommandId>,
 
@@ -171,7 +178,13 @@ pub struct NodeGraphCanvas {
     interaction: InteractionState,
 }
 
-impl NodeGraphCanvas {
+impl NodeGraphCanvasWith<NoopNodeGraphCanvasMiddleware> {
+    pub fn new(graph: Model<Graph>, view_state: Model<NodeGraphViewState>) -> Self {
+        Self::new_with_middleware(graph, view_state, NoopNodeGraphCanvasMiddleware)
+    }
+}
+
+impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     const REROUTE_INPUTS: usize = 1;
     const REROUTE_OUTPUTS: usize = 1;
     const AUTO_PAN_TICK_HZ: f32 = 60.0;
@@ -585,7 +598,11 @@ impl NodeGraphCanvas {
         (geom, index)
     }
 
-    pub fn new(graph: Model<Graph>, view_state: Model<NodeGraphViewState>) -> Self {
+    pub fn new_with_middleware(
+        graph: Model<Graph>,
+        view_state: Model<NodeGraphViewState>,
+        middleware: M,
+    ) -> Self {
         let auto_measured = Arc::new(MeasuredGeometryStore::new());
         Self {
             graph,
@@ -598,6 +615,7 @@ impl NodeGraphCanvas {
             )),
             edge_types: None,
             callbacks: None,
+            middleware,
             style: NodeGraphStyle::default(),
             close_command: None,
             auto_measured,
@@ -640,6 +658,40 @@ impl NodeGraphCanvas {
     pub fn with_callbacks(mut self, callbacks: impl NodeGraphCallbacks) -> Self {
         self.callbacks = Some(Box::new(callbacks));
         self
+    }
+
+    pub fn with_middleware<M2: NodeGraphCanvasMiddleware>(
+        self,
+        middleware: M2,
+    ) -> NodeGraphCanvasWith<M2> {
+        NodeGraphCanvasWith {
+            graph: self.graph,
+            view_state: self.view_state,
+            store: self.store,
+            store_rev: self.store_rev,
+            presenter: self.presenter,
+            edge_types: self.edge_types,
+            callbacks: self.callbacks,
+            middleware,
+            style: self.style,
+            close_command: self.close_command,
+            auto_measured: self.auto_measured,
+            auto_measured_key: self.auto_measured_key,
+            edit_queue: self.edit_queue,
+            edit_queue_key: self.edit_queue_key,
+            overlays: self.overlays,
+            measured_output: self.measured_output,
+            measured_output_key: self.measured_output_key,
+            internals: self.internals,
+            internals_key: self.internals_key,
+            cached_pan: self.cached_pan,
+            cached_zoom: self.cached_zoom,
+            history: self.history,
+            geometry: self.geometry,
+            paint_cache: self.paint_cache,
+            text_blobs: self.text_blobs,
+            interaction: self.interaction,
+        }
     }
 
     /// Configures a store to receive derived measured geometry each frame.
@@ -1467,11 +1519,35 @@ impl NodeGraphCanvas {
             return true;
         }
 
-        let tx = GraphTransaction {
+        let mut tx = GraphTransaction {
             label: label.map(|s| s.to_string()),
             ops,
         };
-        self.commit_transaction(host, window, &tx)
+
+        let snapshot = self.sync_view_state(host);
+        let outcome = {
+            let ctx = NodeGraphCanvasMiddlewareCx {
+                graph: &self.graph,
+                view_state: &self.view_state,
+                store: self.store.as_ref(),
+                edit_queue: self.edit_queue.as_ref(),
+                overlays: self.overlays.as_ref(),
+                style: &self.style,
+                bounds: self.interaction.last_bounds,
+                pan: snapshot.pan,
+                zoom: snapshot.zoom,
+            };
+            self.middleware.before_commit(host, window, &ctx, &mut tx)
+        };
+        match outcome {
+            NodeGraphCanvasCommitOutcome::Continue => self.commit_transaction(host, window, &tx),
+            NodeGraphCanvasCommitOutcome::Reject { diagnostics } => {
+                if let Some((sev, msg)) = Self::toast_from_diagnostics(&diagnostics) {
+                    self.show_toast(host, window, sev, msg);
+                }
+                false
+            }
+        }
     }
 
     fn commit_transaction<H: UiHost>(
@@ -5538,7 +5614,7 @@ impl NodeGraphCanvas {
     }
 }
 
-impl<H: UiHost> Widget<H> for NodeGraphCanvas {
+impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<M> {
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         self.paint_cache.clear(services);
         for id in self.text_blobs.drain(..) {
@@ -5550,6 +5626,27 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         let snapshot = self.sync_view_state(cx.app);
         if cx.input_ctx.focus_is_text_input && command.as_str().starts_with("node_graph.") {
             return false;
+        }
+
+        let mw_outcome = {
+            let mw_ctx = NodeGraphCanvasMiddlewareCx {
+                graph: &self.graph,
+                view_state: &self.view_state,
+                store: self.store.as_ref(),
+                edit_queue: self.edit_queue.as_ref(),
+                overlays: self.overlays.as_ref(),
+                style: &self.style,
+                bounds: self.interaction.last_bounds,
+                pan: snapshot.pan,
+                zoom: snapshot.zoom,
+            };
+            self.middleware.handle_command(cx, &mw_ctx, command)
+        };
+        if mw_outcome == NodeGraphCanvasCommandOutcome::Handled {
+            cx.stop_propagation();
+            cx.request_redraw();
+            cx.invalidate_self(Invalidation::Paint);
+            return true;
         }
 
         match command.as_str() {
@@ -6411,6 +6508,27 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         let snapshot = self.sync_view_state(cx.app);
         self.interaction.last_bounds = Some(cx.bounds);
         let zoom = snapshot.zoom;
+
+        let mw_outcome = {
+            let mw_ctx = NodeGraphCanvasMiddlewareCx {
+                graph: &self.graph,
+                view_state: &self.view_state,
+                store: self.store.as_ref(),
+                edit_queue: self.edit_queue.as_ref(),
+                overlays: self.overlays.as_ref(),
+                style: &self.style,
+                bounds: Some(cx.bounds),
+                pan: snapshot.pan,
+                zoom: snapshot.zoom,
+            };
+            self.middleware.handle_event(cx, &mw_ctx, event)
+        };
+        if mw_outcome == NodeGraphCanvasEventOutcome::Handled {
+            cx.stop_propagation();
+            cx.request_redraw();
+            cx.invalidate_self(Invalidation::Paint);
+            return;
+        }
 
         match event {
             Event::ClipboardText { token, text } => {
@@ -9196,6 +9314,7 @@ mod tests {
     mod hit_testing_conformance;
     mod interaction_conformance;
     mod internals_conformance;
+    mod middleware_conformance;
     mod perf_cache;
     mod portal_conformance;
     mod portal_keyboard_conformance;

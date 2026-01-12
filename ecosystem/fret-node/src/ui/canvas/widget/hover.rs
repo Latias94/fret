@@ -5,10 +5,10 @@ use crate::core::EdgeId;
 use crate::rules::EdgeEndpoint;
 
 use super::super::state::ViewSnapshot;
-use super::NodeGraphCanvas;
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
-pub(super) fn update_hover_edge<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn update_hover_edge<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,

@@ -14,10 +14,10 @@ use crate::ui::commands::{
 use crate::ui::presenter::{NodeGraphContextMenuAction, NodeGraphContextMenuItem};
 
 use super::super::state::{ContextMenuState, ContextMenuTarget, ViewSnapshot};
-use super::NodeGraphCanvas;
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
-pub(super) fn handle_right_click_pointer_down<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_right_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,

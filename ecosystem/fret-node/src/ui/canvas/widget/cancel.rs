@@ -2,11 +2,11 @@ use fret_ui::UiHost;
 
 use fret_runtime::Effect;
 
-use super::NodeGraphCanvas;
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 use crate::runtime::callbacks::{NodeDragEndOutcome, ViewportMoveEndOutcome, ViewportMoveKind};
 
-fn cancel_active_gestures_inner<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+fn cancel_active_gestures_inner<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     consume: bool,
 ) {
@@ -137,15 +137,15 @@ fn cancel_active_gestures_inner<H: UiHost>(
     }
 }
 
-pub(super) fn cancel_active_gestures<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn cancel_active_gestures<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
 ) {
     cancel_active_gestures_inner(canvas, cx, false);
 }
 
-pub(super) fn handle_escape_cancel<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_escape_cancel<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
 ) {
     cancel_active_gestures_inner(canvas, cx, true);

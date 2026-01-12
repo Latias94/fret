@@ -11,8 +11,8 @@ use crate::rules::ConnectDecision;
 use crate::ui::presenter::InsertNodeCandidate;
 
 use super::super::state::{InsertNodeDragPreview, ViewSnapshot};
-use super::NodeGraphCanvas;
 use super::threshold::exceeds_drag_threshold;
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
 /// Payload type for "drag a node from the palette/searcher into the canvas".
 #[derive(Debug, Clone)]
@@ -31,8 +31,8 @@ fn canvas_to_window(bounds: Rect, pos: Point, pan: crate::core::CanvasPoint, zoo
     Point::new(Px(x), Px(y))
 }
 
-pub(super) fn handle_pending_insert_node_drag_move<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,
@@ -90,8 +90,8 @@ pub(super) fn handle_pending_insert_node_drag_move<H: UiHost>(
     true
 }
 
-pub(super) fn handle_internal_drag_event<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_internal_drag_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     event: &InternalDragEvent,
@@ -224,7 +224,7 @@ pub(super) fn handle_internal_drag_event<H: UiHost>(
                     .flatten();
 
                 if let Some(Ok(ops)) = planned {
-                    let node_id = NodeGraphCanvas::first_added_node_id(&ops);
+                    let node_id = NodeGraphCanvasWith::<M>::first_added_node_id(&ops);
                     applied = canvas.commit_ops(cx.app, cx.window, Some("Insert Node"), ops);
                     if applied && let Some(node_id) = node_id {
                         canvas.update_view_state(cx.app, |s| {
@@ -237,7 +237,9 @@ pub(super) fn handle_internal_drag_event<H: UiHost>(
                         });
                     }
                 } else if let Some(Err(diags)) = planned {
-                    if let Some((sev, msg)) = NodeGraphCanvas::toast_from_diagnostics(&diags) {
+                    if let Some((sev, msg)) =
+                        NodeGraphCanvasWith::<M>::toast_from_diagnostics(&diags)
+                    {
                         canvas.show_toast(cx.app, cx.window, sev, msg);
                     }
                 }
@@ -245,7 +247,7 @@ pub(super) fn handle_internal_drag_event<H: UiHost>(
 
             if !applied {
                 let ops: Option<Vec<GraphOp>> = if candidate.kind.0 == REROUTE_KIND {
-                    Some(NodeGraphCanvas::build_reroute_create_ops(at))
+                    Some(NodeGraphCanvasWith::<M>::build_reroute_create_ops(at))
                 } else {
                     let presenter = &mut *canvas.presenter;
                     canvas
@@ -258,7 +260,7 @@ pub(super) fn handle_internal_drag_event<H: UiHost>(
                 };
 
                 if let Some(ops) = ops {
-                    let node_id = NodeGraphCanvas::first_added_node_id(&ops);
+                    let node_id = NodeGraphCanvasWith::<M>::first_added_node_id(&ops);
                     if canvas.commit_ops(cx.app, cx.window, Some("Insert Node"), ops) {
                         if let Some(node_id) = node_id {
                             canvas.update_view_state(cx.app, |s| {

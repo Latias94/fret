@@ -2,11 +2,11 @@ use fret_core::Point;
 use fret_ui::UiHost;
 
 use super::super::state::{EdgeInsertDrag, ViewSnapshot};
-use super::NodeGraphCanvas;
 use super::threshold::exceeds_drag_threshold;
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
-pub(super) fn handle_pending_edge_insert_drag_move<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_pending_edge_insert_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,
@@ -33,8 +33,8 @@ pub(super) fn handle_pending_edge_insert_drag_move<H: UiHost>(
     true
 }
 
-pub(super) fn handle_edge_insert_drag_move<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_edge_insert_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     position: Point,
 ) -> bool {
@@ -48,8 +48,8 @@ pub(super) fn handle_edge_insert_drag_move<H: UiHost>(
     true
 }
 
-pub(super) fn handle_edge_insert_left_up<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_edge_insert_left_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     position: Point,
 ) -> bool {

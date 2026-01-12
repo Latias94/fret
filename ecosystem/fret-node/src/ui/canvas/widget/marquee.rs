@@ -6,7 +6,7 @@ use fret_ui::UiHost;
 use crate::core::NodeId as GraphNodeId;
 
 use super::super::state::{MarqueeDrag, PendingMarqueeDrag, ViewSnapshot};
-use super::NodeGraphCanvas;
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
 fn nodes_in_marquee(
     graph: &crate::core::Graph,
@@ -27,8 +27,8 @@ fn nodes_in_marquee(
         .collect()
 }
 
-pub(super) fn begin_background_marquee<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn begin_background_marquee<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     pos: Point,
@@ -46,8 +46,8 @@ pub(super) fn begin_background_marquee<H: UiHost>(
     cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
 }
 
-pub(super) fn handle_marquee_move<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_marquee_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,
@@ -167,8 +167,8 @@ pub(super) fn handle_marquee_move<H: UiHost>(
     false
 }
 
-pub(super) fn handle_left_up<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_left_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
 ) -> bool {
     if canvas.interaction.marquee.take().is_some() {

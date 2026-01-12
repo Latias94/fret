@@ -2,12 +2,12 @@ use fret_core::{Modifiers, Point};
 use fret_ui::UiHost;
 
 use super::super::state::{ViewSnapshot, WireDrag};
-use super::NodeGraphCanvas;
 use super::threshold::exceeds_drag_threshold;
 use super::wire_drag;
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
-pub(super) fn handle_pending_wire_drag_move<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_pending_wire_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,

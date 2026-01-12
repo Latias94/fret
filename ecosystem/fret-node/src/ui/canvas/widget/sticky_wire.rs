@@ -8,10 +8,10 @@ use crate::ops::GraphOp;
 use crate::rules::{ConnectDecision, DiagnosticSeverity};
 
 use super::super::state::{ViewSnapshot, WireDragKind};
-use super::NodeGraphCanvas;
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
-pub(super) fn handle_sticky_wire_pointer_down<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_sticky_wire_pointer_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,
@@ -53,7 +53,11 @@ pub(super) fn handle_sticky_wire_pointer_down<H: UiHost>(
         canvas
             .graph
             .read_ref(cx.app, |graph| {
-                NodeGraphCanvas::port_is_connectable_end(graph, &snapshot.interaction, *target)
+                NodeGraphCanvasWith::<M>::port_is_connectable_end(
+                    graph,
+                    &snapshot.interaction,
+                    *target,
+                )
             })
             .ok()
             .unwrap_or(false)
@@ -80,7 +84,7 @@ pub(super) fn handle_sticky_wire_pointer_down<H: UiHost>(
                     match plan.decision {
                         ConnectDecision::Accept => Outcome::Apply(plan.ops),
                         ConnectDecision::Reject => {
-                            NodeGraphCanvas::toast_from_diagnostics(&plan.diagnostics)
+                            NodeGraphCanvasWith::<M>::toast_from_diagnostics(&plan.diagnostics)
                                 .map(|(sev, msg)| Outcome::Reject(sev, msg))
                                 .unwrap_or(Outcome::Ignore)
                         }

@@ -14,10 +14,10 @@ use crate::ui::presenter::{
 
 use super::super::searcher::{SEARCHER_MAX_VISIBLE_ROWS, SearcherRowKind};
 use super::super::state::{ContextMenuState, ContextMenuTarget, SearcherState};
-use super::NodeGraphCanvas;
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
-pub(super) fn open_edge_insert_node_picker<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn open_edge_insert_node_picker<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     host: &mut H,
     window: Option<AppWindowId>,
     edge: EdgeId,
@@ -80,8 +80,8 @@ pub(super) fn open_edge_insert_node_picker<H: UiHost>(
     });
 }
 
-pub(super) fn open_edge_insert_context_menu<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn open_edge_insert_context_menu<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut EventCx<'_, H>,
     edge: EdgeId,
     invoked_at: Point,
@@ -131,8 +131,8 @@ pub(super) fn open_edge_insert_context_menu<H: UiHost>(
     });
 }
 
-pub(super) fn insert_node_on_edge<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn insert_node_on_edge<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut EventCx<'_, H>,
     edge: EdgeId,
     invoked_at: Point,
@@ -164,7 +164,7 @@ pub(super) fn insert_node_on_edge<H: UiHost>(
                 match plan.decision {
                     ConnectDecision::Accept => Outcome::Apply(plan.ops),
                     ConnectDecision::Reject => {
-                        NodeGraphCanvas::toast_from_diagnostics(&plan.diagnostics)
+                        NodeGraphCanvasWith::<M>::toast_from_diagnostics(&plan.diagnostics)
                             .map(|(sev, msg)| Outcome::Reject(sev, msg))
                             .unwrap_or_else(|| {
                                 Outcome::Reject(
@@ -186,7 +186,7 @@ pub(super) fn insert_node_on_edge<H: UiHost>(
         Outcome::Apply(ops) => {
             let select_node = candidate.kind.0 == REROUTE_KIND;
             let node_id = select_node
-                .then(|| NodeGraphCanvas::first_added_node_id(&ops))
+                .then(|| NodeGraphCanvasWith::<M>::first_added_node_id(&ops))
                 .flatten();
             canvas.apply_ops(cx.app, cx.window, ops);
             if let Some(node_id) = node_id {

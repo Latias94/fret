@@ -4,11 +4,11 @@ use fret_ui::UiHost;
 use crate::core::NodeId as GraphNodeId;
 
 use super::super::state::{NodeDrag, PendingNodeSelectAction, ViewSnapshot};
-use super::NodeGraphCanvas;
 use super::threshold::exceeds_drag_threshold;
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
-pub(super) fn handle_pending_node_drag_move<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_pending_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,
@@ -37,7 +37,7 @@ pub(super) fn handle_pending_node_drag_move<H: UiHost>(
     let primary_draggable = canvas
         .graph
         .read_ref(cx.app, |g| {
-            NodeGraphCanvas::node_is_draggable(g, &snapshot.interaction, pending.primary)
+            NodeGraphCanvasWith::<M>::node_is_draggable(g, &snapshot.interaction, pending.primary)
         })
         .ok()
         .unwrap_or(false);
@@ -71,7 +71,9 @@ pub(super) fn handle_pending_node_drag_move<H: UiHost>(
                 .nodes
                 .iter()
                 .copied()
-                .filter(|id| NodeGraphCanvas::node_is_draggable(g, &snapshot.interaction, *id))
+                .filter(|id| {
+                    NodeGraphCanvasWith::<M>::node_is_draggable(g, &snapshot.interaction, *id)
+                })
                 .filter_map(|id| g.nodes.get(&id).map(|n| (id, n.pos)))
                 .collect::<Vec<_>>()
         })

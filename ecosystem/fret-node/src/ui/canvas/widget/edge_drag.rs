@@ -2,11 +2,11 @@ use fret_core::Point;
 use fret_ui::UiHost;
 
 use super::super::state::{ViewSnapshot, WireDrag, WireDragKind};
-use super::NodeGraphCanvas;
 use super::threshold::exceeds_drag_threshold;
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
-pub(super) fn handle_edge_drag_move<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_edge_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,
@@ -43,7 +43,7 @@ pub(super) fn handle_edge_drag_move<H: UiHost>(
     let endpoint_allowed = canvas
         .graph
         .read_ref(cx.app, |graph| {
-            NodeGraphCanvas::edge_endpoint_is_reconnectable(
+            NodeGraphCanvasWith::<M>::edge_endpoint_is_reconnectable(
                 graph,
                 &snapshot.interaction,
                 drag.edge,
@@ -77,8 +77,8 @@ pub(super) fn handle_edge_drag_move<H: UiHost>(
     true
 }
 
-pub(super) fn handle_edge_left_up<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_edge_left_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
 ) -> bool {
     if canvas.interaction.edge_drag.take().is_some() {

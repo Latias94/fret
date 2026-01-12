@@ -2,11 +2,11 @@ use fret_core::Point;
 use fret_ui::UiHost;
 
 use super::super::state::{NodeResize, ViewSnapshot};
-use super::NodeGraphCanvas;
 use super::threshold::exceeds_drag_threshold;
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
-pub(super) fn handle_pending_node_resize_move<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_pending_node_resize_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     _cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,

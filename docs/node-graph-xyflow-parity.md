@@ -189,9 +189,12 @@ These are the primary gaps between "a working canvas" and "a production-ready no
   - Notes:
     - still missing a first-class lifecycle contract for node/edge wrappers and update scheduling (internals measurement invalidation, memoization policy).
 
-- [ ] **Plugin-like policy hooks (no forking the canvas)**
+- [~] **Plugin-like policy hooks (no forking the canvas)**
   - XyFlow: store middleware maps for node/edge changes
-  - fret-node: profile pipeline exists (domain rules); still missing a B-layer UI middleware surface for selection/commands/shortcuts
+  - fret-node:
+    - UI middleware contract (event/command/commit hooks): `ecosystem/fret-node/src/ui/canvas/middleware.rs`
+    - install middleware into the canvas: `NodeGraphCanvas::with_middleware` (`ecosystem/fret-node/src/ui/canvas/widget.rs`)
+    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/middleware_conformance.rs`
 
 ## 0.4 Batteries-included add-ons (Controls / MiniMap / Background / Panels)
 

@@ -6,7 +6,7 @@ use fret_ui::UiHost;
 use crate::core::{CanvasPoint, NodeId as GraphNodeId};
 use crate::core::{CanvasRect, CanvasSize, NodeExtent};
 
-use super::{NodeGraphCanvas, ViewSnapshot};
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot};
 
 fn clamp_point_in_rect_with_size(
     pos: CanvasPoint,
@@ -51,8 +51,8 @@ fn union_rect(a: CanvasRect, b: CanvasRect) -> CanvasRect {
     }
 }
 
-pub(super) fn handle_node_drag_move<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,
@@ -64,7 +64,7 @@ pub(super) fn handle_node_drag_move<H: UiHost>(
     };
 
     let auto_pan_delta = (snapshot.interaction.auto_pan.on_node_drag)
-        .then(|| NodeGraphCanvas::auto_pan_delta(snapshot, position, cx.bounds))
+        .then(|| NodeGraphCanvasWith::<M>::auto_pan_delta(snapshot, position, cx.bounds))
         .unwrap_or_default();
     let snap_to_grid = snapshot.interaction.snap_to_grid;
     let snap_grid = snapshot.interaction.snap_grid;
@@ -95,7 +95,7 @@ pub(super) fn handle_node_drag_move<H: UiHost>(
             x: primary_start.x + delta.x,
             y: primary_start.y + delta.y,
         };
-        let snapped = NodeGraphCanvas::snap_canvas_point(primary_target, snap_grid);
+        let snapped = NodeGraphCanvasWith::<M>::snap_canvas_point(primary_target, snap_grid);
         delta = CanvasPoint {
             x: snapped.x - primary_start.x,
             y: snapped.y - primary_start.y,

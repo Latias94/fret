@@ -1,10 +1,10 @@
 use fret_core::{MouseButton, Point};
 use fret_ui::UiHost;
 
-use super::NodeGraphCanvas;
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
-pub(super) fn handle_context_menu_escape<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_context_menu_escape<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
 ) -> bool {
     if canvas.interaction.context_menu.take().is_some() {
@@ -16,8 +16,8 @@ pub(super) fn handle_context_menu_escape<H: UiHost>(
     false
 }
 
-pub(super) fn handle_context_menu_key_down<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_context_menu_key_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     key: fret_core::KeyCode,
 ) -> bool {
@@ -137,8 +137,8 @@ pub(super) fn handle_context_menu_key_down<H: UiHost>(
     false
 }
 
-pub(super) fn handle_context_menu_pointer_down<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_context_menu_pointer_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     position: Point,
     button: MouseButton,
@@ -177,8 +177,8 @@ pub(super) fn handle_context_menu_pointer_down<H: UiHost>(
     }
 }
 
-pub(super) fn handle_context_menu_pointer_move<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_context_menu_pointer_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     position: Point,
     zoom: f32,

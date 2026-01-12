@@ -14,12 +14,12 @@ use super::super::searcher::SEARCHER_MAX_VISIBLE_ROWS;
 use super::super::state::{
     ContextMenuTarget, LastConversionContext, SearcherState, ViewSnapshot, WireDrag, WireDragKind,
 };
-use super::NodeGraphCanvas;
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
 pub(super) trait WireCommitCx<H: UiHost> {
     fn host(&mut self) -> &mut H;
     fn window(&self) -> Option<AppWindowId>;
-    fn bounds(&self, canvas: &NodeGraphCanvas) -> Rect;
+    fn bounds(&self, last_bounds: Option<Rect>) -> Rect;
     fn release_pointer_capture(&mut self);
     fn request_redraw(&mut self);
     fn invalidate_paint(&mut self);
@@ -34,7 +34,7 @@ impl<'a, H: UiHost> WireCommitCx<H> for fret_ui::retained_bridge::EventCx<'a, H>
         self.window
     }
 
-    fn bounds(&self, _canvas: &NodeGraphCanvas) -> Rect {
+    fn bounds(&self, _last_bounds: Option<Rect>) -> Rect {
         self.bounds
     }
 
@@ -60,8 +60,8 @@ impl<'a, H: UiHost> WireCommitCx<H> for fret_ui::retained_bridge::CommandCx<'a, 
         self.window
     }
 
-    fn bounds(&self, canvas: &NodeGraphCanvas) -> Rect {
-        canvas.interaction.last_bounds.unwrap_or_default()
+    fn bounds(&self, last_bounds: Option<Rect>) -> Rect {
+        last_bounds.unwrap_or_default()
     }
 
     fn release_pointer_capture(&mut self) {}
@@ -75,8 +75,8 @@ impl<'a, H: UiHost> WireCommitCx<H> for fret_ui::retained_bridge::CommandCx<'a, 
     }
 }
 
-pub(super) fn handle_wire_drag_move<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_wire_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,
@@ -89,7 +89,7 @@ pub(super) fn handle_wire_drag_move<H: UiHost>(
 
     let (geom, index) = canvas.canvas_derived(&*cx.app, snapshot);
     let auto_pan_delta = (snapshot.interaction.auto_pan.on_connect)
-        .then(|| NodeGraphCanvas::auto_pan_delta(snapshot, position, cx.bounds))
+        .then(|| NodeGraphCanvasWith::<M>::auto_pan_delta(snapshot, position, cx.bounds))
         .unwrap_or_default();
     w.pos = Point::new(
         Px(position.x.0 - auto_pan_delta.x),
@@ -115,14 +115,16 @@ pub(super) fn handle_wire_drag_move<H: UiHost>(
                     let this = &*canvas;
                     this.graph
                         .read_ref(cx.app, |graph| {
-                            if !NodeGraphCanvas::port_is_connectable_start(
+                            if !NodeGraphCanvasWith::<M>::port_is_connectable_start(
                                 graph,
                                 &snapshot.interaction,
                                 candidate,
                             ) {
                                 return false;
                             }
-                            NodeGraphCanvas::should_add_bundle_port(graph, *from, bundle, candidate)
+                            NodeGraphCanvasWith::<M>::should_add_bundle_port(
+                                graph, *from, bundle, candidate,
+                            )
                         })
                         .ok()
                         .unwrap_or(false)
@@ -290,8 +292,8 @@ pub(super) fn handle_wire_drag_move<H: UiHost>(
     true
 }
 
-pub(super) fn handle_wire_left_up<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_wire_left_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut impl WireCommitCx<H>,
     snapshot: &ViewSnapshot,
     zoom: f32,
@@ -299,8 +301,8 @@ pub(super) fn handle_wire_left_up<H: UiHost>(
     handle_wire_left_up_with_forced_target(canvas, cx, snapshot, zoom, None)
 }
 
-pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut impl WireCommitCx<H>,
     snapshot: &ViewSnapshot,
     zoom: f32,
@@ -312,7 +314,7 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
     let kind_for_callbacks = w.kind.clone();
 
     let window = cx.window();
-    let bounds = cx.bounds(canvas);
+    let bounds = cx.bounds(canvas.interaction.last_bounds);
 
     let (from_port, require_from_connectable_start) = match &w.kind {
         WireDragKind::New { from, .. } => (Some(*from), true),
@@ -328,7 +330,11 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
             canvas
                 .graph
                 .read_ref(cx.host(), |graph| {
-                    NodeGraphCanvas::port_is_connectable_start(graph, &snapshot.interaction, port)
+                    NodeGraphCanvasWith::<M>::port_is_connectable_start(
+                        graph,
+                        &snapshot.interaction,
+                        port,
+                    )
                 })
                 .ok()
                 .unwrap_or(false)
@@ -338,7 +344,11 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
         canvas
             .graph
             .read_ref(cx.host(), |graph| {
-                NodeGraphCanvas::port_is_connectable_end(graph, &snapshot.interaction, *port)
+                NodeGraphCanvasWith::<M>::port_is_connectable_end(
+                    graph,
+                    &snapshot.interaction,
+                    *port,
+                )
             })
             .ok()
             .unwrap_or(false)
@@ -469,9 +479,10 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                                             }
                                         }
                                         if toast.is_none() {
-                                            toast = NodeGraphCanvas::toast_from_diagnostics(
-                                                &plan.diagnostics,
-                                            );
+                                            toast =
+                                                NodeGraphCanvasWith::<M>::toast_from_diagnostics(
+                                                    &plan.diagnostics,
+                                                );
                                         }
                                     }
                                 }
@@ -526,8 +537,9 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                             bounds,
                             snapshot,
                         );
-                        let active_row = NodeGraphCanvas::searcher_first_selectable_row(&rows)
-                            .min(rows.len().saturating_sub(1));
+                        let active_row =
+                            NodeGraphCanvasWith::<M>::searcher_first_selectable_row(&rows)
+                                .min(rows.len().saturating_sub(1));
 
                         canvas.interaction.context_menu = None;
                         canvas.interaction.searcher = Some(SearcherState {
@@ -623,9 +635,11 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                             match plan.decision {
                                 ConnectDecision::Accept => Outcome::Apply(plan.ops),
                                 ConnectDecision::Reject => {
-                                    NodeGraphCanvas::toast_from_diagnostics(&plan.diagnostics)
-                                        .map(|(sev, msg)| Outcome::Reject(sev, msg))
-                                        .unwrap_or(Outcome::Ignore)
+                                    NodeGraphCanvasWith::<M>::toast_from_diagnostics(
+                                        &plan.diagnostics,
+                                    )
+                                    .map(|(sev, msg)| Outcome::Reject(sev, msg))
+                                    .unwrap_or(Outcome::Ignore)
                                 }
                             }
                         })
@@ -693,7 +707,7 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                                 }
                                 ConnectDecision::Reject => {
                                     if toast.is_none() {
-                                        toast = NodeGraphCanvas::toast_from_diagnostics(
+                                        toast = NodeGraphCanvasWith::<M>::toast_from_diagnostics(
                                             &plan.diagnostics,
                                         );
                                     }

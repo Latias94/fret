@@ -3,10 +3,10 @@ use fret_ui::UiHost;
 
 use crate::core::{CanvasPoint, CanvasRect};
 
-use super::{NodeGraphCanvas, ViewSnapshot};
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot};
 
-pub(super) fn handle_group_resize_move<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_group_resize_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,
@@ -18,7 +18,7 @@ pub(super) fn handle_group_resize_move<H: UiHost>(
     };
 
     let auto_pan_delta = (snapshot.interaction.auto_pan.on_node_drag)
-        .then(|| NodeGraphCanvas::auto_pan_delta(snapshot, position, cx.bounds))
+        .then(|| NodeGraphCanvasWith::<M>::auto_pan_delta(snapshot, position, cx.bounds))
         .unwrap_or_default();
     let position = Point::new(
         Px(position.x.0 - auto_pan_delta.x),
@@ -77,7 +77,7 @@ pub(super) fn handle_group_resize_move<H: UiHost>(
     let allow_snap = !modifiers.alt && !modifiers.alt_gr;
     if allow_snap && snapshot.interaction.snap_to_grid {
         let grid = snapshot.interaction.snap_grid;
-        let snapped = NodeGraphCanvas::snap_canvas_point(
+        let snapped = NodeGraphCanvasWith::<M>::snap_canvas_point(
             CanvasPoint {
                 x: new_rect.origin.x + new_rect.size.width,
                 y: new_rect.origin.y + new_rect.size.height,
@@ -124,7 +124,7 @@ pub(super) fn group_resize_handle_hit(
     padding_screen: f32,
 ) -> bool {
     if !padding_screen.is_finite() || padding_screen <= 0.0 {
-        return NodeGraphCanvas::rect_contains(handle, position);
+        return rect_contains(handle, position);
     }
     let pad = padding_screen / zoom.max(1.0e-6);
     let expanded = Rect::new(
@@ -134,5 +134,12 @@ pub(super) fn group_resize_handle_hit(
             Px(handle.size.height.0 + 2.0 * pad),
         ),
     );
-    NodeGraphCanvas::rect_contains(expanded, position)
+    rect_contains(expanded, position)
+}
+
+fn rect_contains(rect: Rect, pos: Point) -> bool {
+    pos.x.0 >= rect.origin.x.0
+        && pos.y.0 >= rect.origin.y.0
+        && pos.x.0 <= rect.origin.x.0 + rect.size.width.0
+        && pos.y.0 <= rect.origin.y.0 + rect.size.height.0
 }

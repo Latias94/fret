@@ -2,10 +2,10 @@ use fret_core::{CursorIcon, Point};
 use fret_ui::UiHost;
 
 use super::super::state::{NodeResizeHandle, ViewSnapshot};
-use super::NodeGraphCanvas;
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
-pub(super) fn update_cursors<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn update_cursors<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,
@@ -16,8 +16,8 @@ pub(super) fn update_cursors<H: UiHost>(
     update_edge_anchor_cursor(canvas, cx, snapshot, position, zoom);
 }
 
-fn update_close_button_cursor<H: UiHost>(
-    canvas: &NodeGraphCanvas,
+fn update_close_button_cursor<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,
@@ -35,14 +35,14 @@ fn update_close_button_cursor<H: UiHost>(
         return;
     }
 
-    let rect = NodeGraphCanvas::close_button_rect(snapshot.pan, zoom);
-    if NodeGraphCanvas::rect_contains(rect, position) {
+    let rect = NodeGraphCanvasWith::<M>::close_button_rect(snapshot.pan, zoom);
+    if NodeGraphCanvasWith::<M>::rect_contains(rect, position) {
         cx.set_cursor_icon(CursorIcon::Pointer);
     }
 }
 
-fn update_resize_handle_cursor<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+fn update_resize_handle_cursor<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,
@@ -82,7 +82,7 @@ fn update_resize_handle_cursor<H: UiHost>(
                         continue;
                     }
                     let rect = canvas.node_resize_handle_rect(node_geom.rect, handle, zoom);
-                    if NodeGraphCanvas::rect_contains(rect, position) {
+                    if NodeGraphCanvasWith::<M>::rect_contains(rect, position) {
                         return Some(match handle {
                             NodeResizeHandle::Top | NodeResizeHandle::Bottom => {
                                 CursorIcon::RowResize
@@ -104,8 +104,8 @@ fn update_resize_handle_cursor<H: UiHost>(
     }
 }
 
-fn update_edge_anchor_cursor<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+fn update_edge_anchor_cursor<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     _position: Point,

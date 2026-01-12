@@ -5,7 +5,7 @@ use crate::core::{CanvasRect, CanvasSize, NodeExtent};
 
 use super::super::geometry::{node_ports, node_size_default_px};
 use super::super::state::{NodeResizeHandle, ViewSnapshot};
-use super::NodeGraphCanvas;
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
 fn clamp_finite_positive(v: f32, fallback: f32) -> f32 {
     if v.is_finite() {
@@ -79,8 +79,8 @@ fn normalize_canvas_rect(mut rect: CanvasRect) -> CanvasRect {
     rect
 }
 
-fn resolve_min_size_px<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+fn resolve_min_size_px<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     host: &mut H,
     node: crate::core::NodeId,
     fallback: (f32, f32),
@@ -274,8 +274,8 @@ fn apply_resize_handle(
     (new_pos, new_size_px)
 }
 
-pub(super) fn handle_node_resize_move<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_node_resize_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,
