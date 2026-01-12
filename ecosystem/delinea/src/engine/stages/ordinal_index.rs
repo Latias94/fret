@@ -32,10 +32,13 @@ pub struct OrdinalIndexKey {
 enum OrdinalIndexEntry {
     Ready {
         data_rev: Revision,
+        row_count: usize,
+        end_limit: usize,
         map: Arc<[i32]>,
     },
     Building {
         data_rev: Revision,
+        row_count: usize,
         next: usize,
         end: usize,
         map: Vec<i32>,
@@ -58,7 +61,13 @@ impl OrdinalIndexStage {
     }
 
     pub fn prepare_requests(&mut self, datasets: &DatasetStore) {
-        self.cache.retain(|k, _| self.requested_set.contains(k));
+        let mut keep = self.requested_set.clone();
+        for key in &self.requested {
+            if let Some(prefix) = self.best_prefix_key(*key) {
+                keep.insert(prefix);
+            }
+        }
+        self.cache.retain(|k, _| keep.contains(k));
 
         for key in &self.requested {
             if self.cache.contains_key(key) {
@@ -70,16 +79,91 @@ impl OrdinalIndexStage {
             };
 
             let ordinal_len = key.ordinal_len as usize;
+
+            let mut seed_map: Vec<i32> = vec![INDEX_NOT_FOUND; ordinal_len];
+            let mut seed_next = key.start as usize;
+            if let Some((map, next)) = self.best_prefix_seed(*key) {
+                seed_map = map;
+                seed_next = next;
+            }
             self.cache.insert(
                 *key,
                 OrdinalIndexEntry::Building {
                     data_rev: table.revision,
-                    next: key.start as usize,
+                    row_count: table.row_count,
+                    next: seed_next,
                     end: key.end as usize,
-                    map: vec![INDEX_NOT_FOUND; ordinal_len],
+                    map: seed_map,
                 },
             );
         }
+    }
+
+    fn best_prefix_key(&self, requested: OrdinalIndexKey) -> Option<OrdinalIndexKey> {
+        let requested_end = requested.end as usize;
+
+        let mut best: Option<(usize, OrdinalIndexKey)> = None;
+
+        for (k, _) in self.cache.iter() {
+            if k.dataset != requested.dataset || k.x_col != requested.x_col {
+                continue;
+            }
+            if k.start != requested.start
+                || k.min_bits != requested.min_bits
+                || k.max_bits != requested.max_bits
+            {
+                continue;
+            }
+            let prefix_end = k.end as usize;
+            if prefix_end >= requested_end {
+                continue;
+            }
+            match best {
+                Some((best_end, _)) if prefix_end <= best_end => {}
+                _ => best = Some((prefix_end, *k)),
+            }
+        }
+
+        best.map(|(_, k)| k)
+    }
+
+    fn best_prefix_seed(&self, requested: OrdinalIndexKey) -> Option<(Vec<i32>, usize)> {
+        let requested_end = requested.end as usize;
+        let requested_ordinal_len = requested.ordinal_len as usize;
+
+        let mut best: Option<(usize, Vec<i32>, usize)> = None;
+
+        for (k, entry) in self.cache.iter() {
+            if k.dataset != requested.dataset || k.x_col != requested.x_col {
+                continue;
+            }
+            if k.start != requested.start
+                || k.min_bits != requested.min_bits
+                || k.max_bits != requested.max_bits
+            {
+                continue;
+            }
+            let prefix_end = k.end as usize;
+            if prefix_end >= requested_end {
+                continue;
+            }
+
+            let (mut map, next) = match entry {
+                OrdinalIndexEntry::Ready { map, end_limit, .. } => (map.to_vec(), *end_limit),
+                OrdinalIndexEntry::Building { map, next, .. } => (map.clone(), *next),
+            };
+
+            if map.len() < requested_ordinal_len {
+                map.resize(requested_ordinal_len, INDEX_NOT_FOUND);
+            }
+
+            match best {
+                Some((best_end, ..)) if prefix_end <= best_end => {}
+                _ => best = Some((prefix_end, map, next)),
+            }
+        }
+
+        best.map(|(_, map, next)| (map, next))
     }
 
     pub fn step(&mut self, datasets: &DatasetStore, budget: &mut WorkBudget) -> bool {
@@ -104,30 +188,67 @@ impl OrdinalIndexStage {
 
             let data_rev = table.revision;
             match entry {
-                OrdinalIndexEntry::Ready { data_rev: r, .. } => {
+                OrdinalIndexEntry::Ready {
+                    data_rev: r,
+                    row_count: cached_len,
+                    end_limit,
+                    map,
+                } => {
                     if *r == data_rev {
                         self.cursor += 1;
                         continue;
                     }
-                    *entry = OrdinalIndexEntry::Building {
-                        data_rev,
-                        next: key.start as usize,
-                        end: key.end as usize,
-                        map: vec![INDEX_NOT_FOUND; key.ordinal_len as usize],
-                    };
+
+                    let requested_end = key.end as usize;
+                    let next_end_limit = requested_end.min(table.row_count);
+
+                    let is_append_only = table.row_count >= *cached_len;
+                    if is_append_only && next_end_limit >= *end_limit {
+                        if next_end_limit == *end_limit {
+                            *r = data_rev;
+                            *cached_len = table.row_count;
+                            self.cursor += 1;
+                            continue;
+                        }
+
+                        *entry = OrdinalIndexEntry::Building {
+                            data_rev,
+                            row_count: table.row_count,
+                            next: *end_limit,
+                            end: requested_end,
+                            map: map.to_vec(),
+                        };
+                    } else {
+                        *entry = OrdinalIndexEntry::Building {
+                            data_rev,
+                            row_count: table.row_count,
+                            next: key.start as usize,
+                            end: requested_end,
+                            map: vec![INDEX_NOT_FOUND; key.ordinal_len as usize],
+                        };
+                    }
                 }
                 OrdinalIndexEntry::Building {
                     data_rev: r,
+                    row_count: cached_len,
                     next,
                     end,
                     map,
                 } => {
                     if *r != data_rev {
+                        let is_append_only = table.row_count >= *cached_len;
+                        let can_resume = is_append_only && *next <= *cached_len;
+
                         *r = data_rev;
-                        *next = key.start as usize;
+                        *cached_len = table.row_count;
                         *end = key.end as usize;
-                        map.clear();
-                        map.resize(key.ordinal_len as usize, INDEX_NOT_FOUND);
+                        if !can_resume {
+                            *next = key.start as usize;
+                            map.clear();
+                            map.resize(key.ordinal_len as usize, INDEX_NOT_FOUND);
+                        } else if map.len() != key.ordinal_len as usize {
+                            map.resize(key.ordinal_len as usize, INDEX_NOT_FOUND);
+                        }
                     }
                 }
             }
@@ -149,6 +270,8 @@ impl OrdinalIndexStage {
             if end_limit <= start {
                 let ready = OrdinalIndexEntry::Ready {
                     data_rev,
+                    row_count: table.row_count,
+                    end_limit,
                     map: Arc::from(map.clone().into_boxed_slice()),
                 };
                 self.cache.insert(key, ready);
@@ -195,6 +318,8 @@ impl OrdinalIndexStage {
             if *next >= end_limit {
                 let ready = OrdinalIndexEntry::Ready {
                     data_rev,
+                    row_count: table.row_count,
+                    end_limit,
                     map: Arc::from(map.clone().into_boxed_slice()),
                 };
                 self.cache.insert(key, ready);
@@ -214,7 +339,9 @@ impl OrdinalIndexStage {
         data_rev: Revision,
     ) -> Option<usize> {
         match self.cache.get(&key) {
-            Some(OrdinalIndexEntry::Ready { data_rev: r, map }) if *r == data_rev => map
+            Some(OrdinalIndexEntry::Ready {
+                data_rev: r, map, ..
+            }) if *r == data_rev => map
                 .get(ordinal as usize)
                 .copied()
                 .filter(|&i| i != INDEX_NOT_FOUND)
@@ -292,5 +419,52 @@ mod tests {
         assert_eq!(stage.raw_index_of_ordinal(key, 1, rev), Some(2));
         assert_eq!(stage.raw_index_of_ordinal(key, 2, rev), Some(1));
         assert_eq!(stage.raw_index_of_ordinal(key, 3, rev), None);
+    }
+
+    #[test]
+    fn ordinal_index_resumes_scans_on_append_only_changes() {
+        let dataset = DatasetId::new(1);
+        let mut datasets = DatasetStore::default();
+
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(vec![0.0, 2.0, 1.0]));
+        datasets.insert(dataset, table);
+
+        let key = OrdinalIndexKey::new(
+            dataset,
+            0,
+            4,
+            RowRange { start: 0, end: 100 },
+            AxisFilter1D::default(),
+        );
+
+        let _rev0 = datasets.dataset(dataset).unwrap().revision;
+
+        let mut stage = OrdinalIndexStage::default();
+        stage.begin_frame();
+        stage.request(key);
+        stage.prepare_requests(&datasets);
+
+        let mut budget = WorkBudget::new(1024, 0, 0);
+        assert!(stage.step(&datasets, &mut budget));
+
+        let table = datasets.dataset_mut(dataset).unwrap();
+        table.append_row_f64(&[3.0]).unwrap();
+        let rev1 = table.revision;
+
+        stage.begin_frame();
+        stage.request(key);
+        stage.prepare_requests(&datasets);
+
+        let mut budget = WorkBudget::new(1, 0, 0);
+        assert!(
+            stage.step(&datasets, &mut budget),
+            "append-only should require scanning only the appended rows"
+        );
+
+        assert_eq!(stage.raw_index_of_ordinal(key, 0, rev1), Some(0));
+        assert_eq!(stage.raw_index_of_ordinal(key, 1, rev1), Some(2));
+        assert_eq!(stage.raw_index_of_ordinal(key, 2, rev1), Some(1));
+        assert_eq!(stage.raw_index_of_ordinal(key, 3, rev1), Some(3));
     }
 }

@@ -45,6 +45,55 @@ pub fn data_at_y_in_rect(window: DataWindow, y_px: f32, rect: Rect) -> f64 {
     window.min + (1.0 - t) * span
 }
 
+pub fn px_at_data(window: DataWindow, value: f64, origin_px: f32, span_px: f32) -> f32 {
+    let mut window = window;
+    window.clamp_non_degenerate();
+
+    let span = window.span();
+    if !span.is_finite() || span <= 0.0 {
+        return origin_px;
+    }
+
+    if !span_px.is_finite() || span_px <= 0.0 {
+        return origin_px;
+    }
+
+    if !value.is_finite() {
+        return origin_px;
+    }
+
+    let t = ((value - window.min) / span).clamp(0.0, 1.0) as f32;
+    origin_px + t * span_px
+}
+
+pub fn x_px_at_data_in_rect(window: DataWindow, value: f64, rect: Rect) -> f32 {
+    px_at_data(window, value, rect.origin.x.0, rect.size.width.0)
+}
+
+pub fn y_px_at_data_in_rect(window: DataWindow, value: f64, rect: Rect) -> f32 {
+    let mut window = window;
+    window.clamp_non_degenerate();
+
+    let span = window.span();
+    if !span.is_finite() || span <= 0.0 {
+        return rect.origin.y.0;
+    }
+
+    let span_px = rect.size.height.0;
+    if !span_px.is_finite() || span_px <= 0.0 {
+        return rect.origin.y.0;
+    }
+
+    if !value.is_finite() {
+        return rect.origin.y.0;
+    }
+
+    // Y axis is inverted in screen space (top-down), but data space uses the conventional
+    // bottom-up orientation.
+    let t = ((value - window.min) / span).clamp(0.0, 1.0) as f32;
+    rect.origin.y.0 + (1.0 - t) * span_px
+}
+
 pub fn category_domain_window(axis: &AxisModel) -> Option<DataWindow> {
     let AxisScale::Category(scale) = &axis.scale else {
         return None;

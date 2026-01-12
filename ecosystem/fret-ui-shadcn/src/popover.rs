@@ -2,15 +2,12 @@ use std::sync::Arc;
 use std::{cell::Cell, rc::Rc};
 
 use crate::popper_arrow::{self, DiamondArrowStyle};
-use fret_core::{
-    Edges, FontId, FontWeight, Point, Px, Rect, SemanticsRole, Size, TextOverflow, TextStyle,
-    TextWrap,
-};
+use fret_core::{FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
-    AnchoredProps, AnyElement, ContainerProps, LayoutStyle, Length, Overflow, RenderTransformProps,
-    SemanticsProps, SizeStyle, TextProps,
+    AnyElement, ContainerProps, InteractivityGateProps, LayoutStyle, Length, OpacityProps,
+    Overflow, SemanticsProps, TextProps, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -20,6 +17,7 @@ use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::primitives::popper;
+use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Radius, Space,
@@ -324,6 +322,20 @@ impl Popover {
                         return Vec::new();
                     }
 
+                    let inner_id = std::cell::Cell::new(None);
+                    let inner_id_for_scope = inner_id.clone();
+                    let content = radix_popover::popover_dialog_wrapper(cx, None, move |cx| {
+                        let inner = content(cx, anchor_fallback.unwrap_or_default());
+                        inner_id_for_scope.set(Some(inner.id));
+                        vec![inner]
+                    });
+                    dialog_id_for_trigger.set(Some(content.id));
+
+                    let measure_id = inner_id.get().unwrap_or(content.id);
+                    let last_content_size = cx.last_bounds_for_element(measure_id).map(|r| r.size);
+                    let estimated = Size::new(Px(288.0), Px(160.0));
+                    let content_size = last_content_size.unwrap_or(estimated);
+
                     let align = match align {
                         PopoverAlign::Start => Align::Start,
                         PopoverAlign::Center => Align::Center,
@@ -338,127 +350,110 @@ impl Popover {
 
                     let (arrow_options, arrow_protrusion) =
                         popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
+
                     let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
                     let placement =
                         popper::PopperContentPlacement::new(direction, side, align, side_offset)
                             .with_align_offset(align_offset)
                             .with_arrow(arrow_options, arrow_protrusion)
                             .with_hide_when_detached(hide_when_detached);
+                    let reference_hidden = anchor_fallback
+                        .is_some_and(|anchor| placement.reference_hidden(outer, anchor));
 
                     let bg = theme.color_required("popover.background");
                     let border = theme.color_required("border");
 
-                    let anchored = cx.anchored_props(
-                        AnchoredProps {
-                            layout: LayoutStyle {
-                                overflow: Overflow::Visible,
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Fill,
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            outer_margin: Edges::all(window_margin),
-                            anchor: anchor_fallback.unwrap_or_default(),
-                            anchor_element: Some(anchor_id.0),
-                            side,
-                            align,
-                            side_offset,
-                            options: placement.options(),
-                            layout_out: None,
+                    let anchor = anchor_fallback.unwrap_or_default();
+                    let layout =
+                        popper::popper_content_layout_sized(outer, anchor, content_size, placement);
+                    let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
+
+                    let panel = popper_content::popper_panel_at(
+                        cx,
+                        layout.rect,
+                        wrapper_insets,
+                        Overflow::Visible,
+                        move |_cx| vec![content],
+                    );
+
+                    let arrow_el = popper_arrow::diamond_arrow_element(
+                        cx,
+                        &layout,
+                        wrapper_insets,
+                        arrow_size,
+                        DiamondArrowStyle {
+                            bg,
+                            border: Some(border),
+                            border_width: Px(1.0),
+                        },
+                    );
+
+                    let origin = popper::popper_content_transform_origin(
+                        &layout,
+                        anchor,
+                        arrow.then_some(arrow_size),
+                    );
+                    let opacity = if reference_hidden { 0.0 } else { opacity };
+                    let transform = overlay_motion::shadcn_popper_presence_transform(
+                        layout.side,
+                        origin,
+                        opacity,
+                        scale,
+                        opening,
+                    );
+
+                    // We want the layer root bounds to match the steady-state popper wrapper
+                    // geometry (including arrow protrusion), but we don't want animation transforms
+                    // to affect hit-testing.
+                    //
+                    // We model this by:
+                    // - positioning the layer root via `InteractivityGate` (absolute layout),
+                    // - applying opacity + `VisualTransform` on an inner fill node (paint-only).
+                    let wrapper_layout =
+                        popper_content::popper_wrapper_layout(layout.rect, wrapper_insets);
+                    let mut fill = LayoutStyle::default();
+                    fill.size.width = Length::Fill;
+                    fill.size.height = Length::Fill;
+
+                    let overlay_children = if let Some(arrow_el) = arrow_el {
+                        vec![arrow_el, panel]
+                    } else {
+                        vec![panel]
+                    };
+
+                    let overlay_content = cx.interactivity_gate_props(
+                        InteractivityGateProps {
+                            layout: wrapper_layout,
+                            present: true,
+                            interactive: !reference_hidden,
                         },
                         move |cx| {
-                            let inner_id = std::cell::Cell::new(None);
-                            let inner_id_for_scope = inner_id.clone();
-                            let anchor_for_content = anchor_fallback.unwrap_or_default();
-                            let popover_content =
-                                radix_popover::popover_dialog_wrapper(cx, None, move |cx| {
-                                    let inner = content(cx, anchor_for_content);
-                                    inner_id_for_scope.set(Some(inner.id));
-                                    vec![inner]
-                                });
-                            dialog_id_for_trigger.set(Some(popover_content.id));
-
-                            let measure_id = inner_id.get().unwrap_or(popover_content.id);
-                            let last_content_size =
-                                cx.last_bounds_for_element(measure_id).map(|r| r.size);
-                            let estimated = Size::new(Px(288.0), Px(160.0));
-                            let content_size = last_content_size.unwrap_or(estimated);
-
-                            let reference_hidden = anchor_fallback
-                                .is_some_and(|anchor| placement.reference_hidden(outer, anchor));
-
-                            let w = content_size.width.0.max(0.0);
-                            let h = content_size.height.0.max(0.0);
-                            let origin = match side {
-                                Side::Top => Point::new(Px(w * 0.5), Px(h)),
-                                Side::Bottom => Point::new(Px(w * 0.5), Px(0.0)),
-                                Side::Left => Point::new(Px(w), Px(h * 0.5)),
-                                Side::Right => Point::new(Px(0.0), Px(h * 0.5)),
-                            };
-                            let opacity = if reference_hidden { 0.0 } else { opacity };
-                            let transform = overlay_motion::shadcn_popper_presence_transform(
-                                side, origin, opacity, scale, opening,
-                            );
-
-                            let layout_for_arrow = anchor_fallback.map(|anchor| {
-                                let mut layout = popper::popper_content_layout_sized(
-                                    outer,
-                                    anchor,
-                                    content_size,
-                                    placement,
-                                );
-                                layout.rect =
-                                    Rect::new(Point::new(Px(0.0), Px(0.0)), layout.rect.size);
-                                layout
-                            });
-
-                            let wrapper = cx.container(
+                            // `InteractivityGate` itself is pointer-transparent; we add a
+                            // hit-testable wrapper container so the arrow protrusion region counts
+                            // as "inside" the overlay for outside-press semantics.
+                            vec![cx.container(
                                 ContainerProps {
-                                    layout: LayoutStyle {
-                                        overflow: Overflow::Visible,
-                                        ..Default::default()
-                                    },
+                                    layout: fill,
                                     ..Default::default()
                                 },
                                 move |cx| {
-                                    let arrow_el = layout_for_arrow.as_ref().and_then(|layout| {
-                                        popper_arrow::diamond_arrow_element(
-                                            cx,
-                                            layout,
-                                            Edges::all(Px(0.0)),
-                                            arrow_size,
-                                            DiamondArrowStyle {
-                                                bg,
-                                                border: Some(border),
-                                                border_width: Px(1.0),
-                                            },
-                                        )
-                                    });
-
-                                    let mut out: Vec<AnyElement> = Vec::new();
-                                    if let Some(arrow_el) = arrow_el {
-                                        out.push(arrow_el);
-                                    }
-                                    out.push(popover_content);
-                                    out
+                                    vec![cx.opacity_props(
+                                        OpacityProps {
+                                            layout: fill,
+                                            opacity,
+                                        },
+                                        move |cx| {
+                                            vec![cx.visual_transform_props(
+                                                VisualTransformProps {
+                                                    layout: fill,
+                                                    transform,
+                                                },
+                                                move |_cx| overlay_children,
+                                            )]
+                                        },
+                                    )]
                                 },
-                            );
-
-                            let overlay_content =
-                                overlay_motion::wrap_opacity_and_render_transform_with_layouts_gated(
-                                    cx,
-                                    LayoutStyle::default(),
-                                    opacity,
-                                    RenderTransformProps {
-                                        layout: LayoutStyle::default(),
-                                        transform,
-                                    },
-                                    !reference_hidden,
-                                    vec![wrapper],
-                                );
-                            vec![overlay_content]
+                            )]
                         },
                     );
 
@@ -468,10 +463,10 @@ impl Popover {
                             open_for_barrier.clone(),
                             on_dismiss_request_for_children.clone(),
                             Vec::new(),
-                            anchored,
+                            overlay_content,
                         )
                     } else {
-                        vec![anchored]
+                        vec![overlay_content]
                     }
                 });
 
@@ -1472,11 +1467,21 @@ mod tests {
 
         // Click the underlay while the popover is open: should close the popover (observer pass)
         // and still focus the underlay (click-through), without being overridden on close.
+        let click = Point::new(Px(410.0), Px(310.0));
+        let click_debug_before = ui.debug_hit_test(click);
+        let click_hit_before = click_debug_before.hit;
+        let click_path_before = click_hit_before
+            .map(|hit| ui.debug_node_path(hit))
+            .unwrap_or_default();
+        let click_hit_bounds_before = click_hit_before.and_then(|hit| ui.debug_node_bounds(hit));
+        let click_hit_visual_bounds_before =
+            click_hit_before.and_then(|hit| ui.debug_node_visual_bounds(hit));
+        let click_layers_before = ui.debug_layers_in_paint_order();
         ui.dispatch_event(
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
-                position: Point::new(Px(410.0), Px(310.0)),
+                position: click,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
@@ -1487,14 +1492,20 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
-                position: Point::new(Px(410.0), Px(310.0)),
+                position: click,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
         );
-        assert_eq!(app.models().get_copied(&open), Some(false));
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(false),
+            "expected popover to close on outside press; click={click:?} hit_before={click_hit_before:?} hit_bounds_before={click_hit_bounds_before:?} hit_visual_bounds_before={click_hit_visual_bounds_before:?} path_before={click_path_before:?} active_roots_before={:?} barrier_root_before={:?} layers_before={click_layers_before:?}",
+            click_debug_before.active_layer_roots,
+            click_debug_before.barrier_root
+        );
 
         // Third frame: popover hidden, focus should remain on the underlay.
         app.set_frame_id(FrameId(3));
@@ -1605,12 +1616,11 @@ mod tests {
             .expect("content node");
         let content_bounds = ui
             .debug_node_visual_bounds(content_node)
-            .expect("content visual bounds");
+            .expect("content bounds");
 
         let clip_bottom = 80.0f32;
         let target_y = (clip_bottom + 5.0).max(content_bounds.origin.y.0 + 2.0);
-        let target_x = (content_bounds.origin.x.0 + 5.0).max(0.0);
-        let point = Point::new(Px(target_x), Px(target_y));
+        let point = Point::new(Px(content_bounds.origin.x.0 + 5.0), Px(target_y));
         assert!(
             content_bounds.contains(point),
             "expected point inside popover bounds; point={point:?} bounds={content_bounds:?}"
@@ -1716,7 +1726,7 @@ mod tests {
             .expect("content node");
         let content_bounds = ui
             .debug_node_visual_bounds(content_node)
-            .expect("content visual bounds");
+            .expect("content bounds");
 
         // Click just above the panel: this should land on the arrow and not trigger outside-press
         // dismissal.
@@ -1724,11 +1734,15 @@ mod tests {
             Px(content_bounds.origin.x.0 + content_bounds.size.width.0 * 0.5),
             Px(content_bounds.origin.y.0 - 1.0),
         );
-        let pre_hit = ui.debug_hit_test(click);
-        let pre_path = pre_hit
-            .hit
-            .map(|n| ui.debug_node_path(n))
+        let click_debug_before = ui.debug_hit_test(click);
+        let click_hit_before = click_debug_before.hit;
+        let click_path_before = click_hit_before
+            .map(|hit| ui.debug_node_path(hit))
             .unwrap_or_default();
+        let click_hit_bounds_before = click_hit_before.and_then(|hit| ui.debug_node_bounds(hit));
+        let click_hit_visual_bounds_before =
+            click_hit_before.and_then(|hit| ui.debug_node_visual_bounds(hit));
+        let click_layers_before = ui.debug_layers_in_paint_order();
 
         ui.dispatch_event(
             &mut app,
@@ -1756,9 +1770,9 @@ mod tests {
         assert_eq!(
             app.models().get_copied(&open),
             Some(true),
-            "expected arrow click to stay open; click={click:?} hit={:?} path={pre_path:?} layers={:?}",
-            pre_hit.hit,
-            pre_hit.active_layer_roots
+            "expected popover to remain open when clicking the arrow; click={click:?} hit_before={click_hit_before:?} hit_bounds_before={click_hit_bounds_before:?} hit_visual_bounds_before={click_hit_visual_bounds_before:?} path_before={click_path_before:?} active_roots_before={:?} barrier_root_before={:?} layers_before={click_layers_before:?}",
+            click_debug_before.active_layer_roots,
+            click_debug_before.barrier_root
         );
     }
 

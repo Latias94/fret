@@ -26,6 +26,7 @@ pub mod time_axis;
 pub mod tooltip;
 pub mod transform;
 pub mod view;
+pub mod visual_map;
 
 pub use action::*;
 pub use engine::*;
@@ -42,3 +43,4 @@ pub use text::*;
 pub use tooltip::*;
 pub use transform::*;
 pub use view::*;
+pub use visual_map::*;

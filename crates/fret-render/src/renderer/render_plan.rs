@@ -66,7 +66,6 @@ pub(super) struct ClipMaskPass {
     pub(super) dst_size: (u32, u32),
     pub(super) dst_scissor: Option<ScissorRect>,
     pub(super) uniform_index: u32,
-    pub(super) viewport_rect: ScissorRect,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -455,7 +454,6 @@ impl RenderPlan {
                         dst_size: mask_size,
                         dst_scissor: None,
                         uniform_index,
-                        viewport_rect: scissor,
                     }));
                     Some(MaskRef {
                         target: mask_target,
@@ -835,15 +833,6 @@ fn pixelate_enabled(
     full.saturating_add(down) <= budget_bytes
 }
 
-fn choose_clip_mask_target(
-    viewport_size: (u32, u32),
-    viewport_rect: ScissorRect,
-    budget_bytes: u64,
-    quality: fret_core::EffectQuality,
-) -> Option<PlanTarget> {
-    choose_clip_mask_target_capped(viewport_size, viewport_rect, budget_bytes, quality, None)
-}
-
 fn choose_clip_mask_target_capped(
     viewport_size: (u32, u32),
     viewport_rect: ScissorRect,
@@ -884,14 +873,6 @@ fn choose_clip_mask_target_capped(
     }
 
     None
-}
-
-pub(super) fn mask_target_size(viewport_size: (u32, u32), target: PlanTarget) -> (u32, u32) {
-    mask_target_size_in_viewport_rect(
-        viewport_size,
-        ScissorRect::full(viewport_size.0, viewport_size.1),
-        target,
-    )
 }
 
 pub(super) fn mask_target_size_in_viewport_rect(

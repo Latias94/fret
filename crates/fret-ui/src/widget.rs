@@ -70,6 +70,20 @@ impl<'a, H: UiHost> EventCx<'a, H> {
         self.stop_propagation = true;
     }
 
+    /// Request a window redraw (one-shot).
+    ///
+    /// Use this for one-shot updates after state changes (e.g. responding to input).
+    ///
+    /// Notes:
+    /// - A redraw does not necessarily imply a fresh widget `paint()` pass if the UI tree can
+    ///   replay a valid paint cache entry. If you need frame-driven updates, prefer
+    ///   `request_animation_frame()` (from `LayoutCx`/`PaintCx`/`MeasureCx`) which also ensures
+    ///   `Invalidation::Paint` is set.
+    /// - `request_redraw()` is not a timer. If you need continuous progression without input
+    ///   (animations, progressive rendering), you must request the next frame via
+    ///   `request_animation_frame()` (or a higher-level continuous-frames helper).
+    /// - A redraw request may be coalesced and does not necessarily wake a sleeping event loop on
+    ///   all platforms. Prefer `request_animation_frame()` for frame-driven progression.
     pub fn request_redraw(&mut self) {
         let Some(window) = self.window else {
             return;
@@ -119,6 +133,10 @@ impl<'a, H: UiHost> CommandCx<'a, H> {
         self.stop_propagation = true;
     }
 
+    /// Request a window redraw.
+    ///
+    /// Use this for one-shot updates after state changes. For frame-driven updates (animations,
+    /// progressive rendering), prefer `request_animation_frame()` when available.
     pub fn request_redraw(&mut self) {
         let Some(window) = self.window else {
             return;
@@ -149,6 +167,10 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
         Theme::global(&*self.app)
     }
 
+    /// Request a window redraw (one-shot).
+    ///
+    /// This schedules a paint of the current UI state. If you need continuous frame progression
+    /// (e.g. animations or progressive rendering without input), use `request_animation_frame()`.
     pub fn request_redraw(&mut self) {
         let Some(window) = self.window else {
             return;
@@ -156,7 +178,19 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
         self.app.request_redraw(window);
     }
 
+    /// Request the next animation frame for this window.
+    ///
+    /// Use this for frame-driven behaviors (animations, progress indicators, progressive
+    /// rendering) where the UI must keep repainting even if there are no incoming events.
+    ///
+    /// This is a one-shot request. Code that animates should re-issue
+    /// `request_animation_frame()` each frame while it remains active.
+    ///
+    /// This method also ensures `Invalidation::Paint` is set for the calling node so paint caching
+    /// cannot short-circuit the widget `paint()` pass on the next frame.
     pub fn request_animation_frame(&mut self) {
+        // Ensure animation-frame requests trigger a paint pass even when paint caching is enabled.
+        self.tree.invalidate(self.node, Invalidation::Paint);
         let Some(window) = self.window else {
             return;
         };
@@ -264,6 +298,10 @@ impl<'a, H: UiHost> MeasureCx<'a, H> {
         Theme::global(&*self.app)
     }
 
+    /// Request a window redraw (one-shot).
+    ///
+    /// This is typically used after mutating model/state in response to user input. For
+    /// frame-driven updates, use `request_animation_frame()`.
     pub fn request_redraw(&mut self) {
         let Some(window) = self.window else {
             return;
@@ -271,7 +309,17 @@ impl<'a, H: UiHost> MeasureCx<'a, H> {
         self.app.request_redraw(window);
     }
 
+    /// Request the next animation frame for this window.
+    ///
+    /// Use this for animations/progressive rendering that must advance without input events.
+    ///
+    /// This is a one-shot request. Callers should re-issue `request_animation_frame()` each frame
+    /// while it remains active.
+    /// This also sets `Invalidation::Paint` for the current node so paint caching cannot skip
+    /// widget `paint()` on the next frame.
     pub fn request_animation_frame(&mut self) {
+        // Ensure animation-frame requests trigger a paint pass even when paint caching is enabled.
+        self.tree.invalidate(self.node, Invalidation::Paint);
         let Some(window) = self.window else {
             return;
         };
@@ -319,6 +367,10 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
         Theme::global(&*self.app)
     }
 
+    /// Request a window redraw (one-shot).
+    ///
+    /// Use this for one-shot updates. For frame-driven updates that must repaint continuously,
+    /// use `request_animation_frame()`.
     pub fn request_redraw(&mut self) {
         let Some(window) = self.window else {
             return;
@@ -326,7 +378,17 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
         self.app.request_redraw(window);
     }
 
+    /// Request the next animation frame for this window.
+    ///
+    /// Prefer this over `request_redraw()` when you need frame-driven progression (animations,
+    /// progressive rendering). This also sets `Invalidation::Paint` for the current node so paint
+    /// caching cannot skip widget `paint()` on the next frame.
+    ///
+    /// This is a one-shot request. Callers should re-issue `request_animation_frame()` each frame
+    /// while it remains active.
     pub fn request_animation_frame(&mut self) {
+        // Ensure animation-frame requests trigger a paint pass even when paint caching is enabled.
+        self.tree.invalidate(self.node, Invalidation::Paint);
         let Some(window) = self.window else {
             return;
         };
@@ -351,6 +413,19 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
             self.scale_factor,
             self.accumulated_transform,
         )
+    }
+
+    /// Paint all child nodes using their last computed layout bounds.
+    ///
+    /// This is the default behavior of `Widget::paint()`.
+    pub fn paint_children(&mut self) {
+        for &child in self.children {
+            if let Some(bounds) = self.child_bounds(child) {
+                self.paint(child, bounds);
+            } else {
+                self.paint(child, self.bounds);
+            }
+        }
     }
 
     pub fn child_bounds(&self, child: NodeId) -> Option<Rect> {
@@ -609,7 +684,9 @@ pub trait Widget<H: UiHost> {
     fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
         Size::default()
     }
-    fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+        cx.paint_children();
+    }
     fn semantics(&mut self, _cx: &mut SemanticsCx<'_, H>) {}
 }
 

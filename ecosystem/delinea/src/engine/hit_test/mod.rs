@@ -45,7 +45,7 @@ pub fn hover_hit_test(
             continue;
         }
         if series.kind == SeriesKind::Area && series.stack.is_some() {
-            let variant = (node.id.0 & 0x7) as u8;
+            let variant = crate::ids::mark_variant(node.id);
             if variant == 1 {
                 continue;
             }
@@ -68,7 +68,7 @@ pub fn hover_hit_test(
         };
 
         let y_field = if series.kind == SeriesKind::Band {
-            let variant = (node.id.0 & 0x7) as u8;
+            let variant = crate::ids::mark_variant(node.id);
             if variant == 2 {
                 let Some(y2) = series.encode.y2 else {
                     continue;
@@ -501,7 +501,9 @@ mod tests {
             ],
             data_zoom_x: vec![],
             data_zoom_y: vec![],
+            tooltip: None,
             axis_pointer: None,
+            visual_maps: vec![],
             series: vec![SeriesSpec {
                 id: series_id,
                 name: None,
@@ -634,7 +636,9 @@ mod tests {
             ],
             data_zoom_x: vec![],
             data_zoom_y: vec![],
+            tooltip: None,
             axis_pointer: None,
+            visual_maps: vec![],
             series: vec![
                 SeriesSpec {
                     id: series_a,
@@ -778,7 +782,9 @@ mod tests {
             ],
             data_zoom_x: vec![],
             data_zoom_y: vec![],
+            tooltip: None,
             axis_pointer: None,
+            visual_maps: vec![],
             series: vec![crate::spec::SeriesSpec {
                 id: series_id,
                 name: None,
@@ -827,6 +833,7 @@ mod tests {
             payload: MarkPayloadRef::Rect(crate::marks::MarkRectRef {
                 rects: 0..1,
                 fill: None,
+                opacity_mul: None,
                 stroke: None,
             }),
         });
@@ -905,7 +912,9 @@ mod tests {
             ],
             data_zoom_x: vec![],
             data_zoom_y: vec![],
+            tooltip: None,
             axis_pointer: None,
+            visual_maps: vec![],
             series: vec![
                 SeriesSpec {
                     id: series_a,
@@ -972,6 +981,8 @@ mod tests {
             payload: MarkPayloadRef::Points(MarkPointsRef {
                 points: range_b,
                 fill: None,
+                opacity_mul: None,
+                radius_mul: None,
                 stroke: None,
             }),
         });
@@ -987,6 +998,8 @@ mod tests {
             payload: MarkPayloadRef::Points(MarkPointsRef {
                 points: range_a,
                 fill: None,
+                opacity_mul: None,
+                radius_mul: None,
                 stroke: None,
             }),
         });

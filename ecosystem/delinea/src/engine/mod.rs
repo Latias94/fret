@@ -1,4 +1,4 @@
-use fret_core::Rect;
+use fret_core::{Point, Px, Rect, Size};
 
 use crate::action::Action;
 use crate::data::DatasetStore;
@@ -6,7 +6,8 @@ use crate::engine::interaction::AxisInteractionLocks;
 use crate::engine::lod::LodScratch;
 use crate::engine::model::{ChartModel, ModelError};
 use crate::engine::stages::{
-    BarLayoutStage, DataViewStage, MarksStage, OrdinalIndexStage, StackDimsStage,
+    BarLayoutStage, DataViewStage, MarksStage, NearestXIndexKey, NearestXIndexStage,
+    OrdinalIndexStage, StackDimsStage,
 };
 use crate::ids::{ChartId, Revision};
 use crate::link::{LinkConfig, LinkEvent};
@@ -16,11 +17,12 @@ use crate::selection::BrushSelection2D;
 use crate::spec::AxisPointerTrigger;
 use crate::stats::EngineStats;
 use crate::text::TextMeasurer;
-use crate::tooltip::{TooltipLine, TooltipOutput};
+use crate::tooltip::{
+    TooltipAxisOutput, TooltipItemOutput, TooltipOutput, TooltipSeriesEntry, TooltipSeriesValue,
+};
 use crate::transform::stack_base_at_index;
 use crate::transform::{RowRange, RowSelection};
 use crate::view::ViewState;
-use fret_core::Point;
 use std::collections::BTreeMap;
 
 pub mod axis;
@@ -47,6 +49,9 @@ pub struct ChartState {
     pub data_zoom_x: BTreeMap<crate::ids::AxisId, DataZoomXState>,
     pub data_window_y: BTreeMap<crate::ids::AxisId, window::DataWindowY>,
     pub axis_locks: BTreeMap<crate::ids::AxisId, AxisInteractionLocks>,
+    pub visual_map_range:
+        BTreeMap<crate::ids::VisualMapId, Option<crate::engine::model::VisualMapRange>>,
+    pub visual_map_piece_mask: BTreeMap<crate::ids::VisualMapId, Option<u64>>,
     pub hover_px: Option<Point>,
     pub brush_selection_2d: Option<BrushSelection2D>,
     pub dataset_row_ranges: BTreeMap<crate::ids::DatasetId, crate::transform::RowRange>,
@@ -78,6 +83,7 @@ pub struct ChartOutput {
 pub struct AxisPointerOutput {
     pub crosshair_px: Point,
     pub hit: Option<HoverHit>,
+    pub shadow_rect_px: Option<Rect>,
     pub tooltip: TooltipOutput,
 }
 
@@ -118,6 +124,7 @@ pub struct ChartEngine {
     view: ViewState,
     data_view_stage: DataViewStage,
     ordinal_index_stage: OrdinalIndexStage,
+    nearest_x_index_stage: NearestXIndexStage,
     bar_layout_stage: BarLayoutStage,
     stack_dims_stage: StackDimsStage,
     marks_stage: MarksStage,
@@ -158,7 +165,7 @@ impl ChartEngine {
                 },
             );
         }
-        Ok(Self {
+        let mut engine = Self {
             id,
             model,
             datasets: DatasetStore::default(),
@@ -168,13 +175,16 @@ impl ChartEngine {
             view: ViewState::default(),
             data_view_stage: DataViewStage::default(),
             ordinal_index_stage: OrdinalIndexStage::default(),
+            nearest_x_index_stage: NearestXIndexStage::default(),
             bar_layout_stage: BarLayoutStage::default(),
             stack_dims_stage: StackDimsStage::default(),
             marks_stage: MarksStage::default(),
             lod_scratch: LodScratch::default(),
             axis_pointer_cache: AxisPointerCache::default(),
             brush_link_cache: BrushLinkCache::default(),
-        })
+        };
+        engine.init_visual_map_state();
+        Ok(engine)
     }
 
     pub fn id(&self) -> ChartId {
@@ -520,6 +530,30 @@ impl ChartEngine {
                     self.marks_stage.mark_dirty();
                 }
             }
+            Action::SetVisualMapRange { visual_map, range } => {
+                let range = sanitize_range_option(range);
+                self.state.visual_map_range.insert(visual_map, range);
+                self.state.revision.bump();
+                self.marks_stage.mark_dirty();
+            }
+            Action::SetVisualMapPieceMask { visual_map, mask } => {
+                let mask = mask.and_then(|m| {
+                    let Some(vm) = self.model.visual_maps.get(&visual_map).copied() else {
+                        return Some(m);
+                    };
+                    let buckets = vm.buckets.clamp(1, 64) as u32;
+                    let full_mask = if buckets >= 64 {
+                        u64::MAX
+                    } else {
+                        (1u64 << buckets) - 1
+                    };
+                    let m = m & full_mask;
+                    (m != full_mask).then_some(m)
+                });
+                self.state.visual_map_piece_mask.insert(visual_map, mask);
+                self.state.revision.bump();
+                self.marks_stage.mark_dirty();
+            }
             Action::SetLinkGroup { group } => {
                 self.state.link.group = group;
                 self.state.revision.bump();
@@ -529,6 +563,22 @@ impl ChartEngine {
                     && existing.visible != visible
                 {
                     existing.visible = visible;
+                    self.model.revs.bump_visual();
+                    self.marks_stage.mark_dirty();
+                }
+                self.state.revision.bump();
+            }
+            Action::SetSeriesVisibility { updates } => {
+                let mut changed = false;
+                for (series, visible) in updates {
+                    if let Some(existing) = self.model.series.get_mut(&series)
+                        && existing.visible != visible
+                    {
+                        existing.visible = visible;
+                        changed = true;
+                    }
+                }
+                if changed {
                     self.model.revs.bump_visual();
                     self.marks_stage.mark_dirty();
                 }
@@ -544,6 +594,15 @@ impl ChartEngine {
                 self.state.revision.bump();
                 self.marks_stage.mark_dirty();
             }
+        }
+    }
+
+    fn init_visual_map_state(&mut self) {
+        for (id, map) in &self.model.visual_maps {
+            self.state.visual_map_range.insert(*id, map.initial_range);
+            self.state
+                .visual_map_piece_mask
+                .insert(*id, map.initial_piece_mask);
         }
     }
 
@@ -870,10 +929,13 @@ impl ChartEngine {
             }
         }
 
+        let hover_px = self.state.hover_px;
+
         self.ordinal_index_stage.begin_frame();
         if self
             .model
             .axis_pointer
+            .as_ref()
             .is_some_and(|p| p.enabled && p.trigger == AxisPointerTrigger::Axis)
         {
             request_ordinal_indices_for_axis_pointer(
@@ -885,6 +947,24 @@ impl ChartEngine {
         }
         self.ordinal_index_stage.prepare_requests(&self.datasets);
         let ordinal_indices_done = self.ordinal_index_stage.step(&self.datasets, &mut budget);
+
+        self.nearest_x_index_stage.begin_frame();
+        if hover_px.is_some()
+            && self
+                .model
+                .axis_pointer
+                .as_ref()
+                .is_some_and(|p| p.enabled && p.trigger == AxisPointerTrigger::Axis)
+        {
+            request_nearest_x_indices_for_axis_pointer(
+                &mut self.nearest_x_index_stage,
+                &self.model,
+                &self.datasets,
+                &self.view,
+            );
+        }
+        self.nearest_x_index_stage.prepare_requests(&self.datasets);
+        let nearest_x_done = self.nearest_x_index_stage.step(&self.datasets, &mut budget);
 
         self.stack_dims_stage.begin_frame();
         self.stack_dims_stage
@@ -914,10 +994,15 @@ impl ChartEngine {
 
         self.marks_stage
             .sync_inputs(&self.model, &self.datasets, &self.view);
+        let wants_append_rebuild = self.marks_stage.take_append_rebuild();
         if self.marks_stage.is_dirty() {
             self.output.marks.clear();
             self.output.axis_windows.clear();
             self.marks_stage.reset();
+        } else if wants_append_rebuild {
+            // Append-only updates should not clear marks: keep the previous frame geometry visible
+            // while we incrementally extend/rebuild under budget.
+            self.marks_stage.begin_append_rebuild();
         }
 
         self.stats.stage_data_runs += 1;
@@ -947,6 +1032,7 @@ impl ChartEngine {
         for axis in self.model.axes.values() {
             if let crate::scale::AxisScale::Category(scale) = &axis.scale
                 && !scale.categories.is_empty()
+                && !self.output.axis_windows.contains_key(&axis.id)
             {
                 self.output.axis_windows.insert(
                     axis.id,
@@ -962,9 +1048,8 @@ impl ChartEngine {
             || !selection_done
             || !stack_dims_done
             || !ordinal_indices_done
-            || !bar_layout_done;
-
-        let hover_px = self.state.hover_px;
+            || !bar_layout_done
+            || !nearest_x_done;
         let marks_rev = self.output.marks.revision;
         if self.axis_pointer_cache.last_marks_rev != marks_rev {
             self.axis_pointer_cache.last_marks_rev = marks_rev;
@@ -973,16 +1058,23 @@ impl ChartEngine {
             self.axis_pointer_cache.output = None;
         }
 
-        let axis_pointer = self.model.axis_pointer.filter(|p| p.enabled);
+        let axis_pointer = self.model.axis_pointer.as_ref().filter(|p| p.enabled);
+
+        if axis_pointer.is_none() {
+            self.axis_pointer_cache.last_hover_px = None;
+            self.axis_pointer_cache.hit = None;
+            self.axis_pointer_cache.output = None;
+        }
 
         if let Some(hover_px) = hover_px {
-            let should_recompute = axis_pointer.is_some_and(|p| {
-                should_recompute_hover(
+            let should_recompute = match axis_pointer {
+                Some(spec) => should_recompute_hover(
                     self.axis_pointer_cache.last_hover_px,
                     hover_px,
-                    p.throttle_px,
-                )
-            });
+                    spec.throttle_px,
+                ),
+                None => false,
+            };
             if should_recompute {
                 self.axis_pointer_cache.last_hover_px = Some(hover_px);
                 self.axis_pointer_cache.hit = None;
@@ -1003,7 +1095,6 @@ impl ChartEngine {
                                 self.axis_pointer_cache.hit = hit;
                                 self.axis_pointer_cache.output = compute_item_axis_pointer_output(
                                     &self.model,
-                                    &self.output.axis_windows,
                                     hover_px,
                                     hit,
                                     spec,
@@ -1025,6 +1116,7 @@ impl ChartEngine {
                                     &self.data_view_stage,
                                     &self.stack_dims_stage,
                                     &self.ordinal_index_stage,
+                                    &self.nearest_x_index_stage,
                                     &self.output.axis_windows,
                                     viewport,
                                     hover_px,
@@ -1050,6 +1142,13 @@ impl ChartEngine {
     }
 }
 
+fn sanitize_range_option(
+    range: Option<(f64, f64)>,
+) -> Option<crate::engine::model::VisualMapRange> {
+    let (min, max) = range?;
+    crate::engine::model::VisualMapRange { min, max }.sanitize()
+}
+
 fn rect_contains_point(rect: Rect, point: Point) -> bool {
     let x0 = rect.origin.x.0;
     let y0 = rect.origin.y.0;
@@ -1069,12 +1168,95 @@ fn should_recompute_hover(prev: Option<Point>, next: Point, throttle_px: f32) ->
     dist2 >= t * t
 }
 
+fn request_nearest_x_indices_for_axis_pointer(
+    stage: &mut NearestXIndexStage,
+    model: &ChartModel,
+    datasets: &DatasetStore,
+    view: &ViewState,
+) {
+    let Some(primary) = model.series_in_order().find(|s| s.visible) else {
+        return;
+    };
+
+    let trigger_axis = if primary.kind == crate::spec::SeriesKind::Bar {
+        crate::engine::bar::bar_mapping_for_series(model, primary.id)
+            .map(|m| m.category_axis)
+            .unwrap_or(primary.x_axis)
+    } else {
+        primary.x_axis
+    };
+
+    let Some(axis) = model.axes.get(&trigger_axis) else {
+        return;
+    };
+
+    // Category axes use ordinal mapping and do not need nearest-X acceleration.
+    if matches!(axis.scale, crate::scale::AxisScale::Category(_)) {
+        return;
+    }
+    if axis.kind != crate::spec::AxisKind::X {
+        return;
+    }
+
+    for series in model.series_in_order() {
+        if !series.visible {
+            continue;
+        }
+        if series.kind == crate::spec::SeriesKind::Bar {
+            continue;
+        }
+        if series.x_axis != trigger_axis {
+            continue;
+        }
+
+        let Some(series_view) = view.series_view(series.id) else {
+            continue;
+        };
+        let (RowSelection::All | RowSelection::Range(_)) = series_view.selection else {
+            continue;
+        };
+
+        let Some(table) = datasets.dataset(series.dataset) else {
+            continue;
+        };
+        let Some(dataset) = model.datasets.get(&series.dataset) else {
+            continue;
+        };
+        let Some(x_col) = dataset.fields.get(&series.encode.x).copied() else {
+            continue;
+        };
+        let Some(x_values) = table.column_f64(x_col) else {
+            continue;
+        };
+
+        let selection_range = series_view.selection.as_range(table.row_count);
+        let selection_range = RowRange {
+            start: selection_range.start,
+            end: selection_range.end,
+        };
+        let visible_len = selection_range.end.saturating_sub(selection_range.start);
+        if visible_len <= MAX_UNSORTED_AXIS_SCAN_POINTS {
+            continue;
+        }
+
+        if crate::transform::is_probably_monotonic_in_range(x_values, selection_range).is_some() {
+            continue;
+        }
+
+        stage.request(NearestXIndexKey::new(
+            series.dataset,
+            x_col,
+            selection_range,
+            series_view.x_policy.filter,
+        ));
+    }
+}
+
 fn compute_item_axis_pointer_output(
     model: &ChartModel,
-    axis_windows: &BTreeMap<crate::ids::AxisId, window::DataWindow>,
     hover_px: Point,
     hit: Option<HoverHit>,
-    spec: crate::engine::model::AxisPointerModel,
+    spec: &crate::engine::model::AxisPointerModel,
 ) -> Option<AxisPointerOutput> {
     let hit = hit?;
     let trigger2 = spec.trigger_distance_px.max(0.0) * spec.trigger_distance_px.max(0.0);
@@ -1087,47 +1269,19 @@ fn compute_item_axis_pointer_output(
     let series = model.series.get(&hit.series);
     let (x_axis, y_axis) = series.map(|s| (s.x_axis, s.y_axis)).unwrap_or_default();
 
-    let series_value = series
-        .and_then(|s| s.name.as_deref())
-        .map(|n| n.to_string())
-        .unwrap_or_else(|| hit.series.0.to_string());
-
-    let x_axis_label = model
-        .axes
-        .get(&x_axis)
-        .and_then(|a| a.name.as_deref())
-        .map(|n| format!("x ({n})"))
-        .unwrap_or_else(|| "x".to_string());
-    let y_axis_label = model
-        .axes
-        .get(&y_axis)
-        .and_then(|a| a.name.as_deref())
-        .map(|n| format!("y ({n})"))
-        .unwrap_or_else(|| "y".to_string());
-
-    let x_window = axis_windows.get(&x_axis).copied().unwrap_or_default();
-    let y_window = axis_windows.get(&y_axis).copied().unwrap_or_default();
-    let x_value = crate::engine::axis::format_value_for(model, x_axis, x_window, hit.x_value);
-    let y_value = crate::engine::axis::format_value_for(model, y_axis, y_window, hit.y_value);
-
-    let mut tooltip = TooltipOutput::default();
-    tooltip.lines.reserve(3);
-    tooltip.lines.push(TooltipLine {
-        label: "series".to_string(),
-        value: series_value,
-    });
-    tooltip.lines.push(TooltipLine {
-        label: x_axis_label,
-        value: x_value,
-    });
-    tooltip.lines.push(TooltipLine {
-        label: y_axis_label,
-        value: y_value,
+    let tooltip = TooltipOutput::Item(TooltipItemOutput {
+        series: hit.series,
+        data_index: hit.data_index,
+        x_axis,
+        y_axis,
+        x_value: hit.x_value,
+        y_value: hit.y_value,
     });
 
     Some(AxisPointerOutput {
         crosshair_px,
         hit: Some(hit),
+        shadow_rect_px: None,
         tooltip,
     })
 }
@@ -1139,11 +1293,12 @@ fn compute_axis_axis_pointer_output(
     data_views: &DataViewStage,
     stack_dims: &StackDimsStage,
     ordinal_indices: &OrdinalIndexStage,
+    nearest_x_indices: &NearestXIndexStage,
     axis_windows: &BTreeMap<crate::ids::AxisId, window::DataWindow>,
     viewport: Rect,
     hover_px: Point,
     hit: Option<HoverHit>,
-    spec: crate::engine::model::AxisPointerModel,
+    spec: &crate::engine::model::AxisPointerModel,
 ) -> Option<AxisPointerOutput> {
     let primary = model.series_in_order().find(|s| s.visible)?;
     let trigger_axis = if primary.kind == crate::spec::SeriesKind::Bar {
@@ -1161,60 +1316,155 @@ fn compute_axis_axis_pointer_output(
 
     let trigger_window = axis_windows.get(&trigger_axis).copied().unwrap_or_default();
     let trigger2 = spec.trigger_distance_px.max(0.0) * spec.trigger_distance_px.max(0.0);
-    let hit_for_marker = hit.filter(|h| h.dist2_px <= trigger2);
 
-    let axis_value = if spec.snap
-        && let Some(hit) = hit_for_marker
-    {
-        match trigger_axis_kind {
-            crate::spec::AxisKind::X => hit.x_value,
-            crate::spec::AxisKind::Y => hit.y_value,
+    let axis_value_hover = match trigger_axis_kind {
+        crate::spec::AxisKind::X => {
+            crate::engine::axis::data_at_x_in_rect(trigger_window, hover_px.x.0, viewport)
         }
-    } else {
-        match trigger_axis_kind {
-            crate::spec::AxisKind::X => {
-                crate::engine::axis::data_at_x_in_rect(trigger_window, hover_px.x.0, viewport)
-            }
-            crate::spec::AxisKind::Y => {
-                crate::engine::axis::data_at_y_in_rect(trigger_window, hover_px.y.0, viewport)
-            }
+        crate::spec::AxisKind::Y => {
+            crate::engine::axis::data_at_y_in_rect(trigger_window, hover_px.y.0, viewport)
         }
     };
+
+    let mut axis_value = axis_value_hover;
+    if let Some(axis) = model.axes.get(&trigger_axis)
+        && let crate::scale::AxisScale::Category(scale) = &axis.scale
+        && !scale.is_empty()
+        && axis_value.is_finite()
+    {
+        axis_value =
+            (axis_value.round() as isize).clamp(0, scale.len().saturating_sub(1) as isize) as f64;
+    }
+    let mut hit_for_marker = hit.filter(|h| h.dist2_px <= trigger2);
+
+    if spec.snap {
+        if let Some((snapped_axis_value, snapped_hit)) = snap_axis_pointer_to_nearest_sample(
+            model,
+            datasets,
+            view,
+            data_views,
+            stack_dims,
+            nearest_x_indices,
+            axis_windows,
+            viewport,
+            primary,
+            trigger_axis,
+            trigger_axis_kind,
+            trigger_window,
+            axis_value,
+            hover_px,
+        ) {
+            axis_value = snapped_axis_value;
+
+            // For `trigger=Axis`, `trigger_distance_px` only gates whether a marker dot is shown.
+            // The tooltip/crosshair remain active and use the snapped axis value regardless.
+            if let Some(snapped_hit) = snapped_hit {
+                if snapped_hit.dist2_px <= trigger2 {
+                    hit_for_marker = Some(snapped_hit);
+                } else {
+                    hit_for_marker = None;
+                }
+            } else {
+                hit_for_marker = None;
+            }
+        }
+    }
     if !axis_value.is_finite() {
         return None;
     }
 
-    let crosshair_px = if spec.snap
-        && let Some(hit) = hit_for_marker
-    {
-        hit.point_px
+    let crosshair_px = if spec.snap {
+        match trigger_axis_kind {
+            crate::spec::AxisKind::X => Point::new(
+                Px(crate::engine::axis::x_px_at_data_in_rect(
+                    trigger_window,
+                    axis_value,
+                    viewport,
+                )),
+                hover_px.y,
+            ),
+            crate::spec::AxisKind::Y => Point::new(
+                hover_px.x,
+                Px(crate::engine::axis::y_px_at_data_in_rect(
+                    trigger_window,
+                    axis_value,
+                    viewport,
+                )),
+            ),
+        }
     } else {
         hover_px
     };
 
-    let mut tooltip = TooltipOutput::default();
+    let shadow_rect_px = match spec.pointer_type {
+        crate::spec::AxisPointerType::Shadow => {
+            match model.axes.get(&trigger_axis).map(|a| &a.scale) {
+                Some(crate::scale::AxisScale::Category(scale)) if !scale.is_empty() => {
+                    let idx = (axis_value.round() as isize)
+                        .clamp(0, scale.len().saturating_sub(1) as isize)
+                        as f64;
+                    let edge0 = idx - 0.5;
+                    let edge1 = idx + 0.5;
 
-    let axis_label = model
-        .axes
-        .get(&trigger_axis)
-        .and_then(|a| a.name.as_deref())
-        .map(|n| match trigger_axis_kind {
-            crate::spec::AxisKind::X => format!("x ({n})"),
-            crate::spec::AxisKind::Y => format!("y ({n})"),
-        })
-        .unwrap_or_else(|| match trigger_axis_kind {
-            crate::spec::AxisKind::X => "x".to_string(),
-            crate::spec::AxisKind::Y => "y".to_string(),
-        });
-    tooltip.lines.push(TooltipLine {
-        label: axis_label,
-        value: crate::engine::axis::format_value_for(
-            model,
-            trigger_axis,
-            trigger_window,
-            axis_value,
-        ),
-    });
+                    match trigger_axis_kind {
+                        crate::spec::AxisKind::X => {
+                            let x0 = crate::engine::axis::x_px_at_data_in_rect(
+                                trigger_window,
+                                edge0,
+                                viewport,
+                            );
+                            let x1 = crate::engine::axis::x_px_at_data_in_rect(
+                                trigger_window,
+                                edge1,
+                                viewport,
+                            );
+                            let left = x0.min(x1);
+                            let right = x0.max(x1);
+                            let min_x = viewport.origin.x.0;
+                            let max_x = viewport.origin.x.0 + viewport.size.width.0;
+                            let left = left.clamp(min_x, max_x);
+                            let right = right.clamp(min_x, max_x);
+                            Some(Rect::new(
+                                Point::new(Px(left), viewport.origin.y),
+                                Size::new(Px((right - left).max(0.0)), viewport.size.height),
+                            ))
+                        }
+                        crate::spec::AxisKind::Y => {
+                            let y0 = crate::engine::axis::y_px_at_data_in_rect(
+                                trigger_window,
+                                edge0,
+                                viewport,
+                            );
+                            let y1 = crate::engine::axis::y_px_at_data_in_rect(
+                                trigger_window,
+                                edge1,
+                                viewport,
+                            );
+                            let top = y0.min(y1);
+                            let bottom = y0.max(y1);
+                            let min_y = viewport.origin.y.0;
+                            let max_y = viewport.origin.y.0 + viewport.size.height.0;
+                            let top = top.clamp(min_y, max_y);
+                            let bottom = bottom.clamp(min_y, max_y);
+                            Some(Rect::new(
+                                Point::new(viewport.origin.x, Px(top)),
+                                Size::new(viewport.size.width, Px((bottom - top).max(0.0))),
+                            ))
+                        }
+                    }
+                }
+                _ => None,
+            }
+        }
+        crate::spec::AxisPointerType::Line => None,
+    };
+
+    let mut tooltip = TooltipAxisOutput {
+        axis: trigger_axis,
+        axis_kind: trigger_axis_kind,
+        axis_value,
+        series: Vec::default(),
+    };
 
     let category_len = model.axes.get(&trigger_axis).and_then(|a| match &a.scale {
         crate::scale::AxisScale::Category(scale) => Some(scale.len()),
@@ -1301,6 +1551,11 @@ fn compute_axis_axis_pointer_output(
 
         let model_rev = model.revs.marks;
         let table_rev = table.revision;
+        let nearest_index = x_col.and_then(|x_col| {
+            let key =
+                NearestXIndexKey::new(series.dataset, x_col, selection_range, filter_for_index);
+            nearest_x_indices.items_for(key, table_rev)
+        });
 
         let mut sample: Option<SampledSeriesValue> = None;
         if let (Some(category_len), Some(ordinal)) = (category_len, category_ordinal)
@@ -1368,57 +1623,478 @@ fn compute_axis_axis_pointer_output(
             };
             if series.kind == crate::spec::SeriesKind::Scatter {
                 sample_scatter_at_x_view(
-                    model, datasets, stack_dims, model_rev, table_rev, series.id, axis_value, x,
-                    y0, table_view,
+                    model,
+                    datasets,
+                    stack_dims,
+                    model_rev,
+                    table_rev,
+                    series.id,
+                    axis_value,
+                    x,
+                    y0,
+                    table_view,
+                    nearest_index,
                 )
             } else {
                 sample_series_at_x_view(
-                    model, datasets, stack_dims, model_rev, table_rev, series.id, axis_value, x,
-                    y0, y1, table_view,
+                    model,
+                    datasets,
+                    stack_dims,
+                    model_rev,
+                    table_rev,
+                    series.id,
+                    axis_value,
+                    x,
+                    y0,
+                    y1,
+                    table_view,
+                    nearest_index,
                 )
             }
         });
 
-        let label = series
-            .name
-            .as_deref()
-            .map(|n| n.to_string())
-            .unwrap_or_else(|| format!("Series {}", series.id.0));
-
         let value_axis = bar_mapping.map(|m| m.value_axis).unwrap_or(series.y_axis);
-        let value_window = axis_windows.get(&value_axis).copied().unwrap_or_default();
         let value = match sample {
             Some(sample) => {
                 if let Some(y1) = sample.y1 {
-                    let a = crate::engine::axis::format_value_for(
-                        model,
-                        value_axis,
-                        value_window,
-                        sample.y0,
-                    );
-                    let b =
-                        crate::engine::axis::format_value_for(model, value_axis, value_window, y1);
-                    format!("{a} .. {b}")
+                    TooltipSeriesValue::Range {
+                        min: sample.y0,
+                        max: y1,
+                    }
                 } else {
-                    crate::engine::axis::format_value_for(
-                        model,
-                        value_axis,
-                        value_window,
-                        sample.y0,
-                    )
+                    TooltipSeriesValue::Scalar(sample.y0)
                 }
             }
-            None => "-".to_string(),
+            None => TooltipSeriesValue::Missing,
         };
 
-        tooltip.lines.push(TooltipLine { label, value });
+        tooltip.series.push(TooltipSeriesEntry {
+            series: series.id,
+            value_axis,
+            value,
+        });
     }
 
     Some(AxisPointerOutput {
         crosshair_px,
         hit: hit_for_marker,
-        tooltip,
+        shadow_rect_px,
+        tooltip: TooltipOutput::Axis(tooltip),
     })
+}
+
+fn snap_axis_pointer_to_nearest_sample(
+    model: &ChartModel,
+    datasets: &DatasetStore,
+    view: &ViewState,
+    data_views: &DataViewStage,
+    stack_dims: &StackDimsStage,
+    nearest_x_indices: &NearestXIndexStage,
+    axis_windows: &BTreeMap<crate::ids::AxisId, window::DataWindow>,
+    viewport: Rect,
+    primary: &crate::engine::model::SeriesModel,
+    trigger_axis: crate::ids::AxisId,
+    trigger_axis_kind: crate::spec::AxisKind,
+    trigger_window: window::DataWindow,
+    axis_value: f64,
+    hover_px: Point,
+) -> Option<(f64, Option<HoverHit>)> {
+    if !axis_value.is_finite() {
+        return None;
+    }
+
+    // Category axes already effectively snap via ordinal rounding.
+    if let Some(axis) = model.axes.get(&trigger_axis)
+        && matches!(&axis.scale, crate::scale::AxisScale::Category(_))
+    {
+        let len = model
+            .axes
+            .get(&trigger_axis)
+            .and_then(|a| match &a.scale {
+                crate::scale::AxisScale::Category(scale) => Some(scale.len()),
+                _ => None,
+            })
+            .unwrap_or(0);
+        let ord = ordinal_from_value(axis_value, len)?;
+        return Some((ord as f64, None));
+    }
+
+    match trigger_axis_kind {
+        crate::spec::AxisKind::X => snap_axis_pointer_x_to_series(
+            model,
+            datasets,
+            view,
+            data_views,
+            stack_dims,
+            nearest_x_indices,
+            axis_windows,
+            viewport,
+            primary,
+            trigger_window,
+            axis_value,
+            hover_px,
+        ),
+        crate::spec::AxisKind::Y => snap_axis_pointer_y_to_series(
+            model,
+            datasets,
+            view,
+            data_views,
+            stack_dims,
+            axis_windows,
+            viewport,
+            primary,
+            trigger_window,
+            axis_value,
+            hover_px,
+        ),
+    }
+}
+
+fn snap_axis_pointer_x_to_series(
+    model: &ChartModel,
+    datasets: &DatasetStore,
+    view: &ViewState,
+    data_views: &DataViewStage,
+    stack_dims: &StackDimsStage,
+    nearest_x_indices: &NearestXIndexStage,
+    axis_windows: &BTreeMap<crate::ids::AxisId, window::DataWindow>,
+    viewport: Rect,
+    primary: &crate::engine::model::SeriesModel,
+    trigger_window: window::DataWindow,
+    axis_value: f64,
+    hover_px: Point,
+) -> Option<(f64, Option<HoverHit>)> {
+    if primary.kind == crate::spec::SeriesKind::Bar {
+        return None;
+    }
+
+    let table = datasets.dataset(primary.dataset)?;
+    let table_rev = table.revision;
+    let model_rev = model.revs.data;
+
+    let dataset = model.datasets.get(&primary.dataset)?;
+    let x_col = dataset.fields.get(&primary.encode.x).copied()?;
+    let y0_col = dataset.fields.get(&primary.encode.y).copied()?;
+
+    let x = table.column_f64(x_col)?;
+    let y0 = table.column_f64(y0_col)?;
+    let y1 = primary
+        .encode
+        .y2
+        .and_then(|y2_field| dataset.fields.get(&y2_field).copied())
+        .and_then(|y2_col| table.column_f64(y2_col));
+
+    let (selection_range, filter, base_selection) = match view.series_view(primary.id) {
+        Some(series_view) => {
+            let selection_range = series_view.selection.as_range(table.row_count);
+            let selection_range = RowRange {
+                start: selection_range.start,
+                end: selection_range.end,
+            };
+            (
+                selection_range,
+                series_view.x_policy.filter,
+                series_view.selection.clone(),
+            )
+        }
+        None => (
+            RowRange {
+                start: 0,
+                end: table.row_count,
+            },
+            crate::engine::window_policy::AxisFilter1D::default(),
+            RowSelection::default(),
+        ),
+    };
+
+    let table_view = data_views.table_view_for(
+        table,
+        primary.dataset,
+        x_col,
+        selection_range,
+        filter,
+        base_selection,
+    );
+
+    let nearest_key = NearestXIndexKey::new(primary.dataset, x_col, selection_range, filter);
+    let nearest_index = nearest_x_indices.items_for(nearest_key, table_rev);
+    let (raw_index, x_raw) =
+        nearest_raw_index_at_x_view(axis_value, x, &table_view, nearest_index)?;
+    let sampled = sample_at_raw_index(
+        model,
+        datasets,
+        stack_dims,
+        model_rev,
+        table_rev,
+        primary.id,
+        raw_index,
+        y0,
+        y1.as_deref(),
+    )?;
+
+    let y_window = axis_windows
+        .get(&primary.y_axis)
+        .copied()
+        .unwrap_or_default();
+
+    let px_x = crate::engine::axis::x_px_at_data_in_rect(trigger_window, x_raw, viewport);
+    let px_y = crate::engine::axis::y_px_at_data_in_rect(y_window, sampled.y0, viewport);
+    let point_px = Point::new(Px(px_x), Px(px_y));
+
+    let dx = hover_px.x.0 - point_px.x.0;
+    let dy = hover_px.y.0 - point_px.y.0;
+    let dist2_px = dx * dx + dy * dy;
+
+    let hit = HoverHit {
+        series: primary.id,
+        data_index: raw_index as u32,
+        point_px,
+        dist2_px,
+        x_value: x_raw,
+        y_value: sampled.y0,
+    };
+
+    Some((x_raw, Some(hit)))
+}
+
+fn nearest_raw_index_at_x_view(
+    x_value: f64,
+    x: &[f64],
+    table_view: &crate::data::DataTableView<'_>,
+    nearest_index: Option<&[crate::engine::stages::NearestXIndexItem]>,
+) -> Option<(usize, f64)> {
+    if let Some(index) = nearest_index {
+        if let Some(hit) =
+            crate::engine::stages::nearest_raw_index_in_sorted_x_index(index, x_value)
+        {
+            return Some(hit);
+        }
+    }
+
+    let view_len = table_view.len();
+    if view_len == 0 {
+        return None;
+    }
+
+    let selection = table_view.selection();
+    if let RowSelection::All | RowSelection::Range(_) = selection {
+        let len = x.len();
+        let (start, end) = match selection {
+            RowSelection::All => (0usize, len),
+            RowSelection::Range(range) => {
+                let r = range.as_std_range(len);
+                (r.start, r.end)
+            }
+            RowSelection::Indices(_) => unreachable!(),
+        };
+
+        if start < end
+            && crate::transform::is_probably_monotonic_in_range(x, RowRange { start, end })
+                .is_some()
+        {
+            let xs = &x[start..end];
+            if xs.len() == 1 {
+                let v = xs[0];
+                return v.is_finite().then_some((start, v));
+            }
+
+            let idx = lower_bound(xs, x_value);
+            let i1 = (start + idx).min(end - 1);
+            let i0 = i1.saturating_sub(1).max(start);
+
+            let x0 = x.get(i0).copied().unwrap_or(f64::NAN);
+            let x1 = x.get(i1).copied().unwrap_or(f64::NAN);
+            if !x0.is_finite() || !x1.is_finite() {
+                return None;
+            }
+
+            let d0 = (x_value - x0).abs();
+            let d1 = (x_value - x1).abs();
+            return if d1 < d0 {
+                Some((i1, x1))
+            } else {
+                Some((i0, x0))
+            };
+        }
+    }
+
+    if view_len > MAX_UNSORTED_AXIS_SCAN_POINTS {
+        return None;
+    }
+
+    let mut best_raw_index: Option<usize> = None;
+    let mut best_x: f64 = f64::NAN;
+    let mut best_dist = f64::INFINITY;
+
+    for view_index in 0..view_len {
+        let Some(raw_index) = table_view.get_raw_index(view_index) else {
+            continue;
+        };
+        let x_raw = x.get(raw_index).copied().unwrap_or(f64::NAN);
+        if !x_raw.is_finite() {
+            continue;
+        }
+        let dist = (x_value - x_raw).abs();
+        if dist < best_dist {
+            best_dist = dist;
+            best_raw_index = Some(raw_index);
+            best_x = x_raw;
+        }
+    }
+
+    best_raw_index.map(|i| (i, best_x))
+}
+
+fn snap_axis_pointer_y_to_series(
+    model: &ChartModel,
+    datasets: &DatasetStore,
+    view: &ViewState,
+    data_views: &DataViewStage,
+    stack_dims: &StackDimsStage,
+    axis_windows: &BTreeMap<crate::ids::AxisId, window::DataWindow>,
+    viewport: Rect,
+    primary: &crate::engine::model::SeriesModel,
+    trigger_window: window::DataWindow,
+    axis_value: f64,
+    hover_px: Point,
+) -> Option<(f64, Option<HoverHit>)> {
+    // Bars use category axes and snap via ordinal rounding above.
+    if primary.kind == crate::spec::SeriesKind::Bar {
+        return None;
+    }
+
+    // Only support Y-axis snapping when the trigger axis is the series value axis (future-facing;
+    // v1 typically triggers on X, except for bar charts).
+    let trigger_axis = primary.y_axis;
+    if model
+        .axes
+        .get(&trigger_axis)
+        .is_some_and(|a| a.kind != crate::spec::AxisKind::Y)
+    {
+        return None;
+    }
+
+    let table = datasets.dataset(primary.dataset)?;
+    let table_rev = table.revision;
+    let model_rev = model.revs.data;
+
+    let dataset = model.datasets.get(&primary.dataset)?;
+    let x_col = dataset.fields.get(&primary.encode.x).copied()?;
+    let y0_col = dataset.fields.get(&primary.encode.y).copied()?;
+
+    let x = table.column_f64(x_col)?;
+    let y0 = table.column_f64(y0_col)?;
+    let y1 = primary
+        .encode
+        .y2
+        .and_then(|y2_field| dataset.fields.get(&y2_field).copied())
+        .and_then(|y2_col| table.column_f64(y2_col));
+
+    let (selection_range, filter, base_selection) = match view.series_view(primary.id) {
+        Some(series_view) => {
+            let selection_range = series_view.selection.as_range(table.row_count);
+            let selection_range = RowRange {
+                start: selection_range.start,
+                end: selection_range.end,
+            };
+            (
+                selection_range,
+                series_view.x_policy.filter,
+                series_view.selection.clone(),
+            )
+        }
+        None => (
+            RowRange {
+                start: 0,
+                end: table.row_count,
+            },
+            crate::engine::window_policy::AxisFilter1D::default(),
+            RowSelection::default(),
+        ),
+    };
+
+    let table_view = data_views.table_view_for(
+        table,
+        primary.dataset,
+        x_col,
+        selection_range,
+        filter,
+        base_selection,
+    );
+
+    let view_len = table_view.len();
+    if view_len == 0 {
+        return None;
+    }
+    if view_len > MAX_UNSORTED_AXIS_SCAN_POINTS {
+        return None;
+    }
+
+    let mut best: Option<(usize, f64, f64)> = None; // (raw_index, x_raw, y_eff)
+    let mut best_dist = f64::INFINITY;
+
+    for view_index in 0..view_len {
+        let Some(raw_index) = table_view.get_raw_index(view_index) else {
+            continue;
+        };
+
+        let x_raw = x.get(raw_index).copied().unwrap_or(f64::NAN);
+        if !x_raw.is_finite() {
+            continue;
+        }
+
+        let Some(sampled) = sample_at_raw_index(
+            model,
+            datasets,
+            stack_dims,
+            model_rev,
+            table_rev,
+            primary.id,
+            raw_index,
+            y0,
+            y1.as_deref(),
+        ) else {
+            continue;
+        };
+
+        if !sampled.y0.is_finite() {
+            continue;
+        }
+        let dist = (axis_value - sampled.y0).abs();
+        if dist < best_dist {
+            best_dist = dist;
+            best = Some((raw_index, x_raw, sampled.y0));
+        }
+    }
+
+    let (raw_index, x_raw, y_eff) = best?;
+    if !y_eff.is_finite() {
+        return None;
+    }
+
+    let x_window = axis_windows
+        .get(&primary.x_axis)
+        .copied()
+        .unwrap_or_default();
+
+    let px_x = crate::engine::axis::x_px_at_data_in_rect(x_window, x_raw, viewport);
+    let px_y = crate::engine::axis::y_px_at_data_in_rect(trigger_window, y_eff, viewport);
+    let point_px = Point::new(Px(px_x), Px(px_y));
+
+    let dx = hover_px.x.0 - point_px.x.0;
+    let dy = hover_px.y.0 - point_px.y.0;
+    let dist2_px = dx * dx + dy * dy;
+
+    let hit = HoverHit {
+        series: primary.id,
+        data_index: raw_index as u32,
+        point_px,
+        dist2_px,
+        x_value: x_raw,
+        y_value: y_eff,
+    };
+
+    Some((y_eff, Some(hit)))
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -1577,7 +2253,17 @@ fn sample_nearest_at_x_view(
     y0: &[f64],
     y1: Option<&[f64]>,
     table_view: &crate::data::DataTableView<'_>,
+    nearest_index: Option<&[crate::engine::stages::NearestXIndexItem]>,
 ) -> Option<SampledSeriesValue> {
+    if let Some(index) = nearest_index
+        && let Some((raw_index, _x_raw)) =
+            crate::engine::stages::nearest_raw_index_in_sorted_x_index(index, x_value)
+    {
+        return sample_at_raw_index(
+            model, datasets, stack_dims, model_rev, table_rev, series_id, raw_index, y0, y1,
+        );
+    }
+
     let view_len = table_view.len();
     if view_len == 0 {
         return None;
@@ -1636,6 +2322,7 @@ fn sample_scatter_at_x_view(
     x: &[f64],
     y0: &[f64],
     table_view: &crate::data::DataTableView<'_>,
+    nearest_index: Option<&[crate::engine::stages::NearestXIndexItem]>,
 ) -> Option<SampledSeriesValue> {
     let len = x.len().min(y0.len());
     if len == 0 {
@@ -1698,8 +2385,18 @@ fn sample_scatter_at_x_view(
     }
 
     sample_nearest_at_x_view(
-        model, datasets, stack_dims, model_rev, table_rev, series_id, x_value, x, y0, None,
+        model,
+        datasets,
+        stack_dims,
+        model_rev,
+        table_rev,
+        series_id,
+        x_value,
+        x,
+        y0,
+        None,
         table_view,
+        nearest_index,
     )
 }
 
@@ -1715,6 +2412,7 @@ fn sample_series_at_x_view(
     y0: &[f64],
     y1: Option<&[f64]>,
     table_view: &crate::data::DataTableView<'_>,
+    nearest_index: Option<&[crate::engine::stages::NearestXIndexItem]>,
 ) -> Option<SampledSeriesValue> {
     let len = x.len().min(y0.len());
     if len == 0 {
@@ -1743,8 +2441,17 @@ fn sample_series_at_x_view(
         }
 
         let idx = lower_bound(xs, x_value);
-        let i1 = (start + idx).min(end - 1);
-        let i0 = i1.saturating_sub(1).max(start);
+        let mut i1 = (start + idx).min(end - 1);
+        let mut i0 = i1.saturating_sub(1).max(start);
+        if i0 == i1 {
+            // `lower_bound` can return the start index when sampling at/before the first point.
+            // Ensure we have a non-degenerate segment for interpolation.
+            if i1 + 1 < end {
+                i1 += 1;
+            } else if i0 > start {
+                i0 -= 1;
+            }
+        }
 
         let x0 = x[i0];
         let x1v = x[i1];
@@ -1792,8 +2499,18 @@ fn sample_series_at_x_view(
     }
 
     sample_nearest_at_x_view(
-        model, datasets, stack_dims, model_rev, table_rev, series_id, x_value, x, y0, y1,
+        model,
+        datasets,
+        stack_dims,
+        model_rev,
+        table_rev,
+        series_id,
+        x_value,
+        x,
+        y0,
+        y1,
         table_view,
+        nearest_index,
     )
 }
 

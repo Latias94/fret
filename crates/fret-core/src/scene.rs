@@ -112,6 +112,8 @@ impl Default for EffectChain {
 pub struct SceneRecording {
     ops: Vec<SceneOp>,
     fingerprint: u64,
+    #[cfg(debug_assertions)]
+    storage_swapped_since_clear: bool,
 }
 
 pub type Scene = SceneRecording;
@@ -120,6 +122,10 @@ impl SceneRecording {
     pub fn clear(&mut self) {
         self.ops.clear();
         self.fingerprint = 0;
+        #[cfg(debug_assertions)]
+        {
+            self.storage_swapped_since_clear = false;
+        }
     }
 
     pub fn validate(&self) -> Result<(), SceneValidationError> {
@@ -558,9 +564,26 @@ impl SceneRecording {
         self.ops.len()
     }
 
+    /// Swap the internal op storage with an external buffer.
+    ///
+    /// This is a performance-oriented API used by subsystems like the UI paint cache to "take"
+    /// the previous frame's ops without copying.
+    ///
+    /// In debug builds, this asserts if called more than once without an intervening `clear()`,
+    /// because repeated swaps typically indicate multiple paint-cache ingestions from the same scene.
     pub fn swap_storage(&mut self, other_ops: &mut Vec<SceneOp>, other_fingerprint: &mut u64) {
+        #[cfg(debug_assertions)]
+        debug_assert!(
+            !self.storage_swapped_since_clear,
+            "Scene::swap_storage() was called more than once without an intervening Scene::clear(); \
+this is not supported because swap_storage() is destructive and typically indicates multiple paint-cache ingestions"
+        );
         std::mem::swap(&mut self.ops, other_ops);
         std::mem::swap(&mut self.fingerprint, other_fingerprint);
+        #[cfg(debug_assertions)]
+        {
+            self.storage_swapped_since_clear = true;
+        }
     }
 
     pub fn fingerprint(&self) -> u64 {

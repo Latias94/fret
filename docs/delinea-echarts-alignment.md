@@ -28,11 +28,12 @@ Status symbols:
   - Axis locks + shortcuts: `docs/adr/0135-delinea-axis-interaction-locks-and-shortcuts.md`
   - DataZoom Y + 2D semantics (v1 divergence): `docs/adr/0136-delinea-datazoom-y-and-2d-semantics.md`
   - Row selection + filtering: `docs/adr/0137-delinea-row-selection-and-filtering-contract.md`
-  - DataZoom composition + span policy: `docs/adr/0138-delinea-datazoom-component-composition-and-span-policy.md`
-  - Dataset storage + indices: `docs/adr/0140-delinea-dataset-storage-and-indices.md`
-  - Brush selection output: `docs/adr/0144-delinea-brush-selection-and-output-contract.md`
-  - Brush selection row-range fast path: `docs/adr/0145-delinea-brush-selection-to-row-selection-fast-path.md`
-  - Brush selection link events: `docs/adr/0146-delinea-link-events-for-brush-selection.md`
+- DataZoom composition + span policy: `docs/adr/0138-delinea-datazoom-component-composition-and-span-policy.md`
+- Dataset storage + indices: `docs/adr/0140-delinea-dataset-storage-and-indices.md`
+- Brush selection output: `docs/adr/0144-delinea-brush-selection-and-output-contract.md`
+- Brush selection row-range fast path: `docs/adr/0145-delinea-brush-selection-to-row-selection-fast-path.md`
+- Brush selection link events: `docs/adr/0146-delinea-link-events-for-brush-selection.md`
+- VisualMap (data-driven styling): `docs/adr/0147-delinea-visualmap-and-data-driven-styling.md`
 
 ## Quick Manual Validation
 
@@ -84,6 +85,182 @@ See `apps/fret-demo-web/README.md` for prerequisites and the full list of demo n
 This section defines concrete behaviors that we treat as the baseline for refactors and new
 features. The multi-axis harness (`apps/fret-examples/src/chart_multi_axis_demo.rs`) is the
 reference demo for validating these scenarios on desktop + wasm.
+
+### Traceable P0 Scenario Checklist (Evidence-Backed)
+
+This checklist is intentionally redundant with the sections below. Its purpose is to keep a
+single “at a glance” view of:
+
+- what we treat as P0-conformance semantics,
+- where the behavior is defined (ADR),
+- where it is implemented (evidence anchors),
+- and what is still missing vs ECharts.
+
+**S1 - DataZoom X inside + slider window writes** (`[x]`)
+
+- ECharts reference: `repo-ref/echarts/src/component/dataZoom/AxisProxy.ts`, `repo-ref/echarts/src/component/dataZoom/dataZoomProcessor.ts`
+- ADR(s): `docs/adr/0129-delinea-transform-pipeline-and-datazoom-semantics.md`, `docs/adr/0138-delinea-datazoom-component-composition-and-span-policy.md`
+- Evidence: `ecosystem/delinea/src/engine/window.rs` (span limits), `ecosystem/delinea/src/engine/mod.rs` (interaction action routing), `ecosystem/fret-chart/src/retained/canvas.rs` (inside + slider gestures)
+- Validation (desktop): `cargo run -p fret-demo --bin fret-demo -- chart_multi_axis_demo`
+- Validation (wasm): `cargo run -p fretboard -- dev web --demo chart_multi_axis_demo`
+- What to validate (P0):
+  - Wheel on bottom X axis band zooms X only; span limits clamp zoom-in/out writes.
+  - Drag on bottom X axis band pans X only.
+  - X slider (bottom) supports pan drag + min/max handle drags + click-to-jump.
+  - Locks (`Ctrl + LMB` toggle) gate slider + wheel writes for the locked axis.
+
+**S2 - DataZoom Y + 2D zoom parity boundary (v1 divergence)** (`[~]`)
+
+- ECharts reference: `repo-ref/echarts/src/component/dataZoom/*` (order-sensitive multi-dim filtering)
+- ADR(s): `docs/adr/0136-delinea-datazoom-y-and-2d-semantics.md`, `docs/adr/0137-delinea-row-selection-and-filtering-contract.md`
+- Evidence: `ecosystem/delinea/src/engine/mod.rs` (Y mapping windows), `ecosystem/delinea/src/transform/*` (RowSelection)
+- Validation (desktop): `cargo run -p fret-demo --bin fret-demo -- chart_multi_axis_demo`
+- What to validate (current v1 behavior):
+  - Wheel on Y axis band zooms Y only; Y span limits (when configured) clamp interaction-derived writes.
+  - 2D box zoom writes a paired window update (no sparse filtering materialization).
+- Missing vs ECharts (high value):
+  - Y-driven filtering semantics (and ordering rules when multiple dims are filtered),
+  - ECharts-style “weakFilter/empty” behaviors for sparse selections,
+  - 2D zoom interactions that can materialize sparse selections when needed.
+
+**S3 - 2D box zoom writes an atomic paired window action** (`[x]`)
+
+- ECharts reference: `repo-ref/echarts/src/component/dataZoom/*` + brush/interaction glue (behavioral reference only; implementation differs)
+- ADR(s): `docs/adr/0136-delinea-datazoom-y-and-2d-semantics.md`
+- Evidence: `ecosystem/fret-chart/src/retained/canvas.rs` (`Action::SetViewWindow2DFromZoom`)
+- Validation (desktop): `cargo run -p fret-demo --bin fret-demo -- chart_multi_axis_demo`
+- What to validate (P0):
+  - `RMB drag` in plot starts a box zoom; the gesture respects axis-band active routing rules.
+  - `Alt` expands horizontally; `Shift` expands vertically (unless `Shift` is used to start the gesture).
+  - If either axis is zoom-locked or fixed, the gesture does not start.
+
+**S4 - Category axis under zoom for non-bar series** (`[~]`)
+
+- ECharts reference: category axis + dataZoom behavior (series sampling under ordinal transforms)
+- ADR(s): `docs/adr/0130-delinea-axis-scales-and-coordinate-mapping.md`, `docs/adr/0140-delinea-dataset-storage-and-indices.md`
+- Evidence: `ecosystem/delinea/src/engine/stages/ordinal_index.rs` (ordinal mapping), `ecosystem/delinea/src/engine/axis.rs` (ticks)
+- Validation (existing coverage):
+  - `cargo run -p fret-demo --bin fret-demo -- horizontal_bars_demo` (category Y axis + bar layout + axis pointer)
+- Validation (recommended):
+  - `cargo run -p fret-demo --bin fret-demo -- category_line_demo` (category X axis + line/scatter + dataZoom)
+- Missing vs ECharts:
+  - fully stable ordinal mapping semantics for line/scatter under zoom (not just bars/axis pointer),
+  - conformance tests that lock “raw index ↔ ordinal index” invariants across transforms.
+
+**S5 - Tooltip content parity + formatting hooks** (`[~]`)
+
+- ECharts reference: tooltip formatter + axisPointer sampling behavior (series order, missing values, snapping rules)
+- ADR(s): `docs/adr/0133-delinea-interaction-and-hit-testing-contract.md`, `docs/adr/0148-delinea-tooltip-formatting-contract.md`
+- Evidence: `ecosystem/delinea/src/tooltip.rs`, `ecosystem/fret-chart/src/retained/tooltip.rs`, `ecosystem/delinea/src/engine/hit_test.rs`
+- Validation (desktop): `cargo run -p fret-demo --bin fret-demo -- chart_demo`
+- Validation (wasm): `cargo run -p fretboard -- dev web --demo chart_demo`
+- Notes:
+  - This is a *chart tooltip* (axisPointer-driven, data-derived, per-frame), not a generic UI tooltip primitive.
+    It intentionally lives inside `fret-chart` rather than reusing the Radix/Shadcn tooltip surface.
+- What to validate (P0 baseline):
+  - Tooltip rows are stable and ordered by `series_order`.
+  - Missing/unsampleable series show `-` instead of panicking or reordering rows.
+  - When `axisPointer.snap=true` and `trigger=Axis`, the pointer aligns to a nearest sample on the trigger axis (stable away from the series stroke).
+  - `axisPointer.triggerDistance` gates the snap marker (`axisPointer.hit`) only; the crosshair and tooltip remain available for `trigger=Axis`.
+  - Axis-trigger sampling policies are stable and series-kind aware:
+    - Line/Area/Band: linear interpolation for monotonic X inputs; nearest-sample fallback for non-monotonic inputs.
+    - Scatter: nearest-sample selection on X (no interpolation).
+    - Bar: category-ordinal lookup (stable index mapping), respecting stacked value when applicable.
+- What exists in v1:
+  - `ChartSpec.tooltip: Option<TooltipSpecV1>` supports templates + decimals, including per-series overrides (adapter-side).
+  - Tooltip marker swatches are rendered from the series palette (UI-side).
+  - Tooltip lines support a two-column `label: value` layout (UI-side; current heuristic split on `": "`).
+  - Delinea: `AxisPointerSpec.pointer_type=Shadow` (ECharts: `axisPointer.type="shadow"`) highlights the active category band (`AxisPointerOutput.shadow_rect_px`).
+  - Delinea: `AxisPointerSpec.label.show=true` (ECharts: `axisPointer.label.show=true`) draws an axis value label on the trigger axis band (adapter-side; default is `false`). v1 supports a string template formatter via `AxisPointerSpec.label.template` (`{value}`, `{axis_name}`).
+  - Axis-trigger sampling reads from the current view selection (DataZoom/filter/selection) and is allocation-aware:
+    - monotonic ranges use a bounded `lower_bound` interpolation path,
+    - non-monotonic ranges use nearest-scan with a hard cap (`MAX_UNSORTED_AXIS_SCAN_POINTS`) to avoid O(n) work on huge datasets,
+    - for very large non-monotonic X views, the engine can build a budgeted "nearest X" index to recover near-O(log n) sampling (`NearestXIndexStage`).
+      The stage supports append-only resume and prefix reuse when the request end grows.
+- Missing vs ECharts:
+  - ECharts formatter parity (callback-style formatting, rich text/HTML markers, per-series overrides),
+  - richer tooltip layout (structural columns, rich text/HTML) and additional snapping policies.
+
+**S6 - Legend semantics (series visibility) + UI parity** (`[~]`)
+
+- ECharts reference: legend selection model + event semantics
+- ADR(s): (engine-level visibility is part of the core model contract; UI parity is adapter work)
+- Evidence: `delinea::Action::SetSeriesVisible` + marks gating in `ecosystem/delinea/src/engine/stages/marks.rs`
+- Validation (desktop): `cargo run -p fret-demo --bin fret-demo -- chart_multi_axis_demo`
+- What to validate (P0 baseline):
+  - `LMB click` on legend selector buttons (`All` / `None` / `Invert`) updates the visibility set accordingly.
+  - `LMB click` on a legend row toggles that series visibility.
+  - `LMB double-click` isolates the clicked series (hides all others).
+  - When a series is already isolated, `LMB double-click` restores all series visibility.
+  - `Shift + LMB click` toggles a contiguous range (anchor -> clicked) to match the clicked toggle target.
+  - `RMB click` inside the legend panel restores all series visibility.
+  - `Ctrl+A` (when the pointer is in the legend panel): select all series.
+  - `Ctrl+Shift+A` (when the pointer is in the legend panel): select none.
+  - `Ctrl+I` (when the pointer is in the legend panel): invert selection.
+  - Hidden series do not participate in axisPointer primary selection and are excluded from axis-trigger tooltip rows.
+- What exists in v1:
+  - A built-in legend overlay in `fret-chart` (panel + swatch + hover highlight).
+  - Visibility is wired through `delinea::Action::SetSeriesVisible` (headless model is authoritative).
+  - Basic overflow handling: the legend panel height is clamped to the plot height, and the wheel scrolls the legend.
+  - Selector affordance: `All` / `None` / `Invert` selector buttons at the top of the legend panel.
+- Missing vs ECharts:
+  - multi-legend layout and full selector schema parity (ECharts `legend.selector` options + styling),
+  - conformance scenarios for legend <-> tooltip/axisPointer interactions.
+
+**S7 - VisualMap (continuous + piecewise) multi-channel baseline** (`[~]`)
+
+- ECharts reference: `repo-ref/echarts/src/component/visualMap/VisualMapModel.ts`, `repo-ref/echarts/src/component/visualMap/visualEncoding.ts`
+- ADR(s): `docs/adr/0147-delinea-visualmap-and-data-driven-styling.md`
+- Evidence: `ecosystem/delinea/src/engine/stages/marks.rs` (bucketed batches), `ecosystem/fret-chart/src/retained/canvas.rs` (controller UI)
+- Validation (desktop):
+  - `cargo run -p fret-demo --bin fret-demo -- chart_multi_axis_demo` (scatter visualMap + multi-axis controller band)
+  - `cargo run -p fret-demo --bin fret-demo -- horizontal_bars_demo` (bar visualMap)
+- What to validate (P0 baseline):
+  - Continuous: drag inside range pans; drag handles resizes; click outside jumps.
+  - Piecewise: click toggles buckets; `Shift+Click` range toggles; `RMB`/double click resets.
+  - Channels: bucketed color, per-bucket opacity ramp, scatter radius multiplier, and optional stroke width range (v1: scatter + bar).
+- Missing vs ECharts:
+  - multiple VisualMaps targeting the same series (v1 restriction),
+  - per-item attribute pipelines (GPU instancing) for rich multi-channel mapping without bucketization.
+
+**S8 - LOD / downsampling strategies and conformance harness** (`[~]`)
+
+- ECharts reference: `large`, `progressive`, sampling/decimation knobs per series type
+- ADR(s): `docs/adr/0132-delinea-large-data-and-progressive-rendering.md`
+- Evidence: `ecosystem/delinea/src/engine/lod/*` + stage budgets
+- v1 invariants (P0 baseline):
+  - Line-family (line/area/band): min/max-per-pixel bucketing over the plot width, emitting `<= 4 * plot_width_px`
+    points for monotonic-X inputs (preserves spikes while staying pixel-bounded).
+  - Scatter: exact mode for small datasets; large mode (`visible_len > 20_000`) switches to pixel-bounded LOD.
+  - LOD outputs preserve index identity: `points.len() == data_indices.len()` and indices refer to raw rows.
+- Tests (headless):
+  - `ecosystem/delinea/src/engine/lod/minmax_per_pixel.rs` (unit invariants for finalize ordering + bounds)
+  - `ecosystem/delinea/src/engine/tests.rs` (`scatter_large_mode_is_pixel_bounded`, `line_large_mode_is_pixel_bounded`)
+- Conformance doc: `docs/delinea-lod-conformance.md`
+- Validation harness (native, v1):
+  - `cargo run -p fret-demo --bin chart_stress_demo`
+  - Env knobs:
+    - `FRET_CHART_STRESS_POINTS` (default: 1_000_000)
+    - `FRET_CHART_STRESS_EXIT_AFTER_FRAMES`
+- Missing vs ECharts:
+  - explicit policies per series kind (line vs scatter vs bar),
+  - a benchmark/conformance harness that locks frame-time and visual invariants.
+
+**S9 - Append/update semantics (`appendData`)** (`[~]`)
+
+- ECharts reference: `appendData` and incremental updates on `DataStore`
+- ADR(s): `docs/adr/0140-delinea-dataset-storage-and-indices.md`, `docs/adr/0149-delinea-appenddata-and-incremental-caches.md`
+- ADR(s): `docs/adr/0140-delinea-dataset-storage-and-indices.md` (append-only rule; v1 ingestion API)
+- Evidence:
+  - `ecosystem/delinea/src/data/mod.rs` (`DataTable::append_row_f64`, `DataTable::append_columns_f64`)
+  - `ecosystem/delinea/src/engine/stages/data_view.rs` (append-only resume for XFilter index scans)
+  - `ecosystem/delinea/src/engine/stages/ordinal_index.rs` (append-only resume for ordinal inverted index scans)
+  - `ecosystem/delinea/src/engine/stages/nearest_x_index.rs` (append-only resume + prefix reuse for nearest-X index scans)
+- Validation (headless): `cargo nextest run -p delinea` (see `data_view_stage_invalidates_indices_on_data_revision_change`)
+- Missing vs ECharts (high value):
+  - append-aware incremental mark rebuild for `RowSelection::All` (avoid rebuilding the entire mark tree on stream append),
+  - append-aware incremental bounds extension (monotonic X fast path),
+  - streaming-focused benchmarks and CI gates for regressions.
 
 ### Active axis selection and routing
 
@@ -163,6 +340,16 @@ reference demo for validating these scenarios on desktop + wasm.
   - If either bound is locked, window panning via slider drag is disabled.
   - If `LockMin` is present, the min-handle drag is disabled.
   - If `LockMax` is present, the max-handle drag is disabled.
+- VisualMap controllers (v1):
+  - Rendered when the model has at least one `VisualMapSpec`.
+  - Control UI lives in a dedicated right-side band (outside the plot clip).
+  - Continuous:
+    - Drag inside the selected window pans the range; drag the min/max handles resizes.
+    - Clicking outside the window jumps the selection and continues as a pan drag.
+    - Writes `Action::SetVisualMapRange` into `ChartState.visual_map_range`.
+  - Piecewise:
+    - Clicking a bucket toggles its selection (inRange/outOfRange).
+    - Writes `Action::SetVisualMapPieceMask` into `ChartState.visual_map_piece_mask`.
 
 ### Lock toggles and view reset/fit
 
@@ -253,22 +440,30 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
     `crates/fret-ui/src/tree/paint.rs` (clears stale paint cache entries when caching is disabled for a node).
 - `[x]` No per-frame allocations in core stages (target; enforce via tests/benchmarks over time).
 - `[~]` Series-specific LOD / downsampling strategies (scatter vs line vs bar) (needs a conformance harness).
-- `[ ]` Append/update semantics (ECharts `appendData`) (deferred; likely needs dataset storage contract work).
+- `[~]` Append/update semantics (ECharts `appendData`) (append-only APIs exist; incremental cache extension still pending).
 
 ### Styling & theming
 
 - `[~]` Token-driven chart styling (tracked in `docs/adr/0142-fret-chart-theme-tokens-and-style-resolution.md`).
-- `[ ]` VisualMap-style data-driven color mapping (ECharts `visualMap`) (future; depends on mark metadata + palette policy).
+- `[~]` VisualMap-style data-driven color mapping (ECharts `visualMap`) (scatter + bar v1 buckets).
+  - Evidence: `docs/adr/0147-delinea-visualmap-and-data-driven-styling.md`, `ecosystem/delinea/src/engine/stages/marks.rs`, `ecosystem/fret-chart/src/retained/canvas.rs`.
+  - Notes: v1 includes continuous + piecewise controller UI, scatter/bar bucket coloring, per-bucket opacity ramps, scatter point radius mapping, and optional stroke width ranges; per-item attribute pipelines are future work.
 
 ## Known Gaps vs ECharts (High Value)
 
-- DataZoom Y + 2D zoom UX parity (inside + box zoom + reset behaviors).
-- Category axis indexing under zoom for non-bar series.
-- VisualMap (continuous/piecewise) and declarative color scales.
-- Rich tooltip formatting and series-specific default formatting.
+- DataZoom Y + 2D zoom UX parity (inside + box zoom + reset behaviors) (S2).
+- Category axis indexing under zoom for non-bar series (S4).
+- Tooltip snapping + axisPointer sampling policies (S5).
+- Legend UI parity + selection UX (S6).
+- VisualMap: multiple maps per series and per-item attribute pipelines (S7).
+- Series-specific LOD / downsampling policies + harness (S8).
+- Append/update semantics (ECharts `appendData`) (S9).
 
 ## Recommended Next Steps (P0 -> P1)
 
-1. P0: Decide how brush selection maps to `RowSelection` / highlight semantics (contiguous range fast path vs sparse indices; ADR 0137), then add conformance tests.
-2. P1: Category axis indexing under zoom for non-bar series (may require dataset/index contract extensions).
-3. P1: VisualMap-style data-driven color mapping (continuous + piecewise), with a durable spec surface and allocation-aware evaluation.
+1. P0: Legend widget + selection model UX (single/multi select, invert, reset) (S6).
+2. P0: Tooltip snapping policies and axis-trigger tooltip UX (crosshair + stable rows away from points) (S5).
+3. P0: VisualMap: multiple maps per series and a plan for per-item attributes/instancing (S7).
+4. P1: Category axis indexing under zoom for non-bar series (lock ordinal invariants with a dedicated demo) (S4).
+5. P1: LOD / downsampling policies + conformance harness (S8).
+6. P1: Append/update semantics (ECharts `appendData`) (S9).

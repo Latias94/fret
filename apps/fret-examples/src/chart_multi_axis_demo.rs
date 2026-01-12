@@ -1,49 +1,34 @@
 #[cfg(not(target_arch = "wasm32"))]
 use anyhow::Context as _;
 use fret_app::{App, Effect, WindowRequest};
-use fret_core::{AppWindowId, Event, PointerEvent, Rect};
+use fret_core::{AppWindowId, Event};
 #[cfg(not(target_arch = "wasm32"))]
 use fret_launch::run_app;
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
 };
 use fret_runtime::PlatformCapabilities;
-use fret_ui::UiTree;
+use fret_ui::{FixedSplit, UiTree};
 
 use delinea::data::{Column, DataTable};
 use delinea::engine::window::DataWindow;
-use delinea::ids::{AxisId, FieldId, LinkGroupId};
+use delinea::ids::{AxisId, FieldId, LinkGroupId, VisualMapId};
 use delinea::{
     Action, ChartSpec, DataZoomXSpec, DataZoomYSpec, DatasetSpec, FieldSpec, FilterMode, GridSpec,
-    SeriesEncode, SeriesSpec,
+    SeriesEncode, SeriesSpec, VisualMapSpec,
 };
 use delinea::{AxisKind, AxisPosition, AxisScale, SeriesKind};
 use fret_chart::retained::{ChartCanvas, ChartCanvasOutput};
 use fret_runtime::Model;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Pane {
-    Top,
-    Bottom,
-}
-
-impl Default for Pane {
-    fn default() -> Self {
-        Self::Top
-    }
-}
-
 struct ChartMultiAxisDemoWindowState {
-    top_ui: UiTree<App>,
-    top_root: Option<fret_core::NodeId>,
-    bottom_ui: UiTree<App>,
-    bottom_root: Option<fret_core::NodeId>,
+    ui: UiTree<App>,
+    root: Option<fret_core::NodeId>,
     shared_brush: Model<Option<delinea::BrushSelection2D>>,
     top_output: Model<ChartCanvasOutput>,
     bottom_output: Model<ChartCanvasOutput>,
-    focused_pane: Pane,
-    active_pointer_pane: Option<Pane>,
-    last_bounds: Rect,
+    last_top_output_revision: u64,
+    last_bottom_output_revision: u64,
 }
 
 #[derive(Default)]
@@ -51,10 +36,8 @@ struct ChartMultiAxisDemoDriver;
 
 impl ChartMultiAxisDemoDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> ChartMultiAxisDemoWindowState {
-        let mut top_ui: UiTree<App> = UiTree::new();
-        top_ui.set_window(window);
-        let mut bottom_ui: UiTree<App> = UiTree::new();
-        bottom_ui.set_window(window);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
 
         eprintln!(
             "[chart_multi_axis_demo] X minSpan/maxSpan are enforced for interaction-derived zoom writes only.\n\
@@ -75,16 +58,13 @@ impl ChartMultiAxisDemoDriver {
         let bottom_output = app.models_mut().insert(ChartCanvasOutput::default());
 
         ChartMultiAxisDemoWindowState {
-            top_ui,
-            top_root: None,
-            bottom_ui,
-            bottom_root: None,
+            ui,
+            root: None,
             shared_brush,
             top_output,
             bottom_output,
-            focused_pane: Pane::default(),
-            active_pointer_pane: None,
-            last_bounds: Rect::default(),
+            last_top_output_revision: 0,
+            last_bottom_output_revision: 0,
         }
     }
 
@@ -209,7 +189,40 @@ impl ChartMultiAxisDemoDriver {
                     max_value_span: Some(2000.0),
                 },
             ],
+            tooltip: None,
             axis_pointer: Some(delinea::AxisPointerSpec::default()),
+            visual_maps: vec![
+                VisualMapSpec {
+                    id: VisualMapId::new(1),
+                    mode: delinea::VisualMapMode::Continuous,
+                    dataset: None,
+                    series: vec![delinea::ids::SeriesId::new(3)],
+                    field: y_left_b_field,
+                    domain: (-4.0, 4.0),
+                    initial_range: Some((-1.0, 1.0)),
+                    initial_piece_mask: None,
+                    point_radius_mul_range: Some((0.6, 1.8)),
+                    stroke_width_range: None,
+                    opacity_mul_range: Some((0.15, 1.0)),
+                    buckets: 8,
+                    out_of_range_opacity: 0.25,
+                },
+                VisualMapSpec {
+                    id: VisualMapId::new(2),
+                    mode: delinea::VisualMapMode::Piecewise,
+                    dataset: None,
+                    series: vec![delinea::ids::SeriesId::new(4)],
+                    field: y_right_b_field,
+                    domain: (0.0, 1600.0),
+                    initial_range: None,
+                    initial_piece_mask: None,
+                    point_radius_mul_range: Some((0.8, 1.4)),
+                    stroke_width_range: None,
+                    opacity_mul_range: None,
+                    buckets: 8,
+                    out_of_range_opacity: 0.25,
+                },
+            ],
             series: vec![
                 SeriesSpec {
                     id: delinea::ids::SeriesId::new(1),
@@ -356,73 +369,36 @@ impl ChartMultiAxisDemoDriver {
         canvas
     }
 
-    fn split_y(&self, state: &ChartMultiAxisDemoWindowState) -> fret_core::Px {
-        fret_core::Px(state.last_bounds.origin.y.0 + state.last_bounds.size.height.0 * 0.5)
-    }
-
-    fn pane_for_position(
-        &self,
-        state: &ChartMultiAxisDemoWindowState,
-        pos: fret_core::Point,
-    ) -> Pane {
-        if pos.y.0 < self.split_y(state).0 {
-            Pane::Top
-        } else {
-            Pane::Bottom
-        }
-    }
-
-    fn dispatch_to_pane(
-        &mut self,
-        pane: Pane,
-        app: &mut App,
-        services: &mut dyn fret_core::UiServices,
-        state: &mut ChartMultiAxisDemoWindowState,
-        event: &Event,
-    ) {
-        match pane {
-            Pane::Top => state.top_ui.dispatch_event(app, services, event),
-            Pane::Bottom => state.bottom_ui.dispatch_event(app, services, event),
-        }
-    }
-
-    fn dispatch_to_both(
-        &mut self,
-        app: &mut App,
-        services: &mut dyn fret_core::UiServices,
-        state: &mut ChartMultiAxisDemoWindowState,
-        event: &Event,
-    ) {
-        state.top_ui.dispatch_event(app, services, event);
-        state.bottom_ui.dispatch_event(app, services, event);
-    }
-
     fn tick_brush_link(
         &mut self,
         app: &mut App,
         window: AppWindowId,
-        state: &mut ChartMultiAxisDemoWindowState,
-        source: Pane,
+        shared_brush: &Model<Option<delinea::BrushSelection2D>>,
+        source_output: &Model<ChartCanvasOutput>,
+        last_seen_revision: &mut u64,
     ) {
-        let source_output = match source {
-            Pane::Top => state.top_output.clone(),
-            Pane::Bottom => state.bottom_output.clone(),
-        };
-
-        let Ok(event_selection) = source_output.read(app, |_app, out| {
-            out.snapshot.link_events.iter().rev().find_map(|e| match e {
-                delinea::LinkEvent::BrushSelectionChanged { selection } => Some(*selection),
-                _ => None,
-            })
+        let Ok((revision, selection)) = source_output.read(app, |_app, out| {
+            (
+                out.revision,
+                out.snapshot.link_events.iter().rev().find_map(|e| match e {
+                    delinea::LinkEvent::BrushSelectionChanged { selection } => Some(*selection),
+                    _ => None,
+                }),
+            )
         }) else {
             return;
         };
 
-        let Some(next) = event_selection else {
+        if revision == *last_seen_revision {
+            return;
+        };
+        *last_seen_revision = revision;
+
+        let Some(next) = selection else {
             return;
         };
 
-        let Ok(current) = state.shared_brush.read(app, |_app, s| *s) else {
+        let Ok(current) = shared_brush.read(app, |_app, s| *s) else {
             return;
         };
 
@@ -430,7 +406,7 @@ impl ChartMultiAxisDemoDriver {
             return;
         }
 
-        let _ = state.shared_brush.update(app, |s, _cx| {
+        let _ = shared_brush.update(app, |s, _cx| {
             *s = next;
         });
         app.request_redraw(window);
@@ -461,34 +437,8 @@ impl WinitAppDriver for ChartMultiAxisDemoDriver {
             } => {
                 app.push_effect(Effect::Window(WindowRequest::Close(window)));
             }
-            Event::Pointer(PointerEvent::Down { position, .. }) => {
-                let pane = self.pane_for_position(state, *position);
-                state.focused_pane = pane;
-                state.active_pointer_pane = Some(pane);
-                self.dispatch_to_pane(pane, app, services, state, event);
-            }
-            Event::Pointer(PointerEvent::Up { position, .. }) => {
-                let pane = self.pane_for_position(state, *position);
-                state.focused_pane = pane;
-                state.active_pointer_pane = None;
-                self.dispatch_to_pane(pane, app, services, state, event);
-            }
-            Event::Pointer(PointerEvent::Wheel { position, .. }) => {
-                let pane = self.pane_for_position(state, *position);
-                state.focused_pane = pane;
-                self.dispatch_to_pane(pane, app, services, state, event);
-            }
-            Event::Pointer(PointerEvent::Move { position, .. }) => {
-                let pane = self.pane_for_position(state, *position);
-                if state.active_pointer_pane != Some(pane) {
-                    state.active_pointer_pane = Some(pane);
-                    self.dispatch_to_both(app, services, state, event);
-                } else {
-                    self.dispatch_to_pane(pane, app, services, state, event);
-                }
-            }
             _ => {
-                self.dispatch_to_both(app, services, state, event);
+                state.ui.dispatch_event(app, services, event);
             }
         }
     }
@@ -504,107 +454,61 @@ impl WinitAppDriver for ChartMultiAxisDemoDriver {
             scene,
         } = context;
 
-        state.last_bounds = bounds;
+        if state.root.is_none() {
+            let shared_brush = state.shared_brush.clone();
 
-        let top_h = fret_core::Px((bounds.size.height.0 * 0.5).max(0.0));
-        let bottom_h = fret_core::Px((bounds.size.height.0 - top_h.0).max(0.0));
-
-        let top_bounds = Rect::new(
-            bounds.origin,
-            fret_core::Size::new(bounds.size.width, top_h),
-        );
-        let bottom_bounds = Rect::new(
-            fret_core::Point::new(bounds.origin.x, fret_core::Px(bounds.origin.y.0 + top_h.0)),
-            fret_core::Size::new(bounds.size.width, bottom_h),
-        );
-
-        let shared_brush = state.shared_brush.clone();
-
-        let top_root = state.top_root.get_or_insert_with(|| {
-            let canvas = Self::build_canvas(
+            let top_canvas = Self::build_canvas(
                 delinea::ids::ChartId::new(1),
                 shared_brush.clone(),
                 state.top_output.clone(),
             );
-            let node = ChartCanvas::create_node(&mut state.top_ui, canvas);
-            state.top_ui.set_root(node);
-            node
-        });
-
-        let bottom_root = state.bottom_root.get_or_insert_with(|| {
-            let canvas = Self::build_canvas(
+            let bottom_canvas = Self::build_canvas(
                 delinea::ids::ChartId::new(2),
                 shared_brush,
                 state.bottom_output.clone(),
             );
-            let node = ChartCanvas::create_node(&mut state.bottom_ui, canvas);
-            state.bottom_ui.set_root(node);
-            node
-        });
 
-        state.top_ui.set_root(*top_root);
-        state.bottom_ui.set_root(*bottom_root);
+            let top_node = ChartCanvas::create_node(&mut state.ui, top_canvas);
+            let bottom_node = ChartCanvas::create_node(&mut state.ui, bottom_canvas);
+            let root = FixedSplit::create_node_with_children(
+                &mut state.ui,
+                FixedSplit::vertical(0.5),
+                top_node,
+                bottom_node,
+            );
 
-        state.top_ui.request_semantics_snapshot();
-        state.top_ui.ingest_paint_cache_source(scene);
-        state.bottom_ui.request_semantics_snapshot();
-        state.bottom_ui.ingest_paint_cache_source(scene);
+            state.ui.set_root(root);
+            state.ui.set_focus(Some(top_node));
+            state.root = Some(root);
+        }
 
+        state.ui.request_semantics_snapshot();
+        state.ui.ingest_paint_cache_source(scene);
         scene.clear();
 
-        let active = state.active_pointer_pane.unwrap_or(state.focused_pane);
-        match active {
-            Pane::Top => {
-                let mut top_frame = fret_ui::UiFrameCx::new(
-                    &mut state.top_ui,
-                    app,
-                    services,
-                    window,
-                    top_bounds,
-                    scale_factor,
-                );
-                top_frame.layout_all();
-                top_frame.paint_all(scene);
+        let mut frame =
+            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+        frame.layout_all();
+        frame.paint_all(scene);
 
-                self.tick_brush_link(app, window, state, Pane::Top);
+        let shared_brush = state.shared_brush.clone();
+        let top_output = state.top_output.clone();
+        let bottom_output = state.bottom_output.clone();
 
-                let mut bottom_frame = fret_ui::UiFrameCx::new(
-                    &mut state.bottom_ui,
-                    app,
-                    services,
-                    window,
-                    bottom_bounds,
-                    scale_factor,
-                );
-                bottom_frame.layout_all();
-                bottom_frame.paint_all(scene);
-            }
-            Pane::Bottom => {
-                let mut bottom_frame = fret_ui::UiFrameCx::new(
-                    &mut state.bottom_ui,
-                    app,
-                    services,
-                    window,
-                    bottom_bounds,
-                    scale_factor,
-                );
-                bottom_frame.layout_all();
-                bottom_frame.paint_all(scene);
-
-                self.tick_brush_link(app, window, state, Pane::Bottom);
-
-                let mut top_frame = fret_ui::UiFrameCx::new(
-                    &mut state.top_ui,
-                    app,
-                    services,
-                    window,
-                    top_bounds,
-                    scale_factor,
-                );
-                top_frame.layout_all();
-                top_frame.paint_all(scene);
-            }
-        }
+        self.tick_brush_link(
+            app,
+            window,
+            &shared_brush,
+            &top_output,
+            &mut state.last_top_output_revision,
+        );
+        self.tick_brush_link(
+            app,
+            window,
+            &shared_brush,
+            &bottom_output,
+            &mut state.last_bottom_output_revision,
+        );
     }
 
     fn window_create_spec(

@@ -24,6 +24,7 @@ use fret_ui::retained_bridge::{EventCx, Invalidation, LayoutCx, PaintCx, Widget}
 use crate::input_map::{ChartInputMap, ModifierKey, ModifiersMask};
 use crate::retained::style::ChartStyle;
 use crate::retained::text_cache::{KeyBuilder, TextCacheGroup};
+use crate::retained::tooltip::{DefaultTooltipFormatter, TooltipFormatter};
 use crate::retained::{ChartCanvasOutput, ChartCanvasOutputSnapshot};
 
 #[derive(Debug, Default)]
@@ -53,6 +54,9 @@ struct CachedRect {
     rect: Rect,
     order: u32,
     source_series: Option<delinea::SeriesId>,
+    fill: Option<delinea::PaintId>,
+    opacity_mul: f32,
+    stroke_width: Option<Px>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -60,6 +64,10 @@ struct CachedPoint {
     point: Point,
     order: u32,
     source_series: Option<delinea::SeriesId>,
+    fill: Option<delinea::PaintId>,
+    opacity_mul: f32,
+    radius_mul: f32,
+    stroke_width: Option<Px>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -109,6 +117,16 @@ struct DataZoomSliderDrag {
     start_window: DataWindow,
 }
 
+#[derive(Debug, Clone, Copy)]
+struct VisualMapDrag {
+    visual_map: delinea::VisualMapId,
+    kind: SliderDragKind,
+    track: Rect,
+    domain: DataWindow,
+    start_window: DataWindow,
+    start_value: f64,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum AxisRegion {
     Plot,
@@ -129,6 +147,7 @@ struct ChartLayout {
     plot: Rect,
     x_axes: Vec<AxisBandLayout>,
     y_axes: Vec<AxisBandLayout>,
+    visual_map: Option<Rect>,
 }
 
 pub struct ChartCanvas {
@@ -137,6 +156,7 @@ pub struct ChartCanvas {
     style_source: ChartStyleSource,
     last_theme_revision: u64,
     force_uncached_paint: bool,
+    tooltip_formatter: Box<dyn TooltipFormatter>,
     input_map: ChartInputMap,
     last_bounds: Rect,
     last_layout: ChartLayout,
@@ -153,11 +173,20 @@ pub struct ChartCanvas {
     tooltip_text: TextCacheGroup,
     legend_text: TextCacheGroup,
     legend_item_rects: Vec<(delinea::SeriesId, Rect)>,
+    legend_selector_rects: Vec<(LegendSelectorAction, Rect)>,
+    legend_panel_rect: Option<Rect>,
     legend_hover: Option<delinea::SeriesId>,
+    legend_anchor: Option<delinea::SeriesId>,
+    legend_selector_hover: Option<LegendSelectorAction>,
+    legend_scroll_y: Px,
+    legend_content_height: Px,
+    legend_view_height: Px,
     pan_drag: Option<PanDrag>,
     box_zoom_drag: Option<BoxZoomDrag>,
     brush_drag: Option<BoxZoomDrag>,
     slider_drag: Option<DataZoomSliderDrag>,
+    visual_map_drag: Option<VisualMapDrag>,
+    visual_map_piece_anchor: Option<(delinea::VisualMapId, u32)>,
     axis_extent_cache: BTreeMap<delinea::AxisId, AxisExtentCacheEntry>,
     linked_brush_model: Option<Model<Option<BrushSelection2D>>>,
     output_model: Option<Model<ChartCanvasOutput>>,
@@ -178,6 +207,13 @@ struct AxisExtentCacheEntry {
     window: DataWindow,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum LegendSelectorAction {
+    All,
+    None,
+    Invert,
+}
+
 impl ChartCanvas {
     pub fn new(spec: delinea::ChartSpec) -> Result<Self, ModelError> {
         let mut spec = spec;
@@ -188,6 +224,7 @@ impl ChartCanvas {
             style_source: ChartStyleSource::Theme,
             last_theme_revision: 0,
             force_uncached_paint: true,
+            tooltip_formatter: Box::new(DefaultTooltipFormatter::default()),
             input_map: ChartInputMap::default(),
             last_bounds: Rect::default(),
             last_layout: ChartLayout::default(),
@@ -204,11 +241,20 @@ impl ChartCanvas {
             tooltip_text: TextCacheGroup::default(),
             legend_text: TextCacheGroup::default(),
             legend_item_rects: Vec::default(),
+            legend_selector_rects: Vec::default(),
+            legend_panel_rect: None,
             legend_hover: None,
+            legend_anchor: None,
+            legend_selector_hover: None,
+            legend_scroll_y: Px(0.0),
+            legend_content_height: Px(0.0),
+            legend_view_height: Px(0.0),
             pan_drag: None,
             box_zoom_drag: None,
             brush_drag: None,
             slider_drag: None,
+            visual_map_drag: None,
+            visual_map_piece_anchor: None,
             axis_extent_cache: BTreeMap::default(),
             linked_brush_model: None,
             output_model: None,
@@ -231,6 +277,10 @@ impl ChartCanvas {
 
     pub fn set_style_source(&mut self, source: ChartStyleSource) {
         self.style_source = source;
+    }
+
+    pub fn set_tooltip_formatter(&mut self, formatter: Box<dyn TooltipFormatter>) {
+        self.tooltip_formatter = formatter;
     }
 
     pub fn set_input_map(&mut self, map: ChartInputMap) {
@@ -325,6 +375,13 @@ impl ChartCanvas {
         let axis_band_x = self.style.axis_band_x.0.max(0.0);
         let axis_band_y = self.style.axis_band_y.0.max(0.0);
 
+        let has_visual_map = !self.engine.model().visual_maps.is_empty();
+        let visual_map_band_x = if has_visual_map {
+            self.style.visual_map_band_x.0.max(0.0)
+        } else {
+            0.0
+        };
+
         let active_grid = self
             .primary_axes()
             .and_then(|(x_axis, _)| self.engine.model().axes.get(&x_axis).map(|a| a.grid));
@@ -357,7 +414,7 @@ impl ChartCanvas {
         let top_total = axis_band_y * (x_top.len() as f32);
         let bottom_total = axis_band_y * (x_bottom.len() as f32);
 
-        let plot_w = (inner.size.width.0 - left_total - right_total).max(0.0);
+        let plot_w = (inner.size.width.0 - left_total - right_total - visual_map_band_x).max(0.0);
         let plot_h = (inner.size.height.0 - top_total - bottom_total).max(0.0);
 
         let plot = Rect::new(
@@ -428,11 +485,20 @@ impl ChartCanvas {
             });
         }
 
+        let visual_map = (visual_map_band_x > 0.0).then(|| {
+            let x0 = plot.origin.x.0 + plot.size.width.0 + axis_band_x * (y_right.len() as f32);
+            Rect::new(
+                Point::new(Px(x0), plot.origin.y),
+                Size::new(Px(visual_map_band_x), plot.size.height),
+            )
+        });
+
         ChartLayout {
             bounds,
             plot,
             x_axes,
             y_axes,
+            visual_map,
         }
     }
 
@@ -680,11 +746,53 @@ impl ChartCanvas {
         }
     }
 
-    fn refresh_hover_if_in_plot(&mut self, layout: &ChartLayout, position: Point) {
-        let axis_pointer_enabled = self.engine.model().axis_pointer.is_some_and(|p| p.enabled);
-        if axis_pointer_enabled && layout.plot.contains(position) {
-            self.engine
-                .apply_action(Action::HoverAt { point: position });
+    fn axis_pointer_hover_point(layout: &ChartLayout, position: Point) -> Point {
+        let plot = layout.plot;
+        if plot.contains(position) {
+            return position;
+        }
+
+        let plot_left = plot.origin.x.0;
+        let plot_top = plot.origin.y.0;
+        let plot_right = plot.origin.x.0 + plot.size.width.0;
+        let plot_bottom = plot.origin.y.0 + plot.size.height.0;
+
+        let x_in_plot = position.x.0.clamp(plot_left, plot_right);
+        let y_in_plot = position.y.0.clamp(plot_top, plot_bottom);
+
+        if layout.x_axes.iter().any(|a| a.rect.contains(position)) {
+            let y = (plot_bottom - 1.0).max(plot_top);
+            return Point::new(Px(x_in_plot), Px(y));
+        }
+
+        if let Some(y_axis) = layout.y_axes.iter().find(|a| a.rect.contains(position)) {
+            let x = match y_axis.position {
+                delinea::AxisPosition::Right => (plot_right - 1.0).max(plot_left),
+                _ => (plot_left + 1.0).min(plot_right),
+            };
+            return Point::new(Px(x), Px(y_in_plot));
+        }
+
+        position
+    }
+
+    fn refresh_hover_for_axis_pointer(&mut self, layout: &ChartLayout, position: Point) {
+        let axis_pointer_enabled = self
+            .engine
+            .model()
+            .axis_pointer
+            .as_ref()
+            .is_some_and(|p| p.enabled);
+        if !axis_pointer_enabled {
+            return;
+        }
+
+        let region = Self::axis_region(layout, position);
+        let in_plot = layout.plot.contains(position);
+        let in_axis = matches!(region, AxisRegion::XAxis(_) | AxisRegion::YAxis(_));
+        if in_plot || in_axis {
+            let point = Self::axis_pointer_hover_point(layout, position);
+            self.engine.apply_action(Action::HoverAt { point });
         }
     }
 
@@ -1150,6 +1258,135 @@ impl ChartCanvas {
         delinea::engine::axis::data_at_px(extent, y_from_bottom, 0.0, height)
     }
 
+    fn visual_map_tracks(
+        &self,
+    ) -> Vec<(
+        delinea::VisualMapId,
+        delinea::engine::model::VisualMapModel,
+        Rect,
+    )> {
+        let Some(band) = self.last_layout.visual_map else {
+            return Vec::new();
+        };
+        if band.size.width.0 <= 0.0 || band.size.height.0 <= 0.0 {
+            return Vec::new();
+        }
+
+        let maps: Vec<(delinea::VisualMapId, delinea::engine::model::VisualMapModel)> = self
+            .engine
+            .model()
+            .visual_maps
+            .iter()
+            .map(|(id, vm)| (*id, *vm))
+            .collect();
+        if maps.is_empty() {
+            return Vec::new();
+        }
+
+        let gap = self.style.visual_map_item_gap.0.max(0.0);
+        let pad = self.style.visual_map_padding.0.max(0.0);
+
+        let total_gap = gap * (maps.len().saturating_sub(1) as f32);
+        let item_h = ((band.size.height.0 - total_gap) / (maps.len() as f32)).max(1.0);
+
+        let mut y = band.origin.y.0;
+        let mut out = Vec::with_capacity(maps.len());
+        for (id, vm) in maps {
+            let item = Rect::new(
+                Point::new(band.origin.x, Px(y)),
+                Size::new(band.size.width, Px(item_h)),
+            );
+            y += item_h + gap;
+
+            let track = Rect::new(
+                Point::new(Px(item.origin.x.0 + pad), Px(item.origin.y.0 + pad)),
+                Size::new(
+                    Px((item.size.width.0 - 2.0 * pad).max(1.0)),
+                    Px((item.size.height.0 - 2.0 * pad).max(1.0)),
+                ),
+            );
+            if track.size.width.0 > 0.0 && track.size.height.0 > 0.0 {
+                out.push((id, vm, track));
+            }
+        }
+        out
+    }
+
+    fn visual_map_track_at(
+        &self,
+        position: Point,
+    ) -> Option<(
+        delinea::VisualMapId,
+        delinea::engine::model::VisualMapModel,
+        Rect,
+    )> {
+        self.visual_map_tracks()
+            .into_iter()
+            .find(|(_, _, track)| track.contains(position))
+    }
+
+    fn visual_map_domain_window(vm: delinea::engine::model::VisualMapModel) -> DataWindow {
+        DataWindow {
+            min: vm.domain.min,
+            max: vm.domain.max,
+        }
+    }
+
+    fn current_visual_map_window(
+        &self,
+        id: delinea::VisualMapId,
+        vm: delinea::engine::model::VisualMapModel,
+    ) -> DataWindow {
+        let domain = Self::visual_map_domain_window(vm);
+        match self
+            .engine
+            .state()
+            .visual_map_range
+            .get(&id)
+            .copied()
+            .flatten()
+        {
+            Some(r) => DataWindow {
+                min: r.min,
+                max: r.max,
+            },
+            None => domain,
+        }
+    }
+
+    fn current_visual_map_piece_mask(
+        &self,
+        id: delinea::VisualMapId,
+        vm: delinea::engine::model::VisualMapModel,
+    ) -> u64 {
+        let buckets = vm.buckets.clamp(1, 64) as u32;
+        let full_mask = if buckets >= 64 {
+            u64::MAX
+        } else {
+            (1u64 << buckets) - 1
+        };
+        self.engine
+            .state()
+            .visual_map_piece_mask
+            .get(&id)
+            .copied()
+            .flatten()
+            .or(vm.initial_piece_mask)
+            .unwrap_or(full_mask)
+            & full_mask
+    }
+
+    fn visual_map_y_at_value(track: Rect, domain: DataWindow, value: f64) -> f32 {
+        let mut domain = domain;
+        domain.clamp_non_degenerate();
+        let span = domain.span();
+        if !span.is_finite() || span <= 0.0 {
+            return track.origin.y.0 + track.size.height.0;
+        }
+        let t = ((value - domain.min) / span).clamp(0.0, 1.0) as f32;
+        track.origin.y.0 + (1.0 - t) * track.size.height.0
+    }
+
     fn reset_view_for_axes(&mut self, x_axis: delinea::AxisId, y_axis: delinea::AxisId) {
         if self.axis_is_fixed(x_axis).is_none() {
             self.set_data_window_x(x_axis, None);
@@ -1271,14 +1508,198 @@ impl ChartCanvas {
         palette[order_idx % palette.len()]
     }
 
+    fn paint_color(&self, paint: delinea::PaintId) -> Color {
+        let palette = &self.style.series_palette;
+        palette[(paint.0 as usize) % palette.len()]
+    }
+
     fn legend_series_at(&self, pos: Point) -> Option<delinea::SeriesId> {
         self.legend_item_rects
             .iter()
             .find_map(|(id, r)| r.contains(pos).then_some(*id))
     }
 
+    fn legend_selector_at(&self, pos: Point) -> Option<LegendSelectorAction> {
+        self.legend_selector_rects
+            .iter()
+            .find_map(|(action, r)| r.contains(pos).then_some(*action))
+    }
+
+    fn legend_max_scroll_y(&self) -> Px {
+        if self.legend_content_height.0 <= self.legend_view_height.0 {
+            return Px(0.0);
+        }
+        Px(self.legend_content_height.0 - self.legend_view_height.0)
+    }
+
+    fn apply_legend_wheel_scroll(&mut self, wheel_delta_y: Px) -> bool {
+        let max_scroll = self.legend_max_scroll_y();
+        if max_scroll.0 <= 0.0 {
+            return false;
+        }
+
+        let prev = self.legend_scroll_y;
+        let speed = 0.75f32;
+        let next = (self.legend_scroll_y.0 - wheel_delta_y.0 * speed).clamp(0.0, max_scroll.0);
+        self.legend_scroll_y = Px(next);
+        self.legend_scroll_y.0 != prev.0
+    }
+
+    fn apply_legend_select_all(&mut self) -> bool {
+        let model = self.engine.model();
+        let mut updates = Vec::new();
+        for s in model.series_in_order() {
+            if !s.visible {
+                updates.push((s.id, true));
+            }
+        }
+
+        if updates.is_empty() {
+            return false;
+        }
+
+        self.engine
+            .apply_action(Action::SetSeriesVisibility { updates });
+        true
+    }
+
+    fn apply_legend_select_none(&mut self) -> bool {
+        let model = self.engine.model();
+        let mut updates = Vec::new();
+        for s in model.series_in_order() {
+            if s.visible {
+                updates.push((s.id, false));
+            }
+        }
+
+        if updates.is_empty() {
+            return false;
+        }
+
+        self.engine
+            .apply_action(Action::SetSeriesVisibility { updates });
+        true
+    }
+
+    fn apply_legend_invert(&mut self) -> bool {
+        let model = self.engine.model();
+        if model.series_order.is_empty() {
+            return false;
+        }
+
+        let mut updates = Vec::new();
+        for s in model.series_in_order() {
+            updates.push((s.id, !s.visible));
+        }
+
+        if updates.is_empty() {
+            return false;
+        }
+
+        self.engine
+            .apply_action(Action::SetSeriesVisibility { updates });
+        true
+    }
+
+    fn apply_legend_double_click(&mut self, clicked: delinea::SeriesId) {
+        let model = self.engine.model();
+        if model.series_order.is_empty() {
+            return;
+        }
+
+        let clicked_visible = model
+            .series
+            .get(&clicked)
+            .map(|s| s.visible)
+            .unwrap_or(true);
+        let only_clicked_visible = clicked_visible
+            && model
+                .series_in_order()
+                .all(|s| s.id == clicked || !s.visible);
+
+        let mut updates = Vec::new();
+        if only_clicked_visible {
+            for s in model.series_in_order() {
+                if !s.visible {
+                    updates.push((s.id, true));
+                }
+            }
+        } else {
+            for s in model.series_in_order() {
+                let target = s.id == clicked;
+                if s.visible != target {
+                    updates.push((s.id, target));
+                }
+            }
+        }
+
+        if !updates.is_empty() {
+            self.engine
+                .apply_action(Action::SetSeriesVisibility { updates });
+        }
+    }
+
+    fn apply_legend_reset(&mut self) {
+        let model = self.engine.model();
+        let mut updates = Vec::new();
+        for s in model.series_in_order() {
+            if !s.visible {
+                updates.push((s.id, true));
+            }
+        }
+        if !updates.is_empty() {
+            self.engine
+                .apply_action(Action::SetSeriesVisibility { updates });
+        }
+    }
+
+    fn apply_legend_shift_range_toggle(
+        &mut self,
+        anchor: delinea::SeriesId,
+        clicked: delinea::SeriesId,
+    ) {
+        let model = self.engine.model();
+        let Some(anchor_idx) = model.series_order.iter().position(|id| *id == anchor) else {
+            return;
+        };
+        let Some(clicked_idx) = model.series_order.iter().position(|id| *id == clicked) else {
+            return;
+        };
+
+        let clicked_visible = model
+            .series
+            .get(&clicked)
+            .map(|s| s.visible)
+            .unwrap_or(true);
+        let target = !clicked_visible;
+
+        let (lo, hi) = if anchor_idx <= clicked_idx {
+            (anchor_idx, clicked_idx)
+        } else {
+            (clicked_idx, anchor_idx)
+        };
+
+        let mut updates = Vec::new();
+        for id in &model.series_order[lo..=hi] {
+            if let Some(s) = model.series.get(id)
+                && s.visible != target
+            {
+                updates.push((*id, target));
+            }
+        }
+
+        if !updates.is_empty() {
+            self.engine
+                .apply_action(Action::SetSeriesVisibility { updates });
+        }
+    }
+
     fn draw_legend<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
         self.legend_item_rects.clear();
+        self.legend_selector_rects.clear();
+        self.legend_panel_rect = None;
+        self.legend_content_height = Px(0.0);
+        self.legend_view_height = Px(0.0);
 
         let plot = self.last_layout.plot;
         if plot.size.width.0 <= 0.0 || plot.size.height.0 <= 0.0 {
@@ -1338,20 +1759,61 @@ impl ChartCanvas {
             blobs.push((s.id, blob, metrics, s.visible));
         }
 
+        let selector_text_style = TextStyle {
+            size: Px(11.0),
+            weight: FontWeight::MEDIUM,
+            ..TextStyle::default()
+        };
+
         let pad = self.style.legend_padding;
         let sw = self.style.legend_swatch_size.0.max(1.0);
         let sw_gap = self.style.legend_swatch_gap.0.max(0.0);
         let gap = self.style.legend_item_gap.0.max(0.0);
+        let selector_gap = 8.0f32;
 
         let row_h = row_h.max(sw);
         let legend_w = (pad.left.0 + sw + sw_gap + max_text_w + pad.right.0).max(1.0);
-        let legend_h = (pad.top.0
-            + (row_h + gap) * (series.len().saturating_sub(1) as f32)
-            + row_h
-            + pad.bottom.0)
-            .max(1.0);
+        let selector_labels: [(LegendSelectorAction, &str); 3] = [
+            (LegendSelectorAction::All, "All"),
+            (LegendSelectorAction::None, "None"),
+            (LegendSelectorAction::Invert, "Invert"),
+        ];
+
+        let mut selector_blobs: Vec<(LegendSelectorAction, TextBlobId, fret_core::TextMetrics)> =
+            Vec::with_capacity(selector_labels.len());
+        let mut selector_total_w = 0.0f32;
+        let mut selector_h = 0.0f32;
+        for (action, label) in selector_labels {
+            let prepared =
+                self.legend_text
+                    .prepare(cx.services, label, &selector_text_style, constraints);
+            let blob = prepared.blob;
+            let metrics = prepared.metrics;
+            selector_total_w += metrics.size.width.0.max(1.0);
+            selector_h = selector_h.max(metrics.size.height.0.max(1.0));
+            selector_blobs.push((action, blob, metrics));
+        }
+        if !selector_blobs.is_empty() {
+            selector_total_w += selector_gap * (selector_blobs.len().saturating_sub(1) as f32);
+        }
+        let selector_h = selector_h.max(1.0);
+        let selector_row_h = (selector_h + 4.0).max(1.0);
+
+        let items_h = ((row_h + gap) * (series.len().saturating_sub(1) as f32) + row_h).max(1.0);
+        let full_h = (pad.top.0 + selector_row_h + items_h + pad.bottom.0).max(1.0);
 
         let margin = 8.0f32;
+        let min_h = (pad.top.0 + row_h + pad.bottom.0).max(1.0);
+        let max_h = (plot.size.height.0 - 2.0 * margin).max(min_h);
+        let legend_h = full_h.min(max_h);
+        let view_h = (legend_h - selector_row_h - pad.top.0 - pad.bottom.0).max(1.0);
+        self.legend_content_height = Px(items_h);
+        self.legend_view_height = Px(view_h);
+        self.legend_scroll_y = Px(self
+            .legend_scroll_y
+            .0
+            .clamp(0.0, self.legend_max_scroll_y().0));
+
         let x0 =
             (plot.origin.x.0 + plot.size.width.0 - legend_w - margin).max(plot.origin.x.0 + margin);
         let y0 = (plot.origin.y.0 + margin).max(plot.origin.y.0 + margin);
@@ -1359,6 +1821,7 @@ impl ChartCanvas {
             Point::new(Px(x0), Px(y0)),
             Size::new(Px(legend_w), Px(legend_h)),
         );
+        self.legend_panel_rect = Some(legend_rect);
 
         let legend_order = DrawOrder(self.style.draw_order.0.saturating_add(8_900));
         cx.scene.push(SceneOp::Quad {
@@ -1370,7 +1833,50 @@ impl ChartCanvas {
             corner_radii: Corners::all(self.style.legend_corner_radius),
         });
 
-        let mut y = y0 + pad.top.0;
+        cx.scene.push(SceneOp::PushClipRect { rect: legend_rect });
+
+        // Selector row (ECharts legend.selector-like affordance).
+        // Keep it non-scrolling so it stays accessible even when the legend overflows.
+        let selector_y = y0 + pad.top.0;
+        let selector_x0 = x0 + legend_w - pad.right.0 - selector_total_w;
+        let mut sx = selector_x0;
+        for (action, blob, metrics) in selector_blobs.into_iter() {
+            let w = metrics.size.width.0.max(1.0);
+            let rect = Rect::new(
+                Point::new(Px(sx), Px(selector_y)),
+                Size::new(Px(w), Px(selector_row_h)),
+            );
+            self.legend_selector_rects.push((action, rect));
+
+            if self.legend_selector_hover == Some(action) {
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(legend_order.0.saturating_add(1)),
+                    rect,
+                    background: self.style.legend_hover_background,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: Corners::all(Px(4.0)),
+                });
+            }
+
+            let text_y = selector_y + 0.5 * (selector_row_h - metrics.size.height.0.max(1.0));
+            cx.scene.push(SceneOp::Text {
+                order: DrawOrder(legend_order.0.saturating_add(2)),
+                origin: Point::new(Px(sx), Px(text_y)),
+                text: blob,
+                color: self.style.legend_text_color,
+            });
+
+            sx += w + selector_gap;
+        }
+
+        let items_clip = Rect::new(
+            Point::new(Px(x0), Px(y0 + pad.top.0 + selector_row_h)),
+            Size::new(Px(legend_w), Px(view_h)),
+        );
+        cx.scene.push(SceneOp::PushClipRect { rect: items_clip });
+
+        let mut y = items_clip.origin.y.0 - self.legend_scroll_y.0;
         for (i, (series_id, blob, metrics, visible)) in blobs.into_iter().enumerate() {
             let item_rect = Rect::new(
                 Point::new(Px(x0), Px(y)),
@@ -1416,6 +1922,151 @@ impl ChartCanvas {
             });
 
             y += row_h + gap;
+        }
+
+        cx.scene.push(SceneOp::PopClip);
+        cx.scene.push(SceneOp::PopClip);
+    }
+
+    fn draw_visual_map<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
+        let tracks = self.visual_map_tracks();
+        if tracks.is_empty() {
+            return;
+        }
+
+        for (i, (vm_id, vm, track)) in tracks.into_iter().enumerate() {
+            let order = DrawOrder(
+                self.style
+                    .draw_order
+                    .0
+                    .saturating_add(8_600)
+                    .saturating_add((i as u32).saturating_mul(20)),
+            );
+
+            cx.scene.push(SceneOp::Quad {
+                order,
+                rect: track,
+                background: self.style.visual_map_track_color,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(self.style.visual_map_corner_radius),
+            });
+
+            let buckets = vm.buckets.max(1) as u32;
+            let inset = 1.0f32;
+            let ramp_rect = Rect::new(
+                Point::new(Px(track.origin.x.0 + inset), Px(track.origin.y.0 + inset)),
+                Size::new(
+                    Px((track.size.width.0 - 2.0 * inset).max(1.0)),
+                    Px((track.size.height.0 - 2.0 * inset).max(1.0)),
+                ),
+            );
+            let ramp_h = ramp_rect.size.height.0.max(1.0);
+            let segment_h = (ramp_h / buckets as f32).max(1.0);
+
+            match vm.mode {
+                delinea::VisualMapMode::Continuous => {
+                    // Render a lightweight ramp using the bucket palette. This is not ECharts parity yet
+                    // (no multi-channel mapping), but provides a stable continuous controller affordance.
+                    let ramp_alpha = 0.35f32;
+                    for bucket in 0..buckets {
+                        let y1 = ramp_rect.origin.y.0 + ramp_h - (bucket as f32) * segment_h;
+                        let y0 = (y1 - segment_h).max(ramp_rect.origin.y.0);
+                        let h = (y1 - y0).max(1.0);
+
+                        let mut c = self.paint_color(delinea::PaintId(bucket as u64));
+                        c.a *= ramp_alpha;
+                        cx.scene.push(SceneOp::Quad {
+                            order: DrawOrder(order.0.saturating_add(1)),
+                            rect: Rect::new(
+                                Point::new(ramp_rect.origin.x, Px(y0)),
+                                Size::new(ramp_rect.size.width, Px(h)),
+                            ),
+                            background: c,
+                            border: Edges::all(Px(0.0)),
+                            border_color: Color::TRANSPARENT,
+                            corner_radii: Corners::all(Px(0.0)),
+                        });
+                    }
+
+                    let domain = Self::visual_map_domain_window(vm);
+                    let window = self.current_visual_map_window(vm_id, vm);
+
+                    let y_min = Self::visual_map_y_at_value(track, domain, window.min);
+                    let y_max = Self::visual_map_y_at_value(track, domain, window.max);
+                    let top = y_max.min(y_min);
+                    let bottom = y_max.max(y_min);
+
+                    let win_rect = Rect::new(
+                        Point::new(track.origin.x, Px(top)),
+                        Size::new(track.size.width, Px((bottom - top).max(1.0))),
+                    );
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(order.0.saturating_add(2)),
+                        rect: win_rect,
+                        background: self.style.visual_map_range_fill,
+                        border: Edges::all(self.style.selection_stroke_width),
+                        border_color: self.style.visual_map_range_stroke,
+                        corner_radii: Corners::all(self.style.visual_map_corner_radius),
+                    });
+
+                    let handle_h = 2.0f32.max(self.style.selection_stroke_width.0);
+                    let handle_color = self.style.visual_map_handle_color;
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(order.0.saturating_add(3)),
+                        rect: Rect::new(
+                            Point::new(track.origin.x, Px(y_min - 0.5 * handle_h)),
+                            Size::new(track.size.width, Px(handle_h)),
+                        ),
+                        background: handle_color,
+                        border: Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: Corners::all(Px(0.0)),
+                    });
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(order.0.saturating_add(4)),
+                        rect: Rect::new(
+                            Point::new(track.origin.x, Px(y_max - 0.5 * handle_h)),
+                            Size::new(track.size.width, Px(handle_h)),
+                        ),
+                        background: handle_color,
+                        border: Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: Corners::all(Px(0.0)),
+                    });
+                }
+                delinea::VisualMapMode::Piecewise => {
+                    let mask = self.current_visual_map_piece_mask(vm_id, vm);
+                    let ramp_alpha_selected = 0.55f32;
+                    let ramp_alpha_unselected = 0.12f32;
+                    for bucket in 0..buckets {
+                        let y1 = ramp_rect.origin.y.0 + ramp_h - (bucket as f32) * segment_h;
+                        let y0 = (y1 - segment_h).max(ramp_rect.origin.y.0);
+                        let h = (y1 - y0).max(1.0);
+
+                        let selected = ((mask >> (bucket as u32)) & 1) == 1;
+                        let alpha = if selected {
+                            ramp_alpha_selected
+                        } else {
+                            ramp_alpha_unselected
+                        };
+
+                        let mut c = self.paint_color(delinea::PaintId(bucket as u64));
+                        c.a *= alpha;
+                        cx.scene.push(SceneOp::Quad {
+                            order: DrawOrder(order.0.saturating_add(1)),
+                            rect: Rect::new(
+                                Point::new(ramp_rect.origin.x, Px(y0)),
+                                Size::new(ramp_rect.size.width, Px(h)),
+                            ),
+                            background: c,
+                            border: Edges::all(Px(0.0)),
+                            border_color: Color::TRANSPARENT,
+                            corner_radii: Corners::all(Px(0.0)),
+                        });
+                    }
+                }
+            }
         }
     }
 
@@ -1716,7 +2367,7 @@ impl ChartCanvas {
             if (series_kind == Some(delinea::SeriesKind::Band) || is_stacked_area)
                 && let Some(series_id) = node.source_series
             {
-                let variant = (node.id.0 & 0x7) as u8;
+                let variant = delinea::ids::mark_variant(node.id) as u8;
                 let entry = band_ranges.entry(series_id).or_default();
                 let ids = band_mark_ids.entry(series_id).or_default();
                 match variant {
@@ -1906,11 +2557,19 @@ impl ChartCanvas {
                 continue;
             }
             self.cached_rects.reserve(end - start);
+            let stroke_width = rects
+                .stroke
+                .as_ref()
+                .map(|(_, s)| s.width)
+                .filter(|w| w.0.is_finite() && w.0 > 0.0);
             for rect in &marks.arena.rects[start..end] {
                 self.cached_rects.push(CachedRect {
                     rect: *rect,
                     order: node.order.0,
                     source_series: node.source_series,
+                    fill: rects.fill,
+                    opacity_mul: rects.opacity_mul.unwrap_or(1.0),
+                    stroke_width,
                 });
             }
         }
@@ -1928,11 +2587,24 @@ impl ChartCanvas {
                 continue;
             }
             self.cached_points.reserve(end - start);
+            let stroke_width = points
+                .stroke
+                .as_ref()
+                .map(|(_, s)| s.width)
+                .filter(|w| w.0.is_finite() && w.0 > 0.0);
             for p in &marks.arena.points[start..end] {
+                let radius_mul = points
+                    .radius_mul
+                    .filter(|v| v.is_finite() && *v > 0.0)
+                    .unwrap_or(1.0);
                 self.cached_points.push(CachedPoint {
                     point: *p,
                     order: node.order.0,
                     source_series: node.source_series,
+                    fill: points.fill,
+                    opacity_mul: points.opacity_mul.unwrap_or(1.0),
+                    radius_mul,
+                    stroke_width,
                 });
             }
         }
@@ -1953,6 +2625,14 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     && !modifiers.alt_gr
                     && !modifiers.meta;
                 let lock_mods_ok = !modifiers.alt && !modifiers.alt_gr && !modifiers.meta;
+                let legend_mods_ok =
+                    modifiers.ctrl && !modifiers.alt && !modifiers.alt_gr && !modifiers.meta;
+                let legend_pos = self.last_pointer_pos;
+                let in_legend = legend_pos.is_some_and(|pos| {
+                    self.legend_panel_rect
+                        .is_some_and(|rect| rect.contains(pos))
+                }) || self.legend_hover.is_some()
+                    || self.legend_selector_hover.is_some();
 
                 if lock_mods_ok && *key == KeyCode::KeyL {
                     let Some(pos) = self.last_pointer_pos else {
@@ -2014,6 +2694,25 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     cx.request_redraw();
                     cx.stop_propagation();
                     return;
+                }
+
+                if legend_mods_ok && in_legend {
+                    let mut changed = false;
+                    if modifiers.shift && *key == KeyCode::KeyA {
+                        changed = self.apply_legend_select_none();
+                    } else if !modifiers.shift && *key == KeyCode::KeyA {
+                        changed = self.apply_legend_select_all();
+                    } else if !modifiers.shift && *key == KeyCode::KeyI {
+                        changed = self.apply_legend_invert();
+                    }
+
+                    if changed {
+                        self.legend_anchor = None;
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                        return;
+                    }
                 }
 
                 if plain && *key == KeyCode::KeyR {
@@ -2090,14 +2789,47 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 let layout = self.compute_layout(cx.bounds);
                 self.update_active_axes_for_position(&layout, *position);
 
-                let prev_hover = self.legend_hover;
-                self.legend_hover = self.legend_series_at(*position);
-                if self.legend_hover != prev_hover {
+                let prev_series_hover = self.legend_hover;
+                let prev_selector_hover = self.legend_selector_hover;
+                self.legend_selector_hover = self.legend_selector_at(*position);
+                self.legend_hover = if self.legend_selector_hover.is_some() {
+                    None
+                } else {
+                    self.legend_series_at(*position)
+                };
+                if self.legend_hover != prev_series_hover
+                    || self.legend_selector_hover != prev_selector_hover
+                {
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
                 }
 
                 if cx.captured == Some(cx.node) {
+                    if let Some(drag) = self.visual_map_drag
+                        && Self::is_button_held(MouseButton::Left, *buttons)
+                    {
+                        let current_value = delinea::engine::axis::data_at_y_in_rect(
+                            drag.domain,
+                            position.y.0,
+                            drag.track,
+                        );
+                        let delta_value = current_value - drag.start_value;
+                        let window = Self::slider_window_after_delta(
+                            drag.domain,
+                            drag.start_window,
+                            delta_value,
+                            drag.kind,
+                        );
+                        self.engine.apply_action(Action::SetVisualMapRange {
+                            visual_map: drag.visual_map,
+                            range: Some((window.min, window.max)),
+                        });
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                        return;
+                    }
+
                     if let Some(drag) = self.slider_drag
                         && Self::is_button_held(MouseButton::Left, *buttons)
                     {
@@ -2265,7 +2997,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                             });
                         }
 
-                        self.refresh_hover_if_in_plot(&layout, *position);
+                        self.refresh_hover_for_axis_pointer(&layout, *position);
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
                         cx.stop_propagation();
@@ -2273,8 +3005,9 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     }
                 }
 
+                let hover_point = Self::axis_pointer_hover_point(&layout, *position);
                 self.engine
-                    .apply_action(Action::HoverAt { point: *position });
+                    .apply_action(Action::HoverAt { point: hover_point });
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
             }
@@ -2293,20 +3026,200 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 if *button == MouseButton::Left
                     && self.pan_drag.is_none()
                     && self.box_zoom_drag.is_none()
+                    && let Some(action) = self.legend_selector_at(*position)
+                {
+                    let changed = match action {
+                        LegendSelectorAction::All => self.apply_legend_select_all(),
+                        LegendSelectorAction::None => self.apply_legend_select_none(),
+                        LegendSelectorAction::Invert => self.apply_legend_invert(),
+                    };
+                    if changed {
+                        self.legend_anchor = None;
+                        self.legend_hover = None;
+                        self.legend_selector_hover = Some(action);
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
+
+                if *button == MouseButton::Left
+                    && self.pan_drag.is_none()
+                    && self.box_zoom_drag.is_none()
                     && let Some(series) = self.legend_series_at(*position)
                 {
-                    let visible = self
-                        .engine
-                        .model()
-                        .series
-                        .get(&series)
-                        .map(|s| s.visible)
-                        .unwrap_or(true);
-                    self.engine.apply_action(Action::SetSeriesVisible {
-                        series,
-                        visible: !visible,
-                    });
+                    if *click_count >= 2 {
+                        self.apply_legend_double_click(series);
+                    } else {
+                        if modifiers.shift
+                            && let Some(anchor) = self.legend_anchor
+                        {
+                            self.apply_legend_shift_range_toggle(anchor, series);
+                        } else {
+                            let visible = self
+                                .engine
+                                .model()
+                                .series
+                                .get(&series)
+                                .map(|s| s.visible)
+                                .unwrap_or(true);
+                            self.engine.apply_action(Action::SetSeriesVisible {
+                                series,
+                                visible: !visible,
+                            });
+                        }
+                    }
+                    self.legend_anchor = Some(series);
                     self.legend_hover = Some(series);
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
+                if *button == MouseButton::Right
+                    && self.pan_drag.is_none()
+                    && self.box_zoom_drag.is_none()
+                    && self
+                        .legend_panel_rect
+                        .is_some_and(|r| r.contains(*position))
+                {
+                    self.apply_legend_reset();
+                    self.legend_anchor = None;
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
+                if *pointer_type == PointerType::Mouse
+                    && cx.captured.is_none()
+                    && self.pan_drag.is_none()
+                    && self.box_zoom_drag.is_none()
+                    && self.brush_drag.is_none()
+                    && self.slider_drag.is_none()
+                    && let Some((vm_id, vm, track)) = self.visual_map_track_at(*position)
+                    && (*button == MouseButton::Left
+                        || (vm.mode == delinea::VisualMapMode::Piecewise
+                            && *button == MouseButton::Right))
+                {
+                    let domain = Self::visual_map_domain_window(vm);
+                    let click_value =
+                        delinea::engine::axis::data_at_y_in_rect(domain, position.y.0, track);
+
+                    if vm.mode == delinea::VisualMapMode::Piecewise {
+                        let buckets = vm.buckets.clamp(1, 64) as u32;
+                        let full_mask = if buckets >= 64 {
+                            u64::MAX
+                        } else {
+                            (1u64 << buckets) - 1
+                        };
+
+                        let bucket =
+                            delinea::visual_map::bucket_index_for_value(&vm, click_value) as u32;
+                        let bit = 1u64 << bucket.min(63);
+                        let current = self.current_visual_map_piece_mask(vm_id, vm);
+
+                        let wants_reset = (*button == MouseButton::Right
+                            && !modifiers.alt
+                            && !modifiers.ctrl
+                            && !modifiers.meta
+                            && !modifiers.alt_gr)
+                            || (*button == MouseButton::Left && *click_count == 2);
+                        if wants_reset {
+                            self.engine.apply_action(Action::SetVisualMapPieceMask {
+                                visual_map: vm_id,
+                                mask: None,
+                            });
+                            self.visual_map_piece_anchor = None;
+                            cx.invalidate_self(Invalidation::Paint);
+                            cx.request_redraw();
+                            cx.stop_propagation();
+                            return;
+                        }
+
+                        let is_selected = ((current >> bucket) & 1) == 1;
+
+                        let mut next = current;
+                        if modifiers.shift {
+                            if let Some((anchor_vm, anchor_bucket)) = self.visual_map_piece_anchor
+                                && anchor_vm == vm_id
+                            {
+                                let lo = anchor_bucket.min(bucket);
+                                let hi = anchor_bucket.max(bucket).min(buckets.saturating_sub(1));
+                                let width = hi.saturating_sub(lo).saturating_add(1);
+                                let range_mask = if width >= 64 {
+                                    u64::MAX
+                                } else {
+                                    ((1u64 << width) - 1) << lo
+                                } & full_mask;
+
+                                if is_selected {
+                                    next &= !range_mask;
+                                } else {
+                                    next |= range_mask;
+                                }
+                            } else {
+                                next ^= bit;
+                            }
+                        } else {
+                            next ^= bit;
+                        }
+                        next &= full_mask;
+                        let mask = (next != full_mask).then_some(next);
+                        self.engine.apply_action(Action::SetVisualMapPieceMask {
+                            visual_map: vm_id,
+                            mask,
+                        });
+                        self.visual_map_piece_anchor = Some((vm_id, bucket));
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                        return;
+                    }
+
+                    let current_window = self.current_visual_map_window(vm_id, vm);
+
+                    let handle_hit = 8.0f32;
+                    let y_min = Self::visual_map_y_at_value(track, domain, current_window.min);
+                    let y_max = Self::visual_map_y_at_value(track, domain, current_window.max);
+                    let (top, bottom) = (y_max.min(y_min), y_max.max(y_min));
+
+                    let (kind, start_window) = if (position.y.0 - y_min).abs() <= handle_hit {
+                        (SliderDragKind::HandleMin, current_window)
+                    } else if (position.y.0 - y_max).abs() <= handle_hit {
+                        (SliderDragKind::HandleMax, current_window)
+                    } else if position.y.0 >= top && position.y.0 <= bottom {
+                        (SliderDragKind::Pan, current_window)
+                    } else {
+                        let center = (current_window.min + current_window.max) * 0.5;
+                        let delta = click_value - center;
+                        (
+                            SliderDragKind::Pan,
+                            Self::slider_window_after_delta(
+                                domain,
+                                current_window,
+                                delta,
+                                SliderDragKind::Pan,
+                            ),
+                        )
+                    };
+
+                    self.engine.apply_action(Action::SetVisualMapRange {
+                        visual_map: vm_id,
+                        range: Some((start_window.min, start_window.max)),
+                    });
+                    self.visual_map_drag = Some(VisualMapDrag {
+                        visual_map: vm_id,
+                        kind,
+                        track,
+                        domain,
+                        start_window,
+                        start_value: click_value,
+                    });
+
+                    cx.capture_pointer(cx.node);
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
                     cx.stop_propagation();
@@ -2822,7 +3735,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                 x_window,
                                 y_window,
                             ));
-                        self.refresh_hover_if_in_plot(&layout, *position);
+                        self.refresh_hover_for_axis_pointer(&layout, *position);
                     }
 
                     cx.invalidate_self(Invalidation::Paint);
@@ -2866,6 +3779,17 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     return;
                 }
 
+                if self.visual_map_drag.is_some() && *button == MouseButton::Left {
+                    self.visual_map_drag = None;
+                    if cx.captured == Some(cx.node) {
+                        cx.release_pointer_capture();
+                    }
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
                 if self.slider_drag.is_some() && *button == MouseButton::Left {
                     self.slider_drag = None;
                     if cx.captured == Some(cx.node) {
@@ -2894,6 +3818,18 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 ..
             }) => {
                 self.last_pointer_pos = Some(*position);
+
+                if self
+                    .legend_panel_rect
+                    .is_some_and(|rect| rect.contains(*position))
+                    && self.apply_legend_wheel_scroll(delta.y)
+                {
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
                 let layout = self.compute_layout(cx.bounds);
                 self.update_active_axes_for_position(&layout, *position);
                 let plot = layout.plot;
@@ -2966,7 +3902,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     });
                 }
 
-                self.refresh_hover_if_in_plot(&layout, *position);
+                self.refresh_hover_for_axis_pointer(&layout, *position);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 cx.stop_propagation();
@@ -3057,8 +3993,14 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             rect: self.last_layout.plot,
         });
 
-        let model = self.engine.model();
         let brush = self.engine.state().brush_selection_2d;
+        let brush_rect_px = if let Some(brush) = brush {
+            self.brush_rect_px(brush)
+                .filter(|rect| rect.size.width.0 >= 1.0 && rect.size.height.0 >= 1.0)
+        } else {
+            None
+        };
+        let model = self.engine.model();
 
         for cached in &self.cached_rects {
             let base_order = self
@@ -3068,31 +4010,49 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 .saturating_add(cached.order.saturating_mul(4));
 
             let mut fill_color = self.style.stroke_color;
-            if let Some(series) = cached.source_series {
+            if let Some(paint) = cached.fill {
+                fill_color = self.paint_color(paint);
+                fill_color.a *= self.style.stroke_color.a;
+            } else if let Some(series) = cached.source_series {
                 fill_color = self.series_color(series);
                 fill_color.a *= self.style.stroke_color.a;
             }
-            if let Some(brush) = brush
-                && let Some(series_id) = cached.source_series
-                && let Some(series) = model.series.get(&series_id)
-                && (series.x_axis != brush.x_axis || series.y_axis != brush.y_axis)
-            {
-                fill_color.a *= 0.25;
-            }
-            if let Some(hover) = self.legend_hover
-                && cached.source_series.is_some()
-                && cached.source_series != Some(hover)
-            {
-                fill_color.a *= 0.25;
+            fill_color.a *= cached.opacity_mul;
+            if let Some(series_id) = cached.source_series {
+                let brush_dim = if let Some(brush) = brush
+                    && let Some(series) = model.series.get(&series_id)
+                {
+                    if series.x_axis == brush.x_axis && series.y_axis == brush.y_axis {
+                        0.25
+                    } else {
+                        0.25
+                    }
+                } else {
+                    1.0
+                };
+                fill_color.a *= brush_dim;
+                if let Some(hover) = self.legend_hover
+                    && cached.source_series.is_some()
+                    && cached.source_series != Some(hover)
+                {
+                    fill_color.a *= 0.25;
+                }
             }
             fill_color.a *= self.style.bar_fill_alpha;
+
+            let stroke_width = cached.stroke_width.unwrap_or(Px(0.0));
+            let border_color = if stroke_width.0 > 0.0 {
+                fill_color
+            } else {
+                Color::TRANSPARENT
+            };
 
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(base_order),
                 rect: cached.rect,
                 background: fill_color,
-                border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border: Edges::all(stroke_width),
+                border_color: border_color,
                 corner_radii: Corners::all(Px(0.0)),
             });
         }
@@ -3109,18 +4069,25 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 stroke_color = self.series_color(series);
                 stroke_color.a *= self.style.stroke_color.a;
             }
-            if let Some(brush) = brush
-                && let Some(series_id) = cached.source_series
-                && let Some(series) = model.series.get(&series_id)
-                && (series.x_axis != brush.x_axis || series.y_axis != brush.y_axis)
-            {
-                stroke_color.a *= 0.25;
-            }
-            if let Some(hover) = self.legend_hover
-                && cached.source_series.is_some()
-                && cached.source_series != Some(hover)
-            {
-                stroke_color.a *= 0.25;
+            if let Some(series_id) = cached.source_series {
+                let brush_dim = if let Some(brush) = brush
+                    && let Some(series) = model.series.get(&series_id)
+                {
+                    if series.x_axis == brush.x_axis && series.y_axis == brush.y_axis {
+                        0.25
+                    } else {
+                        0.25
+                    }
+                } else {
+                    1.0
+                };
+                stroke_color.a *= brush_dim;
+                if let Some(hover) = self.legend_hover
+                    && cached.source_series.is_some()
+                    && cached.source_series != Some(hover)
+                {
+                    stroke_color.a *= 0.25;
+                }
             }
 
             if let Some(fill) = cached.fill {
@@ -3140,7 +4107,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     .series
                     .get(&series_id)
                     .is_some_and(|s| s.kind == delinea::SeriesKind::Area && s.stack.is_some())
-                    && (mark_id.0 & 0x7) == 1
+                    && delinea::ids::mark_variant(*mark_id) == 1
             });
             if !suppress_stroke {
                 cx.scene.push(SceneOp::Path {
@@ -3152,9 +4119,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             }
         }
 
-        let point_r = self.style.scatter_point_radius.0.max(1.0);
+        let base_point_r = self.style.scatter_point_radius.0.max(1.0);
         let point_order_bias = 2u32;
         for cached in &self.cached_points {
+            let point_r = (base_point_r * cached.radius_mul).max(1.0);
             let base_order = self
                 .style
                 .draw_order
@@ -3163,23 +4131,41 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 .saturating_add(point_order_bias);
 
             let mut fill_color = self.style.stroke_color;
-            if let Some(series) = cached.source_series {
+            if let Some(paint) = cached.fill {
+                fill_color = self.paint_color(paint);
+                fill_color.a *= self.style.scatter_fill_alpha;
+            } else if let Some(series) = cached.source_series {
                 fill_color = self.series_color(series);
                 fill_color.a *= self.style.scatter_fill_alpha;
             }
-            if let Some(brush) = brush
-                && let Some(series_id) = cached.source_series
-                && let Some(series) = model.series.get(&series_id)
-                && (series.x_axis != brush.x_axis || series.y_axis != brush.y_axis)
-            {
-                fill_color.a *= 0.25;
+            fill_color.a *= cached.opacity_mul;
+            if let Some(series_id) = cached.source_series {
+                let brush_dim = if let Some(brush) = brush
+                    && let Some(series) = model.series.get(&series_id)
+                {
+                    if series.x_axis == brush.x_axis && series.y_axis == brush.y_axis {
+                        0.25
+                    } else {
+                        0.25
+                    }
+                } else {
+                    1.0
+                };
+                fill_color.a *= brush_dim;
+                if let Some(hover) = self.legend_hover
+                    && cached.source_series.is_some()
+                    && cached.source_series != Some(hover)
+                {
+                    fill_color.a *= 0.25;
+                }
             }
-            if let Some(hover) = self.legend_hover
-                && cached.source_series.is_some()
-                && cached.source_series != Some(hover)
-            {
-                fill_color.a *= 0.25;
-            }
+
+            let stroke_width = cached.stroke_width.unwrap_or(Px(0.0));
+            let border_color = if stroke_width.0 > 0.0 {
+                fill_color
+            } else {
+                Color::TRANSPARENT
+            };
 
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(base_order),
@@ -3191,10 +4177,174 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     Size::new(Px(2.0 * point_r), Px(2.0 * point_r)),
                 ),
                 background: fill_color,
-                border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border: Edges::all(stroke_width),
+                border_color: border_color,
                 corner_radii: Corners::all(Px(point_r)),
             });
+        }
+
+        if let Some(brush) = brush
+            && let Some(brush_rect_px) = brush_rect_px
+        {
+            cx.scene.push(SceneOp::PushClipRect {
+                rect: brush_rect_px,
+            });
+
+            let highlight_bias = 2u32;
+
+            for cached in &self.cached_rects {
+                let Some(series_id) = cached.source_series else {
+                    continue;
+                };
+                let Some(series) = model.series.get(&series_id) else {
+                    continue;
+                };
+                if series.x_axis != brush.x_axis || series.y_axis != brush.y_axis {
+                    continue;
+                }
+
+                let base_order = self
+                    .style
+                    .draw_order
+                    .0
+                    .saturating_add(cached.order.saturating_mul(4));
+
+                let mut fill_color = self.series_color(series_id);
+                if let Some(paint) = cached.fill {
+                    fill_color = self.paint_color(paint);
+                }
+                fill_color.a *= self.style.stroke_color.a;
+                fill_color.a *= cached.opacity_mul;
+                if let Some(hover) = self.legend_hover
+                    && cached.source_series.is_some()
+                    && cached.source_series != Some(hover)
+                {
+                    fill_color.a *= 0.25;
+                }
+                fill_color.a *= self.style.bar_fill_alpha;
+
+                let stroke_width = cached.stroke_width.unwrap_or(Px(0.0));
+                let border_color = if stroke_width.0 > 0.0 {
+                    fill_color
+                } else {
+                    Color::TRANSPARENT
+                };
+
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(base_order.saturating_add(highlight_bias)),
+                    rect: cached.rect,
+                    background: fill_color,
+                    border: Edges::all(stroke_width),
+                    border_color: border_color,
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+            }
+
+            for (mark_id, cached) in &self.cached_paths {
+                let Some(series_id) = cached.source_series else {
+                    continue;
+                };
+                let Some(series) = model.series.get(&series_id) else {
+                    continue;
+                };
+                if series.x_axis != brush.x_axis || series.y_axis != brush.y_axis {
+                    continue;
+                }
+
+                let base_order = self
+                    .style
+                    .draw_order
+                    .0
+                    .saturating_add(cached.order.saturating_mul(4));
+
+                let mut stroke_color = self.series_color(series_id);
+                stroke_color.a *= self.style.stroke_color.a;
+                if let Some(hover) = self.legend_hover
+                    && cached.source_series.is_some()
+                    && cached.source_series != Some(hover)
+                {
+                    stroke_color.a *= 0.25;
+                }
+
+                if let Some(fill) = cached.fill {
+                    let fill_alpha = cached.fill_alpha.unwrap_or(self.style.area_fill_color.a);
+                    let mut fill_color = stroke_color;
+                    fill_color.a = fill_alpha;
+                    cx.scene.push(SceneOp::Path {
+                        order: DrawOrder(base_order.saturating_add(highlight_bias)),
+                        origin: self.last_layout.plot.origin,
+                        path: fill,
+                        color: fill_color,
+                    });
+                }
+
+                let suppress_stroke =
+                    cached.source_series.is_some_and(|series_id| {
+                        model.series.get(&series_id).is_some_and(|s| {
+                            s.kind == delinea::SeriesKind::Area && s.stack.is_some()
+                        }) && delinea::ids::mark_variant(*mark_id) == 1
+                    });
+                if !suppress_stroke {
+                    cx.scene.push(SceneOp::Path {
+                        order: DrawOrder(base_order.saturating_add(highlight_bias + 1)),
+                        origin: self.last_layout.plot.origin,
+                        path: cached.stroke,
+                        color: stroke_color,
+                    });
+                }
+            }
+
+            let base_point_r = self.style.scatter_point_radius.0.max(1.0);
+            let point_order_bias = 2u32;
+            for cached in &self.cached_points {
+                let Some(series_id) = cached.source_series else {
+                    continue;
+                };
+                let Some(series) = model.series.get(&series_id) else {
+                    continue;
+                };
+                if series.x_axis != brush.x_axis || series.y_axis != brush.y_axis {
+                    continue;
+                }
+
+                let point_r = (base_point_r * cached.radius_mul).max(1.0);
+                let base_order = self
+                    .style
+                    .draw_order
+                    .0
+                    .saturating_add(cached.order.saturating_mul(4))
+                    .saturating_add(point_order_bias);
+
+                let mut fill_color = self.series_color(series_id);
+                if let Some(paint) = cached.fill {
+                    fill_color = self.paint_color(paint);
+                }
+                fill_color.a *= self.style.scatter_fill_alpha;
+                fill_color.a *= cached.opacity_mul;
+                if let Some(hover) = self.legend_hover
+                    && cached.source_series.is_some()
+                    && cached.source_series != Some(hover)
+                {
+                    fill_color.a *= 0.25;
+                }
+
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(base_order.saturating_add(highlight_bias)),
+                    rect: Rect::new(
+                        Point::new(
+                            Px(cached.point.x.0 - point_r),
+                            Px(cached.point.y.0 - point_r),
+                        ),
+                        Size::new(Px(2.0 * point_r), Px(2.0 * point_r)),
+                    ),
+                    background: fill_color,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: Corners::all(Px(point_r)),
+                });
+            }
+
+            cx.scene.push(SceneOp::PopClip);
         }
 
         if let Some((x_axis, _y_axis)) = self.active_axes(&self.last_layout)
@@ -3256,6 +4406,28 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             let pos = axis_pointer.crosshair_px;
             let overlay_order = DrawOrder(self.style.draw_order.0.saturating_add(9_000));
             let point_order = DrawOrder(self.style.draw_order.0.saturating_add(9_001));
+            let shadow_order = DrawOrder(self.style.draw_order.0.saturating_add(8_999));
+
+            let axis_pointer_type = self
+                .engine
+                .model()
+                .axis_pointer
+                .as_ref()
+                .map(|p| p.pointer_type)
+                .unwrap_or_default();
+            let axis_pointer_label_enabled = self
+                .engine
+                .model()
+                .axis_pointer
+                .as_ref()
+                .is_some_and(|p| p.label.show);
+            let axis_pointer_label_template = self
+                .engine
+                .model()
+                .axis_pointer
+                .as_ref()
+                .map(|p| p.label.template.as_str())
+                .unwrap_or("{value}");
 
             let plot = self.last_layout.plot;
             let crosshair_w = self.style.crosshair_width.0.max(1.0);
@@ -3269,42 +4441,191 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 .0
                 .clamp(plot.origin.y.0, plot.origin.y.0 + plot.size.height.0);
 
-            cx.scene.push(SceneOp::Quad {
-                order: overlay_order,
-                rect: Rect::new(
-                    Point::new(Px(x - 0.5 * crosshair_w), plot.origin.y),
-                    Size::new(Px(crosshair_w), plot.size.height),
-                ),
-                background: self.style.crosshair_color,
-                border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
-                corner_radii: Corners::all(Px(0.0)),
-            });
-            cx.scene.push(SceneOp::Quad {
-                order: overlay_order,
-                rect: Rect::new(
-                    Point::new(plot.origin.x, Px(y - 0.5 * crosshair_w)),
-                    Size::new(plot.size.width, Px(crosshair_w)),
-                ),
-                background: self.style.crosshair_color,
-                border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
-                corner_radii: Corners::all(Px(0.0)),
-            });
+            let (draw_x, draw_y) = match &axis_pointer.tooltip {
+                delinea::TooltipOutput::Axis(axis) => match axis.axis_kind {
+                    delinea::AxisKind::X => (true, false),
+                    delinea::AxisKind::Y => (false, true),
+                },
+                delinea::TooltipOutput::Item(_) => (true, true),
+            };
 
-            if let Some(hit) = axis_pointer.hit {
-                let r = self.style.hover_point_size.0.max(1.0);
+            let shadow = matches!(&axis_pointer.tooltip, delinea::TooltipOutput::Axis(_))
+                && axis_pointer_type == delinea::AxisPointerType::Shadow;
+
+            if shadow {
+                if let Some(rect) = axis_pointer.shadow_rect_px {
+                    let color = Color {
+                        a: 0.08,
+                        ..self.style.selection_fill
+                    };
+                    cx.scene.push(SceneOp::Quad {
+                        order: shadow_order,
+                        rect,
+                        background: color,
+                        border: Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: Corners::all(Px(0.0)),
+                    });
+                }
+            } else if draw_x {
                 cx.scene.push(SceneOp::Quad {
-                    order: point_order,
+                    order: overlay_order,
                     rect: Rect::new(
-                        Point::new(Px(hit.point_px.x.0 - r), Px(hit.point_px.y.0 - r)),
-                        Size::new(Px(2.0 * r), Px(2.0 * r)),
+                        Point::new(Px(x - 0.5 * crosshair_w), plot.origin.y),
+                        Size::new(Px(crosshair_w), plot.size.height),
                     ),
-                    background: self.style.hover_point_color,
+                    background: self.style.crosshair_color,
                     border: Edges::all(Px(0.0)),
                     border_color: Color::TRANSPARENT,
                     corner_radii: Corners::all(Px(0.0)),
                 });
+            }
+            if !shadow && draw_y {
+                cx.scene.push(SceneOp::Quad {
+                    order: overlay_order,
+                    rect: Rect::new(
+                        Point::new(plot.origin.x, Px(y - 0.5 * crosshair_w)),
+                        Size::new(plot.size.width, Px(crosshair_w)),
+                    ),
+                    background: self.style.crosshair_color,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+            }
+
+            if matches!(&axis_pointer.tooltip, delinea::TooltipOutput::Axis(_))
+                && axis_pointer_label_enabled
+            {
+                let band = match &axis_pointer.tooltip {
+                    delinea::TooltipOutput::Axis(axis) => match axis.axis_kind {
+                        delinea::AxisKind::X => self
+                            .last_layout
+                            .x_axes
+                            .iter()
+                            .find(|b| b.axis == axis.axis)
+                            .copied(),
+                        delinea::AxisKind::Y => self
+                            .last_layout
+                            .y_axes
+                            .iter()
+                            .find(|b| b.axis == axis.axis)
+                            .copied(),
+                    },
+                    _ => None,
+                };
+                if let Some(band) = band {
+                    let (axis_id, axis_value) = match &axis_pointer.tooltip {
+                        delinea::TooltipOutput::Axis(axis) => (axis.axis, axis.axis_value),
+                        _ => unreachable!(),
+                    };
+                    let axis_window = self
+                        .engine
+                        .output()
+                        .axis_windows
+                        .get(&axis_id)
+                        .copied()
+                        .unwrap_or_default();
+                    let axis_name = self
+                        .engine
+                        .model()
+                        .axes
+                        .get(&axis_id)
+                        .and_then(|a| a.name.as_deref())
+                        .unwrap_or("");
+                    let value_text = delinea::engine::axis::format_value_for(
+                        self.engine.model(),
+                        axis_id,
+                        axis_window,
+                        axis_value,
+                    );
+                    let label_text = if axis_pointer_label_template == "{value}" {
+                        value_text
+                    } else {
+                        axis_pointer_label_template
+                            .replace("{value}", &value_text)
+                            .replace("{axis_name}", axis_name)
+                    };
+
+                    let text_style = TextStyle {
+                        size: Px(11.0),
+                        weight: FontWeight::MEDIUM,
+                        ..TextStyle::default()
+                    };
+                    let constraints = TextConstraints {
+                        max_width: None,
+                        wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
+                        scale_factor: cx.scale_factor,
+                    };
+                    let prepared = self.tooltip_text.prepare(
+                        cx.services,
+                        &label_text,
+                        &text_style,
+                        constraints,
+                    );
+                    let blob = prepared.blob;
+                    let metrics = prepared.metrics;
+
+                    let pad_x = 6.0f32;
+                    let pad_y = 3.0f32;
+                    let w = (metrics.size.width.0 + 2.0 * pad_x).max(1.0);
+                    let h = (metrics.size.height.0 + 2.0 * pad_y).max(1.0);
+
+                    let (mut box_x, mut box_y) = match &axis_pointer.tooltip {
+                        delinea::TooltipOutput::Axis(axis) => match axis.axis_kind {
+                            delinea::AxisKind::X => (
+                                x - 0.5 * w,
+                                band.rect.origin.y.0 + 0.5 * (band.rect.size.height.0 - h),
+                            ),
+                            delinea::AxisKind::Y => (
+                                band.rect.origin.x.0 + 0.5 * (band.rect.size.width.0 - w),
+                                y - 0.5 * h,
+                            ),
+                        },
+                        _ => unreachable!(),
+                    };
+
+                    let bx0 = band.rect.origin.x.0;
+                    let by0 = band.rect.origin.y.0;
+                    let bx1 = bx0 + band.rect.size.width.0;
+                    let by1 = by0 + band.rect.size.height.0;
+                    box_x = box_x.clamp(bx0, (bx1 - w).max(bx0));
+                    box_y = box_y.clamp(by0, (by1 - h).max(by0));
+
+                    let label_order = DrawOrder(self.style.draw_order.0.saturating_add(9_020));
+                    cx.scene.push(SceneOp::Quad {
+                        order: label_order,
+                        rect: Rect::new(Point::new(Px(box_x), Px(box_y)), Size::new(Px(w), Px(h))),
+                        background: self.style.tooltip_background,
+                        border: Edges::all(self.style.tooltip_border_width),
+                        border_color: self.style.tooltip_border_color,
+                        corner_radii: Corners::all(Px(4.0)),
+                    });
+                    cx.scene.push(SceneOp::Text {
+                        order: DrawOrder(label_order.0.saturating_add(1)),
+                        origin: Point::new(Px(box_x + pad_x), Px(box_y + pad_y)),
+                        text: blob,
+                        color: self.style.tooltip_text_color,
+                    });
+                }
+            }
+
+            if !shadow {
+                if let Some(hit) = axis_pointer.hit {
+                    let r = self.style.hover_point_size.0.max(1.0);
+                    cx.scene.push(SceneOp::Quad {
+                        order: point_order,
+                        rect: Rect::new(
+                            Point::new(Px(hit.point_px.x.0 - r), Px(hit.point_px.y.0 - r)),
+                            Size::new(Px(2.0 * r), Px(2.0 * r)),
+                        ),
+                        background: self.style.hover_point_color,
+                        border: Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: Corners::all(Px(0.0)),
+                    });
+                }
             }
         }
 
@@ -3460,19 +4781,15 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             });
         }
 
-        if let Some(brush) = self.engine.state().brush_selection_2d
-            && let Some(rect) = self.brush_rect_px(brush)
-        {
-            if rect.size.width.0 >= 1.0 && rect.size.height.0 >= 1.0 {
-                cx.scene.push(SceneOp::Quad {
-                    order: DrawOrder(self.style.draw_order.0.saturating_add(8_700)),
-                    rect,
-                    background: self.style.selection_fill,
-                    border: Edges::all(self.style.selection_stroke_width),
-                    border_color: self.style.selection_stroke,
-                    corner_radii: Corners::all(Px(0.0)),
-                });
-            }
+        if let Some(rect) = brush_rect_px {
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(self.style.draw_order.0.saturating_add(8_700)),
+                rect,
+                background: self.style.selection_fill,
+                border: Edges::all(self.style.selection_stroke_width),
+                border_color: self.style.selection_stroke,
+                corner_radii: Corners::all(Px(0.0)),
+            });
         }
 
         if let Some(drag) = self.brush_drag {
@@ -3492,8 +4809,14 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
         cx.scene.push(SceneOp::PopClip);
 
+        self.draw_visual_map(cx);
+
         if let Some(axis_pointer) = axis_pointer {
-            let tooltip_lines = &axis_pointer.tooltip.lines;
+            let tooltip_lines = self.tooltip_formatter.format_axis_pointer(
+                &self.engine,
+                &self.engine.output().axis_windows,
+                &axis_pointer,
+            );
             if tooltip_lines.is_empty() {
                 self.draw_axes(cx);
                 return;
@@ -3510,26 +4833,99 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 overflow: TextOverflow::Clip,
                 scale_factor: effective_scale_factor(cx.scale_factor, 1.0),
             };
-            let mut line_blobs = Vec::with_capacity(tooltip_lines.len());
-            let mut line_metrics = Vec::with_capacity(tooltip_lines.len());
-            for line in tooltip_lines {
-                let text = format!("{}: {}", line.label, line.value);
-                let prepared =
-                    self.tooltip_text
-                        .prepare(cx.services, &text, &text_style, constraints);
-                line_blobs.push(prepared.blob);
-                line_metrics.push(prepared.metrics);
-            }
 
             let pad = self.style.tooltip_padding;
-            let mut w = 1.0f32;
-            let mut h = 0.0f32;
-            for metrics in &line_metrics {
-                w = w.max(metrics.size.width.0);
-                h += metrics.size.height.0.max(1.0);
+            let swatch_w = self.style.tooltip_marker_size.0.max(0.0);
+            let swatch_gap = self.style.tooltip_marker_gap.0.max(0.0);
+            let col_gap = self.style.tooltip_column_gap.0.max(0.0);
+            let reserve_swatch =
+                swatch_w > 0.0 && tooltip_lines.iter().any(|l| l.source_series.is_some());
+            let swatch_space = if reserve_swatch {
+                (swatch_w + swatch_gap).max(0.0)
+            } else {
+                0.0
+            };
+
+            enum TooltipLineLayout {
+                Single {
+                    blob: TextBlobId,
+                    metrics: fret_core::TextMetrics,
+                },
+                Columns {
+                    left_blob: TextBlobId,
+                    left_metrics: fret_core::TextMetrics,
+                    right_blob: TextBlobId,
+                    right_metrics: fret_core::TextMetrics,
+                },
             }
-            w = (w + pad.left.0 + pad.right.0).max(1.0);
-            h = (h + pad.top.0 + pad.bottom.0).max(1.0);
+
+            struct PreparedTooltipLine {
+                source_series: Option<delinea::SeriesId>,
+                layout: TooltipLineLayout,
+            }
+
+            let mut prepared_lines = Vec::with_capacity(tooltip_lines.len());
+            let mut max_left_w = 0.0f32;
+            let mut max_right_w = 0.0f32;
+            let mut max_single_w = 0.0f32;
+            let mut total_h = 0.0f32;
+
+            for line in &tooltip_lines {
+                if let Some((left, right)) = split_tooltip_text_for_columns(&line.text) {
+                    let left_prepared =
+                        self.tooltip_text
+                            .prepare(cx.services, left, &text_style, constraints);
+                    let right_prepared =
+                        self.tooltip_text
+                            .prepare(cx.services, right, &text_style, constraints);
+                    let left_blob = left_prepared.blob;
+                    let left_metrics = left_prepared.metrics;
+                    let right_blob = right_prepared.blob;
+                    let right_metrics = right_prepared.metrics;
+
+                    max_left_w = max_left_w.max(left_metrics.size.width.0);
+                    max_right_w = max_right_w.max(right_metrics.size.width.0);
+                    total_h += left_metrics
+                        .size
+                        .height
+                        .0
+                        .max(right_metrics.size.height.0)
+                        .max(1.0);
+
+                    prepared_lines.push(PreparedTooltipLine {
+                        source_series: line.source_series,
+                        layout: TooltipLineLayout::Columns {
+                            left_blob,
+                            left_metrics,
+                            right_blob,
+                            right_metrics,
+                        },
+                    });
+                } else {
+                    let prepared = self.tooltip_text.prepare(
+                        cx.services,
+                        &line.text,
+                        &text_style,
+                        constraints,
+                    );
+                    let blob = prepared.blob;
+                    let metrics = prepared.metrics;
+                    max_single_w = max_single_w.max(metrics.size.width.0);
+                    total_h += metrics.size.height.0.max(1.0);
+                    prepared_lines.push(PreparedTooltipLine {
+                        source_series: line.source_series,
+                        layout: TooltipLineLayout::Single { blob, metrics },
+                    });
+                }
+            }
+
+            let mut w = 1.0f32;
+            if max_left_w > 0.0 || max_right_w > 0.0 {
+                w = w.max(max_left_w + col_gap + max_right_w);
+            }
+            w = w.max(max_single_w);
+            w = (w + swatch_space + pad.left.0 + pad.right.0).max(1.0);
+            let h = (total_h + pad.top.0 + pad.bottom.0).max(1.0);
 
             let bounds = self.last_layout.bounds;
             let x0 = bounds.origin.x.0;
@@ -3537,10 +4933,13 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             let x1 = x0 + bounds.size.width.0;
             let y1 = y0 + bounds.size.height.0;
 
-            let anchor = axis_pointer
-                .hit
-                .map(|h| h.point_px)
-                .unwrap_or(axis_pointer.crosshair_px);
+            let anchor = match &axis_pointer.tooltip {
+                delinea::TooltipOutput::Axis(_) => axis_pointer.crosshair_px,
+                delinea::TooltipOutput::Item(_) => axis_pointer
+                    .hit
+                    .map(|h| h.point_px)
+                    .unwrap_or(axis_pointer.crosshair_px),
+            };
 
             let offset = 10.0f32;
             let mut tip_x = anchor.x.0 + offset;
@@ -3575,15 +4974,88 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             });
 
             let mut y = tip_y + pad.top.0;
-            for (i, (blob, metrics)) in line_blobs.into_iter().zip(line_metrics).enumerate() {
-                let order = DrawOrder(tooltip_order.0.saturating_add(1 + i as u32));
-                cx.scene.push(SceneOp::Text {
-                    order,
-                    origin: Point::new(Px(tip_x + pad.left.0), Px(y)),
-                    text: blob,
-                    color: self.style.tooltip_text_color,
-                });
-                y += metrics.size.height.0.max(1.0);
+            for (i, line) in prepared_lines.into_iter().enumerate() {
+                let order_base = tooltip_order
+                    .0
+                    .saturating_add(1 + (i as u32).saturating_mul(3));
+                let swatch_x = tip_x + pad.left.0;
+                let text_x0 = swatch_x + swatch_space;
+
+                let side = self.style.tooltip_marker_size.0.max(0.0);
+                if side > 0.0
+                    && reserve_swatch
+                    && let Some(series) = line.source_series
+                {
+                    let line_height = match &line.layout {
+                        TooltipLineLayout::Single { metrics, .. } => metrics.size.height.0.max(1.0),
+                        TooltipLineLayout::Columns {
+                            left_metrics,
+                            right_metrics,
+                            ..
+                        } => left_metrics
+                            .size
+                            .height
+                            .0
+                            .max(right_metrics.size.height.0)
+                            .max(1.0),
+                    };
+                    let marker_y = y + (line_height - side) * 0.5;
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(order_base),
+                        rect: Rect::new(
+                            Point::new(Px(swatch_x), Px(marker_y)),
+                            Size::new(Px(side), Px(side)),
+                        ),
+                        background: self.series_color(series),
+                        border: Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: Corners::all(Px((side * 0.25).max(0.0))),
+                    });
+                }
+
+                match line.layout {
+                    TooltipLineLayout::Single { blob, metrics } => {
+                        cx.scene.push(SceneOp::Text {
+                            order: DrawOrder(order_base.saturating_add(1)),
+                            origin: Point::new(Px(text_x0), Px(y)),
+                            text: blob,
+                            color: self.style.tooltip_text_color,
+                        });
+                        y += metrics.size.height.0.max(1.0);
+                    }
+                    TooltipLineLayout::Columns {
+                        left_blob,
+                        left_metrics,
+                        right_blob,
+                        right_metrics,
+                    } => {
+                        let line_height = left_metrics
+                            .size
+                            .height
+                            .0
+                            .max(right_metrics.size.height.0)
+                            .max(1.0);
+                        let value_x = text_x0
+                            + max_left_w
+                            + col_gap
+                            + (max_right_w - right_metrics.size.width.0).max(0.0);
+
+                        cx.scene.push(SceneOp::Text {
+                            order: DrawOrder(order_base.saturating_add(1)),
+                            origin: Point::new(Px(text_x0), Px(y)),
+                            text: left_blob,
+                            color: self.style.tooltip_text_color,
+                        });
+                        cx.scene.push(SceneOp::Text {
+                            order: DrawOrder(order_base.saturating_add(2)),
+                            origin: Point::new(Px(value_x), Px(y)),
+                            text: right_blob,
+                            color: self.style.tooltip_text_color,
+                        });
+
+                        y += line_height;
+                    }
+                }
             }
         }
 
@@ -3629,14 +5101,168 @@ fn rect_from_points_clamped(bounds: Rect, a: Point, b: Point) -> Rect {
     )
 }
 
+fn split_tooltip_text_for_columns(text: &str) -> Option<(&str, &str)> {
+    let (left, right) = text.split_once(": ")?;
+    if left.is_empty() || right.is_empty() {
+        return None;
+    }
+    Some((left, right))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use delinea::ids::{AxisId, ChartId, DatasetId, FieldId, GridId, SeriesId};
+    use delinea::ids::{AxisId, ChartId, DatasetId, FieldId, GridId, SeriesId, VisualMapId};
     use delinea::{
         AxisKind, AxisPosition, AxisRange, AxisScale, ChartSpec, DatasetSpec, FieldSpec, GridSpec,
-        SeriesEncode, SeriesKind, SeriesSpec,
+        SeriesEncode, SeriesKind, SeriesSpec, VisualMapSpec,
     };
+
+    #[test]
+    fn tooltip_column_splitter_requires_non_empty_columns() {
+        assert_eq!(split_tooltip_text_for_columns("x: 1"), Some(("x", "1")));
+        assert_eq!(split_tooltip_text_for_columns("x: "), None);
+        assert_eq!(split_tooltip_text_for_columns(": 1"), None);
+        assert_eq!(split_tooltip_text_for_columns("no delimiter"), None);
+    }
+
+    #[test]
+    fn legend_double_click_isolates_and_restores_all_series() {
+        let mut canvas = ChartCanvas::new(multi_axis_spec()).expect("spec should be valid");
+
+        let a = delinea::SeriesId::new(1);
+        let b = delinea::SeriesId::new(2);
+
+        assert!(canvas.engine().model().series.get(&a).unwrap().visible);
+        assert!(canvas.engine().model().series.get(&b).unwrap().visible);
+
+        canvas.apply_legend_double_click(b);
+        assert!(!canvas.engine().model().series.get(&a).unwrap().visible);
+        assert!(canvas.engine().model().series.get(&b).unwrap().visible);
+
+        canvas.apply_legend_double_click(b);
+        assert!(canvas.engine().model().series.get(&a).unwrap().visible);
+        assert!(canvas.engine().model().series.get(&b).unwrap().visible);
+    }
+
+    #[test]
+    fn legend_scroll_clamps_to_content_height() {
+        let mut canvas = ChartCanvas::new(multi_axis_spec()).expect("spec should be valid");
+        canvas.legend_content_height = Px(500.0);
+        canvas.legend_view_height = Px(120.0);
+
+        assert_eq!(canvas.legend_max_scroll_y().0, 380.0);
+
+        assert!(canvas.apply_legend_wheel_scroll(Px(-200.0)));
+        assert!(canvas.legend_scroll_y.0 > 0.0);
+
+        canvas.apply_legend_wheel_scroll(Px(-10_000.0));
+        assert_eq!(canvas.legend_scroll_y.0, 380.0);
+
+        canvas.apply_legend_wheel_scroll(Px(10_000.0));
+        assert_eq!(canvas.legend_scroll_y.0, 0.0);
+    }
+
+    #[test]
+    fn legend_select_all_none_invert_update_series_visibility() {
+        let mut canvas = ChartCanvas::new(multi_axis_spec()).expect("spec should be valid");
+
+        let ids: Vec<_> = canvas.engine().model().series_order.clone();
+        assert!(ids.len() >= 2);
+
+        canvas.apply_legend_select_none();
+        for id in &ids {
+            assert!(!canvas.engine().model().series.get(id).unwrap().visible);
+        }
+
+        canvas.apply_legend_select_all();
+        for id in &ids {
+            assert!(canvas.engine().model().series.get(id).unwrap().visible);
+        }
+
+        canvas.engine.apply_action(Action::SetSeriesVisible {
+            series: ids[0],
+            visible: false,
+        });
+        canvas.apply_legend_invert();
+        assert!(canvas.engine().model().series.get(&ids[0]).unwrap().visible);
+        assert!(!canvas.engine().model().series.get(&ids[1]).unwrap().visible);
+    }
+
+    #[test]
+    fn legend_selector_hit_test_returns_action() {
+        let mut canvas = ChartCanvas::new(multi_axis_spec()).expect("spec should be valid");
+        canvas.legend_selector_rects = vec![(
+            LegendSelectorAction::Invert,
+            Rect::new(
+                Point::new(Px(10.0), Px(10.0)),
+                Size::new(Px(20.0), Px(12.0)),
+            ),
+        )];
+
+        assert_eq!(
+            canvas.legend_selector_at(Point::new(Px(15.0), Px(15.0))),
+            Some(LegendSelectorAction::Invert)
+        );
+        assert_eq!(
+            canvas.legend_selector_at(Point::new(Px(1.0), Px(1.0))),
+            None
+        );
+    }
+
+    #[test]
+    fn axis_pointer_hover_point_clamps_axis_band_into_plot() {
+        let plot = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        let layout = ChartLayout {
+            bounds: plot,
+            plot,
+            x_axes: vec![AxisBandLayout {
+                axis: AxisId::new(1),
+                position: AxisPosition::Bottom,
+                rect: Rect::new(
+                    Point::new(Px(0.0), Px(100.0)),
+                    Size::new(Px(100.0), Px(20.0)),
+                ),
+            }],
+            y_axes: vec![
+                AxisBandLayout {
+                    axis: AxisId::new(2),
+                    position: AxisPosition::Left,
+                    rect: Rect::new(
+                        Point::new(Px(-20.0), Px(0.0)),
+                        Size::new(Px(20.0), Px(100.0)),
+                    ),
+                },
+                AxisBandLayout {
+                    axis: AxisId::new(3),
+                    position: AxisPosition::Right,
+                    rect: Rect::new(
+                        Point::new(Px(100.0), Px(0.0)),
+                        Size::new(Px(20.0), Px(100.0)),
+                    ),
+                },
+            ],
+            visual_map: None,
+        };
+
+        let p = ChartCanvas::axis_pointer_hover_point(&layout, Point::new(Px(50.0), Px(110.0)));
+        assert!(plot.contains(p));
+        assert_eq!(p.x.0, 50.0);
+        assert_eq!(p.y.0, 99.0);
+
+        let p = ChartCanvas::axis_pointer_hover_point(&layout, Point::new(Px(-10.0), Px(25.0)));
+        assert!(plot.contains(p));
+        assert_eq!(p.x.0, 1.0);
+        assert_eq!(p.y.0, 25.0);
+
+        let p = ChartCanvas::axis_pointer_hover_point(&layout, Point::new(Px(110.0), Px(75.0)));
+        assert!(plot.contains(p));
+        assert_eq!(p.x.0, 99.0);
+        assert_eq!(p.y.0, 75.0);
+    }
 
     #[test]
     fn data_mapping_is_monotonic() {
@@ -3802,7 +5428,9 @@ mod tests {
             ],
             data_zoom_x: vec![],
             data_zoom_y: vec![],
+            tooltip: None,
             axis_pointer: None,
+            visual_maps: vec![],
             series: vec![
                 SeriesSpec {
                     id: SeriesId::new(1),
@@ -3842,6 +5470,28 @@ mod tests {
         }
     }
 
+    fn multi_axis_visual_map_spec() -> ChartSpec {
+        let mut spec = multi_axis_spec();
+        let y_field = spec.series[0].encode.y;
+        let series_id = spec.series[0].id;
+        spec.visual_maps.push(VisualMapSpec {
+            id: VisualMapId::new(1),
+            mode: delinea::VisualMapMode::Continuous,
+            dataset: None,
+            series: vec![series_id],
+            field: y_field,
+            domain: (-1.0, 1.0),
+            initial_range: Some((-0.25, 0.75)),
+            initial_piece_mask: None,
+            point_radius_mul_range: None,
+            stroke_width_range: None,
+            opacity_mul_range: None,
+            buckets: 8,
+            out_of_range_opacity: 0.25,
+        });
+        spec
+    }
+
     #[test]
     fn primary_axes_skip_hidden_series() {
         let mut canvas = ChartCanvas::new(multi_axis_spec()).expect("spec should be valid");
@@ -3878,6 +5528,55 @@ mod tests {
         let (x, y) = canvas.active_axes(&layout).expect("expected active axes");
         assert_eq!(x, AxisId::new(1));
         assert_eq!(y, AxisId::new(3));
+    }
+
+    #[test]
+    fn visual_map_y_mapping_respects_domain_endpoints() {
+        let track = Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(8.0), Px(100.0)),
+        );
+        let domain = DataWindow {
+            min: 0.0,
+            max: 10.0,
+        };
+
+        let bottom = track.origin.y.0 + track.size.height.0;
+        assert_eq!(
+            ChartCanvas::visual_map_y_at_value(track, domain, 0.0),
+            bottom
+        );
+        assert_eq!(
+            ChartCanvas::visual_map_y_at_value(track, domain, 10.0),
+            track.origin.y.0
+        );
+    }
+
+    #[test]
+    fn visual_map_track_applies_style_padding() {
+        let mut canvas =
+            ChartCanvas::new(multi_axis_visual_map_spec()).expect("spec should be valid");
+        let mut style = ChartStyle::default();
+        style.visual_map_band_x = Px(80.0);
+        style.visual_map_padding = Px(10.0);
+        canvas.set_style(style);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(400.0)),
+        );
+        let layout = canvas.compute_layout(bounds);
+        canvas.last_layout = layout;
+
+        let tracks = canvas.visual_map_tracks();
+        assert_eq!(tracks.len(), 1);
+        let (_id, _vm, track) = tracks[0];
+        let outer = canvas
+            .last_layout
+            .visual_map
+            .expect("expected a visual map band rect");
+        assert_eq!(track.origin.x.0, outer.origin.x.0 + 10.0);
+        assert_eq!(track.origin.y.0, outer.origin.y.0 + 10.0);
     }
 
     #[test]

@@ -392,6 +392,7 @@ pub struct UiTree<H: UiHost> {
     base_layer: Option<UiLayerId>,
     focus: Option<NodeId>,
     captured: Option<NodeId>,
+    last_pointer_move_hit: Option<NodeId>,
     last_internal_drag_target: Option<NodeId>,
     window: Option<AppWindowId>,
     ime_allowed: bool,
@@ -433,6 +434,7 @@ impl<H: UiHost> Default for UiTree<H> {
             base_layer: None,
             focus: None,
             captured: None,
+            last_pointer_move_hit: None,
             last_internal_drag_target: None,
             window: None,
             ime_allowed: false,
@@ -611,9 +613,17 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    /// Ingests the previous frame's recorded ops from `scene`.
+    /// Ingest the previous frame's recorded ops from `scene` for paint-cache replay.
     ///
     /// Call this **before** clearing `scene` for the next frame.
+    ///
+    /// Important:
+    /// - This method is destructive: it swaps the scene op storage into the UI tree. Do not call
+    ///   it more than once for the same `Scene` before `Scene::clear()`.
+    /// - `scene` must contain the previous frame ops that were produced by **this** `UiTree`.
+    /// - The paint cache records absolute op index ranges into the previous frame ops vector, so
+    ///   sharing a single `Scene` across multiple `UiTree`s is not compatible with paint-cache
+    ///   ingestion unless each tree records into an isolated scene.
     pub fn ingest_paint_cache_source(&mut self, scene: &mut Scene) {
         scene.swap_storage(
             &mut self.paint_cache.prev_ops,
@@ -641,13 +651,16 @@ impl<H: UiHost> UiTree<H> {
         self.nodes.get(node).map(|n| n.bounds)
     }
 
-    /// Returns the current frame's visual bounds for `node` by applying any ancestor
-    /// `render_transform` matrices (including the node's own transform) to its layout bounds.
+    /// Returns the node bounds after applying the accumulated `render_transform` stack.
     ///
-    /// This is intended for debugging/tests. It is *not* a stable cross-frame geometry query (see
+    /// This is intended for debugging and tests that need screen-space geometry for overlay
+    /// placement/hit-testing scenarios. Unlike `debug_node_bounds`, this includes render-time
+    /// transforms such as `Anchored` placement.
+    ///
+    /// This is not a stable cross-frame geometry query (see
     /// `fret_ui::elements::visual_bounds_for_element` for that contract).
     pub fn debug_node_visual_bounds(&self, node: NodeId) -> Option<Rect> {
-        let _ = self.nodes.get(node)?;
+        let bounds = self.nodes.get(node).map(|n| n.bounds)?;
         let path = self.debug_node_path(node);
         let mut transform = Transform2D::IDENTITY;
         for id in path {
@@ -655,9 +668,8 @@ impl<H: UiHost> UiTree<H> {
                 transform = transform.compose(local);
             }
         }
-        self.nodes
-            .get(node)
-            .map(|n| rect_aabb_transformed(n.bounds, transform))
+
+        Some(rect_aabb_transformed(bounds, transform))
     }
 
     #[cfg(feature = "layout-engine-v2")]

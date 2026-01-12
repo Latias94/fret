@@ -193,9 +193,10 @@ impl Renderer {
             })
             .collect();
 
+        let path_composite_vertex_capacity = 64 * 6;
         let path_composite_vertices = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("fret path composite vertices"),
-            size: (6 * std::mem::size_of::<ViewportVertex>()) as u64,
+            size: (path_composite_vertex_capacity * std::mem::size_of::<ViewportVertex>()) as u64,
             usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -293,6 +294,7 @@ impl Renderer {
             path_vertex_capacity,
             path_intermediate: None,
             path_composite_vertices,
+            path_composite_vertex_capacity,
             text_system,
             paths: SlotMap::with_key(),
             path_cache: HashMap::new(),

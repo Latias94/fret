@@ -4,16 +4,17 @@ mod tests;
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use fret_core::Rect;
+use fret_core::{Px, Rect};
 use thiserror::Error;
 
 use crate::ids::{
     AxisId, ChartId, DataZoomId, DatasetId, FieldId, GridId, Revision, SeriesId, StackId,
+    VisualMapId,
 };
 use crate::scale::AxisScale;
 use crate::spec::{
     AreaBaseline, AxisKind, AxisPointerTrigger, AxisPosition, AxisRange, FilterMode, SeriesEncode,
-    SeriesKind, StackStrategy,
+    SeriesKind, StackStrategy, VisualMapSpec,
 };
 
 pub use patch::*;
@@ -73,7 +74,10 @@ pub struct ChartModel {
     pub data_zoom_x_by_axis: BTreeMap<AxisId, DataZoomId>,
     pub data_zoom_y: BTreeMap<DataZoomId, DataZoomYModel>,
     pub data_zoom_y_by_axis: BTreeMap<AxisId, DataZoomId>,
+    pub tooltip: Option<crate::spec::TooltipSpecV1>,
     pub axis_pointer: Option<AxisPointerModel>,
+    pub visual_maps: BTreeMap<VisualMapId, VisualMapModel>,
+    pub visual_map_by_series: BTreeMap<SeriesId, VisualMapId>,
 
     pub series_order: Vec<SeriesId>,
     pub series: BTreeMap<SeriesId, SeriesModel>,
@@ -93,7 +97,10 @@ impl ChartModel {
             data_zoom_x_by_axis: BTreeMap::default(),
             data_zoom_y: BTreeMap::default(),
             data_zoom_y_by_axis: BTreeMap::default(),
+            tooltip: spec.tooltip,
             axis_pointer: None,
+            visual_maps: BTreeMap::default(),
+            visual_map_by_series: BTreeMap::default(),
             series_order: Vec::default(),
             series: BTreeMap::default(),
             revs: ModelRevisions::default(),
@@ -255,14 +262,24 @@ impl ChartModel {
         model.axis_pointer = spec.axis_pointer.map(|mut p| {
             p.trigger_distance_px = sanitize_px(p.trigger_distance_px, 12.0);
             p.throttle_px = sanitize_px(p.throttle_px, 0.75);
+            if p.label.template.is_empty() {
+                p.label.template = "{value}".to_string();
+            }
             AxisPointerModel {
                 enabled: p.enabled,
                 trigger: p.trigger,
+                pointer_type: p.pointer_type,
+                label: AxisPointerLabelModel {
+                    show: p.label.show,
+                    template: p.label.template,
+                },
                 snap: p.snap,
                 trigger_distance_px: p.trigger_distance_px,
                 throttle_px: p.throttle_px,
             }
         });
+
+        let visual_maps = spec.visual_maps;
 
         let mut series_ids: BTreeSet<SeriesId> = BTreeSet::new();
         for series in spec.series {
@@ -377,6 +394,8 @@ impl ChartModel {
             );
         }
 
+        apply_visual_maps(&mut model, visual_maps)?;
+
         let mut stack_groups: BTreeMap<
             StackId,
             (AxisId, AxisId, DatasetId, FieldId, StackStrategy),
@@ -428,6 +447,207 @@ impl ChartModel {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct VisualMapDomain {
+    pub min: f64,
+    pub max: f64,
+}
+
+impl VisualMapDomain {
+    pub fn sanitize(self) -> Option<Self> {
+        if !self.min.is_finite() || !self.max.is_finite() || self.max <= self.min {
+            return None;
+        }
+        Some(self)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct VisualMapRange {
+    pub min: f64,
+    pub max: f64,
+}
+
+impl VisualMapRange {
+    pub fn sanitize(self) -> Option<Self> {
+        if !self.min.is_finite() || !self.max.is_finite() {
+            return None;
+        }
+        let (min, max) = if self.max < self.min {
+            (self.max, self.min)
+        } else {
+            (self.min, self.max)
+        };
+        Some(Self { min, max })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct VisualMapModel {
+    pub id: VisualMapId,
+    pub mode: crate::spec::VisualMapMode,
+    pub field: FieldId,
+    pub domain: VisualMapDomain,
+    pub initial_range: Option<VisualMapRange>,
+    pub initial_piece_mask: Option<u64>,
+    pub point_radius_mul_range: Option<(f32, f32)>,
+    pub stroke_width_range: Option<(Px, Px)>,
+    pub opacity_mul_range: Option<(f32, f32)>,
+    pub buckets: u16,
+    pub out_of_range_opacity: f32,
+}
+
+fn apply_visual_maps(
+    model: &mut ChartModel,
+    visual_maps: Vec<VisualMapSpec>,
+) -> Result<(), ModelError> {
+    let mut ids: BTreeSet<VisualMapId> = BTreeSet::new();
+    for map in visual_maps {
+        if !ids.insert(map.id) {
+            return Err(ModelError::DuplicateId { kind: "visual_map" });
+        }
+        if map.dataset.is_some() && !map.series.is_empty() {
+            return Err(ModelError::InvalidSpec {
+                reason: "visual_map.dataset is mutually exclusive with visual_map.series",
+            });
+        }
+
+        let domain = VisualMapDomain {
+            min: map.domain.0,
+            max: map.domain.1,
+        }
+        .sanitize()
+        .ok_or(ModelError::InvalidSpec {
+            reason: "visual_map.domain must be finite and non-degenerate",
+        })?;
+
+        let initial_range = map
+            .initial_range
+            .map(|(min, max)| VisualMapRange { min, max })
+            .and_then(VisualMapRange::sanitize);
+
+        let buckets = map.buckets.clamp(1, 64);
+
+        let out_of_range_opacity = if map.out_of_range_opacity.is_finite() {
+            map.out_of_range_opacity.clamp(0.0, 1.0)
+        } else {
+            0.25
+        };
+
+        let initial_piece_mask = match map.mode {
+            crate::spec::VisualMapMode::Continuous => None,
+            crate::spec::VisualMapMode::Piecewise => {
+                let full_mask = if buckets >= 64 {
+                    u64::MAX
+                } else {
+                    (1u64 << buckets) - 1
+                };
+                map.initial_piece_mask.map(|m| m & full_mask)
+            }
+        };
+
+        let point_radius_mul_range = map
+            .point_radius_mul_range
+            .filter(|(a, b)| a.is_finite() && b.is_finite())
+            .map(|(a, b)| if b < a { (b, a) } else { (a, b) })
+            .filter(|(a, b)| *a > 0.0 && *b > 0.0 && (*b - *a).abs() > f32::EPSILON)
+            .map(|(a, b)| (a.clamp(0.01, 100.0), b.clamp(0.01, 100.0)));
+
+        let stroke_width_range = map
+            .stroke_width_range
+            .filter(|(a, b)| a.is_finite() && b.is_finite())
+            .map(|(a, b)| if b < a { (b, a) } else { (a, b) })
+            .map(|(a, b)| (a.clamp(0.0, 20.0), b.clamp(0.0, 20.0)))
+            .filter(|(a, b)| (*b - *a).abs() > f32::EPSILON)
+            .map(|(a, b)| (Px(a), Px(b)));
+
+        let opacity_mul_range = map
+            .opacity_mul_range
+            .filter(|(a, b)| a.is_finite() && b.is_finite())
+            .map(|(a, b)| if b < a { (b, a) } else { (a, b) })
+            .map(|(a, b)| (a.clamp(0.0, 1.0), b.clamp(0.0, 1.0)))
+            .filter(|(a, b)| (*b - *a).abs() > f32::EPSILON);
+
+        let target_series: Vec<SeriesId> = if let Some(dataset_id) = map.dataset {
+            let Some(dataset) = model.datasets.get(&dataset_id) else {
+                return Err(ModelError::MissingReference {
+                    kind: "visual_map.dataset",
+                });
+            };
+            if !dataset.fields.contains_key(&map.field) {
+                return Err(ModelError::MissingReference {
+                    kind: "visual_map.field",
+                });
+            }
+            model
+                .series_in_order()
+                .filter(|s| s.dataset == dataset_id)
+                .map(|s| s.id)
+                .collect()
+        } else {
+            if map.series.is_empty() {
+                return Err(ModelError::InvalidSpec {
+                    reason: "visual_map must target at least one series",
+                });
+            }
+            map.series.clone()
+        };
+
+        if target_series.is_empty() {
+            return Err(ModelError::InvalidSpec {
+                reason: "visual_map has no target series",
+            });
+        }
+
+        for series_id in &target_series {
+            if !model.series.contains_key(series_id) {
+                return Err(ModelError::MissingReference {
+                    kind: "visual_map.series",
+                });
+            }
+            let Some(series) = model.series.get(series_id) else {
+                continue;
+            };
+            let Some(dataset) = model.datasets.get(&series.dataset) else {
+                return Err(ModelError::MissingReference { kind: "dataset" });
+            };
+            if !dataset.fields.contains_key(&map.field) {
+                return Err(ModelError::MissingReference {
+                    kind: "visual_map.field",
+                });
+            }
+
+            if model
+                .visual_map_by_series
+                .insert(*series_id, map.id)
+                .is_some()
+            {
+                return Err(ModelError::InvalidSpec {
+                    reason: "multiple visual_maps target the same series (v1 restriction)",
+                });
+            }
+        }
+
+        model.visual_maps.insert(
+            map.id,
+            VisualMapModel {
+                id: map.id,
+                mode: map.mode,
+                field: map.field,
+                domain,
+                initial_range,
+                initial_piece_mask,
+                point_radius_mul_range,
+                stroke_width_range,
+                opacity_mul_range,
+                buckets,
+                out_of_range_opacity,
+            },
+        );
+    }
+    Ok(())
+}
+
 #[derive(Debug, Clone)]
 pub struct DatasetModel {
     pub id: DatasetId,
@@ -467,13 +687,21 @@ pub struct DataZoomYModel {
     pub max_value_span: Option<f64>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct AxisPointerModel {
     pub enabled: bool,
     pub trigger: AxisPointerTrigger,
+    pub pointer_type: crate::spec::AxisPointerType,
+    pub label: AxisPointerLabelModel,
     pub snap: bool,
     pub trigger_distance_px: f32,
     pub throttle_px: f32,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct AxisPointerLabelModel {
+    pub show: bool,
+    pub template: String,
 }
 
 #[derive(Debug, Clone)]

@@ -9,7 +9,7 @@
 use fret_core::{Edges, Point, Px, Rect, Transform2D};
 use fret_ui::element::{
     AnyElement, InteractivityGateProps, LayoutStyle, Length, OpacityProps, RenderTransformProps,
-    SizeStyle,
+    VisualTransformProps,
 };
 use fret_ui::overlay_placement::Side;
 use fret_ui::{ElementContext, UiHost};
@@ -28,14 +28,17 @@ pub fn shadcn_ease(x: f32) -> f32 {
 }
 
 fn fullscreen_motion_layout() -> LayoutStyle {
-    LayoutStyle {
-        size: SizeStyle {
-            width: Length::Fill,
-            height: Length::Fill,
-            ..Default::default()
-        },
-        ..Default::default()
-    }
+    // Motion wrappers are commonly used with absolutely positioned overlay content (popper-style
+    // placement). Because absolute-positioned children do not contribute to intrinsic sizing, we
+    // default to a full-window wrapper to keep hit-testing and focus traversal consistent.
+    //
+    // Components that need tighter hit-test bounds should avoid relying on the wrapper bounds for
+    // input semantics, or use a dedicated hit-testable wrapper element (e.g. a popper wrapper that
+    // expands for arrow protrusion).
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Fill;
+    layout.size.height = Length::Fill;
+    layout
 }
 
 /// Wraps interactive overlay content in opacity + render-transform layers.
@@ -123,6 +126,93 @@ pub fn wrap_opacity_and_render_transform_with_layouts_gated<H: UiHost>(
                     opacity,
                 },
                 move |cx| vec![cx.render_transform_props(transform_props, move |_cx| children)],
+            )]
+        },
+    )
+}
+
+/// Wraps interactive overlay content in opacity + visual-transform layers.
+///
+/// Unlike [`wrap_opacity_and_render_transform`], the transform does **not** participate in
+/// hit-testing or pointer coordinate mapping (paint-only, like CSS `transform` would *not* be).
+///
+/// This is useful for overlays where we want stable pointer targeting during open/close motion
+/// (e.g. outside-press semantics should be based on the steady-state geometry, not the animated
+/// scale/slide).
+pub fn wrap_opacity_and_visual_transform<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    opacity: f32,
+    transform: Transform2D,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    let layout = fullscreen_motion_layout();
+    wrap_opacity_and_visual_transform_with_layouts(
+        cx,
+        layout,
+        opacity,
+        VisualTransformProps { layout, transform },
+        children,
+    )
+}
+
+/// Like [`wrap_opacity_and_visual_transform`], but allows gating interactivity.
+pub fn wrap_opacity_and_visual_transform_gated<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    opacity: f32,
+    transform: Transform2D,
+    interactive: bool,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    let layout = fullscreen_motion_layout();
+    wrap_opacity_and_visual_transform_with_layouts_gated(
+        cx,
+        layout,
+        opacity,
+        VisualTransformProps { layout, transform },
+        interactive,
+        children,
+    )
+}
+
+/// Like [`wrap_opacity_and_visual_transform`], but allows customizing layouts.
+pub fn wrap_opacity_and_visual_transform_with_layouts<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    opacity_layout: LayoutStyle,
+    opacity: f32,
+    transform_props: VisualTransformProps,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    cx.opacity_props(
+        OpacityProps {
+            layout: opacity_layout,
+            opacity,
+        },
+        move |cx| vec![cx.visual_transform_props(transform_props, move |_cx| children)],
+    )
+}
+
+/// Like [`wrap_opacity_and_visual_transform_with_layouts`], but allows gating interactivity.
+pub fn wrap_opacity_and_visual_transform_with_layouts_gated<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    opacity_layout: LayoutStyle,
+    opacity: f32,
+    transform_props: VisualTransformProps,
+    interactive: bool,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    cx.interactivity_gate_props(
+        InteractivityGateProps {
+            layout: opacity_layout,
+            present: true,
+            interactive,
+        },
+        move |cx| {
+            vec![cx.opacity_props(
+                OpacityProps {
+                    layout: opacity_layout,
+                    opacity,
+                },
+                move |cx| vec![cx.visual_transform_props(transform_props, move |_cx| children)],
             )]
         },
     )

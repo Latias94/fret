@@ -225,18 +225,19 @@ impl Renderer {
 
         let instance_buffer_index = self.instance_buffer_index;
         self.instance_buffer_index = (self.instance_buffer_index + 1) % self.instance_buffers.len();
-        let instance_buffer = &self.instance_buffers[instance_buffer_index];
+        let instance_buffer = self.instance_buffers[instance_buffer_index].clone();
         if !instances.is_empty() {
-            queue.write_buffer(instance_buffer, 0, bytemuck::cast_slice(instances));
+            queue.write_buffer(&instance_buffer, 0, bytemuck::cast_slice(instances));
         }
 
         let viewport_vertex_buffer_index = self.viewport_vertex_buffer_index;
         self.viewport_vertex_buffer_index =
             (self.viewport_vertex_buffer_index + 1) % self.viewport_vertex_buffers.len();
-        let viewport_vertex_buffer = &self.viewport_vertex_buffers[viewport_vertex_buffer_index];
+        let viewport_vertex_buffer =
+            self.viewport_vertex_buffers[viewport_vertex_buffer_index].clone();
         if !viewport_vertices.is_empty() {
             queue.write_buffer(
-                viewport_vertex_buffer,
+                &viewport_vertex_buffer,
                 0,
                 bytemuck::cast_slice(viewport_vertices),
             );
@@ -245,17 +246,17 @@ impl Renderer {
         let text_vertex_buffer_index = self.text_vertex_buffer_index;
         self.text_vertex_buffer_index =
             (self.text_vertex_buffer_index + 1) % self.text_vertex_buffers.len();
-        let text_vertex_buffer = &self.text_vertex_buffers[text_vertex_buffer_index];
+        let text_vertex_buffer = self.text_vertex_buffers[text_vertex_buffer_index].clone();
         if !text_vertices.is_empty() {
-            queue.write_buffer(text_vertex_buffer, 0, bytemuck::cast_slice(text_vertices));
+            queue.write_buffer(&text_vertex_buffer, 0, bytemuck::cast_slice(text_vertices));
         }
 
         let path_vertex_buffer_index = self.path_vertex_buffer_index;
         self.path_vertex_buffer_index =
             (self.path_vertex_buffer_index + 1) % self.path_vertex_buffers.len();
-        let path_vertex_buffer = &self.path_vertex_buffers[path_vertex_buffer_index];
+        let path_vertex_buffer = self.path_vertex_buffers[path_vertex_buffer_index].clone();
         if !path_vertices.is_empty() {
-            queue.write_buffer(path_vertex_buffer, 0, bytemuck::cast_slice(path_vertices));
+            queue.write_buffer(&path_vertex_buffer, 0, bytemuck::cast_slice(path_vertices));
         }
 
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -267,7 +268,135 @@ impl Renderer {
         let scale_param_size = std::mem::size_of::<ScaleParamsUniform>() as u64;
         let mut scale_param_cursor: u32 = 0;
 
-        for planned_pass in &plan.passes {
+        // Some passes draw textured quads (not fullscreen triangles). Upload the vertex payload
+        // once per frame and reference it via slices, since multiple `queue.write_buffer()` calls
+        // against the same buffer region in a single submission would make all passes observe the
+        // final write.
+        let mut quad_vertices: Vec<ViewportVertex> = Vec::new();
+        let mut quad_vertex_bases: Vec<Option<u32>> = vec![None; plan.passes.len()];
+        for (pass_index, planned_pass) in plan.passes.iter().enumerate() {
+            match planned_pass {
+                RenderPlanPass::PathMsaaBatch(path_pass) => {
+                    let union = path_pass.union_scissor;
+                    if union.w == 0 || union.h == 0 {
+                        continue;
+                    }
+
+                    let x0 = union.x as f32;
+                    let y0 = union.y as f32;
+                    let x1 = (union.x + union.w) as f32;
+                    let y1 = (union.y + union.h) as f32;
+
+                    let vw = viewport_size.0.max(1) as f32;
+                    let vh = viewport_size.1.max(1) as f32;
+                    let u0 = x0 / vw;
+                    let v0 = y0 / vh;
+                    let u1 = x1 / vw;
+                    let v1 = y1 / vh;
+
+                    let base = quad_vertices.len().min(u32::MAX as usize) as u32;
+                    quad_vertex_bases[pass_index] = Some(base);
+                    quad_vertices.extend_from_slice(&[
+                        ViewportVertex {
+                            pos_px: [x0, y0],
+                            uv: [u0, v0],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x1, y0],
+                            uv: [u1, v0],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x1, y1],
+                            uv: [u1, v1],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x0, y0],
+                            uv: [u0, v0],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x1, y1],
+                            uv: [u1, v1],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x0, y1],
+                            uv: [u0, v1],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                    ]);
+                }
+                RenderPlanPass::CompositePremul(pass) => {
+                    let x0 = 0.0;
+                    let y0 = 0.0;
+                    let x1 = pass.dst_size.0 as f32;
+                    let y1 = pass.dst_size.1 as f32;
+
+                    let base = quad_vertices.len().min(u32::MAX as usize) as u32;
+                    quad_vertex_bases[pass_index] = Some(base);
+                    quad_vertices.extend_from_slice(&[
+                        ViewportVertex {
+                            pos_px: [x0, y0],
+                            uv: [0.0, 0.0],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x1, y0],
+                            uv: [1.0, 0.0],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x1, y1],
+                            uv: [1.0, 1.0],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x0, y0],
+                            uv: [0.0, 0.0],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x1, y1],
+                            uv: [1.0, 1.0],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x0, y1],
+                            uv: [0.0, 1.0],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                    ]);
+                }
+                _ => {}
+            }
+        }
+        if !quad_vertices.is_empty() {
+            self.ensure_path_composite_vertex_buffer(device, quad_vertices.len());
+            queue.write_buffer(
+                &self.path_composite_vertices,
+                0,
+                bytemuck::cast_slice(&quad_vertices),
+            );
+        }
+
+        let quad_vertex_size = std::mem::size_of::<ViewportVertex>() as u64;
+
+        for (pass_index, planned_pass) in plan.passes.iter().enumerate() {
             match planned_pass {
                 RenderPlanPass::SceneDrawRange(scene_pass) => {
                     debug_assert_eq!(scene_pass.segment.0, 0);
@@ -762,62 +891,9 @@ impl Renderer {
                     if union.w == 0 || union.h == 0 {
                         continue;
                     }
-
-                    let x0 = union.x as f32;
-                    let y0 = union.y as f32;
-                    let x1 = (union.x + union.w) as f32;
-                    let y1 = (union.y + union.h) as f32;
-
-                    let vw = viewport_size.0.max(1) as f32;
-                    let vh = viewport_size.1.max(1) as f32;
-                    let u0 = x0 / vw;
-                    let v0 = y0 / vh;
-                    let u1 = x1 / vw;
-                    let v1 = y1 / vh;
-
-                    let vertices: [ViewportVertex; 6] = [
-                        ViewportVertex {
-                            pos_px: [x0, y0],
-                            uv: [u0, v0],
-                            opacity: 1.0,
-                            _pad: [0.0; 3],
-                        },
-                        ViewportVertex {
-                            pos_px: [x1, y0],
-                            uv: [u1, v0],
-                            opacity: 1.0,
-                            _pad: [0.0; 3],
-                        },
-                        ViewportVertex {
-                            pos_px: [x1, y1],
-                            uv: [u1, v1],
-                            opacity: 1.0,
-                            _pad: [0.0; 3],
-                        },
-                        ViewportVertex {
-                            pos_px: [x0, y0],
-                            uv: [u0, v0],
-                            opacity: 1.0,
-                            _pad: [0.0; 3],
-                        },
-                        ViewportVertex {
-                            pos_px: [x1, y1],
-                            uv: [u1, v1],
-                            opacity: 1.0,
-                            _pad: [0.0; 3],
-                        },
-                        ViewportVertex {
-                            pos_px: [x0, y1],
-                            uv: [u0, v1],
-                            opacity: 1.0,
-                            _pad: [0.0; 3],
-                        },
-                    ];
-                    queue.write_buffer(
-                        &self.path_composite_vertices,
-                        0,
-                        bytemuck::cast_slice(&vertices),
-                    );
+                    let Some(base) = quad_vertex_bases.get(pass_index).and_then(|v| *v) else {
+                        continue;
+                    };
 
                     let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                         label: Some("fret renderer pass"),
@@ -841,7 +917,9 @@ impl Renderer {
                         (u64::from(path_pass.batch_uniform_index) * self.uniform_stride) as u32;
                     pass.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
                     pass.set_bind_group(1, &intermediate.bind_group, &[]);
-                    pass.set_vertex_buffer(0, self.path_composite_vertices.slice(..));
+                    let base = u64::from(base) * quad_vertex_size;
+                    let len = 6 * quad_vertex_size;
+                    pass.set_vertex_buffer(0, self.path_composite_vertices.slice(base..base + len));
                     pass.set_scissor_rect(union.x, union.y, union.w, union.h);
                     pass.draw(0..6, 0..1);
                 }
@@ -1622,54 +1700,9 @@ impl Renderer {
                             bind_group,
                         )
                     };
-
-                    let x0 = 0.0;
-                    let y0 = 0.0;
-                    let x1 = pass.dst_size.0 as f32;
-                    let y1 = pass.dst_size.1 as f32;
-                    let vertices = [
-                        ViewportVertex {
-                            pos_px: [x0, y0],
-                            uv: [0.0, 0.0],
-                            opacity: 1.0,
-                            _pad: [0.0; 3],
-                        },
-                        ViewportVertex {
-                            pos_px: [x1, y0],
-                            uv: [1.0, 0.0],
-                            opacity: 1.0,
-                            _pad: [0.0; 3],
-                        },
-                        ViewportVertex {
-                            pos_px: [x1, y1],
-                            uv: [1.0, 1.0],
-                            opacity: 1.0,
-                            _pad: [0.0; 3],
-                        },
-                        ViewportVertex {
-                            pos_px: [x0, y0],
-                            uv: [0.0, 0.0],
-                            opacity: 1.0,
-                            _pad: [0.0; 3],
-                        },
-                        ViewportVertex {
-                            pos_px: [x1, y1],
-                            uv: [1.0, 1.0],
-                            opacity: 1.0,
-                            _pad: [0.0; 3],
-                        },
-                        ViewportVertex {
-                            pos_px: [x0, y1],
-                            uv: [0.0, 1.0],
-                            opacity: 1.0,
-                            _pad: [0.0; 3],
-                        },
-                    ];
-                    queue.write_buffer(
-                        &self.path_composite_vertices,
-                        0,
-                        bytemuck::cast_slice(&vertices),
-                    );
+                    let Some(base) = quad_vertex_bases.get(pass_index).and_then(|v| *v) else {
+                        continue;
+                    };
 
                     let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                         label: Some("fret composite premul pass"),
@@ -1696,7 +1729,9 @@ impl Renderer {
                         rp.set_bind_group(0, &self.uniform_bind_group, &[0]);
                     }
                     rp.set_bind_group(1, &bind_group, &[]);
-                    rp.set_vertex_buffer(0, self.path_composite_vertices.slice(..));
+                    let base = u64::from(base) * quad_vertex_size;
+                    let len = 6 * quad_vertex_size;
+                    rp.set_vertex_buffer(0, self.path_composite_vertices.slice(base..base + len));
                     if let Some(scissor) = pass.dst_scissor {
                         if scissor.w != 0 && scissor.h != 0 {
                             rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);

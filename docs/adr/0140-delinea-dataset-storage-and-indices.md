@@ -95,6 +95,24 @@ Therefore:
   under `WorkBudget`,
 - view indices never “own” storage, so they cannot go stale without a revision mismatch.
 
+#### v1 ingestion API (contract surface)
+
+For v1, we treat the following APIs as the stable, recommended mutation surface for streaming:
+
+- `DataTable::append_row_f64(&mut self, row: &[f64])`
+- `DataTable::append_columns_f64(&mut self, columns: &[&[f64]])` (column-major batch append)
+
+Both:
+
+- update `row_count` deterministically,
+- bump `revision` so all dependent caches can invalidate,
+- preserve “raw index identity” (existing rows keep their raw indices; new rows are appended at the end).
+
+Direct mutation of `DataTable.columns` (pushing into vectors, truncation, etc.) is not treated as a
+stable contract even if it is technically possible in Rust today. If a consumer needs to perform a
+non-append mutation, it should do so via a dedicated “replace” helper (future work) so the engine
+can treat it as a full invalidation event with clear semantics.
+
 ### 5) Zero-copy direction: shared column backing is allowed
 
 To enable:

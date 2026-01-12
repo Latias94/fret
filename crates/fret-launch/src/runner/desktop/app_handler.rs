@@ -186,6 +186,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             }
         };
 
+        // RenderDoc must be loaded/injected before the graphics API is initialized to reliably
+        // hook Vulkan/D3D. Initialize capture integration before we create the wgpu context.
         self.init_renderdoc_if_needed();
 
         let (context, surface) =

@@ -40,6 +40,7 @@ use super::state::{
     PlotImageLayer, PlotOutput, PlotOutputSnapshot, PlotState,
 };
 use super::style::{LinePlotStyle, MouseReadoutMode, SeriesTooltipMode};
+use super::{AreaPlotModel, LinePlotModel};
 
 use crate::cartesian::{AxisScale, DataPoint, DataRect, PlotTransform};
 use crate::input_map::{ModifierKey, ModifiersMask, PlotInputMap};
@@ -449,6 +450,11 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
 
     heatmap_colorbar_text_key: Option<u64>,
     heatmap_colorbar_text: Vec<PreparedText>,
+
+    #[cfg(debug_assertions)]
+    debug_overlay: bool,
+    #[cfg(debug_assertions)]
+    debug_overlay_text: Option<PreparedText>,
 }
 
 #[cfg(test)]
@@ -969,11 +975,31 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
 
             heatmap_colorbar_text_key: None,
             heatmap_colorbar_text: Vec::new(),
+
+            #[cfg(debug_assertions)]
+            debug_overlay: false,
+            #[cfg(debug_assertions)]
+            debug_overlay_text: None,
         }
     }
 
     pub fn style(mut self, style: LinePlotStyle) -> Self {
         self.style = style;
+        self
+    }
+
+    /// Enable a small diagnostic overlay that displays per-frame draw stats (e.g. path count).
+    ///
+    /// This is intended for debugging rendering issues in demos and is disabled by default.
+    pub fn debug_overlay(mut self, enabled: bool) -> Self {
+        #[cfg(debug_assertions)]
+        {
+            self.debug_overlay = enabled;
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            let _ = enabled;
+        }
         self
     }
 
@@ -1686,12 +1712,16 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             return Vec::new();
         };
 
+        // Plot paint layers operate in plot-local coordinates (origin at the plot top-left).
+        // The caller applies `layout.plot.origin` when emitting `SceneOp`s.
+        let plot_local = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
+
         self.layer.paint_paths(
             cx,
             &model,
             PlotPaintArgs {
                 model_revision,
-                plot,
+                plot: plot_local,
                 view_bounds,
                 view_bounds_y2,
                 view_bounds_y3,
@@ -1723,12 +1753,16 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             return Vec::new();
         };
 
+        // Plot paint layers operate in plot-local coordinates (origin at the plot top-left).
+        // The caller applies `layout.plot.origin` when emitting `SceneOp`s.
+        let plot_local = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
+
         self.layer.paint_quads(
             cx,
             &model,
             PlotPaintArgs {
                 model_revision,
-                plot,
+                plot: plot_local,
                 view_bounds,
                 view_bounds_y2,
                 view_bounds_y3,
@@ -4903,7 +4937,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 });
             }
 
-            for (series_id, path, color) in self.rebuild_paths_if_needed(
+            let mut debug_paths_pushed: u32 = 0;
+
+            let paths = self.rebuild_paths_if_needed(
                 cx,
                 layout.plot,
                 view_bounds,
@@ -4912,7 +4948,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 view_bounds_y4,
                 hidden,
                 resolved_style,
-            ) {
+            );
+            let debug_paths_prepared = paths.len().min(u32::MAX as usize) as u32;
+
+            for (series_id, path, color) in paths {
                 if emphasized
                     && let Some(emphasized) = emphasized_series
                     && emphasized == series_id
@@ -4932,6 +4971,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     path,
                     color,
                 });
+                debug_paths_pushed = debug_paths_pushed.saturating_add(1);
             }
 
             if let Some((path, color)) = emphasized_path {
@@ -4941,6 +4981,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     path,
                     color,
                 });
+                debug_paths_pushed = debug_paths_pushed.saturating_add(1);
             }
 
             // Heatmap colorbar (when the current plot layer supports it).
@@ -6444,6 +6485,195 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     });
                 }
             }
+
+            #[cfg(debug_assertions)]
+            if self.debug_overlay {
+                // Plot debug: sample a few points from the first series and draw them as quads.
+                // This helps distinguish "path generation is wrong" from "path rendering is broken".
+                //
+                // We use a best-effort downcast to known model types without extending the
+                // `PlotLayer` trait for debugging.
+                let mut debug_sample_points: u32 = 0;
+                let mut debug_model_kind: u32 = 0; // 0=unknown, 1=line, 2=area
+                if let Ok(model_any) = self.model.read(cx.app, |_app, m| m.clone()) {
+                    use std::any::Any;
+
+                    let mut points: Vec<DataPoint> = Vec::new();
+                    if let Some(model) = (&model_any as &dyn Any).downcast_ref::<LinePlotModel>() {
+                        debug_model_kind = 1;
+                        if let Some(series) = model.series.first() {
+                            if let Some(slice) = series.data.as_slice() {
+                                let stride =
+                                    ((slice.len() + 15) / 16).max(1).min(slice.len().max(1));
+                                for p in slice.iter().copied().step_by(stride).take(24) {
+                                    points.push(p);
+                                }
+                            } else {
+                                for i in (0..series.data.len()).step_by(64).take(24) {
+                                    if let Some(p) = series.data.get(i) {
+                                        points.push(p);
+                                    }
+                                }
+                            }
+                        }
+                    } else if let Some(model) =
+                        (&model_any as &dyn Any).downcast_ref::<AreaPlotModel>()
+                    {
+                        debug_model_kind = 2;
+                        if let Some(series) = model.series.first() {
+                            if let Some(slice) = series.data.as_slice() {
+                                let stride =
+                                    ((slice.len() + 15) / 16).max(1).min(slice.len().max(1));
+                                for p in slice.iter().copied().step_by(stride).take(24) {
+                                    points.push(p);
+                                }
+                            } else {
+                                for i in (0..series.data.len()).step_by(64).take(24) {
+                                    if let Some(p) = series.data.get(i) {
+                                        points.push(p);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if !points.is_empty() {
+                        debug_sample_points = points.len().min(u32::MAX as usize) as u32;
+                        let local_viewport =
+                            Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size);
+                        let transform = PlotTransform {
+                            viewport: local_viewport,
+                            data: view_bounds,
+                            x_scale: self.x_scale,
+                            y_scale: self.y_scale,
+                        };
+
+                        let r = Px(2.5);
+                        for p in points {
+                            if !p.x.is_finite() || !p.y.is_finite() {
+                                continue;
+                            }
+                            let local = transform.data_to_px(p);
+                            if !local.x.0.is_finite() || !local.y.0.is_finite() {
+                                continue;
+                            }
+                            let x = Px((layout.plot.origin.x.0 + local.x.0).round());
+                            let y = Px((layout.plot.origin.y.0 + local.y.0).round());
+                            cx.scene.push(SceneOp::Quad {
+                                order: DrawOrder(5),
+                                rect: Rect::new(
+                                    Point::new(Px(x.0 - r.0), Px(y.0 - r.0)),
+                                    Size::new(Px(r.0 * 2.0), Px(r.0 * 2.0)),
+                                ),
+                                background: Color {
+                                    r: 1.0,
+                                    g: 1.0,
+                                    b: 1.0,
+                                    a: 0.9,
+                                },
+                                border: fret_core::Edges::all(Px(0.0)),
+                                border_color: Color::TRANSPARENT,
+                                corner_radii: fret_core::Corners::all(r),
+                            });
+                        }
+                    }
+                }
+
+                let mut key = 0u64;
+                key = Self::hash_u64(key, u64::from(cx.scale_factor.to_bits()));
+                key = Self::hash_u64(key, u64::from(debug_paths_prepared));
+                key = Self::hash_u64(key, u64::from(debug_paths_pushed));
+                key = Self::hash_u64(key, u64::from(debug_sample_points));
+                key = Self::hash_u64(key, u64::from(debug_model_kind));
+                key = Self::hash_u64(key, u64::from(view_bounds.x_min.to_bits()));
+                key = Self::hash_u64(key, u64::from(view_bounds.x_max.to_bits()));
+                key = Self::hash_u64(key, u64::from(view_bounds.y_min.to_bits()));
+                key = Self::hash_u64(key, u64::from(view_bounds.y_max.to_bits()));
+
+                let text_style = TextStyle {
+                    font: FontId::default(),
+                    size: Px(11.0),
+                    weight: FontWeight::NORMAL,
+                    slant: TextSlant::Normal,
+                    line_height: None,
+                    letter_spacing_em: None,
+                };
+                let constraints = TextConstraints {
+                    max_width: None,
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                    scale_factor: cx.scale_factor,
+                };
+
+                let label = format!(
+                    "plot debug: model={} samples={} paths_prepared={} paths_pushed={} view=[{:.3},{:.3}]x[{:.3},{:.3}]",
+                    debug_model_kind,
+                    debug_sample_points,
+                    debug_paths_prepared,
+                    debug_paths_pushed,
+                    view_bounds.x_min,
+                    view_bounds.x_max,
+                    view_bounds.y_min,
+                    view_bounds.y_max
+                );
+
+                let needs_rebuild = self
+                    .debug_overlay_text
+                    .as_ref()
+                    .is_none_or(|t| t.key != key);
+                if needs_rebuild {
+                    if let Some(t) = self.debug_overlay_text.take() {
+                        cx.services.text().release(t.blob);
+                    }
+                    let (blob, metrics) =
+                        cx.services.text().prepare(&label, &text_style, constraints);
+                    self.debug_overlay_text = Some(PreparedText { blob, metrics, key });
+                }
+
+                if let Some(t) = self.debug_overlay_text {
+                    let pad = 6.0f32;
+                    let w = (t.metrics.size.width.0 + pad * 2.0).max(1.0);
+                    let h = (t.metrics.size.height.0 + pad * 2.0).max(1.0);
+                    let origin = Point::new(
+                        Px(layout.plot.origin.x.0 + 8.0),
+                        Px(layout.plot.origin.y.0 + 8.0),
+                    );
+
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(99),
+                        rect: Rect::new(origin, Size::new(Px(w), Px(h))),
+                        background: Color {
+                            r: 0.0,
+                            g: 0.0,
+                            b: 0.0,
+                            a: 0.65,
+                        },
+                        border: fret_core::Edges::all(Px(1.0)),
+                        border_color: Color {
+                            r: 1.0,
+                            g: 1.0,
+                            b: 1.0,
+                            a: 0.18,
+                        },
+                        corner_radii: fret_core::Corners::all(Px(4.0)),
+                    });
+
+                    cx.scene.push(SceneOp::Text {
+                        order: DrawOrder(100),
+                        origin: Point::new(
+                            Px(origin.x.0 + pad),
+                            Px(origin.y.0 + pad + t.metrics.baseline.0),
+                        ),
+                        text: t.blob,
+                        color: Color {
+                            r: 1.0,
+                            g: 1.0,
+                            b: 1.0,
+                            a: 1.0,
+                        },
+                    });
+                }
+            }
         }
 
         cx.scene.push(SceneOp::PopClip);
@@ -7702,5 +7932,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             services.text().release(t.blob);
         }
         self.heatmap_colorbar_text_key = None;
+
+        #[cfg(debug_assertions)]
+        if let Some(t) = self.debug_overlay_text.take() {
+            services.text().release(t.blob);
+        }
     }
 }

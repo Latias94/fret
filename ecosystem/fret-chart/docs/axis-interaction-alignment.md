@@ -96,12 +96,20 @@ All UI input is mapped into headless actions:
 
 ## Hover / crosshair / tooltip (P0)
 
-Current behavior is intentionally ImPlot-like:
+Current behavior is intentionally ImPlot-like for *gestures*, but the tooltip/axisPointer model is
+ECharts-inspired and is controlled by `delinea::AxisPointerSpec`:
 
-- Crosshair + tooltip are only shown when the pointer is inside the plot rect and close to a sampled data point.
-- Crosshair position uses the pointer location.
-- Hover marker uses the closest point on the nearest line segment (after LOD), with linear interpolation.
-- Tooltip currently shows `series id`, `x`, `y` and uses the same numeric formatting as axis ticks.
+- `trigger=Axis` (default):
+  - Crosshair + tooltip are shown while the pointer is in the plot rect. Hovering an axis band also
+    drives the axisPointer (the hover point is clamped into the plot rect).
+  - The tooltip shows an axis row followed by one row per visible series (stable `series_order`).
+  - The crosshair is rendered as a single line (vertical for X-trigger, horizontal for Y-trigger).
+  - The hover marker dot is only shown when a close-enough hit exists (gated by `trigger_distance_px`).
+- `trigger=Item`:
+  - Crosshair + tooltip are only shown when a close-enough hit exists (gated by `trigger_distance_px`).
+  - The crosshair is rendered as a full crosshair (X+Y).
+- `snap=true`:
+  - Crosshair position and axis-trigger tooltip values may snap to the nearest hit point when one exists.
 
 ## Known limitations
 
@@ -109,4 +117,8 @@ Current behavior is intentionally ImPlot-like:
 - Axis rendering is intentionally minimal (no grid lines, titles, or rich formatting yet).
 - Crosshair is currently rendered as solid lines (no dash pattern yet).
 - Fit/reset requires focus (currently acquired by clicking the canvas).
-- Brush selection highlight is minimal in v1: a selection rect is rendered, and non-matching axis-pair series are dimmed.
+- Brush selection highlight is UI-only in v1:
+  - A selection rect is rendered in plot space.
+  - Series not on the selected axis pair are dimmed.
+  - Series on the selected axis pair are re-painted inside the selection rect via clip-based highlighting
+    (outside the rect is dimmed).

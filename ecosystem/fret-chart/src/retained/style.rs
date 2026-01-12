@@ -52,6 +52,14 @@ pub struct ChartStyle {
     pub padding: Edges,
     pub axis_band_x: Px,
     pub axis_band_y: Px,
+    pub visual_map_band_x: Px,
+    pub visual_map_padding: Px,
+    pub visual_map_item_gap: Px,
+    pub visual_map_corner_radius: Px,
+    pub visual_map_track_color: Color,
+    pub visual_map_range_fill: Color,
+    pub visual_map_range_stroke: Color,
+    pub visual_map_handle_color: Color,
     pub axis_line_color: Color,
     pub axis_tick_color: Color,
     pub axis_label_color: Color,
@@ -69,6 +77,9 @@ pub struct ChartStyle {
     pub tooltip_text_color: Color,
     pub tooltip_padding: Edges,
     pub tooltip_corner_radius: Px,
+    pub tooltip_marker_size: Px,
+    pub tooltip_marker_gap: Px,
+    pub tooltip_column_gap: Px,
 
     pub legend_background: Color,
     pub legend_border_color: Color,
@@ -134,6 +145,34 @@ impl Default for ChartStyle {
             padding: Edges::all(Px(8.0)),
             axis_band_x: Px(56.0),
             axis_band_y: Px(36.0),
+            visual_map_band_x: Px(22.0),
+            visual_map_padding: Px(6.0),
+            visual_map_item_gap: Px(8.0),
+            visual_map_corner_radius: Px(4.0),
+            visual_map_track_color: Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 0.18,
+            },
+            visual_map_range_fill: Color {
+                r: 0.2,
+                g: 0.6,
+                b: 1.0,
+                a: 0.12,
+            },
+            visual_map_range_stroke: Color {
+                r: 0.2,
+                g: 0.6,
+                b: 1.0,
+                a: 0.75,
+            },
+            visual_map_handle_color: Color {
+                r: 0.2,
+                g: 0.6,
+                b: 1.0,
+                a: 0.75,
+            },
             axis_line_color: Color {
                 r: 1.0,
                 g: 1.0,
@@ -189,6 +228,9 @@ impl Default for ChartStyle {
             },
             tooltip_padding: Edges::symmetric(Px(8.0), Px(6.0)),
             tooltip_corner_radius: Px(6.0),
+            tooltip_marker_size: Px(8.0),
+            tooltip_marker_gap: Px(6.0),
+            tooltip_column_gap: Px(10.0),
             legend_background: Color {
                 r: 0.08,
                 g: 0.08,
@@ -293,6 +335,11 @@ impl ChartStyle {
 
         let axis_band_x = pick_metric(theme, "metric.chart.axis.band.x", Px(56.0));
         let axis_band_y = pick_metric(theme, "metric.chart.axis.band.y", Px(36.0));
+        let visual_map_band_x = pick_metric(theme, "metric.chart.visualmap.band.x", Px(22.0));
+        let visual_map_padding = pick_metric(theme, "metric.chart.visualmap.pad", Px(6.0));
+        let visual_map_item_gap = pick_metric(theme, "metric.chart.visualmap.item.gap", Px(8.0));
+        let visual_map_corner_radius =
+            pick_metric(theme, "metric.chart.visualmap.corner_radius", Px(4.0));
 
         let tooltip_padding_x = pick_metric(theme, "metric.chart.tooltip.padding.x", Px(8.0));
         let tooltip_padding_y = pick_metric(theme, "metric.chart.tooltip.padding.y", Px(6.0));
@@ -301,6 +348,9 @@ impl ChartStyle {
             "metric.chart.tooltip.corner_radius",
             theme.metric_required("metric.radius.sm"),
         );
+        let tooltip_marker_size = pick_metric(theme, "metric.chart.tooltip.marker.size", Px(8.0));
+        let tooltip_marker_gap = pick_metric(theme, "metric.chart.tooltip.marker.gap", Px(6.0));
+        let tooltip_column_gap = pick_metric(theme, "metric.chart.tooltip.column.gap", Px(10.0));
 
         let legend_padding_x = pick_metric(theme, "metric.chart.legend.padding.x", Px(10.0));
         let legend_padding_y = pick_metric(theme, "metric.chart.legend.padding.y", Px(8.0));
@@ -318,6 +368,17 @@ impl ChartStyle {
             "chart.legend.hover.background",
             with_alpha(foreground, 0.06),
         );
+
+        let visual_map_track_color = pick_color(
+            theme,
+            "chart.visualmap.track",
+            with_alpha(axis_line_color, 0.25),
+        );
+        let visual_map_range_fill = pick_color(theme, "chart.visualmap.range.fill", selection_fill);
+        let visual_map_range_stroke =
+            pick_color(theme, "chart.visualmap.range.stroke", selection_stroke);
+        let visual_map_handle_color =
+            pick_color(theme, "chart.visualmap.handle", visual_map_range_stroke);
 
         const PALETTE_KEYS: [&str; 10] = [
             "chart.palette.0",
@@ -363,6 +424,14 @@ impl ChartStyle {
             padding,
             axis_band_x,
             axis_band_y,
+            visual_map_band_x,
+            visual_map_padding,
+            visual_map_item_gap,
+            visual_map_corner_radius,
+            visual_map_track_color,
+            visual_map_range_fill,
+            visual_map_range_stroke,
+            visual_map_handle_color,
             axis_line_color,
             axis_tick_color,
             axis_label_color,
@@ -378,6 +447,9 @@ impl ChartStyle {
             tooltip_text_color: tooltip_text,
             tooltip_padding: Edges::symmetric(tooltip_padding_x, tooltip_padding_y),
             tooltip_corner_radius,
+            tooltip_marker_size,
+            tooltip_marker_gap,
+            tooltip_column_gap,
             legend_background,
             legend_border_color: legend_border,
             legend_border_width,

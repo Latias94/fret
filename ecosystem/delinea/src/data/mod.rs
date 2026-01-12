@@ -10,8 +10,18 @@ pub use table_view::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DataTableAppendError {
-    ColumnCountMismatch { expected: usize, actual: usize },
-    NonF64Column { column: usize },
+    ColumnCountMismatch {
+        expected: usize,
+        actual: usize,
+    },
+    ColumnLenMismatch {
+        expected: usize,
+        actual: usize,
+        column: usize,
+    },
+    NonF64Column {
+        column: usize,
+    },
 }
 
 impl core::fmt::Display for DataTableAppendError {
@@ -20,6 +30,14 @@ impl core::fmt::Display for DataTableAppendError {
             Self::ColumnCountMismatch { expected, actual } => write!(
                 f,
                 "column count mismatch: expected {expected} values, got {actual}"
+            ),
+            Self::ColumnLenMismatch {
+                expected,
+                actual,
+                column,
+            } => write!(
+                f,
+                "column length mismatch at column {column}: expected {expected} rows, got {actual}"
             ),
             Self::NonF64Column { column } => write!(f, "column {column} is not an f64 column"),
         }
@@ -109,6 +127,47 @@ impl DataTable {
         Ok(())
     }
 
+    /// Appends multiple rows to a table that contains only f64 columns.
+    ///
+    /// `columns` is column-major: each slice corresponds to one f64 column and all slices must have
+    /// the same length.
+    ///
+    /// This is the preferred ingestion path for append-only/streaming charts because it avoids
+    /// per-row overhead while keeping the contract identical to `append_row_f64`:
+    /// - bumps `revision` exactly once,
+    /// - keeps `row_count` consistent,
+    /// - provides deterministic invalidation for dependent caches.
+    pub fn append_columns_f64(&mut self, columns: &[&[f64]]) -> Result<(), DataTableAppendError> {
+        if columns.len() != self.columns.len() {
+            return Err(DataTableAppendError::ColumnCountMismatch {
+                expected: self.columns.len(),
+                actual: columns.len(),
+            });
+        }
+
+        let expected_len = columns.first().map(|c| c.len()).unwrap_or(0);
+        for (i, col) in columns.iter().enumerate() {
+            if col.len() != expected_len {
+                return Err(DataTableAppendError::ColumnLenMismatch {
+                    expected: expected_len,
+                    actual: col.len(),
+                    column: i,
+                });
+            }
+        }
+
+        for (i, col) in self.columns.iter_mut().enumerate() {
+            let Column::F64(v) = col else {
+                return Err(DataTableAppendError::NonF64Column { column: i });
+            };
+            v.extend_from_slice(columns[i]);
+        }
+
+        self.row_count = self.columns.iter().map(|c| c.len()).min().unwrap_or(0);
+        self.revision.bump();
+        Ok(())
+    }
+
     pub fn column_f64(&self, index: usize) -> Option<&[f64]> {
         self.columns
             .get(index)?
@@ -156,6 +215,51 @@ mod tests {
         table.push_column(Column::Bool(vec![true]));
 
         let err = table.append_row_f64(&[2.0, 3.0]).unwrap_err();
+        assert!(matches!(
+            err,
+            DataTableAppendError::NonF64Column { column: 1 }
+        ));
+    }
+
+    #[test]
+    fn append_columns_f64_appends_all_rows_and_bumps_revision_once() {
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(vec![1.0]));
+        table.push_column(Column::F64(vec![2.0]));
+
+        let rev0 = table.revision;
+        table
+            .append_columns_f64(&[&[3.0, 5.0], &[4.0, 6.0]])
+            .unwrap();
+
+        assert!(table.revision.0 > rev0.0);
+        assert_eq!(table.row_count, 3);
+        assert_eq!(table.column_f64(0).unwrap(), &[1.0, 3.0, 5.0]);
+        assert_eq!(table.column_f64(1).unwrap(), &[2.0, 4.0, 6.0]);
+    }
+
+    #[test]
+    fn append_columns_f64_rejects_mismatched_column_lengths() {
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(vec![1.0]));
+        table.push_column(Column::F64(vec![2.0]));
+
+        let err = table
+            .append_columns_f64(&[&[3.0, 5.0], &[4.0]])
+            .unwrap_err();
+        assert!(matches!(
+            err,
+            DataTableAppendError::ColumnLenMismatch { .. }
+        ));
+    }
+
+    #[test]
+    fn append_columns_f64_rejects_non_f64_columns() {
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(vec![1.0]));
+        table.push_column(Column::Bool(vec![true]));
+
+        let err = table.append_columns_f64(&[&[3.0], &[4.0]]).unwrap_err();
         assert!(matches!(
             err,
             DataTableAppendError::NonF64Column { column: 1 }

@@ -1,53 +1,53 @@
-#[cfg(not(target_arch = "wasm32"))]
-use anyhow::Context as _;
 use fret_app::{App, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event};
-#[cfg(not(target_arch = "wasm32"))]
-use fret_launch::run_app;
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 
+use anyhow::Context as _;
+
 use delinea::data::{Column, DataTable};
-use delinea::ids::{AxisId, FieldId, StackId};
+use delinea::engine::window::DataWindow;
+use delinea::ids::{AxisId, DataZoomId, DatasetId, FieldId, GridId, SeriesId};
 use delinea::{
-    AreaBaseline, AxisKind, AxisPosition, AxisRange, AxisScale, SeriesKind, TimeAxisScale,
+    Action, AxisKind, AxisPointerTrigger, AxisPointerType, AxisScale, ChartSpec, DataZoomXSpec,
+    DatasetSpec, FieldSpec, FilterMode, GridSpec, SeriesEncode, SeriesKind, SeriesSpec,
 };
-use delinea::{ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode, SeriesSpec};
 use fret_chart::retained::ChartCanvas;
 
-struct ChartDemoWindowState {
+struct CategoryLineDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
 }
 
 #[derive(Default)]
-struct ChartDemoDriver;
+struct CategoryLineDemoDriver;
 
-impl ChartDemoDriver {
-    fn build_ui(_app: &mut App, window: AppWindowId) -> ChartDemoWindowState {
+impl CategoryLineDemoDriver {
+    fn build_ui(_app: &mut App, window: AppWindowId) -> CategoryLineDemoWindowState {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        ChartDemoWindowState { ui, root: None }
+        CategoryLineDemoWindowState { ui, root: None }
     }
 
     fn build_canvas() -> ChartCanvas {
-        let dataset_id = delinea::ids::DatasetId::new(1);
-        let grid_id = delinea::ids::GridId::new(1);
+        let dataset_id = DatasetId::new(1);
+        let grid_id = GridId::new(1);
         let x_axis = AxisId::new(1);
-        let y_left_axis = AxisId::new(2);
-        let y_right_axis = AxisId::new(3);
-        let stack_id = StackId::new(1);
-        let series_a_id = delinea::ids::SeriesId::new(1);
-        let series_b_id = delinea::ids::SeriesId::new(2);
-        let series_c_id = delinea::ids::SeriesId::new(3);
+        let y_axis = AxisId::new(2);
+        let zoom_id = DataZoomId::new(1);
+
+        let series_line_id = SeriesId::new(1);
+        let series_scatter_id = SeriesId::new(2);
+
         let x_field = FieldId::new(1);
-        let y_a_field = FieldId::new(2);
-        let y_b_field = FieldId::new(3);
-        let y_c_field = FieldId::new(4);
+        let y_line_field = FieldId::new(2);
+        let y_scatter_field = FieldId::new(3);
+
+        let categories: Vec<String> = (0..128).map(|i| format!("C{i:03}")).collect();
 
         let spec = ChartSpec {
             id: delinea::ids::ChartId::new(1),
@@ -60,16 +60,12 @@ impl ChartDemoDriver {
                         column: 0,
                     },
                     FieldSpec {
-                        id: y_a_field,
+                        id: y_line_field,
                         column: 1,
                     },
                     FieldSpec {
-                        id: y_b_field,
+                        id: y_scatter_field,
                         column: 2,
-                    },
-                    FieldSpec {
-                        id: y_c_field,
-                        column: 3,
                     },
                 ],
             }],
@@ -77,92 +73,72 @@ impl ChartDemoDriver {
             axes: vec![
                 delinea::AxisSpec {
                     id: x_axis,
-                    name: Some("Time".to_string()),
+                    name: Some("Category".to_string()),
                     kind: AxisKind::X,
                     grid: grid_id,
                     position: None,
-                    scale: AxisScale::Time(TimeAxisScale),
-                    range: Some(AxisRange::Auto),
+                    scale: AxisScale::Category(delinea::CategoryAxisScale { categories }),
+                    range: None,
                 },
                 delinea::AxisSpec {
-                    id: y_left_axis,
-                    name: Some("Left".to_string()),
+                    id: y_axis,
+                    name: Some("Value".to_string()),
                     kind: AxisKind::Y,
                     grid: grid_id,
                     position: None,
                     scale: Default::default(),
-                    range: Some(AxisRange::Auto),
-                },
-                delinea::AxisSpec {
-                    id: y_right_axis,
-                    name: Some("Right".to_string()),
-                    kind: AxisKind::Y,
-                    grid: grid_id,
-                    position: Some(AxisPosition::Right),
-                    scale: Default::default(),
-                    range: Some(AxisRange::Auto),
+                    range: None,
                 },
             ],
-            data_zoom_x: vec![],
+            data_zoom_x: vec![DataZoomXSpec {
+                id: zoom_id,
+                axis: x_axis,
+                filter_mode: FilterMode::Filter,
+                min_value_span: Some(6.0),
+                max_value_span: Some(80.0),
+            }],
             data_zoom_y: vec![],
             tooltip: None,
             axis_pointer: Some(delinea::AxisPointerSpec {
                 enabled: true,
-                trigger: delinea::AxisPointerTrigger::Axis,
-                pointer_type: delinea::AxisPointerType::Line,
+                trigger: AxisPointerTrigger::Axis,
+                pointer_type: AxisPointerType::Line,
                 label: Default::default(),
-                snap: false,
+                snap: true,
                 trigger_distance_px: 12.0,
                 throttle_px: 0.75,
             }),
             visual_maps: vec![],
             series: vec![
                 SeriesSpec {
-                    id: series_a_id,
-                    name: Some("Stack A (area)".to_string()),
-                    kind: SeriesKind::Area,
-                    dataset: dataset_id,
-                    encode: SeriesEncode {
-                        x: x_field,
-                        y: y_a_field,
-                        y2: None,
-                    },
-                    x_axis,
-                    y_axis: y_left_axis,
-                    stack: Some(stack_id),
-                    stack_strategy: Default::default(),
-                    bar_layout: Default::default(),
-                    area_baseline: Some(AreaBaseline::Zero),
-                },
-                SeriesSpec {
-                    id: series_b_id,
-                    name: Some("Stack B (area)".to_string()),
-                    kind: SeriesKind::Area,
-                    dataset: dataset_id,
-                    encode: SeriesEncode {
-                        x: x_field,
-                        y: y_b_field,
-                        y2: None,
-                    },
-                    x_axis,
-                    y_axis: y_left_axis,
-                    stack: Some(stack_id),
-                    stack_strategy: Default::default(),
-                    bar_layout: Default::default(),
-                    area_baseline: Some(AreaBaseline::Zero),
-                },
-                SeriesSpec {
-                    id: series_c_id,
-                    name: Some("Right axis (line)".to_string()),
+                    id: series_line_id,
+                    name: Some("Line".to_string()),
                     kind: SeriesKind::Line,
                     dataset: dataset_id,
                     encode: SeriesEncode {
                         x: x_field,
-                        y: y_c_field,
+                        y: y_line_field,
                         y2: None,
                     },
                     x_axis,
-                    y_axis: y_right_axis,
+                    y_axis,
+                    stack: None,
+                    stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
+                    area_baseline: None,
+                },
+                SeriesSpec {
+                    id: series_scatter_id,
+                    name: Some("Scatter".to_string()),
+                    kind: SeriesKind::Scatter,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_scatter_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis,
                     stack: None,
                     stack_strategy: Default::default(),
                     bar_layout: Default::default(),
@@ -173,41 +149,38 @@ impl ChartDemoDriver {
 
         let mut canvas = ChartCanvas::new(spec).expect("chart spec should be valid");
 
-        // 2025-01-01T00:00:00Z in epoch milliseconds.
-        let base_ms = 1_735_689_600_000.0;
-        let interval_ms = 60_000.0;
-
-        let n = 65_536usize;
+        let n = 128usize;
         let mut x: Vec<f64> = Vec::with_capacity(n);
-        let mut y_a: Vec<f64> = Vec::with_capacity(n);
-        let mut y_b: Vec<f64> = Vec::with_capacity(n);
-        let mut y_c: Vec<f64> = Vec::with_capacity(n);
+        let mut y_line: Vec<f64> = Vec::with_capacity(n);
+        let mut y_scatter: Vec<f64> = Vec::with_capacity(n);
         for i in 0..n {
-            let t = i as f64 / (n - 1) as f64;
-            let xi = base_ms + interval_ms * i as f64;
+            let t = i as f64 / (n - 1).max(1) as f64;
             let theta = t * std::f64::consts::TAU;
-            let yi_a = (theta * 8.0).sin() * 0.8;
-            let yi_b = (theta * 6.0).cos() * 0.6 + 0.1;
-            let yi_c = (theta * 1.5).sin() * 50.0 + 100.0;
-            x.push(xi);
-            y_a.push(yi_a);
-            y_b.push(yi_b);
-            y_c.push(yi_c);
+            x.push(i as f64);
+            y_line.push((theta * 2.0).sin() * 1.2 + (theta * 0.5).cos() * 0.2);
+            y_scatter.push((theta * 3.0).cos() * 0.9 + (theta * 0.25).sin() * 0.15);
         }
 
         let mut table = DataTable::default();
         table.push_column(Column::F64(x));
-        table.push_column(Column::F64(y_a));
-        table.push_column(Column::F64(y_b));
-        table.push_column(Column::F64(y_c));
+        table.push_column(Column::F64(y_line));
+        table.push_column(Column::F64(y_scatter));
         canvas.engine_mut().datasets_mut().insert(dataset_id, table);
+
+        canvas.engine_mut().apply_action(Action::SetDataWindowX {
+            axis: x_axis,
+            window: Some(DataWindow {
+                min: 16.0,
+                max: 64.0,
+            }),
+        });
 
         canvas
     }
 }
 
-impl WinitAppDriver for ChartDemoDriver {
-    type WindowState = ChartDemoWindowState;
+impl WinitAppDriver for CategoryLineDemoDriver {
+    type WindowState = CategoryLineDemoWindowState;
 
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
         Self::build_ui(app, window)
@@ -290,13 +263,13 @@ pub fn build_app() -> App {
 
 pub fn build_runner_config() -> WinitRunnerConfig {
     WinitRunnerConfig {
-        main_window_title: "fret-demo chart_demo (delinea + fret-chart)".to_string(),
+        main_window_title: "fret-demo category_line_demo (delinea + fret-chart)".to_string(),
         ..Default::default()
     }
 }
 
 pub fn build_driver() -> impl WinitAppDriver {
-    ChartDemoDriver::default()
+    CategoryLineDemoDriver::default()
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -305,9 +278,7 @@ pub fn run() -> anyhow::Result<()> {
     let config = build_runner_config();
     let driver = build_driver();
 
-    run_app(config, app, driver)
-        .context("run chart_demo app")
-        .map_err(anyhow::Error::from)
+    crate::run_native_demo(config, app, driver).context("run category_line_demo app")
 }
 
 #[cfg(target_arch = "wasm32")]

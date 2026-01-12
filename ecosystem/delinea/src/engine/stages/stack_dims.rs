@@ -655,7 +655,9 @@ mod tests {
             ],
             data_zoom_x: vec![],
             data_zoom_y: vec![],
+            tooltip: None,
             axis_pointer: None,
+            visual_maps: vec![],
             series: vec![
                 SeriesSpec {
                     id: a,
@@ -795,7 +797,9 @@ mod tests {
             ],
             data_zoom_x: vec![],
             data_zoom_y: vec![],
+            tooltip: None,
             axis_pointer: None,
+            visual_maps: vec![],
             series: vec![
                 SeriesSpec {
                     id: a,

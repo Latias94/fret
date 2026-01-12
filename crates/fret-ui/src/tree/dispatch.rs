@@ -367,6 +367,7 @@ impl<H: UiHost> UiTree<H> {
         let mut pointer_down_outside = PointerDownOutsideOutcome::default();
         let is_wheel = matches!(event, Event::Pointer(PointerEvent::Wheel { .. }));
         let mut wheel_stop_node: Option<NodeId> = None;
+        let mut synth_pointer_move_prev_target: Option<NodeId> = None;
 
         if let Event::KeyDown {
             key,
@@ -652,6 +653,16 @@ impl<H: UiHost> UiTree<H> {
             Some(target)
         } else if let Some(pos) = event_position(event) {
             let hit = self.hit_test_layers(&active_layers, pos);
+
+            if let Event::Pointer(PointerEvent::Move { buttons, .. }) = event
+                && !buttons.left
+                && !buttons.right
+                && !buttons.middle
+                && hit != self.last_pointer_move_hit
+            {
+                synth_pointer_move_prev_target = self.last_pointer_move_hit;
+                self.last_pointer_move_hit = hit;
+            }
 
             if matches!(event, Event::InternalDrag(_)) {
                 if let Some(node) = hit {
@@ -1028,6 +1039,20 @@ impl<H: UiHost> UiTree<H> {
                     app.request_redraw(window);
                 }
                 return;
+            }
+        }
+
+        if let Event::Pointer(PointerEvent::Move { .. }) = event {
+            if let Some(prev) = synth_pointer_move_prev_target
+                && self.node_in_any_layer(prev, &active_layers)
+            {
+                // Forward a synthetic hover-move to the previously hovered target so retained
+                // widgets can clear hover state when the pointer crosses between siblings.
+                //
+                // We intentionally use observer dispatch to avoid allowing the previous target to
+                // mutate focus/capture/cursor routing on the transition frame.
+                self.dispatch_event_to_node_chain_observer(app, services, &input_ctx, prev, event);
+                needs_redraw = true;
             }
         }
 

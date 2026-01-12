@@ -1,7 +1,7 @@
 #[cfg(not(target_arch = "wasm32"))]
 use anyhow::Context as _;
 use fret_app::{App, Effect, WindowRequest};
-use fret_core::{AppWindowId, Event, MouseButton, PointerEvent, Rect};
+use fret_core::{AppWindowId, Color, Event, Px};
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
 };
@@ -13,25 +13,11 @@ use fret_plot::retained::{
 };
 use fret_plot::series::Series;
 use fret_runtime::PlatformCapabilities;
-use fret_ui::UiTree;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Pane {
-    Top,
-    Bottom,
-}
-
-impl Default for Pane {
-    fn default() -> Self {
-        Self::Top
-    }
-}
+use fret_ui::{FixedSplit, UiTree};
 
 struct LinkedCursorDemoWindowState {
-    top_ui: UiTree<App>,
-    top_root: Option<fret_core::NodeId>,
-    bottom_ui: UiTree<App>,
-    bottom_root: Option<fret_core::NodeId>,
+    ui: UiTree<App>,
+    root: Option<fret_core::NodeId>,
     top_plot: fret_runtime::Model<LinePlotModel>,
     bottom_plot: fret_runtime::Model<AreaPlotModel>,
     top_state: fret_runtime::Model<PlotState>,
@@ -39,9 +25,6 @@ struct LinkedCursorDemoWindowState {
     bottom_state: fret_runtime::Model<PlotState>,
     bottom_output: fret_runtime::Model<PlotOutput>,
     linked: LinkedPlotGroup,
-    focused_pane: Pane,
-    active_pointer_pane: Option<Pane>,
-    last_bounds: Rect,
 }
 
 #[derive(Default)]
@@ -73,20 +56,69 @@ impl LinkedCursorDemoDriver {
         }
 
         let top_plot = app.models_mut().insert(LinePlotModel::from_series(vec![
-            LineSeries::new("signal A", Series::from_points_sorted(series0, true)),
+            LineSeries::new("signal A", Series::from_points_sorted(series0, true))
+                .color(Color {
+                    r: 1.0,
+                    g: 0.2,
+                    b: 0.2,
+                    a: 1.0,
+                })
+                .stroke_width(Px(2.5)),
             LineSeries::new(
                 "signal B",
                 Series::from_points_sorted(series1.clone(), true),
-            ),
+            )
+            .color(Color {
+                r: 0.2,
+                g: 0.9,
+                b: 0.4,
+                a: 1.0,
+            })
+            .stroke_width(Px(2.0)),
             LineSeries::new(
                 "signal C",
                 Series::from_points_sorted(series2.clone(), true),
-            ),
+            )
+            .color(Color {
+                r: 0.25,
+                g: 0.55,
+                b: 1.0,
+                a: 1.0,
+            })
+            .stroke_width(Px(2.0)),
         ]));
 
         let bottom_plot = app.models_mut().insert(AreaPlotModel::from_series(vec![
-            AreaSeries::new("area B", Series::from_points_sorted(series1, true)).fill_alpha(0.18),
-            AreaSeries::new("area C", Series::from_points_sorted(series2, true)).fill_alpha(0.18),
+            AreaSeries::new("area B", Series::from_points_sorted(series1, true))
+                .fill(Color {
+                    r: 0.2,
+                    g: 0.9,
+                    b: 0.4,
+                    a: 1.0,
+                })
+                .stroke(Color {
+                    r: 0.2,
+                    g: 0.9,
+                    b: 0.4,
+                    a: 1.0,
+                })
+                .stroke_width(Px(2.0))
+                .fill_alpha(0.18),
+            AreaSeries::new("area C", Series::from_points_sorted(series2, true))
+                .fill(Color {
+                    r: 0.25,
+                    g: 0.55,
+                    b: 1.0,
+                    a: 1.0,
+                })
+                .stroke(Color {
+                    r: 0.25,
+                    g: 0.55,
+                    b: 1.0,
+                    a: 1.0,
+                })
+                .stroke_width(Px(2.0))
+                .fill_alpha(0.18),
         ]));
 
         let top_state = app.models_mut().insert(PlotState::default());
@@ -105,16 +137,12 @@ impl LinkedCursorDemoDriver {
                 output: bottom_output.clone(),
             });
 
-        let mut top_ui: UiTree<App> = UiTree::new();
-        top_ui.set_window(window);
-        let mut bottom_ui: UiTree<App> = UiTree::new();
-        bottom_ui.set_window(window);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
 
         LinkedCursorDemoWindowState {
-            top_ui,
-            top_root: None,
-            bottom_ui,
-            bottom_root: None,
+            ui,
+            root: None,
             top_plot,
             bottom_plot,
             top_state,
@@ -122,55 +150,7 @@ impl LinkedCursorDemoDriver {
             bottom_state,
             bottom_output,
             linked,
-            focused_pane: Pane::default(),
-            active_pointer_pane: None,
-            last_bounds: Rect::new(
-                fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
-                fret_core::Size::new(fret_core::Px(0.0), fret_core::Px(0.0)),
-            ),
         }
-    }
-
-    fn split_y(&self, state: &LinkedCursorDemoWindowState) -> fret_core::Px {
-        fret_core::Px(state.last_bounds.origin.y.0 + state.last_bounds.size.height.0 * 0.5)
-    }
-
-    fn pane_for_position(
-        &self,
-        state: &LinkedCursorDemoWindowState,
-        position: fret_core::Point,
-    ) -> Pane {
-        let split_y = self.split_y(state);
-        if position.y.0 < split_y.0 {
-            Pane::Top
-        } else {
-            Pane::Bottom
-        }
-    }
-
-    fn dispatch_to_pane(
-        &self,
-        pane: Pane,
-        app: &mut App,
-        services: &mut dyn fret_core::UiServices,
-        state: &mut LinkedCursorDemoWindowState,
-        event: &Event,
-    ) {
-        match pane {
-            Pane::Top => state.top_ui.dispatch_event(app, services, event),
-            Pane::Bottom => state.bottom_ui.dispatch_event(app, services, event),
-        }
-    }
-
-    fn dispatch_to_both(
-        &self,
-        app: &mut App,
-        services: &mut dyn fret_core::UiServices,
-        state: &mut LinkedCursorDemoWindowState,
-        event: &Event,
-    ) {
-        state.top_ui.dispatch_event(app, services, event);
-        state.bottom_ui.dispatch_event(app, services, event);
     }
 }
 
@@ -188,10 +168,8 @@ impl WinitAppDriver for LinkedCursorDemoDriver {
         window: AppWindowId,
         state: &mut Self::WindowState,
     ) {
-        crate::hotpatch::reset_ui_tree(app, window, &mut state.top_ui);
-        crate::hotpatch::reset_ui_tree(app, window, &mut state.bottom_ui);
-        state.top_root = None;
-        state.bottom_root = None;
+        crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+        state.root = None;
     }
 
     fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
@@ -212,46 +190,10 @@ impl WinitAppDriver for LinkedCursorDemoDriver {
                 app.push_effect(Effect::Window(WindowRequest::Close(window)));
                 return;
             }
-            Event::KeyDown { .. } => {
-                self.dispatch_to_pane(state.focused_pane, app, services, state, event);
-            }
-            Event::Pointer(PointerEvent::Down {
-                position,
-                button: MouseButton::Left,
-                ..
-            }) => {
-                let pane = self.pane_for_position(state, *position);
-                state.focused_pane = pane;
-                state.active_pointer_pane = Some(pane);
-                self.dispatch_to_pane(pane, app, services, state, event);
-            }
-            Event::Pointer(PointerEvent::Up {
-                button: MouseButton::Left,
-                ..
-            }) => {
-                if let Some(active) = state.active_pointer_pane.take() {
-                    self.dispatch_to_pane(active, app, services, state, event);
-                } else {
-                    self.dispatch_to_both(app, services, state, event);
-                }
-            }
-            Event::Pointer(PointerEvent::Move { .. }) => {
-                if let Some(active) = state.active_pointer_pane {
-                    self.dispatch_to_pane(active, app, services, state, event);
-                } else {
-                    // Send move to both so the previously hovered plot can clear its cursor/output.
-                    // The linked-plot coordinator will prefer the plot that currently has a cursor.
-                    self.dispatch_to_both(app, services, state, event);
-                }
-            }
-            Event::Pointer(PointerEvent::Wheel { position, .. }) => {
-                let pane = self.pane_for_position(state, *position);
-                self.dispatch_to_pane(pane, app, services, state, event);
-            }
             _ => {
-                self.dispatch_to_both(app, services, state, event);
+                state.ui.dispatch_event(app, services, event);
             }
-        }
+        };
 
         state.linked.tick(app);
     }
@@ -267,73 +209,43 @@ impl WinitAppDriver for LinkedCursorDemoDriver {
             scene,
         } = context;
 
-        state.last_bounds = bounds;
-
-        let top_h = fret_core::Px((bounds.size.height.0 * 0.5).max(0.0));
-        let bottom_h = fret_core::Px((bounds.size.height.0 - top_h.0).max(0.0));
-
-        let top_bounds = Rect::new(
-            bounds.origin,
-            fret_core::Size::new(bounds.size.width, top_h),
-        );
-        let bottom_bounds = Rect::new(
-            fret_core::Point::new(bounds.origin.x, fret_core::Px(bounds.origin.y.0 + top_h.0)),
-            fret_core::Size::new(bounds.size.width, bottom_h),
-        );
-
-        let top_root = state.top_root.get_or_insert_with(|| {
-            let style = LinePlotStyle::default();
-            let canvas = LinePlotCanvas::new(state.top_plot.clone())
-                .style(style)
+        if state.root.is_none() {
+            let top_style = LinePlotStyle::default();
+            let top_canvas = LinePlotCanvas::new(state.top_plot.clone())
+                .style(top_style)
+                .debug_overlay(true)
                 .state(state.top_state.clone())
                 .output(state.top_output.clone());
-            let node = LinePlotCanvas::create_node(&mut state.top_ui, canvas);
-            state.top_ui.set_root(node);
-            node
-        });
 
-        let bottom_root = state.bottom_root.get_or_insert_with(|| {
-            let style = LinePlotStyle::default();
-            let canvas = AreaPlotCanvas::new(state.bottom_plot.clone())
-                .style(style)
+            let bottom_style = LinePlotStyle::default();
+            let bottom_canvas = AreaPlotCanvas::new(state.bottom_plot.clone())
+                .style(bottom_style)
+                .debug_overlay(true)
                 .state(state.bottom_state.clone())
                 .output(state.bottom_output.clone());
-            let node = AreaPlotCanvas::create_node(&mut state.bottom_ui, canvas);
-            state.bottom_ui.set_root(node);
-            node
-        });
 
-        state.top_ui.set_root(*top_root);
-        state.bottom_ui.set_root(*bottom_root);
+            let top_node = LinePlotCanvas::create_node(&mut state.ui, top_canvas);
+            let bottom_node = AreaPlotCanvas::create_node(&mut state.ui, bottom_canvas);
+            let root = FixedSplit::create_node_with_children(
+                &mut state.ui,
+                FixedSplit::vertical(0.5),
+                top_node,
+                bottom_node,
+            );
 
-        state.top_ui.request_semantics_snapshot();
-        state.top_ui.ingest_paint_cache_source(scene);
-        state.bottom_ui.request_semantics_snapshot();
-        state.bottom_ui.ingest_paint_cache_source(scene);
+            state.ui.set_root(root);
+            state.ui.set_focus(Some(top_node));
+            state.root = Some(root);
+        }
 
+        state.ui.request_semantics_snapshot();
+        state.ui.ingest_paint_cache_source(scene);
         scene.clear();
 
-        let mut top_frame = fret_ui::UiFrameCx::new(
-            &mut state.top_ui,
-            app,
-            services,
-            window,
-            top_bounds,
-            scale_factor,
-        );
-        top_frame.layout_all();
-        top_frame.paint_all(scene);
-
-        let mut bottom_frame = fret_ui::UiFrameCx::new(
-            &mut state.bottom_ui,
-            app,
-            services,
-            window,
-            bottom_bounds,
-            scale_factor,
-        );
-        bottom_frame.layout_all();
-        bottom_frame.paint_all(scene);
+        let mut frame =
+            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+        frame.layout_all();
+        frame.paint_all(scene);
     }
 
     fn window_create_spec(

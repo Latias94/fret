@@ -1,7 +1,7 @@
 use fret_core::Point;
 
 use crate::engine::window::{DataWindowX, DataWindowY, WindowSpanAnchor};
-use crate::ids::{AxisId, DatasetId, LinkGroupId, SeriesId};
+use crate::ids::{AxisId, DatasetId, LinkGroupId, SeriesId, VisualMapId};
 use crate::spec::FilterMode;
 use crate::transform::RowRange;
 
@@ -91,9 +91,25 @@ pub enum Action {
         x: Option<DataWindowX>,
         y: Option<DataWindowY>,
     },
+    SetVisualMapRange {
+        visual_map: VisualMapId,
+        range: Option<(f64, f64)>,
+    },
+    SetVisualMapPieceMask {
+        visual_map: VisualMapId,
+        /// When `None`, all buckets are treated as selected.
+        mask: Option<u64>,
+    },
     SetSeriesVisible {
         series: SeriesId,
         visible: bool,
+    },
+    /// Batch version of `SetSeriesVisible` for interaction patterns that update multiple series
+    /// at once (legend isolate, range selection, reset).
+    ///
+    /// The engine will apply all updates and bump revisions at most once.
+    SetSeriesVisibility {
+        updates: Vec<(SeriesId, bool)>,
     },
     SetLinkGroup {
         group: Option<LinkGroupId>,

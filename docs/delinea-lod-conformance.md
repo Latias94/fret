@@ -1,0 +1,83 @@
+# `delinea` LOD Conformance (P0 Baseline)
+
+This document defines the **minimum invariants** for `delinea` level-of-detail (LOD) / downsampling
+behavior, plus the **test and demo harnesses** that lock those invariants.
+
+Goal: ensure large-data behavior stays deterministic and pixel-bounded while we keep adding
+ECharts-class features.
+
+## Terminology
+
+- **Pixel-bounded**: emitted geometry is bounded by plot pixel width, not dataset length.
+- **Monotonic X**: input X values are non-decreasing in raw row order.
+- **Raw index**: the dataset row index, preserved through transforms as `data_indices` (ADR 0140).
+
+## Current v1 strategies
+
+### Line-family (line/area/band): min/max per pixel column
+
+Implementation: `ecosystem/delinea/src/engine/lod/minmax_per_pixel.rs`
+
+- Bucket samples by plot width in pixels.
+- For each bucket, emit up to 4 candidates: `first`, `min`, `max`, `last`.
+- Deduplicate by raw index within the bucket.
+
+This preserves spikes while staying stable under large data.
+
+### Scatter: exact for small, pixel-bounded for large
+
+Implementation: `ecosystem/delinea/src/engine/stages/marks.rs`
+
+- If `visible_len <= 20_000`, emit all visible points (exact mode).
+- If `visible_len > 20_000`, switch to the same min/max-per-pixel strategy as line-family.
+
+## P0 invariants (must stay stable)
+
+### Geometry bounds and cardinality
+
+For a plot viewport with `plot_width_px = ceil(viewport.size.width)`:
+
+- Pixel-bounded output: emitted points must satisfy `points.len() <= 4 * plot_width_px`.
+- Identity alignment: `points.len() == data_indices.len()`.
+- Index validity: every emitted `data_index` must be within the dataset row range.
+- View bounds: emitted points must lie inside the viewport rectangle (after clamping).
+
+### Ordering and determinism (monotonic X precondition)
+
+When the input X is monotonic:
+
+- Emitted `data_indices` are strictly increasing.
+- The output is deterministic: same inputs and viewport produce the same output sequence.
+
+Note: if X is not monotonic, ordering invariants are not guaranteed by the current algorithm.
+
+## Where these invariants are enforced
+
+### Unit tests
+
+- `ecosystem/delinea/src/engine/lod/minmax_per_pixel.rs`
+  - Validates `minmax_per_pixel_finalize` is pixel-bounded and index-aligned for monotonic inputs.
+
+### Engine tests
+
+- `ecosystem/delinea/src/engine/tests.rs`
+  - `scatter_large_mode_is_pixel_bounded`
+  - `line_large_mode_is_pixel_bounded`
+
+### Manual stress harness
+
+- Demo: `apps/fret-examples/src/chart_stress_demo.rs`
+- Runner: `cargo run -p fret-demo --bin chart_stress_demo`
+
+Environment knobs:
+
+- `FRET_CHART_STRESS_POINTS=<usize>` (default `1_000_000`, clamped `1..=10_000_000`)
+- `FRET_CHART_STRESS_EXIT_AFTER_FRAMES=<u64>` (optional)
+- `FRET_CHART_STRESS_HELP=1` (prints help on start)
+
+## Follow-ups (P1)
+
+- Expose spec knobs aligned with ECharts (`large`, `largeThreshold`, `progressive`, `progressiveThreshold`).
+- Add optional higher-fidelity sampling (e.g. LTTB) for moderate sizes.
+- Add a benchmark harness that can gate frame-time regressions on CI.
+

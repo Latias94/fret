@@ -178,15 +178,34 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         out
     }
 
+    /// Request a window redraw (one-shot).
+    ///
+    /// Use this after mutating state/models to schedule a repaint.
+    ///
+    /// Notes:
+    /// - This does not guarantee frame-driven progression. If you need to advance without input
+    ///   events (animations, progressive rendering), prefer `request_animation_frame()` or
+    ///   `begin_continuous_frames()`.
+    /// - This is not a timer: callers that need continuous progression must keep requesting frames.
     pub fn request_frame(&mut self) {
         self.app.request_redraw(self.window);
     }
 
+    /// Request the next animation frame for this window.
+    ///
+    /// Use this for frame-driven updates that must advance without input events.
+    ///
+    /// This is a one-shot request. Prefer `begin_continuous_frames()` when driving animations from
+    /// declarative UI code.
     pub fn request_animation_frame(&mut self) {
         self.app
             .push_effect(Effect::RequestAnimationFrame(self.window));
     }
 
+    /// Begin a "continuous frames" lease for this window.
+    ///
+    /// This is the preferred way for declarative UI to drive animations: while the returned
+    /// lease is held, the mount pass will continue requesting animation frames.
     pub fn begin_continuous_frames(&mut self) -> ContinuousFrames {
         let lease = self.window_state.begin_continuous_frames();
         self.request_animation_frame();

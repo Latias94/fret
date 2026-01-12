@@ -5,6 +5,7 @@ pub mod declarative;
 pub mod drag_route;
 pub mod element;
 pub mod elements;
+pub mod fixed_split;
 pub mod focus_visible;
 mod frame_cx;
 pub mod host;
@@ -52,6 +53,7 @@ or `fret-ui-kit::declarative::action_hooks::ActionHooksExt`."
 
 pub use drag_route::InternalDragRouteService;
 pub use elements::{ElementContext, ElementRuntime, GlobalElementId};
+pub use fixed_split::FixedSplit;
 pub use frame_cx::{UiFrameContext, UiFrameCx};
 pub use host::UiHost;
 pub use resizable_panel_group::ResizablePanelGroupStyle;

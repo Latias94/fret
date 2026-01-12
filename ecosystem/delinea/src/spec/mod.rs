@@ -1,6 +1,8 @@
 use fret_core::Rect;
 
-use crate::ids::{AxisId, ChartId, DataZoomId, DatasetId, FieldId, GridId, SeriesId, StackId};
+use crate::ids::{
+    AxisId, ChartId, DataZoomId, DatasetId, FieldId, GridId, SeriesId, StackId, VisualMapId,
+};
 use crate::scale::AxisScale;
 
 #[cfg(feature = "serde")]
@@ -16,7 +18,9 @@ pub struct ChartSpec {
     pub axes: Vec<AxisSpec>,
     pub data_zoom_x: Vec<DataZoomXSpec>,
     pub data_zoom_y: Vec<DataZoomYSpec>,
+    pub tooltip: Option<TooltipSpecV1>,
     pub axis_pointer: Option<AxisPointerSpec>,
+    pub visual_maps: Vec<VisualMapSpec>,
     pub series: Vec<SeriesSpec>,
 }
 
@@ -207,12 +211,93 @@ impl Default for DataZoomYSpec {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum VisualMapMode {
+    /// ECharts-like continuous visualMap (`type: "continuous"`).
+    #[default]
+    Continuous,
+    /// ECharts-like piecewise visualMap (`type: "piecewise"`).
+    Piecewise,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct VisualMapSpec {
+    pub id: VisualMapId,
+    pub mode: VisualMapMode,
+    /// Optional dataset-wide target.
+    ///
+    /// When set, `series` must be empty and the visualMap will target all series that reference
+    /// the dataset (v1: still restricted to at most one visualMap per series).
+    pub dataset: Option<DatasetId>,
+    /// Explicit series targets.
+    pub series: Vec<SeriesId>,
+    /// Input dimension (dataset field id).
+    pub field: FieldId,
+    /// Full domain used for bucket assignment.
+    pub domain: (f64, f64),
+    /// Optional initial selected range (used for inRange/outOfRange classification).
+    pub initial_range: Option<(f64, f64)>,
+    /// Optional initial piecewise selection mask. Bit `i` selects bucket `i` (v1: up to 64 buckets).
+    ///
+    /// When `None`, all buckets are treated as selected.
+    pub initial_piece_mask: Option<u64>,
+    /// Optional range mapping for point radius *multipliers* (unitless, adapter-defined base radius).
+    ///
+    /// v1:
+    /// - applied only to point marks (scatter),
+    /// - implemented via bucketized batches (no per-item attributes).
+    pub point_radius_mul_range: Option<(f32, f32)>,
+    /// Optional stroke width range (in pixels).
+    ///
+    /// v1:
+    /// - applied to scatter point borders and bar borders (bucketized batches),
+    /// - not yet supported for polyline marks (line/area/band) because v1 does not split paths per bucket.
+    pub stroke_width_range: Option<(f32, f32)>,
+    /// Optional opacity multiplier range (unitless, 0..=1) applied to in-range buckets.
+    ///
+    /// v1:
+    /// - computed per bucket (no per-item attributes),
+    /// - composed with `out_of_range_opacity` for out-of-range buckets.
+    pub opacity_mul_range: Option<(f32, f32)>,
+    /// Bounded bucket count used for v1 batch-friendly rendering.
+    pub buckets: u16,
+    /// Opacity multiplier applied to out-of-range items.
+    pub out_of_range_opacity: f32,
+}
+
+impl Default for VisualMapSpec {
+    fn default() -> Self {
+        Self {
+            id: VisualMapId::new(0),
+            mode: VisualMapMode::Continuous,
+            dataset: None,
+            series: Vec::default(),
+            field: FieldId::new(0),
+            domain: (0.0, 1.0),
+            initial_range: None,
+            initial_piece_mask: None,
+            point_radius_mul_range: None,
+            stroke_width_range: None,
+            opacity_mul_range: None,
+            buckets: 8,
+            out_of_range_opacity: 0.25,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AxisPointerSpec {
     pub enabled: bool,
     pub trigger: AxisPointerTrigger,
-    /// When true, crosshair snaps to the nearest hit point (P0: single series hit).
+    pub pointer_type: AxisPointerType,
+    pub label: AxisPointerLabelSpec,
+    /// When true, snapping is enabled:
+    /// - `trigger=Item`: the crosshair snaps to the nearest hit point.
+    /// - `trigger=Axis`: the crosshair aligns its axis coordinate to a nearest sample on the
+    ///   trigger axis (P0: uses the first visible series as the snap reference).
     pub snap: bool,
     /// For `trigger=Item`, this is the maximum distance (in pixels) to activate the pointer/tooltip.
     /// For `trigger=Axis`, this only gates whether `AxisPointerOutput.hit` is populated (marker dot, snap anchor).
@@ -231,16 +316,112 @@ pub enum AxisPointerTrigger {
     Axis,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum AxisPointerType {
+    #[default]
+    Line,
+    /// Highlights the active category band in the plot region.
+    ///
+    /// v1:
+    /// - only emitted for category trigger axes,
+    /// - computed in px space (`AxisPointerOutput.shadow_rect_px`) for adapter-friendly rendering.
+    Shadow,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct AxisPointerLabelSpec {
+    pub show: bool,
+    /// Optional label template (string formatter).
+    ///
+    /// Supported placeholders (v1):
+    /// - `{value}`: formatted axis value for the trigger axis.
+    /// - `{axis_name}`: axis display name (empty when unset).
+    ///
+    /// v1 does not support callback-based formatters (for wasm portability and deterministic serialization).
+    pub template: String,
+}
+
+impl Default for AxisPointerLabelSpec {
+    fn default() -> Self {
+        Self {
+            show: false,
+            template: "{value}".to_string(),
+        }
+    }
+}
+
 impl Default for AxisPointerSpec {
     fn default() -> Self {
         Self {
             enabled: true,
             trigger: AxisPointerTrigger::Axis,
+            pointer_type: AxisPointerType::Line,
+            label: AxisPointerLabelSpec::default(),
             snap: false,
             trigger_distance_px: 12.0,
             throttle_px: 0.75,
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct TooltipSpecV1 {
+    /// Template for the first axis row in `trigger=Axis` tooltips.
+    ///
+    /// Supported placeholders:
+    /// - `{label}`: axis label (e.g. `x (Time)`),
+    /// - `{value}`: formatted axis value.
+    pub axis_line_template: String,
+    /// Template for series rows in tooltips.
+    ///
+    /// Supported placeholders:
+    /// - `{label}`: series label (e.g. `A`),
+    /// - `{value}`: formatted series value.
+    pub series_line_template: String,
+    /// Placeholder used when a series cannot be sampled (missing/NaN/out-of-range).
+    pub missing_value: String,
+    /// Template used for range values (band-like series).
+    ///
+    /// Supported placeholders:
+    /// - `{min}`: formatted low value,
+    /// - `{max}`: formatted high value.
+    pub range_template: String,
+    /// Optional fixed decimal precision for `AxisScale::Value` values.
+    ///
+    /// This does not apply to category/time axes.
+    pub value_decimals: Option<u8>,
+    /// When `value_decimals` is set, remove trailing zeros and the trailing decimal point.
+    pub trim_trailing_zeros: bool,
+    /// Optional per-series overrides applied to series rows.
+    pub series_overrides: Vec<TooltipSeriesOverrideV1>,
+}
+
+impl Default for TooltipSpecV1 {
+    fn default() -> Self {
+        Self {
+            axis_line_template: "{label}: {value}".to_string(),
+            series_line_template: "{label}: {value}".to_string(),
+            missing_value: "-".to_string(),
+            range_template: "{min} .. {max}".to_string(),
+            value_decimals: None,
+            trim_trailing_zeros: true,
+            series_overrides: Vec::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct TooltipSeriesOverrideV1 {
+    pub series: SeriesId,
+    pub series_line_template: Option<String>,
+    pub missing_value: Option<String>,
+    pub range_template: Option<String>,
+    pub value_decimals: Option<u8>,
+    pub trim_trailing_zeros: Option<bool>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
