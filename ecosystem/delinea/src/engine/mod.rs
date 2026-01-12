@@ -1009,6 +1009,7 @@ impl ChartEngine {
         for axis in self.model.axes.values() {
             if let crate::scale::AxisScale::Category(scale) = &axis.scale
                 && !scale.categories.is_empty()
+                && !self.output.axis_windows.contains_key(&axis.id)
             {
                 self.output.axis_windows.insert(
                     axis.id,
@@ -1218,6 +1219,14 @@ fn compute_axis_axis_pointer_output(
     };
 
     let mut axis_value = axis_value_hover;
+    if let Some(axis) = model.axes.get(&trigger_axis)
+        && let crate::scale::AxisScale::Category(scale) = &axis.scale
+        && !scale.is_empty()
+        && axis_value.is_finite()
+    {
+        axis_value =
+            (axis_value.round() as isize).clamp(0, scale.len().saturating_sub(1) as isize) as f64;
+    }
     let mut hit_for_marker = hit.filter(|h| h.dist2_px <= trigger2);
 
     if spec.snap {
