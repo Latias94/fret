@@ -95,6 +95,10 @@ $env:FRET_TAFFY_DUMP_DIR=".fret\\taffy-dumps"
 $env:FRET_TAFFY_DUMP_MAX=30
 # Optional: only dump roots whose NodeId string contains this substring.
 $env:FRET_TAFFY_DUMP_ROOT="NodeId(46"
+# Optional: only dump roots whose element debug label contains this substring.
+# Tip: if you wrap a region in a `SemanticsProps { label: Some("Golden:..."), .. }`, you can
+# filter by that label.
+$env:FRET_TAFFY_DUMP_ROOT_LABEL="Golden:input-with-label"
 
 # Run a repro with layout-engine-v2 enabled (example):
 cargo run -p fret-demo --features layout-engine-v2 --bin todo_demo
@@ -105,6 +109,10 @@ Notes:
 - Dumps include **window roots** and **viewport roots** (e.g. scroll content) as separate files.
 - Each node entry includes `node/parent/children`, `local_rect/abs_rect`, the computed Taffy `style`,
   and a debug `label` derived from the element instance.
+- Prefer filtering by a stable semantics label when possible:
+  - Wrap the root you care about with `SemanticsProps { label: Some("Golden:..."), .. }`.
+  - Set `FRET_TAFFY_DUMP_ROOT_LABEL="Golden:..."` to capture only that subtree, without chasing
+    unstable `NodeId(...)` values across runs.
 
 ### 2.2 Prefer a unit test when possible
 

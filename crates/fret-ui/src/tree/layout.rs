@@ -254,6 +254,17 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
+        // When debugging complex demos or golden-gated layouts, it is often easier to filter by a
+        // stable element label (e.g. a `SemanticsProps.label`) than by ephemeral `NodeId`s.
+        if let Ok(filter) = std::env::var("FRET_TAFFY_DUMP_ROOT_LABEL") {
+            let root_label = crate::declarative::frame::element_record_for_node(app, window, root)
+                .map(|r| format!("{:?}", r.instance))
+                .unwrap_or_default();
+            if !root_label.contains(&filter) {
+                return;
+            }
+        }
+
         let out_dir = std::env::var("FRET_TAFFY_DUMP_DIR")
             .ok()
             .unwrap_or_else(|| ".fret/taffy-dumps".to_string());
