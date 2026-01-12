@@ -110,8 +110,8 @@ Fret's current contract:
 | Feature | ImGuizmo | transform-gizmo | Fret status | Evidence / notes |
 | --- | --- | --- | --- | --- |
 | Target representation | 4x4 matrix | TRS (`Transform`) | **Aligned (by intent)** | Fret uses TRS (`Transform3d`) to avoid decomposing matrices. `ecosystem/fret-gizmo/src/gizmo.rs` (`Transform3d`). |
-| Decompose/recompose helpers | Yes (`DecomposeMatrixToComponents`, `Recompose...`) | N/A | **Not implemented** | Fret does not provide matrix decomposition utilities; editor apps can add them if needed. |
-| "Delta matrix" output | Yes (`deltaMatrix`) | No (returns result + updated transforms) | **Not implemented** | Fret returns semantic deltas (`GizmoResult`) and updated targets, not a 4x4 delta matrix. |
+| Decompose/recompose helpers | Yes (`DecomposeMatrixToComponents`, `Recompose...`) | N/A | **Aligned (basic)** | `Transform3d::try_from_mat4_trs` and `Transform3d::to_mat4` provide TRS round-tripping (`ecosystem/fret-gizmo/src/gizmo/types.rs`). |
+| "Delta matrix" output | Yes (`deltaMatrix`) | No (returns result + updated transforms) | **Partially aligned** | `delta_matrix_trs(start,end)` computes `delta * start = end` for TRS transforms (`ecosystem/fret-gizmo/src/gizmo/types.rs`). |
 | Semantic delta output | Partial | Yes (`GizmoResult`) | **Aligned** | `GizmoResult::{Translation,Rotation,Scale}` includes `delta` + `total`. |
 | Multi-target update in one call | External | Yes | **Aligned** | `GizmoUpdate.updated_targets: Vec<GizmoTarget3d>`. |
 | Begin/update/commit/cancel phases | No | Partial (implicit) | **Aligned (Fret-specific)** | `GizmoPhase` enables clean undo grouping; host decides persistence. |

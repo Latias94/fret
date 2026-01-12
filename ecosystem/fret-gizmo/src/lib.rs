@@ -18,7 +18,7 @@ pub use gizmo::{
     Aabb3, DepthMode, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoHandedness, GizmoInput, GizmoMode,
     GizmoOps, GizmoOrientation, GizmoPhase, GizmoPickPolicy, GizmoPivotMode, GizmoResult,
     GizmoSizePolicy, GizmoState, GizmoTarget3d, GizmoTargetId, GizmoUpdate, HandleId, Line3d,
-    Transform3d, Triangle3d,
+    Transform3d, Triangle3d, delta_matrix_trs,
 };
 pub use grid::{Grid3d, Grid3dConfig};
 pub use math::{
