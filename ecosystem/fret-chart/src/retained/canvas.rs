@@ -758,7 +758,12 @@ impl ChartCanvas {
     }
 
     fn refresh_hover_for_axis_pointer(&mut self, layout: &ChartLayout, position: Point) {
-        let axis_pointer_enabled = self.engine.model().axis_pointer.is_some_and(|p| p.enabled);
+        let axis_pointer_enabled = self
+            .engine
+            .model()
+            .axis_pointer
+            .as_ref()
+            .is_some_and(|p| p.enabled);
         if !axis_pointer_enabled {
             return;
         }
@@ -4110,13 +4115,22 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 .engine
                 .model()
                 .axis_pointer
+                .as_ref()
                 .map(|p| p.pointer_type)
                 .unwrap_or_default();
             let axis_pointer_label_enabled = self
                 .engine
                 .model()
                 .axis_pointer
+                .as_ref()
                 .is_some_and(|p| p.label.show);
+            let axis_pointer_label_template = self
+                .engine
+                .model()
+                .axis_pointer
+                .as_ref()
+                .map(|p| p.label.template.as_str())
+                .unwrap_or("{value}");
 
             let plot = self.last_layout.plot;
             let crosshair_w = self.style.crosshair_width.0.max(1.0);
@@ -4215,12 +4229,26 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         .get(&axis_id)
                         .copied()
                         .unwrap_or_default();
-                    let label_text = delinea::engine::axis::format_value_for(
+                    let axis_name = self
+                        .engine
+                        .model()
+                        .axes
+                        .get(&axis_id)
+                        .and_then(|a| a.name.as_deref())
+                        .unwrap_or("");
+                    let value_text = delinea::engine::axis::format_value_for(
                         self.engine.model(),
                         axis_id,
                         axis_window,
                         axis_value,
                     );
+                    let label_text = if axis_pointer_label_template == "{value}" {
+                        value_text
+                    } else {
+                        axis_pointer_label_template
+                            .replace("{value}", &value_text)
+                            .replace("{axis_name}", axis_name)
+                    };
 
                     let text_style = TextStyle {
                         size: Px(11.0),

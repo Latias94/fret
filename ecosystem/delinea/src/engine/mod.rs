@@ -930,6 +930,7 @@ impl ChartEngine {
         if self
             .model
             .axis_pointer
+            .as_ref()
             .is_some_and(|p| p.enabled && p.trigger == AxisPointerTrigger::Axis)
         {
             request_ordinal_indices_for_axis_pointer(
@@ -1034,16 +1035,23 @@ impl ChartEngine {
             self.axis_pointer_cache.output = None;
         }
 
-        let axis_pointer = self.model.axis_pointer.filter(|p| p.enabled);
+        let axis_pointer = self.model.axis_pointer.as_ref().filter(|p| p.enabled);
+
+        if axis_pointer.is_none() {
+            self.axis_pointer_cache.last_hover_px = None;
+            self.axis_pointer_cache.hit = None;
+            self.axis_pointer_cache.output = None;
+        }
 
         if let Some(hover_px) = hover_px {
-            let should_recompute = axis_pointer.is_some_and(|p| {
-                should_recompute_hover(
+            let should_recompute = match axis_pointer {
+                Some(spec) => should_recompute_hover(
                     self.axis_pointer_cache.last_hover_px,
                     hover_px,
-                    p.throttle_px,
-                )
-            });
+                    spec.throttle_px,
+                ),
+                None => false,
+            };
             if should_recompute {
                 self.axis_pointer_cache.last_hover_px = Some(hover_px);
                 self.axis_pointer_cache.hit = None;
@@ -1140,7 +1148,7 @@ fn compute_item_axis_pointer_output(
     model: &ChartModel,
     hover_px: Point,
     hit: Option<HoverHit>,
-    spec: crate::engine::model::AxisPointerModel,
+    spec: &crate::engine::model::AxisPointerModel,
 ) -> Option<AxisPointerOutput> {
     let hit = hit?;
     let trigger2 = spec.trigger_distance_px.max(0.0) * spec.trigger_distance_px.max(0.0);
@@ -1181,7 +1189,7 @@ fn compute_axis_axis_pointer_output(
     viewport: Rect,
     hover_px: Point,
     hit: Option<HoverHit>,
-    spec: crate::engine::model::AxisPointerModel,
+    spec: &crate::engine::model::AxisPointerModel,
 ) -> Option<AxisPointerOutput> {
     let primary = model.series_in_order().find(|s| s.visible)?;
     let trigger_axis = if primary.kind == crate::spec::SeriesKind::Bar {

@@ -287,7 +287,7 @@ impl Default for VisualMapSpec {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AxisPointerSpec {
     pub enabled: bool,
@@ -329,10 +329,27 @@ pub enum AxisPointerType {
     Shadow,
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AxisPointerLabelSpec {
     pub show: bool,
+    /// Optional label template (string formatter).
+    ///
+    /// Supported placeholders (v1):
+    /// - `{value}`: formatted axis value for the trigger axis.
+    /// - `{axis_name}`: axis display name (empty when unset).
+    ///
+    /// v1 does not support callback-based formatters (for wasm portability and deterministic serialization).
+    pub template: String,
+}
+
+impl Default for AxisPointerLabelSpec {
+    fn default() -> Self {
+        Self {
+            show: false,
+            template: "{value}".to_string(),
+        }
+    }
 }
 
 impl Default for AxisPointerSpec {
@@ -341,7 +358,7 @@ impl Default for AxisPointerSpec {
             enabled: true,
             trigger: AxisPointerTrigger::Axis,
             pointer_type: AxisPointerType::Line,
-            label: AxisPointerLabelSpec { show: false },
+            label: AxisPointerLabelSpec::default(),
             snap: false,
             trigger_distance_px: 12.0,
             throttle_px: 0.75,

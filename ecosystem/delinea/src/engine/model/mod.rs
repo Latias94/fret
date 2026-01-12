@@ -262,11 +262,17 @@ impl ChartModel {
         model.axis_pointer = spec.axis_pointer.map(|mut p| {
             p.trigger_distance_px = sanitize_px(p.trigger_distance_px, 12.0);
             p.throttle_px = sanitize_px(p.throttle_px, 0.75);
+            if p.label.template.is_empty() {
+                p.label.template = "{value}".to_string();
+            }
             AxisPointerModel {
                 enabled: p.enabled,
                 trigger: p.trigger,
                 pointer_type: p.pointer_type,
-                label: AxisPointerLabelModel { show: p.label.show },
+                label: AxisPointerLabelModel {
+                    show: p.label.show,
+                    template: p.label.template,
+                },
                 snap: p.snap,
                 trigger_distance_px: p.trigger_distance_px,
                 throttle_px: p.throttle_px,
@@ -681,7 +687,7 @@ pub struct DataZoomYModel {
     pub max_value_span: Option<f64>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct AxisPointerModel {
     pub enabled: bool,
     pub trigger: AxisPointerTrigger,
@@ -692,9 +698,10 @@ pub struct AxisPointerModel {
     pub throttle_px: f32,
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone)]
 pub struct AxisPointerLabelModel {
     pub show: bool,
+    pub template: String,
 }
 
 #[derive(Debug, Clone)]
