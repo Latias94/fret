@@ -116,3 +116,83 @@ impl ViewportRenderTarget {
         self.view = None;
     }
 }
+
+/// Like [`ViewportRenderTarget`], but also manages a depth attachment texture for 3D/engine-style viewports.
+#[derive(Debug)]
+pub struct ViewportRenderTargetWithDepth {
+    color: ViewportRenderTarget,
+    depth_format: wgpu::TextureFormat,
+    depth_texture: Option<wgpu::Texture>,
+    depth_view: Option<wgpu::TextureView>,
+}
+
+impl ViewportRenderTargetWithDepth {
+    pub fn new(
+        color_format: wgpu::TextureFormat,
+        color_space: RenderTargetColorSpace,
+        depth_format: wgpu::TextureFormat,
+    ) -> Self {
+        Self {
+            color: ViewportRenderTarget::new(color_format, color_space),
+            depth_format,
+            depth_texture: None,
+            depth_view: None,
+        }
+    }
+
+    pub fn id(&self) -> RenderTargetId {
+        self.color.id()
+    }
+
+    pub fn size(&self) -> (u32, u32) {
+        self.color.size()
+    }
+
+    pub fn ensure_size(
+        &mut self,
+        context: &WgpuContext,
+        renderer: &mut Renderer,
+        desired_size: (u32, u32),
+        color_label: Option<&str>,
+        depth_label: Option<&str>,
+    ) -> (RenderTargetId, &wgpu::TextureView, &wgpu::TextureView) {
+        let desired_size = (desired_size.0.max(1), desired_size.1.max(1));
+        let prev_size = self.color.size();
+        let (id, color_view) = self
+            .color
+            .ensure_size(context, renderer, desired_size, color_label);
+        let size = desired_size;
+
+        if self.depth_view.is_none() || self.depth_texture.is_none() || prev_size != size {
+            let depth = context.device.create_texture(&wgpu::TextureDescriptor {
+                label: depth_label,
+                size: wgpu::Extent3d {
+                    width: size.0.max(1),
+                    height: size.1.max(1),
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format: self.depth_format,
+                usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+                view_formats: &[],
+            });
+            let depth_view = depth.create_view(&wgpu::TextureViewDescriptor::default());
+            self.depth_texture = Some(depth);
+            self.depth_view = Some(depth_view);
+        }
+
+        let depth_view_ref = self
+            .depth_view
+            .as_ref()
+            .expect("ViewportRenderTargetWithDepth::ensure_size should always set depth_view");
+        (id, color_view, depth_view_ref)
+    }
+
+    pub fn unregister(&mut self, renderer: &mut Renderer) {
+        self.color.unregister(renderer);
+        self.depth_texture = None;
+        self.depth_view = None;
+    }
+}
