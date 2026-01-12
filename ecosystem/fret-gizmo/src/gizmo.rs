@@ -2906,34 +2906,21 @@ impl Gizmo {
             let p1 = pos + (u - v) * handle_half_world;
             let p2 = pos + (u + v) * handle_half_world;
             let p3 = pos + (-u + v) * handle_half_world;
-            if allow_ghost {
-                this.push_tri(&mut out.triangles, p0, p1, p2, fill, this.config.depth_mode);
-                this.push_tri(&mut out.triangles, p0, p2, p3, fill, this.config.depth_mode);
-            } else {
-                this.push_tri_no_ghost(
-                    &mut out.triangles,
-                    p0,
-                    p1,
-                    p2,
-                    fill,
-                    this.config.depth_mode,
-                );
-                this.push_tri_no_ghost(
-                    &mut out.triangles,
-                    p0,
-                    p2,
-                    p3,
-                    fill,
-                    this.config.depth_mode,
-                );
-            }
-            for (a, b) in [(p0, p1), (p1, p2), (p2, p3), (p3, p0)] {
-                if allow_ghost {
-                    this.push_line(&mut out.lines, a, b, outline, this.config.depth_mode);
-                } else {
-                    this.push_line_no_ghost(&mut out.lines, a, b, outline, this.config.depth_mode);
-                }
-            }
+            let quad = [p0, p1, p2, p3];
+            this.push_quad_fill(
+                &mut out.triangles,
+                quad,
+                fill,
+                this.config.depth_mode,
+                allow_ghost,
+            );
+            this.push_quad_outline(
+                &mut out.lines,
+                quad,
+                outline,
+                this.config.depth_mode,
+                allow_ghost,
+            );
         };
 
         let corner_base = Color {
@@ -3030,6 +3017,28 @@ impl Gizmo {
         out.push(Line3d { a, b, color, depth });
     }
 
+    fn push_quad_outline(
+        &self,
+        out: &mut Vec<Line3d>,
+        quad: [Vec3; 4],
+        color: Color,
+        depth: DepthMode,
+        allow_ghost: bool,
+    ) {
+        for (a, b) in [
+            (quad[0], quad[1]),
+            (quad[1], quad[2]),
+            (quad[2], quad[3]),
+            (quad[3], quad[0]),
+        ] {
+            if allow_ghost {
+                self.push_line(out, a, b, color, depth);
+            } else {
+                self.push_line_no_ghost(out, a, b, color, depth);
+            }
+        }
+    }
+
     fn push_tri(
         &self,
         out: &mut Vec<Triangle3d>,
@@ -3084,6 +3093,66 @@ impl Gizmo {
             color,
             depth,
         });
+    }
+
+    fn push_quad_fill(
+        &self,
+        out: &mut Vec<Triangle3d>,
+        quad: [Vec3; 4],
+        color: Color,
+        depth: DepthMode,
+        allow_ghost: bool,
+    ) {
+        if allow_ghost {
+            self.push_tri(out, quad[0], quad[1], quad[2], color, depth);
+            self.push_tri(out, quad[0], quad[2], quad[3], color, depth);
+        } else {
+            self.push_tri_no_ghost(out, quad[0], quad[1], quad[2], color, depth);
+            self.push_tri_no_ghost(out, quad[0], quad[2], quad[3], color, depth);
+        }
+    }
+
+    fn push_ring_band(
+        &self,
+        out: &mut GizmoDrawList3d,
+        origin: Vec3,
+        u: Vec3,
+        v: Vec3,
+        inner_r: f32,
+        outer_r: f32,
+        fill: Color,
+        edge: Color,
+        depth: DepthMode,
+        allow_ghost: bool,
+        segments: usize,
+    ) {
+        let point =
+            |theta: f32, r: f32| -> Vec3 { origin + (u * theta.cos() + v * theta.sin()) * r };
+
+        let step = std::f32::consts::TAU / (segments as f32);
+        let mut prev_outer = point(0.0, outer_r);
+        for i in 0..segments {
+            let t0 = step * (i as f32);
+            let t1 = step * ((i + 1) as f32);
+            let o0 = point(t0, outer_r);
+            let i0 = point(t0, inner_r);
+            let o1 = point(t1, outer_r);
+            let i1 = point(t1, inner_r);
+
+            self.push_quad_fill(
+                &mut out.triangles,
+                [o0, i0, i1, o1],
+                fill,
+                depth,
+                allow_ghost,
+            );
+            if allow_ghost {
+                self.push_line(&mut out.lines, prev_outer, o1, edge, depth);
+            } else {
+                self.push_line_no_ghost(&mut out.lines, prev_outer, o1, edge, depth);
+            }
+            prev_outer = o1;
+        }
     }
 
     fn axis_dirs(&self, target: &Transform3d) -> [Vec3; 3] {
@@ -3852,20 +3921,13 @@ impl Gizmo {
             if alpha <= 0.01 {
                 continue;
             }
-            for (a, b) in [
-                (quad[0], quad[1]),
-                (quad[1], quad[2]),
-                (quad[2], quad[3]),
-                (quad[3], quad[0]),
-            ] {
-                self.push_line(
-                    &mut out,
-                    a,
-                    b,
-                    mix_alpha(color, alpha),
-                    self.config.depth_mode,
-                );
-            }
+            self.push_quad_outline(
+                &mut out,
+                quad,
+                mix_alpha(color, alpha),
+                self.config.depth_mode,
+                pv.occlusion.handles,
+            );
         }
         out
     }
@@ -4081,41 +4143,13 @@ impl Gizmo {
                     continue;
                 }
                 let fill = mix_alpha(fill, alpha);
-                if pv.occlusion.translate_plane_fill {
-                    self.push_tri(
-                        &mut out,
-                        quad[0],
-                        quad[1],
-                        quad[2],
-                        fill,
-                        self.config.depth_mode,
-                    );
-                    self.push_tri(
-                        &mut out,
-                        quad[0],
-                        quad[2],
-                        quad[3],
-                        fill,
-                        self.config.depth_mode,
-                    );
-                } else {
-                    self.push_tri_no_ghost(
-                        &mut out,
-                        quad[0],
-                        quad[1],
-                        quad[2],
-                        fill,
-                        self.config.depth_mode,
-                    );
-                    self.push_tri_no_ghost(
-                        &mut out,
-                        quad[0],
-                        quad[2],
-                        quad[3],
-                        fill,
-                        self.config.depth_mode,
-                    );
-                }
+                self.push_quad_fill(
+                    &mut out,
+                    quad,
+                    fill,
+                    self.config.depth_mode,
+                    pv.occlusion.translate_plane_fill,
+                );
             }
         }
 
@@ -4205,31 +4239,19 @@ impl Gizmo {
 
             let fill = mix_alpha(color, pv.rotate_ring_fill_alpha.clamp(0.0, 1.0));
             let edge = mix_alpha(color, pv.rotate_ring_edge_alpha.clamp(0.0, 1.0));
-
-            let point =
-                |theta: f32, r: f32| -> Vec3 { origin + (u * theta.cos() + v * theta.sin()) * r };
-
-            let step = std::f32::consts::TAU / (segments as f32);
-            let mut prev_outer = point(0.0, outer_r);
-            for i in 0..segments {
-                let t0 = step * (i as f32);
-                let t1 = step * ((i + 1) as f32);
-                let o0 = point(t0, outer_r);
-                let i0 = point(t0, inner_r);
-                let o1 = point(t1, outer_r);
-                let i1 = point(t1, inner_r);
-
-                if allow_ghost {
-                    self.push_tri(&mut out.triangles, o0, i0, i1, fill, depth);
-                    self.push_tri(&mut out.triangles, o0, i1, o1, fill, depth);
-                    self.push_line(&mut out.lines, prev_outer, o1, edge, depth);
-                } else {
-                    self.push_tri_no_ghost(&mut out.triangles, o0, i0, i1, fill, depth);
-                    self.push_tri_no_ghost(&mut out.triangles, o0, i1, o1, fill, depth);
-                    self.push_line_no_ghost(&mut out.lines, prev_outer, o1, edge, depth);
-                }
-                prev_outer = o1;
-            }
+            self.push_ring_band(
+                &mut out,
+                origin,
+                u,
+                v,
+                inner_r,
+                outer_r,
+                fill,
+                edge,
+                depth,
+                allow_ghost,
+                segments,
+            );
         };
 
         if include_axis {
@@ -4924,20 +4946,13 @@ impl Gizmo {
                 if alpha <= 0.01 {
                     continue;
                 }
-                for (a, b) in [
-                    (quad[0], quad[1]),
-                    (quad[1], quad[2]),
-                    (quad[2], quad[3]),
-                    (quad[3], quad[0]),
-                ] {
-                    self.push_line(
-                        &mut out,
-                        a,
-                        b,
-                        mix_alpha(color, alpha),
-                        self.config.depth_mode,
-                    );
-                }
+                self.push_quad_outline(
+                    &mut out,
+                    quad,
+                    mix_alpha(color, alpha),
+                    self.config.depth_mode,
+                    pv.occlusion.handles,
+                );
             }
         }
 
@@ -5090,41 +5105,13 @@ impl Gizmo {
                     continue;
                 }
                 let fill = mix_alpha(fill, alpha);
-                if pv.occlusion.scale_plane_fill {
-                    self.push_tri(
-                        &mut out,
-                        quad[0],
-                        quad[1],
-                        quad[2],
-                        fill,
-                        self.config.depth_mode,
-                    );
-                    self.push_tri(
-                        &mut out,
-                        quad[0],
-                        quad[2],
-                        quad[3],
-                        fill,
-                        self.config.depth_mode,
-                    );
-                } else {
-                    self.push_tri_no_ghost(
-                        &mut out,
-                        quad[0],
-                        quad[1],
-                        quad[2],
-                        fill,
-                        self.config.depth_mode,
-                    );
-                    self.push_tri_no_ghost(
-                        &mut out,
-                        quad[0],
-                        quad[2],
-                        quad[3],
-                        fill,
-                        self.config.depth_mode,
-                    );
-                }
+                self.push_quad_fill(
+                    &mut out,
+                    quad,
+                    fill,
+                    self.config.depth_mode,
+                    pv.occlusion.scale_plane_fill,
+                );
             }
         }
 
