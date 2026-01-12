@@ -1,0 +1,27 @@
+name: Consistency Checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  adr-and-layering:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.92.0
+
+      - name: Check ADR numbering
+        shell: pwsh
+        run: pwsh -NoProfile -File tools/check_adr_numbers.ps1
+
+      - name: Check layering policy
+        shell: pwsh
+        run: pwsh -NoProfile -File tools/check_layering.ps1
