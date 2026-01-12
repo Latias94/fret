@@ -106,7 +106,7 @@ impl HorizontalBarsDemoDriver {
                 enabled: true,
                 trigger: AxisPointerTrigger::Axis,
                 pointer_type: AxisPointerType::Shadow,
-                label: delinea::AxisPointerLabelSpec { show: true },
+                label: delinea::AxisPointerLabelSpec { show: false },
                 snap: false,
                 trigger_distance_px: 12.0,
                 throttle_px: 0.75,
