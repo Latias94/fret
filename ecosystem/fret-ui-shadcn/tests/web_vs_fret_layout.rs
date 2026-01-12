@@ -1755,6 +1755,44 @@ fn web_vs_fret_layout_select_scrollable_trigger_size() {
 }
 
 #[test]
+fn web_vs_fret_layout_input_demo_geometry() {
+    let web = read_web_golden("input-demo");
+    let theme = web_theme(&web);
+    let web_input = find_first(&theme.root, &|n| n.tag == "input").expect("web input");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        let model: Model<String> = cx.app.models_mut().insert(String::new());
+        vec![
+            fret_ui_shadcn::Input::new(model)
+                .a11y_label("Input")
+                .into_element(cx),
+        ]
+    });
+
+    let input = find_semantics(&snap, SemanticsRole::TextField, Some("Input"))
+        .or_else(|| find_semantics(&snap, SemanticsRole::TextField, None))
+        .expect("fret input semantics node");
+
+    assert_close_px(
+        "input width",
+        input.bounds.size.width,
+        web_input.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "input height",
+        input.bounds.size.height,
+        web_input.rect.h,
+        1.0,
+    );
+}
+
+#[test]
 fn web_vs_fret_layout_input_group_dropdown_height() {
     let web = read_web_golden("input-group-dropdown");
     let theme = web_theme(&web);
