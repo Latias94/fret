@@ -3022,6 +3022,24 @@ impl Gizmo {
         }
     }
 
+    fn push_tri_no_ghost(
+        &self,
+        out: &mut Vec<Triangle3d>,
+        a: Vec3,
+        b: Vec3,
+        c: Vec3,
+        color: Color,
+        depth: DepthMode,
+    ) {
+        out.push(Triangle3d {
+            a,
+            b,
+            c,
+            color,
+            depth,
+        });
+    }
+
     fn axis_dirs(&self, target: &Transform3d) -> [Vec3; 3] {
         match self.config.orientation {
             GizmoOrientation::World => [Vec3::X, Vec3::Y, Vec3::Z],
@@ -3994,22 +4012,41 @@ impl Gizmo {
                     continue;
                 }
                 let fill = mix_alpha(fill, alpha);
-                self.push_tri(
-                    &mut out,
-                    quad[0],
-                    quad[1],
-                    quad[2],
-                    fill,
-                    self.config.depth_mode,
-                );
-                self.push_tri(
-                    &mut out,
-                    quad[0],
-                    quad[2],
-                    quad[3],
-                    fill,
-                    self.config.depth_mode,
-                );
+                if pv.translate_plane_show_occluded {
+                    self.push_tri(
+                        &mut out,
+                        quad[0],
+                        quad[1],
+                        quad[2],
+                        fill,
+                        self.config.depth_mode,
+                    );
+                    self.push_tri(
+                        &mut out,
+                        quad[0],
+                        quad[2],
+                        quad[3],
+                        fill,
+                        self.config.depth_mode,
+                    );
+                } else {
+                    self.push_tri_no_ghost(
+                        &mut out,
+                        quad[0],
+                        quad[1],
+                        quad[2],
+                        fill,
+                        self.config.depth_mode,
+                    );
+                    self.push_tri_no_ghost(
+                        &mut out,
+                        quad[0],
+                        quad[2],
+                        quad[3],
+                        fill,
+                        self.config.depth_mode,
+                    );
+                }
             }
         }
 
@@ -4949,22 +4986,41 @@ impl Gizmo {
                     continue;
                 }
                 let fill = mix_alpha(fill, alpha);
-                self.push_tri(
-                    &mut out,
-                    quad[0],
-                    quad[1],
-                    quad[2],
-                    fill,
-                    self.config.depth_mode,
-                );
-                self.push_tri(
-                    &mut out,
-                    quad[0],
-                    quad[2],
-                    quad[3],
-                    fill,
-                    self.config.depth_mode,
-                );
+                if pv.scale_plane_show_occluded {
+                    self.push_tri(
+                        &mut out,
+                        quad[0],
+                        quad[1],
+                        quad[2],
+                        fill,
+                        self.config.depth_mode,
+                    );
+                    self.push_tri(
+                        &mut out,
+                        quad[0],
+                        quad[2],
+                        quad[3],
+                        fill,
+                        self.config.depth_mode,
+                    );
+                } else {
+                    self.push_tri_no_ghost(
+                        &mut out,
+                        quad[0],
+                        quad[1],
+                        quad[2],
+                        fill,
+                        self.config.depth_mode,
+                    );
+                    self.push_tri_no_ghost(
+                        &mut out,
+                        quad[0],
+                        quad[2],
+                        quad[3],
+                        fill,
+                        self.config.depth_mode,
+                    );
+                }
             }
         }
 
@@ -6614,6 +6670,35 @@ mod tests {
         config.plane_fade_px2 = (f32::NAN, f32::NAN);
         config.axis_mask = [false; 3];
         Gizmo::new(config)
+    }
+
+    #[test]
+    fn translate_plane_fill_can_disable_occluded_ghost_pass() {
+        let mut gizmo = base_gizmo(GizmoMode::Translate);
+        gizmo.config.depth_mode = DepthMode::Test;
+        gizmo.config.show_occluded = true;
+        gizmo.config.operation_mask = Some(GizmoOps::translate_plane());
+
+        let mut pv = GizmoPartVisuals::classic();
+        pv.translate_plane_show_occluded = false;
+        gizmo.set_part_visuals(pv);
+
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+        let target = GizmoTarget3d {
+            id: GizmoTargetId(1),
+            transform: Transform3d::default(),
+            local_bounds: None,
+        };
+        let draw = gizmo.draw(view_proj, vp, target.id, &[target]);
+        assert!(
+            draw.triangles.iter().any(|t| t.depth == DepthMode::Test),
+            "expected translate plane fill to emit depth-tested triangles"
+        );
+        assert!(
+            draw.triangles.iter().all(|t| t.depth != DepthMode::Ghost),
+            "expected translate plane fill to be able to suppress occluded ghost pass"
+        );
     }
 
     #[test]

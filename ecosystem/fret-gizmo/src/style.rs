@@ -41,6 +41,8 @@ pub struct GizmoPartVisuals {
     pub rotate_ring_thickness_scale: f32,
     pub rotate_ring_fill_alpha: f32,
     pub rotate_ring_edge_alpha: f32,
+    pub translate_plane_show_occluded: bool,
+    pub scale_plane_show_occluded: bool,
 }
 
 impl Default for GizmoPartVisuals {
@@ -72,6 +74,8 @@ impl GizmoPartVisuals {
             rotate_ring_thickness_scale: 1.0,
             rotate_ring_fill_alpha: 0.22,
             rotate_ring_edge_alpha: 0.95,
+            translate_plane_show_occluded: true,
+            scale_plane_show_occluded: true,
         }
     }
 }
