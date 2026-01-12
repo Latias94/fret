@@ -11,7 +11,8 @@ use fret_ui::UiTree;
 use delinea::data::{Column, DataTable};
 use delinea::ids::{AxisId, DatasetId, FieldId, GridId, SeriesId};
 use delinea::{
-    AxisKind, AxisPointerTrigger, AxisRange, AxisScale, ChartSpec, DatasetSpec, FieldSpec,
+    AxisKind, AxisPointerTrigger, AxisPointerType, AxisRange, AxisScale, ChartSpec, DatasetSpec,
+    FieldSpec,
 };
 use delinea::{SeriesEncode, SeriesKind, SeriesSpec};
 use fret_chart::retained::ChartCanvas;
@@ -211,6 +212,7 @@ impl ChartStressDriver {
             axis_pointer: Some(delinea::AxisPointerSpec {
                 enabled: true,
                 trigger: AxisPointerTrigger::Axis,
+                pointer_type: AxisPointerType::Line,
                 snap: false,
                 trigger_distance_px: 12.0,
                 throttle_px: 0.75,

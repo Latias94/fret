@@ -12,7 +12,9 @@ use fret_ui::UiTree;
 
 use delinea::data::{Column, DataTable};
 use delinea::ids::{AxisId, FieldId, StackId, VisualMapId};
-use delinea::{AxisKind, AxisPointerTrigger, AxisScale, SeriesKind, VisualMapMode};
+use delinea::{
+    AxisKind, AxisPointerTrigger, AxisPointerType, AxisScale, SeriesKind, VisualMapMode,
+};
 use delinea::{
     ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode, SeriesSpec, VisualMapSpec,
 };
@@ -103,6 +105,7 @@ impl HorizontalBarsDemoDriver {
             axis_pointer: Some(delinea::AxisPointerSpec {
                 enabled: true,
                 trigger: AxisPointerTrigger::Axis,
+                pointer_type: AxisPointerType::Shadow,
                 snap: false,
                 trigger_distance_px: 12.0,
                 throttle_px: 0.75,

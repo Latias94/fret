@@ -292,6 +292,7 @@ impl Default for VisualMapSpec {
 pub struct AxisPointerSpec {
     pub enabled: bool,
     pub trigger: AxisPointerTrigger,
+    pub pointer_type: AxisPointerType,
     /// When true, snapping is enabled:
     /// - `trigger=Item`: the crosshair snaps to the nearest hit point.
     /// - `trigger=Axis`: the crosshair aligns its axis coordinate to a nearest sample on the
@@ -314,11 +315,25 @@ pub enum AxisPointerTrigger {
     Axis,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum AxisPointerType {
+    #[default]
+    Line,
+    /// Highlights the active category band in the plot region.
+    ///
+    /// v1:
+    /// - only emitted for category trigger axes,
+    /// - computed in px space (`AxisPointerOutput.shadow_rect_px`) for adapter-friendly rendering.
+    Shadow,
+}
+
 impl Default for AxisPointerSpec {
     fn default() -> Self {
         Self {
             enabled: true,
             trigger: AxisPointerTrigger::Axis,
+            pointer_type: AxisPointerType::Line,
             snap: false,
             trigger_distance_px: 12.0,
             throttle_px: 0.75,

@@ -166,6 +166,7 @@ single “at a glance” view of:
   - `ChartSpec.tooltip: Option<TooltipSpecV1>` supports templates + decimals, including per-series overrides (adapter-side).
   - Tooltip marker swatches are rendered from the series palette (UI-side).
   - Tooltip lines support a two-column `label: value` layout (UI-side; current heuristic split on `": "`).
+  - Delinea: `AxisPointerSpec.pointer_type=Shadow` (ECharts: `axisPointer.type="shadow"`) highlights the active category band (`AxisPointerOutput.shadow_rect_px`).
 - Missing vs ECharts:
   - ECharts formatter parity (callback-style formatting, rich text/HTML markers, per-series overrides),
   - richer tooltip layout (structural columns, rich text/HTML) and additional snapping policies.

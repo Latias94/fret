@@ -1,4 +1,4 @@
-use fret_core::Rect;
+use fret_core::{Point, Px, Rect, Size};
 
 use crate::action::Action;
 use crate::data::DatasetStore;
@@ -22,7 +22,6 @@ use crate::tooltip::{
 use crate::transform::stack_base_at_index;
 use crate::transform::{RowRange, RowSelection};
 use crate::view::ViewState;
-use fret_core::{Point, Px};
 use std::collections::BTreeMap;
 
 pub mod axis;
@@ -83,6 +82,7 @@ pub struct ChartOutput {
 pub struct AxisPointerOutput {
     pub crosshair_px: Point,
     pub hit: Option<HoverHit>,
+    pub shadow_rect_px: Option<Rect>,
     pub tooltip: TooltipOutput,
 }
 
@@ -1165,6 +1165,7 @@ fn compute_item_axis_pointer_output(
     Some(AxisPointerOutput {
         crosshair_px,
         hit: Some(hit),
+        shadow_rect_px: None,
         tooltip,
     })
 }
@@ -1267,6 +1268,69 @@ fn compute_axis_axis_pointer_output(
         }
     } else {
         hover_px
+    };
+
+    let shadow_rect_px = match spec.pointer_type {
+        crate::spec::AxisPointerType::Shadow => {
+            match model.axes.get(&trigger_axis).map(|a| &a.scale) {
+                Some(crate::scale::AxisScale::Category(scale)) if !scale.is_empty() => {
+                    let idx = (axis_value.round() as isize)
+                        .clamp(0, scale.len().saturating_sub(1) as isize)
+                        as f64;
+                    let edge0 = idx - 0.5;
+                    let edge1 = idx + 0.5;
+
+                    match trigger_axis_kind {
+                        crate::spec::AxisKind::X => {
+                            let x0 = crate::engine::axis::x_px_at_data_in_rect(
+                                trigger_window,
+                                edge0,
+                                viewport,
+                            );
+                            let x1 = crate::engine::axis::x_px_at_data_in_rect(
+                                trigger_window,
+                                edge1,
+                                viewport,
+                            );
+                            let left = x0.min(x1);
+                            let right = x0.max(x1);
+                            let min_x = viewport.origin.x.0;
+                            let max_x = viewport.origin.x.0 + viewport.size.width.0;
+                            let left = left.clamp(min_x, max_x);
+                            let right = right.clamp(min_x, max_x);
+                            Some(Rect::new(
+                                Point::new(Px(left), viewport.origin.y),
+                                Size::new(Px((right - left).max(0.0)), viewport.size.height),
+                            ))
+                        }
+                        crate::spec::AxisKind::Y => {
+                            let y0 = crate::engine::axis::y_px_at_data_in_rect(
+                                trigger_window,
+                                edge0,
+                                viewport,
+                            );
+                            let y1 = crate::engine::axis::y_px_at_data_in_rect(
+                                trigger_window,
+                                edge1,
+                                viewport,
+                            );
+                            let top = y0.min(y1);
+                            let bottom = y0.max(y1);
+                            let min_y = viewport.origin.y.0;
+                            let max_y = viewport.origin.y.0 + viewport.size.height.0;
+                            let top = top.clamp(min_y, max_y);
+                            let bottom = bottom.clamp(min_y, max_y);
+                            Some(Rect::new(
+                                Point::new(viewport.origin.x, Px(top)),
+                                Size::new(viewport.size.width, Px((bottom - top).max(0.0))),
+                            ))
+                        }
+                    }
+                }
+                _ => None,
+            }
+        }
+        crate::spec::AxisPointerType::Line => None,
     };
 
     let mut tooltip = TooltipAxisOutput {
@@ -1464,6 +1528,7 @@ fn compute_axis_axis_pointer_output(
     Some(AxisPointerOutput {
         crosshair_px,
         hit: hit_for_marker,
+        shadow_rect_px,
         tooltip: TooltipOutput::Axis(tooltip),
     })
 }

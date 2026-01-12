@@ -109,6 +109,7 @@ impl ChartDemoDriver {
             axis_pointer: Some(delinea::AxisPointerSpec {
                 enabled: true,
                 trigger: delinea::AxisPointerTrigger::Axis,
+                pointer_type: delinea::AxisPointerType::Line,
                 snap: false,
                 trigger_distance_px: 12.0,
                 throttle_px: 0.75,

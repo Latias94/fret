@@ -4104,6 +4104,14 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             let pos = axis_pointer.crosshair_px;
             let overlay_order = DrawOrder(self.style.draw_order.0.saturating_add(9_000));
             let point_order = DrawOrder(self.style.draw_order.0.saturating_add(9_001));
+            let shadow_order = DrawOrder(self.style.draw_order.0.saturating_add(8_999));
+
+            let axis_pointer_type = self
+                .engine
+                .model()
+                .axis_pointer
+                .map(|p| p.pointer_type)
+                .unwrap_or_default();
 
             let plot = self.last_layout.plot;
             let crosshair_w = self.style.crosshair_width.0.max(1.0);
@@ -4125,7 +4133,25 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 delinea::TooltipOutput::Item(_) => (true, true),
             };
 
-            if draw_x {
+            let shadow = matches!(&axis_pointer.tooltip, delinea::TooltipOutput::Axis(_))
+                && axis_pointer_type == delinea::AxisPointerType::Shadow;
+
+            if shadow {
+                if let Some(rect) = axis_pointer.shadow_rect_px {
+                    let color = Color {
+                        a: 0.08,
+                        ..self.style.selection_fill
+                    };
+                    cx.scene.push(SceneOp::Quad {
+                        order: shadow_order,
+                        rect,
+                        background: color,
+                        border: Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: Corners::all(Px(0.0)),
+                    });
+                }
+            } else if draw_x {
                 cx.scene.push(SceneOp::Quad {
                     order: overlay_order,
                     rect: Rect::new(
@@ -4138,7 +4164,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     corner_radii: Corners::all(Px(0.0)),
                 });
             }
-            if draw_y {
+            if !shadow && draw_y {
                 cx.scene.push(SceneOp::Quad {
                     order: overlay_order,
                     rect: Rect::new(
@@ -4152,19 +4178,21 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 });
             }
 
-            if let Some(hit) = axis_pointer.hit {
-                let r = self.style.hover_point_size.0.max(1.0);
-                cx.scene.push(SceneOp::Quad {
-                    order: point_order,
-                    rect: Rect::new(
-                        Point::new(Px(hit.point_px.x.0 - r), Px(hit.point_px.y.0 - r)),
-                        Size::new(Px(2.0 * r), Px(2.0 * r)),
-                    ),
-                    background: self.style.hover_point_color,
-                    border: Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
-                    corner_radii: Corners::all(Px(0.0)),
-                });
+            if !shadow {
+                if let Some(hit) = axis_pointer.hit {
+                    let r = self.style.hover_point_size.0.max(1.0);
+                    cx.scene.push(SceneOp::Quad {
+                        order: point_order,
+                        rect: Rect::new(
+                            Point::new(Px(hit.point_px.x.0 - r), Px(hit.point_px.y.0 - r)),
+                            Size::new(Px(2.0 * r), Px(2.0 * r)),
+                        ),
+                        background: self.style.hover_point_color,
+                        border: Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: Corners::all(Px(0.0)),
+                    });
+                }
             }
         }
 
@@ -4462,10 +4490,13 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             let x1 = x0 + bounds.size.width.0;
             let y1 = y0 + bounds.size.height.0;
 
-            let anchor = axis_pointer
-                .hit
-                .map(|h| h.point_px)
-                .unwrap_or(axis_pointer.crosshair_px);
+            let anchor = match &axis_pointer.tooltip {
+                delinea::TooltipOutput::Axis(_) => axis_pointer.crosshair_px,
+                delinea::TooltipOutput::Item(_) => axis_pointer
+                    .hit
+                    .map(|h| h.point_px)
+                    .unwrap_or(axis_pointer.crosshair_px),
+            };
 
             let offset = 10.0f32;
             let mut tip_x = anchor.x.0 + offset;

@@ -7,9 +7,9 @@ use crate::engine::window::DataWindow;
 use crate::marks::MarkPayloadRef;
 use crate::scheduler::WorkBudget;
 use crate::spec::{
-    AxisKind, AxisPointerSpec, AxisRange, AxisSpec, ChartSpec, DataZoomXSpec, DataZoomYSpec,
-    DatasetSpec, FieldSpec, FilterMode, GridSpec, SeriesEncode, SeriesKind, SeriesSpec,
-    VisualMapMode, VisualMapSpec,
+    AxisKind, AxisPointerSpec, AxisPointerType, AxisRange, AxisSpec, ChartSpec, DataZoomXSpec,
+    DataZoomYSpec, DatasetSpec, FieldSpec, FilterMode, GridSpec, SeriesEncode, SeriesKind,
+    SeriesSpec, VisualMapMode, VisualMapSpec,
 };
 use crate::text::{TextMeasurer, TextMetrics};
 use crate::transform::RowRange;
@@ -3536,6 +3536,7 @@ fn axis_pointer_is_emitted_when_hit_is_close_enough() {
         axis_pointer: Some(AxisPointerSpec {
             enabled: true,
             trigger: crate::spec::AxisPointerTrigger::Item,
+            pointer_type: AxisPointerType::Line,
             snap: false,
             trigger_distance_px: 50.0,
             throttle_px: 0.0,
@@ -3652,6 +3653,7 @@ fn axis_pointer_item_trigger_is_suppressed_when_far_from_series() {
         axis_pointer: Some(AxisPointerSpec {
             enabled: true,
             trigger: crate::spec::AxisPointerTrigger::Item,
+            pointer_type: AxisPointerType::Line,
             snap: false,
             trigger_distance_px: 1.0,
             throttle_px: 0.0,
@@ -3761,6 +3763,7 @@ fn axis_pointer_axis_trigger_emits_multi_series_tooltip() {
         axis_pointer: Some(AxisPointerSpec {
             enabled: true,
             trigger: crate::spec::AxisPointerTrigger::Axis,
+            pointer_type: AxisPointerType::Line,
             snap: false,
             trigger_distance_px: 0.0,
             throttle_px: 0.0,
@@ -3909,6 +3912,7 @@ fn axis_pointer_axis_trigger_handles_non_monotonic_x_by_nearest_sample() {
         axis_pointer: Some(AxisPointerSpec {
             enabled: true,
             trigger: crate::spec::AxisPointerTrigger::Axis,
+            pointer_type: AxisPointerType::Line,
             snap: false,
             trigger_distance_px: 10_000.0,
             throttle_px: 0.0,
@@ -4056,6 +4060,7 @@ fn axis_pointer_axis_trigger_includes_placeholders_for_missing_series_values() {
         axis_pointer: Some(AxisPointerSpec {
             enabled: true,
             trigger: crate::spec::AxisPointerTrigger::Axis,
+            pointer_type: AxisPointerType::Line,
             snap: false,
             trigger_distance_px: 10_000.0,
             throttle_px: 0.0,
@@ -4194,6 +4199,7 @@ fn axis_pointer_item_trigger_snaps_to_hit_point_when_enabled() {
         axis_pointer: Some(AxisPointerSpec {
             enabled: true,
             trigger: crate::spec::AxisPointerTrigger::Item,
+            pointer_type: AxisPointerType::Line,
             snap: true,
             trigger_distance_px: 10_000.0,
             throttle_px: 0.0,
@@ -4299,6 +4305,7 @@ fn axis_pointer_axis_trigger_snaps_axis_value_to_nearest_sample_when_enabled() {
         axis_pointer: Some(AxisPointerSpec {
             enabled: true,
             trigger: crate::spec::AxisPointerTrigger::Axis,
+            pointer_type: AxisPointerType::Line,
             snap: true,
             trigger_distance_px: 0.0,
             throttle_px: 0.0,
@@ -4426,6 +4433,7 @@ fn axis_pointer_axis_trigger_uses_first_visible_series_as_primary() {
         axis_pointer: Some(AxisPointerSpec {
             enabled: true,
             trigger: crate::spec::AxisPointerTrigger::Axis,
+            pointer_type: AxisPointerType::Line,
             snap: true,
             trigger_distance_px: 10_000.0,
             throttle_px: 0.0,
@@ -4574,6 +4582,7 @@ fn axis_pointer_axis_trigger_snaps_category_y_to_band_center_when_enabled() {
         axis_pointer: Some(AxisPointerSpec {
             enabled: true,
             trigger: crate::spec::AxisPointerTrigger::Axis,
+            pointer_type: AxisPointerType::Line,
             snap: true,
             trigger_distance_px: 0.0,
             throttle_px: 0.0,
@@ -4643,6 +4652,131 @@ fn axis_pointer_axis_trigger_snaps_category_y_to_band_center_when_enabled() {
         axis.series[0].value,
         crate::TooltipSeriesValue::Scalar(-2.0)
     );
+}
+
+#[test]
+fn axis_pointer_axis_trigger_emits_shadow_rect_for_category_trigger_axis() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let value_field = crate::ids::FieldId::new(1);
+    let category_field = crate::ids::FieldId::new(2);
+
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(200.0)),
+    );
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(viewport),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: value_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: category_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: crate::scale::AxisScale::Category(crate::scale::CategoryAxisScale {
+                    categories: vec!["A".into(), "B".into(), "C".into(), "D".into()],
+                }),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        data_zoom_y: vec![],
+        tooltip: None,
+        axis_pointer: Some(AxisPointerSpec {
+            enabled: true,
+            trigger: crate::spec::AxisPointerTrigger::Axis,
+            pointer_type: AxisPointerType::Shadow,
+            snap: true,
+            trigger_distance_px: 0.0,
+            throttle_px: 0.0,
+        }),
+        visual_maps: vec![],
+        series: vec![SeriesSpec {
+            id: series_id,
+            name: None,
+            kind: SeriesKind::Bar,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: category_field,
+                y: value_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
+            bar_layout: Default::default(),
+            area_baseline: None,
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(vec![1.0, 2.0, 3.0, 0.5]));
+    table.push_column(Column::F64(vec![0.0, 1.0, 2.0, 3.0]));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 32))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    engine.apply_action(Action::HoverAt {
+        point: Point::new(Px(120.0), Px(100.0)),
+    });
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(32_768, 0, 8))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let axis_pointer = engine.output().axis_pointer.as_ref().unwrap();
+    let shadow = axis_pointer.shadow_rect_px.expect("expected a shadow band");
+
+    let trigger_window = engine
+        .output()
+        .axis_windows
+        .get(&x_axis)
+        .copied()
+        .unwrap_or_default();
+    let x0 = crate::engine::axis::x_px_at_data_in_rect(trigger_window, 0.5, viewport);
+    let x1 = crate::engine::axis::x_px_at_data_in_rect(trigger_window, 1.5, viewport);
+
+    let expected_left = x0.min(x1);
+    let expected_right = x0.max(x1);
+    assert!((shadow.origin.x.0 - expected_left).abs() < 1e-4);
+    assert!(((shadow.origin.x.0 + shadow.size.width.0) - expected_right).abs() < 1e-4);
+    assert_eq!(shadow.origin.y, viewport.origin.y);
+    assert_eq!(shadow.size.height, viewport.size.height);
 }
 
 #[test]

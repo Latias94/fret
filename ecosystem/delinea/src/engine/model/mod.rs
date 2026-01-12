@@ -265,6 +265,7 @@ impl ChartModel {
             AxisPointerModel {
                 enabled: p.enabled,
                 trigger: p.trigger,
+                pointer_type: p.pointer_type,
                 snap: p.snap,
                 trigger_distance_px: p.trigger_distance_px,
                 throttle_px: p.throttle_px,
@@ -683,6 +684,7 @@ pub struct DataZoomYModel {
 pub struct AxisPointerModel {
     pub enabled: bool,
     pub trigger: AxisPointerTrigger,
+    pub pointer_type: crate::spec::AxisPointerType,
     pub snap: bool,
     pub trigger_distance_px: f32,
     pub throttle_px: f32,

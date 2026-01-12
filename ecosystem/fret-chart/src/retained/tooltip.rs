@@ -406,6 +406,7 @@ mod tests {
             axis_pointer: Some(delinea::AxisPointerSpec {
                 enabled: true,
                 trigger: delinea::AxisPointerTrigger::Axis,
+                pointer_type: delinea::AxisPointerType::Line,
                 snap: false,
                 trigger_distance_px: 0.0,
                 throttle_px: 0.0,
@@ -555,6 +556,7 @@ mod tests {
             axis_pointer: Some(delinea::AxisPointerSpec {
                 enabled: true,
                 trigger: delinea::AxisPointerTrigger::Axis,
+                pointer_type: delinea::AxisPointerType::Line,
                 snap: false,
                 trigger_distance_px: 0.0,
                 throttle_px: 0.0,
@@ -711,6 +713,7 @@ mod tests {
             axis_pointer: Some(delinea::AxisPointerSpec {
                 enabled: true,
                 trigger: delinea::AxisPointerTrigger::Axis,
+                pointer_type: delinea::AxisPointerType::Line,
                 snap: false,
                 trigger_distance_px: 0.0,
                 throttle_px: 0.0,
