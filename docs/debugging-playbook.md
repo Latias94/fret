@@ -39,6 +39,9 @@ cargo run -p fret-renderdoc -- dump `
 
 See `docs/renderdoc-inspection.md` for what fields to validate for common passes.
 
+Tip: for a quick "frame health" breakdown (which marker paths dominate drawcalls), run with an empty marker and a
+high `--max-results`, then inspect `result.summary.*` in the JSON response (see `docs/renderdoc-inspection.md`).
+
 Tip: if you're debugging pixelate/blur effects, start with:
 
 ```powershell

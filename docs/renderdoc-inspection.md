@@ -27,6 +27,23 @@ cargo run -p fret-renderdoc -- dump --capture .fret/renderdoc-autocap/fret_captu
 
 The command prints the path to `fret_dump_pass_state_json.response.json`.
 
+## Frame health summary (pass breakdown)
+
+For a quick sanity-check of pass breakdowns (without digging into uniform dumps), run with an empty marker
+and a high match limit:
+
+```bash
+cargo run -p fret-renderdoc -- dump --capture .fret/renderdoc-autocap/fret_capture.rdc --marker "" --max-results 200000 --no-uniform-bytes --no-outputs-png
+```
+
+Then inspect:
+
+- `result.summary.matches_count`: total matched draw/dispatch events (bounded by `--max-results`).
+- `result.summary.top_marker_paths`: top marker paths by drawcall count (useful to confirm expected pass mix).
+- `result.summary.top_leaf_markers`: top leaf marker names (useful when paths are too noisy).
+
+Tip: if you only care about `fret-*` passes, search for `"fret"` inside `top_marker_paths` entries.
+
 ## What to look for (examples)
 
 ### Clip mask generation (`fret clip mask pass`)

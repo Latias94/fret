@@ -87,6 +87,12 @@ def marker_path_join(marker_path) -> str:
     return "/".join([str(x) for x in marker_path])
 
 
+def marker_path_split(joined: str):
+    if not joined:
+        return []
+    return [p for p in str(joined).split("/") if p]
+
+
 def normalize(s: str, case_sensitive: bool) -> str:
     if s is None:
         return ""
@@ -194,6 +200,72 @@ def iter_actions(structured_file, actions, marker_stack, out, req):
 
         if max_results is not None and len(out) >= max_results:
             return
+
+
+def summarize_matches(matches):
+    # Provide a small "frame health" summary so callers can sanity-check pass breakdowns without
+    # inspecting full dumps. Note: the summary is only as complete as the caller's `max_results`.
+    total = int(len(matches))
+
+    by_path = {}
+    by_leaf = {}
+
+    # Track a stable representative event id range per marker_path.
+    path_first = {}
+    path_last = {}
+
+    fret_like = 0
+
+    for m in matches:
+        p = str(m.get("marker_path", "") or "")
+        if "fret" in p.lower():
+            fret_like += 1
+
+        by_path[p] = int(by_path.get(p, 0)) + 1
+
+        parts = marker_path_split(p)
+        leaf = parts[-1] if parts else ""
+        by_leaf[leaf] = int(by_leaf.get(leaf, 0)) + 1
+
+        try:
+            eid = int(m.get("event_id", -1))
+        except Exception:
+            eid = -1
+        if eid >= 0:
+            if p not in path_first or eid < int(path_first[p]):
+                path_first[p] = eid
+            if p not in path_last or eid > int(path_last[p]):
+                path_last[p] = eid
+
+    def _top_k(d, k):
+        items = []
+        for key, count in d.items():
+            items.append((key, int(count)))
+        items.sort(key=lambda kv: (-kv[1], kv[0]))
+        return items[: int(k)]
+
+    top_marker_paths = []
+    for p, count in _top_k(by_path, 60):
+        top_marker_paths.append(
+            {
+                "marker_path": p,
+                "count": int(count),
+                "first_event_id": int(path_first.get(p, -1)),
+                "last_event_id": int(path_last.get(p, -1)),
+            }
+        )
+
+    top_leaf_markers = []
+    for leaf, count in _top_k(by_leaf, 40):
+        top_leaf_markers.append({"leaf": leaf, "count": int(count)})
+
+    return {
+        "matches_count": total,
+        "unique_marker_paths": int(len(by_path)),
+        "fret_like_matches_count": int(fret_like),
+        "top_marker_paths": top_marker_paths,
+        "top_leaf_markers": top_leaf_markers,
+    }
 
 
 def decode_viewport_uniform(data: bytes):
@@ -988,6 +1060,7 @@ def main() -> None:
                 "capture_path": req["capture_path"],
                 "matches": matches,
                 "selection": selection,
+                "summary": summarize_matches(matches),
                 "dumps": dumps,
             }
             write_response(RESP_PATH, {"ok": True, "result": payload})
