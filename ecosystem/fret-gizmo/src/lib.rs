@@ -23,7 +23,9 @@ pub use gizmo::{
     Aabb3, DepthMode, Gizmo, GizmoConfig, GizmoCustomEdit, GizmoDrawList3d, GizmoHandedness,
     GizmoInput, GizmoMode, GizmoOps, GizmoOrientation, GizmoPhase, GizmoPickPolicy, GizmoPivotMode,
     GizmoPluginId, GizmoPropertyKey, GizmoResult, GizmoSizePolicy, GizmoState, GizmoTarget3d,
-    GizmoTargetId, GizmoUpdate, HandleId, Line3d, Transform3d, Triangle3d, delta_matrix_trs,
+    GizmoTargetId, GizmoUpdate, HandleId, Line3d, Transform3d, Triangle3d,
+    BUILTIN_HANDLE_GROUP_ROTATE, BUILTIN_HANDLE_GROUP_SCALE, BUILTIN_HANDLE_GROUP_TRANSLATE,
+    HANDLE_LOCAL_GROUP_SHIFT, delta_matrix_trs,
 };
 pub use grid::{Grid3d, Grid3dConfig};
 pub use light_radius_plugin::{

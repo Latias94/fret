@@ -230,20 +230,13 @@ struct GizmoHudState {
     snap: bool,
 }
 
-const HANDLE_GROUP_SHIFT: u32 = 16;
-const HANDLE_GROUP_TRANSLATE: u32 = 1;
-const HANDLE_GROUP_ROTATE: u32 = 2;
-const HANDLE_GROUP_SCALE: u32 = 3;
 const BOUNDS_CORNER_BASE: u32 = 20;
 const BOUNDS_CORNER_END: u32 = 27;
 const BOUNDS_FACE_BASE: u32 = 30;
 const BOUNDS_FACE_END: u32 = 35;
 
 fn handle_group_and_sub_id(handle: HandleId) -> (u32, u32) {
-    let local = handle.local();
-    let group = local >> HANDLE_GROUP_SHIFT;
-    let sub = local & 0xFFFF;
-    (group, sub)
+    (handle.local_group(), handle.local_sub_id())
 }
 
 fn is_bounds_handle(handle: HandleId) -> bool {
@@ -251,7 +244,7 @@ fn is_bounds_handle(handle: HandleId) -> bool {
         return false;
     }
     let (group, sub) = handle_group_and_sub_id(handle);
-    if group != HANDLE_GROUP_SCALE {
+    if group != fret_gizmo::BUILTIN_HANDLE_GROUP_SCALE {
         return false;
     }
     (BOUNDS_CORNER_BASE <= sub && sub <= BOUNDS_CORNER_END)
@@ -266,7 +259,7 @@ fn gizmo_handle_label(handle: HandleId) -> String {
 
     let (group, sub) = handle_group_and_sub_id(handle);
     match group {
-        HANDLE_GROUP_TRANSLATE => match sub {
+        fret_gizmo::BUILTIN_HANDLE_GROUP_TRANSLATE => match sub {
             1 => "X".to_string(),
             2 => "Y".to_string(),
             3 => "Z".to_string(),
@@ -277,7 +270,7 @@ fn gizmo_handle_label(handle: HandleId) -> String {
             11 => "Depth".to_string(),
             _ => format!("Translate handle {sub}"),
         },
-        HANDLE_GROUP_ROTATE => match sub {
+        fret_gizmo::BUILTIN_HANDLE_GROUP_ROTATE => match sub {
             1 => "X".to_string(),
             2 => "Y".to_string(),
             3 => "Z".to_string(),
@@ -285,7 +278,7 @@ fn gizmo_handle_label(handle: HandleId) -> String {
             9 => "Arcball".to_string(),
             _ => format!("Rotate handle {sub}"),
         },
-        HANDLE_GROUP_SCALE => match sub {
+        fret_gizmo::BUILTIN_HANDLE_GROUP_SCALE => match sub {
             1 => "X".to_string(),
             2 => "Y".to_string(),
             3 => "Z".to_string(),

@@ -52,6 +52,14 @@ pub enum DepthMode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct HandleId(pub u64);
 
+pub const HANDLE_LOCAL_GROUP_SHIFT: u32 = 16;
+#[allow(dead_code)]
+pub const BUILTIN_HANDLE_GROUP_TRANSLATE: u32 = 1;
+#[allow(dead_code)]
+pub const BUILTIN_HANDLE_GROUP_ROTATE: u32 = 2;
+#[allow(dead_code)]
+pub const BUILTIN_HANDLE_GROUP_SCALE: u32 = 3;
+
 /// Namespaced identifier for custom gizmo plugins.
 ///
 /// `GizmoPluginId(0)` is reserved for built-in gizmos.
@@ -74,6 +82,14 @@ impl HandleId {
 
     pub const fn local(self) -> u32 {
         (self.0 & 0xFFFF_FFFF) as u32
+    }
+
+    pub const fn local_group(self) -> u32 {
+        self.local() >> HANDLE_LOCAL_GROUP_SHIFT
+    }
+
+    pub const fn local_sub_id(self) -> u32 {
+        self.local() & 0xFFFF
     }
 }
 
