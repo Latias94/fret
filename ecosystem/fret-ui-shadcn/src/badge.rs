@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use fret_core::Color;
-use fret_core::{FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
-use fret_ui::element::{AnyElement, TextProps};
+use fret_core::{FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
@@ -71,7 +71,7 @@ pub fn badge<H: UiHost>(
     let theme = Theme::global(&*cx.app).clone();
 
     let mut chrome = ChromeRefinement::default()
-        .px(Space::N2p5)
+        .px(Space::N2)
         .py(Space::N0p5)
         .rounded(Radius::Full)
         .border_1()
@@ -82,7 +82,18 @@ pub fn badge<H: UiHost>(
 
     let fg = fg_for(&theme, variant);
 
-    let props = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
+    let mut props = decl_style::container_props(
+        &theme,
+        chrome,
+        LayoutRefinement::default().overflow_hidden(),
+    );
+    // Treat borders as part of the component's "outer size" to match the web box model:
+    // shadcn uses `border` + `px-*`/`py-*` (border-box sizing). Our `ContainerProps.border` is a
+    // paint-time concern, so we include the border thickness in layout padding.
+    props.padding.top = Px((props.padding.top.0 + props.border.top.0).max(0.0));
+    props.padding.right = Px((props.padding.right.0 + props.border.right.0).max(0.0));
+    props.padding.bottom = Px((props.padding.bottom.0 + props.border.bottom.0).max(0.0));
+    props.padding.left = Px((props.padding.left.0 + props.border.left.0).max(0.0));
 
     let text_px = theme
         .metric_by_key("component.badge.text_px")
@@ -93,9 +104,18 @@ pub fn badge<H: UiHost>(
         .or_else(|| theme.metric_by_key("font.line_height"))
         .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
+    let text_layout = LayoutStyle {
+        size: SizeStyle {
+            width: Length::Auto,
+            height: Length::Px(line_height),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+
     cx.container(props, |cx| {
         vec![cx.text_props(TextProps {
-            layout: Default::default(),
+            layout: text_layout,
             text: label,
             style: Some(TextStyle {
                 font: FontId::default(),

@@ -655,6 +655,9 @@ pub struct GizmoState {
     drag_prev_hit_world: Vec3,
     drag_translate_prev_axis_raw: f32,
     drag_translate_prev_plane_raw: Vec2,
+    drag_scale_prev_axis_raw: f32,
+    drag_scale_prev_plane_raw: Vec2,
+    drag_bounds_prev_local_raw: Vec3,
     drag_total_axis_raw: f32,
     drag_total_axis_applied: f32,
     drag_translate_is_plane: bool,
@@ -735,6 +738,9 @@ impl Default for GizmoState {
             drag_prev_hit_world: Vec3::ZERO,
             drag_translate_prev_axis_raw: 0.0,
             drag_translate_prev_plane_raw: Vec2::ZERO,
+            drag_scale_prev_axis_raw: 0.0,
+            drag_scale_prev_plane_raw: Vec2::ZERO,
+            drag_bounds_prev_local_raw: Vec3::ZERO,
             drag_total_axis_raw: 0.0,
             drag_total_axis_applied: 0.0,
             drag_translate_is_plane: false,
@@ -2069,13 +2075,17 @@ impl Gizmo {
                         });
 
                         let basis = self.state.drag_bounds_basis;
-                        let delta_world = (hit_world - self.state.drag_prev_hit_world) * precision;
+                        let diff_world = hit_world - self.state.drag_start_hit_world;
                         self.state.drag_prev_hit_world = hit_world;
-                        let delta_local = Vec3::new(
-                            delta_world.dot(basis[0]),
-                            delta_world.dot(basis[1]),
-                            delta_world.dot(basis[2]),
+
+                        let raw_local = Vec3::new(
+                            diff_world.dot(basis[0]),
+                            diff_world.dot(basis[1]),
+                            diff_world.dot(basis[2]),
                         );
+                        let delta_local =
+                            (raw_local - self.state.drag_bounds_prev_local_raw) * precision;
+                        self.state.drag_bounds_prev_local_raw = raw_local;
 
                         for i in 0..3 {
                             if self.state.drag_bounds_axes_mask[i] {
@@ -2197,7 +2207,7 @@ impl Gizmo {
                         .unwrap_or(self.state.drag_origin)
                     });
 
-                    let delta_world = (hit_world - self.state.drag_prev_hit_world) * precision;
+                    let diff_world = hit_world - self.state.drag_start_hit_world;
                     self.state.drag_prev_hit_world = hit_world;
 
                     if let Some((a, b)) = self.state.drag_scale_plane_axes {
@@ -2207,8 +2217,10 @@ impl Gizmo {
                             return None;
                         }
 
-                        self.state.drag_total_scale_plane_raw +=
-                            Vec2::new(delta_world.dot(u_dir), delta_world.dot(v_dir));
+                        let raw = Vec2::new(diff_world.dot(u_dir), diff_world.dot(v_dir));
+                        let delta_raw = raw - self.state.drag_scale_prev_plane_raw;
+                        self.state.drag_scale_prev_plane_raw = raw;
+                        self.state.drag_total_scale_plane_raw += delta_raw * precision;
 
                         let delta_norm = self.state.drag_total_scale_plane_raw / length_world;
                         let mut desired = if input.snap {
@@ -2286,7 +2298,10 @@ impl Gizmo {
                     if scale_dir.length_squared() == 0.0 {
                         return None;
                     }
-                    self.state.drag_total_scale_raw += delta_world.dot(scale_dir);
+                    let raw = diff_world.dot(scale_dir);
+                    let delta_raw = raw - self.state.drag_scale_prev_axis_raw;
+                    self.state.drag_scale_prev_axis_raw = raw;
+                    self.state.drag_total_scale_raw += delta_raw * precision;
 
                     let delta_norm = self.state.drag_total_scale_raw / length_world;
                     let mut desired_factor = if input.snap {
@@ -3452,7 +3467,7 @@ impl Gizmo {
         self.state.drag_scale_plane_axes = plane_axes;
         self.state.drag_scale_plane_u = plane_u;
         self.state.drag_scale_plane_v = plane_v;
-        self.state.drag_prev_hit_world = ray_plane_intersect(cursor_ray, origin, plane_normal)
+        let start_hit_world = ray_plane_intersect(cursor_ray, origin, plane_normal)
             .filter(|p| p.is_finite())
             .unwrap_or_else(|| {
                 unproject_point(
@@ -3464,6 +3479,10 @@ impl Gizmo {
                 )
                 .unwrap_or(origin)
             });
+        self.state.drag_start_hit_world = start_hit_world;
+        self.state.drag_prev_hit_world = start_hit_world;
+        self.state.drag_scale_prev_axis_raw = 0.0;
+        self.state.drag_scale_prev_plane_raw = Vec2::ZERO;
         self.state.drag_total_scale_raw = 0.0;
         self.state.drag_total_scale_applied = 1.0;
         self.state.drag_total_scale_plane_raw = Vec2::ZERO;
@@ -3580,7 +3599,9 @@ impl Gizmo {
         self.state.drag_origin_z01 = origin_z01;
         self.state.drag_size_length_world = size_length_world;
         self.state.drag_plane_normal = plane_normal.normalize_or_zero();
+        self.state.drag_start_hit_world = start_hit_world;
         self.state.drag_prev_hit_world = start_hit_world;
+        self.state.drag_bounds_prev_local_raw = Vec3::ZERO;
 
         self.state.drag_scale_is_bounds = true;
         self.state.drag_bounds_basis = basis;
