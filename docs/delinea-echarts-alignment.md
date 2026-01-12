@@ -141,8 +141,8 @@ single “at a glance” view of:
 - Evidence: `ecosystem/delinea/src/engine/stages/ordinal_index.rs` (ordinal mapping), `ecosystem/delinea/src/engine/axis.rs` (ticks)
 - Validation (existing coverage):
   - `cargo run -p fret-demo --bin fret-demo -- horizontal_bars_demo` (category Y axis + bar layout + axis pointer)
-- Missing validation harness (recommended):
-  - Add a `category_line_demo` (line/scatter over a category axis + dataZoom) to lock ordinal mapping invariants under zoom.
+- Validation (recommended):
+  - `cargo run -p fret-demo --bin fret-demo -- category_line_demo` (category X axis + line/scatter + dataZoom)
 - Missing vs ECharts:
   - fully stable ordinal mapping semantics for line/scatter under zoom (not just bars/axis pointer),
   - conformance tests that lock “raw index ↔ ordinal index” invariants across transforms.

@@ -28,6 +28,7 @@ pub mod area_demo;
 pub mod assets_demo;
 pub mod bars_demo;
 pub mod candlestick_demo;
+pub mod category_line_demo;
 pub mod chart_demo;
 pub mod chart_multi_axis_demo;
 #[cfg(not(target_arch = "wasm32"))]
