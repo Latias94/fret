@@ -1,0 +1,17 @@
+//! Shared canvas substrate helpers for ecosystem widgets.
+//!
+//! This crate is intentionally policy-light:
+//! - It provides reusable math/state helpers (pan/zoom transforms, drag phases, pixel policies).
+//! - It does not prescribe interaction maps, snapping rules, or domain models.
+//!
+//! ADR reference: `docs/adr/0137-canvas-widgets-and-interactive-surfaces.md`.
+
+#![forbid(unsafe_code)]
+
+pub mod drag;
+pub mod scale;
+pub mod text;
+pub mod view;
+
+#[cfg(feature = "declarative")]
+pub mod declarative;

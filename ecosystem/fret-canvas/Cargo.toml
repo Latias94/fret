@@ -1,0 +1,20 @@
+[package]
+name = "fret-canvas"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+
+[features]
+default = []
+
+# Reserved for a future declarative canvas element surface (ADR 0137).
+declarative = []
+
+[dependencies]
+fret-core = { path = "../../crates/fret-core" }
+
