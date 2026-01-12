@@ -195,6 +195,14 @@ impl NodeGraphLookups {
         self.connections(ConnectionLookupKey::Node(node))
     }
 
+    pub fn connections_for_node_side(
+        &self,
+        node: NodeId,
+        side: ConnectionSide,
+    ) -> Option<&HashMap<EdgeId, HandleConnection>> {
+        self.connections(ConnectionLookupKey::NodeSide { node, side })
+    }
+
     pub fn connections_for_port(
         &self,
         node: NodeId,

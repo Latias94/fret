@@ -312,6 +312,32 @@ fn store_lookups_update_after_dispatch_transaction() {
 }
 
 #[test]
+fn lookups_connections_for_node_side_filters_by_direction() {
+    let (g, a, b, out_port, in_port, eid) = make_graph();
+
+    let mut lookups = NodeGraphLookups::default();
+    lookups.rebuild_from(&g);
+
+    let a_source = lookups
+        .connections_for_node_side(a, ConnectionSide::Source)
+        .expect("connections");
+    assert!(a_source.contains_key(&eid));
+
+    let a_target = lookups.connections_for_node_side(a, ConnectionSide::Target);
+    assert!(a_target.is_none() || !a_target.unwrap().contains_key(&eid));
+
+    let b_target = lookups
+        .connections_for_node_side(b, ConnectionSide::Target)
+        .expect("connections");
+    assert!(b_target.contains_key(&eid));
+
+    let b_source = lookups.connections_for_node_side(b, ConnectionSide::Source);
+    assert!(b_source.is_none() || !b_source.unwrap().contains_key(&eid));
+
+    let _ = (out_port, in_port);
+}
+
+#[test]
 fn install_callbacks_receives_graph_and_view_events() {
     use std::cell::RefCell;
     use std::rc::Rc;
