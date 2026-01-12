@@ -20,6 +20,19 @@ pub enum RenderTargetUpdate {
     },
 }
 
+impl RenderTargetUpdate {
+    pub fn update(
+        id: fret_core::RenderTargetId,
+        desc: fret_render::RenderTargetDescriptor,
+    ) -> Self {
+        Self::Update { id, desc }
+    }
+
+    pub fn unregister(id: fret_core::RenderTargetId) -> Self {
+        Self::Unregister { id }
+    }
+}
+
 impl fmt::Debug for RenderTargetUpdate {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -40,6 +53,26 @@ impl fmt::Debug for RenderTargetUpdate {
 pub struct EngineFrameUpdate {
     pub target_updates: Vec<RenderTargetUpdate>,
     pub command_buffers: Vec<wgpu::CommandBuffer>,
+}
+
+impl EngineFrameUpdate {
+    pub fn push_command_buffer(&mut self, cb: wgpu::CommandBuffer) {
+        self.command_buffers.push(cb);
+    }
+
+    pub fn update_render_target(
+        &mut self,
+        id: fret_core::RenderTargetId,
+        desc: fret_render::RenderTargetDescriptor,
+    ) {
+        self.target_updates
+            .push(RenderTargetUpdate::Update { id, desc });
+    }
+
+    pub fn unregister_render_target(&mut self, id: fret_core::RenderTargetId) {
+        self.target_updates
+            .push(RenderTargetUpdate::Unregister { id });
+    }
 }
 
 /// App-owned, engine-pass 3D viewport overlay hooks (gizmos, debug draw, selection outlines).
