@@ -161,6 +161,7 @@ single “at a glance” view of:
   - Tooltip rows are stable and ordered by `series_order`.
   - Missing/unsampleable series show `-` instead of panicking or reordering rows.
   - When `axisPointer.snap=true` and `trigger=Axis`, the pointer aligns to a nearest sample on the trigger axis (stable away from the series stroke).
+  - `axisPointer.triggerDistance` gates the snap marker (`axisPointer.hit`) only; the crosshair and tooltip remain available for `trigger=Axis`.
 - What exists in v1:
   - `ChartSpec.tooltip: Option<TooltipSpecV1>` supports templates + decimals, including per-series overrides (adapter-side).
   - Tooltip marker swatches are rendered from the series palette (UI-side).
