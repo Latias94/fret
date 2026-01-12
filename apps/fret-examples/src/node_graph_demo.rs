@@ -43,10 +43,10 @@ use fret_node::ui::{
     MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphA11yFocusedEdge,
     NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort, NodeGraphCanvas, NodeGraphControlsOverlay,
     NodeGraphEditQueue, NodeGraphEditor, NodeGraphInternalsStore, NodeGraphMiniMapOverlay,
-    NodeGraphNodeTypes, NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPortalHost,
-    NodeGraphPortalNodeLayout, PortalNumberEditHandler, PortalNumberEditSpec,
-    PortalNumberEditSubmit, PortalNumberEditor, RegistryNodeGraphPresenter,
-    register_node_graph_commands,
+    NodeGraphNodeTypes, NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPanel,
+    NodeGraphPanelPosition, NodeGraphPortalHost, NodeGraphPortalNodeLayout,
+    PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit, PortalNumberEditor,
+    RegistryNodeGraphPresenter, register_node_graph_commands,
 };
 
 #[derive(Clone)]
@@ -488,6 +488,8 @@ fn build_demo_graph(graph_id: GraphId) -> Graph {
             connectable: None,
             deletable: None,
             parent: None,
+            extent: None,
+            expand_parent: None,
             size: None,
             collapsed: false,
             ports: vec![port_value_a_out],
@@ -505,6 +507,8 @@ fn build_demo_graph(graph_id: GraphId) -> Graph {
             connectable: None,
             deletable: None,
             parent: None,
+            extent: None,
+            expand_parent: None,
             size: None,
             collapsed: false,
             ports: vec![port_value_b_out],
@@ -522,6 +526,8 @@ fn build_demo_graph(graph_id: GraphId) -> Graph {
             connectable: None,
             deletable: None,
             parent: None,
+            extent: None,
+            expand_parent: None,
             size: None,
             collapsed: false,
             ports: vec![port_merge_in0, port_merge_in1, port_merge_out],
@@ -539,6 +545,8 @@ fn build_demo_graph(graph_id: GraphId) -> Graph {
             connectable: None,
             deletable: None,
             parent: None,
+            extent: None,
+            expand_parent: None,
             size: None,
             collapsed: false,
             ports: vec![port_add_a, port_add_b, port_add_out],
@@ -556,6 +564,8 @@ fn build_demo_graph(graph_id: GraphId) -> Graph {
             connectable: None,
             deletable: None,
             parent: None,
+            extent: None,
+            expand_parent: None,
             size: None,
             collapsed: false,
             ports: vec![port_out_in],
@@ -573,6 +583,8 @@ fn build_demo_graph(graph_id: GraphId) -> Graph {
             connectable: None,
             deletable: None,
             parent: None,
+            extent: None,
+            expand_parent: None,
             size: None,
             collapsed: false,
             ports: vec![
@@ -896,6 +908,8 @@ fn build_stress_graph(graph_id: GraphId, target_nodes: usize) -> Graph {
                 connectable: None,
                 deletable: None,
                 parent: None,
+                extent: None,
+                expand_parent: None,
                 size: None,
                 collapsed: false,
                 ports: vec![port_out],
@@ -944,6 +958,8 @@ fn build_stress_graph(graph_id: GraphId, target_nodes: usize) -> Graph {
                 connectable: None,
                 deletable: None,
                 parent: None,
+                extent: None,
+                expand_parent: None,
                 size: None,
                 collapsed: false,
                 ports: vec![port_a, port_b, port_out],
@@ -1257,9 +1273,15 @@ impl NodeGraphDemoDriver {
         ));
         let portal_node = ui.create_node_retained(portal);
 
-        let controls =
-            NodeGraphControlsOverlay::new(canvas_node, models.view.clone(), style.clone());
-        let controls_node = ui.create_node_retained(controls);
+        let controls_overlay =
+            NodeGraphControlsOverlay::new(canvas_node, models.view.clone(), style.clone())
+                .in_panel_bounds();
+        let controls_overlay_node = ui.create_node_retained(controls_overlay);
+
+        let controls_panel = NodeGraphPanel::new(NodeGraphPanelPosition::TopRight)
+            .with_margin_px(style.controls_margin);
+        let controls_node = ui.create_node_retained(controls_panel);
+        ui.set_children(controls_node, vec![controls_overlay_node]);
 
         let tuning = NodeGraphTuningOverlay::new(canvas_node, models.view.clone(), style.clone())
             .with_store(store.clone())
@@ -1271,15 +1293,21 @@ impl NodeGraphDemoDriver {
             });
         let tuning_node = ui.create_node_retained(tuning);
 
-        let minimap = NodeGraphMiniMapOverlay::new(
+        let minimap_overlay = NodeGraphMiniMapOverlay::new(
             canvas_node,
             models.graph.clone(),
             models.view.clone(),
             internals_overlay,
             style.clone(),
         )
-        .with_store(store);
-        let minimap_node = ui.create_node_retained(minimap);
+        .with_store(store)
+        .in_panel_bounds();
+        let minimap_overlay_node = ui.create_node_retained(minimap_overlay);
+
+        let minimap_panel = NodeGraphPanel::new(NodeGraphPanelPosition::BottomRight)
+            .with_margin_px(style.minimap_margin);
+        let minimap_node = ui.create_node_retained(minimap_panel);
+        ui.set_children(minimap_node, vec![minimap_overlay_node]);
 
         let root = ui.create_node_retained(NodeGraphEditor::new());
         ui.set_children(

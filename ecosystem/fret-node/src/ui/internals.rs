@@ -15,6 +15,7 @@ use crate::core::{CanvasPoint, EdgeId, NodeId, PortId};
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct NodeGraphCanvasTransform {
     pub bounds_origin: Point,
+    pub bounds_size: Size,
     pub pan: CanvasPoint,
     pub zoom: f32,
 }
@@ -23,6 +24,7 @@ impl Default for NodeGraphCanvasTransform {
     fn default() -> Self {
         Self {
             bounds_origin: Point::new(Px(0.0), Px(0.0)),
+            bounds_size: Size::new(Px(0.0), Px(0.0)),
             pan: CanvasPoint::default(),
             zoom: 1.0,
         }

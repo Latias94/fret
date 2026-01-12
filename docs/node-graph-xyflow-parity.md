@@ -207,9 +207,12 @@ These are the primary gaps between "a working canvas" and "a production-ready no
   - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/Background/Background.tsx`
   - fret-node: background grid exists; dot variants + configuration parity still TBD
 
-- [ ] **Panels / toolbars / overlays composition API**
+- [~] **Panels / toolbars / overlays composition API**
   - XyFlow: `<Panel />` composition patterns
-  - fret-node: needs a stable composition surface for editor shells and docking/multi-view integration
+  - fret-node:
+    - `NodeGraphPanel` provides window-space anchored overlay composition: `ecosystem/fret-node/src/ui/panel.rs`
+    - `NodeGraphControlsOverlay::in_panel_bounds` + `NodeGraphMiniMapOverlay::in_panel_bounds` support panel-based placement
+    - demo usage: `apps/fret-examples/src/node_graph_demo.rs`
 
 ---
 

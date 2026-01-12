@@ -466,6 +466,8 @@ pub(crate) struct InternalsCacheKey {
     pub(crate) pan_y_bits: u32,
     pub(crate) bounds_x_bits: u32,
     pub(crate) bounds_y_bits: u32,
+    pub(crate) bounds_w_bits: u32,
+    pub(crate) bounds_h_bits: u32,
 }
 
 #[derive(Debug, Clone, Default)]

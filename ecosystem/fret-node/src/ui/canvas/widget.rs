@@ -1009,6 +1009,8 @@ impl NodeGraphCanvas {
             pan_y_bits: snapshot.pan.y.to_bits(),
             bounds_x_bits: bounds.origin.x.0.to_bits(),
             bounds_y_bits: bounds.origin.y.0.to_bits(),
+            bounds_w_bits: bounds.size.width.0.to_bits(),
+            bounds_h_bits: bounds.size.height.0.to_bits(),
         };
 
         if self.internals_key == Some(key) {
@@ -1018,6 +1020,7 @@ impl NodeGraphCanvas {
 
         let transform = NodeGraphCanvasTransform {
             bounds_origin: bounds.origin,
+            bounds_size: bounds.size,
             pan: snapshot.pan,
             zoom: snapshot.zoom,
         };

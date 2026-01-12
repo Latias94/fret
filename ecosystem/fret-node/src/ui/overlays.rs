@@ -26,6 +26,14 @@ use crate::ui::commands::{
     CMD_NODE_GRAPH_TOGGLE_CONNECTION_MODE, CMD_NODE_GRAPH_ZOOM_IN, CMD_NODE_GRAPH_ZOOM_OUT,
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum OverlayPlacement {
+    /// Positions itself within the canvas bounds (legacy / backwards-compatible).
+    FloatingInCanvas,
+    /// Treats `cx.bounds` as the overlay's own panel bounds (for `NodeGraphPanel` composition).
+    PanelBounds,
+}
+
 /// UI-only overlay state for a node graph editor instance.
 #[derive(Debug, Default, Clone)]
 pub struct NodeGraphOverlayState {
@@ -250,6 +258,7 @@ pub struct NodeGraphControlsOverlay {
     hovered: Option<ControlsButton>,
     pressed: Option<ControlsButton>,
     text_blobs: Vec<TextBlobId>,
+    placement: OverlayPlacement,
 }
 
 impl NodeGraphControlsOverlay {
@@ -265,7 +274,34 @@ impl NodeGraphControlsOverlay {
             hovered: None,
             pressed: None,
             text_blobs: Vec::new(),
+            placement: OverlayPlacement::FloatingInCanvas,
         }
+    }
+
+    /// Switches to "panel bounds" mode for `NodeGraphPanel` composition.
+    pub fn in_panel_bounds(mut self) -> Self {
+        self.placement = OverlayPlacement::PanelBounds;
+        self
+    }
+
+    fn panel_size_px(&self) -> (f32, f32) {
+        let pad = self.style.controls_padding.max(0.0);
+        let gap = self.style.controls_gap.max(0.0);
+        let button = self.style.controls_button_size.max(10.0);
+
+        let items = [
+            ControlsButton::ToggleConnectionMode,
+            ControlsButton::ZoomIn,
+            ControlsButton::ZoomOut,
+            ControlsButton::FrameAll,
+            ControlsButton::FrameSelection,
+            ControlsButton::ResetView,
+        ];
+
+        let panel_w = button + 2.0 * pad;
+        let panel_h =
+            (items.len() as f32) * button + ((items.len() as f32 - 1.0) * gap) + 2.0 * pad;
+        (panel_w, panel_h)
     }
 
     fn compute_layout(&self, bounds: Rect) -> ControlsLayout {
@@ -283,16 +319,17 @@ impl NodeGraphControlsOverlay {
             ControlsButton::ResetView,
         ];
 
-        let panel_w = button + 2.0 * pad;
-        let panel_h =
-            (items.len() as f32) * button + ((items.len() as f32 - 1.0) * gap) + 2.0 * pad;
+        let (panel_w, panel_h) = self.panel_size_px();
 
         let x = bounds.origin.x.0 + (bounds.size.width.0 - margin - panel_w).max(0.0);
         let y = bounds.origin.y.0 + margin;
-        let panel = Rect::new(
-            Point::new(Px(x), Px(y)),
-            Size::new(Px(panel_w), Px(panel_h)),
-        );
+        let panel = match self.placement {
+            OverlayPlacement::FloatingInCanvas => Rect::new(
+                Point::new(Px(x), Px(y)),
+                Size::new(Px(panel_w), Px(panel_h)),
+            ),
+            OverlayPlacement::PanelBounds => bounds,
+        };
 
         let mut buttons = Vec::with_capacity(items.len());
         let mut cy = panel.origin.y.0 + pad;
@@ -350,6 +387,11 @@ impl NodeGraphControlsOverlay {
 }
 
 impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
+    fn measure(&mut self, _cx: &mut MeasureCx<'_, H>) -> Size {
+        let (w, h) = self.panel_size_px();
+        Size::new(Px(w), Px(h))
+    }
+
     fn hit_test(&self, bounds: Rect, position: Point) -> bool {
         let layout = self.compute_layout(bounds);
         layout.panel.contains(position)
@@ -499,6 +541,7 @@ pub struct NodeGraphMiniMapOverlay {
     style: NodeGraphStyle,
 
     drag: Option<MiniMapDragState>,
+    placement: OverlayPlacement,
 }
 
 impl NodeGraphMiniMapOverlay {
@@ -517,7 +560,14 @@ impl NodeGraphMiniMapOverlay {
             internals,
             style,
             drag: None,
+            placement: OverlayPlacement::FloatingInCanvas,
         }
+    }
+
+    /// Switches to "panel bounds" mode for `NodeGraphPanel` composition.
+    pub fn in_panel_bounds(mut self) -> Self {
+        self.placement = OverlayPlacement::PanelBounds;
+        self
     }
 
     /// Attaches a B-layer runtime store (optional).
@@ -529,6 +579,9 @@ impl NodeGraphMiniMapOverlay {
     }
 
     fn minimap_rect(&self, bounds: Rect) -> Rect {
+        if self.placement == OverlayPlacement::PanelBounds {
+            return bounds;
+        }
         let w = self.style.minimap_width.max(40.0);
         let h = self.style.minimap_height.max(30.0);
         let margin = self.style.minimap_margin.max(0.0);
@@ -536,6 +589,15 @@ impl NodeGraphMiniMapOverlay {
         let x = bounds.origin.x.0 + (bounds.size.width.0 - margin - w).max(0.0);
         let y = bounds.origin.y.0 + (bounds.size.height.0 - margin - h).max(0.0);
         Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(w), Px(h)))
+    }
+
+    fn canvas_bounds_from_internals(
+        snapshot: &super::internals::NodeGraphInternalsSnapshot,
+    ) -> Rect {
+        Rect::new(
+            snapshot.transform.bounds_origin,
+            snapshot.transform.bounds_size,
+        )
     }
 
     fn canvas_bounds_from_internals_and_view(
@@ -693,6 +755,12 @@ impl NodeGraphMiniMapOverlay {
 }
 
 impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
+    fn measure(&mut self, _cx: &mut MeasureCx<'_, H>) -> Size {
+        let w = self.style.minimap_width.max(0.0);
+        let h = self.style.minimap_height.max(0.0);
+        Size::new(Px(w), Px(h))
+    }
+
     fn hit_test(&self, bounds: Rect, position: Point) -> bool {
         self.minimap_rect(bounds).contains(position)
     }
@@ -715,13 +783,14 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
                 cx.stop_propagation();
 
                 let snapshot = self.internals.snapshot();
-                let world = self.compute_world_bounds(cx.bounds, &snapshot);
+                let canvas_bounds = Self::canvas_bounds_from_internals(&snapshot);
+                let world = self.compute_world_bounds(canvas_bounds, &snapshot);
                 let Some(canvas_pt) = Self::unproject_point(minimap, world, *position) else {
                     return;
                 };
 
                 let zoom = snapshot.transform.zoom;
-                let viewport = self.canvas_bounds_from_internals_and_view(cx.bounds, &snapshot);
+                let viewport = self.canvas_bounds_from_internals_and_view(canvas_bounds, &snapshot);
                 let viewport_rr = Self::project_rect(minimap, world, viewport);
 
                 let current_pan = self
@@ -733,7 +802,7 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
                 let start_pan = if viewport_rr.contains(*position) {
                     current_pan
                 } else {
-                    let new_pan = Self::pan_to_center_point(cx.bounds, zoom, canvas_pt);
+                    let new_pan = Self::pan_to_center_point(canvas_bounds, zoom, canvas_pt);
                     self.update_pan(cx.app, new_pan);
                     new_pan
                 };
@@ -752,7 +821,8 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
 
                 let minimap = self.minimap_rect(cx.bounds);
                 let snapshot = self.internals.snapshot();
-                let world = self.compute_world_bounds(cx.bounds, &snapshot);
+                let canvas_bounds = Self::canvas_bounds_from_internals(&snapshot);
+                let world = self.compute_world_bounds(canvas_bounds, &snapshot);
                 let Some(canvas_pt) = Self::unproject_point(minimap, world, *position) else {
                     return;
                 };
@@ -788,7 +858,8 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
 
         let minimap = self.minimap_rect(cx.bounds);
         let snapshot = self.internals.snapshot();
-        let world = self.compute_world_bounds(cx.bounds, &snapshot);
+        let canvas_bounds = Self::canvas_bounds_from_internals(&snapshot);
+        let world = self.compute_world_bounds(canvas_bounds, &snapshot);
         let corner = self.style.context_menu_corner_radius;
 
         cx.scene.push(SceneOp::Quad {
@@ -816,7 +887,7 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
             });
         }
 
-        let viewport = self.canvas_bounds_from_internals_and_view(cx.bounds, &snapshot);
+        let viewport = self.canvas_bounds_from_internals_and_view(canvas_bounds, &snapshot);
         let rr = Self::project_rect(minimap, world, viewport);
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(20_002),

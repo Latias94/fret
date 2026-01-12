@@ -12,6 +12,7 @@ pub mod editors;
 pub mod internals;
 pub mod measured;
 pub mod overlays;
+pub mod panel;
 pub mod portal;
 pub mod presenter;
 pub mod registry;
@@ -36,6 +37,7 @@ pub use internals::{
 pub use measured::{
     FallbackMeasuredNodeGraphPresenter, MeasuredGeometryStore, MeasuredNodeGraphPresenter,
 };
+pub use panel::{NodeGraphPanel, NodeGraphPanelPosition, NodeGraphPanelSize};
 pub use portal::{
     CMD_CANCEL_TEXT_PREFIX, CMD_STEP_TEXT_PREFIX, CMD_SUBMIT_TEXT_PREFIX,
     NodeGraphPortalCommandHandler, NodeGraphPortalHost, NodeGraphPortalNodeLayout,
