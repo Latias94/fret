@@ -455,6 +455,7 @@ impl Gizmo {
                             total,
                         },
                         updated_targets: targets.to_vec(),
+                        custom_edits: Vec::new(),
                     });
                 }
 
@@ -588,6 +589,7 @@ impl Gizmo {
                         active,
                         result: GizmoResult::Translation { delta, total },
                         updated_targets,
+                        custom_edits: Vec::new(),
                     });
                 }
 
@@ -614,6 +616,7 @@ impl Gizmo {
                         total,
                     },
                     updated_targets: targets.to_vec(),
+                    custom_edits: Vec::new(),
                 })
             }
             GizmoMode::Rotate => {
@@ -631,6 +634,7 @@ impl Gizmo {
                                 total,
                             },
                             updated_targets: targets.to_vec(),
+                            custom_edits: Vec::new(),
                         });
                     }
 
@@ -721,6 +725,7 @@ impl Gizmo {
                                 total: desired_total,
                             },
                             updated_targets,
+                            custom_edits: Vec::new(),
                         });
                     }
 
@@ -742,6 +747,7 @@ impl Gizmo {
                             total,
                         },
                         updated_targets: targets.to_vec(),
+                        custom_edits: Vec::new(),
                     })
                 } else {
                     let axis_dir = self.state.drag_axis_dir.normalize_or_zero();
@@ -764,6 +770,7 @@ impl Gizmo {
                                 total_radians: total,
                             },
                             updated_targets: targets.to_vec(),
+                            custom_edits: Vec::new(),
                         });
                     }
 
@@ -857,6 +864,7 @@ impl Gizmo {
                                 total_radians: desired_total,
                             },
                             updated_targets,
+                            custom_edits: Vec::new(),
                         });
                     }
 
@@ -878,6 +886,7 @@ impl Gizmo {
                             total_radians: total,
                         },
                         updated_targets: targets.to_vec(),
+                        custom_edits: Vec::new(),
                     })
                 }
             }
@@ -925,6 +934,7 @@ impl Gizmo {
                             total,
                         },
                         updated_targets: targets.to_vec(),
+                        custom_edits: Vec::new(),
                     });
                 }
 
@@ -1075,6 +1085,7 @@ impl Gizmo {
                                 total: desired,
                             },
                             updated_targets,
+                            custom_edits: Vec::new(),
                         });
                     }
 
@@ -1179,6 +1190,7 @@ impl Gizmo {
                             active,
                             result: GizmoResult::Scale { delta, total },
                             updated_targets,
+                            custom_edits: Vec::new(),
                         });
                     }
 
@@ -1261,6 +1273,7 @@ impl Gizmo {
                         active,
                         result: GizmoResult::Scale { delta, total },
                         updated_targets,
+                        custom_edits: Vec::new(),
                     });
                 }
 
@@ -1289,6 +1302,7 @@ impl Gizmo {
                         total,
                     },
                     updated_targets: targets.to_vec(),
+                    custom_edits: Vec::new(),
                 })
             }
             GizmoMode::Universal => {
@@ -1413,6 +1427,7 @@ impl Gizmo {
                 total: Vec3::ZERO,
             },
             updated_targets: targets.to_vec(),
+            custom_edits: Vec::new(),
         })
     }
 
@@ -1499,6 +1514,7 @@ impl Gizmo {
                 total_radians: 0.0,
             },
             updated_targets: targets.to_vec(),
+            custom_edits: Vec::new(),
         })
     }
 
@@ -1572,6 +1588,7 @@ impl Gizmo {
                 total: Quat::IDENTITY,
             },
             updated_targets: targets.to_vec(),
+            custom_edits: Vec::new(),
         })
     }
 
@@ -1695,6 +1712,7 @@ impl Gizmo {
                 total: Vec3::ONE,
             },
             updated_targets: targets.to_vec(),
+            custom_edits: Vec::new(),
         })
     }
 
@@ -1827,6 +1845,7 @@ impl Gizmo {
                 total: Vec3::ONE,
             },
             updated_targets: targets.to_vec(),
+            custom_edits: Vec::new(),
         })
     }
 }

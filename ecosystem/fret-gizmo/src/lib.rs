@@ -8,6 +8,7 @@
 
 mod gizmo;
 mod grid;
+mod light_radius_plugin;
 mod math;
 mod picking;
 mod plugin;
@@ -18,12 +19,15 @@ mod view_gizmo;
 mod viewport_input;
 
 pub use gizmo::{
-    Aabb3, DepthMode, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoHandedness, GizmoInput, GizmoMode,
-    GizmoOps, GizmoOrientation, GizmoPhase, GizmoPickPolicy, GizmoPivotMode, GizmoPluginId,
-    GizmoResult, GizmoSizePolicy, GizmoState, GizmoTarget3d, GizmoTargetId, GizmoUpdate, HandleId,
-    Line3d, Transform3d, Triangle3d, delta_matrix_trs,
+    Aabb3, DepthMode, Gizmo, GizmoConfig, GizmoCustomEdit, GizmoDrawList3d, GizmoHandedness,
+    GizmoInput, GizmoMode, GizmoOps, GizmoOrientation, GizmoPhase, GizmoPickPolicy, GizmoPivotMode,
+    GizmoPluginId, GizmoPropertyKey, GizmoResult, GizmoSizePolicy, GizmoState, GizmoTarget3d,
+    GizmoTargetId, GizmoUpdate, HandleId, Line3d, Transform3d, Triangle3d, delta_matrix_trs,
 };
 pub use grid::{Grid3d, Grid3dConfig};
+pub use light_radius_plugin::{
+    LightRadiusGizmoConfig, LightRadiusGizmoPlugin, LightRadiusGizmoState,
+};
 pub use math::{
     DepthRange, ProjectedPoint, Ray3d, ScreenPoint, ViewportRect, project_point, ray_from_screen,
     unproject_point,

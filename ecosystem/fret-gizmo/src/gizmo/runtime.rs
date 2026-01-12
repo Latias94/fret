@@ -2,7 +2,7 @@ use glam::{Mat4, Quat, Vec2, Vec3};
 
 use crate::style::GizmoPartVisuals;
 
-use super::{GizmoMode, GizmoTarget3d, HandleId, delta_matrix_trs};
+use super::{GizmoMode, GizmoTarget3d, GizmoTargetId, HandleId, delta_matrix_trs};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct GizmoInput {
@@ -178,6 +178,28 @@ pub enum GizmoPhase {
     Cancel,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct GizmoPropertyKey {
+    pub plugin: super::GizmoPluginId,
+    pub id: u32,
+}
+
+impl GizmoPropertyKey {
+    pub const fn new(plugin: super::GizmoPluginId, id: u32) -> Self {
+        Self { plugin, id }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum GizmoCustomEdit {
+    Scalar {
+        target: GizmoTargetId,
+        key: GizmoPropertyKey,
+        delta: f32,
+        total: f32,
+    },
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum GizmoResult {
     Translation {
@@ -197,6 +219,12 @@ pub enum GizmoResult {
         delta: Vec3,
         total: Vec3,
     },
+    CustomScalar {
+        key: GizmoPropertyKey,
+        delta: f32,
+        total: f32,
+        value: Option<f32>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -210,6 +238,11 @@ pub struct GizmoUpdate {
     /// plus the current total delta, so hosts do not need to feed back intermediate transforms to
     /// keep motion stable.
     pub updated_targets: Vec<GizmoTarget3d>,
+    /// Custom property edits emitted by non-transform gizmos.
+    ///
+    /// These edits are intentionally opaque to the core; the host/editor decides how to apply and
+    /// record them for undo/redo.
+    pub custom_edits: Vec<GizmoCustomEdit>,
 }
 
 impl GizmoUpdate {
@@ -256,6 +289,7 @@ mod tests {
                 total: Vec3::ZERO,
             },
             updated_targets: vec![end],
+            custom_edits: Vec::new(),
         };
 
         let a = update

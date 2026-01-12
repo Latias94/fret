@@ -479,6 +479,7 @@ mod tests {
                     total: glam::Vec3::ZERO,
                 },
                 updated_targets: targets.to_vec(),
+                custom_edits: Vec::new(),
             })
         }
     }

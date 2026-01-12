@@ -326,6 +326,7 @@ impl GizmoPlugin for RingScaleGizmoPlugin {
                         total: Vec3::ONE,
                     },
                     updated_targets: targets.to_vec(),
+                    custom_edits: Vec::new(),
                 })
             }
             GizmoPhase::Update => {
@@ -372,6 +373,7 @@ impl GizmoPlugin for RingScaleGizmoPlugin {
                         total: Vec3::splat(factor),
                     },
                     updated_targets,
+                    custom_edits: Vec::new(),
                 })
             }
             GizmoPhase::Commit => {
@@ -389,6 +391,7 @@ impl GizmoPlugin for RingScaleGizmoPlugin {
                         total: Vec3::splat(factor),
                     },
                     updated_targets: targets.to_vec(),
+                    custom_edits: Vec::new(),
                 })
             }
             GizmoPhase::Cancel => {
@@ -406,6 +409,7 @@ impl GizmoPlugin for RingScaleGizmoPlugin {
                         total: Vec3::splat(factor),
                     },
                     updated_targets: targets.to_vec(),
+                    custom_edits: Vec::new(),
                 })
             }
         }

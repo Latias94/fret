@@ -256,12 +256,19 @@ This is a suggested sequence for reaching "mature editor" parity without over-de
 2. **Custom gizmo extensibility**
    - Godot-style plugin surface: allow tools to contribute custom handles with explicit picking shapes (segments/capsules/triangles)
       in addition to draw geometry, so editor tools can build domain gizmos (lights, cameras, physics, nav, etc).
-   - Status: **Partially aligned (contract implemented; integration pending)** — Fret now has:
+   - Status: **Aligned (with known gaps)** — Fret now has:
      - reusable pick-primitive layer (`PickCircle2d`, `PickSegmentCapsule2d`, `PickConvexQuad2d`) in `ecosystem/fret-gizmo/src/picking.rs`
-     - an explicit plugin/handle namespace contract + manager skeleton (`GizmoPlugin`, `GizmoPluginManager`) in
-       `ecosystem/fret-gizmo/src/plugin.rs` (see ADR 0149)
-     Remaining work is to route the built-in transform gizmo through the manager, ship at least one real custom gizmo plugin
-     (e.g. light radius), and likely add 3D picking primitives / acceleration for complex plugins.
+     - an explicit plugin/handle namespace contract + manager (`GizmoPlugin`, `GizmoPluginManager`) in `ecosystem/fret-gizmo/src/plugin.rs` (see ADR 0149)
+     - built-in transform gizmo routed through the manager (`TransformGizmoPlugin` in `ecosystem/fret-gizmo/src/transform_plugin.rs`)
+     - custom property edit payloads for non-transform gizmos (`GizmoUpdate.custom_edits`, `GizmoCustomEdit`, `GizmoPropertyKey`) in `ecosystem/fret-gizmo/src/gizmo/runtime.rs`
+     - real custom plugins shipped:
+       - `RingScaleGizmoPlugin` (example plugin, transform-affecting) in `ecosystem/fret-gizmo/src/ring_scale_plugin.rs`
+       - `LightRadiusGizmoPlugin` (non-transform scalar edits) in `ecosystem/fret-gizmo/src/light_radius_plugin.rs`
+
+     Known gaps (future-facing):
+     - Host-side property source contract (read/write) so plugins can query domain values without maintaining a local cache.
+     - 3D picking primitives / acceleration (Godot-style collision + BVH) for complex gizmos.
+     - Engine/editor undo/redo coalescing integration for `custom_edits` (framework support is still evolving).
 
 ### Roadmap (suggested, editor-first)
 
