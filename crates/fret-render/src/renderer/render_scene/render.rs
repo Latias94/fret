@@ -9,6 +9,9 @@ impl Renderer {
         queue: &wgpu::Queue,
         params: RenderSceneParams<'_>,
     ) -> wgpu::CommandBuffer {
+        self.render_scene_frame_index = self.render_scene_frame_index.saturating_add(1);
+        let frame_index = self.render_scene_frame_index;
+
         let RenderSceneParams {
             format,
             target_view,
@@ -161,6 +164,15 @@ impl Renderer {
             path_samples,
             postprocess,
             self.intermediate_budget_bytes,
+        );
+        render_plan_dump::maybe_dump_render_plan_json(
+            &plan,
+            viewport_size,
+            format,
+            frame_index,
+            postprocess,
+            encoding.ordered_draws.len(),
+            &encoding.effect_markers,
         );
 
         let needs_scale = plan

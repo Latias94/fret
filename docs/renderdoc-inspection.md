@@ -36,6 +36,12 @@ and a high match limit:
 cargo run -p fret-renderdoc -- dump --capture .fret/renderdoc-autocap/fret_capture.rdc --marker "" --max-results 200000 --no-uniform-bytes --no-outputs-png
 ```
 
+To also print a top-N table to stdout, pass `--print-summary`:
+
+```bash
+cargo run -p fret-renderdoc -- dump --capture .fret/renderdoc-autocap/fret_capture.rdc --marker "" --max-results 200000 --no-uniform-bytes --no-outputs-png --print-summary md 30
+```
+
 Then inspect:
 
 - `result.summary.matches_count`: total matched draw/dispatch events (bounded by `--max-results`).

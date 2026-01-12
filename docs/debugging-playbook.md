@@ -28,6 +28,23 @@ cargo run -p fret-demo --bin fret-demo -- effects_demo
 
 Captures are written under `.fret/renderdoc/` (or `FRET_RENDERDOC_CAPTURE_DIR`).
 
+### 1.1.1 Dump the CPU RenderPlan (no RenderDoc required)
+
+If you need to validate pass structure/scissors/origins without a GPU capture, enable the CPU-side plan dump:
+
+```powershell
+$env:FRET_RENDERPLAN_DUMP=1
+# Optional:
+# $env:FRET_RENDERPLAN_DUMP_FRAME=60
+# $env:FRET_RENDERPLAN_DUMP_AFTER_FRAMES=60
+# $env:FRET_RENDERPLAN_DUMP_EVERY=60
+# $env:FRET_RENDERPLAN_DUMP_DIR=".fret\\renderplan"
+
+cargo run -p fret-demo --bin fret-demo -- effects_demo
+```
+
+The renderer writes JSON files under `.fret/renderplan/` (or `FRET_RENDERPLAN_DUMP_DIR`).
+
 ### 1.2 Inspect a pass (scriptable)
 
 Use `fret-renderdoc` to search marker substrings, export outputs, and dump key buffers to JSON:

@@ -3,6 +3,20 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context as _, anyhow};
 use renderdog_automation::{QRenderDocPythonRequest, RenderDocInstallation};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SummaryFormat {
+    Markdown,
+    Csv,
+}
+
+fn parse_summary_format(s: &str) -> Result<SummaryFormat, anyhow::Error> {
+    match s {
+        "md" | "markdown" => Ok(SummaryFormat::Markdown),
+        "csv" => Ok(SummaryFormat::Csv),
+        other => Err(anyhow!("invalid summary format: {other} (expected md|csv)")),
+    }
+}
+
 #[derive(Debug, serde::Serialize)]
 struct DumpRequest {
     capture_path: String,
@@ -14,6 +28,62 @@ struct DumpRequest {
     dump_uniform_bytes: bool,
     dump_clip_stack_entries: usize,
     save_outputs_png: bool,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct ScriptSummaryTopMarkerPath {
+    marker_path: String,
+    count: u64,
+    first_event_id: i64,
+    last_event_id: i64,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct ScriptSummaryTopLeafMarker {
+    leaf: String,
+    count: u64,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct ScriptSummary {
+    matches_count: u64,
+    unique_marker_paths: u64,
+    fret_like_matches_count: u64,
+    top_marker_paths: Vec<ScriptSummaryTopMarkerPath>,
+    top_leaf_markers: Vec<ScriptSummaryTopLeafMarker>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct ScriptActionTreeFlags {
+    drawcall: u64,
+    dispatch: u64,
+    push_marker: u64,
+    pop_marker: u64,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct ScriptActionTreeSummary {
+    total_actions: u64,
+    total_children: u64,
+    max_depth: u64,
+    flags: ScriptActionTreeFlags,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct ScriptResult {
+    #[allow(dead_code)]
+    capture_path: String,
+    #[allow(dead_code)]
+    selection: String,
+    summary: Option<ScriptSummary>,
+    action_tree: Option<ScriptActionTreeSummary>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct ScriptResponse {
+    ok: bool,
+    result: Option<ScriptResult>,
+    error: Option<String>,
 }
 
 const SCRIPT_REQ_NAME: &str = "fret_dump_pass_state_json.request.json";
@@ -41,7 +111,82 @@ fn script_path(root: &Path) -> PathBuf {
         .join("fret_dump_pass_state_json.py")
 }
 
-fn parse_args() -> Result<(Option<PathBuf>, DumpRequest), anyhow::Error> {
+fn print_summary(resp_path: &Path, format: SummaryFormat, top: usize) -> Result<(), anyhow::Error> {
+    let bytes =
+        std::fs::read(resp_path).with_context(|| format!("read {}", resp_path.display()))?;
+    let resp: ScriptResponse = serde_json::from_slice(&bytes).context("parse response json")?;
+    if !resp.ok {
+        return Err(anyhow!(
+            "renderdoc script failed: {}",
+            resp.error.unwrap_or_default()
+        ));
+    }
+
+    let Some(result) = resp.result else {
+        return Err(anyhow!("missing result in response json"));
+    };
+    let Some(summary) = result.summary else {
+        return Err(anyhow!("missing summary in response json"));
+    };
+
+    match format {
+        SummaryFormat::Markdown => {
+            eprintln!(
+                "summary: matches={} fret_like={} unique_paths={}",
+                summary.matches_count, summary.fret_like_matches_count, summary.unique_marker_paths
+            );
+            if let Some(tree) = result.action_tree {
+                eprintln!(
+                    "action_tree: actions={} children={} depth={} drawcalls={} dispatch={} push_marker={} pop_marker={}",
+                    tree.total_actions,
+                    tree.total_children,
+                    tree.max_depth,
+                    tree.flags.drawcall,
+                    tree.flags.dispatch,
+                    tree.flags.push_marker,
+                    tree.flags.pop_marker
+                );
+            }
+            eprintln!();
+            eprintln!("| marker_path | count | event_id_range |");
+            eprintln!("|---|---:|---:|");
+            for row in summary.top_marker_paths.iter().take(top) {
+                let range = if row.first_event_id >= 0 && row.last_event_id >= 0 {
+                    format!("{}..{}", row.first_event_id, row.last_event_id)
+                } else {
+                    "-".to_string()
+                };
+                eprintln!("| {} | {} | {} |", row.marker_path, row.count, range);
+            }
+
+            if !summary.top_leaf_markers.is_empty() {
+                eprintln!();
+                eprintln!("| leaf | count |");
+                eprintln!("|---|---:|");
+                for row in summary.top_leaf_markers.iter().take(top) {
+                    eprintln!("| {} | {} |", row.leaf, row.count);
+                }
+            }
+        }
+        SummaryFormat::Csv => {
+            println!("marker_path,count,first_event_id,last_event_id");
+            for row in summary.top_marker_paths.iter().take(top) {
+                println!(
+                    "{},{},{},{}",
+                    row.marker_path.replace('"', "\"\""),
+                    row.count,
+                    row.first_event_id,
+                    row.last_event_id
+                );
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn parse_args()
+-> Result<(Option<PathBuf>, DumpRequest, Option<(SummaryFormat, usize)>), anyhow::Error> {
     let mut renderdoc_dir: Option<PathBuf> = None;
     let mut capture_path: Option<String> = None;
     let mut marker_contains: Option<String> = None;
@@ -52,6 +197,7 @@ fn parse_args() -> Result<(Option<PathBuf>, DumpRequest), anyhow::Error> {
     let mut dump_uniform_bytes = true;
     let mut dump_clip_stack_entries: usize = 64;
     let mut save_outputs_png = true;
+    let mut print_summary_cfg: Option<(SummaryFormat, usize)> = None;
 
     let mut argv: Vec<String> = std::env::args().skip(1).collect();
     // Optional subcommand for ergonomics (e.g. `fret-renderdoc dump --capture ...`).
@@ -111,9 +257,21 @@ fn parse_args() -> Result<(Option<PathBuf>, DumpRequest), anyhow::Error> {
                 dump_clip_stack_entries = v.parse().context("parse --clip-entries")?;
             }
             "--no-outputs-png" => save_outputs_png = false,
+            "--print-summary" => {
+                let v = args
+                    .next()
+                    .ok_or_else(|| anyhow!("--print-summary requires a value"))?;
+                let fmt = parse_summary_format(&v)?;
+                let top = args
+                    .next()
+                    .map(|v| v.parse::<usize>().context("parse --print-summary <top>"))
+                    .transpose()?
+                    .unwrap_or(20);
+                print_summary_cfg = Some((fmt, top));
+            }
             "-h" | "--help" => {
                 return Err(anyhow!(
-                    "Usage:\n  fret-renderdoc dump --capture <path.rdc> --marker <substring> [options]\n\nOptions:\n  --renderdoc-dir <dir>   RenderDoc install root (contains qrenderdoc + renderdoccmd)\n  --selection <first|last|all> (default: last)\n  --max-results <n>       (default: 200)\n  --out <dir>             Output dir (default: .fret/renderdoc-inspect/<ts>)\n  --basename <name>       Output basename (default: fret_dump)\n  --no-uniform-bytes      Do not dump constant buffer bytes\n  --clip-entries <n>      Dump N ClipRRectUniform entries (default: 64)\n  --no-outputs-png        Do not save pipeline output PNGs\n\nNotes:\n  - If auto-detection fails, set RENDERDOG_RENDERDOC_DIR=<RenderDoc install root> or pass --renderdoc-dir.\n  - Run from the repo root so tools/renderdoc/*.py can be found.\n"
+                    "Usage:\n  fret-renderdoc dump --capture <path.rdc> --marker <substring> [options]\n\nOptions:\n  --renderdoc-dir <dir>   RenderDoc install root (contains qrenderdoc + renderdoccmd)\n  --selection <first|last|all> (default: last)\n  --max-results <n>       (default: 200)\n  --out <dir>             Output dir (default: .fret/renderdoc-inspect/<ts>)\n  --basename <name>       Output basename (default: fret_dump)\n  --no-uniform-bytes      Do not dump constant buffer bytes\n  --clip-entries <n>      Dump N ClipRRectUniform entries (default: 64)\n  --no-outputs-png        Do not save pipeline output PNGs\n+  --print-summary <md|csv> [top] Print a top-N marker_path breakdown to stdout\n\nNotes:\n  - If auto-detection fails, set RENDERDOG_RENDERDOC_DIR=<RenderDoc install root> or pass --renderdoc-dir.\n  - Run from the repo root so tools/renderdoc/*.py can be found.\n"
                 ));
             }
             other => return Err(anyhow!("unknown arg: {other}")),
@@ -157,11 +315,12 @@ fn parse_args() -> Result<(Option<PathBuf>, DumpRequest), anyhow::Error> {
             dump_clip_stack_entries,
             save_outputs_png,
         },
+        print_summary_cfg,
     ))
 }
 
 fn main() -> Result<(), anyhow::Error> {
-    let (renderdoc_dir, req) = parse_args()?;
+    let (renderdoc_dir, req, print_summary_cfg) = parse_args()?;
 
     let root = repo_root()?;
     let script = script_path(&root);
@@ -197,6 +356,10 @@ fn main() -> Result<(), anyhow::Error> {
     }
     if !result.stderr.trim().is_empty() {
         eprintln!("{}", result.stderr);
+    }
+
+    if let Some((fmt, top)) = print_summary_cfg {
+        print_summary(&resp_path, fmt, top)?;
     }
 
     println!("{}", resp_path.display());

@@ -22,6 +22,7 @@ mod fullscreen;
 mod intermediate_pool;
 mod pipelines;
 mod render_plan;
+mod render_plan_dump;
 mod render_plan_effects;
 mod render_scene;
 mod resources;
@@ -172,6 +173,7 @@ pub struct Renderer {
 
     perf_enabled: bool,
     perf: RenderPerfStats,
+    render_scene_frame_index: u64,
 
     path_msaa_samples: u32,
     debug_offscreen_blit_enabled: bool,
