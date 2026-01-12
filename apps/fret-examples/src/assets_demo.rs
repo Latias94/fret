@@ -44,7 +44,7 @@ pub fn run() -> anyhow::Result<()> {
 
     BootstrapBuilder::new(App::new(), driver)
         .configure(|c| *c = config)
-        .with_default_settings_json()?
+        .with_default_config_files()?
         .with_ui_assets_budgets(64 * 1024 * 1024, 2048, 16 * 1024 * 1024, 4096)
         .init_app(|app| {
             shadcn::shadcn_themes::apply_shadcn_new_york_v4(

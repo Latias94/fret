@@ -81,7 +81,7 @@ use fret_ui_shadcn::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme};
 
 fn main() -> anyhow::Result<()> {
     fret_bootstrap::ui_app_with_hooks("todo", init_window, view, |d| d.on_command(on_command))
-        .with_default_settings_json()?
+        .with_default_config_files()?
         .init_app(|app| {
             // Optional: apply a built-in shadcn theme preset for a “new-york-v4” look.
             fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(

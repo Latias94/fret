@@ -16,7 +16,7 @@
 //! #
 //! let driver = FnDriver::new((), |_d, _app, _w| (), event, render);
 //! let builder = BootstrapBuilder::new(App::new(), driver)
-//!     .with_default_settings_json()?
+//!     .with_default_config_files()?
 //!     .register_icon_pack(|_icons| {});
 //! builder.run()?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
@@ -30,7 +30,7 @@
 //! # #[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
 //! # fn demo() -> Result<(), fret_launch::RunnerError> {
 //! let builder = fret_bootstrap::ui_app("todo", |_app, _window| (), |_cx, _state| vec![])
-//!     .with_default_settings_json()?
+//!     .with_default_config_files()?
 //!     .register_icon_pack(|_icons| {});
 //! builder.run()?;
 //! # Ok(())
@@ -39,13 +39,16 @@
 
 use std::path::Path;
 
-use fret_app::{App, SettingsError, SettingsFileV1};
+use fret_app::config_files::LayeredConfigPaths;
+use fret_app::{App, KeymapFileError, KeymapService, SettingsError, SettingsFileV1};
 use fret_icons::IconRegistry;
 
 #[derive(Debug, thiserror::Error)]
 pub enum BootstrapError {
     #[error(transparent)]
     Settings(#[from] SettingsError),
+    #[error(transparent)]
+    Keymap(#[from] KeymapFileError),
 }
 
 /// Apply `SettingsFileV1` to an `App` and runner config.
@@ -99,6 +102,56 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
 
     pub fn with_default_settings_json(self) -> Result<Self, BootstrapError> {
         self.with_settings_json(".fret/settings.json")
+    }
+
+    pub fn with_layered_settings(
+        mut self,
+        project_root: impl AsRef<Path>,
+    ) -> Result<Self, BootstrapError> {
+        let paths = LayeredConfigPaths::for_project_root(project_root);
+        let (settings, _report) = fret_app::load_layered_settings(&paths)?;
+
+        let settings_for_config = settings.clone();
+        self.inner = self.inner.configure(move |config| {
+            config.text_font_families = settings_for_config.fonts.clone();
+        });
+
+        self.inner = self.inner.init_app(move |app| {
+            app.set_global(settings.clone());
+            app.set_global(settings.docking_interaction_settings());
+        });
+
+        Ok(self)
+    }
+
+    pub fn with_layered_keymap(
+        mut self,
+        project_root: impl AsRef<Path>,
+    ) -> Result<Self, BootstrapError> {
+        let paths = LayeredConfigPaths::for_project_root(project_root);
+        let user = if let Some(path) = paths.user_keymap_json() {
+            fret_app::keymap::keymap_from_file_if_exists(path)?
+        } else {
+            None
+        };
+        let project = fret_app::keymap::keymap_from_file_if_exists(paths.project_keymap_json())?;
+
+        self.inner = self.inner.init_app(move |app| {
+            app.with_global_mut(KeymapService::default, |svc, _app| {
+                if let Some(user) = user.clone() {
+                    svc.keymap.extend(user);
+                }
+                if let Some(project) = project.clone() {
+                    svc.keymap.extend(project);
+                }
+            });
+        });
+
+        Ok(self)
+    }
+
+    pub fn with_default_config_files(self) -> Result<Self, BootstrapError> {
+        self.with_layered_settings(".")?.with_layered_keymap(".")
     }
 
     /// Configure budgets for UI render asset caches (`ImageAssetCache` / `SvgAssetCache`).

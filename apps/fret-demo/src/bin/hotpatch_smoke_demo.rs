@@ -47,7 +47,7 @@ fn main() -> anyhow::Result<()> {
         .into_fn_driver();
 
     BootstrapBuilder::new(App::new(), driver)
-        .with_default_settings_json()?
+        .with_default_config_files()?
         .register_icon_pack(fret_icons_lucide::register_icons)
         .run()
         .map_err(anyhow::Error::from)

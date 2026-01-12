@@ -215,6 +215,6 @@ pub fn run() -> anyhow::Result<()> {
         config.main_window_size = winit::dpi::LogicalSize::new(720.0, 480.0);
     });
 
-    let builder = builder.with_default_settings_json()?;
+    let builder = builder.with_default_config_files()?;
     builder.run().map_err(anyhow::Error::from)
 }

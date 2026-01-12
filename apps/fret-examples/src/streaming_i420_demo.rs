@@ -262,6 +262,6 @@ pub fn run() -> anyhow::Result<()> {
         config.streaming_nv12_gpu_convert_enabled = true;
     });
 
-    let builder = builder.with_default_settings_json()?;
+    let builder = builder.with_default_config_files()?;
     builder.run().map_err(anyhow::Error::from)
 }

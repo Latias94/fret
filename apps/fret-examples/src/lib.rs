@@ -18,8 +18,8 @@ pub(crate) fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(
         .configure(move |c| {
             *c = config;
         })
-        .with_default_settings_json()
-        .context("load .fret/settings.json")?
+        .with_default_config_files()
+        .context("load layered config files (settings/keymap)")?
         .register_icon_pack(fret_icons_lucide::register_icons)
         .run()
         .map_err(anyhow::Error::from)

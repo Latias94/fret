@@ -256,7 +256,7 @@ struct TodoState {
 fn main() -> anyhow::Result<()> {
     ui_app_with_hooks("todo", init_window, view, |d| d.on_command(on_command))
         .with_default_diagnostics()
-        .with_default_settings_json()?__UI_ASSETS_BUILDER__
+        .with_default_config_files()?__UI_ASSETS_BUILDER__
         .with_main_window("todo", (560.0, 520.0))
         .init_app(|app| {
             shadcn::shadcn_themes::apply_shadcn_new_york_v4(

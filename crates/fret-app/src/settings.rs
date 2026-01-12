@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::path::Path;
 
 pub type FontsSettingsV1 = fret_core::TextFontFamilyConfig;
@@ -57,6 +58,28 @@ impl SettingsFileV1 {
             return Ok(None);
         }
         Self::load_json(path).map(Some)
+    }
+
+    pub fn load_json_value(path: impl AsRef<Path>) -> Result<Value, SettingsError> {
+        let path = path.as_ref();
+        let bytes = std::fs::read(path).map_err(|source| SettingsError::Read {
+            path: path.display().to_string(),
+            source,
+        })?;
+        serde_json::from_slice(&bytes).map_err(|source| SettingsError::Parse {
+            path: path.display().to_string(),
+            source,
+        })
+    }
+
+    pub fn load_json_value_if_exists(
+        path: impl AsRef<Path>,
+    ) -> Result<Option<Value>, SettingsError> {
+        let path = path.as_ref();
+        if !path.exists() {
+            return Ok(None);
+        }
+        Self::load_json_value(path).map(Some)
     }
 }
 
