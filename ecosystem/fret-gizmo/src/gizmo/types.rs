@@ -52,6 +52,31 @@ pub enum DepthMode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct HandleId(pub u64);
 
+/// Namespaced identifier for custom gizmo plugins.
+///
+/// `GizmoPluginId(0)` is reserved for built-in gizmos.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct GizmoPluginId(pub u32);
+
+impl HandleId {
+    /// Packs a namespaced handle id.
+    ///
+    /// Layout:
+    /// - upper 32 bits: plugin namespace (`GizmoPluginId`)
+    /// - lower 32 bits: plugin-local handle id
+    pub const fn from_parts(plugin: GizmoPluginId, local: u32) -> Self {
+        Self(((plugin.0 as u64) << 32) | (local as u64))
+    }
+
+    pub const fn plugin(self) -> GizmoPluginId {
+        GizmoPluginId((self.0 >> 32) as u32)
+    }
+
+    pub const fn local(self) -> u32 {
+        (self.0 & 0xFFFF_FFFF) as u32
+    }
+}
+
 /// App-defined stable identity for targets controlled by a gizmo.
 ///
 /// This is intentionally lightweight and does not imply an entity/component model. It allows
@@ -189,6 +214,14 @@ mod tests {
             let d = (a - b).abs();
             assert!(d < 1e-4, "expected delta*start == end, got |a-b|={d}");
         }
+    }
+
+    #[test]
+    fn handle_id_packs_plugin_and_local() {
+        let pid = GizmoPluginId(7);
+        let h = HandleId::from_parts(pid, 42);
+        assert_eq!(h.plugin(), pid);
+        assert_eq!(h.local(), 42);
     }
 }
 
