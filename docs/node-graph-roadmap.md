@@ -144,6 +144,7 @@ Legend:
 - [~] Edge label rendering + per-edge style overrides.
 - [~] Edge markers (end arrow) + routing kinds (straight/step/bezier) polish.
 - [ ] Reroute node + edge split UX.
+- [ ] Interaction presets (XyFlow vs ShaderGraph) as kit helpers.
 - [x] Keyboard nudge ops.
 - [x] Selection align/distribute ops.
 
