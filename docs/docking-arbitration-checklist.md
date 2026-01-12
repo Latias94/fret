@@ -120,9 +120,9 @@ References:
 **Automated coverage (unit tests)**
 
 - Dock drag suppresses viewport hover + wheel forwarding:
-  - `ecosystem/fret-ui-docking/src/dock/tests.rs`
+  - `ecosystem/fret-docking/src/dock/tests.rs`
 - Viewport capture continues to emit clamped pointer moves even when leaving the viewport:
-  - `ecosystem/fret-ui-docking/src/dock/tests.rs`
+  - `ecosystem/fret-docking/src/dock/tests.rs`
 
 **Manual steps (needs viewport demo)**
 

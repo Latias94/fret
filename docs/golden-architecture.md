@@ -47,7 +47,7 @@ For each module, we consider it “closed enough to scale” when:
 
 - `ecosystem/fret-ui-kit` — headless policies + composition helpers (action hooks, overlays policy, tokens/recipes infra).
 - `ecosystem/fret-ui-shadcn` — shadcn/ui v4-aligned component surface (recipes, variants, behaviors).
-- `ecosystem/fret-ui-docking` — docking UI + interaction policy (B-route; policy outside runtime).
+- `ecosystem/fret-docking` — docking UI + interaction policy (B-route; policy outside runtime).
 
 **Backends (not portable):**
 
@@ -245,7 +245,7 @@ flowchart LR
 
 - Components validate runtime mechanisms (popover/menu/cmdk are “acceptance tests” for focus, overlays, semantics).
 
-### `fret-ui-docking` (Docking UI + Policy)
+### `fret-docking` (Docking UI + Policy)
 
 **Read first**
 
@@ -256,10 +256,10 @@ flowchart LR
 
 **Code entry points**
 
-- `ecosystem/fret-ui-docking/src/dock/space.rs` (DockSpace UI)
-- `ecosystem/fret-ui-docking/src/dock/manager.rs` (DockManager + ops integration)
-- `ecosystem/fret-ui-docking/src/dock/viewport.rs` (viewport hit mapping → `ViewportInputEvent`)
-- `ecosystem/fret-ui-docking/src/dock/mod.rs` (`DockViewportOverlayHooks`)
+- `ecosystem/fret-docking/src/dock/space.rs` (DockSpace UI)
+- `ecosystem/fret-docking/src/dock/manager.rs` (DockManager + ops integration)
+- `ecosystem/fret-docking/src/dock/viewport.rs` (viewport hit mapping → `ViewportInputEvent`)
+- `ecosystem/fret-docking/src/dock/mod.rs` (`DockViewportOverlayHooks`)
 
 **Closure checklist (P0)**
 

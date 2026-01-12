@@ -12,7 +12,7 @@ use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length};
 use fret_ui::{Theme, UiTree};
-use fret_ui_docking::{
+use fret_docking::{
     DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockViewportOverlayHooks,
     DockViewportOverlayHooksService, handle_dock_before_close_window, handle_dock_op,
     handle_dock_window_created, render_and_bind_dock_panels,
@@ -73,8 +73,8 @@ impl DockViewportOverlayHooks for DemoViewportOverlayHooks {
         theme: fret_ui::ThemeSnapshot,
         _window: AppWindowId,
         _panel: &fret_core::PanelKey,
-        _viewport: fret_ui_docking::ViewportPanel,
-        layout: fret_ui_docking::DockViewportLayout,
+        _viewport: fret_docking::ViewportPanel,
+        layout: fret_docking::DockViewportLayout,
         scene: &mut Scene,
     ) {
         let border_color = Color {
@@ -156,7 +156,7 @@ impl DockingDemoDriver {
         Self::ensure_dock_graph(app, window);
 
         let dock_space = state.root.get_or_insert_with(|| {
-            let node = fret_ui_docking::create_dock_space_node(&mut state.ui, window);
+            let node = fret_docking::create_dock_space_node(&mut state.ui, window);
             state.ui.set_root(node);
             node
         });

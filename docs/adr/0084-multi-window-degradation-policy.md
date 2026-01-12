@@ -46,7 +46,7 @@ On single-window platforms:
 
 Implementation guidance:
 
-- Docking UI (`ecosystem/fret-ui-docking`) should consult capabilities and/or settings to avoid
+- Docking UI (`ecosystem/fret-docking`) should consult capabilities and/or settings to avoid
   emitting `CreateWindowKind::DockFloating` when `ui.multi_window == false`.
 - If a tear-off request still occurs (e.g. loading a persisted multi-window layout), the host must
   render the additional logical window roots as in-window virtual windows instead of failing.
@@ -100,7 +100,7 @@ Pros:
 Cons:
 
 - virtual window surfaces must be implemented as policy-layer UI composition (likely in
-  `fret-ui-docking`), including:
+  `fret-docking`), including:
   - z-ordering,
   - resizing/moving affordances,
   - focus restoration rules.
@@ -135,7 +135,7 @@ Cons:
 - Capability gate: use `PlatformCapabilities.ui.multi_window` (ADR 0054) plus user settings (e.g.
   “tear-off enabled”) to control whether tear-off is available.
 - Rendering model: treat each additional `DockLayoutWindow` root as an in-window “floating dock host”
-  whose chrome and interaction policy live in `fret-ui-docking`.
+  whose chrome and interaction policy live in `fret-docking`.
 - Testing strategy:
   - add a demo harness that runs docking with `ui.multi_window=false` and validates:
     - tear-off becomes in-window float,
@@ -147,7 +147,7 @@ Cons:
 This policy is implemented in the current workspace:
 
 - Dock layout import fallback (unmapped logical windows -> in-window floatings): `crates/fret-core/src/dock.rs`
-- Tear-off request degradation (no OS window creation when `ui.multi_window == false`): `ecosystem/fret-ui-docking/src/runtime.rs`
+- Tear-off request degradation (no OS window creation when `ui.multi_window == false`): `ecosystem/fret-docking/src/runtime.rs`
 
 ## References
 

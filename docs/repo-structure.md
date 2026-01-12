@@ -62,14 +62,14 @@ Rule of thumb:
 Common examples:
 
 - Component/policy layers built on top of `fret-ui`:
-  - `fret-ui-kit` (was `fret-ui-kit`)
-  - `fret-ui-docking` (was `fret-ui-docking`)
-  - `fret-ui-shadcn` (was `fret-ui-shadcn`)
+  - `fret-ui-kit`
+  - `fret-docking` (was `fret-ui-docking`)
+  - `fret-ui-shadcn`
 - "App kit" / default app policies:
   - `fret-bootstrap` (opinionated startup glue over `fret-launch`)
   - `fret-ui-assets` (UI render asset caches; re-export surface over `fret-asset-cache`)
 - Icons:
-  - `fret-icons` (primitives/registry; was `fret-icons`)
+  - `fret-icons` (primitives/registry)
   - `fret-icons-lucide` (icon set)
   - `fret-icons-radix` (icon set)
 
@@ -81,9 +81,9 @@ Long-term intent:
 
 Prefer names that encode **layer** and avoid ambiguous "sounds-like-core" labels.
 
-- Use `fret-ui-*` for **UI components / policy-heavy layers** built on `fret-ui`.
-  - Example: `fret-ui-docking` (explicitly UI-layer docking behavior)
-  - Avoid: `fret-docking` (sounds like the core docking model/ops, which live in `fret-core`)
+- Use `fret-ui-*` for reusable **UI components / policy-heavy layers** built on `fret-ui`.
+  - Example: `fret-ui-kit`
+- Use `fret-docking` for the canonical docking UI + interaction policy layer (core model/ops live in `fret-core`).
 - Use `fret-app-*` for app-level conveniences and defaults that depend on `fret-app`.
 - Use `fret-icons-*` for icons and icon sets.
 - Keep backend crates explicit (`fret-platform-*`, `fret-render-*`, `fret-runner-*`).

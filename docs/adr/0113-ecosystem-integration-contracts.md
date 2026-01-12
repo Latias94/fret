@@ -18,7 +18,7 @@ The next growth phase is third-party ecosystem development: users may want to pu
 - docking layouts / workspace shells,
 - icon packs and asset helpers.
 
-We already have examples inside this repository (`fret-plot`, `fret-plot3d`, `fret-markdown`, `fret-ui-docking`,
+We already have examples inside this repository (`fret-plot`, `fret-plot3d`, `fret-markdown`, `fret-docking`,
 `fret-ui-shadcn`). What’s missing is a shared, user-facing *integration model* that keeps composition smooth while
 preserving kernel stability and Subsecond-friendly hot reload boundaries (ADR 0107).
 
@@ -156,7 +156,7 @@ This repository already contains exemplars:
 
 - Plotting: `ecosystem/fret-plot`, `ecosystem/fret-plot3d`
 - Markdown: `ecosystem/fret-markdown`
-- Docking policy: `ecosystem/fret-ui-docking`
+- Docking policy: `ecosystem/fret-docking`
 - Design system surface: `ecosystem/fret-ui-shadcn`
 - UI render asset caches: `ecosystem/fret-ui-assets` (re-export wrapper over `fret-asset-cache`)
 

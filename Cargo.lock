@@ -1002,6 +1002,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-docking"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-runtime",
+ "fret-ui",
+ "slotmap",
+ "tracing",
+]
+
+[[package]]
 name = "fret-examples"
 version = "0.1.0"
 dependencies = [
@@ -1013,6 +1024,7 @@ dependencies = [
  "fret-chart",
  "fret-code-view",
  "fret-core",
+ "fret-docking",
  "fret-gizmo",
  "fret-icons",
  "fret-icons-lucide",
@@ -1026,7 +1038,6 @@ dependencies = [
  "fret-ui",
  "fret-ui-app",
  "fret-ui-assets",
- "fret-ui-docking",
  "fret-ui-kit",
  "fret-ui-shadcn",
  "fret-undo",
@@ -1337,17 +1348,6 @@ dependencies = [
  "fret-core",
  "fret-runtime",
  "slotmap",
-]
-
-[[package]]
-name = "fret-ui-docking"
-version = "0.1.0"
-dependencies = [
- "fret-core",
- "fret-runtime",
- "fret-ui",
- "slotmap",
- "tracing",
 ]
 
 [[package]]

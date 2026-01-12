@@ -18,7 +18,7 @@
   - `crates/fret`: facade crate (re-exports).
 - `ecosystem/`: Policy-heavy UI kits and reusable component surfaces (Cargo workspace members).
   - `ecosystem/fret-ui-kit`: shared interaction policies + headless primitives + styling helpers.
-  - `ecosystem/fret-ui-docking`: docking UI + interaction policy.
+  - `ecosystem/fret-docking`: docking UI + interaction policy.
   - `ecosystem/fret-ui-shadcn`: shadcn/ui v4-aligned taxonomy + recipes built on `fret-ui-kit`.
   - `ecosystem/fret-bootstrap`: golden-path startup layer over `fret-launch` (optional).
   - `ecosystem/fret-ui-assets`: UI render asset caches facade (re-export surface over `fret-asset-cache`).

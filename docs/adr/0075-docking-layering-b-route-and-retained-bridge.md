@@ -41,7 +41,7 @@ We choose the **B route**:
 - Generic internal drag routing extension point (see below).
 - Transitional, feature-gated compatibility APIs only, with explicit delete plans.
 
-**New: `ecosystem/fret-ui-docking` (Policy-heavy docking UI)**
+**New: `ecosystem/fret-docking` (Policy-heavy docking UI)**
 
 - DockSpace UI composition (tabs/splits/tear-off interactions).
 - Dock-specific drag preview visuals and policy.
@@ -77,7 +77,7 @@ large rewrite, `fret-ui` provides a **feature-gated retained bridge**:
 
 The goal is to enable a staged migration:
 
-1. Move `DockSpace` out to `fret-ui-docking` with minimal code churn.
+1. Move `DockSpace` out to `fret-docking` with minimal code churn.
 2. Keep `fret-ui` free of docking UI and viewport overlay policy.
 3. Later, decide whether docking UI should remain retained (in docking crate) or be re-authored as
    declarative elements once the required declarative primitives exist.
@@ -93,8 +93,8 @@ The goal is to enable a staged migration:
 
 ### Stage 1 (move docking UI out)
 
-- Create `ecosystem/fret-ui-docking`.
-- Move `DockSpace` and related UI/policy code out of `crates/fret-ui/src/dock.rs` (done; now in `ecosystem/fret-ui-docking/src/dock/space.rs`).
+- Create `ecosystem/fret-docking`.
+- Move `DockSpace` and related UI/policy code out of `crates/fret-ui/src/dock.rs` (done; now in `ecosystem/fret-docking/src/dock/space.rs`).
 - Register internal drag routing via `InternalDragRouteService`.
 
 ### Stage 2 (thin the runtime further)
@@ -108,7 +108,7 @@ The goal is to enable a staged migration:
   or app-layer code (ADR 0027 / ADR 0049).
 - Provide an app-owned hook entry point for painting viewport overlays without re-introducing editor
   policy into docking UI:
-  - `ecosystem/fret-ui-docking`: `DockViewportOverlayHooks` + `DockViewportOverlayHooksService`
+  - `ecosystem/fret-docking`: `DockViewportOverlayHooks` + `DockViewportOverlayHooksService`
   - `crates/fret-editor`: `viewport_overlays` (reference shapes + paint helpers)
 
 ### Exit criteria (clean state)

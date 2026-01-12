@@ -27,7 +27,7 @@ policy should live, and how to keep long-term portability (desktop-first now, wa
 
 Create `ecosystem/fret-plot` (crate name: `fret-plot`).
 
-This crate is an ecosystem component/policy layer (like `fret-ui-docking` and `fret-ui-kit`), not part of
+This crate is an ecosystem component/policy layer (like `fret-docking` and `fret-ui-kit`), not part of
 the framework kernel. It is expected to be extractable to a future `fret-components` repository per ADR 0037,
 without changing `fret-core` / `fret-ui` contracts.
 
