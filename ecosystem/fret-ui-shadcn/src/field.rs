@@ -1,12 +1,88 @@
 use std::sync::Arc;
 
-use fret_core::{Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{
-    AnyElement, ColumnProps, ContainerProps, CrossAlign, MainAlign, RowProps, TextProps,
+    AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, MainAlign, RowProps,
+    TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
+
+fn muted_foreground(theme: &Theme) -> fret_core::Color {
+    theme
+        .color_by_key("muted.foreground")
+        .or_else(|| theme.color_by_key("muted-foreground"))
+        .unwrap_or_else(|| theme.color_required("muted.foreground"))
+}
+
+fn peel_single_child_wrappers<'a>(mut element: &'a AnyElement) -> &'a AnyElement {
+    loop {
+        match &element.kind {
+            ElementKind::Semantics(_) | ElementKind::Container(_) => {
+                if element.children.len() == 1 {
+                    element = &element.children[0];
+                    continue;
+                }
+            }
+            _ => {}
+        }
+        break element;
+    }
+}
+
+fn is_field_legend_container(element: &AnyElement) -> bool {
+    let ElementKind::Container(props) = &element.kind else {
+        return false;
+    };
+
+    let fret_ui::element::MarginEdge::Px(px) = props.layout.margin.bottom else {
+        return false;
+    };
+
+    (px.0 - 12.0).abs() <= 0.5
+}
+
+fn is_field_description(theme: &Theme, element: &AnyElement) -> bool {
+    let muted = muted_foreground(theme);
+    let element = peel_single_child_wrappers(element);
+    match &element.kind {
+        ElementKind::Text(props) => props.wrap == TextWrap::Word && props.color == Some(muted),
+        ElementKind::StyledText(props) => {
+            props.wrap == TextWrap::Word && props.color == Some(muted)
+        }
+        _ => false,
+    }
+}
+
+fn kind_flex_grow(kind: &ElementKind) -> Option<f32> {
+    match kind {
+        ElementKind::Container(props) => Some(props.layout.flex.grow),
+        ElementKind::Semantics(props) => Some(props.layout.flex.grow),
+        ElementKind::Pressable(props) => Some(props.layout.flex.grow),
+        ElementKind::Column(props) => Some(props.layout.flex.grow),
+        ElementKind::Row(props) => Some(props.layout.flex.grow),
+        ElementKind::Stack(props) => Some(props.layout.flex.grow),
+        ElementKind::Flex(props) => Some(props.layout.flex.grow),
+        ElementKind::Grid(props) => Some(props.layout.flex.grow),
+        ElementKind::Scroll(props) => Some(props.layout.flex.grow),
+        _ => None,
+    }
+}
+
+fn subtree_has_flex_grow(element: &AnyElement) -> bool {
+    if kind_flex_grow(&element.kind).is_some_and(|grow| grow > 0.0) {
+        return true;
+    }
+    element.children.iter().any(subtree_has_flex_grow)
+}
+
+fn is_radio_group_element(element: &AnyElement) -> bool {
+    match &element.kind {
+        ElementKind::Semantics(props) => props.role == SemanticsRole::RadioGroup,
+        _ => element.children.iter().any(is_radio_group_element),
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum FieldOrientation {
@@ -18,26 +94,125 @@ pub enum FieldOrientation {
 #[derive(Debug, Clone)]
 pub struct FieldSet {
     children: Vec<AnyElement>,
+    layout: LayoutRefinement,
 }
 
 impl FieldSet {
     pub fn new(children: Vec<AnyElement>) -> Self {
-        Self { children }
+        Self {
+            children,
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let gap = MetricRef::space(Space::N6).resolve(&theme);
-        let layout = decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
-        let children = self.children;
-        cx.column(
-            ColumnProps {
-                layout,
-                gap,
-                ..Default::default()
-            },
-            move |_cx| children,
-        )
+        // Upstream `FieldSet` uses `gap-6`, but overrides to `gap-3` when a checkbox/radio group
+        // is present via CSS `:has` selectors.
+        let gap = if self.children.iter().any(is_radio_group_element) {
+            MetricRef::space(Space::N3).resolve(&theme)
+        } else {
+            MetricRef::space(Space::N6).resolve(&theme)
+        };
+        let layout = decl_style::layout_style(
+            &theme,
+            LayoutRefinement::default().w_full().merge(self.layout),
+        );
+
+        let mut children = self.children;
+        let has_leading_legend =
+            children.first().is_some_and(is_field_legend_container) && children.len() > 1;
+
+        if has_leading_legend {
+            let legend = children.remove(0);
+            let rest_children = children;
+
+            cx.column(
+                ColumnProps {
+                    layout,
+                    gap: Px(0.0),
+                    ..Default::default()
+                },
+                move |cx| {
+                    let rest = cx.column(
+                        ColumnProps {
+                            layout: decl_style::layout_style(
+                                &theme,
+                                LayoutRefinement::default().w_full(),
+                            ),
+                            gap,
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            let len = rest_children.len();
+                            rest_children
+                                .into_iter()
+                                .enumerate()
+                                .map(|(idx, child)| {
+                                    if len >= 2
+                                        && idx == len - 2
+                                        && is_field_description(&theme, &child)
+                                    {
+                                        let layout = decl_style::layout_style(
+                                            &theme,
+                                            LayoutRefinement::default().mt_neg(Space::N1),
+                                        );
+                                        cx.container(
+                                            ContainerProps {
+                                                layout,
+                                                ..Default::default()
+                                            },
+                                            move |_cx| vec![child],
+                                        )
+                                    } else {
+                                        child
+                                    }
+                                })
+                                .collect()
+                        },
+                    );
+
+                    vec![legend, rest]
+                },
+            )
+        } else {
+            cx.column(
+                ColumnProps {
+                    layout,
+                    gap,
+                    ..Default::default()
+                },
+                move |cx| {
+                    let len = children.len();
+                    children
+                        .into_iter()
+                        .enumerate()
+                        .map(|(idx, child)| {
+                            if len >= 2 && idx == len - 2 && is_field_description(&theme, &child) {
+                                let layout = decl_style::layout_style(
+                                    &theme,
+                                    LayoutRefinement::default().mt_neg(Space::N1),
+                                );
+                                cx.container(
+                                    ContainerProps {
+                                        layout,
+                                        ..Default::default()
+                                    },
+                                    move |_cx| vec![child],
+                                )
+                            } else {
+                                child
+                            }
+                        })
+                        .collect()
+                },
+            )
+        }
     }
 }
 
@@ -59,6 +234,7 @@ pub enum FieldLegendVariant {
 pub struct FieldLegend {
     text: Arc<str>,
     variant: FieldLegendVariant,
+    layout: LayoutRefinement,
 }
 
 impl FieldLegend {
@@ -66,11 +242,17 @@ impl FieldLegend {
         Self {
             text: text.into(),
             variant: FieldLegendVariant::default(),
+            layout: LayoutRefinement::default(),
         }
     }
 
     pub fn variant(mut self, variant: FieldLegendVariant) -> Self {
         self.variant = variant;
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
         self
     }
 
@@ -80,19 +262,26 @@ impl FieldLegend {
         let fg = theme
             .color_by_key("foreground")
             .unwrap_or_else(|| theme.color_required("foreground"));
-        let base_px = theme
-            .metric_by_key("font.size")
-            .unwrap_or_else(|| theme.metric_required("font.size"));
-        let line_height = theme
-            .metric_by_key("font.line_height")
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
-        let size = match self.variant {
-            FieldLegendVariant::Legend => Px((base_px.0 + 1.0).max(0.0)),
-            FieldLegendVariant::Label => base_px,
+        let (size, line_height) = match self.variant {
+            FieldLegendVariant::Legend => {
+                // Tailwind `text-base` = 16px / 24px by default.
+                let size = theme
+                    .metric_by_key("component.field.legend_px")
+                    .unwrap_or(Px(16.0));
+                let line_height = theme
+                    .metric_by_key("component.field.legend_line_height")
+                    .unwrap_or(Px(24.0));
+                (size, line_height)
+            }
+            FieldLegendVariant::Label => {
+                let size = theme.metric_required("font.size");
+                let line_height = theme.metric_required("font.line_height");
+                (size, line_height)
+            }
         };
 
-        cx.text_props(TextProps {
+        let text = cx.text_props(TextProps {
             layout: Default::default(),
             text: self.text,
             style: Some(TextStyle {
@@ -106,26 +295,69 @@ impl FieldLegend {
             color: Some(fg),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
-        })
+        });
+
+        // Upstream has `mb-3` on the legend.
+        let layout = decl_style::layout_style(
+            &theme,
+            LayoutRefinement::default()
+                .w_full()
+                .mb(Space::N3)
+                .merge(self.layout),
+        );
+
+        cx.container(
+            ContainerProps {
+                layout,
+                ..Default::default()
+            },
+            move |_cx| vec![text],
+        )
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct FieldGroup {
     children: Vec<AnyElement>,
+    gap: Option<MetricRef>,
+    layout: LayoutRefinement,
 }
 
 impl FieldGroup {
     pub fn new(children: Vec<AnyElement>) -> Self {
-        Self { children }
+        Self {
+            children,
+            gap: None,
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn gap(mut self, space: Space) -> Self {
+        self.gap = Some(MetricRef::space(space));
+        self
+    }
+
+    pub fn gap_px(mut self, px: Px) -> Self {
+        self.gap = Some(MetricRef::Px(px));
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let gap = theme
-            .metric_by_key("component.field.group_gap")
-            .unwrap_or_else(|| MetricRef::space(Space::N8).resolve(&theme));
-        let layout = decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
+        let gap = self.gap.map(|g| g.resolve(&theme)).unwrap_or_else(|| {
+            theme
+                .metric_by_key("component.field.group_gap")
+                .unwrap_or_else(|| MetricRef::space(Space::N8).resolve(&theme))
+        });
+        let layout = decl_style::layout_style(
+            &theme,
+            LayoutRefinement::default().w_full().merge(self.layout),
+        );
         let children = self.children;
         cx.column(
             ColumnProps {
@@ -218,11 +450,20 @@ impl FieldTitle {
 #[derive(Debug, Clone)]
 pub struct FieldLabel {
     text: Arc<str>,
+    layout: LayoutRefinement,
 }
 
 impl FieldLabel {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            text: text.into(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -245,7 +486,7 @@ impl FieldLabel {
             .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
         cx.text_props(TextProps {
-            layout: Default::default(),
+            layout: decl_style::layout_style(&theme, self.layout),
             text: self.text,
             style: Some(TextStyle {
                 font: FontId::default(),
@@ -275,10 +516,7 @@ impl FieldDescription {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        let fg = theme
-            .color_by_key("muted.foreground")
-            .or_else(|| theme.color_by_key("muted-foreground"))
-            .unwrap_or_else(|| theme.color_required("muted.foreground"));
+        let fg = muted_foreground(&theme);
         let px = theme
             .metric_by_key("component.field.description_px")
             .or_else(|| theme.metric_by_key("font.size"))
@@ -350,15 +588,24 @@ impl FieldError {
 #[derive(Debug, Clone)]
 pub struct FieldSeparator {
     label: Option<Arc<str>>,
+    layout: LayoutRefinement,
 }
 
 impl FieldSeparator {
     pub fn new() -> Self {
-        Self { label: None }
+        Self {
+            label: None,
+            layout: LayoutRefinement::default(),
+        }
     }
 
     pub fn label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.label = Some(label.into());
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
         self
     }
 
@@ -371,6 +618,16 @@ impl FieldSeparator {
         let border = theme.color_required("border");
         let bg = theme.color_required("background");
 
+        // Upstream uses `-my-2` (negative 8px) to visually tighten the separator in a group.
+        let outer_layout = decl_style::layout_style(
+            &theme,
+            LayoutRefinement::default()
+                .w_full()
+                .mt_neg(Space::N2)
+                .mb_neg(Space::N2)
+                .merge(self.layout),
+        );
+
         let layout = decl_style::layout_style(
             &theme,
             LayoutRefinement::default()
@@ -381,12 +638,10 @@ impl FieldSeparator {
 
         cx.container(
             ContainerProps {
-                layout,
+                layout: outer_layout,
                 ..Default::default()
             },
             move |cx| {
-                let mut children: Vec<AnyElement> = Vec::new();
-
                 let line_layout = decl_style::layout_style(
                     &theme,
                     LayoutRefinement::default()
@@ -396,43 +651,59 @@ impl FieldSeparator {
                         .top(Space::N2p5)
                         .h_px(MetricRef::Px(Px(1.0))),
                 );
-                children.push(cx.container(
+
+                let label = self.label.clone();
+                let separator = cx.container(
                     ContainerProps {
-                        layout: line_layout,
-                        border: Edges {
-                            top: Px(1.0),
-                            right: Px(0.0),
-                            bottom: Px(0.0),
-                            left: Px(0.0),
-                        },
-                        border_color: Some(border),
+                        layout,
                         ..Default::default()
                     },
-                    |_cx| Vec::new(),
-                ));
+                    move |cx| {
+                        let mut children: Vec<AnyElement> = Vec::new();
 
-                if let Some(label) = self.label.clone() {
-                    let label_layout = decl_style::layout_style(
-                        &theme,
-                        LayoutRefinement::default()
-                            .absolute()
-                            .left(Space::N0)
-                            .right(Space::N0)
-                            .top(Space::N0),
-                    );
-                    let chrome = ChromeRefinement::default()
-                        .bg(fret_ui_kit::ColorRef::Color(bg))
-                        .px(Space::N2);
-                    let props =
-                        decl_style::container_props(&theme, chrome, LayoutRefinement::default());
-                    let mut props = ContainerProps { ..props };
-                    props.layout = label_layout;
-                    children.push(cx.container(props, move |cx| {
-                        vec![FieldDescription::new(label).into_element(cx)]
-                    }));
-                }
+                        children.push(cx.container(
+                            ContainerProps {
+                                layout: line_layout,
+                                border: Edges {
+                                    top: Px(1.0),
+                                    right: Px(0.0),
+                                    bottom: Px(0.0),
+                                    left: Px(0.0),
+                                },
+                                border_color: Some(border),
+                                ..Default::default()
+                            },
+                            |_cx| Vec::new(),
+                        ));
 
-                children
+                        if let Some(label) = label {
+                            let label_layout = decl_style::layout_style(
+                                &theme,
+                                LayoutRefinement::default()
+                                    .absolute()
+                                    .left(Space::N0)
+                                    .right(Space::N0)
+                                    .top(Space::N0),
+                            );
+                            let chrome = ChromeRefinement::default()
+                                .bg(fret_ui_kit::ColorRef::Color(bg))
+                                .px(Space::N2);
+                            let mut props = decl_style::container_props(
+                                &theme,
+                                chrome,
+                                LayoutRefinement::default(),
+                            );
+                            props.layout = label_layout;
+                            children.push(cx.container(props, move |cx| {
+                                vec![FieldDescription::new(label).into_element(cx)]
+                            }));
+                        }
+
+                        children
+                    },
+                );
+
+                vec![separator]
             },
         )
     }
@@ -447,22 +718,16 @@ impl Default for FieldSeparator {
 #[derive(Debug, Clone)]
 pub struct Field {
     orientation: FieldOrientation,
-    label: Option<AnyElement>,
-    control: AnyElement,
-    description: Option<AnyElement>,
-    description_before_control: bool,
-    error: Option<AnyElement>,
+    children: Vec<AnyElement>,
+    layout: LayoutRefinement,
 }
 
 impl Field {
-    pub fn new(control: AnyElement) -> Self {
+    pub fn new(children: Vec<AnyElement>) -> Self {
         Self {
             orientation: FieldOrientation::default(),
-            label: None,
-            control,
-            description: None,
-            description_before_control: false,
-            error: None,
+            children,
+            layout: LayoutRefinement::default(),
         }
     }
 
@@ -471,25 +736,8 @@ impl Field {
         self
     }
 
-    pub fn label(mut self, label: AnyElement) -> Self {
-        self.label = Some(label);
-        self
-    }
-
-    pub fn description(mut self, description: AnyElement) -> Self {
-        self.description = Some(description);
-        self
-    }
-
-    /// When set, renders the description *before* the control (matching the upstream Field docs
-    /// examples where helper text can precede the input).
-    pub fn description_before_control(mut self, before: bool) -> Self {
-        self.description_before_control = before;
-        self
-    }
-
-    pub fn error(mut self, error: AnyElement) -> Self {
-        self.error = Some(error);
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
         self
     }
 
@@ -497,13 +745,12 @@ impl Field {
         let theme = Theme::global(&*cx.app).clone();
 
         let gap = MetricRef::space(Space::N3).resolve(&theme);
-        let layout = decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
+        let layout = decl_style::layout_style(
+            &theme,
+            LayoutRefinement::default().w_full().merge(self.layout),
+        );
 
-        let label = self.label;
-        let control = self.control;
-        let description = self.description;
-        let description_before_control = self.description_before_control;
-        let error = self.error;
+        let children = self.children;
 
         match self.orientation {
             FieldOrientation::Vertical => cx.column(
@@ -512,125 +759,48 @@ impl Field {
                     gap,
                     ..Default::default()
                 },
-                move |_cx| {
-                    let mut out: Vec<AnyElement> = Vec::new();
-                    if let Some(label) = label {
-                        out.push(label);
-                    }
-
-                    if description_before_control {
-                        // Upstream `FieldDescription` uses `nth-last-2:-mt-1` to reduce the spacing
-                        // between the label and a description that appears before the control.
-                        // This is a small but user-visible spacing detail in the Field docs.
-                        if let Some(desc) = description {
-                            let desc = if error.is_none() {
+                move |cx| {
+                    // Upstream `FieldDescription` includes `nth-last-2:-mt-1`.
+                    let len = children.len();
+                    children
+                        .into_iter()
+                        .enumerate()
+                        .map(|(idx, child)| {
+                            if len >= 2 && idx == len - 2 && is_field_description(&theme, &child) {
                                 let layout = decl_style::layout_style(
                                     &theme,
                                     LayoutRefinement::default().mt_neg(Space::N1),
                                 );
-                                _cx.container(
+                                cx.container(
                                     ContainerProps {
                                         layout,
                                         ..Default::default()
                                     },
-                                    move |_cx| vec![desc],
+                                    move |_cx| vec![child],
                                 )
                             } else {
-                                desc
-                            };
-                            out.push(desc);
-                        }
-                        out.push(control);
-                    } else {
-                        out.push(control);
-                        if let Some(desc) = description {
-                            out.push(desc);
-                        }
-                    }
-                    if let Some(err) = error {
-                        out.push(err);
-                    }
-                    out
+                                child
+                            }
+                        })
+                        .collect()
                 },
             ),
             FieldOrientation::Horizontal => {
-                let label_layout = decl_style::layout_style(
-                    &theme,
-                    LayoutRefinement::default().flex_1().min_w_0(),
-                );
-                let right_layout = decl_style::layout_style(
-                    &theme,
-                    LayoutRefinement::default().flex_1().min_w_0(),
-                );
-
-                let label = label.map(|l| {
-                    cx.container(
-                        ContainerProps {
-                            layout: label_layout,
-                            ..Default::default()
-                        },
-                        move |_cx| vec![l],
-                    )
-                });
-
-                let content = cx.column(
-                    ColumnProps {
-                        layout: right_layout,
-                        gap: MetricRef::space(Space::N1p5).resolve(&theme),
-                        ..Default::default()
-                    },
-                    move |_cx| {
-                        let mut out: Vec<AnyElement> = Vec::new();
-
-                        if description_before_control {
-                            if let Some(desc) = description {
-                                let desc = if error.is_none() {
-                                    let layout = decl_style::layout_style(
-                                        &theme,
-                                        LayoutRefinement::default().mt_neg(Space::N1),
-                                    );
-                                    _cx.container(
-                                        ContainerProps {
-                                            layout,
-                                            ..Default::default()
-                                        },
-                                        move |_cx| vec![desc],
-                                    )
-                                } else {
-                                    desc
-                                };
-                                out.push(desc);
-                            }
-                            out.push(control);
-                        } else {
-                            out.push(control);
-                            if let Some(desc) = description {
-                                out.push(desc);
-                            }
-                        }
-                        if let Some(err) = error {
-                            out.push(err);
-                        }
-                        out
-                    },
-                );
+                let align = if children.iter().any(subtree_has_flex_grow) {
+                    CrossAlign::Start
+                } else {
+                    CrossAlign::Center
+                };
 
                 cx.row(
                     RowProps {
                         layout,
                         gap,
                         justify: MainAlign::Start,
-                        align: CrossAlign::Center,
+                        align,
                         ..Default::default()
                     },
-                    move |_cx| {
-                        let mut out: Vec<AnyElement> = Vec::new();
-                        if let Some(label) = label {
-                            out.push(label);
-                        }
-                        out.push(content);
-                        out
-                    },
+                    move |_cx| children,
                 )
             }
         }
