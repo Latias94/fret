@@ -3437,6 +3437,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     Effect::ViewportInput(event) => {
                         self.driver.viewport_input(&mut self.app, event);
                     }
+                    Effect::ViewportInputLegacy(event) => {
+                        self.driver.viewport_input_legacy(&mut self.app, event);
+                    }
                     Effect::Dock(op) => {
                         if matches!(op, fret_core::DockOp::RequestFloatPanelToNewWindow { .. }) {
                             dock_tearoff_log(format_args!("[effect-dock] {:?}", op));

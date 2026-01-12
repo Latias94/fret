@@ -166,6 +166,8 @@ pub mod viewport_surface {
                 };
 
                 cx.app.push_effect(Effect::ViewportInput(evt));
+                cx.app
+                    .push_effect(Effect::ViewportInputLegacy(evt.legacy()));
                 if focus_on_down {
                     cx.request_focus(cx.node);
                 }
@@ -208,6 +210,8 @@ pub mod viewport_surface {
                         },
                     );
                     cx.app.push_effect(Effect::ViewportInput(evt));
+                    cx.app
+                        .push_effect(Effect::ViewportInputLegacy(evt.legacy()));
                     cx.stop_propagation();
                     return true;
                 }
@@ -226,6 +230,8 @@ pub mod viewport_surface {
                     return false;
                 };
                 cx.app.push_effect(Effect::ViewportInput(evt));
+                cx.app
+                    .push_effect(Effect::ViewportInputLegacy(evt.legacy()));
                 cx.stop_propagation();
                 true
             }
@@ -261,6 +267,8 @@ pub mod viewport_surface {
                     },
                 );
                 cx.app.push_effect(Effect::ViewportInput(evt));
+                cx.app
+                    .push_effect(Effect::ViewportInputLegacy(evt.legacy()));
 
                 *capture = None;
                 if cx.captured == Some(cx.node) {
@@ -291,6 +299,8 @@ pub mod viewport_surface {
                     return false;
                 };
                 cx.app.push_effect(Effect::ViewportInput(evt));
+                cx.app
+                    .push_effect(Effect::ViewportInputLegacy(evt.legacy()));
                 cx.stop_propagation();
                 true
             }

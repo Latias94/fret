@@ -1132,7 +1132,7 @@ fn radix_web_collapsible_toggle_state_matches_fret() {
         .cloned()
         .expect("semantics snapshot");
     let button = find_semantics(&snap, SemanticsRole::Button, &label);
-    assert_eq!(button.flags.expanded, expected_expanded);
+    assert_eq!(button.flags.expanded, Some(expected_expanded));
 }
 
 #[test]

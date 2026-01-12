@@ -342,6 +342,15 @@ pub enum ImageUpdateDropReason {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ViewportInputEventLegacy {
+    pub window: AppWindowId,
+    pub target: RenderTargetId,
+    pub uv: (f32, f32),
+    pub target_px: (u32, u32),
+    pub kind: ViewportInputKind,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ViewportInputGeometry {
     /// The viewport widget bounds in window-local logical pixels (ADR 0017).
     pub content_rect_px: Rect,
@@ -420,6 +429,16 @@ impl ViewportInputEvent {
             uv,
             target_px,
             kind,
+        }
+    }
+
+    pub fn legacy(&self) -> ViewportInputEventLegacy {
+        ViewportInputEventLegacy {
+            window: self.window,
+            target: self.target,
+            uv: self.uv,
+            target_px: self.target_px,
+            kind: self.kind,
         }
     }
 }

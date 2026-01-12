@@ -2,7 +2,7 @@
 //!
 //! This module provides a reusable declarative wrapper that:
 //! - composites an app-owned `RenderTargetId` into the UI tree (ADR 0007),
-//! - forwards pointer + wheel input as `Effect::ViewportInput` (ADR 0147),
+//! - forwards pointer + wheel input as `Effect::ViewportInput` (ADR 0025 / ADR 0121),
 //! - keeps mapping semantics consistent with `ViewportMapping` (contain/cover/stretch).
 
 use std::sync::Arc;
@@ -82,6 +82,7 @@ fn push_viewport_input(
     };
 
     host.push_effect(Effect::ViewportInput(event));
+    host.push_effect(Effect::ViewportInputLegacy(event.legacy()));
     true
 }
 
