@@ -2,7 +2,7 @@ use std::any::Any;
 
 use glam::{Mat4, Vec2};
 
-use crate::math::ViewportRect;
+use crate::math::{DepthRange, ViewportRect};
 use crate::picking::{PickCircle2d, PickConvexQuad2d, PickSegmentCapsule2d};
 use crate::{
     GizmoDrawList3d, GizmoInput, GizmoPhase, GizmoPluginId, GizmoTarget3d, GizmoTargetId,
@@ -64,6 +64,7 @@ pub struct GizmoPickHit {
 pub struct GizmoPluginContext {
     pub view_projection: Mat4,
     pub viewport: ViewportRect,
+    pub depth_range: DepthRange,
     pub input: GizmoInput,
     /// Cursor position at pointer-down for the current active drag.
     ///
@@ -166,6 +167,7 @@ impl GizmoPluginManager {
         &mut self,
         view_projection: Mat4,
         viewport: ViewportRect,
+        depth_range: DepthRange,
         active_target: GizmoTargetId,
         targets: &[GizmoTarget3d],
         input: GizmoInput,
@@ -175,6 +177,7 @@ impl GizmoPluginManager {
         let ctx = GizmoPluginContext {
             view_projection,
             viewport,
+            depth_range,
             input,
             drag_start_cursor_px: if self.state.active.is_some() {
                 self.state.drag_start_cursor_px
@@ -198,6 +201,7 @@ impl GizmoPluginManager {
         &mut self,
         view_projection: Mat4,
         viewport: ViewportRect,
+        depth_range: DepthRange,
         input: GizmoInput,
         active_target: GizmoTargetId,
         targets: &[GizmoTarget3d],
@@ -212,8 +216,14 @@ impl GizmoPluginManager {
         if self.state.active.is_none() {
             self.state.hovered = None;
             if input.hovered {
-                self.state.hovered =
-                    self.pick_best_handle(view_projection, viewport, input, active_target, targets);
+                self.state.hovered = self.pick_best_handle(
+                    view_projection,
+                    viewport,
+                    depth_range,
+                    input,
+                    active_target,
+                    targets,
+                );
             }
 
             if input.drag_started {
@@ -226,6 +236,7 @@ impl GizmoPluginManager {
                         let out = self.route_update(
                             view_projection,
                             viewport,
+                            depth_range,
                             input,
                             GizmoPhase::Begin,
                             active_target,
@@ -251,6 +262,7 @@ impl GizmoPluginManager {
                 self.route_update(
                     view_projection,
                     viewport,
+                    depth_range,
                     input,
                     GizmoPhase::Cancel,
                     active_target,
@@ -276,6 +288,7 @@ impl GizmoPluginManager {
                 let out = self.route_update(
                     view_projection,
                     viewport,
+                    depth_range,
                     input,
                     GizmoPhase::Begin,
                     active_target,
@@ -291,6 +304,7 @@ impl GizmoPluginManager {
             return self.route_update(
                 view_projection,
                 viewport,
+                depth_range,
                 input,
                 GizmoPhase::Update,
                 active_target,
@@ -303,6 +317,7 @@ impl GizmoPluginManager {
             self.route_update(
                 view_projection,
                 viewport,
+                depth_range,
                 input,
                 GizmoPhase::Commit,
                 active_target,
@@ -322,6 +337,7 @@ impl GizmoPluginManager {
         &mut self,
         view_projection: Mat4,
         viewport: ViewportRect,
+        depth_range: DepthRange,
         input: GizmoInput,
         active_target: GizmoTargetId,
         targets: &[GizmoTarget3d],
@@ -331,6 +347,7 @@ impl GizmoPluginManager {
         let ctx = GizmoPluginContext {
             view_projection,
             viewport,
+            depth_range,
             input,
             drag_start_cursor_px: input.cursor_px,
             hovered: None,
@@ -368,6 +385,7 @@ impl GizmoPluginManager {
         &mut self,
         view_projection: Mat4,
         viewport: ViewportRect,
+        depth_range: DepthRange,
         input: GizmoInput,
         phase: GizmoPhase,
         active_target: GizmoTargetId,
@@ -378,6 +396,7 @@ impl GizmoPluginManager {
         let ctx = GizmoPluginContext {
             view_projection,
             viewport,
+            depth_range,
             input,
             drag_start_cursor_px: self.state.drag_start_cursor_px,
             hovered: self.state.hovered,
@@ -482,6 +501,7 @@ mod tests {
         let targets = vec![dummy_target(1)];
         let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
         let view_proj = Mat4::IDENTITY;
+        let depth_range = DepthRange::ZeroToOne;
 
         let input_begin = GizmoInput {
             cursor_px: Vec2::ZERO,
@@ -492,7 +512,14 @@ mod tests {
             cancel: false,
             precision: 1.0,
         };
-        let u0 = mgr.update(view_proj, vp, input_begin, targets[0].id, &targets);
+        let u0 = mgr.update(
+            view_proj,
+            vp,
+            depth_range,
+            input_begin,
+            targets[0].id,
+            &targets,
+        );
         assert!(u0.is_some());
         assert_eq!(u0.unwrap().phase, GizmoPhase::Begin);
 
@@ -500,7 +527,14 @@ mod tests {
             drag_started: false,
             ..input_begin
         };
-        let u1 = mgr.update(view_proj, vp, input_update, targets[0].id, &targets);
+        let u1 = mgr.update(
+            view_proj,
+            vp,
+            depth_range,
+            input_update,
+            targets[0].id,
+            &targets,
+        );
         assert!(u1.is_some());
         assert_eq!(u1.unwrap().phase, GizmoPhase::Update);
 
@@ -508,7 +542,14 @@ mod tests {
             dragging: false,
             ..input_update
         };
-        let u2 = mgr.update(view_proj, vp, input_commit, targets[0].id, &targets);
+        let u2 = mgr.update(
+            view_proj,
+            vp,
+            depth_range,
+            input_commit,
+            targets[0].id,
+            &targets,
+        );
         assert!(u2.is_some());
         assert_eq!(u2.unwrap().phase, GizmoPhase::Commit);
     }

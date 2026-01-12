@@ -38,6 +38,7 @@ impl GizmoPlugin for TransformGizmoPlugin {
         active_target: GizmoTargetId,
         targets: &[GizmoTarget3d],
     ) -> GizmoDrawList3d {
+        self.gizmo.config.depth_range = ctx.depth_range;
         let hovered = ctx.hovered.filter(|h| h.plugin() == self.plugin_id());
         let active = ctx.active.filter(|h| h.plugin() == self.plugin_id());
 
@@ -56,6 +57,7 @@ impl GizmoPlugin for TransformGizmoPlugin {
         targets: &[GizmoTarget3d],
         out: &mut Vec<GizmoPickItem>,
     ) {
+        self.gizmo.config.depth_range = ctx.depth_range;
         if !ctx.input.hovered || targets.is_empty() {
             return;
         }
@@ -92,6 +94,7 @@ impl GizmoPlugin for TransformGizmoPlugin {
         targets: &[GizmoTarget3d],
         active_handle: HandleId,
     ) -> Option<GizmoUpdate> {
+        self.gizmo.config.depth_range = ctx.depth_range;
         if active_handle.plugin() != self.plugin_id() {
             return None;
         }

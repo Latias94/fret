@@ -10,9 +10,9 @@ use fret_gizmo::{
     Aabb3, DepthMode, DepthRange, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoInput, GizmoMode,
     GizmoOps, GizmoOrientation, GizmoPhase, GizmoPivotMode, GizmoPluginManager,
     GizmoPluginManagerConfig, GizmoResult, GizmoSizePolicy, GizmoTarget3d, GizmoTargetId,
-    GizmoVisualPreset, Grid3d, HandleId, Transform3d, TransformGizmoPlugin, ViewGizmo,
-    ViewGizmoAnchor, ViewGizmoConfig, ViewGizmoInput, ViewGizmoProjection, ViewGizmoUpdate,
-    ViewGizmoVisualPreset, ViewportRect, viewport_input_cursor_target_px,
+    GizmoVisualPreset, Grid3d, HandleId, RingScaleGizmoPlugin, Transform3d, TransformGizmoPlugin,
+    ViewGizmo, ViewGizmoAnchor, ViewGizmoConfig, ViewGizmoInput, ViewGizmoProjection,
+    ViewGizmoUpdate, ViewGizmoVisualPreset, ViewportRect, viewport_input_cursor_target_px,
 };
 use fret_launch::{
     EngineFrameUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService, WinitAppDriver,
@@ -1104,6 +1104,7 @@ impl Default for Gizmo3dDemoModel {
                 let mut plugin = TransformGizmoPlugin::new(Gizmo::new(gizmo_cfg));
                 GizmoVisualPreset::ALL[gizmo_visual_preset_index].apply_to_gizmo(&mut plugin.gizmo);
                 mgr.register(Box::new(plugin));
+                mgr.register(Box::new(RingScaleGizmoPlugin::default()));
                 mgr
             },
             view_gizmo,
@@ -2179,6 +2180,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     if let Some(update) = m.gizmo_mgr.update(
                         view_projection,
                         viewport,
+                        m.gizmo().config.depth_range,
                         input,
                         m.active_target,
                         &selected,
@@ -3174,6 +3176,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         let _ = m.gizmo_mgr.update(
                             view_projection,
                             viewport,
+                            m.gizmo().config.depth_range,
                             hover_input,
                             m.active_target,
                             &selected,
@@ -3374,6 +3377,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             if let Some(update) = m.gizmo_mgr.update(
                 view_projection,
                 viewport,
+                m.gizmo().config.depth_range,
                 m.input,
                 m.active_target,
                 &selected,
@@ -3521,8 +3525,14 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         .copied()
                         .filter(|t| selection.contains(&t.id))
                         .collect();
-                    m.gizmo_mgr
-                        .draw(view_proj, viewport, active_target, &gizmo_targets, m.input)
+                    m.gizmo_mgr.draw(
+                        view_proj,
+                        viewport,
+                        m.gizmo().config.depth_range,
+                        active_target,
+                        &gizmo_targets,
+                        m.input,
+                    )
                 };
                 if marquee.is_none() {
                     let projection = match m.camera.projection {

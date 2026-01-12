@@ -11,6 +11,7 @@ mod grid;
 mod math;
 mod picking;
 mod plugin;
+mod ring_scale_plugin;
 mod style;
 mod transform_plugin;
 mod view_gizmo;
@@ -35,6 +36,7 @@ pub use plugin::{
     GizmoPickHit, GizmoPickItem, GizmoPickShape2d, GizmoPlugin, GizmoPluginContext,
     GizmoPluginManager, GizmoPluginManagerConfig, GizmoPluginManagerState,
 };
+pub use ring_scale_plugin::{RingScaleGizmoConfig, RingScaleGizmoPlugin, RingScaleGizmoState};
 pub use style::{
     GizmoPartVisuals, GizmoVisualPreset, GizmoVisuals, ViewGizmoVisualPreset, ViewGizmoVisuals,
 };
