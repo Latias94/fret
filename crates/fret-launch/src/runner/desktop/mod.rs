@@ -2449,6 +2449,26 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return;
         }
 
+        if self
+            .dock_tearoff_follow
+            .is_some_and(|f| f.window == window || f.source_window == window)
+        {
+            self.stop_dock_tearoff_follow(Instant::now(), false);
+        }
+
+        if self.internal_drag_hover_window == Some(window) {
+            self.internal_drag_hover_window = None;
+            self.internal_drag_hover_pos = None;
+        }
+
+        if let Some(drag) = self.app.drag_mut() {
+            if drag.source_window == window {
+                self.app.cancel_drag();
+            } else if drag.current_window == window {
+                drag.current_window = drag.source_window;
+            }
+        }
+
         if let Some(state) = self.windows.remove(window) {
             self.window_registry.remove(state.window.id());
         }
