@@ -49,6 +49,22 @@ fn fill_only_resolves_under_definite_available_space_in_measurement() {
         measured.height
     );
 
+    let max_constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(AvailableSpace::MaxContent, AvailableSpace::MaxContent),
+    );
+    let measured = ui.measure_in(&mut app, &mut text, container, max_constraints, 1.0);
+    assert!(
+        (measured.width.0 - 10.0).abs() < 0.01,
+        "expected Fill to behave like auto under MaxContent, got {:?}",
+        measured.width
+    );
+    assert!(
+        (measured.height.0 - 10.0).abs() < 0.01,
+        "expected Fill to behave like auto under MaxContent, got {:?}",
+        measured.height
+    );
+
     let definite_constraints = LayoutConstraints::new(
         LayoutSize::new(None, None),
         LayoutSize::new(
@@ -486,6 +502,614 @@ fn viewport_root_registration_is_recorded_in_layout_all() {
 
 #[cfg(feature = "layout-engine-v2")]
 #[test]
+fn layout_engine_solve_stats_are_per_call_and_bounded_for_two_viewport_roots() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(60.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let model = app.models_mut().insert(vec![0.5, 0.5]);
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "layout-engine-solve-stats-bounded",
+        |cx| {
+            let props = crate::element::ResizablePanelGroupProps::new(
+                fret_core::Axis::Horizontal,
+                model.clone(),
+            );
+            vec![cx.resizable_panel_group(props, |cx| {
+                vec![
+                    cx.flex(crate::element::FlexProps::default(), |cx| {
+                        vec![cx.text("left")]
+                    }),
+                    cx.flex(crate::element::FlexProps::default(), |cx| {
+                        vec![cx.text("right")]
+                    }),
+                ]
+            })]
+        },
+    );
+    ui.set_root(root);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let s1 = ui.debug_stats().layout_engine_solves;
+    assert!(
+        (1..=64).contains(&s1),
+        "expected a small, non-zero solve count; got {s1}"
+    );
+
+    // A second call with identical inputs should not report the cumulative engine totals from the
+    // prior call.
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let s2 = ui.debug_stats().layout_engine_solves;
+    assert_eq!(s2, 0, "expected per-call solve stats (not cumulative)");
+
+    // Change the window bounds; this must force some engine work again, and should still be
+    // bounded and per-call.
+    let bounds2 = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(60.0)),
+    );
+    ui.layout_all(&mut app, &mut text, bounds2, 1.0);
+    let s3 = ui.debug_stats().layout_engine_solves;
+    assert!(
+        (1..=64).contains(&s3),
+        "expected a small, non-zero solve count after bounds change; got {s3}"
+    );
+
+    ui.layout_all(&mut app, &mut text, bounds2, 1.0);
+    let s4 = ui.debug_stats().layout_engine_solves;
+    assert_eq!(s4, 0, "expected per-call solve stats (not cumulative)");
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn resizable_panel_group_does_not_register_viewport_roots_during_probe_layout() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(60.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let model = app.models_mut().insert(vec![0.5, 0.5]);
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "panel-group-probe-does-not-register-viewport-roots",
+        |cx| {
+            let props = crate::element::ResizablePanelGroupProps::new(
+                fret_core::Axis::Horizontal,
+                model.clone(),
+            );
+            vec![cx.resizable_panel_group(props, |cx| vec![cx.text("left"), cx.text("right")])]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all_with_pass_kind(
+        &mut app,
+        &mut text,
+        bounds,
+        1.0,
+        crate::layout_pass::LayoutPassKind::Probe,
+    );
+
+    assert!(
+        ui.viewport_roots().is_empty(),
+        "expected probe layout to avoid registering viewport roots"
+    );
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn probe_layout_does_not_prune_layout_engine_nodes() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(60.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "probe-layout-does-not-prune-engine-nodes",
+        |cx| vec![cx.container(Default::default(), |cx| vec![cx.text("hello")])],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let container_node = ui.children(root)[0];
+    let text_node = ui.children(container_node)[0];
+    assert!(
+        ui.layout_engine_has_node(text_node),
+        "expected a final layout to register nodes in the layout engine"
+    );
+
+    ui.layout_all_with_pass_kind(
+        &mut app,
+        &mut text,
+        bounds,
+        1.0,
+        crate::layout_pass::LayoutPassKind::Probe,
+    );
+    assert!(
+        ui.layout_engine_has_node(text_node),
+        "expected probe layouts to avoid pruning layout engine nodes"
+    );
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn viewport_root_flush_only_lays_out_invalidated_roots() {
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    struct CountsLayout {
+        count: Arc<AtomicUsize>,
+    }
+
+    impl<H: UiHost> Widget<H> for CountsLayout {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            self.count.fetch_add(1, Ordering::Relaxed);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(400.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let left_count = Arc::new(AtomicUsize::new(0));
+    let right_count = Arc::new(AtomicUsize::new(0));
+
+    let left = ui.create_node(CountsLayout {
+        count: left_count.clone(),
+    });
+    ui.set_children(left, Vec::new());
+    let right = ui.create_node(CountsLayout {
+        count: right_count.clone(),
+    });
+    ui.set_children(right, Vec::new());
+
+    let viewport_a = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    let viewport_b = Rect::new(
+        Point::new(Px(120.0), Px(0.0)),
+        Size::new(Px(200.0), Px(40.0)),
+    );
+
+    let parent = ui.create_node(TwoViewportRects::new(viewport_a, viewport_b));
+    ui.set_children(parent, vec![left, right]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(left_count.load(Ordering::Relaxed), 1);
+    assert_eq!(right_count.load(Ordering::Relaxed), 1);
+
+    // Invalidate only the left root subtree; the parent must re-register viewport roots, but the
+    // flush loop should only lay out the invalidated root.
+    ui.invalidate(left, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(left_count.load(Ordering::Relaxed), 2);
+    assert_eq!(
+        right_count.load(Ordering::Relaxed),
+        1,
+        "expected right viewport root to be skipped when clean"
+    );
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn viewport_root_request_build_keeps_engine_nodes_alive_when_skipped() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(400.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_viewport(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        vec![cx.container(Default::default(), |cx| vec![cx.text("hello")])]
+    }
+
+    let root_a = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-keeps-engine-nodes-a",
+        build_viewport,
+    );
+    let root_b = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-keeps-engine-nodes-b",
+        build_viewport,
+    );
+
+    let viewport_a = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    let viewport_b = Rect::new(
+        Point::new(Px(120.0), Px(0.0)),
+        Size::new(Px(200.0), Px(40.0)),
+    );
+
+    let parent = ui.create_node(TwoViewportRects::new(viewport_a, viewport_b));
+    ui.set_children(parent, vec![root_a, root_b]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let b_container = ui.children(root_b)[0];
+    let b_text = ui.children(b_container)[0];
+    assert!(
+        ui.layout_engine_has_node(b_text),
+        "expected viewport subtree nodes to be registered in the engine after layout"
+    );
+
+    // Only invalidate the left viewport; the right root should be skipped by the flush loop, but
+    // still kept alive via the request/build phase.
+    ui.invalidate(root_a, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert!(
+        ui.layout_engine_has_node(b_text),
+        "expected skipped viewport roots to remain registered in the engine (stable identity)"
+    );
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn precompute_flow_root_island_reuses_solved_root_even_after_other_solves() {
+    struct PrecomputesSameRootTwice {
+        a: NodeId,
+        b: NodeId,
+        rect: Rect,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputesSameRootTwice {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let sf = cx.scale_factor;
+            let app = &mut *cx.app;
+            let services = &mut *cx.services;
+            let tree = &mut *cx.tree;
+
+            tree.precompute_barrier_flow_root_island(app, services, self.a, self.rect, sf);
+            tree.precompute_barrier_flow_root_island(app, services, self.b, self.rect, sf);
+            tree.precompute_barrier_flow_root_island(app, services, self.a, self.rect, sf);
+
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let a = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "precompute-a",
+        |cx| vec![cx.container(Default::default(), |cx| vec![cx.text("a"), cx.text("aa")])],
+    );
+    let b = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "precompute-b",
+        |cx| vec![cx.container(Default::default(), |cx| vec![cx.text("b")])],
+    );
+
+    let rect = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(150.0), Px(40.0)),
+    );
+    let parent = ui.create_node(PrecomputesSameRootTwice { a, b, rect });
+    ui.set_children(parent, vec![a, b]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        2,
+        "expected the third precompute to reuse cached solve results"
+    );
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn precompute_flow_root_island_if_needed_skips_translation_only_bounds_changes() {
+    struct PrecomputeThenTranslate {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenTranslate {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let sf = cx.scale_factor;
+            let app = &mut *cx.app;
+            let services = &mut *cx.services;
+            let tree = &mut *cx.tree;
+
+            let rect = if self.calls == 0 {
+                tree.precompute_barrier_flow_root_island(
+                    app,
+                    services,
+                    self.child,
+                    self.rect_a,
+                    sf,
+                );
+                self.rect_a
+            } else {
+                tree.precompute_barrier_flow_root_island_if_needed(
+                    app,
+                    services,
+                    self.child,
+                    self.rect_b,
+                    sf,
+                );
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "precompute-translate-child",
+        |cx| vec![cx.container(Default::default(), |cx| vec![cx.text("a"), cx.text("b")])],
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(150.0), Px(40.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(10.0), Px(15.0)),
+        Size::new(Px(150.0), Px(40.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenTranslate {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert!(
+        ui.debug_stats().layout_engine_solves > 0,
+        "expected the first precompute to solve at least once"
+    );
+
+    // Force the parent to re-run layout within the same frame, while keeping the child subtree
+    // clean. A translation-only bounds change for the child should not trigger an engine solve.
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "expected translation-only layout to avoid triggering engine solves"
+    );
+
+    let child_bounds = ui.debug_node_bounds(child).expect("child bounds");
+    assert!((child_bounds.origin.y.0 - rect_b.origin.y.0).abs() < 0.01);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn resizable_panel_group_viewport_roots_match_panel_bounds() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(60.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let model = app.models_mut().insert(vec![0.5, 0.5]);
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "panel-group-viewport-roots-match-panel-bounds",
+        |cx| {
+            let props = crate::element::ResizablePanelGroupProps::new(
+                fret_core::Axis::Horizontal,
+                model.clone(),
+            );
+            vec![cx.resizable_panel_group(props, |cx| vec![cx.text("left"), cx.text("right")])]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let group = ui.children(root)[0];
+    let panel_a = ui.children(group)[0];
+    let panel_b = ui.children(group)[1];
+
+    let bounds_a = ui
+        .debug_node_bounds(panel_a)
+        .expect("expected panel a bounds");
+    let bounds_b = ui
+        .debug_node_bounds(panel_b)
+        .expect("expected panel b bounds");
+
+    assert_eq!(ui.viewport_roots().len(), 2);
+    assert!(ui.viewport_roots().contains(&(panel_a, bounds_a)));
+    assert!(ui.viewport_roots().contains(&(panel_b, bounds_b)));
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn viewport_root_registration_is_flushed_when_registered_from_another_viewport_root() {
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    struct RegistersViewport {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for RegistersViewport {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    struct MarksLayout {
+        did_layout: Arc<AtomicBool>,
+    }
+
+    impl<H: UiHost> Widget<H> for MarksLayout {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            self.did_layout.store(true, Ordering::Relaxed);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(400.0), Px(200.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let base = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-root-registration-is-flushed-nested",
+        |cx| vec![cx.text("base")],
+    );
+
+    let inner_did_layout = Arc::new(AtomicBool::new(false));
+    let inner = ui.create_node(MarksLayout {
+        did_layout: inner_did_layout.clone(),
+    });
+    ui.set_children(inner, Vec::new());
+
+    let outer_viewport = Rect::new(
+        Point::new(Px(10.0), Px(10.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let inner_viewport = Rect::new(
+        Point::new(Px(20.0), Px(30.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+
+    let outer = ui.create_node(RegistersViewport {
+        viewport: inner_viewport,
+        child: inner,
+    });
+    ui.set_children(outer, Vec::new());
+
+    let root = ui.create_node(RegistersViewport {
+        viewport: outer_viewport,
+        child: outer,
+    });
+    ui.set_children(root, vec![base]);
+    ui.set_root(root);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    assert!(
+        inner_did_layout.load(Ordering::Relaxed),
+        "expected nested viewport root to be laid out in the same frame"
+    );
+    assert!(ui.viewport_roots().contains(&(outer, outer_viewport)));
+    assert!(ui.viewport_roots().contains(&(inner, inner_viewport)));
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
 fn layout_viewport_root_defers_child_layout_until_after_parent() {
     use std::sync::Arc;
     use std::sync::atomic::{AtomicBool, Ordering};
@@ -746,6 +1370,2700 @@ fn viewport_roots_do_not_couple_fill_layout() {
         .expect("viewport b spacer bounds");
     assert!((b.size.width.0 - viewport_b.size.width.0).abs() < 0.01);
     assert!((b.size.height.0 - viewport_b.size.height.0).abs() < 0.01);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn layout_engine_v2_scales_px_styles_with_scale_factor() {
+    struct RegistersViewportRoot {
+        viewport: Rect,
+    }
+
+    impl<H: UiHost> Widget<H> for RegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let child = cx.children[0];
+            let _ = cx.layout_viewport_root(child, self.viewport);
+            cx.available
+        }
+    }
+
+    fn run(scale_factor: f32) -> (Rect, Rect) {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(140.0)),
+        );
+        let viewport = Rect::new(
+            fret_core::Point::new(Px(5.0), Px(3.0)),
+            Size::new(Px(200.0), Px(100.0)),
+        );
+
+        let mut text = FakeTextService::default();
+
+        let child_root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "scale-factor-px-style",
+            |cx| {
+                let flex = crate::element::FlexProps {
+                    direction: fret_core::Axis::Vertical,
+                    gap: Px(8.0),
+                    padding: fret_core::Edges::all(Px(10.0)),
+                    layout: crate::element::LayoutStyle {
+                        size: crate::element::SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+
+                let child = |cx: &mut ElementContext<'_, TestHost>| {
+                    let props = crate::element::ContainerProps {
+                        layout: crate::element::LayoutStyle {
+                            size: crate::element::SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Px(Px(10.0)),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    };
+                    cx.container(props, |_cx| vec![])
+                };
+
+                vec![cx.flex(flex, |cx| vec![child(cx), child(cx)])]
+            },
+        );
+
+        let base = ui.create_node(RegistersViewportRoot { viewport });
+        ui.set_children(base, vec![child_root]);
+        ui.set_root(base);
+
+        ui.layout_all(&mut app, &mut text, bounds, scale_factor);
+
+        let flex_node = ui.children(child_root)[0];
+        let first = ui.children(flex_node)[0];
+        let second = ui.children(flex_node)[1];
+
+        (
+            ui.debug_node_bounds(first).expect("first bounds"),
+            ui.debug_node_bounds(second).expect("second bounds"),
+        )
+    }
+
+    let (first_1x, second_1x) = run(1.0);
+    let (first_2x, second_2x) = run(2.0);
+
+    assert_eq!(first_1x, first_2x, "expected scale-factor invariant bounds");
+    assert_eq!(
+        second_1x, second_2x,
+        "expected scale-factor invariant bounds"
+    );
+
+    let expected_first = Rect::new(
+        fret_core::Point::new(Px(15.0), Px(13.0)),
+        Size::new(Px(180.0), Px(10.0)),
+    );
+    let expected_second = Rect::new(
+        fret_core::Point::new(Px(15.0), Px(31.0)),
+        Size::new(Px(180.0), Px(10.0)),
+    );
+
+    assert_eq!(first_1x, expected_first);
+    assert_eq!(second_1x, expected_second);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn stack_does_not_stretch_spacer_children_in_engine_tree() {
+    struct RegistersViewportRoot {
+        viewport: Rect,
+    }
+
+    impl<H: UiHost> Widget<H> for RegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let child = cx.children[0];
+            let _ = cx.layout_viewport_root(child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(140.0)),
+    );
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(7.0), Px(11.0)),
+        Size::new(Px(200.0), Px(100.0)),
+    );
+
+    let mut text = FakeTextService::default();
+
+    let child_root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "stack-engine-no-stretch",
+        |cx| {
+            let mut props = crate::element::StackProps::default();
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+
+            vec![cx.stack_props(props, |cx| {
+                vec![
+                    cx.spacer(crate::element::SpacerProps::default()),
+                    cx.spacer(crate::element::SpacerProps::default()),
+                ]
+            })]
+        },
+    );
+
+    let base = ui.create_node(RegistersViewportRoot { viewport });
+    ui.set_children(base, vec![child_root]);
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let stack = ui.children(child_root)[0];
+    let a = ui.children(stack)[0];
+    let b = ui.children(stack)[1];
+
+    let a_bounds = ui.debug_node_bounds(a).expect("a bounds");
+    let b_bounds = ui.debug_node_bounds(b).expect("b bounds");
+
+    assert_eq!(a_bounds.origin, viewport.origin);
+    assert_eq!(b_bounds.origin, viewport.origin);
+
+    assert!(a_bounds.size.width.0.abs() < 0.01);
+    assert!(a_bounds.size.height.0.abs() < 0.01);
+    assert!(b_bounds.size.width.0.abs() < 0.01);
+    assert!(b_bounds.size.height.0.abs() < 0.01);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn container_does_not_stretch_spacer_child_in_engine_tree() {
+    struct RegistersViewportRoot {
+        viewport: Rect,
+    }
+
+    impl<H: UiHost> Widget<H> for RegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let child = cx.children[0];
+            let _ = cx.layout_viewport_root(child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(140.0)),
+    );
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(7.0), Px(11.0)),
+        Size::new(Px(200.0), Px(100.0)),
+    );
+
+    let mut text = FakeTextService::default();
+
+    let child_root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "container-engine-no-stretch",
+        |cx| {
+            let mut props = crate::element::ContainerProps::default();
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+
+            vec![cx.container(props, |cx| {
+                vec![cx.spacer(crate::element::SpacerProps::default())]
+            })]
+        },
+    );
+
+    let base = ui.create_node(RegistersViewportRoot { viewport });
+    ui.set_children(base, vec![child_root]);
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let container = ui.children(child_root)[0];
+    let spacer = ui.children(container)[0];
+
+    let container_bounds = ui.debug_node_bounds(container).expect("container bounds");
+    let spacer_bounds = ui.debug_node_bounds(spacer).expect("spacer bounds");
+
+    assert_eq!(container_bounds, viewport);
+    assert_eq!(spacer_bounds.origin, viewport.origin);
+    assert!(spacer_bounds.size.width.0.abs() < 0.01);
+    assert!(spacer_bounds.size.height.0.abs() < 0.01);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn pressable_does_not_stretch_spacer_child_in_engine_tree() {
+    struct RegistersViewportRoot {
+        viewport: Rect,
+    }
+
+    impl<H: UiHost> Widget<H> for RegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let child = cx.children[0];
+            let _ = cx.layout_viewport_root(child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(140.0)),
+    );
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(7.0), Px(11.0)),
+        Size::new(Px(200.0), Px(100.0)),
+    );
+
+    let mut text = FakeTextService::default();
+
+    let child_root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "pressable-engine-no-stretch",
+        |cx| {
+            let mut props = crate::element::PressableProps::default();
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+
+            vec![cx.pressable(props, |cx, _state| {
+                vec![cx.spacer(crate::element::SpacerProps::default())]
+            })]
+        },
+    );
+
+    let base = ui.create_node(RegistersViewportRoot { viewport });
+    ui.set_children(base, vec![child_root]);
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let pressable = ui.children(child_root)[0];
+    let spacer = ui.children(pressable)[0];
+
+    let pressable_bounds = ui.debug_node_bounds(pressable).expect("pressable bounds");
+    let spacer_bounds = ui.debug_node_bounds(spacer).expect("spacer bounds");
+
+    assert_eq!(pressable_bounds, viewport);
+    assert_eq!(spacer_bounds.origin, viewport.origin);
+    assert!(spacer_bounds.size.width.0.abs() < 0.01);
+    assert!(spacer_bounds.size.height.0.abs() < 0.01);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn opacity_does_not_stretch_spacer_child_in_engine_tree() {
+    struct RegistersViewportRoot {
+        viewport: Rect,
+    }
+
+    impl<H: UiHost> Widget<H> for RegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let child = cx.children[0];
+            let _ = cx.layout_viewport_root(child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(140.0)),
+    );
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(7.0), Px(11.0)),
+        Size::new(Px(200.0), Px(100.0)),
+    );
+
+    let mut text = FakeTextService::default();
+
+    let child_root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "opacity-engine-no-stretch",
+        |cx| {
+            let mut props = crate::element::OpacityProps::default();
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+
+            vec![cx.opacity_props(props, |cx| {
+                vec![cx.spacer(crate::element::SpacerProps::default())]
+            })]
+        },
+    );
+
+    let base = ui.create_node(RegistersViewportRoot { viewport });
+    ui.set_children(base, vec![child_root]);
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let opacity = ui.children(child_root)[0];
+    let spacer = ui.children(opacity)[0];
+
+    let opacity_bounds = ui.debug_node_bounds(opacity).expect("opacity bounds");
+    let spacer_bounds = ui.debug_node_bounds(spacer).expect("spacer bounds");
+
+    assert_eq!(opacity_bounds, viewport);
+    assert_eq!(spacer_bounds.origin, viewport.origin);
+    assert!(spacer_bounds.size.width.0.abs() < 0.01);
+    assert!(spacer_bounds.size.height.0.abs() < 0.01);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn visual_transform_does_not_stretch_spacer_child_in_engine_tree() {
+    struct RegistersViewportRoot {
+        viewport: Rect,
+    }
+
+    impl<H: UiHost> Widget<H> for RegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let child = cx.children[0];
+            let _ = cx.layout_viewport_root(child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(140.0)),
+    );
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(7.0), Px(11.0)),
+        Size::new(Px(200.0), Px(100.0)),
+    );
+
+    let mut text = FakeTextService::default();
+
+    let child_root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "visual-transform-engine-no-stretch",
+        |cx| {
+            let mut props = crate::element::VisualTransformProps {
+                transform: fret_core::Transform2D::scale_uniform(1.0),
+                ..Default::default()
+            };
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+
+            vec![cx.visual_transform_props(props, |cx| {
+                vec![cx.spacer(crate::element::SpacerProps::default())]
+            })]
+        },
+    );
+
+    let base = ui.create_node(RegistersViewportRoot { viewport });
+    ui.set_children(base, vec![child_root]);
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let transform = ui.children(child_root)[0];
+    let spacer = ui.children(transform)[0];
+
+    let transform_bounds = ui.debug_node_bounds(transform).expect("transform bounds");
+    let spacer_bounds = ui.debug_node_bounds(spacer).expect("spacer bounds");
+
+    assert_eq!(transform_bounds, viewport);
+    assert_eq!(spacer_bounds.origin, viewport.origin);
+    assert!(spacer_bounds.size.width.0.abs() < 0.01);
+    assert!(spacer_bounds.size.height.0.abs() < 0.01);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn viewport_root_nested_flow_is_solved_once() {
+    struct BaseRegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for BaseRegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        let outer = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Vertical,
+            ..Default::default()
+        };
+
+        let inner = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Auto,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Horizontal,
+            gap: Px(4.0),
+            ..Default::default()
+        };
+
+        vec![cx.flex(outer, |cx| {
+            vec![cx.flex(inner, |cx| vec![cx.text("hello")])]
+        })]
+    }
+
+    let viewport_child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-root-nested-flow-solve-count",
+        build_root,
+    );
+
+    let viewport = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+
+    let base = ui.create_node(BaseRegistersViewportRoot {
+        viewport,
+        child: viewport_child,
+    });
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let engine = ui.take_layout_engine();
+    assert_eq!(
+        engine.solve_count(),
+        1,
+        "expected viewport root flow subtree to be solved exactly once"
+    );
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn viewport_root_hover_region_wraps_flow_in_engine_tree() {
+    struct BaseRegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for BaseRegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        let outer = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Vertical,
+            ..Default::default()
+        };
+
+        let inner_a = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Auto,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Horizontal,
+            gap: Px(4.0),
+            ..Default::default()
+        };
+
+        let inner_b = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Auto,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Horizontal,
+            gap: Px(4.0),
+            ..Default::default()
+        };
+
+        vec![cx.flex(outer, |cx| {
+            vec![cx.hover_region(
+                crate::element::HoverRegionProps::default(),
+                |cx, _hovered| {
+                    vec![
+                        cx.flex(inner_a, |cx| vec![cx.text("hello")]),
+                        cx.flex(inner_b, |cx| vec![cx.text("world")]),
+                    ]
+                },
+            )]
+        })]
+    }
+
+    let viewport_child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-root-hover-region-flow-tree",
+        build_root,
+    );
+
+    let viewport = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+
+    let base = ui.create_node(BaseRegistersViewportRoot {
+        viewport,
+        child: viewport_child,
+    });
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let outer = ui.children(viewport_child)[0];
+    let hover = ui.children(outer)[0];
+    let inner_a = ui.children(hover)[0];
+    let inner_b = ui.children(hover)[1];
+    let text_a = ui.children(inner_a)[0];
+    let text_b = ui.children(inner_b)[0];
+
+    let engine = ui.take_layout_engine();
+    assert!(engine.layout_id_for_node(hover).is_some());
+    assert!(engine.layout_id_for_node(inner_a).is_some());
+    assert!(engine.layout_id_for_node(inner_b).is_some());
+    assert!(engine.layout_id_for_node(text_a).is_some());
+    assert!(engine.layout_id_for_node(text_b).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn viewport_root_pointer_region_wraps_flow_in_engine_tree() {
+    struct BaseRegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for BaseRegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        let outer = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Vertical,
+            ..Default::default()
+        };
+
+        let inner = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Auto,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Horizontal,
+            gap: Px(4.0),
+            ..Default::default()
+        };
+
+        vec![cx.flex(outer, |cx| {
+            vec![
+                cx.pointer_region(crate::element::PointerRegionProps::default(), |cx| {
+                    vec![cx.flex(inner, |cx| vec![cx.text("hello")])]
+                }),
+            ]
+        })]
+    }
+
+    let viewport_child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-root-pointer-region-flow-tree",
+        build_root,
+    );
+
+    let viewport = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+
+    let base = ui.create_node(BaseRegistersViewportRoot {
+        viewport,
+        child: viewport_child,
+    });
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let outer = ui.children(viewport_child)[0];
+    let region = ui.children(outer)[0];
+    let inner = ui.children(region)[0];
+    let text = ui.children(inner)[0];
+
+    let engine = ui.take_layout_engine();
+    assert!(engine.layout_id_for_node(region).is_some());
+    assert!(engine.layout_id_for_node(inner).is_some());
+    assert!(engine.layout_id_for_node(text).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn viewport_root_pointer_region_wraps_multiple_children_in_engine_tree() {
+    struct BaseRegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for BaseRegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        let outer = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Vertical,
+            ..Default::default()
+        };
+
+        let a = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Auto,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Horizontal,
+            ..Default::default()
+        };
+
+        let b = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Auto,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Horizontal,
+            ..Default::default()
+        };
+
+        vec![cx.flex(outer, |cx| {
+            vec![
+                cx.pointer_region(crate::element::PointerRegionProps::default(), |cx| {
+                    vec![
+                        cx.flex(a, |cx| vec![cx.text("a")]),
+                        cx.flex(b, |cx| vec![cx.text("b")]),
+                    ]
+                }),
+            ]
+        })]
+    }
+
+    let viewport_child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-root-pointer-region-multi-child-flow-tree",
+        build_root,
+    );
+
+    let viewport = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+
+    let base = ui.create_node(BaseRegistersViewportRoot {
+        viewport,
+        child: viewport_child,
+    });
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let outer = ui.children(viewport_child)[0];
+    let region = ui.children(outer)[0];
+    let flex_a = ui.children(region)[0];
+    let flex_b = ui.children(region)[1];
+    let text_a = ui.children(flex_a)[0];
+    let text_b = ui.children(flex_b)[0];
+
+    let engine = ui.take_layout_engine();
+    assert!(engine.layout_id_for_node(region).is_some());
+    assert!(engine.layout_id_for_node(flex_a).is_some());
+    assert!(engine.layout_id_for_node(text_a).is_some());
+    assert!(engine.layout_id_for_node(flex_b).is_some());
+    assert!(engine.layout_id_for_node(text_b).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn viewport_root_pointer_region_absolute_child_fills_region() {
+    struct BaseRegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for BaseRegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        let outer = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Vertical,
+            ..Default::default()
+        };
+
+        let mut region = crate::element::PointerRegionProps::default();
+        region.layout.size.width = Length::Fill;
+        region.layout.size.height = Length::Fill;
+
+        let mut barrier = crate::element::ContainerProps::default();
+        barrier.layout.position = crate::element::PositionStyle::Absolute;
+        barrier.layout.inset.top = Some(Px(0.0));
+        barrier.layout.inset.right = Some(Px(0.0));
+        barrier.layout.inset.bottom = Some(Px(0.0));
+        barrier.layout.inset.left = Some(Px(0.0));
+        barrier.layout.size.width = Length::Fill;
+        barrier.layout.size.height = Length::Fill;
+
+        vec![cx.flex(outer, |cx| {
+            vec![cx.pointer_region(region, |cx| vec![cx.container(barrier, |_cx| vec![])])]
+        })]
+    }
+
+    let viewport_child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-root-pointer-region-absolute-only",
+        build_root,
+    );
+
+    let viewport = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+
+    let base = ui.create_node(BaseRegistersViewportRoot {
+        viewport,
+        child: viewport_child,
+    });
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let outer = ui.children(viewport_child)[0];
+    let region = ui.children(outer)[0];
+    let barrier = ui.children(region)[0];
+
+    let region_bounds = ui.debug_node_bounds(region).expect("region bounds");
+    let barrier_bounds = ui.debug_node_bounds(barrier).expect("barrier bounds");
+
+    assert_eq!(region_bounds, viewport);
+    assert_eq!(barrier_bounds, viewport);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn positioned_container_precomputes_flow_islands_for_multiple_children() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        vec![
+            cx.pointer_region(crate::element::PointerRegionProps::default(), |cx| {
+                vec![
+                    cx.hover_region(
+                        crate::element::HoverRegionProps::default(),
+                        |cx, _hovered| vec![cx.text("left")],
+                    ),
+                    cx.flex(
+                        crate::element::FlexProps {
+                            layout: crate::element::LayoutStyle {
+                                size: crate::element::SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Auto,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            direction: fret_core::Axis::Horizontal,
+                            ..Default::default()
+                        },
+                        |cx| vec![cx.text("right")],
+                    ),
+                ]
+            }),
+        ]
+    }
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "positioned-container-multi-child-flow-islands",
+        build_root,
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let region = ui.children(root)[0];
+    let hover = ui.children(region)[0];
+    let flex = ui.children(region)[1];
+    let hover_text = ui.children(hover)[0];
+    let flex_text = ui.children(flex)[0];
+
+    let engine = ui.take_layout_engine();
+    assert!(engine.layout_id_for_node(hover).is_some());
+    assert!(engine.layout_id_for_node(hover_text).is_some());
+    assert!(engine.layout_id_for_node(flex).is_some());
+    assert!(engine.layout_id_for_node(flex_text).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn hover_region_precomputes_flow_islands_for_multiple_children() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        vec![cx.hover_region(
+            crate::element::HoverRegionProps::default(),
+            |cx, _hovered| {
+                vec![
+                    cx.flex(
+                        crate::element::FlexProps {
+                            layout: crate::element::LayoutStyle {
+                                size: crate::element::SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Auto,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            direction: fret_core::Axis::Vertical,
+                            ..Default::default()
+                        },
+                        |cx| vec![cx.text("a")],
+                    ),
+                    cx.flex(
+                        crate::element::FlexProps {
+                            layout: crate::element::LayoutStyle {
+                                size: crate::element::SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Auto,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            direction: fret_core::Axis::Vertical,
+                            ..Default::default()
+                        },
+                        |cx| vec![cx.text("b")],
+                    ),
+                ]
+            },
+        )]
+    }
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "hover-region-multi-child-flow-islands",
+        build_root,
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let hover = ui.children(root)[0];
+    let flex_a = ui.children(hover)[0];
+    let flex_b = ui.children(hover)[1];
+    let text_a = ui.children(flex_a)[0];
+    let text_b = ui.children(flex_b)[0];
+
+    let engine = ui.take_layout_engine();
+    assert!(engine.layout_id_for_node(flex_a).is_some());
+    assert!(engine.layout_id_for_node(text_a).is_some());
+    assert!(engine.layout_id_for_node(flex_b).is_some());
+    assert!(engine.layout_id_for_node(text_b).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn pressable_wraps_multiple_children_in_engine_tree() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        vec![cx.flex(
+            crate::element::FlexProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                direction: fret_core::Axis::Vertical,
+                ..Default::default()
+            },
+            |cx| {
+                vec![
+                    cx.pressable(crate::element::PressableProps::default(), |cx, _state| {
+                        vec![cx.text("a"), cx.text("b")]
+                    }),
+                ]
+            },
+        )]
+    }
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "pressable-engine-children",
+        build_root,
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let flex = ui.children(root)[0];
+    let pressable = ui.children(flex)[0];
+    let a = ui.children(pressable)[0];
+    let b = ui.children(pressable)[1];
+
+    let engine = ui.take_layout_engine();
+    assert!(engine.layout_id_for_node(pressable).is_some());
+    assert!(engine.layout_id_for_node(a).is_some());
+    assert!(engine.layout_id_for_node(b).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn viewport_root_pressable_wraps_multiple_children_in_engine_tree() {
+    struct BaseRegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for BaseRegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        let outer = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Vertical,
+            ..Default::default()
+        };
+
+        vec![cx.flex(outer, |cx| {
+            vec![
+                cx.pressable(crate::element::PressableProps::default(), |cx, _state| {
+                    vec![cx.text("a"), cx.text("b")]
+                }),
+            ]
+        })]
+    }
+
+    let viewport_child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-root-pressable-multi-child-flow-tree",
+        build_root,
+    );
+
+    let viewport = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+
+    let base = ui.create_node(BaseRegistersViewportRoot {
+        viewport,
+        child: viewport_child,
+    });
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let outer = ui.children(viewport_child)[0];
+    let pressable = ui.children(outer)[0];
+    let a = ui.children(pressable)[0];
+    let b = ui.children(pressable)[1];
+
+    let engine = ui.take_layout_engine();
+    assert!(engine.layout_id_for_node(pressable).is_some());
+    assert!(engine.layout_id_for_node(a).is_some());
+    assert!(engine.layout_id_for_node(b).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn viewport_root_semantics_wraps_multiple_children_in_engine_tree() {
+    struct BaseRegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for BaseRegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        let outer = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Vertical,
+            ..Default::default()
+        };
+
+        vec![cx.flex(outer, |cx| {
+            vec![
+                cx.semantics(crate::element::SemanticsProps::default(), |cx| {
+                    vec![cx.text("a"), cx.text("b")]
+                }),
+            ]
+        })]
+    }
+
+    let viewport_child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-root-semantics-multi-child-flow-tree",
+        build_root,
+    );
+
+    let viewport = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+
+    let base = ui.create_node(BaseRegistersViewportRoot {
+        viewport,
+        child: viewport_child,
+    });
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let outer = ui.children(viewport_child)[0];
+    let semantics = ui.children(outer)[0];
+    let a = ui.children(semantics)[0];
+    let b = ui.children(semantics)[1];
+
+    let engine = ui.take_layout_engine();
+    assert!(engine.layout_id_for_node(semantics).is_some());
+    assert!(engine.layout_id_for_node(a).is_some());
+    assert!(engine.layout_id_for_node(b).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn viewport_root_focus_scope_wraps_multiple_children_in_engine_tree() {
+    struct BaseRegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for BaseRegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        let outer = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Vertical,
+            ..Default::default()
+        };
+
+        vec![cx.flex(outer, |cx| {
+            vec![
+                cx.focus_scope(crate::element::FocusScopeProps::default(), |cx| {
+                    vec![cx.text("a"), cx.text("b")]
+                }),
+            ]
+        })]
+    }
+
+    let viewport_child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-root-focus-scope-multi-child-flow-tree",
+        build_root,
+    );
+
+    let viewport = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+
+    let base = ui.create_node(BaseRegistersViewportRoot {
+        viewport,
+        child: viewport_child,
+    });
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let outer = ui.children(viewport_child)[0];
+    let focus = ui.children(outer)[0];
+    let a = ui.children(focus)[0];
+    let b = ui.children(focus)[1];
+
+    let engine = ui.take_layout_engine();
+    assert!(engine.layout_id_for_node(focus).is_some());
+    assert!(engine.layout_id_for_node(a).is_some());
+    assert!(engine.layout_id_for_node(b).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn viewport_root_opacity_wraps_multiple_children_in_engine_tree() {
+    struct BaseRegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for BaseRegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        let outer = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Vertical,
+            ..Default::default()
+        };
+
+        vec![cx.flex(outer, |cx| {
+            vec![cx.opacity(0.5, |cx| vec![cx.text("a"), cx.text("b")])]
+        })]
+    }
+
+    let viewport_child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-root-opacity-multi-child-flow-tree",
+        build_root,
+    );
+
+    let viewport = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+
+    let base = ui.create_node(BaseRegistersViewportRoot {
+        viewport,
+        child: viewport_child,
+    });
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let outer = ui.children(viewport_child)[0];
+    let opacity = ui.children(outer)[0];
+    let a = ui.children(opacity)[0];
+    let b = ui.children(opacity)[1];
+
+    let engine = ui.take_layout_engine();
+    assert!(engine.layout_id_for_node(opacity).is_some());
+    assert!(engine.layout_id_for_node(a).is_some());
+    assert!(engine.layout_id_for_node(b).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn viewport_root_visual_transform_wraps_multiple_children_in_engine_tree() {
+    struct BaseRegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for BaseRegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        let outer = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Vertical,
+            ..Default::default()
+        };
+
+        let transform =
+            fret_core::Transform2D::translation(fret_core::Point::new(Px(1.0), Px(2.0)));
+        vec![cx.flex(outer, |cx| {
+            vec![cx.visual_transform(transform, |cx| vec![cx.text("a"), cx.text("b")])]
+        })]
+    }
+
+    let viewport_child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-root-visual-transform-multi-child-flow-tree",
+        build_root,
+    );
+
+    let viewport = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+
+    let base = ui.create_node(BaseRegistersViewportRoot {
+        viewport,
+        child: viewport_child,
+    });
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let outer = ui.children(viewport_child)[0];
+    let transform = ui.children(outer)[0];
+    let a = ui.children(transform)[0];
+    let b = ui.children(transform)[1];
+
+    let engine = ui.take_layout_engine();
+    assert!(engine.layout_id_for_node(transform).is_some());
+    assert!(engine.layout_id_for_node(a).is_some());
+    assert!(engine.layout_id_for_node(b).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn viewport_root_interactivity_gate_wraps_multiple_children_in_engine_tree() {
+    struct BaseRegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for BaseRegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        let outer = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Vertical,
+            ..Default::default()
+        };
+
+        vec![cx.flex(outer, |cx| {
+            vec![cx.interactivity_gate(true, true, |cx| vec![cx.text("a"), cx.text("b")])]
+        })]
+    }
+
+    let viewport_child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-root-interactivity-gate-multi-child-flow-tree",
+        build_root,
+    );
+
+    let viewport = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+
+    let base = ui.create_node(BaseRegistersViewportRoot {
+        viewport,
+        child: viewport_child,
+    });
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let outer = ui.children(viewport_child)[0];
+    let gate = ui.children(outer)[0];
+    let a = ui.children(gate)[0];
+    let b = ui.children(gate)[1];
+
+    let engine = ui.take_layout_engine();
+    assert!(engine.layout_id_for_node(gate).is_some());
+    assert!(engine.layout_id_for_node(a).is_some());
+    assert!(engine.layout_id_for_node(b).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn viewport_root_container_wraps_multiple_children_in_engine_tree() {
+    struct BaseRegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for BaseRegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        let outer = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Vertical,
+            ..Default::default()
+        };
+
+        let mut container = crate::element::ContainerProps::default();
+        container.layout.size.width = Length::Fill;
+        container.layout.size.height = Length::Fill;
+
+        vec![cx.flex(outer, |cx| {
+            vec![cx.container(container, |cx| vec![cx.text("a"), cx.text("b")])]
+        })]
+    }
+
+    let viewport_child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-root-container-multi-child-flow-tree",
+        build_root,
+    );
+
+    let viewport = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+
+    let base = ui.create_node(BaseRegistersViewportRoot {
+        viewport,
+        child: viewport_child,
+    });
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let outer = ui.children(viewport_child)[0];
+    let container = ui.children(outer)[0];
+    let a = ui.children(container)[0];
+    let b = ui.children(container)[1];
+
+    let engine = ui.take_layout_engine();
+    assert!(engine.layout_id_for_node(container).is_some());
+    assert!(engine.layout_id_for_node(a).is_some());
+    assert!(engine.layout_id_for_node(b).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn viewport_root_stack_wraps_multiple_children_in_engine_tree() {
+    struct BaseRegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for BaseRegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        let outer = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Vertical,
+            ..Default::default()
+        };
+
+        let mut stack = crate::element::StackProps::default();
+        stack.layout.size.width = Length::Fill;
+        stack.layout.size.height = Length::Fill;
+
+        vec![cx.flex(outer, |cx| {
+            vec![cx.stack_props(stack, |cx| vec![cx.text("a"), cx.text("b")])]
+        })]
+    }
+
+    let viewport_child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-root-stack-multi-child-flow-tree",
+        build_root,
+    );
+
+    let viewport = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+
+    let base = ui.create_node(BaseRegistersViewportRoot {
+        viewport,
+        child: viewport_child,
+    });
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let outer = ui.children(viewport_child)[0];
+    let stack = ui.children(outer)[0];
+    let a = ui.children(stack)[0];
+    let b = ui.children(stack)[1];
+
+    let engine = ui.take_layout_engine();
+    assert!(engine.layout_id_for_node(stack).is_some());
+    assert!(engine.layout_id_for_node(a).is_some());
+    assert!(engine.layout_id_for_node(b).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn viewport_root_render_transform_passthrough_fill_does_not_collapse() {
+    struct BaseRegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for BaseRegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        let outer = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Vertical,
+            ..Default::default()
+        };
+
+        let transform = Transform2D::translation(Point::new(Px(5.0), Px(0.0)));
+
+        let mut region = crate::element::PointerRegionProps::default();
+        region.layout.size.width = Length::Fill;
+        region.layout.size.height = Length::Fill;
+
+        vec![cx.flex(outer, |cx| {
+            vec![cx.render_transform(transform, |cx| {
+                vec![cx.pointer_region(region, |_cx| vec![])]
+            })]
+        })]
+    }
+
+    let viewport_child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-root-render-transform-passthrough-fill",
+        build_root,
+    );
+
+    let viewport = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+
+    let base = ui.create_node(BaseRegistersViewportRoot {
+        viewport,
+        child: viewport_child,
+    });
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let outer = ui.children(viewport_child)[0];
+    let wrapper = ui.children(outer)[0];
+    let region = ui.children(wrapper)[0];
+
+    let region_bounds = ui.debug_node_bounds(region).expect("region bounds");
+    assert_eq!(region_bounds.origin, viewport.origin);
+    assert_eq!(region_bounds.size, viewport.size);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn viewport_root_wheel_region_wraps_flow_in_engine_tree() {
+    struct BaseRegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for BaseRegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        let outer = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Vertical,
+            ..Default::default()
+        };
+
+        let inner = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Auto,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Horizontal,
+            gap: Px(4.0),
+            ..Default::default()
+        };
+
+        vec![cx.flex(outer, |cx| {
+            vec![
+                cx.wheel_region(crate::element::WheelRegionProps::default(), |cx| {
+                    vec![cx.flex(inner, |cx| vec![cx.text("hello")])]
+                }),
+            ]
+        })]
+    }
+
+    let viewport_child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-root-wheel-region-flow-tree",
+        build_root,
+    );
+
+    let viewport = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+
+    let base = ui.create_node(BaseRegistersViewportRoot {
+        viewport,
+        child: viewport_child,
+    });
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let outer = ui.children(viewport_child)[0];
+    let region = ui.children(outer)[0];
+    let inner = ui.children(region)[0];
+    let text = ui.children(inner)[0];
+
+    let engine = ui.take_layout_engine();
+    assert!(engine.layout_id_for_node(region).is_some());
+    assert!(engine.layout_id_for_node(inner).is_some());
+    assert!(engine.layout_id_for_node(text).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn viewport_root_auto_wrapper_promotes_fill_when_flow_child_requests_fill() {
+    struct BaseRegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for BaseRegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        let outer = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Vertical,
+            align: CrossAlign::Start,
+            ..Default::default()
+        };
+
+        let wrapper = crate::element::ContainerProps::default();
+
+        let fill_child = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Auto,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Horizontal,
+            ..Default::default()
+        };
+
+        vec![cx.flex(outer, |cx| {
+            vec![cx.container(wrapper, |cx| {
+                vec![cx.flex(fill_child, |cx| vec![cx.text("fill-child")])]
+            })]
+        })]
+    }
+
+    let viewport_child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-root-auto-wrapper-promotes-fill",
+        build_root,
+    );
+
+    let viewport = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+
+    let base = ui.create_node(BaseRegistersViewportRoot {
+        viewport,
+        child: viewport_child,
+    });
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let outer = ui.children(viewport_child)[0];
+    let wrapper = ui.children(outer)[0];
+
+    let wrapper_bounds = ui.debug_node_bounds(wrapper).expect("wrapper bounds");
+    assert_eq!(wrapper_bounds.origin, viewport.origin);
+    assert_eq!(wrapper_bounds.size.width, viewport.size.width);
+    assert!(wrapper_bounds.size.width.0 > 0.0);
+
+    let engine = ui.take_layout_engine();
+    assert!(engine.layout_id_for_node(wrapper).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn viewport_root_wheel_region_wraps_multiple_children_in_engine_tree() {
+    struct BaseRegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for BaseRegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        let outer = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Vertical,
+            ..Default::default()
+        };
+
+        let a = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Auto,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Horizontal,
+            ..Default::default()
+        };
+
+        let b = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Auto,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Horizontal,
+            ..Default::default()
+        };
+
+        vec![cx.flex(outer, |cx| {
+            vec![
+                cx.wheel_region(crate::element::WheelRegionProps::default(), |cx| {
+                    vec![
+                        cx.flex(a, |cx| vec![cx.text("a")]),
+                        cx.flex(b, |cx| vec![cx.text("b")]),
+                    ]
+                }),
+            ]
+        })]
+    }
+
+    let viewport_child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-root-wheel-region-multi-child-flow-tree",
+        build_root,
+    );
+
+    let viewport = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+
+    let base = ui.create_node(BaseRegistersViewportRoot {
+        viewport,
+        child: viewport_child,
+    });
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let outer = ui.children(viewport_child)[0];
+    let region = ui.children(outer)[0];
+    let flex_a = ui.children(region)[0];
+    let flex_b = ui.children(region)[1];
+    let text_a = ui.children(flex_a)[0];
+    let text_b = ui.children(flex_b)[0];
+
+    let engine = ui.take_layout_engine();
+    assert!(engine.layout_id_for_node(region).is_some());
+    assert!(engine.layout_id_for_node(flex_a).is_some());
+    assert!(engine.layout_id_for_node(text_a).is_some());
+    assert!(engine.layout_id_for_node(flex_b).is_some());
+    assert!(engine.layout_id_for_node(text_b).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn viewport_root_wheel_region_absolute_child_fills_region() {
+    struct BaseRegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for BaseRegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        let outer = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Vertical,
+            ..Default::default()
+        };
+
+        let mut region = crate::element::WheelRegionProps::default();
+        region.layout.size.width = Length::Fill;
+        region.layout.size.height = Length::Fill;
+
+        let mut barrier = crate::element::ContainerProps::default();
+        barrier.layout.position = crate::element::PositionStyle::Absolute;
+        barrier.layout.inset.top = Some(Px(0.0));
+        barrier.layout.inset.right = Some(Px(0.0));
+        barrier.layout.inset.bottom = Some(Px(0.0));
+        barrier.layout.inset.left = Some(Px(0.0));
+        barrier.layout.size.width = Length::Fill;
+        barrier.layout.size.height = Length::Fill;
+
+        vec![cx.flex(outer, |cx| {
+            vec![cx.wheel_region(region, |cx| vec![cx.container(barrier, |_cx| vec![])])]
+        })]
+    }
+
+    let viewport_child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-root-wheel-region-absolute-only",
+        build_root,
+    );
+
+    let viewport = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+
+    let base = ui.create_node(BaseRegistersViewportRoot {
+        viewport,
+        child: viewport_child,
+    });
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let outer = ui.children(viewport_child)[0];
+    let region = ui.children(outer)[0];
+    let barrier = ui.children(region)[0];
+
+    let region_bounds = ui.debug_node_bounds(region).expect("region bounds");
+    let barrier_bounds = ui.debug_node_bounds(barrier).expect("barrier bounds");
+
+    assert_eq!(region_bounds, viewport);
+    assert_eq!(barrier_bounds, viewport);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn viewport_root_roving_flex_is_in_engine_tree() {
+    struct BaseRegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for BaseRegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        let outer = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Vertical,
+            ..Default::default()
+        };
+
+        let mut roving = crate::element::RovingFlexProps::default();
+        roving.flex.layout.size.width = Length::Fill;
+        roving.flex.layout.size.height = Length::Auto;
+        roving.flex.direction = fret_core::Axis::Horizontal;
+        roving.flex.gap = Px(4.0);
+
+        vec![cx.flex(outer, |cx| {
+            vec![cx.roving_flex(roving, |cx| vec![cx.text("hello")])]
+        })]
+    }
+
+    let viewport_child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-root-roving-flex-flow-tree",
+        build_root,
+    );
+
+    let viewport = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+
+    let base = ui.create_node(BaseRegistersViewportRoot {
+        viewport,
+        child: viewport_child,
+    });
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let outer = ui.children(viewport_child)[0];
+    let roving = ui.children(outer)[0];
+    let text = ui.children(roving)[0];
+
+    let engine = ui.take_layout_engine();
+    assert!(engine.layout_id_for_node(roving).is_some());
+    assert!(engine.layout_id_for_node(text).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn viewport_root_anchored_wraps_flow_in_engine_tree() {
+    struct BaseRegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for BaseRegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        let outer = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Vertical,
+            ..Default::default()
+        };
+
+        let inner = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Auto,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Horizontal,
+            gap: Px(4.0),
+            ..Default::default()
+        };
+
+        let anchored = crate::element::AnchoredProps {
+            anchor: Rect::new(
+                Point::new(Px(10.0), Px(10.0)),
+                Size::new(Px(10.0), Px(10.0)),
+            ),
+            ..Default::default()
+        };
+
+        vec![cx.flex(outer, |cx| {
+            vec![cx.anchored_props(anchored, |cx| {
+                vec![cx.flex(inner, |cx| vec![cx.text("hello")])]
+            })]
+        })]
+    }
+
+    let viewport_child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-root-anchored-flow-tree",
+        build_root,
+    );
+
+    let viewport = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+
+    let base = ui.create_node(BaseRegistersViewportRoot {
+        viewport,
+        child: viewport_child,
+    });
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let outer = ui.children(viewport_child)[0];
+    let anchored = ui.children(outer)[0];
+    let inner = ui.children(anchored)[0];
+    let text = ui.children(inner)[0];
+
+    let engine = ui.take_layout_engine();
+    assert!(engine.layout_id_for_node(anchored).is_some());
+    assert!(engine.layout_id_for_node(inner).is_some());
+    assert!(engine.layout_id_for_node(text).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn overlay_root_dismissible_layer_precomputes_child_flow_islands() {
+    let window = AppWindowId::default();
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let mut services = FakeTextService::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+
+    let base = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "overlay-root-underlay",
+        |cx| vec![cx.text("underlay")],
+    );
+    ui.set_root(base);
+
+    let overlay_root = crate::declarative::render_dismissible_root_with_hooks(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "overlay-root-dismissible-precompute",
+        |cx| {
+            let anchored = crate::element::AnchoredProps {
+                anchor: Rect::new(
+                    Point::new(Px(10.0), Px(10.0)),
+                    Size::new(Px(10.0), Px(10.0)),
+                ),
+                ..Default::default()
+            };
+
+            let inner = crate::element::FlexProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Auto,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                direction: fret_core::Axis::Horizontal,
+                gap: Px(4.0),
+                ..Default::default()
+            };
+
+            vec![cx.anchored_props(anchored, |cx| {
+                vec![cx.flex(inner, |cx| vec![cx.text("hello")])]
+            })]
+        },
+    );
+    let _layer = ui.push_overlay_root_ex(overlay_root, false, true);
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let anchored = ui.children(overlay_root)[0];
+    let inner = ui.children(anchored)[0];
+    let text = ui.children(inner)[0];
+
+    let engine = ui.take_layout_engine();
+    assert!(
+        engine.layout_id_for_node(overlay_root).is_some(),
+        "expected dismissible root to be represented in the engine tree"
+    );
+    assert!(
+        engine.layout_id_for_node(anchored).is_some(),
+        "expected overlay subtree to be precomputed into the engine tree"
+    );
+    assert!(engine.layout_id_for_node(inner).is_some());
+    assert!(engine.layout_id_for_node(text).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn overlay_root_scroll_precomputes_child_flow_islands() {
+    let window = AppWindowId::default();
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let mut services = FakeTextService::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+
+    let base = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "overlay-root-scroll-underlay",
+        |cx| vec![cx.text("underlay")],
+    );
+    ui.set_root(base);
+
+    let overlay_root = crate::declarative::render_dismissible_root_with_hooks(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "overlay-root-scroll-precompute",
+        |cx| {
+            let anchored = crate::element::AnchoredProps {
+                anchor: Rect::new(
+                    Point::new(Px(10.0), Px(10.0)),
+                    Size::new(Px(10.0), Px(10.0)),
+                ),
+                ..Default::default()
+            };
+
+            let inner = crate::element::FlexProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Auto,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                direction: fret_core::Axis::Horizontal,
+                gap: Px(4.0),
+                ..Default::default()
+            };
+
+            let mut scroll = crate::element::ScrollProps::default();
+            scroll.layout.size.width = Length::Fill;
+            scroll.layout.size.height = Length::Fill;
+            scroll.probe_unbounded = true;
+
+            vec![cx.scroll(scroll, |cx| {
+                vec![cx.anchored_props(anchored, |cx| {
+                    vec![cx.flex(inner, |cx| vec![cx.text("hello")])]
+                })]
+            })]
+        },
+    );
+    let _layer = ui.push_overlay_root_ex(overlay_root, false, true);
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let scroll = ui.children(overlay_root)[0];
+    let anchored = ui.children(scroll)[0];
+    let inner = ui.children(anchored)[0];
+    let text = ui.children(inner)[0];
+
+    let engine = ui.take_layout_engine();
+    assert!(
+        engine.layout_id_for_node(anchored).is_some(),
+        "expected scroll to precompute its child flow island into the engine tree"
+    );
+    assert!(engine.layout_id_for_node(inner).is_some());
+    assert!(engine.layout_id_for_node(text).is_some());
+    ui.put_layout_engine(engine);
 }
 
 #[cfg(feature = "layout-engine-v2")]
@@ -1165,6 +4483,11 @@ fn scroll_wheel_updates_offset_and_shifts_child_bounds() {
     let scroll_node = ui.children(root)[0];
     let column_node = ui.children(scroll_node)[0];
     let before = ui.debug_node_bounds(column_node).expect("column bounds");
+    #[cfg(feature = "layout-engine-v2")]
+    assert!(
+        ui.layout_engine_has_node(column_node),
+        "expected scroll content subtree nodes to remain registered in the layout engine"
+    );
 
     let wheel_pos = fret_core::Point::new(Px(5.0), Px(5.0));
     ui.dispatch_event(
@@ -1188,6 +4511,158 @@ fn scroll_wheel_updates_offset_and_shifts_child_bounds() {
         "expected content to move up after wheel scroll: before={:?} after={:?}",
         before.origin.y,
         after.origin.y
+    );
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn scroll_translation_does_not_force_layout_engine_solves() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp-scroll-wheel-solve-stats",
+        |cx| {
+            let mut p = crate::element::ScrollProps::default();
+            p.layout.size.width = crate::element::Length::Fill;
+            p.layout.size.height = crate::element::Length::Px(Px(20.0));
+            vec![cx.scroll(p, |cx| {
+                vec![cx.column(
+                    crate::element::ColumnProps {
+                        gap: Px(0.0),
+                        ..Default::default()
+                    },
+                    |cx| vec![cx.text("a"), cx.text("b"), cx.text("c")],
+                )]
+            })]
+        },
+    );
+    ui.set_root(root);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let scroll_node = ui.children(root)[0];
+    let column_node = ui.children(scroll_node)[0];
+    let before = ui.debug_node_bounds(column_node).expect("column bounds");
+
+    let wheel_pos = fret_core::Point::new(Px(5.0), Px(5.0));
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+            position: wheel_pos,
+            delta: fret_core::Point::new(Px(0.0), Px(-10.0)),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let after = ui
+        .debug_node_bounds(column_node)
+        .expect("column bounds after scroll");
+
+    assert!(
+        after.origin.y.0 < before.origin.y.0,
+        "expected content to move up after wheel scroll: before={:?} after={:?}",
+        before.origin.y,
+        after.origin.y
+    );
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "expected scroll translation to avoid triggering layout engine solves"
+    );
+    #[cfg(feature = "layout-engine-v2")]
+    assert!(
+        ui.layout_engine_has_node(column_node),
+        "expected translation-only scroll to keep engine nodes alive (stable identity)"
+    );
+
+    // Even when the tree is fully clean (no invalidation, no translation), the request/build phase
+    // must keep barrier-mounted subtrees registered so identity remains stable across frames.
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    #[cfg(feature = "layout-engine-v2")]
+    assert!(
+        ui.layout_engine_has_node(column_node),
+        "expected steady-state frames to keep scroll content nodes registered in the engine"
+    );
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn scroll_axis_both_probe_unbounded_keeps_content_at_least_viewport_width() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp-scroll-axis-both-min-content-width",
+        |cx| {
+            let mut p = crate::element::ScrollProps::default();
+            p.layout.size.width = crate::element::Length::Fill;
+            p.layout.size.height = crate::element::Length::Fill;
+            p.axis = crate::element::ScrollAxis::Both;
+            p.probe_unbounded = true;
+
+            vec![cx.scroll(p, |cx| {
+                vec![cx.column(
+                    crate::element::ColumnProps {
+                        layout: crate::element::LayoutStyle {
+                            size: crate::element::SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Auto,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        gap: Px(0.0),
+                        ..Default::default()
+                    },
+                    |cx| vec![cx.text("a")],
+                )]
+            })]
+        },
+    );
+    ui.set_root(root);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let scroll_node = ui.children(root)[0];
+    let column_node = ui.children(scroll_node)[0];
+    let column_bounds = ui.debug_node_bounds(column_node).expect("column bounds");
+
+    assert_eq!(
+        column_bounds.size.width, bounds.size.width,
+        "expected scroll content bounds to be at least the viewport width; got={:?} want={:?}",
+        column_bounds.size.width, bounds.size.width
     );
 }
 
@@ -2224,6 +5699,92 @@ fn container_applies_padding_and_paints_background() {
         }
         _ => panic!("expected quad op"),
     }
+}
+
+#[test]
+fn container_shrink_wraps_to_max_child_under_definite_parent_bounds() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-container-shrink-wraps",
+        |cx| {
+            let mut outer = crate::element::ContainerProps::default();
+            outer.padding = fret_core::Edges::all(Px(2.0));
+
+            vec![cx.container(outer, |cx| {
+                let mut fixed = crate::element::ContainerProps::default();
+                fixed.layout.size.width = crate::element::Length::Px(Px(30.0));
+                fixed.layout.size.height = crate::element::Length::Px(Px(15.0));
+
+                vec![cx.container(fixed, |_| Vec::new()), cx.text("x")]
+            })]
+        },
+    );
+    ui.set_root(root);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let outer = ui.children(root)[0];
+    let outer_bounds = ui.debug_node_bounds(outer).expect("outer bounds");
+    assert_eq!(outer_bounds.size.width, Px(34.0));
+    assert_eq!(outer_bounds.size.height, Px(19.0));
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn container_nested_chains_do_not_trigger_extra_engine_solves_when_clean() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "container-nested-clean-solves",
+        |cx| {
+            let mut outer = crate::element::ContainerProps::default();
+            outer.padding = fret_core::Edges::all(Px(2.0));
+
+            let mut inner = crate::element::ContainerProps::default();
+            inner.padding = fret_core::Edges::all(Px(1.0));
+
+            vec![cx.container(outer, |cx| {
+                vec![cx.container(inner, |cx| vec![cx.text("x")])]
+            })]
+        },
+    );
+    ui.set_root(root);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(ui.debug_stats().layout_engine_solves, 1);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(ui.debug_stats().layout_engine_solves, 0);
 }
 
 #[test]

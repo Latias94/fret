@@ -52,6 +52,7 @@ type DomNode = {
   tag: string
   path: number[]
   attrs: Record<string, string>
+  rect?: { x: number; y: number; w: number; h: number }
   text?: string
   children: DomNode[]
 }
@@ -119,8 +120,11 @@ function writeIfChanged(filePath: string, json: unknown, update: boolean) {
   fs.writeFileSync(filePath, data, "utf8")
 }
 
+const SETTLE_MS = 250
+
 async function sleep(ms: number) {
-  await new Promise((r) => setTimeout(r, ms))
+  const next = ms === 50 ? SETTLE_MS : ms
+  await new Promise((r) => setTimeout(r, next))
 }
 
 function resolveBrowserExecutablePath(): string | undefined {
@@ -289,6 +293,20 @@ async function snapshotDom(page: puppeteer.Page): Promise<{
         children: builtChildren,
       };
 
+      try {
+        const r = el.getBoundingClientRect();
+        // We intentionally keep viewport-relative rects so they can be compared to Fret window
+        // coordinates without additional normalization.
+        node.rect = {
+          x: r.x,
+          y: r.y,
+          w: r.width,
+          h: r.height,
+        };
+      } catch {
+        // ignore
+      }
+
       const txt = textOf(el);
       if (txt) node.text = txt;
       return node;
@@ -384,7 +402,7 @@ async function clickUntilRoleAppears(
     } catch {
       try {
         await page.keyboard.press("Escape")
-        await sleep(50)
+        await sleep(SETTLE_MS)
       } catch {
         // ignore
       }

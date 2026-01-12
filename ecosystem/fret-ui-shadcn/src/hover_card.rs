@@ -46,6 +46,15 @@ pub enum HoverCardAlign {
     End,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum HoverCardSide {
+    Top,
+    Right,
+    #[default]
+    Bottom,
+    Left,
+}
+
 #[derive(Debug, Default, Clone, Copy)]
 struct HoverCardSharedState {
     overlay_hovered: bool,
@@ -65,6 +74,7 @@ pub struct HoverCard {
     trigger: AnyElement,
     content: AnyElement,
     align: HoverCardAlign,
+    side: HoverCardSide,
     side_offset: Px,
     window_margin_override: Option<Px>,
     arrow: bool,
@@ -82,6 +92,7 @@ impl std::fmt::Debug for HoverCard {
             .field("open", &"<model>")
             .field("default_open", &self.default_open)
             .field("align", &self.align)
+            .field("side", &self.side)
             .field("side_offset", &self.side_offset)
             .field("window_margin_override", &self.window_margin_override)
             .field("arrow", &self.arrow)
@@ -101,6 +112,7 @@ impl HoverCard {
             trigger,
             content,
             align: HoverCardAlign::default(),
+            side: HoverCardSide::default(),
             side_offset: Px(4.0),
             window_margin_override: None,
             arrow: false,
@@ -147,6 +159,11 @@ impl HoverCard {
 
     pub fn align(mut self, align: HoverCardAlign) -> Self {
         self.align = align;
+        self
+    }
+
+    pub fn side(mut self, side: HoverCardSide) -> Self {
+        self.side = side;
         self
     }
 
@@ -221,6 +238,7 @@ impl HoverCard {
         });
 
         let align = self.align;
+        let side = self.side;
         let open_delay_frames = self.open_delay_frames;
         let close_delay_frames = self.close_delay_frames;
         let arrow = self.arrow;
@@ -432,6 +450,13 @@ impl HoverCard {
                     HoverCardAlign::End => Align::End,
                 };
 
+                let placement_side = match side {
+                    HoverCardSide::Top => Side::Top,
+                    HoverCardSide::Right => Side::Right,
+                    HoverCardSide::Bottom => Side::Bottom,
+                    HoverCardSide::Left => Side::Left,
+                };
+
                 let (arrow_options, arrow_protrusion) =
                     popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
 
@@ -441,7 +466,7 @@ impl HoverCard {
                     content_size,
                     popper::PopperContentPlacement::new(
                         direction,
-                        Side::Bottom,
+                        placement_side,
                         align,
                         side_offset,
                     )
@@ -1541,11 +1566,15 @@ mod tests {
             fret_ui::elements::node_for_element(&mut app, window, selectable_element)
                 .expect("selectable node");
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        let selectable_bounds = snap
-            .nodes
-            .iter()
-            .find(|n| n.id == selectable_node)
-            .map(|n| n.bounds)
+        let selectable_bounds = ui
+            .debug_node_visual_bounds(selectable_node)
+            .or_else(|| ui.debug_node_bounds(selectable_node))
+            .or_else(|| {
+                snap.nodes
+                    .iter()
+                    .find(|n| n.id == selectable_node)
+                    .map(|n| n.bounds)
+            })
             .expect("selectable bounds");
 
         // Select text (double click selects the first word), then leave the hover card.
@@ -1563,6 +1592,17 @@ mod tests {
                 click_count: 2,
                 pointer_type: fret_core::PointerType::Mouse,
             }),
+        );
+        let (anchor, caret) = fret_ui::elements::with_element_state(
+            &mut app,
+            window,
+            selectable_element,
+            fret_ui::element::SelectableTextState::default,
+            |state| (state.selection_anchor, state.caret),
+        );
+        assert_ne!(
+            anchor, caret,
+            "expected selectable text to have an active selection after double click"
         );
 
         let outside = Point::new(Px(400.0), Px(400.0));
@@ -1597,6 +1637,18 @@ mod tests {
                 anchor: 0,
                 focus: 0,
             },
+        );
+        let (anchor, caret) = fret_ui::elements::with_element_state(
+            &mut app,
+            window,
+            selectable_element,
+            fret_ui::element::SelectableTextState::default,
+            |state| (state.selection_anchor, state.caret),
+        );
+        assert_eq!(
+            (anchor, caret),
+            (0, 0),
+            "expected selection to collapse before asserting hover card close"
         );
         render(&mut ui, &mut app, &mut services, 5);
         ui.layout_all(&mut app, &mut services, bounds, 1.0);

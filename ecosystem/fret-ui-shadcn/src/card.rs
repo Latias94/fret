@@ -3,6 +3,7 @@ use std::sync::Arc;
 use fret_core::{FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{AnyElement, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 
@@ -51,7 +52,14 @@ impl Card {
         let radius = props.corner_radii.top_left;
         props.shadow = Some(decl_style::shadow_sm(&theme, radius));
         let children = self.children;
-        shadcn_layout::container_flow(cx, props, children)
+        // Cards behave like block containers in shadcn/ui examples: their sections are expected to
+        // stretch to the card width unless explicitly constrained.
+        shadcn_layout::container_vstack(
+            cx,
+            props,
+            stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
+            children,
+        )
     }
 }
 
@@ -77,10 +85,17 @@ impl CardHeader {
         let props = decl_style::container_props(
             &theme,
             ChromeRefinement::default().p(Space::N6),
-            LayoutRefinement::default(),
+            LayoutRefinement::default().w_full(),
         );
         let children = self.children;
-        shadcn_layout::container_vstack_gap(cx, props, Space::N1p5, children)
+        shadcn_layout::container_vstack(
+            cx,
+            props,
+            stack::VStackProps::default()
+                .gap(Space::N1p5)
+                .layout(LayoutRefinement::default().w_full()),
+            children,
+        )
     }
 }
 
@@ -99,10 +114,15 @@ impl CardContent {
         let props = decl_style::container_props(
             &theme,
             ChromeRefinement::default().p(Space::N6).pt(Space::N0),
-            LayoutRefinement::default(),
+            LayoutRefinement::default().w_full(),
         );
         let children = self.children;
-        shadcn_layout::container_flow(cx, props, children)
+        shadcn_layout::container_vstack(
+            cx,
+            props,
+            stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
+            children,
+        )
     }
 }
 
@@ -121,13 +141,15 @@ impl CardFooter {
         let props = decl_style::container_props(
             &theme,
             ChromeRefinement::default().p(Space::N6).pt(Space::N0),
-            LayoutRefinement::default(),
+            LayoutRefinement::default().w_full(),
         );
         let children = self.children;
         shadcn_layout::container_hstack(
             cx,
             props,
-            fret_ui_kit::declarative::stack::HStackProps::default().items_center(),
+            stack::HStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .items_center(),
             children,
         )
     }

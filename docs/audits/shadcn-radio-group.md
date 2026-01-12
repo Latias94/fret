@@ -42,6 +42,8 @@ examples in `repo-ref/ui`.
 ## Validation
 
 - `cargo test -p fret-ui-shadcn --lib radio_group`
+- Web layout gate: `cargo nextest run -p fret-ui-shadcn -F fret-ui/layout-engine-v2 --test web_vs_fret_layout`
+  (`web_vs_fret_layout_radio_group_demo_row_geometry`).
 
 ## Follow-ups (recommended)
 

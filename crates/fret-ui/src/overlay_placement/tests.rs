@@ -90,7 +90,7 @@ fn sized_variant_prefers_side_with_more_available_space_for_oversized_content() 
     let outer = r(0.0, 0.0, 200.0, 200.0);
     let anchor = r(10.0, 150.0, 40.0, 10.0);
     // Simulate a "greedy" widget measured with an unconstrained probe.
-    let desired = Size::new(Px(120.0), Px(1.0e9));
+    let desired = Size::new(Px(120.0), Px(10_000.0));
 
     let placed =
         anchored_panel_bounds_sized(outer, anchor, desired, Px(8.0), Side::Bottom, Align::Start);

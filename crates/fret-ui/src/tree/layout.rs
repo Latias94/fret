@@ -4,6 +4,13 @@ use std::any::TypeId;
 #[cfg(feature = "layout-engine-v2")]
 use crate::layout_constraints::LayoutSize;
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints};
+#[cfg(feature = "layout-engine-v2")]
+use crate::layout_engine::TaffyLayoutEngine;
+#[cfg(feature = "layout-engine-v2")]
+use crate::layout_engine::{ParentLayoutKind, build_flow_subtree, build_viewport_flow_subtree};
+use crate::layout_pass::LayoutPassKind;
+#[cfg(feature = "layout-engine-v2")]
+use taffy::Style as TaffyStyle;
 
 impl<H: UiHost> UiTree<H> {
     pub fn layout_all(
@@ -13,11 +20,24 @@ impl<H: UiHost> UiTree<H> {
         bounds: Rect,
         scale_factor: f32,
     ) {
+        self.layout_all_with_pass_kind(app, services, bounds, scale_factor, LayoutPassKind::Final);
+    }
+
+    pub(crate) fn layout_all_with_pass_kind(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        bounds: Rect,
+        scale_factor: f32,
+        pass_kind: LayoutPassKind,
+    ) {
         let started = self.debug_enabled.then(Instant::now);
         if self.debug_enabled {
             self.debug_stats.frame_id = app.frame_id();
             self.debug_stats.layout_nodes_visited = 0;
             self.debug_stats.layout_nodes_performed = 0;
+            self.debug_stats.layout_engine_solves = 0;
+            self.debug_stats.layout_engine_solve_time = Duration::default();
             self.debug_stats.focus = self.focus;
             self.debug_stats.captured = self.captured;
         }
@@ -28,30 +48,43 @@ impl<H: UiHost> UiTree<H> {
             .collect();
 
         #[cfg(feature = "layout-engine-v2")]
-        {
-            self.layout_engine.begin_frame(app.frame_id());
-            self.viewport_roots.clear();
-        }
+        let (layout_engine_solves_start, layout_engine_solve_time_start) = {
+            self.begin_layout_engine_frame(app);
+            if self.debug_enabled {
+                (
+                    self.layout_engine.solve_count(),
+                    self.layout_engine.last_solve_time(),
+                )
+            } else {
+                (0, Duration::default())
+            }
+        };
 
         #[cfg(feature = "layout-engine-v2")]
         let mut viewport_cursor: usize = 0;
 
+        #[cfg(feature = "layout-engine-v2")]
+        self.request_build_window_roots_if_final(
+            app,
+            services,
+            &roots,
+            bounds,
+            scale_factor,
+            pass_kind,
+        );
+
         for root in roots {
-            let _ = self.layout_in(app, services, root, bounds, scale_factor);
+            let _ =
+                self.layout_in_with_pass_kind(app, services, root, bounds, scale_factor, pass_kind);
 
             #[cfg(feature = "layout-engine-v2")]
-            while viewport_cursor < self.viewport_roots.len() {
-                let (viewport_root, viewport_bounds) = self.viewport_roots[viewport_cursor];
-                viewport_cursor += 1;
-                self.precompute_viewport_root_flow_island(
-                    app,
-                    services,
-                    viewport_root,
-                    viewport_bounds,
-                    scale_factor,
-                );
-                let _ = self.layout_in(app, services, viewport_root, viewport_bounds, scale_factor);
-            }
+            self.flush_viewport_roots_after_root(
+                app,
+                services,
+                scale_factor,
+                pass_kind,
+                &mut viewport_cursor,
+            );
         }
 
         if self.semantics_requested {
@@ -59,12 +92,30 @@ impl<H: UiHost> UiTree<H> {
             self.refresh_semantics_snapshot(app);
         }
 
+        self.flush_deferred_cleanup(services);
+
         if let Some(started) = started {
             self.debug_stats.layout_time = started.elapsed();
         }
 
         #[cfg(feature = "layout-engine-v2")]
-        self.layout_engine.end_frame();
+        if pass_kind == LayoutPassKind::Final {
+            self.layout_engine.end_frame();
+        }
+
+        if self.debug_enabled {
+            #[cfg(feature = "layout-engine-v2")]
+            {
+                self.debug_stats.layout_engine_solves = self
+                    .layout_engine
+                    .solve_count()
+                    .saturating_sub(layout_engine_solves_start);
+                self.debug_stats.layout_engine_solve_time = self
+                    .layout_engine
+                    .last_solve_time()
+                    .saturating_sub(layout_engine_solve_time_start);
+            }
+        }
     }
 
     pub fn layout(
@@ -82,23 +133,31 @@ impl<H: UiHost> UiTree<H> {
 
         #[cfg(feature = "layout-engine-v2")]
         {
-            self.layout_engine.begin_frame(app.frame_id());
-            self.viewport_roots.clear();
-
             let mut viewport_cursor: usize = 0;
-            let size = self.layout_in(app, services, root, bounds, scale_factor);
-            while viewport_cursor < self.viewport_roots.len() {
-                let (viewport_root, viewport_bounds) = self.viewport_roots[viewport_cursor];
-                viewport_cursor += 1;
-                self.precompute_viewport_root_flow_island(
-                    app,
-                    services,
-                    viewport_root,
-                    viewport_bounds,
-                    scale_factor,
-                );
-                let _ = self.layout_in(app, services, viewport_root, viewport_bounds, scale_factor);
-            }
+            self.begin_layout_engine_frame(app);
+            self.request_build_window_roots_if_final(
+                app,
+                services,
+                std::slice::from_ref(&root),
+                bounds,
+                scale_factor,
+                LayoutPassKind::Final,
+            );
+            let size = self.layout_in_with_pass_kind(
+                app,
+                services,
+                root,
+                bounds,
+                scale_factor,
+                LayoutPassKind::Final,
+            );
+            self.flush_viewport_roots_after_root(
+                app,
+                services,
+                scale_factor,
+                LayoutPassKind::Final,
+                &mut viewport_cursor,
+            );
 
             self.layout_engine.end_frame();
             size
@@ -118,7 +177,26 @@ impl<H: UiHost> UiTree<H> {
         bounds: Rect,
         scale_factor: f32,
     ) -> Size {
-        self.layout_node(app, services, root, bounds, scale_factor)
+        self.layout_in_with_pass_kind(
+            app,
+            services,
+            root,
+            bounds,
+            scale_factor,
+            LayoutPassKind::Final,
+        )
+    }
+
+    pub fn layout_in_with_pass_kind(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        root: NodeId,
+        bounds: Rect,
+        scale_factor: f32,
+        pass_kind: LayoutPassKind,
+    ) -> Size {
+        self.layout_node(app, services, root, bounds, scale_factor, pass_kind)
     }
 
     pub fn measure_in(
@@ -133,12 +211,342 @@ impl<H: UiHost> UiTree<H> {
     }
 
     #[cfg(feature = "layout-engine-v2")]
-    fn precompute_viewport_root_flow_island(
+    fn begin_layout_engine_frame(&mut self, app: &mut H) {
+        self.layout_engine.begin_frame(app.frame_id());
+        self.viewport_roots.clear();
+    }
+
+    #[cfg(feature = "layout-engine-v2")]
+    fn maybe_dump_taffy_subtree(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        engine: &TaffyLayoutEngine,
+        root: NodeId,
+        root_bounds: Rect,
+        scale_factor: f32,
+    ) {
+        use std::sync::atomic::{AtomicU32, Ordering};
+
+        if std::env::var_os("FRET_TAFFY_DUMP").is_none() {
+            return;
+        }
+
+        static DUMP_COUNT: AtomicU32 = AtomicU32::new(0);
+        let dump_max: Option<u32> =
+            if std::env::var("FRET_TAFFY_DUMP_ONCE").ok().as_deref() == Some("1") {
+                Some(1)
+            } else {
+                std::env::var("FRET_TAFFY_DUMP_MAX")
+                    .ok()
+                    .and_then(|s| s.parse().ok())
+            };
+        if let Some(max) = dump_max {
+            let prev = DUMP_COUNT.fetch_add(1, Ordering::SeqCst);
+            if prev >= max {
+                return;
+            }
+        }
+
+        if let Ok(filter) = std::env::var("FRET_TAFFY_DUMP_ROOT") {
+            if !format!("{root:?}").contains(&filter) {
+                return;
+            }
+        }
+
+        // When debugging complex demos or golden-gated layouts, it is often easier to filter by a
+        // stable element label (e.g. a `SemanticsProps.label`) than by ephemeral `NodeId`s.
+        let dump_root = if let Ok(filter) = std::env::var("FRET_TAFFY_DUMP_ROOT_LABEL") {
+            let root_label = crate::declarative::frame::element_record_for_node(app, window, root)
+                .map(|r| format!("{:?}", r.instance))
+                .unwrap_or_default();
+            if root_label.contains(&filter) {
+                root
+            } else {
+                let mut stack: Vec<NodeId> = vec![root];
+                let mut visited: std::collections::HashSet<NodeId> =
+                    std::collections::HashSet::new();
+                let mut found: Option<NodeId> = None;
+                while let Some(node) = stack.pop() {
+                    if !visited.insert(node) {
+                        continue;
+                    }
+
+                    let label =
+                        crate::declarative::frame::element_record_for_node(app, window, node)
+                            .map(|r| format!("{:?}", r.instance))
+                            .unwrap_or_default();
+                    if label.contains(&filter) {
+                        found = Some(node);
+                        break;
+                    }
+
+                    if let Some(node) = self.nodes.get(node) {
+                        stack.extend(node.children.iter().copied());
+                    }
+                }
+
+                let Some(found) = found else {
+                    return;
+                };
+
+                found
+            }
+        } else {
+            root
+        };
+
+        let out_dir = std::env::var("FRET_TAFFY_DUMP_DIR")
+            .ok()
+            .unwrap_or_else(|| ".fret/taffy-dumps".to_string());
+
+        let frame = app.frame_id().0;
+        let root_slug: String = format!("{dump_root:?}")
+            .chars()
+            .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '_' })
+            .collect();
+        let filename = format!("taffy_{frame}_{root_slug}.json");
+
+        let dump = engine.debug_dump_subtree_json(dump_root, |node| {
+            crate::declarative::frame::element_record_for_node(app, window, node)
+                .map(|r| format!("{:?}", r.instance))
+        });
+
+        let wrapped = serde_json::json!({
+            "meta": {
+                "window": format!("{window:?}"),
+                "root_bounds": {
+                    "x": root_bounds.origin.x.0,
+                    "y": root_bounds.origin.y.0,
+                    "w": root_bounds.size.width.0,
+                    "h": root_bounds.size.height.0,
+                },
+                "scale_factor": scale_factor,
+            },
+            "taffy": dump,
+        });
+
+        let result = std::fs::create_dir_all(&out_dir)
+            .and_then(|_| {
+                serde_json::to_vec_pretty(&wrapped).map_err(|e| {
+                    std::io::Error::new(std::io::ErrorKind::Other, format!("serialize: {e}"))
+                })
+            })
+            .and_then(|bytes| {
+                std::fs::write(std::path::Path::new(&out_dir).join(&filename), bytes)
+            });
+
+        match result {
+            Ok(()) => tracing::info!(
+                out_dir = %out_dir,
+                filename = %filename,
+                "wrote taffy debug dump"
+            ),
+            Err(err) => tracing::warn!(
+                error = %err,
+                out_dir = %out_dir,
+                filename = %filename,
+                "failed to write taffy debug dump"
+            ),
+        }
+    }
+
+    #[cfg(feature = "layout-engine-v2")]
+    fn request_build_window_roots_if_final(
         &mut self,
         app: &mut H,
         services: &mut dyn UiServices,
-        viewport_root: NodeId,
-        viewport_bounds: Rect,
+        roots: &[NodeId],
+        bounds: Rect,
+        scale_factor: f32,
+        pass_kind: LayoutPassKind,
+    ) {
+        if pass_kind != LayoutPassKind::Final {
+            return;
+        }
+
+        let Some(window) = self.window else {
+            return;
+        };
+
+        let sf = scale_factor;
+        let available = LayoutSize::new(
+            AvailableSpace::Definite(bounds.size.width),
+            AvailableSpace::Definite(bounds.size.height),
+        );
+
+        let mut engine = self.take_layout_engine();
+
+        // Phase 1: request/build for stable identity, even if we later skip compute/apply.
+        for &root in roots {
+            if !self
+                .nodes
+                .get(root)
+                .is_some_and(|node| node.element.is_some())
+            {
+                continue;
+            }
+
+            build_viewport_flow_subtree(&mut engine, app, &*self, window, sf, root, bounds.size);
+        }
+
+        // Phase 2: compute/apply only when layout is needed.
+        for &root in roots {
+            let (has_element, needs_layout, is_translation_only) = match self.nodes.get(root) {
+                Some(node) => {
+                    let has_element = node.element.is_some();
+                    let needs_layout = node.invalidation.layout || node.bounds != bounds;
+                    let is_translation_only = !node.invalidation.layout
+                        && node.bounds.size == bounds.size
+                        && node.bounds.origin != bounds.origin
+                        && node.measured_size != Size::default();
+                    (has_element, needs_layout, is_translation_only)
+                }
+                None => continue,
+            };
+
+            if !has_element || !needs_layout || is_translation_only {
+                continue;
+            }
+
+            let _ =
+                engine.compute_root_for_node_with_measure_if_needed(root, available, sf, |n, c| {
+                    self.measure_in(app, services, n, c, sf)
+                });
+
+            self.maybe_dump_taffy_subtree(app, window, &engine, root, bounds, sf);
+        }
+
+        self.put_layout_engine(engine);
+    }
+
+    #[cfg(feature = "layout-engine-v2")]
+    fn flush_viewport_roots_after_root(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        scale_factor: f32,
+        pass_kind: LayoutPassKind,
+        viewport_cursor: &mut usize,
+    ) {
+        let sf = scale_factor;
+        let window = self.window;
+
+        while *viewport_cursor < self.viewport_roots.len() {
+            let batch_start = *viewport_cursor;
+            let batch_end = self.viewport_roots.len();
+
+            struct ViewportWorkItem {
+                root: NodeId,
+                bounds: Rect,
+                needs_layout: bool,
+                is_translation_only: bool,
+            }
+
+            let mut batch: Vec<ViewportWorkItem> = Vec::with_capacity(batch_end - batch_start);
+            for &(root, bounds) in &self.viewport_roots[batch_start..batch_end] {
+                let Some((prev_bounds, invalidated, measured)) = self
+                    .nodes
+                    .get(root)
+                    .map(|n| (n.bounds, n.invalidation.layout, n.measured_size))
+                else {
+                    continue;
+                };
+
+                let needs_layout = invalidated || prev_bounds != bounds;
+                let is_translation_only = !invalidated
+                    && prev_bounds.size == bounds.size
+                    && prev_bounds.origin != bounds.origin
+                    && measured != Size::default();
+
+                batch.push(ViewportWorkItem {
+                    root,
+                    bounds,
+                    needs_layout,
+                    is_translation_only,
+                });
+            }
+
+            if pass_kind == LayoutPassKind::Final
+                && let Some(window) = window
+            {
+                let mut engine = self.take_layout_engine();
+
+                // Phase 1: request/build newly registered viewport roots for stable identity,
+                // regardless of whether they will be computed this frame.
+                for item in &batch {
+                    if !self
+                        .nodes
+                        .get(item.root)
+                        .is_some_and(|node| node.element.is_some())
+                    {
+                        continue;
+                    }
+
+                    build_viewport_flow_subtree(
+                        &mut engine,
+                        app,
+                        &*self,
+                        window,
+                        sf,
+                        item.root,
+                        item.bounds.size,
+                    );
+                }
+
+                // Phase 2: compute/apply only for roots that need layout and are not translation-only.
+                for item in &batch {
+                    if !item.needs_layout || item.is_translation_only {
+                        continue;
+                    }
+
+                    let available = LayoutSize::new(
+                        AvailableSpace::Definite(item.bounds.size.width),
+                        AvailableSpace::Definite(item.bounds.size.height),
+                    );
+
+                    let _ = engine.compute_root_for_node_with_measure_if_needed(
+                        item.root,
+                        available,
+                        sf,
+                        |n, c| self.measure_in(app, services, n, c, sf),
+                    );
+
+                    self.maybe_dump_taffy_subtree(app, window, &engine, item.root, item.bounds, sf);
+                }
+
+                self.put_layout_engine(engine);
+            }
+
+            // Apply the viewport root bounds by running the regular layout pass. Even when a root
+            // is translation-only (so we skip compute), the translation-only fast path needs to
+            // update the retained bounds for the subtree.
+            for item in &batch {
+                if !item.needs_layout {
+                    continue;
+                }
+
+                let _ = self.layout_in_with_pass_kind(
+                    app,
+                    services,
+                    item.root,
+                    item.bounds,
+                    scale_factor,
+                    LayoutPassKind::Final,
+                );
+            }
+
+            *viewport_cursor = batch_end;
+        }
+    }
+
+    #[cfg(feature = "layout-engine-v2")]
+    pub(crate) fn precompute_barrier_flow_root_island(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        root: NodeId,
+        root_bounds: Rect,
         scale_factor: f32,
     ) {
         let Some(window) = self.window else {
@@ -151,25 +559,105 @@ impl<H: UiHost> UiTree<H> {
             app,
             &*self,
             window,
-            viewport_root,
-            viewport_bounds.size,
+            scale_factor,
+            root,
+            root_bounds.size,
         );
-        let Some(root_id) = engine.layout_id_for_node(viewport_root) else {
-            self.put_layout_engine(engine);
-            return;
-        };
-
         let available = LayoutSize::new(
-            AvailableSpace::Definite(viewport_bounds.size.width),
-            AvailableSpace::Definite(viewport_bounds.size.height),
+            AvailableSpace::Definite(root_bounds.size.width),
+            AvailableSpace::Definite(root_bounds.size.height),
         );
 
         let sf = scale_factor;
-        engine.compute_root_with_measure(root_id, available, |node, constraints| {
-            self.measure_in(app, services, node, constraints, sf)
-        });
+        let _ = engine.compute_root_for_node_with_measure_if_needed(
+            root,
+            available,
+            sf,
+            |node, constraints| self.measure_in(app, services, node, constraints, sf),
+        );
 
+        self.maybe_dump_taffy_subtree(app, window, &engine, root, root_bounds, scale_factor);
         self.put_layout_engine(engine);
+    }
+
+    #[cfg(feature = "layout-engine-v2")]
+    pub(crate) fn precompute_barrier_flow_root_island_if_needed(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        root: NodeId,
+        root_bounds: Rect,
+        scale_factor: f32,
+    ) {
+        let Some(node) = self.nodes.get(root) else {
+            return;
+        };
+
+        let needs_layout = node.invalidation.layout || node.bounds != root_bounds;
+        if !needs_layout {
+            return;
+        }
+
+        let is_translation_only = !node.invalidation.layout
+            && node.bounds.size == root_bounds.size
+            && node.bounds.origin != root_bounds.origin
+            && node.measured_size != Size::default();
+        if is_translation_only {
+            return;
+        }
+
+        self.precompute_barrier_flow_root_island(app, services, root, root_bounds, scale_factor);
+    }
+
+    #[cfg(feature = "layout-engine-v2")]
+    pub(crate) fn solve_flow_island_with_root_style(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        root: NodeId,
+        root_style: TaffyStyle,
+        children: &[NodeId],
+        child_parent_kind: ParentLayoutKind,
+        available: LayoutSize<AvailableSpace>,
+        scale_factor: f32,
+    ) -> (Rect, Vec<(NodeId, Rect)>) {
+        let mut engine = self.take_layout_engine();
+
+        let root_id = engine.request_layout_node(root);
+        engine.set_style(root, root_style);
+        engine.set_children(root, children);
+
+        for &child in children {
+            build_flow_subtree(
+                &mut engine,
+                app,
+                &*self,
+                window,
+                scale_factor,
+                child_parent_kind,
+                child,
+            );
+        }
+
+        let sf = scale_factor;
+        let _ =
+            engine.compute_root_for_node_with_measure_if_needed(root, available, sf, |node, c| {
+                self.measure_in(app, services, node, c, sf)
+            });
+
+        let mut child_layouts: Vec<(NodeId, Rect)> = Vec::with_capacity(children.len());
+        for &child in children {
+            let Some(id) = engine.layout_id_for_node(child) else {
+                continue;
+            };
+            child_layouts.push((child, engine.layout_rect(id)));
+        }
+
+        let root_layout = engine.layout_rect(root_id);
+        self.put_layout_engine(engine);
+
+        (root_layout, child_layouts)
     }
     fn layout_node(
         &mut self,
@@ -178,7 +666,9 @@ impl<H: UiHost> UiTree<H> {
         node: NodeId,
         bounds: Rect,
         scale_factor: f32,
+        pass_kind: LayoutPassKind,
     ) -> Size {
+        let is_probe = pass_kind == LayoutPassKind::Probe;
         if self.debug_enabled {
             self.debug_stats.layout_nodes_visited =
                 self.debug_stats.layout_nodes_visited.saturating_add(1);
@@ -188,12 +678,13 @@ impl<H: UiHost> UiTree<H> {
             Some(n) => (n.bounds, n.measured_size, n.invalidation.layout),
             None => return Size::default(),
         };
+        let invalidated_for_pass = invalidated || is_probe;
 
         if let Some(n) = self.nodes.get_mut(node) {
             n.bounds = bounds;
         }
 
-        if !invalidated
+        if !invalidated_for_pass
             && prev_bounds.size == bounds.size
             && prev_bounds.origin != bounds.origin
             && measured != Size::default()
@@ -203,6 +694,9 @@ impl<H: UiHost> UiTree<H> {
                 bounds.origin.y - prev_bounds.origin.y,
             );
             if delta.x.0 != 0.0 || delta.y.0 != 0.0 {
+                #[cfg(feature = "layout-engine-v2")]
+                self.layout_engine.mark_seen_if_present(node);
+
                 let window = self.window;
                 let mut stack: Vec<NodeId> = Vec::new();
                 let mut i = 0usize;
@@ -220,12 +714,15 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 while let Some(id) = stack.pop() {
+                    #[cfg(feature = "layout-engine-v2")]
+                    self.layout_engine.mark_seen_if_present(id);
+
                     let Some(n) = self.nodes.get_mut(id) else {
                         continue;
                     };
                     n.bounds.origin =
                         Point::new(n.bounds.origin.x + delta.x, n.bounds.origin.y + delta.y);
-                    if let (Some(window), Some(element)) = (window, n.element) {
+                    if !is_probe && let (Some(window), Some(element)) = (window, n.element) {
                         crate::elements::record_bounds_for_element(app, window, element, n.bounds);
                     }
                     for &child in &n.children {
@@ -233,15 +730,16 @@ impl<H: UiHost> UiTree<H> {
                     }
                 }
             }
-            if let (Some(window), Some(element)) =
-                (self.window, self.nodes.get(node).and_then(|n| n.element))
+            if !is_probe
+                && let (Some(window), Some(element)) =
+                    (self.window, self.nodes.get(node).and_then(|n| n.element))
             {
                 crate::elements::record_bounds_for_element(app, window, element, bounds);
             }
             return measured;
         }
 
-        let needs_layout = invalidated || prev_bounds != bounds;
+        let needs_layout = invalidated_for_pass || prev_bounds != bounds;
         if !needs_layout {
             return measured;
         }
@@ -284,6 +782,7 @@ impl<H: UiHost> UiTree<H> {
                 children: children_buf.as_slice(),
                 bounds,
                 available: bounds.size,
+                pass_kind,
                 scale_factor: sf,
                 services: &mut *services,
                 observe_model: &mut observe_model,
@@ -293,13 +792,15 @@ impl<H: UiHost> UiTree<H> {
             widget.layout(&mut cx)
         });
 
-        self.observed_in_layout
-            .record(node, observations.as_slice());
-        self.observed_globals_in_layout
-            .record(node, global_observations.as_slice());
-        if let Some(n) = self.nodes.get_mut(node) {
-            n.measured_size = size;
-            n.invalidation.layout = false;
+        if !is_probe {
+            self.observed_in_layout
+                .record(node, observations.as_slice());
+            self.observed_globals_in_layout
+                .record(node, global_observations.as_slice());
+            if let Some(n) = self.nodes.get_mut(node) {
+                n.measured_size = size;
+                n.invalidation.layout = false;
+            }
         }
 
         size
@@ -324,6 +825,15 @@ impl<H: UiHost> UiTree<H> {
         if self.measure_stack.contains(&key) {
             if cfg!(debug_assertions) {
                 panic!("measure_in re-entered for {node:?} under {constraints:?}");
+            }
+            if let Some(suppressed) = self.measure_reentrancy_diagnostics.record(app.frame_id()) {
+                tracing::warn!(
+                    window = ?self.window,
+                    node = ?node,
+                    constraints = ?constraints,
+                    suppressed,
+                    "measure_in re-entered; returning Size::default()"
+                );
             }
             return Size::default();
         }

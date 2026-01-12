@@ -36,6 +36,15 @@ Fret does not use the DOM or native scroll containers. Scrolling is an explicit 
   - `always` shows scrollbars when overflowing.
 - Pass: Supports separate X/Y scrollbars and a corner element when both overflow.
 - Pass: Thumb sizing matches Radix (includes scrollbar padding and minimum `18px` thumb).
+- Pass: Viewport content has a minimum width equal to the viewport width, matching Radix's
+  `ScrollAreaViewport` content wrapper (`minWidth: '100%'`). This prevents `w-full` / percent-style
+  descendants from collapsing when the scroll axis is probed with `MaxContent` during intrinsic
+  measurement. In Fret, this is enforced by clamping the scroll content bounds to at least the
+  viewport bounds during layout (`crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`).
+- Pass: Scroll axes are gated by mounted scrollbars (Radix `overflowX/overflowY` only enable when
+  the corresponding `ScrollAreaScrollbar` is present). In Fret's shadcn/Radix-shaped surface, the
+  underlying `Scroll` axis is derived from the requested scrollbar orientations, so horizontal
+  scrolling is disabled by default unless a horizontal scrollbar is mounted.
 
 ## Follow-ups (recommended)
 

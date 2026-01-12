@@ -645,6 +645,22 @@ mod tests {
         OverlayController::render(&mut ui, &mut app, &mut services, window, b);
         ui.layout_all(&mut app, &mut services, b, 1.0);
 
+        let modal_root = ui
+            .debug_layers_in_paint_order()
+            .into_iter()
+            .find(|l| l.blocks_underlay_input && l.visible)
+            .expect("modal layer root")
+            .root;
+        let barrier = ui.children(modal_root)[0];
+        let barrier_bounds = ui.debug_node_bounds(barrier).expect("barrier bounds");
+        assert!(
+            barrier_bounds.origin.x.0 <= 10.0
+                && barrier_bounds.origin.y.0 <= 10.0
+                && barrier_bounds.origin.x.0 + barrier_bounds.size.width.0 >= 10.0
+                && barrier_bounds.origin.y.0 + barrier_bounds.size.height.0 >= 10.0,
+            "expected modal barrier to cover (10, 10), got {barrier_bounds:?}"
+        );
+
         ui.dispatch_event(
             &mut app,
             &mut services,
@@ -724,6 +740,22 @@ mod tests {
         OverlayController::request_for_window(&mut app, window, req);
         OverlayController::render(&mut ui, &mut app, &mut services, window, b);
         ui.layout_all(&mut app, &mut services, b, 1.0);
+
+        let modal_root = ui
+            .debug_layers_in_paint_order()
+            .into_iter()
+            .find(|l| l.blocks_underlay_input && l.visible)
+            .expect("modal layer root")
+            .root;
+        let barrier = ui.children(modal_root)[0];
+        let barrier_bounds = ui.debug_node_bounds(barrier).expect("barrier bounds");
+        assert!(
+            barrier_bounds.origin.x.0 <= 10.0
+                && barrier_bounds.origin.y.0 <= 10.0
+                && barrier_bounds.origin.x.0 + barrier_bounds.size.width.0 >= 10.0
+                && barrier_bounds.origin.y.0 + barrier_bounds.size.height.0 >= 10.0,
+            "expected modal barrier to cover (10, 10), got {barrier_bounds:?}"
+        );
 
         ui.dispatch_event(
             &mut app,

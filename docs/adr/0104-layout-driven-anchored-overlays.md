@@ -72,6 +72,12 @@ own “probe render then re-place” loops. They should rely on `Anchored` for f
 - `outer_margin`: insets applied to the outer window bounds prior to placement (equivalent to a
   window margin).
 - `anchor`: the anchor rect in the same coordinate space as `outer` (window-local logical px).
+- Optional: `anchor_element`: a declarative element ID to resolve during layout. When set, the
+  layout pass prefers the element's **current-frame** layout bounds as the anchor rect (falling
+  back to `anchor` when unavailable). This avoids cross-frame geometry delay from
+  `bounds_for_element(...)` / `last_bounds_for_element(...)` queries and better matches GPUI's
+  layout-driven placement model. Note that this resolves **layout bounds** only (ADR 0083): if you
+  need post-`render_transform` anchoring, provide `anchor` from `visual_bounds_for_element(...)`.
 - `side`, `align`, `side_offset`: the primary placement policy.
 - `options: AnchoredPanelOptions`: direction, cross-axis offset, and optional arrow options.
 - `layout_out: Option<Model<AnchoredPanelLayout>>`: optional output model updated during layout.

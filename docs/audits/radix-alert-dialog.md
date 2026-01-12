@@ -43,3 +43,8 @@ Fret models alert-dialog outcomes as a modal overlay recipe with safety defaults
 
 - Consider exposing an explicit `AlertDialogOptions` builder in `primitives::alert_dialog` if
   non-shadcn consumers need the same safety defaults without adopting the shadcn recipe layer.
+
+## Conformance gate
+
+- Radix Web overlay geometry parity: `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs`
+  (`radix_web_alert_dialog_open_geometry_matches_fret`).

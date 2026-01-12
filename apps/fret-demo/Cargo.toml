@@ -16,6 +16,7 @@ alloc-profile = ["fret-examples/alloc-profile"]
 mathjax-svg = ["fret-examples/mathjax-svg"]
 hotpatch = ["fret-examples/hotpatch", "fret-bootstrap/hotpatch-subsecond"]
 node-graph-demos = ["fret-examples/node-graph-demos"]
+layout-engine-v2 = ["fret-examples/layout-engine-v2", "fret-ui/layout-engine-v2"]
 
 [dependencies]
 anyhow.workspace = true

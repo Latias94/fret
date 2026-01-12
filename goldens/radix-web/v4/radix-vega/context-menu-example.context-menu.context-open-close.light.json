@@ -97,12 +97,30 @@
                                     "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 109,
+                                    "w": 398,
+                                    "h": 99.5
+                                  },
                                   "text": "Right click here"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 84,
+                                "w": 448,
+                                "h": 167.5
+                              },
                               "text": "Right click here"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 48,
+                            "w": 448,
+                            "h": 203.5
+                          },
                           "text": "BasicRight click here"
                         },
                         {
@@ -158,6 +176,12 @@
                                         "data-slot": "context-menu-trigger"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 109,
+                                        "w": 187,
+                                        "h": 46.75
+                                      },
                                       "text": "Right click (top)"
                                     },
                                     {
@@ -176,6 +200,12 @@
                                         "data-slot": "context-menu-trigger"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 892,
+                                        "y": 109,
+                                        "w": 187,
+                                        "h": 46.75
+                                      },
                                       "text": "Right click (right)"
                                     },
                                     {
@@ -194,6 +224,12 @@
                                         "data-slot": "context-menu-trigger"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 179.75,
+                                        "w": 187,
+                                        "h": 46.75
+                                      },
                                       "text": "Right click (bottom)"
                                     },
                                     {
@@ -212,15 +248,39 @@
                                         "data-slot": "context-menu-trigger"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 892,
+                                        "y": 179.75,
+                                        "w": 187,
+                                        "h": 46.75
+                                      },
                                       "text": "Right click (left)"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 109,
+                                    "w": 398,
+                                    "h": 117.5
+                                  },
                                   "text": "Right click (top)Right click (right)Right click (bottom)Right click (left)"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 84,
+                                "w": 448,
+                                "h": 167.5
+                              },
                               "text": "Right click (top)Right click (right)Right click (bottom)Right click (left)"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 48,
+                            "w": 448,
+                            "h": 203.5
+                          },
                           "text": "With SidesRight click (top)Right click (right)Right click (bottom)Right click (left)"
                         },
                         {
@@ -263,12 +323,30 @@
                                     "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 344.5,
+                                    "w": 398,
+                                    "h": 99.5
+                                  },
                                   "text": "Right click here"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 319.5,
+                                "w": 448,
+                                "h": 149.5
+                              },
                               "text": "Right click here"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 283.5,
+                            "w": 448,
+                            "h": 185.5
+                          },
                           "text": "With IconsRight click here"
                         },
                         {
@@ -311,12 +389,30 @@
                                     "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 344.5,
+                                    "w": 398,
+                                    "h": 99.5
+                                  },
                                   "text": "Right click here"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 319.5,
+                                "w": 448,
+                                "h": 149.5
+                              },
                               "text": "Right click here"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 283.5,
+                            "w": 448,
+                            "h": 185.5
+                          },
                           "text": "With ShortcutsRight click here"
                         },
                         {
@@ -359,12 +455,30 @@
                                     "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 562,
+                                    "w": 398,
+                                    "h": 99.5
+                                  },
                                   "text": "Right click here"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 537,
+                                "w": 448,
+                                "h": 149.5
+                              },
                               "text": "Right click here"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 501,
+                            "w": 448,
+                            "h": 185.5
+                          },
                           "text": "With SubmenuRight click here"
                         },
                         {
@@ -407,12 +521,30 @@
                                     "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 562,
+                                    "w": 398,
+                                    "h": 99.5
+                                  },
                                   "text": "Right click here"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 537,
+                                "w": 448,
+                                "h": 149.5
+                              },
                               "text": "Right click here"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 501,
+                            "w": 448,
+                            "h": 185.5
+                          },
                           "text": "With Groups, Labels & SeparatorsRight click here"
                         },
                         {
@@ -455,12 +587,30 @@
                                     "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 779.5,
+                                    "w": 398,
+                                    "h": 99.5
+                                  },
                                   "text": "Right click here"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 754.5,
+                                "w": 448,
+                                "h": 149.5
+                              },
                               "text": "Right click here"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 718.5,
+                            "w": 448,
+                            "h": 185.5
+                          },
                           "text": "With CheckboxesRight click here"
                         },
                         {
@@ -503,12 +653,30 @@
                                     "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 779.5,
+                                    "w": 398,
+                                    "h": 99.5
+                                  },
                                   "text": "Right click here"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 754.5,
+                                "w": 448,
+                                "h": 149.5
+                              },
                               "text": "Right click here"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 718.5,
+                            "w": 448,
+                            "h": 185.5
+                          },
                           "text": "With Radio GroupRight click here"
                         },
                         {
@@ -551,12 +719,30 @@
                                     "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 997,
+                                    "w": 398,
+                                    "h": 99.5
+                                  },
                                   "text": "Right click here"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 972,
+                                "w": 448,
+                                "h": 149.5
+                              },
                               "text": "Right click here"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 936,
+                            "w": 448,
+                            "h": 185.5
+                          },
                           "text": "With Destructive ItemsRight click here"
                         },
                         {
@@ -602,21 +788,57 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 997,
+                                    "w": 104.015625,
+                                    "h": 36
+                                  },
                                   "text": "Open Dialog"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 972,
+                                "w": 448,
+                                "h": 149.5
+                              },
                               "text": "Open Dialog"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 936,
+                            "w": 448,
+                            "h": 185.5
+                          },
                           "text": "In DialogOpen Dialog"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 1169.5
+                      },
                       "text": "BasicRight click hereWith SidesRight click (top)Right click (right)Right click (bottom)Right click (left)With IconsRight…"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 1169.5
+                  },
                   "text": "BasicRight click hereWith SidesRight click (top)Right click (right)Right click (bottom)Right click (left)With IconsRight…"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 1169.5
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -631,9 +853,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 1169.5,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 1169.5
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -802,7 +1036,13 @@
                 "tabindex": "0",
                 "aria-hidden": "true"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 0,
+                "h": 0
+              }
             },
             {
               "tag": "div",
@@ -812,7 +1052,13 @@
               "attrs": {
                 "aria-hidden": "true"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 0,
+                "h": 0
+              }
             },
             {
               "tag": "div",
@@ -882,12 +1128,30 @@
                                     "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 109,
+                                    "w": 398,
+                                    "h": 99.5
+                                  },
                                   "text": "Right click here"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 84,
+                                "w": 448,
+                                "h": 167.5
+                              },
                               "text": "Right click here"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 48,
+                            "w": 448,
+                            "h": 203.5
+                          },
                           "text": "BasicRight click here"
                         },
                         {
@@ -943,6 +1207,12 @@
                                         "data-slot": "context-menu-trigger"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 109,
+                                        "w": 187,
+                                        "h": 46.75
+                                      },
                                       "text": "Right click (top)"
                                     },
                                     {
@@ -961,6 +1231,12 @@
                                         "data-slot": "context-menu-trigger"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 892,
+                                        "y": 109,
+                                        "w": 187,
+                                        "h": 46.75
+                                      },
                                       "text": "Right click (right)"
                                     },
                                     {
@@ -979,6 +1255,12 @@
                                         "data-slot": "context-menu-trigger"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 179.75,
+                                        "w": 187,
+                                        "h": 46.75
+                                      },
                                       "text": "Right click (bottom)"
                                     },
                                     {
@@ -997,15 +1279,39 @@
                                         "data-slot": "context-menu-trigger"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 892,
+                                        "y": 179.75,
+                                        "w": 187,
+                                        "h": 46.75
+                                      },
                                       "text": "Right click (left)"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 109,
+                                    "w": 398,
+                                    "h": 117.5
+                                  },
                                   "text": "Right click (top)Right click (right)Right click (bottom)Right click (left)"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 84,
+                                "w": 448,
+                                "h": 167.5
+                              },
                               "text": "Right click (top)Right click (right)Right click (bottom)Right click (left)"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 48,
+                            "w": 448,
+                            "h": 203.5
+                          },
                           "text": "With SidesRight click (top)Right click (right)Right click (bottom)Right click (left)"
                         },
                         {
@@ -1048,12 +1354,30 @@
                                     "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 344.5,
+                                    "w": 398,
+                                    "h": 99.5
+                                  },
                                   "text": "Right click here"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 319.5,
+                                "w": 448,
+                                "h": 149.5
+                              },
                               "text": "Right click here"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 283.5,
+                            "w": 448,
+                            "h": 185.5
+                          },
                           "text": "With IconsRight click here"
                         },
                         {
@@ -1096,12 +1420,30 @@
                                     "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 344.5,
+                                    "w": 398,
+                                    "h": 99.5
+                                  },
                                   "text": "Right click here"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 319.5,
+                                "w": 448,
+                                "h": 149.5
+                              },
                               "text": "Right click here"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 283.5,
+                            "w": 448,
+                            "h": 185.5
+                          },
                           "text": "With ShortcutsRight click here"
                         },
                         {
@@ -1144,12 +1486,30 @@
                                     "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 562,
+                                    "w": 398,
+                                    "h": 99.5
+                                  },
                                   "text": "Right click here"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 537,
+                                "w": 448,
+                                "h": 149.5
+                              },
                               "text": "Right click here"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 501,
+                            "w": 448,
+                            "h": 185.5
+                          },
                           "text": "With SubmenuRight click here"
                         },
                         {
@@ -1192,12 +1552,30 @@
                                     "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 562,
+                                    "w": 398,
+                                    "h": 99.5
+                                  },
                                   "text": "Right click here"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 537,
+                                "w": 448,
+                                "h": 149.5
+                              },
                               "text": "Right click here"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 501,
+                            "w": 448,
+                            "h": 185.5
+                          },
                           "text": "With Groups, Labels & SeparatorsRight click here"
                         },
                         {
@@ -1240,12 +1618,30 @@
                                     "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 779.5,
+                                    "w": 398,
+                                    "h": 99.5
+                                  },
                                   "text": "Right click here"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 754.5,
+                                "w": 448,
+                                "h": 149.5
+                              },
                               "text": "Right click here"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 718.5,
+                            "w": 448,
+                            "h": 185.5
+                          },
                           "text": "With CheckboxesRight click here"
                         },
                         {
@@ -1288,12 +1684,30 @@
                                     "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 779.5,
+                                    "w": 398,
+                                    "h": 99.5
+                                  },
                                   "text": "Right click here"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 754.5,
+                                "w": 448,
+                                "h": 149.5
+                              },
                               "text": "Right click here"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 718.5,
+                            "w": 448,
+                            "h": 185.5
+                          },
                           "text": "With Radio GroupRight click here"
                         },
                         {
@@ -1336,12 +1750,30 @@
                                     "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 997,
+                                    "w": 398,
+                                    "h": 99.5
+                                  },
                                   "text": "Right click here"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 972,
+                                "w": 448,
+                                "h": 149.5
+                              },
                               "text": "Right click here"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 936,
+                            "w": 448,
+                            "h": 185.5
+                          },
                           "text": "With Destructive ItemsRight click here"
                         },
                         {
@@ -1387,18 +1819,48 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 997,
+                                    "w": 104.015625,
+                                    "h": 36
+                                  },
                                   "text": "Open Dialog"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 972,
+                                "w": 448,
+                                "h": 149.5
+                              },
                               "text": "Open Dialog"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 936,
+                            "w": 448,
+                            "h": 185.5
+                          },
                           "text": "In DialogOpen Dialog"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 1169.5
+                      },
                       "text": "BasicRight click hereWith SidesRight click (top)Right click (right)Right click (bottom)Right click (left)With IconsRight…"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 1169.5
+                  },
                   "text": "BasicRight click hereWith SidesRight click (top)Right click (right)Right click (bottom)Right click (left)With IconsRight…"
                 },
                 {
@@ -1414,6 +1876,12 @@
                   "text": "xssmmdlgxl2xl"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 1169.5
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -1428,7 +1896,13 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 1169.5,
+                "w": 1280,
+                "h": 0
+              }
             },
             {
               "tag": "title",
@@ -1619,7 +2093,13 @@
               "attrs": {
                 "aria-hidden": "true"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 1169.5,
+                "w": 0,
+                "h": 0
+              }
             },
             {
               "tag": "div",
@@ -1673,6 +2153,12 @@
                             "data-radix-collection-item": ""
                           },
                           "children": [],
+                          "rect": {
+                            "x": 212,
+                            "y": 118,
+                            "w": 136,
+                            "h": 32
+                          },
                           "text": "Back"
                         },
                         {
@@ -1693,6 +2179,12 @@
                             "data-radix-collection-item": ""
                           },
                           "children": [],
+                          "rect": {
+                            "x": 212,
+                            "y": 150,
+                            "w": 136,
+                            "h": 32
+                          },
                           "text": "Forward"
                         },
                         {
@@ -1711,15 +2203,39 @@
                             "data-radix-collection-item": ""
                           },
                           "children": [],
+                          "rect": {
+                            "x": 212,
+                            "y": 182,
+                            "w": 136,
+                            "h": 32
+                          },
                           "text": "Reload"
                         }
                       ],
+                      "rect": {
+                        "x": 212,
+                        "y": 118,
+                        "w": 136,
+                        "h": 96
+                      },
                       "text": "BackForwardReload"
                     }
                   ],
+                  "rect": {
+                    "x": 208,
+                    "y": 114,
+                    "w": 144,
+                    "h": 104
+                  },
                   "text": "BackForwardReload"
                 }
               ],
+              "rect": {
+                "x": 208,
+                "y": 114,
+                "w": 144,
+                "h": 104
+              },
               "text": "BackForwardReload"
             },
             {
@@ -1731,9 +2247,21 @@
                 "tabindex": "0",
                 "aria-hidden": "true"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 1169.5,
+                "w": 0,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 1169.5
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -1850,12 +2378,30 @@
                                     "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 109,
+                                    "w": 398,
+                                    "h": 99.5
+                                  },
                                   "text": "Right click here"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 84,
+                                "w": 448,
+                                "h": 167.5
+                              },
                               "text": "Right click here"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 48,
+                            "w": 448,
+                            "h": 203.5
+                          },
                           "text": "BasicRight click here"
                         },
                         {
@@ -1911,6 +2457,12 @@
                                         "data-slot": "context-menu-trigger"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 109,
+                                        "w": 187,
+                                        "h": 46.75
+                                      },
                                       "text": "Right click (top)"
                                     },
                                     {
@@ -1929,6 +2481,12 @@
                                         "data-slot": "context-menu-trigger"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 892,
+                                        "y": 109,
+                                        "w": 187,
+                                        "h": 46.75
+                                      },
                                       "text": "Right click (right)"
                                     },
                                     {
@@ -1947,6 +2505,12 @@
                                         "data-slot": "context-menu-trigger"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 179.75,
+                                        "w": 187,
+                                        "h": 46.75
+                                      },
                                       "text": "Right click (bottom)"
                                     },
                                     {
@@ -1965,15 +2529,39 @@
                                         "data-slot": "context-menu-trigger"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 892,
+                                        "y": 179.75,
+                                        "w": 187,
+                                        "h": 46.75
+                                      },
                                       "text": "Right click (left)"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 109,
+                                    "w": 398,
+                                    "h": 117.5
+                                  },
                                   "text": "Right click (top)Right click (right)Right click (bottom)Right click (left)"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 84,
+                                "w": 448,
+                                "h": 167.5
+                              },
                               "text": "Right click (top)Right click (right)Right click (bottom)Right click (left)"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 48,
+                            "w": 448,
+                            "h": 203.5
+                          },
                           "text": "With SidesRight click (top)Right click (right)Right click (bottom)Right click (left)"
                         },
                         {
@@ -2016,12 +2604,30 @@
                                     "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 344.5,
+                                    "w": 398,
+                                    "h": 99.5
+                                  },
                                   "text": "Right click here"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 319.5,
+                                "w": 448,
+                                "h": 149.5
+                              },
                               "text": "Right click here"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 283.5,
+                            "w": 448,
+                            "h": 185.5
+                          },
                           "text": "With IconsRight click here"
                         },
                         {
@@ -2064,12 +2670,30 @@
                                     "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 344.5,
+                                    "w": 398,
+                                    "h": 99.5
+                                  },
                                   "text": "Right click here"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 319.5,
+                                "w": 448,
+                                "h": 149.5
+                              },
                               "text": "Right click here"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 283.5,
+                            "w": 448,
+                            "h": 185.5
+                          },
                           "text": "With ShortcutsRight click here"
                         },
                         {
@@ -2112,12 +2736,30 @@
                                     "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 562,
+                                    "w": 398,
+                                    "h": 99.5
+                                  },
                                   "text": "Right click here"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 537,
+                                "w": 448,
+                                "h": 149.5
+                              },
                               "text": "Right click here"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 501,
+                            "w": 448,
+                            "h": 185.5
+                          },
                           "text": "With SubmenuRight click here"
                         },
                         {
@@ -2160,12 +2802,30 @@
                                     "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 562,
+                                    "w": 398,
+                                    "h": 99.5
+                                  },
                                   "text": "Right click here"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 537,
+                                "w": 448,
+                                "h": 149.5
+                              },
                               "text": "Right click here"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 501,
+                            "w": 448,
+                            "h": 185.5
+                          },
                           "text": "With Groups, Labels & SeparatorsRight click here"
                         },
                         {
@@ -2208,12 +2868,30 @@
                                     "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 779.5,
+                                    "w": 398,
+                                    "h": 99.5
+                                  },
                                   "text": "Right click here"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 754.5,
+                                "w": 448,
+                                "h": 149.5
+                              },
                               "text": "Right click here"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 718.5,
+                            "w": 448,
+                            "h": 185.5
+                          },
                           "text": "With CheckboxesRight click here"
                         },
                         {
@@ -2256,12 +2934,30 @@
                                     "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 779.5,
+                                    "w": 398,
+                                    "h": 99.5
+                                  },
                                   "text": "Right click here"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 754.5,
+                                "w": 448,
+                                "h": 149.5
+                              },
                               "text": "Right click here"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 718.5,
+                            "w": 448,
+                            "h": 185.5
+                          },
                           "text": "With Radio GroupRight click here"
                         },
                         {
@@ -2304,12 +3000,30 @@
                                     "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 997,
+                                    "w": 398,
+                                    "h": 99.5
+                                  },
                                   "text": "Right click here"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 972,
+                                "w": 448,
+                                "h": 149.5
+                              },
                               "text": "Right click here"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 936,
+                            "w": 448,
+                            "h": 185.5
+                          },
                           "text": "With Destructive ItemsRight click here"
                         },
                         {
@@ -2355,21 +3069,57 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 997,
+                                    "w": 104.015625,
+                                    "h": 36
+                                  },
                                   "text": "Open Dialog"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 972,
+                                "w": 448,
+                                "h": 149.5
+                              },
                               "text": "Open Dialog"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 936,
+                            "w": 448,
+                            "h": 185.5
+                          },
                           "text": "In DialogOpen Dialog"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 1169.5
+                      },
                       "text": "BasicRight click hereWith SidesRight click (top)Right click (right)Right click (bottom)Right click (left)With IconsRight…"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 1169.5
+                  },
                   "text": "BasicRight click hereWith SidesRight click (top)Right click (right)Right click (bottom)Right click (left)With IconsRight…"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 1169.5
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -2384,9 +3134,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 1169.5,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 1169.5
+          }
         },
         "ax": {
           "role": "RootWebArea",

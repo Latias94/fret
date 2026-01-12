@@ -7,6 +7,7 @@ use renderdog_automation::{QRenderDocPythonRequest, RenderDocInstallation};
 struct DumpRequest {
     capture_path: String,
     marker_contains: String,
+    only_drawcalls: bool,
     selection: String,
     max_results: usize,
     output_dir: String,
@@ -45,6 +46,7 @@ fn parse_args() -> Result<(Option<PathBuf>, DumpRequest), anyhow::Error> {
     let mut renderdoc_dir: Option<PathBuf> = None;
     let mut capture_path: Option<String> = None;
     let mut marker_contains: Option<String> = None;
+    let mut only_drawcalls = false;
     let mut selection: String = "last".to_string();
     let mut max_results: usize = 200;
     let mut output_dir: Option<String> = None;
@@ -111,9 +113,10 @@ fn parse_args() -> Result<(Option<PathBuf>, DumpRequest), anyhow::Error> {
                 dump_clip_stack_entries = v.parse().context("parse --clip-entries")?;
             }
             "--no-outputs-png" => save_outputs_png = false,
+            "--only-drawcalls" => only_drawcalls = true,
             "-h" | "--help" => {
                 return Err(anyhow!(
-                    "Usage:\n  fret-renderdoc dump --capture <path.rdc> --marker <substring> [options]\n\nOptions:\n  --renderdoc-dir <dir>   RenderDoc install root (contains qrenderdoc + renderdoccmd)\n  --selection <first|last|all> (default: last)\n  --max-results <n>       (default: 200)\n  --out <dir>             Output dir (default: .fret/renderdoc-inspect/<ts>)\n  --basename <name>       Output basename (default: fret_dump)\n  --no-uniform-bytes      Do not dump constant buffer bytes\n  --clip-entries <n>      Dump N ClipRRectUniform entries (default: 64)\n  --no-outputs-png        Do not save pipeline output PNGs\n\nNotes:\n  - If auto-detection fails, set RENDERDOG_RENDERDOC_DIR=<RenderDoc install root> or pass --renderdoc-dir.\n  - Run from the repo root so tools/renderdoc/*.py can be found.\n"
+                    "Usage:\n  fret-renderdoc dump --capture <path.rdc> --marker <substring> [options]\n\nOptions:\n  --renderdoc-dir <dir>   RenderDoc install root (contains qrenderdoc + renderdoccmd)\n  --only-drawcalls        Filter matches to draw/dispatch actions only (default: false)\n  --selection <first|last|all> (default: last)\n  --max-results <n>       (default: 200)\n  --out <dir>             Output dir (default: .fret/renderdoc-inspect/<ts>)\n  --basename <name>       Output basename (default: fret_dump)\n  --no-uniform-bytes      Do not dump constant buffer bytes\n  --clip-entries <n>      Dump N ClipRRectUniform entries (default: 64)\n  --no-outputs-png        Do not save pipeline output PNGs\n\nNotes:\n  - If auto-detection fails, set RENDERDOG_RENDERDOC_DIR=<RenderDoc install root> or pass --renderdoc-dir.\n  - Run from the repo root so tools/renderdoc/*.py can be found.\n"
                 ));
             }
             other => return Err(anyhow!("unknown arg: {other}")),
@@ -149,6 +152,7 @@ fn parse_args() -> Result<(Option<PathBuf>, DumpRequest), anyhow::Error> {
         DumpRequest {
             capture_path: capture_path.display().to_string(),
             marker_contains,
+            only_drawcalls,
             selection,
             max_results,
             output_dir: out_dir_path.display().to_string(),

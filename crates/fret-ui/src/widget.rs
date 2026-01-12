@@ -8,6 +8,7 @@ use std::any::{Any, TypeId};
 use std::collections::HashMap;
 
 use crate::layout_constraints::LayoutConstraints;
+use crate::layout_pass::LayoutPassKind;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Invalidation {
@@ -135,6 +136,7 @@ pub struct LayoutCx<'a, H: UiHost> {
     pub children: &'a [NodeId],
     pub bounds: Rect,
     pub available: Size,
+    pub pass_kind: LayoutPassKind,
     pub scale_factor: f32,
     pub services: &'a mut dyn UiServices,
     pub observe_model: &'a mut dyn FnMut(ModelId, Invalidation),
@@ -175,8 +177,25 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
     }
 
     pub fn layout_in(&mut self, child: NodeId, bounds: Rect) -> Size {
-        self.tree
-            .layout_in(self.app, self.services, child, bounds, self.scale_factor)
+        self.tree.layout_in_with_pass_kind(
+            self.app,
+            self.services,
+            child,
+            bounds,
+            self.scale_factor,
+            self.pass_kind,
+        )
+    }
+
+    pub fn layout_in_probe(&mut self, child: NodeId, bounds: Rect) -> Size {
+        self.tree.layout_in_with_pass_kind(
+            self.app,
+            self.services,
+            child,
+            bounds,
+            self.scale_factor,
+            LayoutPassKind::Probe,
+        )
     }
 
     pub fn layout_engine_child_bounds(&mut self, child: NodeId) -> Option<Rect> {
@@ -202,6 +221,9 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
     pub fn layout_viewport_root(&mut self, child: NodeId, bounds: Rect) -> Size {
         #[cfg(feature = "layout-engine-v2")]
         {
+            if self.pass_kind == LayoutPassKind::Probe {
+                return bounds.size;
+            }
             self.tree.register_viewport_root(child, bounds);
             bounds.size
         }

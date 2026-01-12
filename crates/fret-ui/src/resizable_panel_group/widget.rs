@@ -263,6 +263,18 @@ impl<H: UiHost> Widget<H> for BoundResizablePanelGroup {
         self.last_handle_centers = handle_centers;
         self.last_sizes = sizes;
 
+        #[cfg(feature = "layout-engine-v2")]
+        {
+            // Avoid registering viewport roots during "probe" layout passes (important for
+            // scroll/virtualized descendants).
+            if cx.pass_kind == crate::layout_pass::LayoutPassKind::Final {
+                for (&child, &rect) in cx.children.iter().zip(panel_rects.iter()) {
+                    let _ = cx.layout_viewport_root(child, rect);
+                }
+                return cx.available;
+            }
+        }
+
         for (&child, &rect) in cx.children.iter().zip(panel_rects.iter()) {
             let _ = cx.layout_in(child, rect);
         }

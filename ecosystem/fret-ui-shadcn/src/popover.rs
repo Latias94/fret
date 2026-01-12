@@ -9,8 +9,8 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
-    AnchoredProps, AnyElement, ContainerProps, LayoutStyle, Overflow, SemanticsProps, SizeStyle,
-    TextProps,
+    AnchoredProps, AnyElement, ContainerProps, LayoutStyle, Length, Overflow, RenderTransformProps,
+    SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -324,20 +324,6 @@ impl Popover {
                         return Vec::new();
                     }
 
-                    let inner_id = std::cell::Cell::new(None);
-                    let inner_id_for_scope = inner_id.clone();
-                    let content = radix_popover::popover_dialog_wrapper(cx, None, move |cx| {
-                        let inner = content(cx, anchor_fallback.unwrap_or_default());
-                        inner_id_for_scope.set(Some(inner.id));
-                        vec![inner]
-                    });
-                    dialog_id_for_trigger.set(Some(content.id));
-
-                    let measure_id = inner_id.get().unwrap_or(content.id);
-                    let last_content_size = cx.last_bounds_for_element(measure_id).map(|r| r.size);
-                    let estimated = Size::new(Px(288.0), Px(160.0));
-                    let content_size = last_content_size.unwrap_or(estimated);
-
                     let align = match align {
                         PopoverAlign::Start => Align::Start,
                         PopoverAlign::Center => Align::Center,
@@ -352,101 +338,131 @@ impl Popover {
 
                     let (arrow_options, arrow_protrusion) =
                         popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
-
                     let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
                     let placement =
                         popper::PopperContentPlacement::new(direction, side, align, side_offset)
                             .with_align_offset(align_offset)
                             .with_arrow(arrow_options, arrow_protrusion)
                             .with_hide_when_detached(hide_when_detached);
-                    let reference_hidden = anchor_fallback
-                        .is_some_and(|anchor| placement.reference_hidden(outer, anchor));
-
-                    let w = content_size.width.0.max(0.0);
-                    let h = content_size.height.0.max(0.0);
-                    let origin = match side {
-                        Side::Top => Point::new(Px(w * 0.5), Px(h)),
-                        Side::Bottom => Point::new(Px(w * 0.5), Px(0.0)),
-                        Side::Left => Point::new(Px(w), Px(h * 0.5)),
-                        Side::Right => Point::new(Px(0.0), Px(h * 0.5)),
-                    };
-                    let opacity = if reference_hidden { 0.0 } else { opacity };
-                    let transform = overlay_motion::shadcn_popper_presence_transform(
-                        side, origin, opacity, scale, opening,
-                    );
 
                     let bg = theme.color_required("popover.background");
                     let border = theme.color_required("border");
 
-                    let layout_for_arrow = anchor_fallback.map(|anchor| {
-                        let mut layout = popper::popper_content_layout_sized(
-                            outer,
-                            anchor,
-                            content_size,
-                            placement,
-                        );
-                        layout.rect = Rect::new(Point::new(Px(0.0), Px(0.0)), layout.rect.size);
-                        layout
-                    });
-
-                    let wrapper = cx.container(
-                        ContainerProps {
+                    let anchored = cx.anchored_props(
+                        AnchoredProps {
                             layout: LayoutStyle {
                                 overflow: Overflow::Visible,
+                                size: SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Fill,
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             },
-                            ..Default::default()
+                            outer_margin: Edges::all(window_margin),
+                            anchor: anchor_fallback.unwrap_or_default(),
+                            anchor_element: Some(anchor_id.0),
+                            side,
+                            align,
+                            side_offset,
+                            options: placement.options(),
+                            layout_out: None,
                         },
                         move |cx| {
-                            let arrow_el = layout_for_arrow.as_ref().and_then(|layout| {
-                                popper_arrow::diamond_arrow_element(
-                                    cx,
-                                    layout,
-                                    Edges::all(Px(0.0)),
-                                    arrow_size,
-                                    DiamondArrowStyle {
-                                        bg,
-                                        border: Some(border),
-                                        border_width: Px(1.0),
-                                    },
-                                )
+                            let inner_id = std::cell::Cell::new(None);
+                            let inner_id_for_scope = inner_id.clone();
+                            let anchor_for_content = anchor_fallback.unwrap_or_default();
+                            let popover_content =
+                                radix_popover::popover_dialog_wrapper(cx, None, move |cx| {
+                                    let inner = content(cx, anchor_for_content);
+                                    inner_id_for_scope.set(Some(inner.id));
+                                    vec![inner]
+                                });
+                            dialog_id_for_trigger.set(Some(popover_content.id));
+
+                            let measure_id = inner_id.get().unwrap_or(popover_content.id);
+                            let last_content_size =
+                                cx.last_bounds_for_element(measure_id).map(|r| r.size);
+                            let estimated = Size::new(Px(288.0), Px(160.0));
+                            let content_size = last_content_size.unwrap_or(estimated);
+
+                            let reference_hidden = anchor_fallback
+                                .is_some_and(|anchor| placement.reference_hidden(outer, anchor));
+
+                            let w = content_size.width.0.max(0.0);
+                            let h = content_size.height.0.max(0.0);
+                            let origin = match side {
+                                Side::Top => Point::new(Px(w * 0.5), Px(h)),
+                                Side::Bottom => Point::new(Px(w * 0.5), Px(0.0)),
+                                Side::Left => Point::new(Px(w), Px(h * 0.5)),
+                                Side::Right => Point::new(Px(0.0), Px(h * 0.5)),
+                            };
+                            let opacity = if reference_hidden { 0.0 } else { opacity };
+                            let transform = overlay_motion::shadcn_popper_presence_transform(
+                                side, origin, opacity, scale, opening,
+                            );
+
+                            let layout_for_arrow = anchor_fallback.map(|anchor| {
+                                let mut layout = popper::popper_content_layout_sized(
+                                    outer,
+                                    anchor,
+                                    content_size,
+                                    placement,
+                                );
+                                layout.rect =
+                                    Rect::new(Point::new(Px(0.0), Px(0.0)), layout.rect.size);
+                                layout
                             });
 
-                            let mut out: Vec<AnyElement> = Vec::new();
-                            if let Some(arrow_el) = arrow_el {
-                                out.push(arrow_el);
-                            }
-                            out.push(content);
-                            out
-                        },
-                    );
+                            let wrapper = cx.container(
+                                ContainerProps {
+                                    layout: LayoutStyle {
+                                        overflow: Overflow::Visible,
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                move |cx| {
+                                    let arrow_el = layout_for_arrow.as_ref().and_then(|layout| {
+                                        popper_arrow::diamond_arrow_element(
+                                            cx,
+                                            layout,
+                                            Edges::all(Px(0.0)),
+                                            arrow_size,
+                                            DiamondArrowStyle {
+                                                bg,
+                                                border: Some(border),
+                                                border_width: Px(1.0),
+                                            },
+                                        )
+                                    });
 
-                    let overlay_content = overlay_motion::wrap_opacity_and_render_transform_gated(
-                        cx,
-                        opacity,
-                        transform,
-                        !reference_hidden,
-                        vec![wrapper],
+                                    let mut out: Vec<AnyElement> = Vec::new();
+                                    if let Some(arrow_el) = arrow_el {
+                                        out.push(arrow_el);
+                                    }
+                                    out.push(popover_content);
+                                    out
+                                },
+                            );
+
+                            let overlay_content =
+                                overlay_motion::wrap_opacity_and_render_transform_with_layouts_gated(
+                                    cx,
+                                    LayoutStyle::default(),
+                                    opacity,
+                                    RenderTransformProps {
+                                        layout: LayoutStyle::default(),
+                                        transform,
+                                    },
+                                    !reference_hidden,
+                                    vec![wrapper],
+                                );
+                            vec![overlay_content]
+                        },
                     );
 
                     if modal {
-                        let anchored = cx.anchored_props(
-                            AnchoredProps {
-                                layout: LayoutStyle {
-                                    overflow: Overflow::Visible,
-                                    size: SizeStyle::default(),
-                                    ..Default::default()
-                                },
-                                outer_margin: Edges::all(window_margin),
-                                anchor: anchor_fallback.unwrap_or_default(),
-                                side,
-                                align,
-                                side_offset,
-                                options: placement.options(),
-                                layout_out: None,
-                            },
-                            move |_cx| vec![overlay_content],
-                        );
                         radix_popover::popover_modal_layer_children_with_dismiss_handler(
                             cx,
                             open_for_barrier.clone(),
@@ -455,23 +471,7 @@ impl Popover {
                             anchored,
                         )
                     } else {
-                        vec![cx.anchored_props(
-                            AnchoredProps {
-                                layout: LayoutStyle {
-                                    overflow: Overflow::Visible,
-                                    size: SizeStyle::default(),
-                                    ..Default::default()
-                                },
-                                outer_margin: Edges::all(window_margin),
-                                anchor: anchor_fallback.unwrap_or_default(),
-                                side,
-                                align,
-                                side_offset,
-                                options: placement.options(),
-                                layout_out: None,
-                            },
-                            move |_cx| vec![overlay_content],
-                        )]
+                        vec![anchored]
                     }
                 });
 
@@ -1603,11 +1603,14 @@ mod tests {
         let content_id = popover_content_cell.get().expect("popover content id");
         let content_node = fret_ui::elements::node_for_element(&mut app, window, content_id)
             .expect("content node");
-        let content_bounds = ui.debug_node_bounds(content_node).expect("content bounds");
+        let content_bounds = ui
+            .debug_node_visual_bounds(content_node)
+            .expect("content visual bounds");
 
         let clip_bottom = 80.0f32;
         let target_y = (clip_bottom + 5.0).max(content_bounds.origin.y.0 + 2.0);
-        let point = Point::new(Px(content_bounds.origin.x.0 + 5.0), Px(target_y));
+        let target_x = (content_bounds.origin.x.0 + 5.0).max(0.0);
+        let point = Point::new(Px(target_x), Px(target_y));
         assert!(
             content_bounds.contains(point),
             "expected point inside popover bounds; point={point:?} bounds={content_bounds:?}"
@@ -1711,7 +1714,9 @@ mod tests {
         let content_id = popover_content_cell.get().expect("popover content id");
         let content_node = fret_ui::elements::node_for_element(&mut app, window, content_id)
             .expect("content node");
-        let content_bounds = ui.debug_node_bounds(content_node).expect("content bounds");
+        let content_bounds = ui
+            .debug_node_visual_bounds(content_node)
+            .expect("content visual bounds");
 
         // Click just above the panel: this should land on the arrow and not trigger outside-press
         // dismissal.
@@ -1719,6 +1724,11 @@ mod tests {
             Px(content_bounds.origin.x.0 + content_bounds.size.width.0 * 0.5),
             Px(content_bounds.origin.y.0 - 1.0),
         );
+        let pre_hit = ui.debug_hit_test(click);
+        let pre_path = pre_hit
+            .hit
+            .map(|n| ui.debug_node_path(n))
+            .unwrap_or_default();
 
         ui.dispatch_event(
             &mut app,
@@ -1743,7 +1753,13 @@ mod tests {
             }),
         );
 
-        assert_eq!(app.models().get_copied(&open), Some(true));
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(true),
+            "expected arrow click to stay open; click={click:?} hit={:?} path={pre_path:?} layers={:?}",
+            pre_hit.hit,
+            pre_hit.active_layer_roots
+        );
     }
 
     #[test]

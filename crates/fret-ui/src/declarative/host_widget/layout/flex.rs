@@ -3,18 +3,17 @@ use crate::declarative::frame::layout_style_for_node;
 use crate::declarative::layout_helpers::clamp_to_constraints;
 use crate::declarative::prelude::*;
 use crate::declarative::taffy_layout::*;
+use crate::layout_constraints::LayoutConstraints;
 use crate::layout_constraints::{AvailableSpace as RuntimeAvailableSpace, LayoutSize};
 
 #[cfg(feature = "layout-engine-v2")]
-use crate::layout_engine::{
-    ParentLayoutKind, build_flow_subtree, layout_children_from_engine_if_solved,
-};
+use crate::layout_engine::{ParentLayoutKind, layout_children_from_engine_if_solved};
+
+#[cfg(feature = "layout-engine-v2")]
+use crate::widget::MeasureCx;
 
 #[cfg(not(feature = "layout-engine-v2"))]
 use crate::declarative::frame::{ElementInstance, element_record_for_node};
-
-#[cfg(not(feature = "layout-engine-v2"))]
-use crate::layout_constraints::LayoutConstraints;
 
 impl ElementHostWidget {
     pub(super) fn layout_flex_impl<H: UiHost>(
@@ -391,6 +390,32 @@ impl ElementHostWidget {
         window: AppWindowId,
         props: FlexProps,
     ) -> Size {
+        if cx.pass_kind == crate::layout_pass::LayoutPassKind::Probe {
+            let constraints = LayoutConstraints::new(
+                LayoutSize::new(None, None),
+                LayoutSize::new(
+                    RuntimeAvailableSpace::Definite(cx.available.width),
+                    RuntimeAvailableSpace::Definite(cx.available.height),
+                ),
+            );
+
+            // Avoid re-entrant `with_widget_mut(cx.node)` by measuring the current widget directly.
+            let mut measure_cx = MeasureCx {
+                app: cx.app,
+                tree: cx.tree,
+                node: cx.node,
+                window: cx.window,
+                focus: cx.focus,
+                children: cx.children,
+                constraints,
+                scale_factor: cx.scale_factor,
+                services: cx.services,
+                observe_model: cx.observe_model,
+                observe_global: cx.observe_global,
+            };
+            return self.measure_impl(&mut measure_cx);
+        }
+
         if let Some(size) = layout_children_from_engine_if_solved(cx) {
             return size;
         }
@@ -419,6 +444,12 @@ impl ElementHostWidget {
             Px((outer_avail_h.0 - pad_h).max(0.0)),
         );
 
+        let sf = if cx.scale_factor.is_finite() && cx.scale_factor > 0.0 {
+            cx.scale_factor
+        } else {
+            1.0
+        };
+
         let root_style = TaffyStyle {
             display: Display::Flex,
             flex_direction: match props.direction {
@@ -433,24 +464,20 @@ impl ElementHostWidget {
             justify_content: Some(taffy_justify(props.justify)),
             align_items: Some(taffy_align_items(props.align)),
             gap: TaffySize {
-                width: LengthPercentage::length(props.gap.0.max(0.0)),
-                height: LengthPercentage::length(props.gap.0.max(0.0)),
+                width: LengthPercentage::length(props.gap.0.max(0.0) * sf),
+                height: LengthPercentage::length(props.gap.0.max(0.0) * sf),
             },
             size: TaffySize {
                 width: match props.layout.size.width {
-                    Length::Px(px) => Dimension::length((px.0 - pad_w).max(0.0)),
-                    Length::Fill => Dimension::length(inner_avail.width.0.max(0.0)),
+                    Length::Px(px) => Dimension::length((px.0 - pad_w).max(0.0) * sf),
+                    Length::Fill => Dimension::length(inner_avail.width.0.max(0.0) * sf),
                     Length::Auto => Dimension::auto(),
                 },
                 height: match props.layout.size.height {
-                    Length::Px(px) => Dimension::length((px.0 - pad_h).max(0.0)),
-                    Length::Fill => Dimension::length(inner_avail.height.0.max(0.0)),
+                    Length::Px(px) => Dimension::length((px.0 - pad_h).max(0.0) * sf),
+                    Length::Fill => Dimension::length(inner_avail.height.0.max(0.0) * sf),
                     Length::Auto => Dimension::auto(),
                 },
-            },
-            max_size: TaffySize {
-                width: Dimension::length(inner_avail.width.0.max(0.0)),
-                height: Dimension::length(inner_avail.height.0.max(0.0)),
             },
             ..Default::default()
         };
@@ -460,37 +487,24 @@ impl ElementHostWidget {
             RuntimeAvailableSpace::Definite(inner_avail.height),
         );
 
-        let mut engine = cx.tree.take_layout_engine();
-        let root_id = engine.request_layout_node(cx.node);
-        engine.set_style(cx.node, root_style);
-        engine.set_children(cx.node, cx.children);
-        for &child in cx.children {
-            build_flow_subtree(
-                &mut engine,
-                cx.app,
-                &*cx.tree,
-                window,
-                ParentLayoutKind::Flex {
-                    direction: props.direction,
-                },
-                child,
-            );
-        }
+        let (root_layout, child_layouts) = cx.tree.solve_flow_island_with_root_style(
+            cx.app,
+            cx.services,
+            window,
+            cx.node,
+            root_style,
+            cx.children,
+            ParentLayoutKind::Flex {
+                direction: props.direction,
+            },
+            available,
+            sf,
+        );
 
-        let sf = cx.scale_factor;
-        let app = &mut *cx.app;
-        let services = &mut *cx.services;
-        engine.compute_root_with_measure(root_id, available, |child, constraints| {
-            cx.tree.measure_in(app, services, child, constraints, sf)
-        });
-
-        let container_inner_size = {
-            let rect = engine.layout_rect(root_id);
-            Size::new(
-                Px(rect.size.width.0.max(0.0)),
-                Px(rect.size.height.0.max(0.0)),
-            )
-        };
+        let container_inner_size = Size::new(
+            Px(root_layout.size.width.0.max(0.0)),
+            Px(root_layout.size.height.0.max(0.0)),
+        );
         let auto_margin_inner_size = Size::new(
             match props.layout.size.width {
                 Length::Fill => inner_avail.width,
@@ -501,16 +515,6 @@ impl ElementHostWidget {
                 _ => container_inner_size.height,
             },
         );
-
-        let mut child_layouts: Vec<(NodeId, Rect)> = Vec::with_capacity(cx.children.len());
-        for &child in cx.children {
-            let Some(id) = engine.layout_id_for_node(child) else {
-                continue;
-            };
-            child_layouts.push((child, engine.layout_rect(id)));
-        }
-
-        cx.tree.put_layout_engine(engine);
 
         for (child, layout) in child_layouts {
             let child_style = layout_style_for_node(cx.app, window, child);
@@ -630,6 +634,7 @@ impl ElementHostWidget {
                 fret_core::Point::new(Px(inner_origin.x.0 + x), Px(inner_origin.y.0 + y)),
                 layout.size,
             );
+
             let _ = cx.layout_in(child, rect);
         }
 

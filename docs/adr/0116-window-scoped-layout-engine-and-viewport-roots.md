@@ -55,10 +55,11 @@ This ADR is intended to refine and extend existing accepted contracts, not contr
   flow layout, and docking/splits/scroll/virtualization remain explicit systems.
 - ADR 0005 (layout writes bounds) remains true: the engine's "apply" step is part of layout and
   writes authoritative bounds into the retained UI tree before paint/hit-test.
-- ADR 0076 (persistent container-owned Taffy trees) remains a valid near-term implementation
-  strategy; this ADR proposes a later evolution that generalizes the same persistence/incremental
-  update principles into a single window-scoped engine. If ADR 0116 is accepted, it should be
-  treated as superseding ADR 0076's "container-owned TaffyTree" as the preferred end-state shape.
+- ADR 0076 (persistent container-owned Taffy trees) remains the accepted performance hardening
+  guidance for the **container-owned** integration shape; this ADR proposes a later evolution that
+  generalizes the same persistence/incremental update principles into a single window-scoped
+  engine. If ADR 0116 is accepted, it becomes the preferred *integration shape* for declarative
+  flow layout, while ADR 0076's caching/invalidation guidance remains applicable.
 - Terminology: "viewport" in this ADR refers to docking-defined layout roots (multi-viewport UI).
   "ViewportSurface" refers to engine integration surfaces (ADR 0007).
 
@@ -128,7 +129,7 @@ Names illustrative:
 - `LayoutEngine::begin_frame(frame_id, scale_factor, env_keys...)`
 - `LayoutEngine::request_layout(node_id, style, children: &[node_id]) -> LayoutId`
 - `LayoutEngine::request_measured_layout(node_id, style, measure_fn) -> LayoutId`
-- `LayoutEngine::compute_root(root_layout_id, available: Size<AvailableSpace>)`
+- `LayoutEngine::compute_root(root_layout_id, available: Size<AvailableSpace>, scale_factor)`
 - `LayoutEngine::layout_rect(layout_id) -> Rect` (root-local)
 
 Important: the request phase is allowed to observe models/globals for invalidation, but it must not
@@ -252,13 +253,20 @@ Debug surfaces:
   0011); add per-viewport overlay roots only for concrete perf/correctness needs.
 - Root solve order: solve roots in window root z-order, but viewport roots never participate in a
   shared solve; each viewport root is solved independently against its own definite available space.
-- Pixel rounding: keep an explicit engine-level rounding policy (off by default); when enabled,
-  apply it once at the layout-engine boundary so hit-testing and paint share snapped bounds.
+- Pixel rounding: optional; if enabled, snap layout outputs at the layout-engine boundary (apply/writeback)
+  using the same `snap_rect` policy as ADR 0035 so hit-testing and paint share stable bounds.
+  - Implementation option A (simple): solve in logical pixels, then apply `snap_rect` on writeback.
+  - Implementation option B (GPUI-aligned, implementation detail): internally solve in device-pixel space
+    (`* scale_factor`) with Taffy rounding enabled, then convert results back to logical pixels
+    (`/ scale_factor`). This must be semantically equivalent to applying `snap_rect` on writeback and must
+    not change the core coordinate space (still logical pixels).
+  - Requirement: snapping must be idempotent with renderer snapping (avoid double-rounding drift).
 
 ## References
 
 - Non-reentrant measurement + `AvailableSpace`: `docs/adr/0115-available-space-and-non-reentrant-measurement.md`
 - Refactor roadmap (living doc): `docs/layout-engine-refactor-roadmap.md`
+- Migration inventory (living checklist): `docs/layout-engine-v2-migration-inventory.md`
 - Taffy integration boundaries: `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`
 - Declarative Flex semantics: `docs/adr/0057-declarative-layout-style-and-flex-semantics.md`
 - Container-owned Taffy performance hardening (near-term): `docs/adr/0076-declarative-layout-performance-hardening.md`

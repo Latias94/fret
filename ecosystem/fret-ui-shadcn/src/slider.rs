@@ -4,7 +4,8 @@ use fret_core::{Color, Corners, CursorIcon, Edges, MouseButton, Px};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerDownCx, PointerMoveCx, PointerUpCx, UiPointerActionHost};
 use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutStyle, Length, PointerRegionProps, PositionStyle,
+    AnyElement, ContainerProps, CrossAlign, LayoutStyle, Length, MainAlign, MarginEdge,
+    MarginEdges, Overflow, PointerRegionProps, PositionStyle, RowProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::LayoutRefinement;
@@ -227,8 +228,12 @@ pub fn slider<H: UiHost>(
             drag_index_model
         };
 
-        let root_layout = decl_style::layout_style(&theme, layout.relative().w_full());
-        let root_h = style.thumb_size.0.max(style.track_height.0).max(0.0);
+        let mut root_layout = decl_style::layout_style(&theme, layout.relative().w_full());
+        root_layout.overflow = fret_ui::element::Overflow::Visible;
+
+        // Match shadcn/Radix DOM semantics: the layout height follows the track, while the thumb
+        // is allowed to overflow (hit-testing is not clipped unless overflow=Clip).
+        let root_h = style.track_height.0.max(0.0);
 
         let mut semantics_layout = root_layout;
         semantics_layout.size.height = Length::Px(Px(root_h));
@@ -429,8 +434,7 @@ pub fn slider<H: UiHost>(
                 }),
             );
 
-            let track_top = (root_h - style.track_height.0.max(0.0)) * 0.5;
-            let thumb_top = (root_h - style.thumb_size.0.max(0.0)) * 0.5;
+            let track_top = 0.0;
             let thumb_r = Px(style.thumb_size.0.max(0.0) * 0.5);
 
             let root_container = ContainerProps {
@@ -446,9 +450,10 @@ pub fn slider<H: UiHost>(
             let track = ContainerProps {
                 layout: LayoutStyle {
                     position: PositionStyle::Absolute,
+                    overflow: Overflow::Clip,
                     inset: fret_ui::element::InsetStyle {
-                        left: Some(thumb_r),
-                        right: Some(thumb_r),
+                        left: Some(Px(0.0)),
+                        right: Some(Px(0.0)),
                         top: Some(Px(track_top)),
                         ..Default::default()
                     },
@@ -477,59 +482,117 @@ pub fn slider<H: UiHost>(
                 cx.pointer_region_on_pointer_move(on_move);
                 cx.pointer_region_on_pointer_up(on_up);
 
-                let track_w = cx
-                    .last_bounds_for_element(cx.root_id())
-                    .map(|b| (b.size.width.0 - style.thumb_size.0.max(0.0)).max(0.0))
-                    .unwrap_or(0.0);
-                let thumb_lefts: Vec<f32> =
-                    percentages.iter().copied().map(|t| track_w * t).collect();
-                let fill_w = track_w * (range_end_t - range_start_t).max(0.0);
+                let grow_left = range_start_t.clamp(0.0, 1.0);
+                let grow_range = (range_end_t - range_start_t).clamp(0.0, 1.0);
+                let grow_right = (1.0 - range_end_t).clamp(0.0, 1.0);
 
-                let range = ContainerProps {
-                    layout: LayoutStyle {
-                        position: PositionStyle::Absolute,
-                        inset: fret_ui::element::InsetStyle {
-                            left: Some(Px(thumb_r.0 + track_w * range_start_t)),
-                            top: Some(Px(track_top)),
-                            ..Default::default()
-                        },
-                        size: fret_ui::element::SizeStyle {
-                            width: Length::Px(Px(fill_w)),
-                            height: Length::Px(style.track_height),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    padding: Edges::all(Px(0.0)),
-                    background: Some(style.range_background),
-                    shadow: None,
-                    border: Edges::all(Px(0.0)),
-                    border_color: None,
-                    corner_radii: Corners::all(Px(style.track_height.0.max(0.0) * 0.5)),
-                };
+                let mut flex_segment_layout = LayoutStyle::default();
+                flex_segment_layout.size.height = Length::Fill;
+                flex_segment_layout.flex.shrink = 1.0;
+                flex_segment_layout.flex.basis = Length::Px(Px(0.0));
+
+                let corner_radius = Px(style.track_height.0.max(0.0) * 0.5);
 
                 vec![cx.container(root_container, |cx| {
-                    let mut out = vec![
-                        cx.container(track, |_| Vec::new()),
-                        cx.container(range, |_| Vec::new()),
-                    ];
-
-                    for thumb_left in thumb_lefts {
-                        let thumb = ContainerProps {
+                    let track_el = cx.container(track, |cx| {
+                        let range_row = RowProps {
                             layout: LayoutStyle {
-                                position: PositionStyle::Absolute,
-                                inset: fret_ui::element::InsetStyle {
-                                    left: Some(Px(thumb_left)),
-                                    top: Some(Px(thumb_top)),
-                                    ..Default::default()
-                                },
                                 size: fret_ui::element::SizeStyle {
-                                    width: Length::Px(style.thumb_size),
-                                    height: Length::Px(style.thumb_size),
+                                    width: Length::Fill,
+                                    height: Length::Fill,
                                     ..Default::default()
                                 },
                                 ..Default::default()
                             },
+                            gap: Px(0.0),
+                            padding: Edges::all(Px(0.0)),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Stretch,
+                        };
+
+                        let mut left_layout = flex_segment_layout;
+                        left_layout.flex.grow = grow_left;
+                        let mut range_layout = flex_segment_layout;
+                        range_layout.flex.grow = grow_range;
+                        let mut right_layout = flex_segment_layout;
+                        right_layout.flex.grow = grow_right;
+
+                        let left = ContainerProps {
+                            layout: left_layout,
+                            ..Default::default()
+                        };
+                        let range = ContainerProps {
+                            layout: range_layout,
+                            background: Some(style.range_background),
+                            corner_radii: Corners::all(corner_radius),
+                            ..Default::default()
+                        };
+                        let right = ContainerProps {
+                            layout: right_layout,
+                            ..Default::default()
+                        };
+
+                        vec![cx.row(range_row, |cx| {
+                            vec![
+                                cx.container(left, |_| Vec::new()),
+                                cx.container(range, |_| Vec::new()),
+                                cx.container(right, |_| Vec::new()),
+                            ]
+                        })]
+                    });
+
+                    let mut out = vec![track_el];
+
+                    for t in percentages.iter().copied() {
+                        let t = t.clamp(0.0, 1.0);
+                        let mut left_layout = flex_segment_layout;
+                        left_layout.flex.grow = t;
+                        let mut right_layout = flex_segment_layout;
+                        right_layout.flex.grow = 1.0 - t;
+
+                        let thumb_row = RowProps {
+                            layout: LayoutStyle {
+                                position: PositionStyle::Absolute,
+                                inset: fret_ui::element::InsetStyle {
+                                    left: Some(Px(0.0)),
+                                    right: Some(Px(0.0)),
+                                    top: Some(Px(track_top)),
+                                    ..Default::default()
+                                },
+                                size: fret_ui::element::SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Px(style.track_height),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            gap: Px(0.0),
+                            padding: Edges::all(Px(0.0)),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Center,
+                        };
+
+                        let left = ContainerProps {
+                            layout: left_layout,
+                            ..Default::default()
+                        };
+                        let right = ContainerProps {
+                            layout: right_layout,
+                            ..Default::default()
+                        };
+
+                        let mut thumb_layout = LayoutStyle::default();
+                        thumb_layout.size.width = Length::Px(style.thumb_size);
+                        thumb_layout.size.height = Length::Px(style.thumb_size);
+                        thumb_layout.flex.shrink = 0.0;
+                        thumb_layout.margin = MarginEdges {
+                            left: MarginEdge::Px(Px(-thumb_r.0)),
+                            right: MarginEdge::Px(Px(-thumb_r.0)),
+                            ..Default::default()
+                        };
+
+                        let thumb = ContainerProps {
+                            layout: thumb_layout,
                             padding: Edges::all(Px(0.0)),
                             background: Some(style.thumb_background),
                             shadow: None,
@@ -537,7 +600,14 @@ pub fn slider<H: UiHost>(
                             border_color: Some(style.thumb_border_color),
                             corner_radii: Corners::all(thumb_r),
                         };
-                        out.push(cx.container(thumb, |_| Vec::new()));
+
+                        out.push(cx.row(thumb_row, |cx| {
+                            vec![
+                                cx.container(left, |_| Vec::new()),
+                                cx.container(thumb, |_| Vec::new()),
+                                cx.container(right, |_| Vec::new()),
+                            ]
+                        }));
                     }
 
                     out
@@ -560,9 +630,9 @@ mod tests {
 
     fn pointer_x_for_value(bounds: Rect, value: f32, min: f32, max: f32, thumb_size: Px) -> Px {
         let t = radix_slider::normalize_value(value, min, max);
-        let thumb = thumb_size.0.max(0.0);
-        let track_w = (bounds.size.width.0 - thumb).max(0.0);
-        let left = bounds.origin.x.0 + thumb * 0.5;
+        let _ = thumb_size;
+        let track_w = bounds.size.width.0.max(0.0);
+        let left = bounds.origin.x.0;
         Px(left + track_w * t)
     }
 

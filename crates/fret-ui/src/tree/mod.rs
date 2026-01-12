@@ -117,6 +117,10 @@ pub struct UiDebugFrameStats {
     pub paint_cache_hits: u32,
     pub paint_cache_misses: u32,
     pub paint_cache_replayed_ops: u32,
+    /// Number of layout engine root solves performed during the current frame.
+    pub layout_engine_solves: u64,
+    /// Total time spent in layout engine solves during the current frame.
+    pub layout_engine_solve_time: Duration,
     pub focus: Option<NodeId>,
     pub captured: Option<NodeId>,
 }
@@ -400,6 +404,7 @@ pub struct UiTree<H: UiHost> {
     observed_globals_in_layout: GlobalObservationIndex,
     observed_globals_in_paint: GlobalObservationIndex,
     measure_stack: Vec<MeasureStackKey>,
+    measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics,
 
     #[cfg(feature = "layout-engine-v2")]
     layout_engine: crate::layout_engine::TaffyLayoutEngine,
@@ -415,6 +420,7 @@ pub struct UiTree<H: UiHost> {
 
     semantics: Option<Arc<SemanticsSnapshot>>,
     semantics_requested: bool,
+    deferred_cleanup: Vec<Box<dyn Widget<H>>>,
 }
 
 impl<H: UiHost> Default for UiTree<H> {
@@ -439,6 +445,7 @@ impl<H: UiHost> Default for UiTree<H> {
             observed_globals_in_layout: GlobalObservationIndex::default(),
             observed_globals_in_paint: GlobalObservationIndex::default(),
             measure_stack: Vec::new(),
+            measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics::default(),
             #[cfg(feature = "layout-engine-v2")]
             layout_engine: crate::layout_engine::TaffyLayoutEngine::default(),
             #[cfg(feature = "layout-engine-v2")]
@@ -450,7 +457,35 @@ impl<H: UiHost> Default for UiTree<H> {
             paint_cache: PaintCacheState::default(),
             semantics: None,
             semantics_requested: false,
+            deferred_cleanup: Vec::new(),
         }
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct MeasureReentrancyDiagnostics {
+    /// Frame ID of the last emitted warning.
+    last_log_frame: Option<FrameId>,
+    /// Number of suppressed re-entrancy events since the last emitted warning.
+    suppressed_since_last_log: u64,
+}
+
+impl MeasureReentrancyDiagnostics {
+    const MIN_FRAMES_BETWEEN_LOGS: u64 = 120;
+
+    fn record(&mut self, frame_id: FrameId) -> Option<u64> {
+        let should_log = match self.last_log_frame {
+            None => true,
+            Some(last) => frame_id.0.saturating_sub(last.0) >= Self::MIN_FRAMES_BETWEEN_LOGS,
+        };
+
+        if !should_log {
+            self.suppressed_since_last_log = self.suppressed_since_last_log.saturating_add(1);
+            return None;
+        }
+
+        self.last_log_frame = Some(frame_id);
+        Some(std::mem::take(&mut self.suppressed_since_last_log))
     }
 }
 
@@ -526,6 +561,16 @@ impl<H: UiHost> UiTree<H> {
         Self::default()
     }
 
+    pub(crate) fn node_exists(&self, node: NodeId) -> bool {
+        self.nodes.contains_key(node)
+    }
+
+    pub(crate) fn flush_deferred_cleanup(&mut self, services: &mut dyn UiServices) {
+        for mut widget in self.deferred_cleanup.drain(..) {
+            widget.cleanup_resources(services);
+        }
+    }
+
     pub fn set_debug_enabled(&mut self, enabled: bool) {
         self.debug_enabled = enabled;
     }
@@ -596,6 +641,25 @@ impl<H: UiHost> UiTree<H> {
         self.nodes.get(node).map(|n| n.bounds)
     }
 
+    /// Returns the current frame's visual bounds for `node` by applying any ancestor
+    /// `render_transform` matrices (including the node's own transform) to its layout bounds.
+    ///
+    /// This is intended for debugging/tests. It is *not* a stable cross-frame geometry query (see
+    /// `fret_ui::elements::visual_bounds_for_element` for that contract).
+    pub fn debug_node_visual_bounds(&self, node: NodeId) -> Option<Rect> {
+        let _ = self.nodes.get(node)?;
+        let path = self.debug_node_path(node);
+        let mut transform = Transform2D::IDENTITY;
+        for id in path {
+            if let Some(local) = self.node_render_transform(id) {
+                transform = transform.compose(local);
+            }
+        }
+        self.nodes
+            .get(node)
+            .map(|n| rect_aabb_transformed(n.bounds, transform))
+    }
+
     #[cfg(feature = "layout-engine-v2")]
     pub(crate) fn layout_engine_child_local_rect(
         &self,
@@ -604,6 +668,20 @@ impl<H: UiHost> UiTree<H> {
     ) -> Option<Rect> {
         self.layout_engine
             .child_layout_rect_if_solved(parent, child)
+    }
+
+    #[cfg(feature = "layout-engine-v2")]
+    #[allow(dead_code)]
+    pub(crate) fn flow_subtree_is_engine_backed(&self, root: NodeId) -> bool {
+        let Some(&child) = self.children(root).first() else {
+            return false;
+        };
+        self.layout_engine_child_local_rect(root, child).is_some()
+    }
+
+    #[cfg(all(feature = "layout-engine-v2", test))]
+    pub(crate) fn layout_engine_has_node(&self, node: NodeId) -> bool {
+        self.layout_engine.layout_id_for_node(node).is_some()
     }
 
     pub fn debug_node_path(&self, node: NodeId) -> Vec<NodeId> {
@@ -1055,7 +1133,15 @@ impl<H: UiHost> UiTree<H> {
         };
         let children = n.children.clone();
 
-        self.with_widget_mut(node, |widget, _tree| widget.cleanup_resources(services));
+        let widget = self.nodes.get_mut(node).and_then(|n| n.widget.take());
+        if let Some(mut widget) = widget {
+            widget.cleanup_resources(services);
+            if let Some(n) = self.nodes.get_mut(node) {
+                n.widget = Some(widget);
+            } else {
+                self.deferred_cleanup.push(widget);
+            }
+        }
 
         for child in children {
             self.cleanup_subtree_inner(services, child);
@@ -1067,15 +1153,18 @@ impl<H: UiHost> UiTree<H> {
         node: NodeId,
         f: impl FnOnce(&mut dyn Widget<H>, &mut UiTree<H>) -> R,
     ) -> R {
-        let widget = self
-            .nodes
-            .get_mut(node)
-            .and_then(|n| n.widget.take())
-            .expect("node widget must exist");
+        let Some(n) = self.nodes.get_mut(node) else {
+            panic!("node must exist: {node:?}");
+        };
+        let Some(widget) = n.widget.take() else {
+            panic!("node widget must exist: {node:?}");
+        };
         let mut widget = widget;
         let result = f(widget.as_mut(), self);
         if let Some(n) = self.nodes.get_mut(node) {
             n.widget = Some(widget);
+        } else {
+            self.deferred_cleanup.push(widget);
         }
         result
     }

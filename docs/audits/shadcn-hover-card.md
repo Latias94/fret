@@ -33,8 +33,10 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 ### Placement & sizing
 
-- Pass: Anchored placement uses deterministic flip/clamp behavior via
-  `overlay_placement::anchored_panel_bounds_sized(...)`.
+- Pass: Anchored placement uses deterministic flip/clamp behavior via the Radix-shaped popper facade.
+  - Placement policy: `fret_ui_kit::primitives::popper::PopperContentPlacement`
+  - Solver: `crates/fret-ui/src/overlay_placement/solver.rs`
+  - Layout-driven placement: `AnchoredProps`.
 - Pass: Optional arrow is supported via `HoverCard::arrow(true)` (default is `false`).
 
 ### Visual parity (new-york)
@@ -49,3 +51,4 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn hover_card::tests`
+- Web placement gate (layout engine v2): `cargo nextest run -p fret-ui-shadcn -F fret-ui/layout-engine-v2 --test radix_web_overlay_geometry`

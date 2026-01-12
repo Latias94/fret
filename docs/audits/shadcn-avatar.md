@@ -7,31 +7,29 @@ This audit compares Fret’s shadcn-aligned `Avatar` against the upstream shadcn
 
 - Docs page: `repo-ref/ui/apps/v4/content/docs/components/avatar.mdx`
 - Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/avatar.tsx`
-- Underlying primitive: `repo-ref/primitives/packages/react/avatar/src/avatar.tsx`
+- Underlying primitive: Radix `@radix-ui/react-avatar`
 
 ## Fret implementation
 
 - Component code: `ecosystem/fret-ui-shadcn/src/avatar.rs`
-- Radix helpers: `ecosystem/fret-ui-kit/src/primitives/avatar.rs`
+- Radix-aligned fallback delay helper: `ecosystem/fret-ui-kit/src/primitives/avatar.rs`
 
 ## Audit checklist
 
-### Composition surface
+### Layout & geometry (shadcn parity)
 
-- Pass: Exposes `Avatar`, `AvatarImage`, `AvatarFallback`.
-- Pass: Root is overflow-clipped and fully rounded (shadcn `rounded-full` outcome).
-- Pass: Image uses `aspect-square` and fills the root.
-
-### Image loading + fallback
-
-- Pass (Fret-specific): Supports model-driven image availability via `AvatarImage::model(Model<Option<ImageId>>)`
-  and optional image via `AvatarImage::maybe(Option<ImageId>)`.
-- Pass: `AvatarFallback` can be gated to the “image not loaded” outcome via
-  `AvatarFallback::when_image_missing_model(...)` / `when_image_missing(...)`.
-- Pass: `AvatarFallback` supports an optional delay via `delay_ms(...)` / `delay_frames(...)`,
-  approximating Radix `delayMs`.
+- Pass: Root defaults to `size-8` (32px) and `shrink-0`.
+- Pass: Root uses overflow clipping and a fully-rounded shape by default.
+- Pass: `rounded-lg` can be expressed via `ChromeRefinement::rounded(Radius::Lg)` for parity demos.
+- Pass: Group overlap can be expressed via `LayoutRefinement::ml_neg(Space::N2)` to match `-space-x-2`.
+- Note: The web golden gates the avatar-group **visual** bounds by unioning the avatar item rects,
+  rather than relying on a wrapper node's bounds.
 
 ## Validation
 
-- `cargo test -p fret-ui-shadcn --lib avatar`
-
+- Web layout gate: `cargo nextest run -p fret-ui-shadcn -F fret-ui/layout-engine-v2 --test web_vs_fret_layout`
+  (`web_vs_fret_layout_avatar_demo_geometry`).
+- Additional avatar gates in the same suite:
+  - `web_vs_fret_layout_empty_avatar_geometry`
+  - `web_vs_fret_layout_empty_avatar_group_geometry`
+  - `web_vs_fret_layout_item_avatar_geometry`

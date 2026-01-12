@@ -9,7 +9,7 @@ use fret_ui::overlay_placement::{
 };
 
 pub use fret_ui::overlay_placement::{
-    Align, ArrowLayout, ArrowOptions, LayoutDirection, Offset, Side, StickyMode,
+    Align, ArrowLayout, ArrowOptions, LayoutDirection, Offset, ShiftOptions, Side, StickyMode,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -39,6 +39,11 @@ pub fn anchored_panel_options_for_popper_content(
             main_axis: arrow_protrusion,
             cross_axis: align_offset,
             alignment_axis: None,
+        },
+        // Radix uses Floating UI `shift({ crossAxis: false })` by default for popper content.
+        shift: ShiftOptions {
+            main_axis: true,
+            cross_axis: false,
         },
         arrow,
         collision: Default::default(),
@@ -557,6 +562,7 @@ mod tests {
             AnchoredPanelOptions {
                 direction: LayoutDirection::Ltr,
                 offset: Offset::default(),
+                shift: Default::default(),
                 arrow: Some(ArrowOptions {
                     size: Size::new(Px(12.0), Px(12.0)),
                     padding: Edges::all(Px(8.0)),
@@ -593,6 +599,7 @@ mod tests {
             AnchoredPanelOptions {
                 direction: LayoutDirection::Ltr,
                 offset: Offset::default(),
+                shift: Default::default(),
                 arrow: Some(ArrowOptions {
                     size: Size::new(arrow_size, arrow_size),
                     padding: Edges::all(Px(8.0)),
@@ -633,6 +640,7 @@ mod tests {
             AnchoredPanelOptions {
                 direction: LayoutDirection::Ltr,
                 offset: Offset::default(),
+                shift: Default::default(),
                 arrow: None,
                 collision: Default::default(),
                 sticky: Default::default(),

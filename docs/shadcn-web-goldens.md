@@ -74,6 +74,11 @@ To emit a JSON comparison report:
 
 `$env:WRITE_WEB_REPORT='1'; cargo nextest run -p fret-ui-shadcn --test web_vs_fret_button`
 
+## Layout conformance (geometry-first)
+
+For layout-engine refactors, prefer geometry-first assertions (rects + spacing invariants) over
+pixel diffs. See: `docs/audits/shadcn-web-layout-conformance.md`.
+
 ## Options
 
 - `--style=new-york-v4`

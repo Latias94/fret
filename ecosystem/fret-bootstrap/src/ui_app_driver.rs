@@ -13,6 +13,9 @@ use fret_ui::{ElementContext, UiFrameCx, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_kit::primitives::direction as direction_prim;
 use std::cell::Cell;
+use std::sync::OnceLock;
+
+use fret_core::time::Instant;
 
 type ViewFn<S> = for<'a> fn(&mut ElementContext<'a, App>, &mut S) -> Vec<AnyElement>;
 
@@ -565,6 +568,64 @@ fn ui_app_handle_global_changes<S>(
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+struct FrameHitchConfig {
+    hitch_ms: u64,
+}
+
+fn frame_hitch_config() -> Option<FrameHitchConfig> {
+    static CONFIG: OnceLock<Option<FrameHitchConfig>> = OnceLock::new();
+    *CONFIG.get_or_init(|| {
+        let enabled = std::env::var_os("FRET_FRAME_HITCH_LOG").is_some_and(|v| !v.is_empty());
+        if !enabled {
+            return None;
+        }
+
+        let hitch_ms = std::env::var("FRET_FRAME_HITCH_MS")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(24);
+
+        Some(FrameHitchConfig { hitch_ms })
+    })
+}
+
+fn frame_hitch_log_paths() -> impl Iterator<Item = std::path::PathBuf> {
+    let mut paths = Vec::new();
+    paths.push(std::path::Path::new(".fret").join("frame_hitches.log"));
+
+    let tmp = std::env::temp_dir();
+    if !tmp.as_os_str().is_empty() {
+        paths.push(tmp.join("fret").join("frame_hitches.log"));
+    }
+    paths.into_iter()
+}
+
+fn write_frame_hitch_log(line: &str) {
+    use std::io::Write as _;
+
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::SystemTime::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or_default();
+    let thread_id = format!("{:?}", std::thread::current().id());
+    let msg = format!("[{ts}] [thread={thread_id}] {line}\n");
+
+    for path in frame_hitch_log_paths() {
+        if let Some(dir) = path.parent() {
+            let _ = std::fs::create_dir_all(dir);
+        }
+        if let Ok(mut file) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+        {
+            let _ = file.write_all(msg.as_bytes());
+            let _ = file.flush();
+        }
+    }
+}
+
 fn ui_app_render<S>(
     driver: &mut UiAppDriver<S>,
     context: WinitRenderContext<'_, UiAppWindowState<S>>,
@@ -584,6 +645,13 @@ fn ui_app_render<S>(
         scene,
     } = context;
 
+    let hitch_config = frame_hitch_config();
+    let hitch_total_started = hitch_config.map(|_| Instant::now());
+    let mut hitch_view_ms: Option<u64> = None;
+    let mut hitch_overlay_ms: Option<u64> = None;
+    let mut hitch_layout_ms: Option<u64> = None;
+    let mut hitch_paint_ms: Option<u64> = None;
+
     let render_depth = RENDER_DEPTH.with(|d| {
         let next = d.get().saturating_add(1);
         d.set(next);
@@ -598,6 +666,7 @@ fn ui_app_render<S>(
         "ui_app_render: after begin_frame window={window:?}"
     ));
 
+    let view_started = hitch_config.map(|_| Instant::now());
     let root = RenderRootContext::new(&mut state.ui, app, services, window, bounds).render_root(
         driver.root_name,
         |cx| {
@@ -719,12 +788,20 @@ fn ui_app_render<S>(
             }
         },
     );
+    if let Some(started) = view_started {
+        hitch_view_ms = Some(started.elapsed().as_millis() as u64);
+    }
     hotpatch_trace_log(&format!(
         "ui_app_render: after render_root window={window:?} root={root:?}"
     ));
     state.ui.set_root(root);
     hotpatch_trace_log(&format!("ui_app_render: after set_root window={window:?}"));
+
+    let overlay_started = hitch_config.map(|_| Instant::now());
     OverlayController::render(&mut state.ui, app, services, window, bounds);
+    if let Some(started) = overlay_started {
+        hitch_overlay_ms = Some(started.elapsed().as_millis() as u64);
+    }
     hotpatch_trace_log(&format!(
         "ui_app_render: after overlay render window={window:?}"
     ));
@@ -735,12 +812,49 @@ fn ui_app_render<S>(
     scene.clear();
 
     let mut frame = UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    let layout_started = hitch_config.map(|_| Instant::now());
     frame.layout_all();
+    if let Some(started) = layout_started {
+        hitch_layout_ms = Some(started.elapsed().as_millis() as u64);
+    }
     hotpatch_trace_log(&format!(
         "ui_app_render: after layout_all window={window:?}"
     ));
+    let paint_started = hitch_config.map(|_| Instant::now());
     frame.paint_all(scene);
+    if let Some(started) = paint_started {
+        hitch_paint_ms = Some(started.elapsed().as_millis() as u64);
+    }
     hotpatch_trace_log(&format!("ui_app_render: after paint_all window={window:?}"));
+
+    if let (Some(cfg), Some(started)) = (hitch_config, hitch_total_started) {
+        let total = started.elapsed();
+        let total_ms = total.as_millis() as u64;
+        if total_ms >= cfg.hitch_ms {
+            write_frame_hitch_log(&format!(
+                "frame hitch window={window:?} total_ms={total_ms} view_ms={view_ms:?} overlay_ms={overlay_ms:?} layout_ms={layout_ms:?} paint_ms={paint_ms:?} scene_ops={ops} bounds={bounds:?} scale_factor={scale_factor}",
+                view_ms = hitch_view_ms,
+                overlay_ms = hitch_overlay_ms,
+                layout_ms = hitch_layout_ms,
+                paint_ms = hitch_paint_ms,
+                ops = scene.ops_len(),
+            ));
+
+            #[cfg(feature = "tracing")]
+            tracing::warn!(
+                window = ?window,
+                total_ms,
+                view_ms = hitch_view_ms,
+                overlay_ms = hitch_overlay_ms,
+                layout_ms = hitch_layout_ms,
+                paint_ms = hitch_paint_ms,
+                scene_ops = scene.ops_len(),
+                bounds = ?bounds,
+                scale_factor,
+                "frame hitch"
+            );
+        }
+    }
 
     hotpatch_trace_log(&format!(
         "ui_app_render: end window={window:?} depth={render_depth}"

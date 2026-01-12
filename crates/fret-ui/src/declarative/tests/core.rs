@@ -669,7 +669,7 @@ fn stale_nodes_are_swept_after_gc_lag() {
 
     // Remove item 2 from the render output, but it should not be swept immediately.
     app.advance_frame();
-    let _ = render_root(
+    let _root = render_root(
         &mut ui,
         &mut app,
         &mut text,
@@ -704,4 +704,58 @@ fn stale_nodes_are_swept_after_gc_lag() {
         |cx| build_keyed_rows(cx, &[1u64], &mut Vec::new()),
     );
     assert!(ui.debug_node_bounds(node_to_remove).is_none());
+}
+
+#[test]
+fn dismissible_root_recreates_nodes_after_layer_removal() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(500.0), Px(500.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let base_root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "base",
+        |_cx| Vec::<AnyElement>::new(),
+    );
+    ui.set_root(base_root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let overlay_root = crate::declarative::render_dismissible_root_with_hooks(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "overlay-root",
+        |cx| vec![cx.text("overlay")],
+    );
+    let layer = ui.push_overlay_root(overlay_root, true);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let _ = ui.remove_layer(&mut text, layer);
+    assert!(ui.debug_node_bounds(overlay_root).is_none());
+
+    app.advance_frame();
+    let overlay_root = crate::declarative::render_dismissible_root_with_hooks(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "overlay-root",
+        |cx| vec![cx.text("overlay")],
+    );
+    let _layer = ui.push_overlay_root(overlay_root, true);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
 }

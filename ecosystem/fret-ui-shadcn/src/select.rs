@@ -226,8 +226,7 @@ fn select_scroll_with_buttons<H: UiHost>(
                                         layout.size.width = Length::Fill;
                                         layout
                                     },
-                                    // new-york-v4: `SelectPrimitive.Viewport` uses `p-1`.
-                                    padding: Edges::all(Px(4.0)),
+                                    padding: Edges::all(Px(0.0)),
                                     ..Default::default()
                                 },
                                 move |cx| content(cx, active_element_ref),
@@ -727,8 +726,8 @@ fn select_impl<H: UiHost>(
 
         let min_width = theme
             .metric_by_key("component.select.min_width")
-            // new-york-v4: Select content uses `min-w-[8rem]`.
-            .unwrap_or(Px(128.0));
+            // radix-vega: Select content uses `min-w-36` (Tailwind: 9rem).
+            .unwrap_or(Px(144.0));
 
         let mut trigger_layout = decl_style::layout_style(
             &theme,
@@ -1129,6 +1128,8 @@ fn select_impl<H: UiHost>(
                     let trigger_state_for_overlay = trigger_state.clone();
                     let viewport_id_out_cell = Cell::new(None::<GlobalElementId>);
                     let viewport_id_out = &viewport_id_out_cell;
+                    let listbox_id_out_cell = Cell::new(None::<GlobalElementId>);
+                    let listbox_id_out = &listbox_id_out_cell;
                     let content_panel_id_out_cell = Cell::new(None::<GlobalElementId>);
                     let content_panel_id_out = &content_panel_id_out_cell;
                     let selected_item_id_out_cell = Cell::new(None::<GlobalElementId>);
@@ -1292,6 +1293,7 @@ fn select_impl<H: UiHost>(
                                             let loop_navigation_for_key = loop_navigation;
 
                                             vec![radix_select::select_listbox_pressable_with_id_props(cx, move |cx, _st, listbox_id| {
+                                                listbox_id_out.set(Some(listbox_id));
                                                 cx.key_on_key_down_for(
                                                     listbox_id,
                                                     Arc::new(move |host, action_cx, it| {
@@ -1414,6 +1416,8 @@ fn select_impl<H: UiHost>(
                                                                             let is_selected = selected
                                                                                 .as_ref()
                                                                                 .is_some_and(|v| v.as_ref() == item.value.as_ref());
+                                                                            let is_alignment_item = is_selected
+                                                                                || (selected.is_none() && is_active);
 
                                                                             let model = model.clone();
                                                                             let open = open_for_content.clone();
@@ -1449,7 +1453,7 @@ fn select_impl<H: UiHost>(
                                                                                     ..Default::default()
                                                                                 },
                                                                                 move |cx, st, id| {
-                                                                                    if is_selected {
+                                                                                    if is_alignment_item {
                                                                                         selected_item_id_out.set(Some(id));
                                                                                     }
                                                                                     if is_active {
@@ -1608,7 +1612,7 @@ fn select_impl<H: UiHost>(
                                                                                                     })]
                                                                                                 },
                                                                                             );
-                                                                                            if is_selected {
+                                                                                            if is_alignment_item {
                                                                                                 selected_item_text_id_out
                                                                                                     .set(Some(text.id));
                                                                                             }
@@ -1754,7 +1758,7 @@ fn select_impl<H: UiHost>(
                                 .lock()
                                 .unwrap_or_else(|e| e.into_inner());
                             state.viewport = viewport_id_out.get();
-                            state.listbox = Some(listbox_id_for_trigger);
+                            state.listbox = listbox_id_out.get();
                             state.content_panel = content_panel_id_out.get();
                             state.selected_item = selected_item_id_out.get();
                             state.selected_item_text = selected_item_text_id_out.get();
@@ -1842,7 +1846,7 @@ fn select_impl<H: UiHost>(
                             layout
                         },
                         direction: fret_core::Axis::Horizontal,
-                        gap: MetricRef::space(Space::N2).resolve(&theme),
+                        gap: MetricRef::space(Space::N1p5).resolve(&theme),
                         padding: Edges::all(Px(0.0)),
                         justify: MainAlign::SpaceBetween,
                         align: CrossAlign::Center,

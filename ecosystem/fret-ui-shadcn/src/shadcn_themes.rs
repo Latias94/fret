@@ -161,6 +161,64 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         .entry("component.size.lg.icon_button.size".to_string())
         .or_insert(40.0);
 
+    // new-york-v4 `Slider` defaults:
+    // - Track uses `h-1.5` (6px) via `data-[orientation=horizontal]:h-1.5`.
+    // - Thumb uses `size-4` (16px).
+    metrics
+        .entry("component.slider.track_height".to_string())
+        .or_insert(6.0);
+    metrics
+        .entry("component.slider.thumb_size".to_string())
+        .or_insert(16.0);
+
+    // new-york-v4 `Badge` defaults:
+    // - `text-xs` (12px) with Tailwind default leading (16px).
+    metrics
+        .entry("component.badge.text_px".to_string())
+        .or_insert(12.0);
+    metrics
+        .entry("component.badge.line_height".to_string())
+        .or_insert(16.0);
+
+    // new-york-v4 `Label` defaults:
+    // - `text-sm` (14px) and `leading-none` (line-height = font-size).
+    metrics
+        .entry("component.label.text_px".to_string())
+        .or_insert(14.0);
+    metrics
+        .entry("component.label.line_height".to_string())
+        .or_insert(14.0);
+
+    // new-york-v4 `Field` defaults:
+    // - `FieldGroup` uses `gap-7` (28px).
+    // - `FieldLabel` uses `text-sm` with `leading-snug` (14px * 1.375 = 19.25px).
+    // - `FieldDescription` uses `text-sm` with `leading-normal` (14px * 1.5 = 21px).
+    metrics
+        .entry("component.field.group_gap".to_string())
+        .or_insert(28.0);
+    metrics
+        .entry("component.field.label_px".to_string())
+        .or_insert(14.0);
+    metrics
+        .entry("component.field.label_line_height".to_string())
+        .or_insert(19.25);
+    metrics
+        .entry("component.field.description_px".to_string())
+        .or_insert(14.0);
+    metrics
+        .entry("component.field.description_line_height".to_string())
+        .or_insert(21.0);
+
+    // Tooltip defaults in the upstream registry:
+    // - `sideOffset={4}`
+    // - Arrow uses `h-2 w-2` (8px)
+    metrics
+        .entry("component.tooltip.side_offset".to_string())
+        .or_insert(4.0);
+    metrics
+        .entry("component.tooltip.arrow_size".to_string())
+        .or_insert(8.0);
+
     if let Some(ring) = colors.get("ring").cloned() {
         if let Some(ring_50) = with_oklch_alpha(&ring, 0.5) {
             colors.insert("ring/50".to_string(), ring_50);

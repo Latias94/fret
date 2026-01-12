@@ -68,3 +68,8 @@ Fret does not use React context nor CSS variables. Outcomes are composed via:
 
 - Consider evolving the viewport sizing contract to cover RTL and "content registry" semantics
   (Radix tracks per-item content refs and sizes) if/when non-shadcn recipes need it.
+
+## Conformance gate
+
+- Radix Web overlay geometry parity: `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs`
+  (`radix_web_navigation_menu_open_geometry_matches_fret`).

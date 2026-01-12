@@ -59,9 +59,32 @@ pub struct CollisionOptions {
 pub struct AnchoredPanelOptions {
     pub direction: LayoutDirection,
     pub offset: Offset,
+    /// Shift/clamp policy for keeping the floating panel within the collision boundary.
+    ///
+    /// This is inspired by Floating UI's `shift()` middleware options.
+    pub shift: ShiftOptions,
     pub arrow: Option<ArrowOptions>,
     pub collision: CollisionOptions,
     pub sticky: StickyMode,
+}
+
+/// Shift configuration inspired by Floating UI's `shift()` middleware.
+///
+/// - `main_axis` clamps the panel along the placement axis (y for Top/Bottom, x for Left/Right).
+/// - `cross_axis` clamps the panel along the alignment axis (x for Top/Bottom, y for Left/Right).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ShiftOptions {
+    pub main_axis: bool,
+    pub cross_axis: bool,
+}
+
+impl Default for ShiftOptions {
+    fn default() -> Self {
+        Self {
+            main_axis: true,
+            cross_axis: true,
+        }
+    }
 }
 
 /// Arrow positioning options inspired by Floating UI's `arrow()` middleware.

@@ -10,6 +10,7 @@ Primary ADRs:
 
 - AvailableSpace + non-reentrant intrinsic measurement: `docs/adr/0115-available-space-and-non-reentrant-measurement.md`
 - Window-scoped engine + viewport roots: `docs/adr/0116-window-scoped-layout-engine-and-viewport-roots.md`
+- Migration inventory (living checklist): `docs/layout-engine-v2-migration-inventory.md`
 
 Related constraints and boundaries:
 
@@ -50,7 +51,7 @@ GPUI reference (implementation, not contract):
 
 - P1: `AvailableSpace` + non-reentrant `measure_in`. (**Done**; merged.)
 - P2: window-scoped engine skeleton behind `fret-ui/layout-engine-v2`. (**In progress**; iterating in `wt-layout-engine2`.)
-- P3: multi-viewport roots + engine-backed flow migration. (**In progress**; viewport-root plumbing + conformance tests landed; more migration remains.)
+- P3: multi-viewport roots + engine-backed flow migration. (**In progress**; viewport-root plumbing + conformance tests landed; Flex/Grid v2 root solves are centralized and redundant precompute is guarded when subtrees are already engine-backed; viewport-root coverage now locks wrapper + region nodes (Pressable/Semantics/FocusScope/Opacity/VisualTransform/InteractivityGate/PointerRegion/WheelRegion), including absolute-only children that must still fill the region; host widget v2 "engine fast path" checks are deduped via `try_layout_children_from_engine_or_manual_absolute`.)
 
 Update this section by editing this file (avoid scattering progress notes across ADRs).
 
@@ -107,17 +108,49 @@ Deliverables:
 - Apply composes viewport-local rects into window-local bounds.
 - Flex/Grid/Stack/Container wrappers become nodes in the same Taffy tree when possible; `measure_in`
   is reserved for true leaves.
-- Add stacksafe execution around solves + measure callbacks; enable optional rounding to reduce drift.
+- Add stacksafe execution around solves + measure callbacks; enable Taffy rounding to reduce drift.
 
 Acceptance:
 
 - Conformance test: no cross-viewport coupling for percent/flex distribution.
 - Docking demos behave consistently across DPI scales (bounds stable within rounding policy).
+- Dogfood demo (manual): `cargo run -p fret-demo --features layout-engine-v2 --bin todo_demo` matches the shadcn-style composition (Card + Input + Tabs + ScrollArea + hover-only actions) without re-entrant layout or stack growth.
 
 ## Open Decisions (Track Here)
 
 1. **"Contents-like" wrappers**: **Decision (v1)**: no general-purpose contents-like / `Slot/asChild` prop merging (ADR 0117). Prefer GPUI-aligned single-root components; if needed later, add a restricted, validated "layout-transparent wrapper" opt-in (layout-only, no prop merging).
-2. **Root solve orchestration**: which roots we precompute (viewport only vs additional layer roots) and the required ordering relative to overlay roots (ADR 0011, ADR 0064).
-3. **Engine cache keys + invalidation**: exact environment keys for measurement caching (scale factor, theme revision, font stack key, model revisions).
-4. **Rounding policy**: whether/where to enable engine-level pixel rounding, and how it composes with hit-testing and paint.
-5. **"Not all containers use Taffy" boundary**: list-like/virtualized surfaces and other perf-critical containers that should remain specialized algorithms, and the conformance tests that keep them interoperable.
+2. **Root solve orchestration**: **Decision (v1)**: viewport roots are registered during the parent/root layout pass and flushed immediately after that root, before continuing to subsequent overlay roots. This preserves the ADR 0011 ordering expectation ("viewport content before overlays") without coupling viewports into a shared solve. (Implementation: `UiTree::layout_all` viewport flush loop.)
+3. **Engine cache keys + invalidation**: **Decision (v1)**: keep intrinsic measurement memoization scoped to a single `compute_root_with_measure` call (engine-local cache keyed by `NodeId + known_dimensions + AvailableSpace`); avoid cross-frame measurement caching until we have an explicit, stable environment key. Leaf `measure_in` implementations must observe all relevant inputs (scale factor, theme revision, font stack key, model revisions) so invalidation remains correct even without long-lived caches.
+4. **Rounding policy**: **Decision (v1)**: snap layout outputs at apply/writeback using ADR 0035 `snap_rect` so hit-testing and paint share stable bounds. The engine may internally solve in device-pixel space (`* scale_factor`) with Taffy rounding enabled as an implementation detail, but the results must be semantically equivalent to `snap_rect` on writeback and must be idempotent with renderer snapping (avoid double-rounding drift).
+5. **"Not all containers use Taffy" boundary**: **Decision (v1)**: keep these as explicit barriers with specialized layout algorithms, but require clean interop with the engine (definite child rects, correct `AvailableSpace`, and no solver-time re-entry):
+   - Docking / multi-viewport split roots (ADR 0013 + 0116): registers viewport roots and defines definite per-viewport available space.
+   - Scroll extents + clipping (barrier): measures content with `MaxContent`, then lays out a single viewport-sized subtree.
+   - Virtualization (`VirtualList`) (ADR 0042): measures item extents via `measure_in`, precomputes only visible item subtrees, and never demands solver-time re-entry.
+   - Resizable splits (`ResizablePanelGroup`): computes definite panel rects, then registers each panel as a viewport root in v2.
+   - Viewport surfaces (`RenderTargetId`) (ADR 0007): treat as rendering/clip boundary; never try to "merge" multiple surfaces into a single flow tree.
+
+## Known Gaps / Cautions
+
+- In v2 Final passes, **declarative element layer roots** run a request/build stage up front (stable identity + engine-backed wrapper rects), followed by a compute stage that is skipped when clean/translation-only. This is intentionally skipped for non-element/custom roots to avoid wasted work, and viewport roots are still orchestrated via the post-root flush protocol.
+ - Viewport roots participate in the same request/build stage: when docking registers viewport roots, the flush loop first request/builds all newly-registered viewport roots, then computes/applies only the roots that require layout. This preserves stable identity even when a viewport root is skipped for compute/apply.
+- v2 request/build orchestration is centralized in `UiTree::request_build_window_roots_if_final(...)` and the viewport flush helper `UiTree::flush_viewport_roots_after_root(...)` (`crates/fret-ui/src/tree/layout.rs`). These helpers perform request/build and compute/apply using a single `take_layout_engine()` per wave to reduce engine handoff churn.
+- Wrapper overlay nodes use `1fr` tracks with `justify_items/align_items: stretch` so wrapper nodes remain layout-transparent: if an ancestor stretches the wrapper (e.g. `w-full` via flex cross-axis stretch), the single child receives the same definite box budget and does not collapse to content width.
+
+## Engineering Guardrails (v2 Runtime Policy)
+
+To keep solve counts stable and avoid accidental re-introduction of re-entrant layout patterns, v2
+code should follow these rules:
+
+1. Treat barrier precompute as an escape hatch: do not call it from normal wrappers/flow containers.
+   Only explicit barriers (e.g. Scroll/VirtualList/ResizableSplit) may call
+   `precompute_barrier_flow_root_island_if_needed(...)`. The `_if_needed` helper skips work when the
+   subtree is clean, and avoids engine solves for translation-only changes (size stable, origin shifts).
+2. Keep solve stats per-call and use them to detect regressions.
+3. Translation-only bounds shifts must still keep existing engine nodes "alive" for stable identity
+   and incremental updates (do not let `end_frame` prune large subtrees during scrolling/panning).
+
+Regression tests that lock these behaviors:
+
+- Scroll translation does not trigger engine solves: `declarative::tests::layout::scroll_translation_does_not_force_layout_engine_solves`.
+- Viewport root flush only lays out invalidated roots: `declarative::tests::layout::viewport_root_flush_only_lays_out_invalidated_roots`.
+- Translation-only precompute gating: `declarative::tests::layout::precompute_flow_root_island_if_needed_skips_translation_only_bounds_changes`.

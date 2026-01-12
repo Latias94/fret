@@ -81,7 +81,51 @@ Practical workflow:
 3. Verify child bounds propagation (especially when using absolute positioning helpers).
 4. If the issue is about what the user “sees”, validate visual bounds vs layout bounds (ADR 0083).
 
-### 2.1 Prefer a unit test when possible
+### 2.1 Dump Taffy layout trees (layout-engine-v2)
+
+When debugging layout-engine-v2, it is often faster to inspect the solved Taffy tree(s) than to
+guess which wrapper collapsed. Fret can emit JSON dumps under `.fret/`.
+
+```powershell
+# Enable dumps.
+$env:FRET_TAFFY_DUMP=1
+# Optional: write to a dedicated directory.
+$env:FRET_TAFFY_DUMP_DIR=".fret\\taffy-dumps"
+# Optional: cap output count to avoid spam.
+$env:FRET_TAFFY_DUMP_MAX=30
+# Optional: only dump roots whose NodeId string contains this substring.
+$env:FRET_TAFFY_DUMP_ROOT="NodeId(46"
+# Optional: only dump roots whose element debug label contains this substring.
+# Tip: if you wrap a region in a `SemanticsProps { label: Some("Golden:..."), .. }`, you can
+# filter by that label. Note: the label match is applied to the root subtree, so you can match a
+# nested `SemanticsProps.label` even if the window root is an internal wrapper.
+$env:FRET_TAFFY_DUMP_ROOT_LABEL="Golden:input-with-label"
+
+# Run a repro with layout-engine-v2 enabled (example):
+cargo run -p fret-demo --features layout-engine-v2 --bin todo_demo
+```
+
+Notes:
+
+- Dumps include **window roots** and **viewport roots** (e.g. scroll content) as separate files.
+- Each node entry includes `node/parent/children`, `local_rect/abs_rect`, the computed Taffy `style`,
+  and a debug `label` derived from the element instance.
+- Prefer filtering by a stable semantics label when possible:
+  - Wrap the root you care about with `SemanticsProps { label: Some("Golden:..."), .. }`.
+  - Set `FRET_TAFFY_DUMP_ROOT_LABEL="Golden:..."` to dump the first matching node’s subtree,
+    without chasing unstable `NodeId(...)` values across runs.
+
+Example (todo demo):
+
+```powershell
+$env:FRET_TAFFY_DUMP=1
+$env:FRET_TAFFY_DUMP_ONCE=1
+$env:FRET_TAFFY_DUMP_DIR=".fret\\taffy-dumps"
+$env:FRET_TAFFY_DUMP_ROOT_LABEL="Debug:todo-demo:page"
+cargo run -p fret-demo --features layout-engine-v2 --bin todo_demo
+```
+
+### 2.2 Prefer a unit test when possible
 
 If the bug is deterministic (no timing/input dependency), it is usually faster to reproduce it as a test:
 
@@ -94,7 +138,7 @@ Typical pattern:
 2. Call `layout_all(...)` with a fixed window bounds + scale factor.
 3. Assert the computed bounds/visual bounds for the relevant node(s).
 
-### 2.2 Debug “visual bounds vs layout bounds”
+### 2.3 Debug “visual bounds vs layout bounds”
 
 For overlay anchoring and transformed widgets, always distinguish:
 
@@ -185,6 +229,36 @@ When the bug is “why did this frame render”, use structured tracing:
 
 - Observability contract: `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`
 - Frame identity/scheduling: `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
+
+If the symptom is “dragging the window feels laggy / delayed”, first rule out debug overhead:
+
+- Ensure heavy debug dumps are disabled (`FRET_TAFFY_DUMP` writes JSON to disk and will stutter).
+- Prefer `--release` to avoid debug build overhead.
+- Reduce log volume (e.g. `RUST_LOG=warn`) to avoid per-frame stdout overhead.
+
+To locate the bottleneck, enable frame hitch logging (writes only when a frame exceeds a threshold):
+
+```powershell
+$env:FRET_FRAME_HITCH_LOG=1
+# Default is 24ms; adjust as needed for your monitor / expectation.
+$env:FRET_FRAME_HITCH_MS=24
+cargo run -p fret-demo --features layout-engine-v2 --bin todo_demo
+```
+
+The log is written to `.fret/frame_hitches.log` (and also mirrored under the system temp dir).
+Each entry includes the breakdown of `view` / `overlay` / `layout` / `paint`, plus `scene_ops`.
+
+If `.fret/frame_hitches.log` stays quiet but the app still feels laggy, the hitch is likely outside
+the UI tree work (e.g. surface acquire/present or GPU work). Enable redraw hitch logging:
+
+```powershell
+$env:FRET_REDRAW_HITCH_LOG=1
+$env:FRET_REDRAW_HITCH_MS=24
+cargo run -p fret-demo --features layout-engine-v2 --bin todo_demo
+```
+
+The log is written to `.fret/redraw_hitches.log` and includes `prepare` / `render` / `record` /
+`present` timings plus any surface error.
 
 Recommended approach:
 

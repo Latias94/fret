@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, MainAlign, RowProps,
     TextProps,
@@ -29,6 +29,50 @@ fn peel_single_child_wrappers<'a>(mut element: &'a AnyElement) -> &'a AnyElement
         }
         break element;
     }
+}
+
+fn peel_semantics_wrappers<'a>(mut element: &'a AnyElement) -> &'a AnyElement {
+    loop {
+        match &element.kind {
+            ElementKind::Semantics(_) if element.children.len() == 1 => {
+                element = &element.children[0];
+                continue;
+            }
+            _ => break element,
+        }
+    }
+}
+
+fn is_field_legend_container(element: &AnyElement) -> bool {
+    let element = peel_semantics_wrappers(element);
+    let ElementKind::Container(props) = &element.kind else {
+        return false;
+    };
+
+    let fret_ui::element::MarginEdge::Px(px) = props.layout.margin.bottom else {
+        return false;
+    };
+
+    (px.0 - 12.0).abs() <= 0.5
+}
+
+fn is_field_legend_variant_legend(element: &AnyElement) -> bool {
+    let element = peel_semantics_wrappers(element);
+    let ElementKind::Container(_props) = &element.kind else {
+        return false;
+    };
+    if element.children.len() != 1 {
+        return false;
+    }
+
+    let child = peel_single_child_wrappers(&element.children[0]);
+    let line_height = match &child.kind {
+        ElementKind::Text(props) => props.style.as_ref().and_then(|s| s.line_height),
+        ElementKind::StyledText(props) => props.style.as_ref().and_then(|s| s.line_height),
+        _ => None,
+    };
+
+    line_height.is_some_and(|lh| (lh.0 - 24.0).abs() <= 0.5)
 }
 
 fn is_field_description(theme: &Theme, element: &AnyElement) -> bool {
@@ -77,6 +121,7 @@ fn kind_flex_grow(kind: &ElementKind) -> Option<f32> {
         ElementKind::RovingFlex(props) => Some(props.flex.layout.flex.grow),
         ElementKind::VirtualList(props) => Some(props.layout.flex.grow),
         ElementKind::ResizablePanelGroup(props) => Some(props.layout.flex.grow),
+        _ => None,
     }
 }
 
@@ -85,6 +130,28 @@ fn subtree_has_flex_grow(element: &AnyElement) -> bool {
         return true;
     }
     element.children.iter().any(subtree_has_flex_grow)
+}
+
+fn is_radio_group_element(element: &AnyElement) -> bool {
+    match &element.kind {
+        ElementKind::Semantics(props) if props.role == SemanticsRole::RadioGroup => true,
+        ElementKind::Pressable(props)
+            if props
+                .a11y
+                .role
+                .is_some_and(|role| role == SemanticsRole::RadioGroup) =>
+        {
+            true
+        }
+        _ => element.children.iter().any(is_radio_group_element),
+    }
+}
+
+fn is_checkbox_group_element(element: &AnyElement) -> bool {
+    match &element.kind {
+        ElementKind::Semantics(props) if props.role == SemanticsRole::List => true,
+        _ => false,
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -115,44 +182,116 @@ impl FieldSet {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let gap = MetricRef::space(Space::N6).resolve(&theme);
+        // Upstream `FieldSet` uses `gap-6`, but overrides to `gap-3` when a checkbox/radio group
+        // is present via CSS `:has` selectors.
+        let gap = if self.children.iter().any(is_radio_group_element)
+            || self.children.iter().any(is_checkbox_group_element)
+        {
+            MetricRef::space(Space::N3).resolve(&theme)
+        } else {
+            MetricRef::space(Space::N6).resolve(&theme)
+        };
         let layout = decl_style::layout_style(
             &theme,
             LayoutRefinement::default().w_full().merge(self.layout),
         );
-        let children = self.children;
-        cx.column(
-            ColumnProps {
-                layout,
-                gap,
-                ..Default::default()
-            },
-            move |cx| {
-                // Upstream `FieldDescription` includes `nth-last-2:-mt-1`.
-                let len = children.len();
-                children
-                    .into_iter()
-                    .enumerate()
-                    .map(|(idx, child)| {
-                        if len >= 2 && idx == len - 2 && is_field_description(&theme, &child) {
-                            let layout = decl_style::layout_style(
+
+        let mut children = self.children;
+        let has_leading_legend =
+            children.first().is_some_and(is_field_legend_container) && children.len() > 1;
+
+        if has_leading_legend {
+            let legend = children.remove(0);
+            let legend_is_variant_legend = is_field_legend_variant_legend(&legend);
+            let rest_children = children;
+
+            cx.column(
+                ColumnProps {
+                    layout,
+                    gap: Px(0.0),
+                    ..Default::default()
+                },
+                move |cx| {
+                    let rest = cx.column(
+                        ColumnProps {
+                            layout: decl_style::layout_style(
                                 &theme,
-                                LayoutRefinement::default().mt_neg(Space::N1),
-                            );
-                            cx.container(
-                                ContainerProps {
-                                    layout,
-                                    ..Default::default()
-                                },
-                                move |_cx| vec![child],
-                            )
-                        } else {
-                            child
-                        }
-                    })
-                    .collect()
-            },
-        )
+                                LayoutRefinement::default().w_full(),
+                            ),
+                            gap,
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            let legend_is_variant_legend = legend_is_variant_legend;
+                            let len = rest_children.len();
+                            rest_children
+                                .into_iter()
+                                .enumerate()
+                                .map(|(idx, child)| {
+                                    if len >= 2
+                                        && idx == len - 2
+                                        && is_field_description(&theme, &child)
+                                    {
+                                        let space = if legend_is_variant_legend && idx == 0 {
+                                            Space::N1p5
+                                        } else {
+                                            Space::N1
+                                        };
+                                        let layout = decl_style::layout_style(
+                                            &theme,
+                                            LayoutRefinement::default().mt_neg(space),
+                                        );
+                                        cx.container(
+                                            ContainerProps {
+                                                layout,
+                                                ..Default::default()
+                                            },
+                                            move |_cx| vec![child],
+                                        )
+                                    } else {
+                                        child
+                                    }
+                                })
+                                .collect()
+                        },
+                    );
+
+                    vec![legend, rest]
+                },
+            )
+        } else {
+            cx.column(
+                ColumnProps {
+                    layout,
+                    gap,
+                    ..Default::default()
+                },
+                move |cx| {
+                    let len = children.len();
+                    children
+                        .into_iter()
+                        .enumerate()
+                        .map(|(idx, child)| {
+                            if len >= 2 && idx == len - 2 && is_field_description(&theme, &child) {
+                                let layout = decl_style::layout_style(
+                                    &theme,
+                                    LayoutRefinement::default().mt_neg(Space::N1),
+                                );
+                                cx.container(
+                                    ContainerProps {
+                                        layout,
+                                        ..Default::default()
+                                    },
+                                    move |_cx| vec![child],
+                                )
+                            } else {
+                                child
+                            }
+                        })
+                        .collect()
+                },
+            )
+        }
     }
 }
 
@@ -256,9 +395,17 @@ impl FieldLegend {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum FieldGroupSlot {
+    #[default]
+    Default,
+    CheckboxGroup,
+}
+
 #[derive(Debug, Clone)]
 pub struct FieldGroup {
     children: Vec<AnyElement>,
+    slot: FieldGroupSlot,
     gap: Option<MetricRef>,
     layout: LayoutRefinement,
 }
@@ -267,9 +414,15 @@ impl FieldGroup {
     pub fn new(children: Vec<AnyElement>) -> Self {
         Self {
             children,
+            slot: FieldGroupSlot::default(),
             gap: None,
             layout: LayoutRefinement::default(),
         }
+    }
+
+    pub fn checkbox_group(mut self) -> Self {
+        self.slot = FieldGroupSlot::CheckboxGroup;
+        self
     }
 
     pub fn gap(mut self, space: Space) -> Self {
@@ -289,24 +442,40 @@ impl FieldGroup {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let gap = self.gap.map(|g| g.resolve(&theme)).unwrap_or_else(|| {
-            theme
-                .metric_by_key("component.field.group_gap")
-                .unwrap_or_else(|| MetricRef::space(Space::N8).resolve(&theme))
-        });
+        let gap = self
+            .gap
+            .map(|g| g.resolve(&theme))
+            .unwrap_or_else(|| match self.slot {
+                FieldGroupSlot::Default => theme
+                    .metric_by_key("component.field.group_gap")
+                    .unwrap_or_else(|| MetricRef::space(Space::N8).resolve(&theme)),
+                FieldGroupSlot::CheckboxGroup => MetricRef::space(Space::N3).resolve(&theme),
+            });
         let layout = decl_style::layout_style(
             &theme,
             LayoutRefinement::default().w_full().merge(self.layout),
         );
         let children = self.children;
-        cx.column(
+        let column = cx.column(
             ColumnProps {
                 layout,
                 gap,
                 ..Default::default()
             },
             move |_cx| children,
-        )
+        );
+
+        match self.slot {
+            FieldGroupSlot::Default => column,
+            FieldGroupSlot::CheckboxGroup => cx.semantics(
+                fret_ui::element::SemanticsProps {
+                    layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full()),
+                    role: SemanticsRole::List,
+                    ..Default::default()
+                },
+                move |_cx| vec![column],
+            ),
+        }
     }
 }
 
@@ -467,7 +636,7 @@ impl FieldDescription {
             .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
         cx.text_props(TextProps {
-            layout: Default::default(),
+            layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full()),
             text: self.text,
             style: Some(TextStyle {
                 font: FontId::default(),
@@ -567,6 +736,7 @@ impl FieldSeparator {
                 .mb_neg(Space::N2)
                 .merge(self.layout),
         );
+
         let layout = decl_style::layout_style(
             &theme,
             LayoutRefinement::default()
@@ -592,7 +762,6 @@ impl FieldSeparator {
                 );
 
                 let label = self.label.clone();
-
                 let separator = cx.container(
                     ContainerProps {
                         layout,

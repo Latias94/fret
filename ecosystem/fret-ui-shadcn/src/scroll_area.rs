@@ -54,7 +54,7 @@ impl ScrollAreaViewport {
     pub fn new(children: Vec<AnyElement>) -> Self {
         Self {
             children,
-            axis: ScrollAxis::Both,
+            axis: ScrollAxis::Y,
             probe_unbounded: true,
         }
     }
@@ -240,10 +240,20 @@ impl ScrollAreaRoot {
                 .iter()
                 .any(|s| s.orientation == ScrollAreaScrollbarOrientation::Vertical);
 
+            let axis = match (wants_x, wants_y) {
+                (true, true) => ScrollAxis::Both,
+                (true, false) => ScrollAxis::X,
+                (false, true) => ScrollAxis::Y,
+                (false, false) => viewport.axis,
+            };
+
             let show_scrollbar_x = wants_x && visible && max_offset.x.0 > 0.01;
             let show_scrollbar_y = wants_y && visible && max_offset.y.0 > 0.01;
 
-            let layout = decl_style::layout_style(&theme, layout);
+            let mut layout = decl_style::layout_style(&theme, layout);
+            if matches!(layout.size.width, Length::Auto) {
+                layout.size.width = Length::Fill;
+            }
             vec![cx.stack_props(StackProps { layout }, move |cx| {
                 let mut scroll_layout = LayoutStyle::default();
                 scroll_layout.size.width = Length::Fill;
@@ -253,7 +263,7 @@ impl ScrollAreaRoot {
                 let scroll = cx.scroll(
                     ScrollProps {
                         layout: scroll_layout,
-                        axis: viewport.axis,
+                        axis,
                         scroll_handle: Some(handle.clone()),
                         probe_unbounded: viewport.probe_unbounded,
                     },
@@ -391,7 +401,7 @@ impl ScrollArea {
     pub fn new(children: Vec<AnyElement>) -> Self {
         Self {
             children,
-            axis: ScrollAxis::Both,
+            axis: ScrollAxis::Y,
             show_scrollbar: true,
             scrollbar_type: ScrollAreaType::default(),
             scroll_hide_delay_ticks: DEFAULT_SCROLL_HIDE_DELAY_TICKS,
@@ -440,13 +450,19 @@ impl ScrollArea {
             .type_(self.scrollbar_type)
             .scroll_hide_delay_ticks(self.scroll_hide_delay_ticks)
             .refine_layout(self.layout)
-            .corner(true)
-            .scrollbar(
+            .corner(matches!(self.axis, ScrollAxis::Both));
+
+        if self.axis.scroll_y() {
+            root = root.scrollbar(
                 ScrollAreaScrollbar::new().orientation(ScrollAreaScrollbarOrientation::Vertical),
-            )
-            .scrollbar(
+            );
+        }
+
+        if self.axis.scroll_x() {
+            root = root.scrollbar(
                 ScrollAreaScrollbar::new().orientation(ScrollAreaScrollbarOrientation::Horizontal),
             );
+        }
 
         if let Some(handle) = self.scroll_handle {
             root = root.scroll_handle(handle);
@@ -592,7 +608,6 @@ mod tests {
             window,
             ScrollAreaType::Hover,
         );
-
         // Root -> HoverRegion -> Stack -> (Scroll) when not hovered.
         let hover_region = ui.children(root)[0];
         let stack = ui.children(hover_region)[0];
@@ -894,6 +909,87 @@ mod tests {
             ui.children(stack).len(),
             4,
             "expected both scrollbars and a corner element"
+        );
+    }
+
+    #[test]
+    fn scroll_area_explicit_handle_reports_overflow_across_renders() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices::default();
+        let handle = ScrollHandle::default();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds(),
+            "sa-explicit-handle",
+            |cx| {
+                vec![
+                    ScrollArea::new(vec![cx.column(ColumnProps::default(), |cx| {
+                        (0..50).map(|_| cx.text("Row")).collect()
+                    })])
+                    .type_(ScrollAreaType::Auto)
+                    .scroll_handle(handle.clone())
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+        let hover_region = ui.children(root)[0];
+        let stack = ui.children(hover_region)[0];
+        let scroll = ui.children(stack)[0];
+        let root_bounds = ui.debug_node_bounds(root).expect("root bounds");
+        let hover_bounds = ui.debug_node_bounds(hover_region).expect("hover bounds");
+        let stack_bounds = ui.debug_node_bounds(stack).expect("stack bounds");
+        let scroll_bounds = ui.debug_node_bounds(scroll).expect("scroll bounds");
+
+        assert!(
+            handle.max_offset().y.0 > 0.01,
+            "expected explicit scroll handle to observe overflow after layout (viewport={:?} content={:?} max_offset={:?} root={:?} hover={:?} stack={:?} scroll={:?})",
+            handle.viewport_size(),
+            handle.content_size(),
+            handle.max_offset(),
+            root_bounds,
+            hover_bounds,
+            stack_bounds,
+            scroll_bounds,
+        );
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds(),
+            "sa-explicit-handle",
+            |cx| {
+                vec![
+                    ScrollArea::new(vec![cx.column(ColumnProps::default(), |cx| {
+                        (0..50).map(|_| cx.text("Row")).collect()
+                    })])
+                    .type_(ScrollAreaType::Auto)
+                    .scroll_handle(handle.clone())
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+        let hover_region = ui.children(root)[0];
+        let stack = ui.children(hover_region)[0];
+        assert_eq!(
+            ui.children(stack).len(),
+            2,
+            "expected auto scrollbar to mount for overflow when using an explicit handle"
         );
     }
 }

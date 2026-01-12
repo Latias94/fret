@@ -40,6 +40,7 @@ References:
 - Regression tracker for the observed stack overflow: `docs/todo-tracker.md` (P0 shadcn Components / Layout Correctness)
 - GPUI Taffy engine reference: `repo-ref/zed/crates/gpui/src/taffy.rs`
 - Refactor roadmap (living doc): `docs/layout-engine-refactor-roadmap.md`
+- Migration inventory (living checklist): `docs/layout-engine-v2-migration-inventory.md`
 
 ## Goals
 
@@ -247,7 +248,8 @@ To avoid regressions and make invalid compositions diagnosable:
   - debug/test builds: panic with diagnostics (treat as a bug),
   - release builds: return `Size::default()` and emit a rate-limited diagnostic counter.
 - Use stacksafe execution for the top-level layout solve and measure callbacks (GPUI reference).
-- Prefer rounding in the Taffy engine to reduce subpixel drift where applicable.
+- Prefer rounding in the Taffy engine to reduce subpixel drift where applicable (must remain
+  consistent with the snapping policy in ADR 0035 and be idempotent with renderer snapping).
 
 ### 10) Stable identity and incremental updates
 

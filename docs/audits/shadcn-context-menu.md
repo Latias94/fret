@@ -79,4 +79,4 @@ _None tracked at this time._
 - Contract test: `context_menu_items_have_collection_position_metadata_excluding_separators`
 - Interaction test: `context_menu_opens_on_shift_f10`
  - Interaction test: `context_menu_submenu_opens_on_arrow_right_without_pointer_move`
-
+- Web placement gate (layout engine v2): `cargo nextest run -p fret-ui-shadcn -F fret-ui/layout-engine-v2 --test radix_web_overlay_geometry`

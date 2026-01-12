@@ -97,12 +97,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 169,
+                                    "w": 108.671875,
+                                    "h": 36
+                                  },
                                   "text": "Show Tooltip"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 144,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Show Tooltip"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 108,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "BasicShow Tooltip"
                         },
                         {
@@ -158,6 +176,12 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 169,
+                                        "w": 47.15625,
+                                        "h": 36
+                                      },
                                       "text": "top"
                                     },
                                     {
@@ -176,6 +200,12 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 736.15625,
+                                        "y": 169,
+                                        "w": 56.46875,
+                                        "h": 36
+                                      },
                                       "text": "right"
                                     },
                                     {
@@ -194,6 +224,12 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 800.625,
+                                        "y": 169,
+                                        "w": 69.890625,
+                                        "h": 36
+                                      },
                                       "text": "bottom"
                                     },
                                     {
@@ -212,15 +248,39 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 878.515625,
+                                        "y": 169,
+                                        "w": 47.71875,
+                                        "h": 36
+                                      },
                                       "text": "left"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 169,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "toprightbottomleft"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 144,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "toprightbottomleft"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 108,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Sidestoprightbottomleft"
                         },
                         {
@@ -263,12 +323,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 323,
+                                    "w": 36,
+                                    "h": 36
+                                  },
                                   "text": "Info"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 298,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Info"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 262,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With IconInfo"
                         },
                         {
@@ -311,12 +389,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 323,
+                                    "w": 108.671875,
+                                    "h": 36
+                                  },
                                   "text": "Show Tooltip"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 298,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Show Tooltip"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 262,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Long ContentShow Tooltip"
                         },
                         {
@@ -374,15 +470,39 @@
                                         "data-slot": "button"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 477,
+                                        "w": 80.1875,
+                                        "h": 36
+                                      },
                                       "text": "Disabled"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 477,
+                                    "w": 80.1875,
+                                    "h": 36
+                                  },
                                   "text": "Disabled"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 452,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Disabled"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 416,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "DisabledDisabled"
                         },
                         {
@@ -424,11 +544,29 @@
                                     "data-slot": "tooltip-trigger",
                                     "data-state": "closed"
                                   },
-                                  "children": []
+                                  "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 477,
+                                    "w": 32,
+                                    "h": 32
+                                  }
                                 }
-                              ]
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 452,
+                                "w": 448,
+                                "h": 86
+                              }
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 416,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With Keyboard Shortcut"
                         },
                         {
@@ -471,12 +609,30 @@
                                     "data-slot": "tooltip-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 631,
+                                    "w": 75.640625,
+                                    "h": 20
+                                  },
                                   "text": "Learn more"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 606,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Learn more"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 570,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "On LinkLearn more"
                         },
                         {
@@ -519,21 +675,57 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 631,
+                                    "w": 64.5625,
+                                    "h": 36
+                                  },
                                   "text": "Status"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 606,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Status"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 570,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Formatted ContentStatus"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 800
+                      },
                       "text": "BasicShow TooltipSidestoprightbottomleftWith IconInfoLong ContentShow TooltipDisabledDisabledWith Keyboard ShortcutOn Li…"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 800
+                  },
                   "text": "BasicShow TooltipSidestoprightbottomleftWith IconInfoLong ContentShow TooltipDisabledDisabledWith Keyboard ShortcutOn Li…"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 800
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -548,9 +740,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 800,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 800
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -748,12 +952,30 @@
                                     "aria-describedby": "radix-_r_d_"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 169,
+                                    "w": 108.671875,
+                                    "h": 36
+                                  },
                                   "text": "Show Tooltip"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 144,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Show Tooltip"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 108,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "BasicShow Tooltip"
                         },
                         {
@@ -809,6 +1031,12 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 169,
+                                        "w": 47.15625,
+                                        "h": 36
+                                      },
                                       "text": "top"
                                     },
                                     {
@@ -827,6 +1055,12 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 736.15625,
+                                        "y": 169,
+                                        "w": 56.46875,
+                                        "h": 36
+                                      },
                                       "text": "right"
                                     },
                                     {
@@ -845,6 +1079,12 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 800.625,
+                                        "y": 169,
+                                        "w": 69.890625,
+                                        "h": 36
+                                      },
                                       "text": "bottom"
                                     },
                                     {
@@ -863,15 +1103,39 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 878.515625,
+                                        "y": 169,
+                                        "w": 47.71875,
+                                        "h": 36
+                                      },
                                       "text": "left"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 169,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "toprightbottomleft"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 144,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "toprightbottomleft"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 108,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Sidestoprightbottomleft"
                         },
                         {
@@ -914,12 +1178,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 323,
+                                    "w": 36,
+                                    "h": 36
+                                  },
                                   "text": "Info"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 298,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Info"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 262,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With IconInfo"
                         },
                         {
@@ -962,12 +1244,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 323,
+                                    "w": 108.671875,
+                                    "h": 36
+                                  },
                                   "text": "Show Tooltip"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 298,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Show Tooltip"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 262,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Long ContentShow Tooltip"
                         },
                         {
@@ -1025,15 +1325,39 @@
                                         "data-slot": "button"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 477,
+                                        "w": 80.1875,
+                                        "h": 36
+                                      },
                                       "text": "Disabled"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 477,
+                                    "w": 80.1875,
+                                    "h": 36
+                                  },
                                   "text": "Disabled"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 452,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Disabled"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 416,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "DisabledDisabled"
                         },
                         {
@@ -1075,11 +1399,29 @@
                                     "data-slot": "tooltip-trigger",
                                     "data-state": "closed"
                                   },
-                                  "children": []
+                                  "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 477,
+                                    "w": 32,
+                                    "h": 32
+                                  }
                                 }
-                              ]
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 452,
+                                "w": 448,
+                                "h": 86
+                              }
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 416,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With Keyboard Shortcut"
                         },
                         {
@@ -1122,12 +1464,30 @@
                                     "data-slot": "tooltip-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 631,
+                                    "w": 75.640625,
+                                    "h": 20
+                                  },
                                   "text": "Learn more"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 606,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Learn more"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 570,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "On LinkLearn more"
                         },
                         {
@@ -1170,21 +1530,57 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 631,
+                                    "w": 64.5625,
+                                    "h": 36
+                                  },
                                   "text": "Status"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 606,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Status"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 570,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Formatted ContentStatus"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 800
+                      },
                       "text": "BasicShow TooltipSidestoprightbottomleftWith IconInfoLong ContentShow TooltipDisabledDisabledWith Keyboard ShortcutOn Li…"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 800
+                  },
                   "text": "BasicShow TooltipSidestoprightbottomleftWith IconInfoLong ContentShow TooltipDisabledDisabledWith Keyboard ShortcutOn Li…"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 800
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -1199,7 +1595,13 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 800,
+                "w": 1280,
+                "h": 0
+              }
             },
             {
               "tag": "div",
@@ -1232,15 +1634,39 @@
                         "role": "tooltip"
                       },
                       "children": [],
+                      "rect": {
+                        "x": 216.01419067382812,
+                        "y": 152.0635986328125,
+                        "w": 0.9996490478515625,
+                        "h": 0.9996490478515625
+                      },
                       "text": "Add to library"
                     }
                   ],
+                  "rect": {
+                    "x": 205.0181427001953,
+                    "y": 131.07115173339844,
+                    "w": 100.55760192871094,
+                    "h": 27.989944458007812
+                  },
                   "text": "Add to libraryAdd to library"
                 }
               ],
+              "rect": {
+                "x": 205,
+                "y": 131,
+                "w": 100.59375,
+                "h": 28
+              },
               "text": "Add to libraryAdd to library"
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 800
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -1446,12 +1872,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 169,
+                                    "w": 108.671875,
+                                    "h": 36
+                                  },
                                   "text": "Show Tooltip"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 144,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Show Tooltip"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 108,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "BasicShow Tooltip"
                         },
                         {
@@ -1507,6 +1951,12 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 169,
+                                        "w": 47.15625,
+                                        "h": 36
+                                      },
                                       "text": "top"
                                     },
                                     {
@@ -1525,6 +1975,12 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 736.15625,
+                                        "y": 169,
+                                        "w": 56.46875,
+                                        "h": 36
+                                      },
                                       "text": "right"
                                     },
                                     {
@@ -1543,6 +1999,12 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 800.625,
+                                        "y": 169,
+                                        "w": 69.890625,
+                                        "h": 36
+                                      },
                                       "text": "bottom"
                                     },
                                     {
@@ -1561,15 +2023,39 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 878.515625,
+                                        "y": 169,
+                                        "w": 47.71875,
+                                        "h": 36
+                                      },
                                       "text": "left"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 169,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "toprightbottomleft"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 144,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "toprightbottomleft"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 108,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Sidestoprightbottomleft"
                         },
                         {
@@ -1612,12 +2098,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 323,
+                                    "w": 36,
+                                    "h": 36
+                                  },
                                   "text": "Info"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 298,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Info"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 262,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With IconInfo"
                         },
                         {
@@ -1660,12 +2164,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 323,
+                                    "w": 108.671875,
+                                    "h": 36
+                                  },
                                   "text": "Show Tooltip"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 298,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Show Tooltip"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 262,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Long ContentShow Tooltip"
                         },
                         {
@@ -1723,15 +2245,39 @@
                                         "data-slot": "button"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 477,
+                                        "w": 80.1875,
+                                        "h": 36
+                                      },
                                       "text": "Disabled"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 477,
+                                    "w": 80.1875,
+                                    "h": 36
+                                  },
                                   "text": "Disabled"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 452,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Disabled"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 416,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "DisabledDisabled"
                         },
                         {
@@ -1773,11 +2319,29 @@
                                     "data-slot": "tooltip-trigger",
                                     "data-state": "closed"
                                   },
-                                  "children": []
+                                  "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 477,
+                                    "w": 32,
+                                    "h": 32
+                                  }
                                 }
-                              ]
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 452,
+                                "w": 448,
+                                "h": 86
+                              }
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 416,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With Keyboard Shortcut"
                         },
                         {
@@ -1820,12 +2384,30 @@
                                     "data-slot": "tooltip-trigger"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 631,
+                                    "w": 75.640625,
+                                    "h": 20
+                                  },
                                   "text": "Learn more"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 606,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Learn more"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 570,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "On LinkLearn more"
                         },
                         {
@@ -1868,21 +2450,57 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 631,
+                                    "w": 64.5625,
+                                    "h": 36
+                                  },
                                   "text": "Status"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 606,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Status"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 570,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Formatted ContentStatus"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 800
+                      },
                       "text": "BasicShow TooltipSidestoprightbottomleftWith IconInfoLong ContentShow TooltipDisabledDisabledWith Keyboard ShortcutOn Li…"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 800
+                  },
                   "text": "BasicShow TooltipSidestoprightbottomleftWith IconInfoLong ContentShow TooltipDisabledDisabledWith Keyboard ShortcutOn Li…"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 800
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -1897,9 +2515,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 800,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 800
+          }
         },
         "ax": {
           "role": "RootWebArea",

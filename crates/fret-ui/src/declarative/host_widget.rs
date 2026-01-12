@@ -87,6 +87,7 @@ impl ElementHostWidget {
         element_record_for_node(app, window, node).map(|r| r.instance)
     }
 
+    #[allow(dead_code)]
     fn layout_flex_container<H: UiHost>(
         &mut self,
         cx: &mut LayoutCx<'_, H>,

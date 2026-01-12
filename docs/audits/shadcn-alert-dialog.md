@@ -61,8 +61,9 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn alert_dialog::tests`
+- Radix Web overlay geometry gate: `cargo nextest run -p fret-ui-shadcn -F fret-ui/layout-engine-v2 --test radix_web_overlay_geometry`
+  (`radix_web_alert_dialog_open_geometry_matches_fret`).
 
 ## Follow-ups (recommended)
 
 - Add optional presence/motion (if desired) while preserving safety semantics.
-

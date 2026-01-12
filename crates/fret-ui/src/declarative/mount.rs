@@ -127,6 +127,7 @@ pub fn render_root<H: UiHost>(
         let root_node = window_state
             .node_entry(root_id)
             .map(|e| e.node)
+            .filter(|&node| ui.node_exists(node))
             .unwrap_or_else(|| {
                 let node = ui.create_node(ElementHostWidget::new(root_id));
                 ui.set_node_element(node, Some(root_id));
@@ -270,6 +271,7 @@ fn render_dismissible_root_impl<
         let root_node = window_state
             .node_entry(root_id)
             .map(|e| e.node)
+            .filter(|&node| ui.node_exists(node))
             .unwrap_or_else(|| {
                 let node = ui.create_node(ElementHostWidget::new(root_id));
                 ui.set_node_element(node, Some(root_id));
@@ -375,6 +377,7 @@ fn mount_element<H: UiHost>(
     let node = window_state
         .node_entry(id)
         .map(|e| e.node)
+        .filter(|&node| ui.node_exists(node))
         .unwrap_or_else(|| {
             let node = ui.create_node(ElementHostWidget::new(id));
             ui.set_node_element(node, Some(id));

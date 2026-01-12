@@ -2,6 +2,8 @@ use super::super::ElementHostWidget;
 use crate::declarative::layout_helpers::clamp_to_constraints;
 use crate::declarative::prelude::*;
 
+use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+
 impl ElementHostWidget {
     pub(super) fn layout_virtual_list_impl<H: UiHost>(
         &mut self,
@@ -67,10 +69,10 @@ impl ElementHostWidget {
         let mut offset = metrics.clamp_offset(prev_offset_axis, viewport);
 
         // Avoid consuming deferred scroll requests during "probe" layout passes that use an
-        // effectively-unbounded available height (e.g. Stack/Pressable measuring with
-        // `Px(1.0e9)`). Those passes are not the final viewport constraints and would
+        // effectively-unbounded available space. Those passes are not the final viewport
+        // constraints and would
         // otherwise clear the request before the real layout happens.
-        let is_probe_layout = cx.available.height.0 >= 1.0e8;
+        let is_probe_layout = cx.pass_kind == crate::layout_pass::LayoutPassKind::Probe;
 
         if !is_probe_layout
             && viewport.0 > 0.0
@@ -121,29 +123,32 @@ impl ElementHostWidget {
 
         match props.measure_mode {
             crate::element::VirtualListMeasureMode::Measured => {
+                let item_constraints = LayoutConstraints::new(
+                    LayoutSize::new(
+                        match axis {
+                            fret_core::Axis::Vertical => Some(size.width),
+                            fret_core::Axis::Horizontal => None,
+                        },
+                        match axis {
+                            fret_core::Axis::Vertical => None,
+                            fret_core::Axis::Horizontal => Some(size.height),
+                        },
+                    ),
+                    LayoutSize::new(
+                        match axis {
+                            fret_core::Axis::Vertical => AvailableSpace::Definite(size.width),
+                            fret_core::Axis::Horizontal => AvailableSpace::MaxContent,
+                        },
+                        match axis {
+                            fret_core::Axis::Vertical => AvailableSpace::MaxContent,
+                            fret_core::Axis::Horizontal => AvailableSpace::Definite(size.height),
+                        },
+                    ),
+                );
+
                 for (&child, item) in cx.children.iter().zip(props.visible_items.iter()) {
                     let idx = item.index;
-                    let start = metrics.offset_for_index(idx);
-                    let origin = match axis {
-                        fret_core::Axis::Vertical => {
-                            let y = cx.bounds.origin.y.0 + start.0 - offset.0;
-                            fret_core::Point::new(cx.bounds.origin.x, Px(y))
-                        }
-                        fret_core::Axis::Horizontal => {
-                            let x = cx.bounds.origin.x.0 + start.0 - offset.0;
-                            fret_core::Point::new(Px(x), cx.bounds.origin.y)
-                        }
-                    };
-
-                    let measure_bounds = match axis {
-                        fret_core::Axis::Vertical => {
-                            Rect::new(origin, Size::new(size.width, Px(1.0e9)))
-                        }
-                        fret_core::Axis::Horizontal => {
-                            Rect::new(origin, Size::new(Px(1.0e9), size.height))
-                        }
-                    };
-                    let measured = cx.layout_in(child, measure_bounds);
+                    let measured = cx.measure_in(child, item_constraints);
                     let measured_extent = match axis {
                         fret_core::Axis::Vertical => Px(measured.height.0.max(0.0)),
                         fret_core::Axis::Horizontal => Px(measured.width.0.max(0.0)),
@@ -255,6 +260,22 @@ impl ElementHostWidget {
                     Rect::new(origin, Size::new(*measured_extent, size.height))
                 }
             };
+
+            #[cfg(feature = "layout-engine-v2")]
+            if !is_probe_layout {
+                let sf = cx.scale_factor;
+                let app = &mut *cx.app;
+                let services = &mut *cx.services;
+                let tree = &mut *cx.tree;
+                tree.precompute_barrier_flow_root_island_if_needed(
+                    app,
+                    services,
+                    *child,
+                    child_bounds,
+                    sf,
+                );
+            }
+
             let _ = cx.layout_in(*child, child_bounds);
         }
 
@@ -298,21 +319,24 @@ impl ElementHostWidget {
         window: AppWindowId,
         props: crate::element::ScrollProps,
     ) -> Size {
-        let probe_w = if props.axis.scroll_x() && props.probe_unbounded {
-            Px(1.0e9)
-        } else {
-            cx.available.width
-        };
-        let probe_h = if props.axis.scroll_y() && props.probe_unbounded {
-            Px(1.0e9)
-        } else {
-            cx.available.height
-        };
-        let probe_bounds = Rect::new(cx.bounds.origin, Size::new(probe_w, probe_h));
-
         let mut max_child = Size::new(Px(0.0), Px(0.0));
+        let child_constraints = LayoutConstraints::new(
+            LayoutSize::new(None, None),
+            LayoutSize::new(
+                if props.axis.scroll_x() && props.probe_unbounded {
+                    AvailableSpace::MaxContent
+                } else {
+                    AvailableSpace::Definite(cx.available.width)
+                },
+                if props.axis.scroll_y() && props.probe_unbounded {
+                    AvailableSpace::MaxContent
+                } else {
+                    AvailableSpace::Definite(cx.available.height)
+                },
+            ),
+        );
         for &child in cx.children {
-            let child_size = cx.layout_in(child, probe_bounds);
+            let child_size = cx.measure_in(child, child_constraints);
             max_child.width = Px(max_child.width.0.max(child_size.width.0));
             max_child.height = Px(max_child.height.0.max(child_size.height.0));
         }
@@ -334,11 +358,18 @@ impl ElementHostWidget {
         } else {
             desired.height
         };
+        // Ensure the scroll content bounds never underflow the viewport bounds.
+        //
+        // This matches DOM behavior (the scrollable content box is at least the viewport size),
+        // and prevents `Length::Fill` descendants from collapsing when we probe with
+        // `AvailableSpace::MaxContent` on the scroll axis.
+        let content_w = Px(content_w.0.max(desired.width.0.max(0.0)));
+        let content_h = Px(content_h.0.max(desired.height.0.max(0.0)));
 
         // Avoid mutating the imperative handle during "probe" layout passes that use an
-        // effectively-unbounded available height (e.g. Stack/Pressable measuring with
-        // `Px(1.0e9)`), otherwise scroll position can be clamped to zero prematurely.
-        let is_probe_layout = cx.available.height.0 >= 1.0e8 || cx.available.width.0 >= 1.0e8;
+        // effectively-unbounded available space, otherwise scroll position can be clamped to zero
+        // prematurely.
+        let is_probe_layout = cx.pass_kind == crate::layout_pass::LayoutPassKind::Probe;
         let external_handle = props.scroll_handle.clone();
         let offset = crate::elements::with_element_state(
             &mut *cx.app,
@@ -375,6 +406,20 @@ impl ElementHostWidget {
             ),
             Size::new(content_w, content_h),
         );
+
+        #[cfg(feature = "layout-engine-v2")]
+        if !is_probe_layout {
+            let sf = cx.scale_factor;
+            let app = &mut *cx.app;
+            let services = &mut *cx.services;
+            let tree = &mut *cx.tree;
+            for &child in cx.children {
+                tree.precompute_barrier_flow_root_island_if_needed(
+                    app, services, child, shifted, sf,
+                );
+            }
+        }
+
         for &child in cx.children {
             let _ = cx.layout_in(child, shifted);
         }

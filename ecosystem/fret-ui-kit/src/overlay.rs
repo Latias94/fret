@@ -166,6 +166,7 @@ mod tests {
             AnchoredPanelOptions {
                 direction: LayoutDirection::Ltr,
                 offset: Offset::default(),
+                shift: Default::default(),
                 arrow: Some(ArrowOptions {
                     size: Size::new(Px(12.0), Px(12.0)),
                     padding: Edges::all(Px(8.0)),

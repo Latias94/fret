@@ -30,6 +30,10 @@ Prefer behavior + semantics over pixel diffs:
 - **Geometry (optional)**: bounding boxes for key nodes, mainly to validate layout-driven behaviors
   (e.g. popover placement anchoring).
 
+The current extractor can optionally capture per-node viewport-relative rects (`getBoundingClientRect`)
+for every “interesting” node included in the snapshot tree. This is intended for **layout-driven**
+contracts (e.g. overlay placement + available-space clamping) and should use tolerances.
+
 ## Golden format (suggested)
 
 Use a timeline format so we can express interaction sequences:
@@ -73,4 +77,3 @@ Mirror the same sequence in Fret tests:
 - radix goldens: “interaction/semantics conformance for primitives”
 
 Both are valuable, and they fail for different reasons.
-

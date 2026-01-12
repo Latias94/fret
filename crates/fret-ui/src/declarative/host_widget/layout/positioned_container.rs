@@ -5,6 +5,7 @@ use crate::declarative::layout_helpers::{
     layout_positioned_child, positioned_layout_style,
 };
 use crate::declarative::prelude::*;
+use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 
 impl ElementHostWidget {
     pub(super) fn layout_positioned_container_impl<H: UiHost>(
@@ -13,22 +14,26 @@ impl ElementHostWidget {
         window: AppWindowId,
         layout: LayoutStyle,
     ) -> Size {
-        // Probe within the available height budget so measurement passes do not observe an
-        // artificially "infinite" viewport (important for scroll/virtualized children).
-        let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
+        // Probe within this container's own constrained size so measurement passes do not observe
+        // an artificially "infinite" viewport (important for scroll/virtualized children) and so
+        // absolute-positioned children measure against the same size budget used for placement.
+        let probe_available = clamp_to_constraints(cx.available, layout, cx.available);
+        let probe_bounds = Rect::new(cx.bounds.origin, probe_available);
+        let probe_constraints = probe_constraints_for_size(probe_bounds.size);
         let mut max_child = Size::new(Px(0.0), Px(0.0));
         for &child in cx.children {
             let child_style = layout_style_for_node(cx.app, window, child);
             if child_style.position == crate::element::PositionStyle::Absolute {
                 continue;
             }
-            let child_size = cx.layout_in(child, probe_bounds);
+            let child_size = cx.measure_in(child, probe_constraints);
             max_child.width = Px(max_child.width.0.max(child_size.width.0));
             max_child.height = Px(max_child.height.0.max(child_size.height.0));
         }
 
         let desired = clamp_to_constraints(max_child, layout, cx.available);
         let base = Rect::new(cx.bounds.origin, desired);
+
         for &child in cx.children {
             let child_style = layout_style_for_node(cx.app, window, child);
             match positioned_layout_style(child_style) {
@@ -58,12 +63,14 @@ impl ElementHostWidget {
         //
         // This keeps the hover region's hit-test bounds stable without forcing it to fill the
         // viewport.
-        let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
+        let probe_available = clamp_to_constraints(cx.available, layout, cx.available);
+        let probe_bounds = Rect::new(cx.bounds.origin, probe_available);
+        let probe_constraints = probe_constraints_for_size(probe_bounds.size);
         let mut max_child = Size::new(Px(0.0), Px(0.0));
 
         for &child in cx.children {
             let child_style = layout_style_for_node(cx.app, window, child);
-            let child_size = cx.layout_in(child, probe_bounds);
+            let child_size = cx.measure_in(child, probe_constraints);
 
             let required = if child_style.position == crate::element::PositionStyle::Absolute {
                 let left = child_style.inset.left.map(|v| v.0);
@@ -96,6 +103,7 @@ impl ElementHostWidget {
 
         let desired = clamp_to_constraints(max_child, layout, cx.available);
         let base = Rect::new(cx.bounds.origin, desired);
+
         for &child in cx.children {
             let child_style = layout_style_for_node(cx.app, window, child);
             match positioned_layout_style(child_style) {
@@ -107,4 +115,14 @@ impl ElementHostWidget {
         }
         desired
     }
+}
+
+fn probe_constraints_for_size(size: Size) -> LayoutConstraints {
+    LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(
+            AvailableSpace::Definite(size.width),
+            AvailableSpace::Definite(size.height),
+        ),
+    )
 }

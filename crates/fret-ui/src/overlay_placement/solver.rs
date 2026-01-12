@@ -147,28 +147,14 @@ pub fn anchored_panel_layout_ex(
     let preferred_origin = anchored_origin_ex(anchor, content, gap, preferred_side, align, options);
     let preferred = Rect::new(preferred_origin, content);
     if side_fits_without_clamp(outer, preferred, preferred_side) {
-        return finalize_layout(
-            outer,
-            anchor,
-            clamp_rect_to_outer(outer, preferred),
-            preferred_side,
-            align,
-            options,
-        );
+        return finalize_layout(outer, anchor, preferred, preferred_side, align, options);
     }
 
     let flipped_side = opposite_side(preferred_side);
     let flipped_origin = anchored_origin_ex(anchor, content, gap, flipped_side, align, options);
     let flipped = Rect::new(flipped_origin, content);
     if side_fits_without_clamp(outer, flipped, flipped_side) {
-        return finalize_layout(
-            outer,
-            anchor,
-            clamp_rect_to_outer(outer, flipped),
-            flipped_side,
-            align,
-            options,
-        );
+        return finalize_layout(outer, anchor, flipped, flipped_side, align, options);
     }
 
     // Neither side fits cleanly on the main axis. Choose the candidate that minimizes main-axis
@@ -189,14 +175,7 @@ pub fn anchored_panel_layout_ex(
         (preferred_side, preferred)
     };
 
-    finalize_layout(
-        outer,
-        anchor,
-        clamp_rect_to_outer(outer, chosen),
-        chosen_side,
-        align,
-        options,
-    )
+    finalize_layout(outer, anchor, chosen, chosen_side, align, options)
 }
 
 /// Like [`anchored_panel_layout_ex`], but clamps the panel `Size` to available space (see ADR 0064).
@@ -223,7 +202,7 @@ pub fn anchored_panel_layout_sized_ex(
         return finalize_layout(
             outer,
             anchor,
-            clamp_rect_to_outer(outer, Rect::new(origin, size)),
+            Rect::new(origin, size),
             preferred_side,
             align,
             options,
@@ -240,7 +219,7 @@ pub fn anchored_panel_layout_sized_ex(
         return finalize_layout(
             outer,
             anchor,
-            clamp_rect_to_outer(outer, Rect::new(origin, size)),
+            Rect::new(origin, size),
             flipped_side,
             align,
             options,
@@ -280,7 +259,7 @@ pub fn anchored_panel_layout_sized_ex(
     finalize_layout(
         outer,
         anchor,
-        clamp_rect_to_outer(outer, Rect::new(origin, size)),
+        Rect::new(origin, size),
         chosen_side,
         align,
         options,
@@ -500,13 +479,30 @@ fn total_overflow(o: Overflow) -> f32 {
 }
 
 fn clamp_rect_to_outer(outer: Rect, inner: Rect) -> Rect {
+    clamp_rect_to_outer_axes(outer, inner, true, true)
+}
+
+fn clamp_rect_to_outer_axes(outer: Rect, inner: Rect, clamp_x: bool, clamp_y: bool) -> Rect {
     let min_x = outer.origin.x.0;
     let min_y = outer.origin.y.0;
     let max_x = (outer.origin.x.0 + outer.size.width.0 - inner.size.width.0).max(min_x);
     let max_y = (outer.origin.y.0 + outer.size.height.0 - inner.size.height.0).max(min_y);
 
-    let x = inner.origin.x.0.clamp(min_x, max_x);
-    let y = inner.origin.y.0.clamp(min_y, max_y);
+    let mut x = inner.origin.x.0;
+    let mut y = inner.origin.y.0;
+    if !x.is_finite() {
+        x = min_x;
+    }
+    if !y.is_finite() {
+        y = min_y;
+    }
+
+    if clamp_x {
+        x = x.clamp(min_x, max_x);
+    }
+    if clamp_y {
+        y = y.clamp(min_y, max_y);
+    }
     Rect::new(Point::new(Px(x), Px(y)), inner.size)
 }
 
@@ -527,9 +523,18 @@ fn finalize_layout(
     align: Align,
     options: AnchoredPanelOptions,
 ) -> AnchoredPanelLayout {
-    rect = shift_rect_with_sticky(outer, anchor, rect, side, options.sticky);
+    rect = shift_rect_with_sticky(outer, anchor, rect, side, options.sticky, options.shift);
     let arrow = options.arrow.map(|arrow| {
-        apply_arrow_layout(outer, anchor, &mut rect, side, align, options.sticky, arrow)
+        apply_arrow_layout(
+            outer,
+            anchor,
+            &mut rect,
+            side,
+            align,
+            options.sticky,
+            options.shift,
+            arrow,
+        )
     });
 
     AnchoredPanelLayout {
@@ -546,16 +551,28 @@ fn shift_rect_with_sticky(
     rect: Rect,
     side: Side,
     sticky: StickyMode,
+    shift: ShiftOptions,
 ) -> Rect {
-    let mut rect = clamp_rect_to_outer(outer, rect);
-    if sticky == StickyMode::Always {
+    let is_vertical = matches!(side, Side::Top | Side::Bottom);
+    let clamp_x = if is_vertical {
+        shift.cross_axis
+    } else {
+        shift.main_axis
+    };
+    let clamp_y = if is_vertical {
+        shift.main_axis
+    } else {
+        shift.cross_axis
+    };
+
+    let mut rect = clamp_rect_to_outer_axes(outer, rect, clamp_x, clamp_y);
+    if sticky == StickyMode::Always || !shift.cross_axis {
         return rect;
     }
 
     // Floating UI `limitShift()` (as used by Radix `sticky="partial"`) constrains the shift so the
     // floating element does not detach from the reference on the alignment axis, even if that
     // means overflowing the collision boundary.
-    let is_vertical = matches!(side, Side::Top | Side::Bottom);
     let anchor_len = if is_vertical {
         anchor.size.width.0.max(0.0)
     } else {
@@ -599,6 +616,7 @@ fn apply_arrow_layout(
     placement_side: Side,
     align: Align,
     sticky: StickyMode,
+    shift: ShiftOptions,
     arrow: ArrowOptions,
 ) -> ArrowLayout {
     let is_vertical = matches!(placement_side, Side::Top | Side::Bottom);
@@ -665,7 +683,7 @@ fn apply_arrow_layout(
                 rect.origin.y = Px(rect.origin.y.0 + alignment_offset);
             }
 
-            *rect = shift_rect_with_sticky(outer, anchor, *rect, placement_side, sticky);
+            *rect = shift_rect_with_sticky(outer, anchor, *rect, placement_side, sticky, shift);
 
             // Recompute after shifting/clamping.
             let rect_start = if is_vertical {

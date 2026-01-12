@@ -437,6 +437,15 @@ pub struct AnchoredProps {
     pub outer_margin: Edges,
     /// Anchor rect in the same coordinate space as the wrapper bounds.
     pub anchor: fret_core::Rect,
+    /// Optional anchor element ID to resolve during layout (ADR 0104).
+    ///
+    /// When set, the layout pass attempts to resolve the element's current-frame bounds and uses
+    /// that rect as the anchor. This avoids cross-frame geometry jitter from
+    /// `bounds_for_element(...)` / `last_bounds_for_element(...)` queries and better matches GPUI's
+    /// layout-driven placement model.
+    ///
+    /// If the element cannot be resolved (e.g. not mounted yet), `anchor` is used as a fallback.
+    pub anchor_element: Option<u64>,
     pub side: Side,
     pub align: Align,
     /// Gap between the anchor and the placed subtree.
@@ -456,6 +465,7 @@ impl Default for AnchoredProps {
             layout,
             outer_margin: Edges::all(Px(0.0)),
             anchor: fret_core::Rect::default(),
+            anchor_element: None,
             side: Side::Bottom,
             align: Align::Start,
             side_offset: Px(0.0),

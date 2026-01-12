@@ -231,7 +231,7 @@ impl ElementHostWidget {
             ElementInstance::TextInput(props) => self.measure_text_input(cx, props),
             ElementInstance::TextArea(props) => self.measure_text_area(cx, props),
             ElementInstance::ResizablePanelGroup(props) => clamp_to_constraints_in_measure(
-                Size::new(Px(0.0), Px(0.0)),
+                available_px_or_zero(cx.constraints),
                 props.layout,
                 cx.constraints,
             ),

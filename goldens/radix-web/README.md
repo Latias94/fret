@@ -8,6 +8,8 @@ Unlike `shadcn-web` (layout/style snapshots), these goldens are **timelines**:
 - drive pointer/keyboard actions (open/close, roving focus, selection),
 - record DOM semantics (`role`, `aria-*`, `data-state`, ...),
 - record the Accessibility Tree snapshot after each step.
+- optionally record viewport-relative DOM rects (`getBoundingClientRect`) for included nodes (for
+  layout-driven contracts like overlay placement).
 
 Generator script:
 
