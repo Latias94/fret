@@ -19,7 +19,7 @@ What exists today:
   - `crates/fret-a11y-accesskit/src/lib.rs` (AccessKit mapping + unit tests)
   - `crates/fret-runner-winit/src/accessibility.rs` (winit adapter glue)
 - Overlay + list semantics tests for several window-scoped overlay surfaces
-  (see `docs/a11y-acceptance-checklist.md` and `ecosystem/fret-ui-kit/src/window_overlays.rs`).
+  (see `docs/a11y-acceptance-checklist.md` and `ecosystem/fret-ui-kit/src/window_overlays/*`).
 - Roving-focus navigation for composite lists is typically implemented by **moving focus** between
   rows (via `UiTree` focus primitives), which works without `active_descendant` but is not ideal
   for cmdk-style “focus stays in the text field” experiences.

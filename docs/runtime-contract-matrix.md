@@ -37,7 +37,7 @@ For a closure-oriented, module-by-module index (contracts → code → tests →
 
 ### Overlay placement solver (anchoring, flip, clamp, size)
 
-- **Module(s):** `crates/fret-ui/src/overlay_placement.rs`
+- **Module(s):** `crates/fret-ui/src/overlay_placement/mod.rs`
 - **ADR(s):** `docs/adr/0064-overlay-placement-contract.md`
 - **Reference(s):**
   - Floating UI: `repo-ref/floating-ui` (contract vocabulary; not a DOM implementation target)

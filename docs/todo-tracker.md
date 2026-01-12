@@ -169,7 +169,7 @@ It complements (but does not replace) ADRs:
 - **Formalize the vector path contract now that `SceneOp::Path` exists**
   - Problem: `fret-core::vector_path` and `SceneOp::Path` are implemented, but the contract is not yet locked at the ADR level (stroke joins/caps, AA expectations, transform interaction, caching keys).
   - ADRs: `docs/adr/0080-vector-path-contract.md`, `docs/adr/0002-display-list.md`, `docs/adr/0030-shape-rendering-and-sdf-semantics.md`
-  - Code: `crates/fret-core/src/vector_path.rs`, `crates/fret-core/src/scene.rs`, `crates/fret-render/src/renderer.rs`
+  - Code: `crates/fret-core/src/vector_path.rs`, `crates/fret-core/src/scene.rs`, `crates/fret-render/src/renderer/mod.rs`
   - Update: contract locked (ADR 0080). Follow-up work is conformance testing and any v2 surface expansion (joins/caps/dashes).
 
 - **Clarify the runner vs platform split in docs and code**

@@ -26,7 +26,7 @@ Fret does not use React/DOM attributes. Instead, toggle behavior is composed via
 ## Current parity notes
 
 - Pass: Controlled and uncontrolled state are supported (`pressed` / `defaultPressed`) via
-  `ecosystem/fret-ui-kit/src/primitives/toggle.rs:toggle_use_model` (backed by the shared
+  `ecosystem/fret-ui-kit/src/primitives/toggle.rs` (`toggle_use_model`) (backed by the shared
   controllable-state substrate).
 - Pass: Activation toggling exists in shadcn recipes.
 - Note: Fret currently maps `aria-pressed` to a button-like semantics outcome (`selected=true`).

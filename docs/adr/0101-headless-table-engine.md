@@ -196,7 +196,7 @@ backend; see ADR 0033 and platform conformance work).
 
 ## Alternatives Considered
 
-1) **New workspace crate `ecosystem/fret-table`**
+1) **New workspace crate `fret-table` (hypothetical)**
    - Pros: very clean dependency boundary; could be reused without `fret-ui-kit`.
    - Cons: extra crate and versioning surface; more workspace churn.
    - Decision: rejected for now; revisit if `fret-ui-kit` becomes too broad.

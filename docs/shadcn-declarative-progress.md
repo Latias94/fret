@@ -186,12 +186,12 @@ Intended new building blocks (names tentative):
 
 - `ecosystem/fret-ui-kit/src/headless/hover_intent.rs` (tooltip/hover-card delays + cancellation)
 - `ecosystem/fret-ui-kit/src/headless/menu_nav.rs` (arrow key navigation + typeahead buffer + disabled skipping)
-- `ecosystem/fret-ui-kit/src/headless/focus_trap.rs` (dialog/sheet focus trap + restore hooks)
-- `ecosystem/fret-ui-kit/src/declarative/separator.rs` (simple visual + semantics)
-- `ecosystem/fret-ui-kit/src/declarative/scroll_area.rs` (Scroll + scrollbar styling wrapper)
-- `ecosystem/fret-ui-kit/src/declarative/textarea.rs` (runtime `TextArea` chrome wrapper)
-- `crates/fret-ui/src/slider.rs` (pointer/keyboard input; a11y TBD)
-- Extend `ecosystem/fret-ui-kit/src/window_overlays.rs` with: tooltip layer, menu layer, dialog/sheet layer, toast layer
+- `ecosystem/fret-ui-kit/src/primitives/focus_scope.rs` (dialog/sheet focus trap helpers + restore hooks)
+- `ecosystem/fret-ui-shadcn/src/separator.rs` (simple visual + semantics)
+- `ecosystem/fret-ui-shadcn/src/scroll_area.rs` (Scroll + scrollbar styling wrapper)
+- `ecosystem/fret-ui-shadcn/src/textarea.rs` (runtime `TextArea` chrome wrapper)
+- `ecosystem/fret-ui-shadcn/src/slider.rs` (pointer/keyboard input; a11y TBD; uses `fret-ui-kit` headless slider)
+- Extend `ecosystem/fret-ui-kit/src/window_overlays/*` with: tooltip layer, menu layer, dialog/sheet layer, toast layer
 
 Cross-cutting a11y constraint to keep in mind:
 

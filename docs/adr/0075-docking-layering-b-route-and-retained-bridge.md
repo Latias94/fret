@@ -8,7 +8,8 @@ Docking is an "editor-grade UX" capability, but it is also one of the easiest pl
 application/editor-specific policy to leak into the UI runtime.
 
 We previously had docking UI and viewport overlay details implemented in `crates/fret-ui` via a
-retained-widget implementation (`DockSpace` lived in `crates/fret-ui/src/dock.rs`). This was
+retained-widget implementation (historically the `DockSpace` widget lived inside the old `dock`
+module). This was
 convenient early on, but it conflicts with:
 
 - ADR 0027: framework scope vs editor app responsibilities
@@ -49,7 +50,7 @@ We choose the **B route**:
 - May use a feature-gated retained-widget bridge during migration (see below), but must not leak
   retained authoring into shadcn/tailwind components.
 
-**`crates/fret-editor` / app layer (Editor-specific viewport policy)**
+**`apps/fret-editor` / app layer (Editor-specific viewport policy)**
 
 - Viewport overlays such as gizmos, marquee, selection rects, markers.
 - Tool routing, picking, and camera navigation policy (ADR 0049).
@@ -94,7 +95,7 @@ The goal is to enable a staged migration:
 ### Stage 1 (move docking UI out)
 
 - Create `ecosystem/fret-docking`.
-- Move `DockSpace` and related UI/policy code out of `crates/fret-ui/src/dock.rs` (done; now in `ecosystem/fret-docking/src/dock/space.rs`).
+- Move `DockSpace` and related UI/policy code out of `crates/fret-ui` (done; now in `ecosystem/fret-docking/src/dock/space.rs`).
 - Register internal drag routing via `InternalDragRouteService`.
 
 ### Stage 2 (thin the runtime further)
@@ -109,7 +110,7 @@ The goal is to enable a staged migration:
 - Provide an app-owned hook entry point for painting viewport overlays without re-introducing editor
   policy into docking UI:
   - `ecosystem/fret-docking`: `DockViewportOverlayHooks` + `DockViewportOverlayHooksService`
-  - `crates/fret-editor`: `viewport_overlays` (reference shapes + paint helpers)
+  - `apps/fret-editor/src/viewport_overlays.rs` (reference shapes + paint helpers)
 
 ### Exit criteria (clean state)
 

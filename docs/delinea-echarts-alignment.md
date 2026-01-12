@@ -151,7 +151,7 @@ single “at a glance” view of:
 
 - ECharts reference: tooltip formatter + axisPointer sampling behavior (series order, missing values, snapping rules)
 - ADR(s): `docs/adr/1133-delinea-interaction-and-hit-testing-contract.md`, `docs/adr/1148-delinea-tooltip-formatting-contract.md`
-- Evidence: `ecosystem/delinea/src/tooltip.rs`, `ecosystem/fret-chart/src/retained/tooltip.rs`, `ecosystem/delinea/src/engine/hit_test.rs`
+- Evidence: `ecosystem/delinea/src/tooltip.rs`, `ecosystem/fret-chart/src/retained/tooltip.rs`, `ecosystem/delinea/src/engine/hit_test/mod.rs`
 - Validation (desktop): `cargo run -p fret-demo --bin fret-demo -- chart_demo`
 - Validation (wasm): `cargo run -p fretboard -- dev web --demo chart_demo`
 - Notes:

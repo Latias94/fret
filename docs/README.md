@@ -59,7 +59,7 @@ contracts early to avoid large rewrites later.
    - Note: crate boundary direction is “core vs backends vs apps” (ADR 0093): `docs/adr/0093-crate-structure-core-backends-apps.md`
  - UI runtime (retained tree prototype): `crates/fret-ui/src/tree/mod.rs`
 - Docking UI (`DockSpace`, policy-heavy): `ecosystem/fret-docking/src/dock/space.rs`
-- Renderer (display list → wgpu pipelines; SDF AA lives here): `crates/fret-render/src/renderer.rs`
+- Renderer (display list → wgpu pipelines; SDF AA lives here): `crates/fret-render/src/renderer/mod.rs`
 
 ## Repository references
 

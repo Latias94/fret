@@ -101,7 +101,7 @@ Notes:
 
 - Renderer provides geometry queries by caching caret stops on prepared blobs:
   - `crates/fret-render/src/text.rs`
-  - `crates/fret-render/src/renderer.rs`
+  - `crates/fret-render/src/renderer/mod.rs`
 - TextInput uses caret-stop tables for event hit-testing and uses `caret_x` for painting/cursor area:
   - `crates/fret-ui/src/text_input/mod.rs`
 - Multiline text input experiments (wrapping/scrolling + geometry queries):

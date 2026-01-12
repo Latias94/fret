@@ -105,7 +105,7 @@ Migration path:
 
 ### 3) Remove `fret-app-kit` and keep responsibilities split
 
-`ecosystem/fret-app-kit` historically mixed "app-level defaults" and "UI render-asset convenience". Since this repository
+`fret-app-kit` historically mixed "app-level defaults" and "UI render-asset convenience". Since this repository
 is still pre-OSS and has no external users yet, we remove it entirely and keep the story crisp:
 
 - App defaults / startup glue live in `ecosystem/fret-bootstrap`.

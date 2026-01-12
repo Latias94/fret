@@ -30,11 +30,11 @@ contracts.
 
 Fret deliberately splits “Tailwind-like” knobs by intent to avoid silent no-ops:
 
-- **ChromeRefinement** (`ecosystem/fret-ui-kit/src/style.rs`)
+- **ChromeRefinement** (`ecosystem/fret-ui-kit/src/style/mod.rs`)
   - visual/chrome: padding, border, radius, bg/fg colors, min-height (for controls), etc.
   - applies to component widgets that implement `RefineStyle` / `StyledExt`.
   - may be interpreted as *symmetric* padding for many surfaces (see “Padding semantics”).
-- **LayoutRefinement** (`ecosystem/fret-ui-kit/src/style.rs`)
+- **LayoutRefinement** (`ecosystem/fret-ui-kit/src/style/mod.rs`)
   - layout-only: margin, position/inset, size constraints, flex-item shorthands, aspect ratio.
   - **only applies in declarative authoring** (ADR 0057) via bridging helpers.
 - **Runtime layout contracts** (`crates/fret-ui/src/element.rs`, `crates/fret-ui/src/declarative.rs`)

@@ -88,7 +88,7 @@ Tradeoffs / limitations (current):
 
 ## Implementation Notes (Current Prototype)
 
-- Runtime primitive: `crates/fret-ui/src/resizable_panel_group.rs`
+- Runtime primitive: `crates/fret-ui/src/resizable_panel_group/mod.rs`
 - Declarative surface: `ResizablePanelGroupProps` + `ElementContext::resizable_panel_group(...)`
 - shadcn facade: `ecosystem/fret-ui-shadcn/src/resizable.rs`
 - Docking integration: split layout/hit-testing/painting delegates to the same panel-group mechanics via `fret-ui/unstable-retained-bridge`.

@@ -168,7 +168,7 @@ Each section below answers:
 - `crates/fret-ui/src/tree/mod.rs` (routing + focus/capture + layers + paint cache)
 - `crates/fret-ui/src/elements/mod.rs`, `crates/fret-ui/src/declarative.rs`
 - `crates/fret-ui/src/action.rs` (action hook substrate)
-- `crates/fret-ui/src/overlay_placement.rs`
+- `crates/fret-ui/src/overlay_placement/mod.rs`
 - `crates/fret-ui/src/scroll.rs`, `crates/fret-ui/src/virtual_list.rs`
 - `crates/fret-ui/src/text_input/mod.rs`, `crates/fret-ui/src/text_area/mod.rs`
 
@@ -183,9 +183,9 @@ Each section below answers:
   - `crates/fret-ui/src/tree/tests/` (`visual_bounds_for_element_includes_ancestor_render_transform`)
   - `crates/fret-ui/src/tree/tests/` (`non_invertible_render_transform_is_ignored_for_paint_and_visual_bounds`)
 - Anchored placement solver invariants:
-  - `crates/fret-ui/src/overlay_placement.rs` (`keeps_bottom_when_it_fits`)
-  - `crates/fret-ui/src/overlay_placement.rs` (`flips_from_bottom_to_top_when_bottom_overflows`)
-  - `crates/fret-ui/src/overlay_placement.rs` (`sized_variant_prefers_side_with_less_main_axis_overflow`)
+  - `crates/fret-ui/src/overlay_placement/tests.rs` (`keeps_bottom_when_it_fits`)
+  - `crates/fret-ui/src/overlay_placement/tests.rs` (`flips_from_bottom_to_top_when_bottom_overflows`)
+  - `crates/fret-ui/src/overlay_placement/tests.rs` (`sized_variant_prefers_side_with_less_main_axis_overflow`)
 
 **Subsystem index (UI — find things fast)**
 
@@ -201,7 +201,7 @@ flowchart LR
 
 - **Event routing + capture + focus**: ADR 0005 / 0020 / 0068; code: `crates/fret-ui/src/tree/mod.rs`
 - **Overlays + barriers + outside press**: ADR 0011 / 0067 / 0069; code: `crates/fret-ui/src/tree/mod.rs`; policy: `ecosystem/fret-ui-kit/src/window_overlays/*`
-- **Anchored overlays (placement)**: ADR 0064; code: `crates/fret-ui/src/overlay_placement.rs`; reference: `repo-ref/floating-ui`
+- **Anchored overlays (placement)**: ADR 0064; code: `crates/fret-ui/src/overlay_placement/mod.rs`; reference: `repo-ref/floating-ui`
 - **RenderTransform + anchor geometry**: ADR 0083; code: `crates/fret-ui/src/tree/mod.rs` (hit-test mapping + `visual_bounds_for_element` recording) + `crates/fret-ui/src/elements/mod.rs` (cross-frame geometry queries)
 - **Layout**: ADR 0035 / 0057 / 0062 / 0076; code: `crates/fret-ui/src/declarative.rs`, `crates/fret-ui/src/element.rs`
 - **Painting + clip/transform semantics**: ADR 0002 / 0019 / 0063 / 0078 / 0082; code: `crates/fret-ui/src/paint.rs` + declarative paint emission
@@ -277,7 +277,7 @@ flowchart LR
 
 **Code entry points**
 
-- `crates/fret-render/src/renderer.rs`
+- `crates/fret-render/src/renderer/mod.rs`
 - `crates/fret-render/src/text.rs`
 
 **Closure checklist (P0)**

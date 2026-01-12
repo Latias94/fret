@@ -78,4 +78,4 @@ When a window’s scale factor changes, the platform backend emits a scale-facto
 Prototype implementation (desktop runner + demo):
 
 - Window move events are forwarded as data: `crates/fret-launch/src/runner/mod.rs`
-- Demo persists/restores `DockLayoutWindow.placement`: implemented in `crates/fret-demo` (entrypoints evolve; search for `DockLayoutWindow` usage).
+- Demo persists/restores `DockLayoutWindow.placement`: implemented in `apps/fret-demo` (entrypoints evolve; search for `DockLayoutWindow` usage).

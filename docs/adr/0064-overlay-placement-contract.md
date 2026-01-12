@@ -24,7 +24,7 @@ want:
 ## Decision
 
 We define an **anchored panel placement** contract implemented by a pure function in
-`crates/fret-ui/src/overlay_placement.rs`.
+`crates/fret-ui/src/overlay_placement/mod.rs`.
 
 ### Inputs
 

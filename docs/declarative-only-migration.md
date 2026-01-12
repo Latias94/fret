@@ -57,7 +57,7 @@ Owns:
 ### Phase 1 — extract “engine” types out of retained widgets
 
 Problem: some core element props may depend on types that historically lived in demo/widgets scaffolding
-(previously `crates/fret-ui-widgets`).
+(previously the removed `fret-ui-widgets` scaffolding crate).
 
 Actions:
 

@@ -62,7 +62,7 @@ ADR or adding a new ADR) before scaling feature surface area.
 - **Docking drag vs overlays vs viewport capture: arbitration matrix**
   - Update: `docs/adr/0072-docking-interaction-arbitration-matrix.md` (Accepted)
   - Decide: drag start/stop precedence, which overlays close/freeze during dock drags, and how modal barriers intentionally block docking/tool input.
-  - Implement: `ecosystem/fret-docking/src/dock/space.rs`, `ecosystem/fret-ui-kit/src/overlay_policy.rs`, `crates/fret-ui/src/tree/mod.rs` (capture + layering).
+  - Implement: `ecosystem/fret-docking/src/dock/space.rs`, `ecosystem/fret-ui-kit/src/overlay.rs`, `crates/fret-ui/src/tree/mod.rs` (capture + layering).
 
 - **Multi-window degradation policy (single-window platforms)**
   - Update: `docs/adr/0084-multi-window-degradation-policy.md` (Accepted)
@@ -140,7 +140,7 @@ These anchors are intentionally few; use `rg` to drill down from them.
 - UI runtime (retained tree prototype): `crates/fret-ui/src/tree/mod.rs`
 - Docking UI (`DockSpace`, policy-heavy): `ecosystem/fret-docking/src/dock/space.rs`
 - Core contracts (IDs, dock graph, scene ops): `crates/fret-core/src/lib.rs`
-- Renderer (quads/SDF/text hooks): `crates/fret-render/src/renderer.rs`
+- Renderer (quads/SDF/text hooks): `crates/fret-render/src/renderer/mod.rs`
 - Demo (end-to-end wiring): `apps/fret-examples/src/components_gallery.rs`, `apps/fret-examples/src/docking_demo.rs`
 
 ## Current Focus (“Decide Early”)

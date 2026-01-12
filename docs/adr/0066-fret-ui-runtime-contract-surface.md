@@ -198,13 +198,13 @@ GPUI provides a useful “contract vs component” separation reference:
 
 - **GPUI runtime (`gpui`)** provides substrate contracts: `ScrollHandle`, `ScrollStrategy`,
   `FocusHandle`, anchored/deferred primitives, event routing/hit testing.
-- **gpui-component `crates/ui`** builds policy-heavy components on top: `Popover`, `Dialog`,
+- **gpui-component `repo-ref/gpui-component/crates/ui`** builds policy-heavy components on top: `Popover`, `Dialog`,
   `VirtualList`, scrollbars, Tailwind-like `StyledExt`, etc.
 
 Fret’s target mapping:
 
 - `gpui` (runtime substrate) ≈ `crates/fret-ui`
-- gpui-component `crates/ui` (policy + recipes) ≈ `ecosystem/fret-ui-kit` (infra) +
+- gpui-component `repo-ref/gpui-component/crates/ui` (policy + recipes) ≈ `ecosystem/fret-ui-kit` (infra) +
   `ecosystem/fret-ui-shadcn` (taxonomy + recipes)
 
 Key principle:

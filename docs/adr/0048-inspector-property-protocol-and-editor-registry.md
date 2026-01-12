@@ -132,9 +132,9 @@ Notes:
 
 ## Implementation Notes (Current Prototype)
 
-- Protocol types + editor registry (example editor layer): `crates/fret-editor/src/inspector_protocol.rs`
-- Property edit request plumbing (phased edits): `crates/fret-editor/src/property_edit.rs`
-- Inspector edit UI surface (example editor layer widgets): `crates/fret-editor/src/inspector_edit_layout.rs`
+- Protocol types + editor registry (example editor layer): `apps/fret-editor/src/inspector_protocol.rs`
+- Property edit request plumbing (phased edits): `apps/fret-editor/src/property_edit.rs`
+- Inspector edit UI surface (example editor layer widgets): `apps/fret-editor/src/inspector_edit.rs`
 - Demo wiring status: no dedicated inspector demo harness is kept stable yet; if needed, integrate into `fret-demo --bin components_gallery` and treat the demo entrypoint as evolving.
 
 Phased edit validation:

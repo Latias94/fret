@@ -88,7 +88,7 @@ Implementation anchors:
 
 - `crates/fret-ui/src/tree/mod.rs` (transform propagation, hit-test mapping)
 - `crates/fret-ui/src/elements/mod.rs` (`visual_bounds_for_element`, last-frame geometry)
-- Component anchoring: `ecosystem/fret-ui-shadcn/src/overlay_anchor.rs`
+- Component anchoring: `ecosystem/fret-ui-kit/src/overlay.rs`
 
 Validation anchors:
 
@@ -157,11 +157,11 @@ Validation anchors:
 
 **Code entry points**
 
-- `crates/fret-ui/src/overlay_placement.rs`
+- `crates/fret-ui/src/overlay_placement/mod.rs`
 
 **Validation anchors**
 
-- `crates/fret-ui/src/overlay_placement.rs` tests
+- `crates/fret-ui/src/overlay_placement/tests.rs`
 
 **Closure requirement**
 
@@ -179,7 +179,7 @@ Validation anchors:
 **Code entry points**
 
 - UI paint emission: `crates/fret-ui/src/paint.rs`, `crates/fret-ui/src/declarative.rs`
-- Scene rendering: `crates/fret-render/src/renderer.rs`
+- Scene rendering: `crates/fret-render/src/renderer/mod.rs`
 
 **Validation anchors**
 
@@ -291,7 +291,7 @@ Validation anchors:
 **Code entry points**
 
 - `crates/fret-ui/src/tree/mod.rs` (debug stats structs; overlay stack/focus/capture visibility)
-- Renderer metrics: `crates/fret-render/src/renderer.rs`
+- Renderer metrics: `crates/fret-render/src/renderer/mod.rs`
 
 **Closure requirement**
 
