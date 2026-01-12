@@ -7,12 +7,13 @@ use fret_core::{
     AppWindowId, Event, RenderTargetId, ViewportFit, ViewportInputEvent, ViewportInputKind,
 };
 use fret_gizmo::{
-    Aabb3, DepthMode, DepthRange, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoInput, GizmoMode,
-    GizmoOps, GizmoOrientation, GizmoPhase, GizmoPivotMode, GizmoPluginManager,
-    GizmoPluginManagerConfig, GizmoResult, GizmoSizePolicy, GizmoTarget3d, GizmoTargetId,
-    GizmoVisualPreset, Grid3d, HandleId, RingScaleGizmoPlugin, Transform3d, TransformGizmoPlugin,
-    ViewGizmo, ViewGizmoAnchor, ViewGizmoConfig, ViewGizmoInput, ViewGizmoProjection,
-    ViewGizmoUpdate, ViewGizmoVisualPreset, ViewportRect, viewport_input_cursor_target_px,
+    Aabb3, DepthMode, DepthRange, Gizmo, GizmoConfig, GizmoCustomEdit, GizmoDrawList3d, GizmoInput,
+    GizmoMode, GizmoOps, GizmoOrientation, GizmoPhase, GizmoPivotMode, GizmoPluginManager,
+    GizmoPluginManagerConfig, GizmoPropertyKey, GizmoResult, GizmoSizePolicy, GizmoTarget3d,
+    GizmoTargetId, GizmoVisualPreset, Grid3d, HandleId, LightRadiusGizmoPlugin,
+    RingScaleGizmoPlugin, Transform3d, TransformGizmoPlugin, ViewGizmo, ViewGizmoAnchor,
+    ViewGizmoConfig, ViewGizmoInput, ViewGizmoProjection, ViewGizmoUpdate, ViewGizmoVisualPreset,
+    ViewportRect, viewport_input_cursor_target_px,
 };
 use fret_launch::{
     EngineFrameUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService, WinitAppDriver,
@@ -48,6 +49,8 @@ enum GizmoOpMaskPreset {
     UniversalArcball,
     BoundsOnly,
 }
+
+type CustomScalarKey = (GizmoPropertyKey, GizmoTargetId);
 
 impl GizmoOpMaskPreset {
     const ALL: [Self; 6] = [
@@ -317,6 +320,7 @@ fn gizmo_hud_text(state: GizmoHudState, config: GizmoConfig) -> Option<String> {
                         let _ = write!(&mut out, " (step={step:.3})");
                     }
                 }
+                GizmoResult::CustomScalar { .. } => {}
             }
         }
     }
@@ -361,6 +365,19 @@ fn gizmo_hud_text(state: GizmoHudState, config: GizmoConfig) -> Option<String> {
                     &mut out,
                     "Δs=({:.3}, {:.3}, {:.3})   Σs=({:.3}, {:.3}, {:.3})",
                     delta.x, delta.y, delta.z, total.x, total.y, total.z
+                );
+            }
+            GizmoResult::CustomScalar {
+                delta,
+                total,
+                value,
+                ..
+            } => {
+                let v = value.unwrap_or(f32::NAN);
+                let _ = writeln!(
+                    &mut out,
+                    "d={:.3}   total={:.3}   value={:.3}",
+                    delta, total, v
                 );
             }
         }
@@ -881,6 +898,12 @@ struct MarqueeSelection {
     op: SelectionOp,
 }
 
+#[derive(Debug, Default)]
+struct PendingUndoRecords {
+    transform: Option<UndoRecord<ValueTx<Vec<GizmoTarget3d>>>>,
+    custom_scalars: Option<UndoRecord<ValueTx<HashMap<CustomScalarKey, f32>>>>,
+}
+
 #[derive(Debug)]
 struct Gizmo3dDemoModel {
     viewport_target: RenderTargetId,
@@ -907,6 +930,8 @@ struct Gizmo3dDemoModel {
     camera: OrbitCamera,
     last_frame_instant: Option<Instant>,
     hud: GizmoHudState,
+    custom_scalar_values: HashMap<CustomScalarKey, f32>,
+    custom_scalar_drag_start: Option<HashMap<CustomScalarKey, f32>>,
 }
 
 impl Gizmo3dDemoModel {
@@ -928,6 +953,137 @@ impl Gizmo3dDemoModel {
 
     fn gizmo_mut(&mut self) -> &mut Gizmo {
         &mut self.transform_plugin_mut().gizmo
+    }
+
+    fn sync_light_radius_plugin(&mut self, targets: &[GizmoTarget3d]) {
+        let Some(plugin) = self.gizmo_mgr.plugin_mut::<LightRadiusGizmoPlugin>() else {
+            return;
+        };
+
+        for t in targets {
+            let key = (LightRadiusGizmoPlugin::PROPERTY_RADIUS, t.id);
+            if let Some(radius) = self.custom_scalar_values.get(&key).copied() {
+                plugin.set_radius_world(t.id, radius);
+            }
+        }
+    }
+
+    fn capture_custom_scalar_drag_start(&mut self, edits: &[GizmoCustomEdit]) {
+        if edits.is_empty() {
+            return;
+        }
+        let start = self
+            .custom_scalar_drag_start
+            .get_or_insert_with(HashMap::new);
+        for edit in edits {
+            match *edit {
+                GizmoCustomEdit::Scalar { target, key, .. } => {
+                    let k = (key, target);
+                    let v = self.custom_scalar_values.get(&k).copied().unwrap_or(0.0);
+                    start.entry(k).or_insert(v);
+                }
+            }
+        }
+    }
+
+    fn apply_custom_scalar_totals(&mut self, edits: &[GizmoCustomEdit]) {
+        if edits.is_empty() {
+            return;
+        }
+        let Some(start) = self.custom_scalar_drag_start.as_ref() else {
+            return;
+        };
+
+        for edit in edits {
+            match *edit {
+                GizmoCustomEdit::Scalar {
+                    target, key, total, ..
+                } => {
+                    let Some(start_value) = start.get(&(key, target)).copied() else {
+                        continue;
+                    };
+                    let value = start_value + total;
+                    if value.is_finite() {
+                        self.custom_scalar_values.insert((key, target), value);
+                    }
+                }
+            }
+        }
+    }
+
+    fn cancel_custom_scalar_drag(&mut self) {
+        let Some(start) = self.custom_scalar_drag_start.take() else {
+            return;
+        };
+        for (k, v) in start {
+            self.custom_scalar_values.insert(k, v);
+        }
+    }
+
+    fn commit_custom_scalar_undo_record(
+        &mut self,
+        edits: &[GizmoCustomEdit],
+        active_target: GizmoTargetId,
+        selection: &[GizmoTargetId],
+    ) -> Option<UndoRecord<ValueTx<HashMap<CustomScalarKey, f32>>>> {
+        let Some(start) = self.custom_scalar_drag_start.take() else {
+            return None;
+        };
+        if edits.is_empty() {
+            return None;
+        }
+
+        let mut before: HashMap<CustomScalarKey, f32> = HashMap::new();
+        let mut after: HashMap<CustomScalarKey, f32> = HashMap::new();
+
+        for (k, v0) in start {
+            let v1 = self.custom_scalar_values.get(&k).copied().unwrap_or(v0);
+            if !v0.is_finite() || !v1.is_finite() {
+                continue;
+            }
+            if (v0 - v1).abs() <= 1e-6 {
+                continue;
+            }
+            before.insert(k, v0);
+            after.insert(k, v1);
+        }
+
+        if before.is_empty() || before.len() != after.len() {
+            return None;
+        }
+
+        let label = match edits.first().copied() {
+            Some(GizmoCustomEdit::Scalar { key, .. })
+                if key == LightRadiusGizmoPlugin::PROPERTY_RADIUS =>
+            {
+                "Light Radius"
+            }
+            _ => "Property",
+        };
+
+        let tool = match edits.first().copied() {
+            Some(GizmoCustomEdit::Scalar { key, .. })
+                if key == LightRadiusGizmoPlugin::PROPERTY_RADIUS =>
+            {
+                "gizmo.light_radius"
+            }
+            _ => "gizmo.scalar",
+        };
+
+        let mut sel = selection.to_vec();
+        sel.sort_by_key(|id| id.0);
+        let sel_key = sel
+            .iter()
+            .map(|id| id.0.to_string())
+            .collect::<Vec<_>>()
+            .join(",");
+        let coalesce_key = format!("{tool}:active={}:sel={sel_key}", active_target.0);
+
+        Some(
+            UndoRecord::new(ValueTx::new(before, after))
+                .label(label)
+                .coalesce_key(CoalesceKey::from(coalesce_key)),
+        )
     }
 
     fn is_busy(&self) -> bool {
@@ -1105,6 +1261,7 @@ impl Default for Gizmo3dDemoModel {
                 GizmoVisualPreset::ALL[gizmo_visual_preset_index].apply_to_gizmo(&mut plugin.gizmo);
                 mgr.register(Box::new(plugin));
                 mgr.register(Box::new(RingScaleGizmoPlugin::default()));
+                mgr.register(Box::new(LightRadiusGizmoPlugin::default()));
                 mgr
             },
             view_gizmo,
@@ -1135,6 +1292,19 @@ impl Default for Gizmo3dDemoModel {
             camera: OrbitCamera::default(),
             last_frame_instant: None,
             hud: GizmoHudState::default(),
+            custom_scalar_values: {
+                let mut map = HashMap::new();
+                map.insert(
+                    (LightRadiusGizmoPlugin::PROPERTY_RADIUS, GizmoTargetId(1)),
+                    2.0,
+                );
+                map.insert(
+                    (LightRadiusGizmoPlugin::PROPERTY_RADIUS, GizmoTargetId(2)),
+                    3.0,
+                );
+                map
+            },
+            custom_scalar_drag_start: None,
         }
     }
 }
@@ -1275,6 +1445,12 @@ impl Gizmo3dDemoDriver {
         let doc: DocumentId = "gizmo3d_demo.scene".into();
         app.with_global_mut(
             || UndoService::<ValueTx<Vec<GizmoTarget3d>>>::with_limit(256),
+            |undo, _app| {
+                undo.set_active_document(window, doc.clone());
+            },
+        );
+        app.with_global_mut(
+            || UndoService::<ValueTx<HashMap<CustomScalarKey, f32>>>::with_limit(256),
             |undo, _app| {
                 undo.set_active_document(window, doc.clone());
             },
@@ -1795,10 +1971,15 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
                     .copied()
                     .filter(|t| m.selection.contains(&t.id))
                     .collect();
-                if let Some(update) =
-                    m.gizmo_mgr
-                        .update(view_projection, viewport, input, m.active_target, &selected)
-                {
+                m.sync_light_radius_plugin(&selected);
+                if let Some(update) = m.gizmo_mgr.update(
+                    view_projection,
+                    viewport,
+                    m.gizmo().config.depth_range,
+                    input,
+                    m.active_target,
+                    &selected,
+                ) {
                     if update.phase == GizmoPhase::Cancel {
                         if let Some(start) = m.drag_start_targets.take() {
                             for updated in start {
@@ -1809,6 +1990,7 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
                                 }
                             }
                         }
+                        m.cancel_custom_scalar_drag();
                     }
                 }
                 m.drag_start_targets = None;
@@ -1818,13 +2000,14 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
             }
         });
 
+        let mut applied_transform = false;
         let _ = app.with_global_mut(
             || UndoService::<ValueTx<Vec<GizmoTarget3d>>>::with_limit(256),
             |undo_svc, app| {
                 // Ensure the window routes edit.undo/edit.redo to this viewport document.
                 undo_svc.set_active_document(window, state.doc.clone());
 
-                let applied = if undo {
+                applied_transform = if undo {
                     undo_svc
                         .undo_active_invertible(window, |rec| {
                             let _ = state.demo.update(app, |m, _cx| {
@@ -1855,9 +2038,43 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
                         })
                         .unwrap_or(false)
                 };
-                did_apply |= applied;
             },
         );
+        did_apply |= applied_transform;
+
+        if !applied_transform {
+            let _ = app.with_global_mut(
+                || UndoService::<ValueTx<HashMap<CustomScalarKey, f32>>>::with_limit(256),
+                |undo_svc, app| {
+                    undo_svc.set_active_document(window, state.doc.clone());
+
+                    let applied = if undo {
+                        undo_svc
+                            .undo_active_invertible(window, |rec| {
+                                let _ = state.demo.update(app, |m, _cx| {
+                                    for (&k, &v) in &rec.tx.after {
+                                        m.custom_scalar_values.insert(k, v);
+                                    }
+                                });
+                                Ok::<(), ()>(())
+                            })
+                            .unwrap_or(false)
+                    } else {
+                        undo_svc
+                            .redo_active_invertible(window, |rec| {
+                                let _ = state.demo.update(app, |m, _cx| {
+                                    for (&k, &v) in &rec.tx.after {
+                                        m.custom_scalar_values.insert(k, v);
+                                    }
+                                });
+                                Ok::<(), ()>(())
+                            })
+                            .unwrap_or(false)
+                    };
+                    did_apply |= applied;
+                },
+            );
+        }
 
         if did_apply {
             app.request_redraw(window);
@@ -2177,6 +2394,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         .filter(|t| m.selection.contains(&t.id))
                         .collect();
 
+                    m.sync_light_radius_plugin(&selected);
                     if let Some(update) = m.gizmo_mgr.update(
                         view_projection,
                         viewport,
@@ -2195,6 +2413,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                                     }
                                 }
                             }
+                            m.cancel_custom_scalar_drag();
                             did_cancel = true;
                         }
                     }
@@ -2821,10 +3040,10 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             return;
         };
 
-        let rec_to_record = model.update(app, |m, _cx| {
+        let pending_undo = model.update(app, |m, _cx| {
             apply_pixels_per_point(m, event.geometry.pixels_per_point);
             if m.viewport_target != event.target {
-                return None;
+                return PendingUndoRecords::default();
             }
 
             let cursor_px = viewport_input_cursor_target_px(&event).unwrap_or_else(|| {
@@ -2833,7 +3052,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 Vec2::new(event.uv.0 * tw as f32, event.uv.1 * th as f32)
             });
 
-            let mut rec_to_record: Option<UndoRecord<ValueTx<Vec<GizmoTarget3d>>>> = None;
+            let mut pending = PendingUndoRecords::default();
 
             match event.kind {
                 ViewportInputKind::PointerDown {
@@ -3028,7 +3247,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             // become a selection click or a transform gizmo drag.
             if view_gizmo_drag_started && m.view_gizmo.state.drag_active && !m.is_busy() {
                 clear_other_interactions(m);
-                return rec_to_record;
+                return pending;
             }
 
             if !m.is_busy() {
@@ -3042,7 +3261,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         m.camera.yaw_radians += delta_yaw_radians;
                         m.camera.pitch_radians =
                             (m.camera.pitch_radians + delta_pitch_radians).clamp(-1.55, 1.55);
-                        return rec_to_record;
+                        return pending;
                     }
                     Some(ViewGizmoUpdate::ToggleProjection) => {
                         clear_other_interactions(m);
@@ -3089,7 +3308,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                                 });
                             }
                         }
-                        return rec_to_record;
+                        return pending;
                     }
                     Some(ViewGizmoUpdate::SnapView {
                         snap: _,
@@ -3138,7 +3357,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                             });
                         }
 
-                        return rec_to_record;
+                        return pending;
                     }
                     _ => {}
                 }
@@ -3173,6 +3392,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                             cancel: false,
                             precision,
                         };
+                        m.sync_light_radius_plugin(&selected);
                         let _ = m.gizmo_mgr.update(
                             view_projection,
                             viewport,
@@ -3374,6 +3594,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     }
                 };
 
+            m.sync_light_radius_plugin(&selected);
             if let Some(update) = m.gizmo_mgr.update(
                 view_projection,
                 viewport,
@@ -3390,50 +3611,72 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 match update.phase {
                     GizmoPhase::Begin => {
                         m.drag_start_targets = Some(selected.clone());
+                        m.capture_custom_scalar_drag_start(&update.custom_edits);
                         apply_updated_targets(&mut m.targets, &update.updated_targets);
+                        m.apply_custom_scalar_totals(&update.custom_edits);
                     }
                     GizmoPhase::Update => {
+                        m.capture_custom_scalar_drag_start(&update.custom_edits);
                         apply_updated_targets(&mut m.targets, &update.updated_targets);
+                        m.apply_custom_scalar_totals(&update.custom_edits);
                     }
                     GizmoPhase::Commit => {
-                        let Some(before) = m.drag_start_targets.take() else {
-                            return rec_to_record;
-                        };
-                        let mut after: Vec<GizmoTarget3d> = Vec::with_capacity(before.len());
-                        for t in &before {
-                            if let Some(now) = m.targets.iter().find(|v| v.id == t.id) {
-                                after.push(*now);
+                        m.capture_custom_scalar_drag_start(&update.custom_edits);
+                        m.apply_custom_scalar_totals(&update.custom_edits);
+
+                        pending.custom_scalars = m.commit_custom_scalar_undo_record(
+                            &update.custom_edits,
+                            m.active_target,
+                            &m.selection,
+                        );
+
+                        if let Some(before) = m.drag_start_targets.take() {
+                            let mut after: Vec<GizmoTarget3d> = Vec::with_capacity(before.len());
+                            for t in &before {
+                                if let Some(now) = m.targets.iter().find(|v| v.id == t.id) {
+                                    after.push(*now);
+                                }
                             }
-                        }
 
-                        if before != after {
-                            let tool = match update.result {
-                                fret_gizmo::GizmoResult::Translation { .. } => "gizmo.translate",
-                                fret_gizmo::GizmoResult::Rotation { .. } => "gizmo.rotate",
-                                fret_gizmo::GizmoResult::Arcball { .. } => "gizmo.arcball",
-                                fret_gizmo::GizmoResult::Scale { .. } => "gizmo.scale",
-                            };
+                            if before != after {
+                                let tool = match update.result {
+                                    fret_gizmo::GizmoResult::Translation { .. } => {
+                                        "gizmo.translate"
+                                    }
+                                    fret_gizmo::GizmoResult::Rotation { .. } => "gizmo.rotate",
+                                    fret_gizmo::GizmoResult::Arcball { .. } => "gizmo.arcball",
+                                    fret_gizmo::GizmoResult::Scale { .. } => "gizmo.scale",
+                                    fret_gizmo::GizmoResult::CustomScalar { key, .. } => {
+                                        if key == LightRadiusGizmoPlugin::PROPERTY_RADIUS {
+                                            "gizmo.light_radius"
+                                        } else {
+                                            "gizmo.scalar"
+                                        }
+                                    }
+                                };
 
-                            let mut sel = m.selection.clone();
-                            sel.sort_by_key(|id| id.0);
-                            let sel_key = sel
-                                .iter()
-                                .map(|id| id.0.to_string())
-                                .collect::<Vec<_>>()
-                                .join(",");
-                            let coalesce_key =
-                                format!("{tool}:active={}:sel={sel_key}", m.active_target.0);
+                                let mut sel = m.selection.clone();
+                                sel.sort_by_key(|id| id.0);
+                                let sel_key = sel
+                                    .iter()
+                                    .map(|id| id.0.to_string())
+                                    .collect::<Vec<_>>()
+                                    .join(",");
+                                let coalesce_key =
+                                    format!("{tool}:active={}:sel={sel_key}", m.active_target.0);
 
-                            let rec = UndoRecord::new(ValueTx::new(before, after))
-                                .label("Transform")
-                                .coalesce_key(CoalesceKey::from(coalesce_key));
-                            rec_to_record = Some(rec);
+                                let rec = UndoRecord::new(ValueTx::new(before, after))
+                                    .label("Transform")
+                                    .coalesce_key(CoalesceKey::from(coalesce_key));
+                                pending.transform = Some(rec);
+                            }
                         }
                     }
                     GizmoPhase::Cancel => {
                         if let Some(start) = m.drag_start_targets.take() {
                             apply_updated_targets(&mut m.targets, &start);
                         }
+                        m.cancel_custom_scalar_drag();
                     }
                 }
             }
@@ -3443,16 +3686,26 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             m.hud.active = m.gizmo_mgr.state.active;
             m.hud.snap = m.input.snap;
 
-            rec_to_record
+            pending
         });
 
-        if let Ok(Some(rec)) = rec_to_record {
-            let _ = app.with_global_mut(
-                || UndoService::<ValueTx<Vec<GizmoTarget3d>>>::with_limit(256),
-                |undo_svc, _app| {
-                    undo_svc.record_or_coalesce_active(event.window, rec);
-                },
-            );
+        if let Ok(pending) = pending_undo {
+            if let Some(rec) = pending.transform {
+                let _ = app.with_global_mut(
+                    || UndoService::<ValueTx<Vec<GizmoTarget3d>>>::with_limit(256),
+                    |undo_svc, _app| {
+                        undo_svc.record_or_coalesce_active(event.window, rec);
+                    },
+                );
+            }
+            if let Some(rec) = pending.custom_scalars {
+                let _ = app.with_global_mut(
+                    || UndoService::<ValueTx<HashMap<CustomScalarKey, f32>>>::with_limit(256),
+                    |undo_svc, _app| {
+                        undo_svc.record_or_coalesce_active(event.window, rec);
+                    },
+                );
+            }
         }
 
         app.request_redraw(event.window);
@@ -3525,6 +3778,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         .copied()
                         .filter(|t| selection.contains(&t.id))
                         .collect();
+                    m.sync_light_radius_plugin(&gizmo_targets);
                     m.gizmo_mgr.draw(
                         view_proj,
                         viewport,
