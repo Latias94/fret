@@ -739,6 +739,18 @@ impl MarksStage {
                                 paint_bucket,
                                 in_range,
                             );
+                            let stroke =
+                                crate::visual_map::stroke_width_for_bucket(&vm, paint_bucket).map(
+                                    |width| {
+                                        (
+                                            crate::ids::PaintId::new(paint_bucket as u64),
+                                            StrokeStyleV2 {
+                                                width,
+                                                ..StrokeStyleV2::default()
+                                            },
+                                        )
+                                    },
+                                );
 
                             marks.nodes.push(MarkNode {
                                 id: series_mark_id(series.id, 16 + bucket_key as u64),
@@ -752,7 +764,7 @@ impl MarksStage {
                                     fill: Some(crate::ids::PaintId::new(paint_bucket as u64)),
                                     opacity_mul,
                                     radius_mul,
-                                    stroke: None,
+                                    stroke,
                                 }),
                             });
 
@@ -1174,6 +1186,18 @@ impl MarksStage {
                                 paint_bucket,
                                 in_range,
                             );
+                            let stroke =
+                                crate::visual_map::stroke_width_for_bucket(&vm, paint_bucket).map(
+                                    |width| {
+                                        (
+                                            crate::ids::PaintId::new(paint_bucket as u64),
+                                            StrokeStyleV2 {
+                                                width,
+                                                ..StrokeStyleV2::default()
+                                            },
+                                        )
+                                    },
+                                );
 
                             marks.nodes.push(MarkNode {
                                 id: series_mark_id(series.id, 16 + bucket_key as u64),
@@ -1186,7 +1210,7 @@ impl MarksStage {
                                     rects: range.clone(),
                                     fill: Some(crate::ids::PaintId::new(paint_bucket as u64)),
                                     opacity_mul,
-                                    stroke: None,
+                                    stroke,
                                 }),
                             });
 

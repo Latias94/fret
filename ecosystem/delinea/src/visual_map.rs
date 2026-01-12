@@ -1,5 +1,6 @@
 use crate::engine::model::{VisualMapDomain, VisualMapModel, VisualMapRange};
 use crate::ids::PaintId;
+use fret_core::Px;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct VisualMapBucket {
@@ -66,6 +67,17 @@ pub fn opacity_mul_for_bucket(map: &VisualMapModel, bucket: u16, in_range: bool)
     (mul.is_finite() && (mul - 1.0).abs() > f32::EPSILON).then_some(mul.clamp(0.0, 1.0))
 }
 
+pub fn stroke_width_for_bucket(map: &VisualMapModel, bucket: u16) -> Option<Px> {
+    let (min, max) = map.stroke_width_range?;
+    let denom = (map.buckets.saturating_sub(1) as f32).max(1.0);
+    let t = (bucket as f32 / denom).clamp(0.0, 1.0);
+    let w = min.0 + t * (max.0 - min.0);
+    if !w.is_finite() {
+        return None;
+    }
+    (w > 0.0).then_some(Px(w))
+}
+
 fn bucket_index(domain: VisualMapDomain, buckets: f64, value: f64) -> u16 {
     let Some(domain) = domain.sanitize() else {
         return 0;
@@ -104,6 +116,7 @@ mod tests {
             initial_range: None,
             initial_piece_mask: None,
             point_radius_mul_range: None,
+            stroke_width_range: None,
             opacity_mul_range: None,
             buckets: 5,
             out_of_range_opacity: 0.25,
@@ -153,5 +166,13 @@ mod tests {
 
         assert_eq!(opacity_mul_for_bucket(&vm, 0, false), Some(0.05));
         assert_eq!(opacity_mul_for_bucket(&vm, 4, false), Some(0.25));
+    }
+
+    #[test]
+    fn stroke_width_range_maps_bucket_to_px() {
+        let mut vm = vm();
+        vm.stroke_width_range = Some((Px(0.0), Px(2.0)));
+        assert_eq!(stroke_width_for_bucket(&vm, 0), None);
+        assert_eq!(stroke_width_for_bucket(&vm, 4), Some(Px(2.0)));
     }
 }

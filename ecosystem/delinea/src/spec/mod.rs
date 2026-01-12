@@ -18,6 +18,7 @@ pub struct ChartSpec {
     pub axes: Vec<AxisSpec>,
     pub data_zoom_x: Vec<DataZoomXSpec>,
     pub data_zoom_y: Vec<DataZoomYSpec>,
+    pub tooltip: Option<TooltipSpecV1>,
     pub axis_pointer: Option<AxisPointerSpec>,
     pub visual_maps: Vec<VisualMapSpec>,
     pub series: Vec<SeriesSpec>,
@@ -225,7 +226,12 @@ pub enum VisualMapMode {
 pub struct VisualMapSpec {
     pub id: VisualMapId,
     pub mode: VisualMapMode,
-    /// Explicit series targets (v1: we only support series binding, not dataset-wide binding).
+    /// Optional dataset-wide target.
+    ///
+    /// When set, `series` must be empty and the visualMap will target all series that reference
+    /// the dataset (v1: still restricted to at most one visualMap per series).
+    pub dataset: Option<DatasetId>,
+    /// Explicit series targets.
     pub series: Vec<SeriesId>,
     /// Input dimension (dataset field id).
     pub field: FieldId,
@@ -243,6 +249,12 @@ pub struct VisualMapSpec {
     /// - applied only to point marks (scatter),
     /// - implemented via bucketized batches (no per-item attributes).
     pub point_radius_mul_range: Option<(f32, f32)>,
+    /// Optional stroke width range (in pixels).
+    ///
+    /// v1:
+    /// - applied to scatter point borders and bar borders (bucketized batches),
+    /// - not yet supported for polyline marks (line/area/band) because v1 does not split paths per bucket.
+    pub stroke_width_range: Option<(f32, f32)>,
     /// Optional opacity multiplier range (unitless, 0..=1) applied to in-range buckets.
     ///
     /// v1:
@@ -260,12 +272,14 @@ impl Default for VisualMapSpec {
         Self {
             id: VisualMapId::new(0),
             mode: VisualMapMode::Continuous,
+            dataset: None,
             series: Vec::default(),
             field: FieldId::new(0),
             domain: (0.0, 1.0),
             initial_range: None,
             initial_piece_mask: None,
             point_radius_mul_range: None,
+            stroke_width_range: None,
             opacity_mul_range: None,
             buckets: 8,
             out_of_range_opacity: 0.25,
@@ -307,6 +321,64 @@ impl Default for AxisPointerSpec {
             throttle_px: 0.75,
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct TooltipSpecV1 {
+    /// Template for the first axis row in `trigger=Axis` tooltips.
+    ///
+    /// Supported placeholders:
+    /// - `{label}`: axis label (e.g. `x (Time)`),
+    /// - `{value}`: formatted axis value.
+    pub axis_line_template: String,
+    /// Template for series rows in tooltips.
+    ///
+    /// Supported placeholders:
+    /// - `{label}`: series label (e.g. `A`),
+    /// - `{value}`: formatted series value.
+    pub series_line_template: String,
+    /// Placeholder used when a series cannot be sampled (missing/NaN/out-of-range).
+    pub missing_value: String,
+    /// Template used for range values (band-like series).
+    ///
+    /// Supported placeholders:
+    /// - `{min}`: formatted low value,
+    /// - `{max}`: formatted high value.
+    pub range_template: String,
+    /// Optional fixed decimal precision for `AxisScale::Value` values.
+    ///
+    /// This does not apply to category/time axes.
+    pub value_decimals: Option<u8>,
+    /// When `value_decimals` is set, remove trailing zeros and the trailing decimal point.
+    pub trim_trailing_zeros: bool,
+    /// Optional per-series overrides applied to series rows.
+    pub series_overrides: Vec<TooltipSeriesOverrideV1>,
+}
+
+impl Default for TooltipSpecV1 {
+    fn default() -> Self {
+        Self {
+            axis_line_template: "{label}: {value}".to_string(),
+            series_line_template: "{label}: {value}".to_string(),
+            missing_value: "-".to_string(),
+            range_template: "{min} .. {max}".to_string(),
+            value_decimals: None,
+            trim_trailing_zeros: true,
+            series_overrides: Vec::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct TooltipSeriesOverrideV1 {
+    pub series: SeriesId,
+    pub series_line_template: Option<String>,
+    pub missing_value: Option<String>,
+    pub range_template: Option<String>,
+    pub value_decimals: Option<u8>,
+    pub trim_trailing_zeros: Option<bool>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

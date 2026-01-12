@@ -59,7 +59,7 @@ The UI adapter remains responsible for rendering:
 Each `VisualMapSpec`:
 
 - has a stable id (`VisualMapId`),
-- defines a *target set* of series/datasets,
+- defines a *target set* of series/datasets (v1: `series: Vec<SeriesId>` or `dataset: DatasetId`),
 - identifies the input dimension as either:
   - a dataset field (`FieldId`), or
   - a derived dimension (stack base, normalized value, etc.) once those are formalized.
@@ -74,11 +74,12 @@ VisualMap can write a small set of channels in v1:
 - `color` (primary, most common ECharts usage),
 - `opacity` (often combined with `outOfRange` dimming; v1 supports a per-bucket ramp composed with `out_of_range_opacity`),
 - `point radius multiplier` (scatter-only; bucketized batches, adapter multiplies its base radius).
+- `stroke width range` (scatter + bar; bucketized batches, adapter renders borders).
 
 Future extensions (P1+) may add:
 
 - point size / symbol size,
-- stroke width,
+- per-item stroke width for polylines (line/area),
 - per-item z-order hints,
 - label formatting.
 

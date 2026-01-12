@@ -9,6 +9,7 @@ use crate::scheduler::WorkBudget;
 use crate::spec::{
     AxisKind, AxisPointerSpec, AxisRange, AxisSpec, ChartSpec, DataZoomXSpec, DataZoomYSpec,
     DatasetSpec, FieldSpec, FilterMode, GridSpec, SeriesEncode, SeriesKind, SeriesSpec,
+    VisualMapMode, VisualMapSpec,
 };
 use crate::text::{TextMeasurer, TextMetrics};
 use crate::transform::RowRange;
@@ -59,6 +60,7 @@ fn basic_spec() -> ChartSpec {
         ],
         data_zoom_x: vec![],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: None,
         visual_maps: vec![],
         series: vec![SeriesSpec {
@@ -135,6 +137,7 @@ fn bar_emits_rect_batch() {
         ],
         data_zoom_x: vec![],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: None,
         visual_maps: vec![],
         series: vec![SeriesSpec {
@@ -234,6 +237,7 @@ fn horizontal_bar_emits_rect_batch() {
         ],
         data_zoom_x: vec![],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: None,
         visual_maps: vec![],
         series: vec![SeriesSpec {
@@ -340,6 +344,7 @@ fn stacked_bar_uses_stack_base() {
         ],
         data_zoom_x: vec![],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: None,
         visual_maps: vec![],
         series: vec![
@@ -495,6 +500,7 @@ fn grouped_bars_have_distinct_x_offsets() {
         ],
         data_zoom_x: vec![],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: None,
         visual_maps: vec![],
         series: vec![
@@ -648,6 +654,7 @@ fn stacked_and_grouped_bars_share_and_separate_slots() {
         ],
         data_zoom_x: vec![],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: None,
         visual_maps: vec![],
         series: vec![
@@ -831,6 +838,7 @@ fn grouped_bars_order_slots_by_first_occurrence_across_stacks() {
         ],
         data_zoom_x: vec![],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: None,
         visual_maps: vec![],
         series: vec![
@@ -2004,6 +2012,132 @@ impl TextMeasurer for NullTextMeasurer {
 }
 
 #[test]
+fn visual_map_can_emit_stroke_width_for_scatter_buckets() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        )),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        data_zoom_y: vec![],
+        tooltip: None,
+        axis_pointer: None,
+        visual_maps: vec![VisualMapSpec {
+            id: crate::ids::VisualMapId::new(1),
+            mode: VisualMapMode::Continuous,
+            dataset: None,
+            series: vec![series_id],
+            field: y_field,
+            domain: (-1.0, 1.0),
+            initial_range: None,
+            initial_piece_mask: None,
+            point_radius_mul_range: Some((0.5, 2.0)),
+            stroke_width_range: Some((0.5, 3.0)),
+            opacity_mul_range: Some((0.2, 1.0)),
+            buckets: 8,
+            out_of_range_opacity: 0.25,
+        }],
+        series: vec![SeriesSpec {
+            id: series_id,
+            name: None,
+            kind: SeriesKind::Scatter,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
+            bar_layout: Default::default(),
+            area_baseline: None,
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).expect("spec should be valid");
+
+    let n = 4096usize;
+    let mut xs = Vec::with_capacity(n);
+    let mut ys = Vec::with_capacity(n);
+    for i in 0..n {
+        let t = i as f64 / (n - 1) as f64;
+        xs.push(t);
+        ys.push((t * std::f64::consts::TAU).sin());
+    }
+
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(xs));
+    table.push_column(Column::F64(ys));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    let mut measurer = NullTextMeasurer::default();
+    let mut unfinished = true;
+    while unfinished {
+        let step = engine
+            .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+            .expect("step should succeed");
+        unfinished = step.unfinished;
+    }
+
+    let marks = &engine.output().marks;
+    let has_stroked_bucket = marks.nodes.iter().any(|node| {
+        if node.kind != crate::marks::MarkKind::Points {
+            return false;
+        }
+        let MarkPayloadRef::Points(points) = &node.payload else {
+            return false;
+        };
+        points.fill.is_some() && points.stroke.is_some()
+    });
+    assert!(has_stroked_bucket);
+}
+
+#[test]
 fn band_emits_two_polylines() {
     let dataset_id = crate::ids::DatasetId::new(1);
     let grid_id = crate::ids::GridId::new(1);
@@ -2060,6 +2194,7 @@ fn band_emits_two_polylines() {
         ],
         data_zoom_x: vec![],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: None,
         visual_maps: vec![],
         series: vec![SeriesSpec {
@@ -2178,6 +2313,7 @@ fn stacked_area_emits_two_polylines() {
         ],
         data_zoom_x: vec![],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: None,
         visual_maps: vec![],
         series: vec![SeriesSpec {
@@ -2294,6 +2430,7 @@ fn row_range_limits_mark_indices() {
         ],
         data_zoom_x: vec![],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: None,
         visual_maps: vec![],
         series: vec![SeriesSpec {
@@ -2401,6 +2538,7 @@ fn x_window_limits_mark_indices() {
         ],
         data_zoom_x: vec![],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: None,
         visual_maps: vec![],
         series: vec![SeriesSpec {
@@ -2514,6 +2652,7 @@ fn axis_fixed_overrides_data_window_for_marks() {
         ],
         data_zoom_x: vec![],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: None,
         visual_maps: vec![],
         series: vec![SeriesSpec {
@@ -2624,6 +2763,7 @@ fn set_series_visible_hides_marks() {
         ],
         data_zoom_x: vec![],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: None,
         visual_maps: vec![],
         series: vec![SeriesSpec {
@@ -2747,6 +2887,7 @@ fn axis_lock_min_filters_bounds_to_prevent_y_compression() {
         ],
         data_zoom_x: vec![],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: None,
         visual_maps: vec![],
         series: vec![SeriesSpec {
@@ -2873,6 +3014,7 @@ fn data_window_filter_mode_none_keeps_y_bounds_global() {
         ],
         data_zoom_x: vec![],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: None,
         visual_maps: vec![],
         series: vec![SeriesSpec {
@@ -3024,6 +3166,7 @@ fn data_window_filter_mode_resets_to_spec_default() {
             max_value_span: None,
         }],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: None,
         visual_maps: vec![],
         series: vec![SeriesSpec {
@@ -3139,6 +3282,7 @@ fn set_data_window_x_inserts_state_with_spec_default_filter_mode() {
             max_value_span: None,
         }],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: None,
         visual_maps: vec![],
         series: vec![SeriesSpec {
@@ -3250,6 +3394,7 @@ fn hover_does_not_rebuild_marks() {
         ],
         data_zoom_x: vec![],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: Some(AxisPointerSpec::default()),
         visual_maps: vec![],
         series: vec![SeriesSpec {
@@ -3347,6 +3492,7 @@ fn axis_pointer_is_emitted_when_hit_is_close_enough() {
         ],
         data_zoom_x: vec![],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: Some(AxisPointerSpec {
             enabled: true,
             trigger: crate::spec::AxisPointerTrigger::Item,
@@ -3399,10 +3545,15 @@ fn axis_pointer_is_emitted_when_hit_is_close_enough() {
     assert!(axis_pointer.is_some());
     let axis_pointer = axis_pointer.unwrap();
     assert_eq!(axis_pointer.crosshair_px, Point::new(Px(0.0), Px(100.0)));
-    assert!(!axis_pointer.tooltip.lines.is_empty());
-    assert_eq!(axis_pointer.tooltip.lines[0].value, "MySeries");
-    let x_label = axis_pointer.tooltip.lines[1].label.as_str();
-    assert!(x_label.contains("Time"), "unexpected x label: {x_label}");
+    let crate::TooltipOutput::Item(item) = &axis_pointer.tooltip else {
+        panic!("expected item-trigger tooltip payload");
+    };
+    assert_eq!(item.series, series_id);
+    assert_eq!(item.x_axis, x_axis);
+    assert_eq!(item.y_axis, y_axis);
+    assert!(item.data_index < 2);
+    assert!(item.x_value.is_finite());
+    assert!(item.y_value.is_finite());
 }
 
 #[test]
@@ -3463,6 +3614,7 @@ fn axis_pointer_axis_trigger_emits_multi_series_tooltip() {
         ],
         data_zoom_x: vec![],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: Some(AxisPointerSpec {
             enabled: true,
             trigger: crate::spec::AxisPointerTrigger::Axis,
@@ -3532,11 +3684,24 @@ fn axis_pointer_axis_trigger_emits_multi_series_tooltip() {
 
     let axis_pointer = engine.output().axis_pointer.as_ref().unwrap();
     assert_eq!(axis_pointer.crosshair_px, Point::new(Px(50.0), Px(50.0)));
-    assert_eq!(axis_pointer.tooltip.lines[0].label, "x (Time)");
-    assert_eq!(axis_pointer.tooltip.lines[1].label, "A");
-    assert_eq!(axis_pointer.tooltip.lines[1].value, "0.5");
-    assert_eq!(axis_pointer.tooltip.lines[2].label, "B");
-    assert_eq!(axis_pointer.tooltip.lines[2].value, "1");
+    let crate::TooltipOutput::Axis(axis) = &axis_pointer.tooltip else {
+        panic!("expected axis-trigger tooltip payload");
+    };
+    assert_eq!(axis.axis, x_axis);
+    assert_eq!(axis.axis_kind, AxisKind::X);
+    assert_eq!(axis.axis_value, 0.5);
+    assert_eq!(axis.series.len(), 2);
+    assert_eq!(axis.series[0].series, series_a);
+    assert_eq!(axis.series[1].series, series_b);
+
+    let crate::TooltipSeriesValue::Scalar(a) = axis.series[0].value else {
+        panic!("expected scalar tooltip value for series A");
+    };
+    assert_eq!(a, 0.5);
+    let crate::TooltipSeriesValue::Scalar(b) = axis.series[1].value else {
+        panic!("expected scalar tooltip value for series B");
+    };
+    assert_eq!(b, 1.0);
 }
 
 #[test]
@@ -3597,6 +3762,7 @@ fn axis_pointer_axis_trigger_handles_non_monotonic_x_by_nearest_sample() {
         ],
         data_zoom_x: vec![],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: Some(AxisPointerSpec {
             enabled: true,
             trigger: crate::spec::AxisPointerTrigger::Axis,
@@ -3666,11 +3832,23 @@ fn axis_pointer_axis_trigger_handles_non_monotonic_x_by_nearest_sample() {
     assert!(!step.unfinished);
 
     let axis_pointer = engine.output().axis_pointer.as_ref().unwrap();
-    assert_eq!(axis_pointer.tooltip.lines[0].label, "x (Time)");
-    assert_eq!(axis_pointer.tooltip.lines[1].label, "A");
-    assert_eq!(axis_pointer.tooltip.lines[1].value, "10");
-    assert_eq!(axis_pointer.tooltip.lines[2].label, "B");
-    assert_eq!(axis_pointer.tooltip.lines[2].value, "20");
+    let crate::TooltipOutput::Axis(axis) = &axis_pointer.tooltip else {
+        panic!("expected axis-trigger tooltip payload");
+    };
+    assert_eq!(axis.axis, x_axis);
+    assert_eq!(axis.axis_kind, AxisKind::X);
+    assert_eq!(axis.series.len(), 2);
+    assert_eq!(axis.series[0].series, series_a);
+    assert_eq!(axis.series[1].series, series_b);
+
+    let crate::TooltipSeriesValue::Scalar(a) = axis.series[0].value else {
+        panic!("expected scalar tooltip value for series A");
+    };
+    assert_eq!(a, 10.0);
+    let crate::TooltipSeriesValue::Scalar(b) = axis.series[1].value else {
+        panic!("expected scalar tooltip value for series B");
+    };
+    assert_eq!(b, 20.0);
 }
 
 #[test]
@@ -3731,6 +3909,7 @@ fn axis_pointer_axis_trigger_includes_placeholders_for_missing_series_values() {
         ],
         data_zoom_x: vec![],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: Some(AxisPointerSpec {
             enabled: true,
             trigger: crate::spec::AxisPointerTrigger::Axis,
@@ -3801,11 +3980,19 @@ fn axis_pointer_axis_trigger_includes_placeholders_for_missing_series_values() {
     assert!(!step.unfinished);
 
     let axis_pointer = engine.output().axis_pointer.as_ref().unwrap();
-    assert_eq!(axis_pointer.tooltip.lines[0].label, "x (Time)");
-    assert_eq!(axis_pointer.tooltip.lines[1].label, "A");
-    assert_eq!(axis_pointer.tooltip.lines[1].value, "-");
-    assert_eq!(axis_pointer.tooltip.lines[2].label, "B");
-    assert_eq!(axis_pointer.tooltip.lines[2].value, "20");
+    let crate::TooltipOutput::Axis(axis) = &axis_pointer.tooltip else {
+        panic!("expected axis-trigger tooltip payload");
+    };
+    assert_eq!(axis.axis, x_axis);
+    assert_eq!(axis.axis_kind, AxisKind::X);
+    assert_eq!(axis.series.len(), 2);
+    assert_eq!(axis.series[0].series, series_a);
+    assert_eq!(axis.series[1].series, series_b);
+    assert_eq!(axis.series[0].value, crate::TooltipSeriesValue::Missing);
+    let crate::TooltipSeriesValue::Scalar(b) = axis.series[1].value else {
+        panic!("expected scalar tooltip value for series B");
+    };
+    assert_eq!(b, 20.0);
 }
 
 #[test]
@@ -3860,6 +4047,7 @@ fn axis_pointer_axis_trigger_snaps_to_hit_point_when_enabled() {
         ],
         data_zoom_x: vec![],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: Some(AxisPointerSpec {
             enabled: true,
             trigger: crate::spec::AxisPointerTrigger::Axis,
@@ -3964,6 +4152,7 @@ fn scatter_emits_point_marks() {
         ],
         data_zoom_x: vec![],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: None,
         visual_maps: vec![],
         series: vec![SeriesSpec {
@@ -4073,6 +4262,7 @@ fn scatter_large_mode_is_pixel_bounded() {
         ],
         data_zoom_x: vec![],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: None,
         visual_maps: vec![],
         series: vec![SeriesSpec {
@@ -4232,6 +4422,7 @@ fn stacked_line_series_offsets_y() {
         ],
         data_zoom_x: vec![],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: None,
         visual_maps: vec![],
         series: vec![
@@ -4367,6 +4558,7 @@ fn stack_strategy_samesign_separates_positive_and_negative() {
         ],
         data_zoom_x: vec![],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: None,
         visual_maps: vec![],
         series: vec![

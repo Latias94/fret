@@ -53,6 +53,7 @@ fn basic_spec() -> ChartSpec {
         ],
         data_zoom_x: vec![],
         data_zoom_y: vec![],
+        tooltip: None,
         axis_pointer: None,
         visual_maps: vec![],
         series: vec![SeriesSpec {
@@ -84,12 +85,14 @@ fn visual_map_accepts_series_binding() {
     spec.visual_maps.push(VisualMapSpec {
         id: crate::ids::VisualMapId::new(1),
         mode: crate::spec::VisualMapMode::Continuous,
+        dataset: None,
         series: vec![series_id],
         field: y_field,
         domain: (0.0, 1.0),
         initial_range: Some((0.2, 0.8)),
         initial_piece_mask: None,
         point_radius_mul_range: None,
+        stroke_width_range: None,
         opacity_mul_range: None,
         buckets: 8,
         out_of_range_opacity: 0.25,
@@ -111,12 +114,14 @@ fn visual_map_rejects_multiple_maps_targeting_the_same_series() {
     spec.visual_maps.push(VisualMapSpec {
         id: crate::ids::VisualMapId::new(1),
         mode: crate::spec::VisualMapMode::Continuous,
+        dataset: None,
         series: vec![series_id],
         field: y_field,
         domain: (0.0, 1.0),
         initial_range: None,
         initial_piece_mask: None,
         point_radius_mul_range: None,
+        stroke_width_range: None,
         opacity_mul_range: None,
         buckets: 8,
         out_of_range_opacity: 0.25,
@@ -124,12 +129,94 @@ fn visual_map_rejects_multiple_maps_targeting_the_same_series() {
     spec.visual_maps.push(VisualMapSpec {
         id: crate::ids::VisualMapId::new(2),
         mode: crate::spec::VisualMapMode::Continuous,
+        dataset: None,
         series: vec![series_id],
         field: y_field,
         domain: (0.0, 1.0),
         initial_range: None,
         initial_piece_mask: None,
         point_radius_mul_range: None,
+        stroke_width_range: None,
+        opacity_mul_range: None,
+        buckets: 8,
+        out_of_range_opacity: 0.25,
+    });
+
+    let err = ChartModel::from_spec(spec).unwrap_err();
+    assert!(matches!(err, ModelError::InvalidSpec { .. }));
+}
+
+#[test]
+fn visual_map_accepts_dataset_binding() {
+    let mut spec = basic_spec();
+    let dataset_id = spec.series[0].dataset;
+    let y_field = spec.series[0].encode.y;
+
+    spec.series.push(SeriesSpec {
+        id: crate::ids::SeriesId::new(2),
+        name: None,
+        kind: SeriesKind::Scatter,
+        dataset: dataset_id,
+        encode: spec.series[0].encode,
+        x_axis: spec.series[0].x_axis,
+        y_axis: spec.series[0].y_axis,
+        stack: None,
+        stack_strategy: Default::default(),
+        bar_layout: Default::default(),
+        area_baseline: None,
+    });
+
+    spec.visual_maps.push(VisualMapSpec {
+        id: crate::ids::VisualMapId::new(1),
+        mode: crate::spec::VisualMapMode::Continuous,
+        dataset: Some(dataset_id),
+        series: vec![],
+        field: y_field,
+        domain: (0.0, 1.0),
+        initial_range: None,
+        initial_piece_mask: None,
+        point_radius_mul_range: None,
+        stroke_width_range: None,
+        opacity_mul_range: None,
+        buckets: 8,
+        out_of_range_opacity: 0.25,
+    });
+
+    let model = ChartModel::from_spec(spec).expect("model should accept dataset binding");
+    assert_eq!(
+        model
+            .visual_map_by_series
+            .get(&crate::ids::SeriesId::new(1))
+            .copied(),
+        Some(crate::ids::VisualMapId::new(1))
+    );
+    assert_eq!(
+        model
+            .visual_map_by_series
+            .get(&crate::ids::SeriesId::new(2))
+            .copied(),
+        Some(crate::ids::VisualMapId::new(1))
+    );
+}
+
+#[test]
+fn visual_map_rejects_dataset_and_series_both_set() {
+    let mut spec = basic_spec();
+    let dataset_id = spec.series[0].dataset;
+    let series_id = spec.series[0].id;
+    let y_field = spec.series[0].encode.y;
+
+    spec.visual_maps.push(VisualMapSpec {
+        id: crate::ids::VisualMapId::new(1),
+        mode: crate::spec::VisualMapMode::Continuous,
+        dataset: Some(dataset_id),
+        series: vec![series_id],
+        field: y_field,
+        domain: (0.0, 1.0),
+        initial_range: None,
+        initial_piece_mask: None,
+        point_radius_mul_range: None,
+        stroke_width_range: None,
         opacity_mul_range: None,
         buckets: 8,
         out_of_range_opacity: 0.25,

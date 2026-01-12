@@ -16,7 +16,9 @@ use crate::selection::BrushSelection2D;
 use crate::spec::AxisPointerTrigger;
 use crate::stats::EngineStats;
 use crate::text::TextMeasurer;
-use crate::tooltip::{TooltipLine, TooltipOutput};
+use crate::tooltip::{
+    TooltipAxisOutput, TooltipItemOutput, TooltipOutput, TooltipSeriesEntry, TooltipSeriesValue,
+};
 use crate::transform::stack_base_at_index;
 use crate::transform::{RowRange, RowSelection};
 use crate::view::ViewState;
@@ -1041,7 +1043,6 @@ impl ChartEngine {
                                 self.axis_pointer_cache.hit = hit;
                                 self.axis_pointer_cache.output = compute_item_axis_pointer_output(
                                     &self.model,
-                                    &self.output.axis_windows,
                                     hover_px,
                                     hit,
                                     spec,
@@ -1116,7 +1117,6 @@ fn should_recompute_hover(prev: Option<Point>, next: Point, throttle_px: f32) ->
 
 fn compute_item_axis_pointer_output(
     model: &ChartModel,
-    axis_windows: &BTreeMap<crate::ids::AxisId, window::DataWindow>,
     hover_px: Point,
     hit: Option<HoverHit>,
     spec: crate::engine::model::AxisPointerModel,
@@ -1132,42 +1132,13 @@ fn compute_item_axis_pointer_output(
     let series = model.series.get(&hit.series);
     let (x_axis, y_axis) = series.map(|s| (s.x_axis, s.y_axis)).unwrap_or_default();
 
-    let series_value = series
-        .and_then(|s| s.name.as_deref())
-        .map(|n| n.to_string())
-        .unwrap_or_else(|| hit.series.0.to_string());
-
-    let x_axis_label = model
-        .axes
-        .get(&x_axis)
-        .and_then(|a| a.name.as_deref())
-        .map(|n| format!("x ({n})"))
-        .unwrap_or_else(|| "x".to_string());
-    let y_axis_label = model
-        .axes
-        .get(&y_axis)
-        .and_then(|a| a.name.as_deref())
-        .map(|n| format!("y ({n})"))
-        .unwrap_or_else(|| "y".to_string());
-
-    let x_window = axis_windows.get(&x_axis).copied().unwrap_or_default();
-    let y_window = axis_windows.get(&y_axis).copied().unwrap_or_default();
-    let x_value = crate::engine::axis::format_value_for(model, x_axis, x_window, hit.x_value);
-    let y_value = crate::engine::axis::format_value_for(model, y_axis, y_window, hit.y_value);
-
-    let mut tooltip = TooltipOutput::default();
-    tooltip.lines.reserve(3);
-    tooltip.lines.push(TooltipLine {
-        label: "series".to_string(),
-        value: series_value,
-    });
-    tooltip.lines.push(TooltipLine {
-        label: x_axis_label,
-        value: x_value,
-    });
-    tooltip.lines.push(TooltipLine {
-        label: y_axis_label,
-        value: y_value,
+    let tooltip = TooltipOutput::Item(TooltipItemOutput {
+        series: hit.series,
+        data_index: hit.data_index,
+        x_axis,
+        y_axis,
+        x_value: hit.x_value,
+        y_value: hit.y_value,
     });
 
     Some(AxisPointerOutput {
@@ -1237,29 +1208,12 @@ fn compute_axis_axis_pointer_output(
         hover_px
     };
 
-    let mut tooltip = TooltipOutput::default();
-
-    let axis_label = model
-        .axes
-        .get(&trigger_axis)
-        .and_then(|a| a.name.as_deref())
-        .map(|n| match trigger_axis_kind {
-            crate::spec::AxisKind::X => format!("x ({n})"),
-            crate::spec::AxisKind::Y => format!("y ({n})"),
-        })
-        .unwrap_or_else(|| match trigger_axis_kind {
-            crate::spec::AxisKind::X => "x".to_string(),
-            crate::spec::AxisKind::Y => "y".to_string(),
-        });
-    tooltip.lines.push(TooltipLine {
-        label: axis_label,
-        value: crate::engine::axis::format_value_for(
-            model,
-            trigger_axis,
-            trigger_window,
-            axis_value,
-        ),
-    });
+    let mut tooltip = TooltipAxisOutput {
+        axis: trigger_axis,
+        axis_kind: trigger_axis_kind,
+        axis_value,
+        series: Vec::default(),
+    };
 
     let category_len = model.axes.get(&trigger_axis).and_then(|a| match &a.scale {
         crate::scale::AxisScale::Category(scale) => Some(scale.len()),
@@ -1424,45 +1378,32 @@ fn compute_axis_axis_pointer_output(
             }
         });
 
-        let label = series
-            .name
-            .as_deref()
-            .map(|n| n.to_string())
-            .unwrap_or_else(|| format!("Series {}", series.id.0));
-
         let value_axis = bar_mapping.map(|m| m.value_axis).unwrap_or(series.y_axis);
-        let value_window = axis_windows.get(&value_axis).copied().unwrap_or_default();
         let value = match sample {
             Some(sample) => {
                 if let Some(y1) = sample.y1 {
-                    let a = crate::engine::axis::format_value_for(
-                        model,
-                        value_axis,
-                        value_window,
-                        sample.y0,
-                    );
-                    let b =
-                        crate::engine::axis::format_value_for(model, value_axis, value_window, y1);
-                    format!("{a} .. {b}")
+                    TooltipSeriesValue::Range {
+                        min: sample.y0,
+                        max: y1,
+                    }
                 } else {
-                    crate::engine::axis::format_value_for(
-                        model,
-                        value_axis,
-                        value_window,
-                        sample.y0,
-                    )
+                    TooltipSeriesValue::Scalar(sample.y0)
                 }
             }
-            None => "-".to_string(),
+            None => TooltipSeriesValue::Missing,
         };
 
-        tooltip.lines.push(TooltipLine { label, value });
+        tooltip.series.push(TooltipSeriesEntry {
+            series: series.id,
+            value_axis,
+            value,
+        });
     }
 
     Some(AxisPointerOutput {
         crosshair_px,
         hit: hit_for_marker,
-        tooltip,
+        tooltip: TooltipOutput::Axis(tooltip),
     })
 }
 

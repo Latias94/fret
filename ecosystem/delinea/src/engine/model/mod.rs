@@ -4,7 +4,7 @@ mod tests;
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use fret_core::Rect;
+use fret_core::{Px, Rect};
 use thiserror::Error;
 
 use crate::ids::{
@@ -74,6 +74,7 @@ pub struct ChartModel {
     pub data_zoom_x_by_axis: BTreeMap<AxisId, DataZoomId>,
     pub data_zoom_y: BTreeMap<DataZoomId, DataZoomYModel>,
     pub data_zoom_y_by_axis: BTreeMap<AxisId, DataZoomId>,
+    pub tooltip: Option<crate::spec::TooltipSpecV1>,
     pub axis_pointer: Option<AxisPointerModel>,
     pub visual_maps: BTreeMap<VisualMapId, VisualMapModel>,
     pub visual_map_by_series: BTreeMap<SeriesId, VisualMapId>,
@@ -96,6 +97,7 @@ impl ChartModel {
             data_zoom_x_by_axis: BTreeMap::default(),
             data_zoom_y: BTreeMap::default(),
             data_zoom_y_by_axis: BTreeMap::default(),
+            tooltip: spec.tooltip,
             axis_pointer: None,
             visual_maps: BTreeMap::default(),
             visual_map_by_series: BTreeMap::default(),
@@ -481,6 +483,7 @@ pub struct VisualMapModel {
     pub initial_range: Option<VisualMapRange>,
     pub initial_piece_mask: Option<u64>,
     pub point_radius_mul_range: Option<(f32, f32)>,
+    pub stroke_width_range: Option<(Px, Px)>,
     pub opacity_mul_range: Option<(f32, f32)>,
     pub buckets: u16,
     pub out_of_range_opacity: f32,
@@ -495,9 +498,9 @@ fn apply_visual_maps(
         if !ids.insert(map.id) {
             return Err(ModelError::DuplicateId { kind: "visual_map" });
         }
-        if map.series.is_empty() {
+        if map.dataset.is_some() && !map.series.is_empty() {
             return Err(ModelError::InvalidSpec {
-                reason: "visual_map.series must not be empty",
+                reason: "visual_map.dataset is mutually exclusive with visual_map.series",
             });
         }
 
@@ -542,6 +545,14 @@ fn apply_visual_maps(
             .filter(|(a, b)| *a > 0.0 && *b > 0.0 && (*b - *a).abs() > f32::EPSILON)
             .map(|(a, b)| (a.clamp(0.01, 100.0), b.clamp(0.01, 100.0)));
 
+        let stroke_width_range = map
+            .stroke_width_range
+            .filter(|(a, b)| a.is_finite() && b.is_finite())
+            .map(|(a, b)| if b < a { (b, a) } else { (a, b) })
+            .map(|(a, b)| (a.clamp(0.0, 20.0), b.clamp(0.0, 20.0)))
+            .filter(|(a, b)| (*b - *a).abs() > f32::EPSILON)
+            .map(|(a, b)| (Px(a), Px(b)));
+
         let opacity_mul_range = map
             .opacity_mul_range
             .filter(|(a, b)| a.is_finite() && b.is_finite())
@@ -549,7 +560,38 @@ fn apply_visual_maps(
             .map(|(a, b)| (a.clamp(0.0, 1.0), b.clamp(0.0, 1.0)))
             .filter(|(a, b)| (*b - *a).abs() > f32::EPSILON);
 
-        for series_id in &map.series {
+        let target_series: Vec<SeriesId> = if let Some(dataset_id) = map.dataset {
+            let Some(dataset) = model.datasets.get(&dataset_id) else {
+                return Err(ModelError::MissingReference {
+                    kind: "visual_map.dataset",
+                });
+            };
+            if !dataset.fields.contains_key(&map.field) {
+                return Err(ModelError::MissingReference {
+                    kind: "visual_map.field",
+                });
+            }
+            model
+                .series_in_order()
+                .filter(|s| s.dataset == dataset_id)
+                .map(|s| s.id)
+                .collect()
+        } else {
+            if map.series.is_empty() {
+                return Err(ModelError::InvalidSpec {
+                    reason: "visual_map must target at least one series",
+                });
+            }
+            map.series.clone()
+        };
+
+        if target_series.is_empty() {
+            return Err(ModelError::InvalidSpec {
+                reason: "visual_map has no target series",
+            });
+        }
+
+        for series_id in &target_series {
             if !model.series.contains_key(series_id) {
                 return Err(ModelError::MissingReference {
                     kind: "visual_map.series",
@@ -588,6 +630,7 @@ fn apply_visual_maps(
                 initial_range,
                 initial_piece_mask,
                 point_radius_mul_range,
+                stroke_width_range,
                 opacity_mul_range,
                 buckets,
                 out_of_range_opacity,

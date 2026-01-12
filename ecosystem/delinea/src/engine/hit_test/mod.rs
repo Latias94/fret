@@ -501,6 +501,7 @@ mod tests {
             ],
             data_zoom_x: vec![],
             data_zoom_y: vec![],
+            tooltip: None,
             axis_pointer: None,
             visual_maps: vec![],
             series: vec![SeriesSpec {
@@ -635,6 +636,7 @@ mod tests {
             ],
             data_zoom_x: vec![],
             data_zoom_y: vec![],
+            tooltip: None,
             axis_pointer: None,
             visual_maps: vec![],
             series: vec![
@@ -780,6 +782,7 @@ mod tests {
             ],
             data_zoom_x: vec![],
             data_zoom_y: vec![],
+            tooltip: None,
             axis_pointer: None,
             visual_maps: vec![],
             series: vec![crate::spec::SeriesSpec {
@@ -909,6 +912,7 @@ mod tests {
             ],
             data_zoom_x: vec![],
             data_zoom_y: vec![],
+            tooltip: None,
             axis_pointer: None,
             visual_maps: vec![],
             series: vec![

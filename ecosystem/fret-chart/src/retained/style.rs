@@ -77,6 +77,9 @@ pub struct ChartStyle {
     pub tooltip_text_color: Color,
     pub tooltip_padding: Edges,
     pub tooltip_corner_radius: Px,
+    pub tooltip_marker_size: Px,
+    pub tooltip_marker_gap: Px,
+    pub tooltip_column_gap: Px,
 
     pub legend_background: Color,
     pub legend_border_color: Color,
@@ -225,6 +228,9 @@ impl Default for ChartStyle {
             },
             tooltip_padding: Edges::symmetric(Px(8.0), Px(6.0)),
             tooltip_corner_radius: Px(6.0),
+            tooltip_marker_size: Px(8.0),
+            tooltip_marker_gap: Px(6.0),
+            tooltip_column_gap: Px(10.0),
             legend_background: Color {
                 r: 0.08,
                 g: 0.08,
@@ -342,6 +348,9 @@ impl ChartStyle {
             "metric.chart.tooltip.corner_radius",
             theme.metric_required("metric.radius.sm"),
         );
+        let tooltip_marker_size = pick_metric(theme, "metric.chart.tooltip.marker.size", Px(8.0));
+        let tooltip_marker_gap = pick_metric(theme, "metric.chart.tooltip.marker.gap", Px(6.0));
+        let tooltip_column_gap = pick_metric(theme, "metric.chart.tooltip.column.gap", Px(10.0));
 
         let legend_padding_x = pick_metric(theme, "metric.chart.legend.padding.x", Px(10.0));
         let legend_padding_y = pick_metric(theme, "metric.chart.legend.padding.y", Px(8.0));
@@ -438,6 +447,9 @@ impl ChartStyle {
             tooltip_text_color: tooltip_text,
             tooltip_padding: Edges::symmetric(tooltip_padding_x, tooltip_padding_y),
             tooltip_corner_radius,
+            tooltip_marker_size,
+            tooltip_marker_gap,
+            tooltip_column_gap,
             legend_background,
             legend_border_color: legend_border,
             legend_border_width,

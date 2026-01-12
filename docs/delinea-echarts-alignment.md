@@ -150,27 +150,40 @@ single “at a glance” view of:
 **S5 — Tooltip content parity + formatting hooks** (`[~]`)
 
 - ECharts reference: tooltip formatter + axisPointer sampling behavior (series order, missing values, snapping rules)
-- ADR(s): `docs/adr/0133-delinea-interaction-and-hit-testing-contract.md`
-- Evidence: `ecosystem/delinea/src/tooltip/*`, `ecosystem/delinea/src/engine/hit_test.rs`
-- Validation (desktop): `cargo run -p fret-demo --bin fret-demo -- linked_cursor_demo`
-- Validation (wasm): `cargo run -p fretboard -- dev web --demo linked_cursor_demo`
+- ADR(s): `docs/adr/0133-delinea-interaction-and-hit-testing-contract.md`, `docs/adr/0148-delinea-tooltip-formatting-contract.md`
+- Evidence: `ecosystem/delinea/src/tooltip.rs`, `ecosystem/fret-chart/src/retained/tooltip.rs`, `ecosystem/delinea/src/engine/hit_test.rs`
+- Validation (desktop): `cargo run -p fret-demo --bin fret-demo -- chart_demo`
+- Validation (wasm): `cargo run -p fretboard -- dev web --demo chart_demo`
+- Notes:
+  - This is a *chart tooltip* (axisPointer-driven, data-derived, per-frame), not a generic UI tooltip primitive.
+    It intentionally lives inside `fret-chart` rather than reusing the Radix/Shadcn tooltip surface.
 - What to validate (P0 baseline):
   - Tooltip rows are stable and ordered by `series_order`.
   - Missing/unsampleable series show `-` instead of panicking or reordering rows.
+- What exists in v1:
+  - `ChartSpec.tooltip: Option<TooltipSpecV1>` supports templates + decimals, including per-series overrides (adapter-side).
+  - Tooltip marker swatches are rendered from the series palette (UI-side).
+  - Tooltip lines support a two-column `label: value` layout (UI-side; current heuristic split on `": "`).
 - Missing vs ECharts:
-  - formatter contract (per-series / global hooks),
-  - default formatting parity (time/value/category),
-  - value snapping rules for mixed series / missing points.
+  - ECharts formatter parity (callback-style formatting, rich text/HTML markers, per-series overrides),
+  - richer tooltip layout (structural columns, rich text/HTML) and additional snapping policies.
 
 **S6 — Legend semantics (series visibility) + UI parity** (`[~]`)
 
 - ECharts reference: legend selection model + event semantics
 - ADR(s): (engine-level visibility is part of the core model contract; UI parity is adapter work)
 - Evidence: `delinea::Action::SetSeriesVisible` + marks gating in `ecosystem/delinea/src/engine/stages/marks.rs`
-- Validation (headless / indirect): toggle series visibility via actions in `fret-chart` tests.
+- Validation (desktop): `cargo run -p fret-demo --bin fret-demo -- chart_multi_axis_demo`
+- What to validate (P0 baseline):
+  - `LMB click` on a legend row toggles that series visibility.
+  - `LMB double-click` isolates the clicked series (hides all others).
+  - When a series is already isolated, `LMB double-click` restores all series visibility.
+- What exists in v1:
+  - A built-in legend overlay in `fret-chart` (panel + swatch + hover highlight).
+  - Visibility is wired through `delinea::Action::SetSeriesVisible` (headless model is authoritative).
 - Missing vs ECharts:
-  - a first-class legend widget in `fret-chart` (layout, scroll, multi-legend, selection UX),
-  - conformance scenarios for legend ↔ tooltip/axisPointer interactions.
+  - scroll/overflow handling, multi-legend layout, and selection UX parity (`Shift` range, invert, select-all/none),
+  - conformance scenarios for legend <-> tooltip/axisPointer interactions.
 
 **S7 — VisualMap (continuous + piecewise) multi-channel baseline** (`[~]`)
 
@@ -183,10 +196,10 @@ single “at a glance” view of:
 - What to validate (P0 baseline):
   - Continuous: drag inside range pans; drag handles resizes; click outside jumps.
   - Piecewise: click toggles buckets; `Shift+Click` range toggles; `RMB`/double click resets.
-  - Channels: bucketed color, per-bucket opacity ramp, scatter radius multiplier.
+  - Channels: bucketed color, per-bucket opacity ramp, scatter radius multiplier, and optional stroke width range (v1: scatter + bar).
 - Missing vs ECharts:
-  - multi-series / dataset-wide targeting parity (v1 restriction),
-  - more channels (e.g. stroke width) without per-item attributes.
+  - multiple VisualMaps targeting the same series (v1 restriction),
+  - per-item attribute pipelines (GPU instancing) for rich multi-channel mapping without bucketization.
 
 **S8 - LOD / downsampling strategies and conformance harness** (`[~]`)
 
@@ -400,21 +413,23 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 - `[~]` Token-driven chart styling (tracked in `docs/adr/0142-fret-chart-theme-tokens-and-style-resolution.md`).
 - `[~]` VisualMap-style data-driven color mapping (ECharts `visualMap`) (scatter + bar v1 buckets).
   - Evidence: `docs/adr/0147-delinea-visualmap-and-data-driven-styling.md`, `ecosystem/delinea/src/engine/stages/marks.rs`, `ecosystem/fret-chart/src/retained/canvas.rs`.
-  - Notes: v1 includes continuous + piecewise controller UI, scatter/bar bucket coloring, per-bucket opacity ramps, and scatter point radius mapping; further multi-channel mapping is future work.
+  - Notes: v1 includes continuous + piecewise controller UI, scatter/bar bucket coloring, per-bucket opacity ramps, scatter point radius mapping, and optional stroke width ranges; per-item attribute pipelines are future work.
 
 ## Known Gaps vs ECharts (High Value)
 
 - DataZoom Y + 2D zoom UX parity (inside + box zoom + reset behaviors) (S2).
 - Category axis indexing under zoom for non-bar series (S4).
-- Tooltip formatting hooks + default formatting parity (S5).
-- VisualMap: additional channels and multi-series/dataset-wide targeting parity (S7).
+- Tooltip snapping + axisPointer sampling policies (S5).
+- Legend UI parity + selection UX (S6).
+- VisualMap: multiple maps per series and per-item attribute pipelines (S7).
 - Series-specific LOD / downsampling policies + harness (S8).
 - Append/update semantics (ECharts `appendData`) (S9).
 
 ## Recommended Next Steps (P0 -> P1)
 
-1. P0: Harden VisualMap semantics (multi-channel mapping and multi-series/dataset-wide targeting parity) (S7).
-2. P0: Lock a tooltip formatting contract (formatters + defaults + snapping rules) (S5).
-3. P1: Category axis indexing under zoom for non-bar series (may require dataset/index contract extensions) (S4).
-4. P1: LOD / downsampling policies + conformance harness (S8).
-5. P1: Append/update semantics (ECharts `appendData`) (S9).
+1. P0: Legend widget + selection model UX (single/multi select, invert, reset) (S6).
+2. P0: Tooltip snapping policies and axis-trigger tooltip UX (crosshair + stable rows away from points) (S5).
+3. P0: VisualMap: multiple maps per series and a plan for per-item attributes/instancing (S7).
+4. P1: Category axis indexing under zoom for non-bar series (lock ordinal invariants with a dedicated demo) (S4).
+5. P1: LOD / downsampling policies + conformance harness (S8).
+6. P1: Append/update semantics (ECharts `appendData`) (S9).

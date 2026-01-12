@@ -99,6 +99,7 @@ impl HorizontalBarsDemoDriver {
             ],
             data_zoom_x: vec![],
             data_zoom_y: vec![],
+            tooltip: None,
             axis_pointer: Some(delinea::AxisPointerSpec {
                 enabled: true,
                 trigger: AxisPointerTrigger::Axis,
@@ -109,12 +110,14 @@ impl HorizontalBarsDemoDriver {
             visual_maps: vec![VisualMapSpec {
                 id: VisualMapId::new(1),
                 mode: VisualMapMode::Continuous,
+                dataset: None,
                 series: vec![series_c_id],
                 field: x_c_field,
                 domain: (-80.0, 80.0),
                 initial_range: Some((-20.0, 20.0)),
                 initial_piece_mask: None,
                 point_radius_mul_range: None,
+                stroke_width_range: None,
                 opacity_mul_range: Some((0.2, 1.0)),
                 buckets: 8,
                 out_of_range_opacity: 0.25,
