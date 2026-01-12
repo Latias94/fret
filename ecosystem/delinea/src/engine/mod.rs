@@ -22,7 +22,7 @@ use crate::tooltip::{
 use crate::transform::stack_base_at_index;
 use crate::transform::{RowRange, RowSelection};
 use crate::view::ViewState;
-use fret_core::Point;
+use fret_core::{Point, Px};
 use std::collections::BTreeMap;
 
 pub mod axis;
@@ -1198,33 +1198,73 @@ fn compute_axis_axis_pointer_output(
 
     let trigger_window = axis_windows.get(&trigger_axis).copied().unwrap_or_default();
     let trigger2 = spec.trigger_distance_px.max(0.0) * spec.trigger_distance_px.max(0.0);
-    let hit_for_marker = hit.filter(|h| h.dist2_px <= trigger2);
 
-    let axis_value = if spec.snap
-        && let Some(hit) = hit_for_marker
-    {
-        match trigger_axis_kind {
-            crate::spec::AxisKind::X => hit.x_value,
-            crate::spec::AxisKind::Y => hit.y_value,
+    let axis_value_hover = match trigger_axis_kind {
+        crate::spec::AxisKind::X => {
+            crate::engine::axis::data_at_x_in_rect(trigger_window, hover_px.x.0, viewport)
         }
-    } else {
-        match trigger_axis_kind {
-            crate::spec::AxisKind::X => {
-                crate::engine::axis::data_at_x_in_rect(trigger_window, hover_px.x.0, viewport)
-            }
-            crate::spec::AxisKind::Y => {
-                crate::engine::axis::data_at_y_in_rect(trigger_window, hover_px.y.0, viewport)
-            }
+        crate::spec::AxisKind::Y => {
+            crate::engine::axis::data_at_y_in_rect(trigger_window, hover_px.y.0, viewport)
         }
     };
+
+    let mut axis_value = axis_value_hover;
+    let mut hit_for_marker = hit.filter(|h| h.dist2_px <= trigger2);
+
+    if spec.snap {
+        if let Some((snapped_axis_value, snapped_hit)) = snap_axis_pointer_to_nearest_sample(
+            model,
+            datasets,
+            view,
+            data_views,
+            stack_dims,
+            axis_windows,
+            viewport,
+            primary,
+            trigger_axis,
+            trigger_axis_kind,
+            trigger_window,
+            axis_value,
+            hover_px,
+        ) {
+            axis_value = snapped_axis_value;
+
+            // For `trigger=Axis`, `trigger_distance_px` only gates whether a marker dot is shown.
+            // The tooltip/crosshair remain active and use the snapped axis value regardless.
+            if let Some(snapped_hit) = snapped_hit {
+                if snapped_hit.dist2_px <= trigger2 {
+                    hit_for_marker = Some(snapped_hit);
+                } else {
+                    hit_for_marker = None;
+                }
+            } else {
+                hit_for_marker = None;
+            }
+        }
+    }
     if !axis_value.is_finite() {
         return None;
     }
 
-    let crosshair_px = if spec.snap
-        && let Some(hit) = hit_for_marker
-    {
-        hit.point_px
+    let crosshair_px = if spec.snap {
+        match trigger_axis_kind {
+            crate::spec::AxisKind::X => Point::new(
+                Px(crate::engine::axis::x_px_at_data_in_rect(
+                    trigger_window,
+                    axis_value,
+                    viewport,
+                )),
+                hover_px.y,
+            ),
+            crate::spec::AxisKind::Y => Point::new(
+                hover_px.x,
+                Px(crate::engine::axis::y_px_at_data_in_rect(
+                    trigger_window,
+                    axis_value,
+                    viewport,
+                )),
+            ),
+        }
     } else {
         hover_px
     };
@@ -1426,6 +1466,241 @@ fn compute_axis_axis_pointer_output(
         hit: hit_for_marker,
         tooltip: TooltipOutput::Axis(tooltip),
     })
+}
+
+fn snap_axis_pointer_to_nearest_sample(
+    model: &ChartModel,
+    datasets: &DatasetStore,
+    view: &ViewState,
+    data_views: &DataViewStage,
+    stack_dims: &StackDimsStage,
+    axis_windows: &BTreeMap<crate::ids::AxisId, window::DataWindow>,
+    viewport: Rect,
+    primary: &crate::engine::model::SeriesModel,
+    trigger_axis: crate::ids::AxisId,
+    trigger_axis_kind: crate::spec::AxisKind,
+    trigger_window: window::DataWindow,
+    axis_value: f64,
+    hover_px: Point,
+) -> Option<(f64, Option<HoverHit>)> {
+    if !axis_value.is_finite() {
+        return None;
+    }
+
+    // Category axes already effectively snap via ordinal rounding.
+    if let Some(axis) = model.axes.get(&trigger_axis)
+        && matches!(&axis.scale, crate::scale::AxisScale::Category(_))
+    {
+        let len = model
+            .axes
+            .get(&trigger_axis)
+            .and_then(|a| match &a.scale {
+                crate::scale::AxisScale::Category(scale) => Some(scale.len()),
+                _ => None,
+            })
+            .unwrap_or(0);
+        let ord = ordinal_from_value(axis_value, len)?;
+        return Some((ord as f64, None));
+    }
+
+    match trigger_axis_kind {
+        crate::spec::AxisKind::X => snap_axis_pointer_x_to_series(
+            model,
+            datasets,
+            view,
+            data_views,
+            stack_dims,
+            axis_windows,
+            viewport,
+            primary,
+            trigger_window,
+            axis_value,
+            hover_px,
+        ),
+        crate::spec::AxisKind::Y => None,
+    }
+}
+
+fn snap_axis_pointer_x_to_series(
+    model: &ChartModel,
+    datasets: &DatasetStore,
+    view: &ViewState,
+    data_views: &DataViewStage,
+    stack_dims: &StackDimsStage,
+    axis_windows: &BTreeMap<crate::ids::AxisId, window::DataWindow>,
+    viewport: Rect,
+    primary: &crate::engine::model::SeriesModel,
+    trigger_window: window::DataWindow,
+    axis_value: f64,
+    hover_px: Point,
+) -> Option<(f64, Option<HoverHit>)> {
+    if primary.kind == crate::spec::SeriesKind::Bar {
+        return None;
+    }
+
+    let table = datasets.dataset(primary.dataset)?;
+    let table_rev = table.revision;
+    let model_rev = model.revs.data;
+
+    let dataset = model.datasets.get(&primary.dataset)?;
+    let x_col = dataset.fields.get(&primary.encode.x).copied()?;
+    let y0_col = dataset.fields.get(&primary.encode.y).copied()?;
+
+    let x = table.column_f64(x_col)?;
+    let y0 = table.column_f64(y0_col)?;
+    let y1 = primary
+        .encode
+        .y2
+        .and_then(|y2_field| dataset.fields.get(&y2_field).copied())
+        .and_then(|y2_col| table.column_f64(y2_col));
+
+    let (selection_range, filter, base_selection) = match view.series_view(primary.id) {
+        Some(series_view) => {
+            let selection_range = series_view.selection.as_range(table.row_count);
+            let selection_range = RowRange {
+                start: selection_range.start,
+                end: selection_range.end,
+            };
+            (
+                selection_range,
+                series_view.x_policy.filter,
+                series_view.selection.clone(),
+            )
+        }
+        None => (
+            RowRange {
+                start: 0,
+                end: table.row_count,
+            },
+            crate::engine::window_policy::AxisFilter1D::default(),
+            RowSelection::default(),
+        ),
+    };
+
+    let table_view = data_views.table_view_for(
+        table,
+        primary.dataset,
+        x_col,
+        selection_range,
+        filter,
+        base_selection,
+    );
+
+    let (raw_index, x_raw) = nearest_raw_index_at_x_view(axis_value, x, &table_view)?;
+    let sampled = sample_at_raw_index(
+        model,
+        datasets,
+        stack_dims,
+        model_rev,
+        table_rev,
+        primary.id,
+        raw_index,
+        y0,
+        y1.as_deref(),
+    )?;
+
+    let y_window = axis_windows
+        .get(&primary.y_axis)
+        .copied()
+        .unwrap_or_default();
+
+    let px_x = crate::engine::axis::x_px_at_data_in_rect(trigger_window, x_raw, viewport);
+    let px_y = crate::engine::axis::y_px_at_data_in_rect(y_window, sampled.y0, viewport);
+    let point_px = Point::new(Px(px_x), Px(px_y));
+
+    let dx = hover_px.x.0 - point_px.x.0;
+    let dy = hover_px.y.0 - point_px.y.0;
+    let dist2_px = dx * dx + dy * dy;
+
+    let hit = HoverHit {
+        series: primary.id,
+        data_index: raw_index as u32,
+        point_px,
+        dist2_px,
+        x_value: x_raw,
+        y_value: sampled.y0,
+    };
+
+    Some((x_raw, Some(hit)))
+}
+
+fn nearest_raw_index_at_x_view(
+    x_value: f64,
+    x: &[f64],
+    table_view: &crate::data::DataTableView<'_>,
+) -> Option<(usize, f64)> {
+    let view_len = table_view.len();
+    if view_len == 0 {
+        return None;
+    }
+
+    let selection = table_view.selection();
+    if let RowSelection::All | RowSelection::Range(_) = selection {
+        let len = x.len();
+        let (start, end) = match selection {
+            RowSelection::All => (0usize, len),
+            RowSelection::Range(range) => {
+                let r = range.as_std_range(len);
+                (r.start, r.end)
+            }
+            RowSelection::Indices(_) => unreachable!(),
+        };
+
+        if start < end
+            && crate::transform::is_probably_monotonic_in_range(x, RowRange { start, end })
+                .is_some()
+        {
+            let xs = &x[start..end];
+            if xs.len() == 1 {
+                let v = xs[0];
+                return v.is_finite().then_some((start, v));
+            }
+
+            let idx = lower_bound(xs, x_value);
+            let i1 = (start + idx).min(end - 1);
+            let i0 = i1.saturating_sub(1).max(start);
+
+            let x0 = x.get(i0).copied().unwrap_or(f64::NAN);
+            let x1 = x.get(i1).copied().unwrap_or(f64::NAN);
+            if !x0.is_finite() || !x1.is_finite() {
+                return None;
+            }
+
+            let d0 = (x_value - x0).abs();
+            let d1 = (x_value - x1).abs();
+            return if d1 < d0 {
+                Some((i1, x1))
+            } else {
+                Some((i0, x0))
+            };
+        }
+    }
+
+    if view_len > MAX_UNSORTED_AXIS_SCAN_POINTS {
+        return None;
+    }
+
+    let mut best_raw_index: Option<usize> = None;
+    let mut best_x: f64 = f64::NAN;
+    let mut best_dist = f64::INFINITY;
+
+    for view_index in 0..view_len {
+        let Some(raw_index) = table_view.get_raw_index(view_index) else {
+            continue;
+        };
+        let x_raw = x.get(raw_index).copied().unwrap_or(f64::NAN);
+        if !x_raw.is_finite() {
+            continue;
+        }
+        let dist = (x_value - x_raw).abs();
+        if dist < best_dist {
+            best_dist = dist;
+            best_raw_index = Some(raw_index);
+            best_x = x_raw;
+        }
+    }
+
+    best_raw_index.map(|i| (i, best_x))
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -1750,8 +2025,17 @@ fn sample_series_at_x_view(
         }
 
         let idx = lower_bound(xs, x_value);
-        let i1 = (start + idx).min(end - 1);
-        let i0 = i1.saturating_sub(1).max(start);
+        let mut i1 = (start + idx).min(end - 1);
+        let mut i0 = i1.saturating_sub(1).max(start);
+        if i0 == i1 {
+            // `lower_bound` can return the start index when sampling at/before the first point.
+            // Ensure we have a non-degenerate segment for interpolation.
+            if i1 + 1 < end {
+                i1 += 1;
+            } else if i0 > start {
+                i0 -= 1;
+            }
+        }
 
         let x0 = x[i0];
         let x1v = x[i1];

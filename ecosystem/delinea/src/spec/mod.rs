@@ -292,7 +292,10 @@ impl Default for VisualMapSpec {
 pub struct AxisPointerSpec {
     pub enabled: bool,
     pub trigger: AxisPointerTrigger,
-    /// When true, crosshair snaps to the nearest hit point (P0: single series hit).
+    /// When true, snapping is enabled:
+    /// - `trigger=Item`: the crosshair snaps to the nearest hit point.
+    /// - `trigger=Axis`: the crosshair aligns its axis coordinate to a nearest sample on the
+    ///   trigger axis (P0: uses the first visible series as the snap reference).
     pub snap: bool,
     /// For `trigger=Item`, this is the maximum distance (in pixels) to activate the pointer/tooltip.
     /// For `trigger=Axis`, this only gates whether `AxisPointerOutput.hit` is populated (marker dot, snap anchor).
