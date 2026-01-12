@@ -6,7 +6,8 @@ use crate::engine::interaction::AxisInteractionLocks;
 use crate::engine::lod::LodScratch;
 use crate::engine::model::{ChartModel, ModelError};
 use crate::engine::stages::{
-    BarLayoutStage, DataViewStage, MarksStage, OrdinalIndexStage, StackDimsStage,
+    BarLayoutStage, DataViewStage, MarksStage, NearestXIndexKey, NearestXIndexStage,
+    OrdinalIndexStage, StackDimsStage,
 };
 use crate::ids::{ChartId, Revision};
 use crate::link::{LinkConfig, LinkEvent};
@@ -123,6 +124,7 @@ pub struct ChartEngine {
     view: ViewState,
     data_view_stage: DataViewStage,
     ordinal_index_stage: OrdinalIndexStage,
+    nearest_x_index_stage: NearestXIndexStage,
     bar_layout_stage: BarLayoutStage,
     stack_dims_stage: StackDimsStage,
     marks_stage: MarksStage,
@@ -173,6 +175,7 @@ impl ChartEngine {
             view: ViewState::default(),
             data_view_stage: DataViewStage::default(),
             ordinal_index_stage: OrdinalIndexStage::default(),
+            nearest_x_index_stage: NearestXIndexStage::default(),
             bar_layout_stage: BarLayoutStage::default(),
             stack_dims_stage: StackDimsStage::default(),
             marks_stage: MarksStage::default(),
@@ -926,6 +929,8 @@ impl ChartEngine {
             }
         }
 
+        let hover_px = self.state.hover_px;
+
         self.ordinal_index_stage.begin_frame();
         if self
             .model
@@ -942,6 +947,24 @@ impl ChartEngine {
         }
         self.ordinal_index_stage.prepare_requests(&self.datasets);
         let ordinal_indices_done = self.ordinal_index_stage.step(&self.datasets, &mut budget);
+
+        self.nearest_x_index_stage.begin_frame();
+        if hover_px.is_some()
+            && self
+                .model
+                .axis_pointer
+                .as_ref()
+                .is_some_and(|p| p.enabled && p.trigger == AxisPointerTrigger::Axis)
+        {
+            request_nearest_x_indices_for_axis_pointer(
+                &mut self.nearest_x_index_stage,
+                &self.model,
+                &self.datasets,
+                &self.view,
+            );
+        }
+        self.nearest_x_index_stage.prepare_requests(&self.datasets);
+        let nearest_x_done = self.nearest_x_index_stage.step(&self.datasets, &mut budget);
 
         self.stack_dims_stage.begin_frame();
         self.stack_dims_stage
@@ -1025,9 +1048,8 @@ impl ChartEngine {
             || !selection_done
             || !stack_dims_done
             || !ordinal_indices_done
-            || !bar_layout_done;
-
-        let hover_px = self.state.hover_px;
+            || !bar_layout_done
+            || !nearest_x_done;
         let marks_rev = self.output.marks.revision;
         if self.axis_pointer_cache.last_marks_rev != marks_rev {
             self.axis_pointer_cache.last_marks_rev = marks_rev;
@@ -1094,6 +1116,7 @@ impl ChartEngine {
                                     &self.data_view_stage,
                                     &self.stack_dims_stage,
                                     &self.ordinal_index_stage,
+                                    &self.nearest_x_index_stage,
                                     &self.output.axis_windows,
                                     viewport,
                                     hover_px,
@@ -1145,6 +1168,90 @@ fn should_recompute_hover(prev: Option<Point>, next: Point, throttle_px: f32) ->
     dist2 >= t * t
 }
 
+fn request_nearest_x_indices_for_axis_pointer(
+    stage: &mut NearestXIndexStage,
+    model: &ChartModel,
+    datasets: &DatasetStore,
+    view: &ViewState,
+) {
+    let Some(primary) = model.series_in_order().find(|s| s.visible) else {
+        return;
+    };
+
+    let trigger_axis = if primary.kind == crate::spec::SeriesKind::Bar {
+        crate::engine::bar::bar_mapping_for_series(model, primary.id)
+            .map(|m| m.category_axis)
+            .unwrap_or(primary.x_axis)
+    } else {
+        primary.x_axis
+    };
+
+    let Some(axis) = model.axes.get(&trigger_axis) else {
+        return;
+    };
+
+    // Category axes use ordinal mapping and do not need nearest-X acceleration.
+    if matches!(axis.scale, crate::scale::AxisScale::Category(_)) {
+        return;
+    }
+    if axis.kind != crate::spec::AxisKind::X {
+        return;
+    }
+
+    for series in model.series_in_order() {
+        if !series.visible {
+            continue;
+        }
+        if series.kind == crate::spec::SeriesKind::Bar {
+            continue;
+        }
+        if series.x_axis != trigger_axis {
+            continue;
+        }
+
+        let Some(series_view) = view.series_view(series.id) else {
+            continue;
+        };
+        let (RowSelection::All | RowSelection::Range(_)) = series_view.selection else {
+            continue;
+        };
+
+        let Some(table) = datasets.dataset(series.dataset) else {
+            continue;
+        };
+        let Some(dataset) = model.datasets.get(&series.dataset) else {
+            continue;
+        };
+        let Some(x_col) = dataset.fields.get(&series.encode.x).copied() else {
+            continue;
+        };
+        let Some(x_values) = table.column_f64(x_col) else {
+            continue;
+        };
+
+        let selection_range = series_view.selection.as_range(table.row_count);
+        let selection_range = RowRange {
+            start: selection_range.start,
+            end: selection_range.end,
+        };
+        let visible_len = selection_range.end.saturating_sub(selection_range.start);
+        if visible_len <= MAX_UNSORTED_AXIS_SCAN_POINTS {
+            continue;
+        }
+
+        if crate::transform::is_probably_monotonic_in_range(x_values, selection_range).is_some() {
+            continue;
+        }
+
+        stage.request(NearestXIndexKey::new(
+            series.dataset,
+            x_col,
+            selection_range,
+            series_view.x_policy.filter,
+        ));
+    }
+}
+
 fn compute_item_axis_pointer_output(
     model: &ChartModel,
     hover_px: Point,
@@ -1186,6 +1293,7 @@ fn compute_axis_axis_pointer_output(
     data_views: &DataViewStage,
     stack_dims: &StackDimsStage,
     ordinal_indices: &OrdinalIndexStage,
+    nearest_x_indices: &NearestXIndexStage,
     axis_windows: &BTreeMap<crate::ids::AxisId, window::DataWindow>,
     viewport: Rect,
     hover_px: Point,
@@ -1236,6 +1344,7 @@ fn compute_axis_axis_pointer_output(
             view,
             data_views,
             stack_dims,
+            nearest_x_indices,
             axis_windows,
             viewport,
             primary,
@@ -1442,6 +1551,11 @@ fn compute_axis_axis_pointer_output(
 
         let model_rev = model.revs.marks;
         let table_rev = table.revision;
+        let nearest_index = x_col.and_then(|x_col| {
+            let key =
+                NearestXIndexKey::new(series.dataset, x_col, selection_range, filter_for_index);
+            nearest_x_indices.items_for(key, table_rev)
+        });
 
         let mut sample: Option<SampledSeriesValue> = None;
         if let (Some(category_len), Some(ordinal)) = (category_len, category_ordinal)
@@ -1509,13 +1623,32 @@ fn compute_axis_axis_pointer_output(
             };
             if series.kind == crate::spec::SeriesKind::Scatter {
                 sample_scatter_at_x_view(
-                    model, datasets, stack_dims, model_rev, table_rev, series.id, axis_value, x,
-                    y0, table_view,
+                    model,
+                    datasets,
+                    stack_dims,
+                    model_rev,
+                    table_rev,
+                    series.id,
+                    axis_value,
+                    x,
+                    y0,
+                    table_view,
+                    nearest_index,
                 )
             } else {
                 sample_series_at_x_view(
-                    model, datasets, stack_dims, model_rev, table_rev, series.id, axis_value, x,
-                    y0, y1, table_view,
+                    model,
+                    datasets,
+                    stack_dims,
+                    model_rev,
+                    table_rev,
+                    series.id,
+                    axis_value,
+                    x,
+                    y0,
+                    y1,
+                    table_view,
+                    nearest_index,
                 )
             }
         });
@@ -1556,6 +1689,7 @@ fn snap_axis_pointer_to_nearest_sample(
     view: &ViewState,
     data_views: &DataViewStage,
     stack_dims: &StackDimsStage,
+    nearest_x_indices: &NearestXIndexStage,
     axis_windows: &BTreeMap<crate::ids::AxisId, window::DataWindow>,
     viewport: Rect,
     primary: &crate::engine::model::SeriesModel,
@@ -1592,6 +1726,7 @@ fn snap_axis_pointer_to_nearest_sample(
             view,
             data_views,
             stack_dims,
+            nearest_x_indices,
             axis_windows,
             viewport,
             primary,
@@ -1621,6 +1756,7 @@ fn snap_axis_pointer_x_to_series(
     view: &ViewState,
     data_views: &DataViewStage,
     stack_dims: &StackDimsStage,
+    nearest_x_indices: &NearestXIndexStage,
     axis_windows: &BTreeMap<crate::ids::AxisId, window::DataWindow>,
     viewport: Rect,
     primary: &crate::engine::model::SeriesModel,
@@ -1680,7 +1816,10 @@ fn snap_axis_pointer_x_to_series(
         base_selection,
     );
 
-    let (raw_index, x_raw) = nearest_raw_index_at_x_view(axis_value, x, &table_view)?;
+    let nearest_key = NearestXIndexKey::new(primary.dataset, x_col, selection_range, filter);
+    let nearest_index = nearest_x_indices.items_for(nearest_key, table_rev);
+    let (raw_index, x_raw) =
+        nearest_raw_index_at_x_view(axis_value, x, &table_view, nearest_index)?;
     let sampled = sample_at_raw_index(
         model,
         datasets,
@@ -1722,7 +1861,16 @@ fn nearest_raw_index_at_x_view(
     x_value: f64,
     x: &[f64],
     table_view: &crate::data::DataTableView<'_>,
+    nearest_index: Option<&[crate::engine::stages::NearestXIndexItem]>,
 ) -> Option<(usize, f64)> {
+    if let Some(index) = nearest_index {
+        if let Some(hit) =
+            crate::engine::stages::nearest_raw_index_in_sorted_x_index(index, x_value)
+        {
+            return Some(hit);
+        }
+    }
+
     let view_len = table_view.len();
     if view_len == 0 {
         return None;
@@ -2105,7 +2253,17 @@ fn sample_nearest_at_x_view(
     y0: &[f64],
     y1: Option<&[f64]>,
     table_view: &crate::data::DataTableView<'_>,
+    nearest_index: Option<&[crate::engine::stages::NearestXIndexItem]>,
 ) -> Option<SampledSeriesValue> {
+    if let Some(index) = nearest_index
+        && let Some((raw_index, _x_raw)) =
+            crate::engine::stages::nearest_raw_index_in_sorted_x_index(index, x_value)
+    {
+        return sample_at_raw_index(
+            model, datasets, stack_dims, model_rev, table_rev, series_id, raw_index, y0, y1,
+        );
+    }
+
     let view_len = table_view.len();
     if view_len == 0 {
         return None;
@@ -2164,6 +2322,7 @@ fn sample_scatter_at_x_view(
     x: &[f64],
     y0: &[f64],
     table_view: &crate::data::DataTableView<'_>,
+    nearest_index: Option<&[crate::engine::stages::NearestXIndexItem]>,
 ) -> Option<SampledSeriesValue> {
     let len = x.len().min(y0.len());
     if len == 0 {
@@ -2226,8 +2385,18 @@ fn sample_scatter_at_x_view(
     }
 
     sample_nearest_at_x_view(
-        model, datasets, stack_dims, model_rev, table_rev, series_id, x_value, x, y0, None,
+        model,
+        datasets,
+        stack_dims,
+        model_rev,
+        table_rev,
+        series_id,
+        x_value,
+        x,
+        y0,
+        None,
         table_view,
+        nearest_index,
     )
 }
 
@@ -2243,6 +2412,7 @@ fn sample_series_at_x_view(
     y0: &[f64],
     y1: Option<&[f64]>,
     table_view: &crate::data::DataTableView<'_>,
+    nearest_index: Option<&[crate::engine::stages::NearestXIndexItem]>,
 ) -> Option<SampledSeriesValue> {
     let len = x.len().min(y0.len());
     if len == 0 {
@@ -2329,8 +2499,18 @@ fn sample_series_at_x_view(
     }
 
     sample_nearest_at_x_view(
-        model, datasets, stack_dims, model_rev, table_rev, series_id, x_value, x, y0, y1,
+        model,
+        datasets,
+        stack_dims,
+        model_rev,
+        table_rev,
+        series_id,
+        x_value,
+        x,
+        y0,
+        y1,
         table_view,
+        nearest_index,
     )
 }
 

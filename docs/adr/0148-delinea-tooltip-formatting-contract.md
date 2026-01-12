@@ -78,6 +78,11 @@ These invariants are treated as stable contracts for refactors:
 
 - Engine types: `ecosystem/delinea/src/tooltip.rs`
 - Engine wiring: `ecosystem/delinea/src/engine/mod.rs` (`compute_*_axis_pointer_output`)
+- Performance notes:
+  - Axis-trigger sampling must remain budget-aware and avoid O(n) scans for very large non-monotonic views.
+  - v1 uses a budgeted nearest-X index (`NearestXIndexStage`) to recover near-O(log n) sampling for axis-trigger
+    tooltips and snapping without requiring monotonic X inputs. The stage supports append-only resume and prefix
+    reuse when the request end grows.
 - UI formatting + rendering: `ecosystem/fret-chart/src/retained/tooltip.rs`, `ecosystem/fret-chart/src/retained/canvas.rs`
 - Regression tests:
   - `ecosystem/delinea/src/engine/tests.rs` (axis-trigger multi-series ordering + missing values)

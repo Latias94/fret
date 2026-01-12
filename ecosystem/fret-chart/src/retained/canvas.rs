@@ -171,9 +171,14 @@ pub struct ChartCanvas {
     tooltip_text: Vec<TextBlobId>,
     legend_text: Vec<TextBlobId>,
     legend_item_rects: Vec<(delinea::SeriesId, Rect)>,
+    legend_selector_rects: Vec<(LegendSelectorAction, Rect)>,
     legend_panel_rect: Option<Rect>,
     legend_hover: Option<delinea::SeriesId>,
     legend_anchor: Option<delinea::SeriesId>,
+    legend_selector_hover: Option<LegendSelectorAction>,
+    legend_scroll_y: Px,
+    legend_content_height: Px,
+    legend_view_height: Px,
     pan_drag: Option<PanDrag>,
     box_zoom_drag: Option<BoxZoomDrag>,
     brush_drag: Option<BoxZoomDrag>,
@@ -198,6 +203,13 @@ struct AxisExtentCacheEntry {
     visual_rev: delinea::ids::Revision,
     data_sig: u64,
     window: DataWindow,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum LegendSelectorAction {
+    All,
+    None,
+    Invert,
 }
 
 impl ChartCanvas {
@@ -227,9 +239,14 @@ impl ChartCanvas {
             tooltip_text: Vec::default(),
             legend_text: Vec::default(),
             legend_item_rects: Vec::default(),
+            legend_selector_rects: Vec::default(),
             legend_panel_rect: None,
             legend_hover: None,
             legend_anchor: None,
+            legend_selector_hover: None,
+            legend_scroll_y: Px(0.0),
+            legend_content_height: Px(0.0),
+            legend_view_height: Px(0.0),
             pan_drag: None,
             box_zoom_drag: None,
             brush_drag: None,
@@ -1485,7 +1502,10 @@ impl ChartCanvas {
             services.text().release(blob);
         }
         self.legend_item_rects.clear();
+        self.legend_selector_rects.clear();
         self.legend_panel_rect = None;
+        self.legend_content_height = Px(0.0);
+        self.legend_view_height = Px(0.0);
     }
 
     fn series_color(&self, series: delinea::SeriesId) -> Color {
@@ -1514,6 +1534,88 @@ impl ChartCanvas {
         self.legend_item_rects
             .iter()
             .find_map(|(id, r)| r.contains(pos).then_some(*id))
+    }
+
+    fn legend_selector_at(&self, pos: Point) -> Option<LegendSelectorAction> {
+        self.legend_selector_rects
+            .iter()
+            .find_map(|(action, r)| r.contains(pos).then_some(*action))
+    }
+
+    fn legend_max_scroll_y(&self) -> Px {
+        if self.legend_content_height.0 <= self.legend_view_height.0 {
+            return Px(0.0);
+        }
+        Px(self.legend_content_height.0 - self.legend_view_height.0)
+    }
+
+    fn apply_legend_wheel_scroll(&mut self, wheel_delta_y: Px) -> bool {
+        let max_scroll = self.legend_max_scroll_y();
+        if max_scroll.0 <= 0.0 {
+            return false;
+        }
+
+        let prev = self.legend_scroll_y;
+        let speed = 0.75f32;
+        let next = (self.legend_scroll_y.0 - wheel_delta_y.0 * speed).clamp(0.0, max_scroll.0);
+        self.legend_scroll_y = Px(next);
+        self.legend_scroll_y.0 != prev.0
+    }
+
+    fn apply_legend_select_all(&mut self) -> bool {
+        let model = self.engine.model();
+        let mut updates = Vec::new();
+        for s in model.series_in_order() {
+            if !s.visible {
+                updates.push((s.id, true));
+            }
+        }
+
+        if updates.is_empty() {
+            return false;
+        }
+
+        self.engine
+            .apply_action(Action::SetSeriesVisibility { updates });
+        true
+    }
+
+    fn apply_legend_select_none(&mut self) -> bool {
+        let model = self.engine.model();
+        let mut updates = Vec::new();
+        for s in model.series_in_order() {
+            if s.visible {
+                updates.push((s.id, false));
+            }
+        }
+
+        if updates.is_empty() {
+            return false;
+        }
+
+        self.engine
+            .apply_action(Action::SetSeriesVisibility { updates });
+        true
+    }
+
+    fn apply_legend_invert(&mut self) -> bool {
+        let model = self.engine.model();
+        if model.series_order.is_empty() {
+            return false;
+        }
+
+        let mut updates = Vec::new();
+        for s in model.series_in_order() {
+            updates.push((s.id, !s.visible));
+        }
+
+        if updates.is_empty() {
+            return false;
+        }
+
+        self.engine
+            .apply_action(Action::SetSeriesVisibility { updates });
+        true
     }
 
     fn apply_legend_double_click(&mut self, clicked: delinea::SeriesId) {
@@ -1652,20 +1754,60 @@ impl ChartCanvas {
             blobs.push((s.id, blob, metrics, s.visible));
         }
 
+        let selector_text_style = TextStyle {
+            size: Px(11.0),
+            weight: FontWeight::MEDIUM,
+            ..TextStyle::default()
+        };
+
         let pad = self.style.legend_padding;
         let sw = self.style.legend_swatch_size.0.max(1.0);
         let sw_gap = self.style.legend_swatch_gap.0.max(0.0);
         let gap = self.style.legend_item_gap.0.max(0.0);
+        let selector_gap = 8.0f32;
 
         let row_h = row_h.max(sw);
         let legend_w = (pad.left.0 + sw + sw_gap + max_text_w + pad.right.0).max(1.0);
-        let legend_h = (pad.top.0
-            + (row_h + gap) * (series.len().saturating_sub(1) as f32)
-            + row_h
-            + pad.bottom.0)
-            .max(1.0);
+        let selector_labels: [(LegendSelectorAction, &str); 3] = [
+            (LegendSelectorAction::All, "All"),
+            (LegendSelectorAction::None, "None"),
+            (LegendSelectorAction::Invert, "Invert"),
+        ];
+
+        let mut selector_blobs: Vec<(LegendSelectorAction, TextBlobId, fret_core::TextMetrics)> =
+            Vec::with_capacity(selector_labels.len());
+        let mut selector_total_w = 0.0f32;
+        let mut selector_h = 0.0f32;
+        for (action, label) in selector_labels {
+            let (blob, metrics) =
+                cx.services
+                    .text()
+                    .prepare(label, &selector_text_style, constraints);
+            selector_total_w += metrics.size.width.0.max(1.0);
+            selector_h = selector_h.max(metrics.size.height.0.max(1.0));
+            selector_blobs.push((action, blob, metrics));
+        }
+        if !selector_blobs.is_empty() {
+            selector_total_w += selector_gap * (selector_blobs.len().saturating_sub(1) as f32);
+        }
+        let selector_h = selector_h.max(1.0);
+        let selector_row_h = (selector_h + 4.0).max(1.0);
+
+        let items_h = ((row_h + gap) * (series.len().saturating_sub(1) as f32) + row_h).max(1.0);
+        let full_h = (pad.top.0 + selector_row_h + items_h + pad.bottom.0).max(1.0);
 
         let margin = 8.0f32;
+        let min_h = (pad.top.0 + row_h + pad.bottom.0).max(1.0);
+        let max_h = (plot.size.height.0 - 2.0 * margin).max(min_h);
+        let legend_h = full_h.min(max_h);
+        let view_h = (legend_h - selector_row_h - pad.top.0 - pad.bottom.0).max(1.0);
+        self.legend_content_height = Px(items_h);
+        self.legend_view_height = Px(view_h);
+        self.legend_scroll_y = Px(self
+            .legend_scroll_y
+            .0
+            .clamp(0.0, self.legend_max_scroll_y().0));
+
         let x0 =
             (plot.origin.x.0 + plot.size.width.0 - legend_w - margin).max(plot.origin.x.0 + margin);
         let y0 = (plot.origin.y.0 + margin).max(plot.origin.y.0 + margin);
@@ -1685,7 +1827,51 @@ impl ChartCanvas {
             corner_radii: Corners::all(self.style.legend_corner_radius),
         });
 
-        let mut y = y0 + pad.top.0;
+        cx.scene.push(SceneOp::PushClipRect { rect: legend_rect });
+
+        // Selector row (ECharts legend.selector-like affordance).
+        // Keep it non-scrolling so it stays accessible even when the legend overflows.
+        let selector_y = y0 + pad.top.0;
+        let selector_x0 = x0 + legend_w - pad.right.0 - selector_total_w;
+        let mut sx = selector_x0;
+        for (action, blob, metrics) in selector_blobs.into_iter() {
+            let w = metrics.size.width.0.max(1.0);
+            let rect = Rect::new(
+                Point::new(Px(sx), Px(selector_y)),
+                Size::new(Px(w), Px(selector_row_h)),
+            );
+            self.legend_selector_rects.push((action, rect));
+
+            if self.legend_selector_hover == Some(action) {
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(legend_order.0.saturating_add(1)),
+                    rect,
+                    background: self.style.legend_hover_background,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: Corners::all(Px(4.0)),
+                });
+            }
+
+            let text_y = selector_y + 0.5 * (selector_row_h - metrics.size.height.0.max(1.0));
+            cx.scene.push(SceneOp::Text {
+                order: DrawOrder(legend_order.0.saturating_add(2)),
+                origin: Point::new(Px(sx), Px(text_y)),
+                text: blob,
+                color: self.style.legend_text_color,
+            });
+            self.legend_text.push(blob);
+
+            sx += w + selector_gap;
+        }
+
+        let items_clip = Rect::new(
+            Point::new(Px(x0), Px(y0 + pad.top.0 + selector_row_h)),
+            Size::new(Px(legend_w), Px(view_h)),
+        );
+        cx.scene.push(SceneOp::PushClipRect { rect: items_clip });
+
+        let mut y = items_clip.origin.y.0 - self.legend_scroll_y.0;
         for (i, (series_id, blob, metrics, visible)) in blobs.into_iter().enumerate() {
             let item_rect = Rect::new(
                 Point::new(Px(x0), Px(y)),
@@ -1733,6 +1919,9 @@ impl ChartCanvas {
 
             y += row_h + gap;
         }
+
+        cx.scene.push(SceneOp::PopClip);
+        cx.scene.push(SceneOp::PopClip);
     }
 
     fn draw_visual_map<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
@@ -2397,6 +2586,14 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     && !modifiers.alt_gr
                     && !modifiers.meta;
                 let lock_mods_ok = !modifiers.alt && !modifiers.alt_gr && !modifiers.meta;
+                let legend_mods_ok =
+                    modifiers.ctrl && !modifiers.alt && !modifiers.alt_gr && !modifiers.meta;
+                let legend_pos = self.last_pointer_pos;
+                let in_legend = legend_pos.is_some_and(|pos| {
+                    self.legend_panel_rect
+                        .is_some_and(|rect| rect.contains(pos))
+                }) || self.legend_hover.is_some()
+                    || self.legend_selector_hover.is_some();
 
                 if lock_mods_ok && *key == KeyCode::KeyL {
                     let Some(pos) = self.last_pointer_pos else {
@@ -2458,6 +2655,25 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     cx.request_redraw();
                     cx.stop_propagation();
                     return;
+                }
+
+                if legend_mods_ok && in_legend {
+                    let mut changed = false;
+                    if modifiers.shift && *key == KeyCode::KeyA {
+                        changed = self.apply_legend_select_none();
+                    } else if !modifiers.shift && *key == KeyCode::KeyA {
+                        changed = self.apply_legend_select_all();
+                    } else if !modifiers.shift && *key == KeyCode::KeyI {
+                        changed = self.apply_legend_invert();
+                    }
+
+                    if changed {
+                        self.legend_anchor = None;
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                        return;
+                    }
                 }
 
                 if plain && *key == KeyCode::KeyR {
@@ -2534,9 +2750,17 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 let layout = self.compute_layout(cx.bounds);
                 self.update_active_axes_for_position(&layout, *position);
 
-                let prev_hover = self.legend_hover;
-                self.legend_hover = self.legend_series_at(*position);
-                if self.legend_hover != prev_hover {
+                let prev_series_hover = self.legend_hover;
+                let prev_selector_hover = self.legend_selector_hover;
+                self.legend_selector_hover = self.legend_selector_at(*position);
+                self.legend_hover = if self.legend_selector_hover.is_some() {
+                    None
+                } else {
+                    self.legend_series_at(*position)
+                };
+                if self.legend_hover != prev_series_hover
+                    || self.legend_selector_hover != prev_selector_hover
+                {
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
                 }
@@ -2759,6 +2983,27 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 self.last_pointer_pos = Some(*position);
                 let layout = self.compute_layout(cx.bounds);
                 self.update_active_axes_for_position(&layout, *position);
+
+                if *button == MouseButton::Left
+                    && self.pan_drag.is_none()
+                    && self.box_zoom_drag.is_none()
+                    && let Some(action) = self.legend_selector_at(*position)
+                {
+                    let changed = match action {
+                        LegendSelectorAction::All => self.apply_legend_select_all(),
+                        LegendSelectorAction::None => self.apply_legend_select_none(),
+                        LegendSelectorAction::Invert => self.apply_legend_invert(),
+                    };
+                    if changed {
+                        self.legend_anchor = None;
+                        self.legend_hover = None;
+                        self.legend_selector_hover = Some(action);
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
 
                 if *button == MouseButton::Left
                     && self.pan_drag.is_none()
@@ -3534,6 +3779,18 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 ..
             }) => {
                 self.last_pointer_pos = Some(*position);
+
+                if self
+                    .legend_panel_rect
+                    .is_some_and(|rect| rect.contains(*position))
+                    && self.apply_legend_wheel_scroll(delta.y)
+                {
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
                 let layout = self.compute_layout(cx.bounds);
                 self.update_active_axes_for_position(&layout, *position);
                 let plot = layout.plot;
@@ -4842,6 +5099,71 @@ mod tests {
         canvas.apply_legend_double_click(b);
         assert!(canvas.engine().model().series.get(&a).unwrap().visible);
         assert!(canvas.engine().model().series.get(&b).unwrap().visible);
+    }
+
+    #[test]
+    fn legend_scroll_clamps_to_content_height() {
+        let mut canvas = ChartCanvas::new(multi_axis_spec()).expect("spec should be valid");
+        canvas.legend_content_height = Px(500.0);
+        canvas.legend_view_height = Px(120.0);
+
+        assert_eq!(canvas.legend_max_scroll_y().0, 380.0);
+
+        assert!(canvas.apply_legend_wheel_scroll(Px(-200.0)));
+        assert!(canvas.legend_scroll_y.0 > 0.0);
+
+        canvas.apply_legend_wheel_scroll(Px(-10_000.0));
+        assert_eq!(canvas.legend_scroll_y.0, 380.0);
+
+        canvas.apply_legend_wheel_scroll(Px(10_000.0));
+        assert_eq!(canvas.legend_scroll_y.0, 0.0);
+    }
+
+    #[test]
+    fn legend_select_all_none_invert_update_series_visibility() {
+        let mut canvas = ChartCanvas::new(multi_axis_spec()).expect("spec should be valid");
+
+        let ids: Vec<_> = canvas.engine().model().series_order.clone();
+        assert!(ids.len() >= 2);
+
+        canvas.apply_legend_select_none();
+        for id in &ids {
+            assert!(!canvas.engine().model().series.get(id).unwrap().visible);
+        }
+
+        canvas.apply_legend_select_all();
+        for id in &ids {
+            assert!(canvas.engine().model().series.get(id).unwrap().visible);
+        }
+
+        canvas.engine.apply_action(Action::SetSeriesVisible {
+            series: ids[0],
+            visible: false,
+        });
+        canvas.apply_legend_invert();
+        assert!(canvas.engine().model().series.get(&ids[0]).unwrap().visible);
+        assert!(!canvas.engine().model().series.get(&ids[1]).unwrap().visible);
+    }
+
+    #[test]
+    fn legend_selector_hit_test_returns_action() {
+        let mut canvas = ChartCanvas::new(multi_axis_spec()).expect("spec should be valid");
+        canvas.legend_selector_rects = vec![(
+            LegendSelectorAction::Invert,
+            Rect::new(
+                Point::new(Px(10.0), Px(10.0)),
+                Size::new(Px(20.0), Px(12.0)),
+            ),
+        )];
+
+        assert_eq!(
+            canvas.legend_selector_at(Point::new(Px(15.0), Px(15.0))),
+            Some(LegendSelectorAction::Invert)
+        );
+        assert_eq!(
+            canvas.legend_selector_at(Point::new(Px(1.0), Px(1.0))),
+            None
+        );
     }
 
     #[test]

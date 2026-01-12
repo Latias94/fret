@@ -162,12 +162,21 @@ single “at a glance” view of:
   - Missing/unsampleable series show `-` instead of panicking or reordering rows.
   - When `axisPointer.snap=true` and `trigger=Axis`, the pointer aligns to a nearest sample on the trigger axis (stable away from the series stroke).
   - `axisPointer.triggerDistance` gates the snap marker (`axisPointer.hit`) only; the crosshair and tooltip remain available for `trigger=Axis`.
+  - Axis-trigger sampling policies are stable and series-kind aware:
+    - Line/Area/Band: linear interpolation for monotonic X inputs; nearest-sample fallback for non-monotonic inputs.
+    - Scatter: nearest-sample selection on X (no interpolation).
+    - Bar: category-ordinal lookup (stable index mapping), respecting stacked value when applicable.
 - What exists in v1:
   - `ChartSpec.tooltip: Option<TooltipSpecV1>` supports templates + decimals, including per-series overrides (adapter-side).
   - Tooltip marker swatches are rendered from the series palette (UI-side).
   - Tooltip lines support a two-column `label: value` layout (UI-side; current heuristic split on `": "`).
   - Delinea: `AxisPointerSpec.pointer_type=Shadow` (ECharts: `axisPointer.type="shadow"`) highlights the active category band (`AxisPointerOutput.shadow_rect_px`).
   - Delinea: `AxisPointerSpec.label.show=true` (ECharts: `axisPointer.label.show=true`) draws an axis value label on the trigger axis band (adapter-side; default is `false`). v1 supports a string template formatter via `AxisPointerSpec.label.template` (`{value}`, `{axis_name}`).
+  - Axis-trigger sampling reads from the current view selection (DataZoom/filter/selection) and is allocation-aware:
+    - monotonic ranges use a bounded `lower_bound` interpolation path,
+    - non-monotonic ranges use nearest-scan with a hard cap (`MAX_UNSORTED_AXIS_SCAN_POINTS`) to avoid O(n) work on huge datasets,
+    - for very large non-monotonic X views, the engine can build a budgeted "nearest X" index to recover near-O(log n) sampling (`NearestXIndexStage`).
+      The stage supports append-only resume and prefix reuse when the request end grows.
 - Missing vs ECharts:
   - ECharts formatter parity (callback-style formatting, rich text/HTML markers, per-series overrides),
   - richer tooltip layout (structural columns, rich text/HTML) and additional snapping policies.
@@ -179,17 +188,23 @@ single “at a glance” view of:
 - Evidence: `delinea::Action::SetSeriesVisible` + marks gating in `ecosystem/delinea/src/engine/stages/marks.rs`
 - Validation (desktop): `cargo run -p fret-demo --bin fret-demo -- chart_multi_axis_demo`
 - What to validate (P0 baseline):
+  - `LMB click` on legend selector buttons (`All` / `None` / `Invert`) updates the visibility set accordingly.
   - `LMB click` on a legend row toggles that series visibility.
   - `LMB double-click` isolates the clicked series (hides all others).
   - When a series is already isolated, `LMB double-click` restores all series visibility.
   - `Shift + LMB click` toggles a contiguous range (anchor -> clicked) to match the clicked toggle target.
   - `RMB click` inside the legend panel restores all series visibility.
+  - `Ctrl+A` (when the pointer is in the legend panel): select all series.
+  - `Ctrl+Shift+A` (when the pointer is in the legend panel): select none.
+  - `Ctrl+I` (when the pointer is in the legend panel): invert selection.
   - Hidden series do not participate in axisPointer primary selection and are excluded from axis-trigger tooltip rows.
 - What exists in v1:
   - A built-in legend overlay in `fret-chart` (panel + swatch + hover highlight).
   - Visibility is wired through `delinea::Action::SetSeriesVisible` (headless model is authoritative).
+  - Basic overflow handling: the legend panel height is clamped to the plot height, and the wheel scrolls the legend.
+  - Selector affordance: `All` / `None` / `Invert` selector buttons at the top of the legend panel.
 - Missing vs ECharts:
-  - scroll/overflow handling, multi-legend layout, and selection UX parity (invert, select-all/none),
+  - multi-legend layout and full selector schema parity (ECharts `legend.selector` options + styling),
   - conformance scenarios for legend <-> tooltip/axisPointer interactions.
 
 **S7 - VisualMap (continuous + piecewise) multi-channel baseline** (`[~]`)
@@ -240,6 +255,7 @@ single “at a glance” view of:
   - `ecosystem/delinea/src/data/mod.rs` (`DataTable::append_row_f64`, `DataTable::append_columns_f64`)
   - `ecosystem/delinea/src/engine/stages/data_view.rs` (append-only resume for XFilter index scans)
   - `ecosystem/delinea/src/engine/stages/ordinal_index.rs` (append-only resume for ordinal inverted index scans)
+  - `ecosystem/delinea/src/engine/stages/nearest_x_index.rs` (append-only resume + prefix reuse for nearest-X index scans)
 - Validation (headless): `cargo nextest run -p delinea` (see `data_view_stage_invalidates_indices_on_data_revision_change`)
 - Missing vs ECharts (high value):
   - append-aware incremental mark rebuild for `RowSelection::All` (avoid rebuilding the entire mark tree on stream append),
