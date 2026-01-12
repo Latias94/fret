@@ -1,6 +1,6 @@
 # ADR 0147: Viewport Input Forwarding — Explicit Units, Mapping Geometry, and Scale Factor
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -8,18 +8,7 @@ Fret’s core coordinate-space contract is **logical pixels** (ADR 0017). The re
 pixels to physical pixels using the window `scale_factor` (ADR 0002 / ADR 0017).
 
 Viewports embed an engine-owned render target into the UI (`SceneOp::ViewportSurface`, ADR 0007) and
-forward input to app/editor tooling via effects. The legacy contract (ADR 0025) forwards
-`Effect::ViewportInputLegacy(ViewportInputEventLegacy)`.
-
-The legacy event shape, `ViewportInputEventLegacy`, carries:
-
-- `window: AppWindowId`
-- `target: RenderTargetId`
-- `uv: (f32, f32)`
-- `target_px: (u32, u32)`
-- `kind: ViewportInputKind` (buttons/modifiers/wheel)
-
-This is sufficient for engines that only need **texture-space** (UV / target pixel) input.
+forward input to app/editor tooling via effects (`Effect::ViewportInput(ViewportInputEvent)`).
 
 However, editor-grade tooling (gizmos, selection, snapping, overlays, camera navigation) routinely
 needs all of the following at the same time:
@@ -54,7 +43,6 @@ References:
 2. Align viewport input semantics with ADR 0017 (logical pixels as the UI/input source of truth).
 3. Preserve the existing `uv` + `target_px` fields as the engine-facing “texture space” affordance.
 4. Enable gizmo/tool ecosystems (`ecosystem/*`) to consume viewport input without ad-hoc DPI glue.
-5. Provide a migration path that does not require an immediate “flag day” refactor of all apps.
 
 ## Non-goals
 
@@ -66,8 +54,7 @@ References:
 ## Decision
 
 Introduce an explicit-units viewport input event (`ViewportInputEvent`) that carries explicit
-mapping geometry and scale information, and forward it in parallel with a legacy event during a
-transition period.
+mapping geometry and scale information.
 
 ### 1) Add an explicit-units event type in `fret-core`
 
@@ -107,31 +94,7 @@ Normative unit rules:
 - `target_px_size` and `target_px` are **physical pixels** for the engine target.
 - `pixels_per_point` is the conversion factor from logical → physical pixels.
 
-### 2) Add a legacy effect variant in `fret-runtime`
-
-Add:
-
-- `Effect::ViewportInput(fret_core::ViewportInputEvent)`
-- `Effect::ViewportInputLegacy(fret_core::ViewportInputEventLegacy)`
-
-Rationale: adding these fields to the legacy event is a breaking change for any code constructing it
-by struct literal (e.g. viewport widgets in ecosystem crates). Keeping a legacy variant allows a
-controlled migration.
-
-### 3) Add a legacy driver hook in `fret-launch`
-
-Add a new optional hook (default no-op):
-
-- `WinitAppDriver::viewport_input(&mut self, app: &mut App, event: ViewportInputEvent)`
-- `WinitAppDriver::viewport_input_legacy(&mut self, app: &mut App, event: ViewportInputEventLegacy)`
-
-Rationale: engine/editor integrations should be able to opt into the explicit-units event without
-needing to parse the legacy shape or query global window metrics.
-
-### 4) Update viewport widgets to emit the explicit-units event (alongside legacy during migration)
-
-Viewport widgets that currently enqueue `Effect::ViewportInput` should be updated to also enqueue
-`Effect::ViewportInput`.
+### 2) Update viewport widgets to emit the explicit-units event
 
 The widget is the correct place to construct the explicit-units event because it has:
 
@@ -141,7 +104,7 @@ The widget is the correct place to construct the explicit-units event because it
 - the target pixel size (`target_px_size`),
 - access to `WindowMetricsService` (via `UiHost::global`) to read `pixels_per_point`.
 
-### 5) Recommended consumption pattern for tooling (non-normative)
+### 3) Recommended consumption pattern for tooling (non-normative)
 
 Tools (e.g. `ecosystem/fret-gizmo`) should treat `ViewportInputEvent` as the canonical input:
 
@@ -149,27 +112,14 @@ Tools (e.g. `ecosystem/fret-gizmo`) should treat `ViewportInputEvent` as the can
 - use `target_px` when interacting with engine-side pixel buffers,
 - use `pixels_per_point` to keep “pixel-sized” affordances stable across DPI.
 
-## Migration Plan
-
-1. Implement explicit-units types and forwarding hooks in core/runtime/runner.
-2. Update in-tree viewport widgets (e.g. `ecosystem/fret-plot3d`) to emit explicit-units events.
-3. Update demos (e.g. `apps/fret-examples`) to consume explicit-units events for gizmo input and
-   DPI-stable visuals.
-4. Keep v1 forwarding for at least one cycle; add a deprecation note to ADR 0025 and/or to the v1
-   types once migration is complete.
-
 ## Affected APIs / Surface Area
 
 Core/runtime:
 
-- `crates/fret-core/src/input.rs`: add `ViewportInputEvent`, `ViewportInputEventLegacy`, `ViewportInputGeometry`.
-- `crates/fret-runtime/src/effect.rs`: add `Effect::ViewportInputLegacy(...)`.
+- `crates/fret-core/src/input.rs`: add `ViewportInputEvent`, `ViewportInputGeometry`.
 
 Runner:
-
-- `crates/fret-launch/src/runner/common.rs`: add `WinitAppDriver::viewport_input_legacy(...)`.
-- `crates/fret-launch/src/runner/desktop/mod.rs` and `crates/fret-launch/src/runner/web.rs`:
-  forward the new effect variant to the new driver hook.
+- `crates/fret-launch/src/runner/common.rs`: forward `Effect::ViewportInput` to `WinitAppDriver::viewport_input`.
 
 Ecosystem / apps (opportunities to simplify):
 
