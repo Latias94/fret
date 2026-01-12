@@ -513,10 +513,10 @@ const scenarios: Scenario[] = [
     item: "accordion-example",
     async run(ctx) {
       await pushStep(ctx, { kind: "load", url: ctx.url })
-      await clickFirst(ctx.page, "[data-state], button")
+      await clickFirst(ctx.page, '[data-slot="accordion-trigger"]')
       await sleep(50)
       await pushStep(ctx, { kind: "click", target: "accordion-trigger" })
-      await clickFirst(ctx.page, "[data-state], button")
+      await clickFirst(ctx.page, '[data-slot="accordion-trigger"]')
       await sleep(50)
       await pushStep(ctx, { kind: "click", target: "accordion-trigger" })
     },

@@ -63,14 +63,6 @@ struct FocusNode {
     text: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
-struct DomRect {
-    x: f32,
-    y: f32,
-    w: f32,
-    h: f32,
-}
-
 #[derive(Debug, Clone, Deserialize)]
 #[allow(dead_code)]
 struct DomNode {
@@ -78,8 +70,6 @@ struct DomNode {
     path: Vec<usize>,
     #[serde(default)]
     attrs: BTreeMap<String, String>,
-    #[serde(default)]
-    rect: Option<DomRect>,
     #[serde(default)]
     text: Option<String>,
     #[serde(default)]
@@ -172,36 +162,6 @@ fn find_first<'a>(node: &'a DomNode, pred: &impl Fn(&'a DomNode) -> bool) -> Opt
         }
     }
     None
-}
-
-fn find_by_path<'a>(node: &'a DomNode, path: &[usize]) -> Option<&'a DomNode> {
-    if node.path == path {
-        return Some(node);
-    }
-    for child in &node.children {
-        if let Some(found) = find_by_path(child, path) {
-            return Some(found);
-        }
-    }
-    None
-}
-
-fn require_dom_rect(node: &DomNode, label: &str) -> DomRect {
-    let rect = node
-        .rect
-        .unwrap_or_else(|| panic!("missing rect for {label} (tag={})", node.tag));
-
-    assert!(
-        rect.x.is_finite()
-            && rect.y.is_finite()
-            && rect.w.is_finite()
-            && rect.h.is_finite()
-            && rect.w >= 0.0
-            && rect.h >= 0.0,
-        "invalid rect for {label}: {rect:?}"
-    );
-
-    rect
 }
 
 #[derive(Default)]
