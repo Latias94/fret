@@ -1,6 +1,7 @@
 use fret_core::Color;
 use glam::Vec2;
 
+use crate::gizmo::Gizmo;
 use crate::gizmo::GizmoConfig;
 use crate::view_gizmo::ViewGizmoConfig;
 
@@ -16,6 +17,57 @@ pub struct GizmoVisuals {
     pub y_color: Color,
     pub z_color: Color,
     pub hover_color: Color,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct GizmoPartVisuals {
+    pub translate_head_length_fraction: f32,
+    pub translate_head_radius_fraction: f32,
+    pub translate_shaft_min_fraction: f32,
+    pub translate_plane_offset_fraction: f32,
+    pub translate_plane_size_fraction: f32,
+    pub translate_plane_fill_alpha: f32,
+    pub translate_plane_fill_hover_alpha: f32,
+    pub translate_center_half_fraction: f32,
+    pub translate_depth_ring_radius_fraction: f32,
+    pub translate_depth_ring_radius_min_fraction: f32,
+    pub scale_axis_end_box_half_fraction: f32,
+    pub scale_plane_offset_fraction: f32,
+    pub scale_plane_size_fraction: f32,
+    pub scale_plane_fill_alpha: f32,
+    pub scale_plane_fill_hover_alpha: f32,
+    pub scale_uniform_half_fraction: f32,
+    pub rotate_feedback_thickness_scale: f32,
+}
+
+impl Default for GizmoPartVisuals {
+    fn default() -> Self {
+        Self::classic()
+    }
+}
+
+impl GizmoPartVisuals {
+    pub fn classic() -> Self {
+        Self {
+            translate_head_length_fraction: 0.18,
+            translate_head_radius_fraction: 0.07,
+            translate_shaft_min_fraction: 0.20,
+            translate_plane_offset_fraction: 0.15,
+            translate_plane_size_fraction: 0.25,
+            translate_plane_fill_alpha: 0.30,
+            translate_plane_fill_hover_alpha: 0.55,
+            translate_center_half_fraction: 0.08,
+            translate_depth_ring_radius_fraction: 0.14,
+            translate_depth_ring_radius_min_fraction: 0.08,
+            scale_axis_end_box_half_fraction: 0.06,
+            scale_plane_offset_fraction: 0.15,
+            scale_plane_size_fraction: 0.25,
+            scale_plane_fill_alpha: 0.22,
+            scale_plane_fill_hover_alpha: 0.45,
+            scale_uniform_half_fraction: 0.08,
+            rotate_feedback_thickness_scale: 1.0,
+        }
+    }
 }
 
 impl Default for GizmoVisuals {
@@ -176,6 +228,34 @@ impl GizmoVisualPreset {
         }
     }
 
+    pub fn part_visuals(self) -> GizmoPartVisuals {
+        match self {
+            Self::Classic => GizmoPartVisuals::classic(),
+            Self::Muted => GizmoPartVisuals {
+                translate_head_length_fraction: 0.19,
+                translate_head_radius_fraction: 0.075,
+                translate_plane_size_fraction: 0.28,
+                translate_plane_fill_alpha: 0.35,
+                translate_plane_fill_hover_alpha: 0.60,
+                scale_plane_fill_alpha: 0.25,
+                scale_plane_fill_hover_alpha: 0.50,
+                rotate_feedback_thickness_scale: 1.10,
+                ..GizmoPartVisuals::classic()
+            },
+            Self::HighContrast => GizmoPartVisuals {
+                translate_head_length_fraction: 0.20,
+                translate_head_radius_fraction: 0.080,
+                translate_plane_size_fraction: 0.30,
+                translate_plane_fill_alpha: 0.40,
+                translate_plane_fill_hover_alpha: 0.70,
+                scale_plane_fill_alpha: 0.30,
+                scale_plane_fill_hover_alpha: 0.60,
+                rotate_feedback_thickness_scale: 1.25,
+                ..GizmoPartVisuals::classic()
+            },
+        }
+    }
+
     pub fn apply_to_config(self, cfg: &mut GizmoConfig) {
         match self {
             Self::Classic => {
@@ -188,6 +268,11 @@ impl GizmoVisualPreset {
                 self.visuals().apply_to_config(cfg);
             }
         }
+    }
+
+    pub fn apply_to_gizmo(self, gizmo: &mut Gizmo) {
+        self.visuals().apply_to_config(&mut gizmo.config);
+        gizmo.set_part_visuals(self.part_visuals());
     }
 }
 

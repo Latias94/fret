@@ -5,6 +5,7 @@ use crate::math::{
     DepthRange, Ray3d, ViewportRect, project_point, ray_from_screen, unproject_point,
 };
 use crate::picking::{PickCircle2d, PickConvexQuad2d, PickSegmentCapsule2d};
+use crate::style::GizmoPartVisuals;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GizmoMode {
@@ -642,6 +643,7 @@ pub struct GizmoState {
     pub hovered: Option<HandleId>,
     pub active: Option<HandleId>,
     pub hovered_kind: Option<GizmoMode>,
+    part_visuals: GizmoPartVisuals,
     drag_start_targets: Vec<GizmoTarget3d>,
     drag_mode: GizmoMode,
     drag_snap: bool,
@@ -725,6 +727,7 @@ impl Default for GizmoState {
             hovered: None,
             active: None,
             hovered_kind: None,
+            part_visuals: GizmoPartVisuals::default(),
             drag_start_targets: Vec::new(),
             drag_mode: GizmoMode::Translate,
             drag_snap: false,
@@ -1243,6 +1246,14 @@ impl Gizmo {
             config,
             state: GizmoState::default(),
         }
+    }
+
+    pub fn set_part_visuals(&mut self, visuals: GizmoPartVisuals) {
+        self.state.part_visuals = visuals;
+    }
+
+    pub fn part_visuals(&self) -> GizmoPartVisuals {
+        self.state.part_visuals
     }
 
     pub fn update(
@@ -3644,10 +3655,12 @@ impl Gizmo {
         size_length_world: f32,
     ) -> Vec<Line3d> {
         let mut out = Vec::new();
+        let pv = self.state.part_visuals;
         let length_world = size_length_world;
         let axis_tip_len = length_world * self.translate_axis_tip_scale();
-        let head_len = length_world * 0.18;
-        let shaft_len = (length_world - head_len).max(length_world * 0.2);
+        let head_len = length_world * pv.translate_head_length_fraction.max(0.0);
+        let shaft_len =
+            (length_world - head_len).max(length_world * pv.translate_shaft_min_fraction.max(0.0));
         for &(((axis_dir, color), handle), axis_index) in &[
             (((axes[0], self.config.x_color), HandleId(1)), 0usize),
             (((axes[1], self.config.y_color), HandleId(2)), 1usize),
@@ -3690,10 +3703,11 @@ impl Gizmo {
         axes: [Vec3; 3],
         size_length_world: f32,
     ) -> Vec<Line3d> {
+        let pv = self.state.part_visuals;
         let length_world = size_length_world;
 
-        let off = length_world * 0.15;
-        let size = length_world * 0.25;
+        let off = length_world * pv.translate_plane_offset_fraction.max(0.0);
+        let size = length_world * pv.translate_plane_size_fraction.max(0.0);
 
         let mut out = Vec::new();
         for &(u, v, base_color, handle) in &[
@@ -3762,6 +3776,7 @@ impl Gizmo {
         origin: Vec3,
         size_length_world: f32,
     ) -> Vec<Line3d> {
+        let pv = self.state.part_visuals;
         let length_world = size_length_world;
 
         let Some(view_dir) =
@@ -3770,7 +3785,7 @@ impl Gizmo {
             return Vec::new();
         };
         let (u, v) = plane_basis(view_dir);
-        let half = length_world * 0.08;
+        let half = length_world * pv.translate_center_half_fraction.max(0.0);
         let base = mix_alpha(self.config.hover_color, 0.65);
         let handle_id = TranslateHandle::Screen.id();
         let color = if self.is_handle_highlighted(GizmoMode::Translate, handle_id) {
@@ -3798,6 +3813,7 @@ impl Gizmo {
         origin: Vec3,
         size_length_world: f32,
     ) -> Vec<Line3d> {
+        let pv = self.state.part_visuals;
         let length_world = size_length_world;
 
         let Some(view_dir) =
@@ -3814,7 +3830,8 @@ impl Gizmo {
         // A small ring around the center handle that controls translation along the view direction
         // (a "dolly" translate handle). The ring is rendered always-on-top so it remains usable in
         // dense scenes.
-        let r = (length_world * 0.14).max(length_world * 0.08);
+        let r = (length_world * pv.translate_depth_ring_radius_fraction.max(0.0))
+            .max(length_world * pv.translate_depth_ring_radius_min_fraction.max(0.0));
         let handle_id = TranslateHandle::Depth.id();
         let base = mix_alpha(self.config.hover_color, 0.35);
         let color = if self.is_handle_highlighted(GizmoMode::Translate, handle_id) {
@@ -3846,10 +3863,11 @@ impl Gizmo {
         include_planes: bool,
         include_screen: bool,
     ) -> Vec<Triangle3d> {
+        let pv = self.state.part_visuals;
         let length_world = size_length_world;
 
-        let head_len = length_world * 0.18;
-        let head_radius = length_world * 0.07;
+        let head_len = length_world * pv.translate_head_length_fraction.max(0.0);
+        let head_radius = length_world * pv.translate_head_radius_fraction.max(0.0);
         let axis_tip_len = length_world * self.translate_axis_tip_scale();
 
         let mut out = Vec::new();
@@ -3902,8 +3920,8 @@ impl Gizmo {
 
         // Plane handle fills.
         if include_planes {
-            let off = length_world * 0.15;
-            let size = length_world * 0.25;
+            let off = length_world * pv.translate_plane_offset_fraction.max(0.0);
+            let size = length_world * pv.translate_plane_size_fraction.max(0.0);
             for &(u, v, base_color, handle) in &[
                 (
                     axes[0],
@@ -3940,9 +3958,9 @@ impl Gizmo {
                     base_color
                 };
                 let fill = if self.is_handle_highlighted(GizmoMode::Translate, handle_id) {
-                    mix_alpha(outline, 0.55)
+                    mix_alpha(outline, pv.translate_plane_fill_hover_alpha.clamp(0.0, 1.0))
                 } else {
-                    mix_alpha(outline, 0.30)
+                    mix_alpha(outline, pv.translate_plane_fill_alpha.clamp(0.0, 1.0))
                 };
                 let quad = translate_plane_quad_world(origin, u, v, off, size);
                 let alpha = self.plane_visibility_alpha(view_projection, viewport, quad);
@@ -3975,7 +3993,7 @@ impl Gizmo {
                 view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)
             {
                 let (u, v) = plane_basis(view_dir);
-                let half = length_world * 0.08;
+                let half = length_world * pv.translate_center_half_fraction.max(0.0);
                 let handle_id = TranslateHandle::Screen.id();
                 let outline = if self.is_handle_highlighted(GizmoMode::Translate, handle_id) {
                     mix_alpha(self.config.hover_color, 1.0)
@@ -4139,6 +4157,7 @@ impl Gizmo {
         origin: Vec3,
         size_length_world: f32,
     ) -> GizmoDrawList3d {
+        let pv = self.state.part_visuals;
         if self.state.drag_mode != GizmoMode::Rotate {
             return GizmoDrawList3d::default();
         }
@@ -4191,7 +4210,7 @@ impl Gizmo {
             viewport,
             origin,
             self.config.depth_range,
-            self.config.line_thickness_px,
+            (self.config.line_thickness_px * pv.rotate_feedback_thickness_scale).max(0.0),
         )
         .unwrap_or(radius_world * 0.04);
 
@@ -4613,6 +4632,7 @@ impl Gizmo {
         include_uniform: bool,
         include_planes: bool,
     ) -> Vec<Line3d> {
+        let pv = self.state.part_visuals;
         let length_world = size_length_world;
 
         let (u, v) = view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)
@@ -4660,7 +4680,7 @@ impl Gizmo {
                 self.push_line(&mut out, origin, end, c, self.config.depth_mode);
 
                 // End box, screen-facing.
-                let half = length_world * 0.06;
+                let half = length_world * pv.scale_axis_end_box_half_fraction.max(0.0);
                 let p0 = end + (-u - v) * half;
                 let p1 = end + (u - v) * half;
                 let p2 = end + (u + v) * half;
@@ -4672,8 +4692,8 @@ impl Gizmo {
         }
 
         if include_planes {
-            let off = length_world * 0.15;
-            let size = length_world * 0.25;
+            let off = length_world * pv.scale_plane_offset_fraction.max(0.0);
+            let size = length_world * pv.scale_plane_size_fraction.max(0.0);
             for &(u, v, base_color, handle) in &[
                 (
                     axes[0],
@@ -4741,7 +4761,7 @@ impl Gizmo {
             } else {
                 base
             };
-            let half = length_world * 0.08;
+            let half = length_world * pv.scale_uniform_half_fraction.max(0.0);
             let p0 = origin + (-u - v) * half;
             let p1 = origin + (u - v) * half;
             let p2 = origin + (u + v) * half;
@@ -4765,6 +4785,7 @@ impl Gizmo {
         include_uniform: bool,
         include_planes: bool,
     ) -> Vec<Triangle3d> {
+        let pv = self.state.part_visuals;
         let length_world = size_length_world;
 
         let (u, v) = view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)
@@ -4815,7 +4836,7 @@ impl Gizmo {
                 let fill = mix_alpha(fill, alpha);
 
                 let end = origin + axis_dir * length_world;
-                let half = length_world * 0.06;
+                let half = length_world * pv.scale_axis_end_box_half_fraction.max(0.0);
                 let p0 = end + (-u - v) * half;
                 let p1 = end + (u - v) * half;
                 let p2 = end + (u + v) * half;
@@ -4826,8 +4847,8 @@ impl Gizmo {
         }
 
         if include_planes {
-            let off = length_world * 0.15;
-            let size = length_world * 0.25;
+            let off = length_world * pv.scale_plane_offset_fraction.max(0.0);
+            let size = length_world * pv.scale_plane_size_fraction.max(0.0);
             for &(u, v, base_color, handle) in &[
                 (
                     axes[0],
@@ -4864,9 +4885,9 @@ impl Gizmo {
                     base_color
                 };
                 let fill = if self.is_handle_highlighted(GizmoMode::Scale, handle_id) {
-                    mix_alpha(outline, 0.45)
+                    mix_alpha(outline, pv.scale_plane_fill_hover_alpha.clamp(0.0, 1.0))
                 } else {
-                    mix_alpha(outline, 0.22)
+                    mix_alpha(outline, pv.scale_plane_fill_alpha.clamp(0.0, 1.0))
                 };
 
                 let quad = translate_plane_quad_world(origin, u, v, off, size);
@@ -4908,7 +4929,7 @@ impl Gizmo {
                 mix_alpha(outline, 0.40)
             };
 
-            let half = length_world * 0.08;
+            let half = length_world * pv.scale_uniform_half_fraction.max(0.0);
             let p0 = origin + (-u - v) * half;
             let p1 = origin + (u - v) * half;
             let p2 = origin + (u + v) * half;
@@ -4933,6 +4954,7 @@ impl Gizmo {
         include_screen: bool,
         include_depth: bool,
     ) -> Option<PickHit> {
+        let pv = self.state.part_visuals;
         let length_world = size_length_world;
         let axis_tip_len = length_world * self.translate_axis_tip_scale();
 
@@ -4969,7 +4991,8 @@ impl Gizmo {
                 let axis_dir = view_dir.normalize_or_zero();
                 if axis_dir.length_squared() > 0.0 {
                     let (u, v) = plane_basis(axis_dir);
-                    let r_world = (length_world * 0.14).max(length_world * 0.08);
+                    let r_world = (length_world * pv.translate_depth_ring_radius_fraction.max(0.0))
+                        .max(length_world * pv.translate_depth_ring_radius_min_fraction.max(0.0));
                     let segments: usize = 36;
                     let mut prev_world = origin + u * r_world;
                     let mut best_d = f32::INFINITY;
@@ -5010,8 +5033,8 @@ impl Gizmo {
         }
 
         // Plane handles (distance to projected quad; accept when inside).
-        let off = length_world * 0.15;
-        let size = length_world * 0.25;
+        let off = length_world * pv.translate_plane_offset_fraction.max(0.0);
+        let size = length_world * pv.translate_plane_size_fraction.max(0.0);
         let mut plane_inside: Option<(HandleId, f32)> = None;
         if include_planes {
             for &((u, v, handle), plane_axes) in &[
@@ -5173,6 +5196,7 @@ impl Gizmo {
         include_uniform: bool,
         include_planes: bool,
     ) -> Option<PickHit> {
+        let pv = self.state.part_visuals;
         let length_world = size_length_world;
 
         // Picking priority ladder (editor UX):
@@ -5235,7 +5259,7 @@ impl Gizmo {
                 }
 
                 let end = origin + axis_dir * length_world;
-                let half = length_world * 0.06;
+                let half = length_world * pv.scale_axis_end_box_half_fraction.max(0.0);
                 let quad_world = [
                     end + (-u - v) * half,
                     end + (u - v) * half,
@@ -5265,8 +5289,8 @@ impl Gizmo {
         }
 
         if include_planes {
-            let off = length_world * 0.15;
-            let size = length_world * 0.25;
+            let off = length_world * pv.scale_plane_offset_fraction.max(0.0);
+            let size = length_world * pv.scale_plane_size_fraction.max(0.0);
             for &((u, v, handle), plane_axes) in &[
                 (
                     (axes[0], axes[1], ScaleHandle::PlaneXY.id()),
@@ -6830,7 +6854,9 @@ mod tests {
 
         let view_dir = view_dir_at_origin(view_proj, vp, origin, gizmo.config.depth_range).unwrap();
         let (u, _v) = plane_basis(view_dir);
-        let r_world = (size_length_world * 0.14).max(size_length_world * 0.08);
+        let pv = gizmo.part_visuals();
+        let r_world = (size_length_world * pv.translate_depth_ring_radius_fraction.max(0.0))
+            .max(size_length_world * pv.translate_depth_ring_radius_min_fraction.max(0.0));
 
         let origin_px = project_point(view_proj, vp, origin, gizmo.config.depth_range)
             .unwrap()
@@ -7628,8 +7654,9 @@ mod tests {
         )
         .unwrap();
 
-        let off = length_world * 0.15;
-        let size = length_world * 0.25;
+        let pv = gizmo.part_visuals();
+        let off = length_world * pv.translate_plane_offset_fraction.max(0.0);
+        let size = length_world * pv.translate_plane_size_fraction.max(0.0);
 
         let quad_xy = translate_plane_quad_world(origin, axes[0], axes[1], off, size);
         let quad_xz = translate_plane_quad_world(origin, axes[0], axes[2], off, size);
@@ -7722,8 +7749,9 @@ mod tests {
         .unwrap();
         let axis_tip_len = length_world * gizmo.translate_axis_tip_scale();
 
-        let off = length_world * 0.15;
-        let size = length_world * 0.25;
+        let pv = gizmo.part_visuals();
+        let off = length_world * pv.translate_plane_offset_fraction.max(0.0);
+        let size = length_world * pv.translate_plane_size_fraction.max(0.0);
         let quad_world = translate_plane_quad_world(origin, axes[0], axes[1], off, size);
         let quad_screen =
             project_quad(view_proj, vp, quad_world, gizmo.config.depth_range).unwrap();
@@ -7896,7 +7924,8 @@ mod tests {
             .map(plane_basis)
             .unwrap();
         let end = origin + axes[2] * length_world;
-        let half = length_world * 0.06;
+        let pv = no_fade.part_visuals();
+        let half = length_world * pv.scale_axis_end_box_half_fraction.max(0.0);
         let quad_world = [
             end + (-u - v) * half,
             end + (u - v) * half,
@@ -7962,8 +7991,9 @@ mod tests {
         )
         .unwrap();
 
-        let off = length_world * 0.15;
-        let size = length_world * 0.25;
+        let pv = gizmo.part_visuals();
+        let off = length_world * pv.translate_plane_offset_fraction.max(0.0);
+        let size = length_world * pv.translate_plane_size_fraction.max(0.0);
         let quad_world = translate_plane_quad_world(origin, axes[0], axes[1], off, size);
         let quad_screen =
             project_quad(view_proj, vp, quad_world, gizmo.config.depth_range).unwrap();
@@ -8817,8 +8847,9 @@ mod tests {
         )
         .unwrap();
 
-        let off = length_world * 0.15;
-        let size = length_world * 0.25;
+        let pv = gizmo.part_visuals();
+        let off = length_world * pv.scale_plane_offset_fraction.max(0.0);
+        let size = length_world * pv.scale_plane_size_fraction.max(0.0);
         let quad_world = translate_plane_quad_world(origin, axes[0], axes[1], off, size);
         let quad_screen =
             project_quad(view_proj, vp, quad_world, gizmo.config.depth_range).unwrap();
@@ -8916,8 +8947,9 @@ mod tests {
         )
         .unwrap();
 
-        let off = length_world * 0.15;
-        let size = length_world * 0.25;
+        let pv = gizmo.part_visuals();
+        let off = length_world * pv.scale_plane_offset_fraction.max(0.0);
+        let size = length_world * pv.scale_plane_size_fraction.max(0.0);
         let quad_world = translate_plane_quad_world(origin, axes[0], axes[1], off, size);
         let quad_screen =
             project_quad(view_proj, vp, quad_world, gizmo.config.depth_range).unwrap();
@@ -9636,7 +9668,9 @@ mod tests {
 
         let view_dir = view_dir_at_origin(view_proj, vp, origin, gizmo.config.depth_range).unwrap();
         let (u, _v) = plane_basis(view_dir);
-        let r_world = (length_world * 0.14).max(length_world * 0.08);
+        let pv = gizmo.part_visuals();
+        let r_world = (length_world * pv.translate_depth_ring_radius_fraction.max(0.0))
+            .max(length_world * pv.translate_depth_ring_radius_min_fraction.max(0.0));
         let ring_px = project_point(
             view_proj,
             vp,

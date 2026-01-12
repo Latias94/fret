@@ -1057,7 +1057,6 @@ impl Default for Gizmo3dDemoModel {
         view_gizmo_cfg.anchor = ViewGizmoAnchor::TopRight;
         let gizmo_visual_preset_index = 0;
         let view_gizmo_visual_preset_index = 0;
-        GizmoVisualPreset::ALL[gizmo_visual_preset_index].apply_to_config(&mut gizmo_cfg);
         ViewGizmoVisualPreset::ALL[view_gizmo_visual_preset_index]
             .apply_to_config(&mut view_gizmo_cfg);
 
@@ -1066,7 +1065,11 @@ impl Default for Gizmo3dDemoModel {
             viewport_target: RenderTargetId::default(),
             viewport_px: (960, 540),
             pixels_per_point: 1.0,
-            gizmo: Gizmo::new(gizmo_cfg),
+            gizmo: {
+                let mut gizmo = Gizmo::new(gizmo_cfg);
+                GizmoVisualPreset::ALL[gizmo_visual_preset_index].apply_to_gizmo(&mut gizmo);
+                gizmo
+            },
             view_gizmo,
             gizmo_visual_preset_index,
             view_gizmo_visual_preset_index,
@@ -2355,7 +2358,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         m.gizmo_visual_preset_index =
                             (m.gizmo_visual_preset_index + 1) % GizmoVisualPreset::ALL.len();
                         GizmoVisualPreset::ALL[m.gizmo_visual_preset_index]
-                            .apply_to_config(&mut m.gizmo.config);
+                            .apply_to_gizmo(&mut m.gizmo);
                     }
                 });
                 app.request_redraw(window);
