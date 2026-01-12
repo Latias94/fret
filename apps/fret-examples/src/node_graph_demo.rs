@@ -24,6 +24,7 @@ use fret_node::io::NodeGraphViewState;
 use fret_node::ops::{GraphOp, GraphTransaction};
 use fret_node::profile::{DataflowProfile, apply_transaction_with_profile};
 use fret_node::schema::{NodeRegistry, NodeSchema, PortDecl};
+use fret_node::ui::canvas::middleware::RejectNonFiniteTx;
 use fret_node::ui::presenter::{
     InsertNodeCandidate, NodeGraphContextMenuItem, NodeGraphPresenter, PortAnchorHint,
 };
@@ -723,6 +724,7 @@ impl NodeGraphDemoDriver {
         let presenter =
             MeasuredNodeGraphPresenter::new(DemoPresenter::new(registry), measured.manual.clone());
         let canvas = NodeGraphCanvas::new(models.graph, models.view)
+            .with_tx_middleware(RejectNonFiniteTx)
             .with_presenter(presenter)
             .with_edit_queue(models.edits)
             .with_internals_store(internals)

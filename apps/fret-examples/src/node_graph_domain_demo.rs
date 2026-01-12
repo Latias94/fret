@@ -16,6 +16,7 @@ use fret_node::rules::{
     PortTemplate,
 };
 use fret_node::types::TypeDesc;
+use fret_node::ui::canvas::middleware::RejectNonFiniteTx;
 use fret_node::ui::{InsertNodeCandidate, NodeGraphCanvas, NodeGraphPresenter};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
@@ -478,6 +479,7 @@ impl NodeGraphDomainDemoDriver {
 
         let presenter = DemoTypedPresenter::default();
         let canvas = NodeGraphCanvas::new(models.graph, models.view)
+            .with_tx_middleware(RejectNonFiniteTx)
             .with_presenter(presenter)
             .with_close_command(CommandId::new("node_graph_domain_demo.close"));
         let root = ui.create_node_retained(canvas);
