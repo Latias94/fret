@@ -6917,6 +6917,119 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     }
                 }
 
+                if *button == MouseButton::Left
+                    && *click_count == 2
+                    && snapshot.interaction.reroute_on_edge_double_click
+                    && self.interaction.searcher.is_none()
+                    && self.interaction.context_menu.is_none()
+                {
+                    let (geom, index) = self.canvas_derived(&*cx.app, &snapshot);
+                    let hit: Option<EdgeId> = self
+                        .graph
+                        .read_ref(cx.app, |graph| {
+                            let mut scratch_ports: Vec<PortId> = Vec::new();
+                            let mut scratch_edges: Vec<EdgeId> = Vec::new();
+
+                            if self
+                                .hit_port(
+                                    geom.as_ref(),
+                                    index.as_ref(),
+                                    *position,
+                                    zoom,
+                                    &mut scratch_ports,
+                                )
+                                .is_some()
+                            {
+                                return None;
+                            }
+                            if self
+                                .hit_edge_focus_anchor(
+                                    graph,
+                                    &snapshot,
+                                    geom.as_ref(),
+                                    index.as_ref(),
+                                    *position,
+                                    zoom,
+                                    &mut scratch_edges,
+                                )
+                                .is_some()
+                            {
+                                return None;
+                            }
+                            if geom.nodes.values().any(|ng| ng.rect.contains(*position)) {
+                                return None;
+                            }
+                            if graph.groups.values().any(|group| {
+                                group_resize::group_rect_to_px(group.rect).contains(*position)
+                            }) {
+                                return None;
+                            }
+                            self.hit_edge(
+                                graph,
+                                &snapshot,
+                                geom.as_ref(),
+                                index.as_ref(),
+                                *position,
+                                zoom,
+                                &mut scratch_edges,
+                            )
+                        })
+                        .ok()
+                        .flatten();
+
+                    if let Some(edge_id) = hit {
+                        let invoked_at = *position;
+                        let at = self.reroute_pos_for_invoked_at(invoked_at);
+
+                        let outcome = {
+                            let presenter = &mut *self.presenter;
+                            self.graph
+                                .read_ref(cx.app, |graph| {
+                                    let plan = presenter.plan_split_edge(
+                                        graph,
+                                        edge_id,
+                                        &NodeKindKey::new(REROUTE_KIND),
+                                        at,
+                                    );
+                                    match plan.decision {
+                                        ConnectDecision::Accept => Ok(plan.ops),
+                                        ConnectDecision::Reject => Err(plan.diagnostics),
+                                    }
+                                })
+                                .ok()
+                        };
+
+                        match outcome {
+                            Some(Ok(ops)) => {
+                                let node_id = Self::first_added_node_id(&ops);
+                                if self.commit_ops(cx.app, cx.window, Some("Insert Reroute"), ops) {
+                                    if let Some(node_id) = node_id {
+                                        self.update_view_state(cx.app, |s| {
+                                            s.selected_edges.clear();
+                                            s.selected_groups.clear();
+                                            s.selected_nodes.clear();
+                                            s.selected_nodes.push(node_id);
+                                            s.draw_order.retain(|id| *id != node_id);
+                                            s.draw_order.push(node_id);
+                                        });
+                                    }
+                                }
+                            }
+                            Some(Err(diags)) => {
+                                if let Some((sev, msg)) = Self::toast_from_diagnostics(&diags) {
+                                    self.show_toast(cx.app, cx.window, sev, msg);
+                                }
+                            }
+                            None => {}
+                        }
+
+                        cx.stop_propagation();
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
+                        return;
+                    }
+                }
+
                 if self.interaction.context_menu.is_some()
                     && context_menu::handle_context_menu_pointer_down(
                         self, cx, *position, *button, zoom,
@@ -9504,6 +9617,81 @@ mod tests {
         assert!((after.zoom - 0.5).abs() <= 1.0e-6);
         assert!((after.pan.x - 600.0).abs() <= 1.0e-3);
         assert!((after.pan.y - 500.0).abs() <= 1.0e-3);
+    }
+
+    #[test]
+    fn double_click_edge_inserts_reroute_when_enabled() {
+        let mut host = TestUiHostImpl::default();
+        let (mut graph_value, _a, _a_in, a_out, _b, b_in) =
+            make_test_graph_two_nodes_with_ports_spaced_x(420.0);
+        let edge_id = EdgeId::new();
+        graph_value.edges.insert(
+            edge_id,
+            Edge {
+                kind: EdgeKind::Data,
+                from: a_out,
+                to: b_in,
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        );
+
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+        let _ = view.update(&mut host, |s, _cx| {
+            s.interaction.zoom_on_double_click = true;
+            s.interaction.reroute_on_edge_double_click = true;
+        });
+
+        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = NullServices::default();
+        let mut cx = event_cx(&mut host, &mut services, bounds);
+
+        let snap = canvas.sync_view_state(cx.app);
+        let (geom, _index) = canvas.canvas_derived(&*cx.app, &snap);
+        let from = geom.port_center(a_out).expect("from port center");
+        let to = geom.port_center(b_in).expect("to port center");
+        let (c1, c2) = super::wire_ctrl_points(from, to, snap.zoom);
+        let pos = super::cubic_bezier(from, c1, c2, to, 0.5);
+
+        canvas.event(
+            &mut cx,
+            &Event::Pointer(PointerEvent::Down {
+                position: pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 2,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let nodes_len = graph.read_ref(cx.app, |g| g.nodes.len()).unwrap_or(0);
+        let edges_len = graph.read_ref(cx.app, |g| g.edges.len()).unwrap_or(0);
+        assert_eq!(nodes_len, 3);
+        assert_eq!(edges_len, 2);
+        assert!(
+            graph
+                .read_ref(cx.app, |g| g.edges.contains_key(&edge_id))
+                .unwrap_or(false)
+        );
+        assert!(
+            graph
+                .read_ref(cx.app, |g| g
+                    .nodes
+                    .values()
+                    .any(|n| n.kind.0 == crate::REROUTE_KIND))
+                .unwrap_or(false)
+        );
+
+        let after = canvas.sync_view_state(cx.app);
+        assert_eq!(after.selected_edges.len(), 0);
+        assert_eq!(after.selected_nodes.len(), 1);
+        assert_eq!(after.zoom, 1.0);
     }
     use crate::rules::EdgeEndpoint;
     use crate::ui::commands::{

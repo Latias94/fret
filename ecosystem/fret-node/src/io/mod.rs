@@ -636,6 +636,13 @@ pub struct NodeGraphInteractionState {
     #[serde(default = "default_zoom_on_double_click")]
     pub zoom_on_double_click: bool,
 
+    /// Whether double-clicking a wire inserts a reroute node (ShaderGraph-style).
+    ///
+    /// This is separate from `zoom_on_double_click`: zoom only applies when the double click hits
+    /// the background, while reroute insertion applies when the double click hits an edge.
+    #[serde(default = "default_reroute_on_edge_double_click")]
+    pub reroute_on_edge_double_click: bool,
+
     /// Modifier requirement for wheel zoom (XyFlow `zoomActivationKey`).
     #[serde(default)]
     pub zoom_activation_key: NodeGraphZoomActivationKey,
@@ -732,6 +739,7 @@ impl Default for NodeGraphInteractionState {
             zoom_on_pinch: default_zoom_on_pinch(),
             zoom_on_pinch_speed: default_zoom_on_pinch_speed(),
             zoom_on_double_click: default_zoom_on_double_click(),
+            reroute_on_edge_double_click: default_reroute_on_edge_double_click(),
             zoom_activation_key: NodeGraphZoomActivationKey::default(),
             node_drag_threshold: default_node_drag_threshold(),
             node_drag_handle_mode: NodeGraphDragHandleMode::default(),
@@ -807,6 +815,10 @@ fn default_zoom_on_pinch_speed() -> f32 {
 
 fn default_zoom_on_double_click() -> bool {
     true
+}
+
+fn default_reroute_on_edge_double_click() -> bool {
+    false
 }
 
 fn default_connection_radius() -> f32 {

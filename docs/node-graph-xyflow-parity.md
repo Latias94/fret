@@ -641,11 +641,17 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 - [~] **Insert node on edge**
   - XyFlow: can be userland patterns (drag-and-drop on edge)
-  - fret-node: domain demo includes conversion insert picker in connect workflow
+  - fret-node:
+    - edge context menu supports insertion flows: `ecosystem/fret-node/src/ui/canvas/widget/right_click.rs`
+    - searcher-based picker + insert op: `ecosystem/fret-node/src/ui/canvas/widget/edge_insert.rs`
 
-- [ ] **Reroute node and manual edge splitting**
+- [x] **Reroute node and manual edge splitting**
   - XyFlow: userland / pro features; system supports hit-testing
-  - fret-node: not implemented
+  - fret-node:
+    - reroute kind: `ecosystem/fret-node/src/lib.rs` (`REROUTE_KIND`)
+    - split plan: `ecosystem/fret-node/src/ui/presenter.rs` (`plan_split_edge` / `plan_split_edge_candidate`)
+    - edge menu action: `CMD_NODE_GRAPH_INSERT_REROUTE` in `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - double-click wire insertion (optional): `NodeGraphInteractionState.reroute_on_edge_double_click` + `NodeGraphCanvas::event` in `ecosystem/fret-node/src/ui/canvas/widget.rs`
 
 ---
 
