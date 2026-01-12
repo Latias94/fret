@@ -1,8 +1,118 @@
 use super::{GraphOp, GraphTransaction};
 
 pub(crate) fn normalize_transaction(mut tx: GraphTransaction) -> GraphTransaction {
+    tx.ops = coalesce_setter_chains(tx.ops);
     tx.ops.retain(|op| !op_is_noop(op));
     tx
+}
+
+fn coalesce_setter_chains(ops: Vec<GraphOp>) -> Vec<GraphOp> {
+    let mut out = Vec::with_capacity(ops.len());
+    for op in ops {
+        if let Some(last) = out.last_mut()
+            && try_coalesce_setter(last, &op)
+        {
+            continue;
+        }
+        out.push(op);
+    }
+    out
+}
+
+fn try_coalesce_setter(last: &mut GraphOp, next: &GraphOp) -> bool {
+    match (last, next) {
+        (
+            GraphOp::SetNodePos {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetNodePos { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = *to;
+            true
+        }
+        (
+            GraphOp::SetNodeParent {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetNodeParent { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = *to;
+            true
+        }
+        (
+            GraphOp::SetNodeSize {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetNodeSize { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = *to;
+            true
+        }
+        (
+            GraphOp::SetNodeCollapsed {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetNodeCollapsed { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = *to;
+            true
+        }
+        (
+            GraphOp::SetNodePorts {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetNodePorts { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = to.clone();
+            true
+        }
+        (
+            GraphOp::SetNodeData {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetNodeData { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = to.clone();
+            true
+        }
+        (
+            GraphOp::SetEdgeKind {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetEdgeKind { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = *to;
+            true
+        }
+        (
+            GraphOp::SetEdgeEndpoints {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetEdgeEndpoints { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = *to;
+            true
+        }
+        (
+            GraphOp::SetSymbolMeta {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetSymbolMeta { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = to.clone();
+            true
+        }
+        (
+            GraphOp::SetGroupRect {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetGroupRect { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = *to;
+            true
+        }
+        _ => false,
+    }
 }
 
 fn op_is_noop(op: &GraphOp) -> bool {

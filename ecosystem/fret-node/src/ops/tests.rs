@@ -284,6 +284,67 @@ fn normalize_transaction_keeps_non_noop_set_ops() {
 }
 
 #[test]
+fn normalize_transaction_coalesces_setter_chains_and_drops_resulting_noops() {
+    let node_id = NodeId::new();
+
+    let tx = GraphTransaction {
+        label: None,
+        ops: vec![
+            GraphOp::SetNodePos {
+                id: node_id,
+                from: CanvasPoint { x: 0.0, y: 0.0 },
+                to: CanvasPoint { x: 10.0, y: 20.0 },
+            },
+            GraphOp::SetNodePos {
+                id: node_id,
+                from: CanvasPoint { x: 10.0, y: 20.0 },
+                to: CanvasPoint { x: 0.0, y: 0.0 },
+            },
+        ],
+    };
+
+    let normalized = crate::ops::normalize_transaction(tx);
+    assert!(normalized.ops.is_empty());
+}
+
+#[test]
+fn normalize_transaction_coalesces_setter_chains_when_chained() {
+    let node_id = NodeId::new();
+
+    let tx = GraphTransaction {
+        label: None,
+        ops: vec![
+            GraphOp::SetNodeCollapsed {
+                id: node_id,
+                from: false,
+                to: true,
+            },
+            GraphOp::SetNodeCollapsed {
+                id: node_id,
+                from: true,
+                to: false,
+            },
+            GraphOp::SetNodeCollapsed {
+                id: node_id,
+                from: false,
+                to: true,
+            },
+        ],
+    };
+
+    let normalized = crate::ops::normalize_transaction(tx);
+    assert_eq!(normalized.ops.len(), 1);
+    assert!(matches!(
+        &normalized.ops[0],
+        GraphOp::SetNodeCollapsed {
+            id,
+            from: false,
+            to: true
+        } if *id == node_id
+    ));
+}
+
+#[test]
 fn set_node_size_roundtrips_through_invert_transaction() {
     let mut graph = Graph::default();
     let node_id = NodeId::new();

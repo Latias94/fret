@@ -785,7 +785,10 @@ impl NodeGraphCanvas {
         window: Option<AppWindowId>,
         tx: &GraphTransaction,
     ) -> bool {
-        let mut tx = tx.clone();
+        let mut tx = crate::ops::normalize_transaction(tx.clone());
+        if tx.is_empty() {
+            return true;
+        }
         let bounds = self.interaction.last_bounds;
         let pan = self.cached_pan;
         let zoom = self.cached_zoom;
