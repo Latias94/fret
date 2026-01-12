@@ -7,6 +7,11 @@ This audit compares Fret’s shadcn-aligned Field primitives against the upstrea
 
 - Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/field.tsx`
 - Example: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/field-input.tsx`
+- Example: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/field-checkbox.tsx`
+- Example: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/field-switch.tsx`
+- Example: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/field-select.tsx`
+- Example: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/field-radio.tsx`
+- Example: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/field-textarea.tsx`
 
 ## Fret implementation
 
@@ -18,14 +23,22 @@ This audit compares Fret’s shadcn-aligned Field primitives against the upstrea
 ### Layout & geometry (shadcn parity)
 
 - `FieldGroup` matches `gap-7` (28px) via `component.field.group_gap`.
+- `FieldGroup` supports per-instance gap overrides (e.g. `gap-3`) for checkbox/radio group recipes.
+- `FieldSet` accounts for HTML `legend` formatting quirks observed in the web goldens (legend spacing
+  is driven by `mb-3` + `FieldDescription` negative top margin rather than flex `gap`).
+- `FieldSet` matches shadcn's `:has([data-slot=radio-group])` compact spacing via SemanticsRole-based
+  detection (`gap-3` instead of `gap-6`).
+- `Field` horizontal alignment matches shadcn's `has-[>[data-slot=field-content]]:items-start` rule
+  (content-driven rows align to the top instead of centering).
 - `FieldLabel` matches `leading-snug` via `component.field.label_line_height`.
 - `FieldDescription` matches `leading-normal` via `component.field.description_line_height`.
-- `FieldDescription` spacing detail for “description before control” is supported (upstream uses
-  `nth-last-2:-mt-1`).
+- `FieldDescription` negative-margin detail for “description before final sibling” is supported
+  (upstream uses `nth-last-2:-mt-1`).
 
 ## Validation
 
 - Web layout gate:
   `cargo nextest run -p fret-ui-shadcn -F fret-ui/layout-engine-v2 --test web_vs_fret_layout`
-  (`web_vs_fret_layout_field_input_geometry`).
-
+  (`web_vs_fret_layout_field_input_geometry`, `web_vs_fret_layout_field_checkbox_geometry`,
+  `web_vs_fret_layout_field_switch_geometry`, `web_vs_fret_layout_field_select_geometry`,
+  `web_vs_fret_layout_field_radio_geometry`, `web_vs_fret_layout_field_textarea_geometry`).

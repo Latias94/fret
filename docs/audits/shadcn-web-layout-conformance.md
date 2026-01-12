@@ -76,6 +76,11 @@ patterns:
 - `label-demo`
 - `input-with-label`
 - `field-input`
+- `field-checkbox`
+- `field-switch`
+- `field-select`
+- `field-radio`
+- `field-textarea`
 - `empty-avatar`
 - `empty-avatar-group`
 - `popover-demo` (overlay placement + transform origin)
