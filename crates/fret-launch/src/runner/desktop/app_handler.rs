@@ -1,6 +1,65 @@
 //! Winit `ApplicationHandler` integration.
 
 use super::*;
+use std::sync::OnceLock;
+
+#[derive(Debug, Clone, Copy)]
+struct RedrawHitchConfig {
+    hitch_ms: u64,
+}
+
+fn redraw_hitch_config() -> Option<RedrawHitchConfig> {
+    static CONFIG: OnceLock<Option<RedrawHitchConfig>> = OnceLock::new();
+    *CONFIG.get_or_init(|| {
+        let enabled = std::env::var_os("FRET_REDRAW_HITCH_LOG").is_some_and(|v| !v.is_empty());
+        if !enabled {
+            return None;
+        }
+
+        let hitch_ms = std::env::var("FRET_REDRAW_HITCH_MS")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(24);
+
+        Some(RedrawHitchConfig { hitch_ms })
+    })
+}
+
+fn redraw_hitch_log_paths() -> impl Iterator<Item = std::path::PathBuf> {
+    let mut paths = Vec::new();
+    paths.push(std::path::Path::new(".fret").join("redraw_hitches.log"));
+
+    let tmp = std::env::temp_dir();
+    if !tmp.as_os_str().is_empty() {
+        paths.push(tmp.join("fret").join("redraw_hitches.log"));
+    }
+    paths.into_iter()
+}
+
+fn write_redraw_hitch_log(line: &str) {
+    use std::io::Write as _;
+
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::SystemTime::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or_default();
+    let thread_id = format!("{:?}", std::thread::current().id());
+    let msg = format!("[{ts}] [thread={thread_id}] {line}\n");
+
+    for path in redraw_hitch_log_paths() {
+        if let Some(dir) = path.parent() {
+            let _ = std::fs::create_dir_all(dir);
+        }
+        if let Ok(mut file) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+        {
+            let _ = file.write_all(msg.as_bytes());
+            let _ = file.flush();
+        }
+    }
+}
 
 impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
     fn device_event(
@@ -567,6 +626,13 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 self.drain_effects(event_loop);
             }
             WindowEvent::RedrawRequested => {
+                let hitch_config = redraw_hitch_config();
+                let hitch_total_started = hitch_config.map(|_| Instant::now());
+                let mut hitch_prepare_ms: Option<u64> = None;
+                let mut hitch_render_ms: Option<u64> = None;
+                let mut hitch_record_ms: Option<u64> = None;
+                let mut hitch_present_ms: Option<u64> = None;
+
                 // Drain effects before rendering so dock ops, invalidation bumps, and window
                 // requests apply deterministically to the frame being drawn (ADR 0013).
                 self.drain_effects(event_loop);
@@ -586,6 +652,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         .as_mut()
                         .is_some_and(|r| r.begin_capture_if_requested());
 
+                    let prepare_started = hitch_config.map(|_| Instant::now());
                     // Apply any pending window-side state (IME/cursor) once per frame, similar to
                     // Dear ImGui's backend `prepare_frame` pattern.
                     state.platform.prepare_frame(state.window.as_ref());
@@ -608,7 +675,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         renderer,
                         scale_factor,
                     );
+                    if let Some(started) = prepare_started {
+                        hitch_prepare_ms = Some(started.elapsed().as_millis() as u64);
+                    }
 
+                    let render_started = hitch_config.map(|_| Instant::now());
                     self.driver.render(WinitRenderContext {
                         app: &mut self.app,
                         services: renderer as &mut dyn fret_core::UiServices,
@@ -618,6 +689,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         scale_factor,
                         scene: &mut state.scene,
                     });
+                    if let Some(started) = render_started {
+                        hitch_render_ms = Some(started.elapsed().as_millis() as u64);
+                    }
 
                     validate_scene_if_enabled(&state.scene);
 
@@ -639,6 +713,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         state.last_accessibility_snapshot = None;
                     }
 
+                    let record_started = hitch_config.map(|_| Instant::now());
                     let engine_frame = self.driver.record_engine_frame(
                         &mut self.app,
                         app_window,
@@ -649,6 +724,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         self.tick_id,
                         self.frame_id,
                     );
+                    if let Some(started) = record_started {
+                        hitch_record_ms = Some(started.elapsed().as_millis() as u64);
+                    }
 
                     for update in engine_frame.target_updates {
                         match update {
@@ -671,6 +749,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         }
                     }
 
+                    let present_started = hitch_config.map(|_| Instant::now());
                     let draw_result = state.surface.present_with(&context.queue, |view| {
                         let ui_cmd = renderer.render_scene(
                             &context.device,
@@ -689,6 +768,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         cmd_buffers.push(ui_cmd);
                         cmd_buffers
                     });
+                    if let Some(started) = present_started {
+                        hitch_present_ms = Some(started.elapsed().as_millis() as u64);
+                    }
 
                     if capturing && let Some(r) = self.renderdoc.as_mut() {
                         r.end_capture();
@@ -739,6 +821,20 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 error!(?err, "render error");
                                 return;
                             }
+                        }
+                    }
+
+                    if let (Some(cfg), Some(started)) = (hitch_config, hitch_total_started) {
+                        let total_ms = started.elapsed().as_millis() as u64;
+                        if total_ms >= cfg.hitch_ms {
+                            write_redraw_hitch_log(&format!(
+                                "redraw hitch window={app_window:?} total_ms={total_ms} prepare_ms={prepare_ms:?} render_ms={render_ms:?} record_ms={record_ms:?} present_ms={present_ms:?} scene_ops={scene_ops} bounds={bounds:?} scale_factor={scale_factor}",
+                                prepare_ms = hitch_prepare_ms,
+                                render_ms = hitch_render_ms,
+                                record_ms = hitch_record_ms,
+                                present_ms = hitch_present_ms,
+                                scene_ops = state.scene.ops_len(),
+                            ));
                         }
                     }
 

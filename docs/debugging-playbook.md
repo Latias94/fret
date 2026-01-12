@@ -230,6 +230,36 @@ When the bug is “why did this frame render”, use structured tracing:
 - Observability contract: `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`
 - Frame identity/scheduling: `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
 
+If the symptom is “dragging the window feels laggy / delayed”, first rule out debug overhead:
+
+- Ensure heavy debug dumps are disabled (`FRET_TAFFY_DUMP` writes JSON to disk and will stutter).
+- Prefer `--release` to avoid debug build overhead.
+- Reduce log volume (e.g. `RUST_LOG=warn`) to avoid per-frame stdout overhead.
+
+To locate the bottleneck, enable frame hitch logging (writes only when a frame exceeds a threshold):
+
+```powershell
+$env:FRET_FRAME_HITCH_LOG=1
+# Default is 24ms; adjust as needed for your monitor / expectation.
+$env:FRET_FRAME_HITCH_MS=24
+cargo run -p fret-demo --features layout-engine-v2 --bin todo_demo
+```
+
+The log is written to `.fret/frame_hitches.log` (and also mirrored under the system temp dir).
+Each entry includes the breakdown of `view` / `overlay` / `layout` / `paint`, plus `scene_ops`.
+
+If `.fret/frame_hitches.log` stays quiet but the app still feels laggy, the hitch is likely outside
+the UI tree work (e.g. surface acquire/present or GPU work). Enable redraw hitch logging:
+
+```powershell
+$env:FRET_REDRAW_HITCH_LOG=1
+$env:FRET_REDRAW_HITCH_MS=24
+cargo run -p fret-demo --features layout-engine-v2 --bin todo_demo
+```
+
+The log is written to `.fret/redraw_hitches.log` and includes `prepare` / `render` / `record` /
+`present` timings plus any surface error.
+
 Recommended approach:
 
 1. Turn on tracing for the smallest set of crates relevant to the bug.
