@@ -68,12 +68,14 @@ patterns:
 - `button-default`
 - `badge-demo`
 - `checkbox-demo`
+- `checkbox-with-text`
 - `radio-group-demo`
 - `tabs-demo`
 - `switch-demo`
 - `input-demo`
 - `label-demo`
 - `input-with-label`
+- `field-input`
 - `empty-avatar`
 - `empty-avatar-group`
 - `popover-demo` (overlay placement + transform origin)
