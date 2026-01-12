@@ -189,6 +189,26 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         .entry("component.label.line_height".to_string())
         .or_insert(14.0);
 
+    // new-york-v4 `Field` defaults:
+    // - `FieldGroup` uses `gap-7` (28px).
+    // - `FieldLabel` uses `text-sm` with `leading-snug` (14px * 1.375 = 19.25px).
+    // - `FieldDescription` uses `text-sm` with `leading-normal` (14px * 1.5 = 21px).
+    metrics
+        .entry("component.field.group_gap".to_string())
+        .or_insert(28.0);
+    metrics
+        .entry("component.field.label_px".to_string())
+        .or_insert(14.0);
+    metrics
+        .entry("component.field.label_line_height".to_string())
+        .or_insert(19.25);
+    metrics
+        .entry("component.field.description_px".to_string())
+        .or_insert(14.0);
+    metrics
+        .entry("component.field.description_line_height".to_string())
+        .or_insert(21.0);
+
     // Tooltip defaults in the upstream registry:
     // - `sideOffset={4}`
     // - Arrow uses `h-2 w-2` (8px)

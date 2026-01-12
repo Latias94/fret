@@ -8,8 +8,6 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
 
-use crate::label::label as shadcn_label;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum FieldOrientation {
     #[default]
@@ -228,7 +226,39 @@ impl FieldLabel {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        shadcn_label(cx, self.text)
+        let theme = Theme::global(&*cx.app).clone();
+
+        // Upstream `FieldLabel` uses `leading-snug` instead of the plain `Label` default.
+        // See: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/field.tsx`.
+        let fg = theme
+            .color_by_key("foreground")
+            .unwrap_or_else(|| theme.color_required("foreground"));
+        let px = theme
+            .metric_by_key("component.field.label_px")
+            .or_else(|| theme.metric_by_key("component.label.text_px"))
+            .or_else(|| theme.metric_by_key("font.size"))
+            .unwrap_or_else(|| theme.metric_required("font.size"));
+        let line_height = theme
+            .metric_by_key("component.field.label_line_height")
+            .or_else(|| theme.metric_by_key("component.label.line_height"))
+            .or_else(|| theme.metric_by_key("font.line_height"))
+            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+
+        cx.text_props(TextProps {
+            layout: Default::default(),
+            text: self.text,
+            style: Some(TextStyle {
+                font: FontId::default(),
+                size: px,
+                weight: FontWeight::MEDIUM,
+                slant: Default::default(),
+                line_height: Some(line_height),
+                letter_spacing_em: None,
+            }),
+            color: Some(fg),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+        })
     }
 }
 
@@ -420,6 +450,7 @@ pub struct Field {
     label: Option<AnyElement>,
     control: AnyElement,
     description: Option<AnyElement>,
+    description_before_control: bool,
     error: Option<AnyElement>,
 }
 
@@ -430,6 +461,7 @@ impl Field {
             label: None,
             control,
             description: None,
+            description_before_control: false,
             error: None,
         }
     }
@@ -449,6 +481,13 @@ impl Field {
         self
     }
 
+    /// When set, renders the description *before* the control (matching the upstream Field docs
+    /// examples where helper text can precede the input).
+    pub fn description_before_control(mut self, before: bool) -> Self {
+        self.description_before_control = before;
+        self
+    }
+
     pub fn error(mut self, error: AnyElement) -> Self {
         self.error = Some(error);
         self
@@ -463,6 +502,7 @@ impl Field {
         let label = self.label;
         let control = self.control;
         let description = self.description;
+        let description_before_control = self.description_before_control;
         let error = self.error;
 
         match self.orientation {
@@ -477,9 +517,35 @@ impl Field {
                     if let Some(label) = label {
                         out.push(label);
                     }
-                    out.push(control);
-                    if let Some(desc) = description {
-                        out.push(desc);
+
+                    if description_before_control {
+                        // Upstream `FieldDescription` uses `nth-last-2:-mt-1` to reduce the spacing
+                        // between the label and a description that appears before the control.
+                        // This is a small but user-visible spacing detail in the Field docs.
+                        if let Some(desc) = description {
+                            let desc = if error.is_none() {
+                                let layout = decl_style::layout_style(
+                                    &theme,
+                                    LayoutRefinement::default().mt_neg(Space::N1),
+                                );
+                                _cx.container(
+                                    ContainerProps {
+                                        layout,
+                                        ..Default::default()
+                                    },
+                                    move |_cx| vec![desc],
+                                )
+                            } else {
+                                desc
+                            };
+                            out.push(desc);
+                        }
+                        out.push(control);
+                    } else {
+                        out.push(control);
+                        if let Some(desc) = description {
+                            out.push(desc);
+                        }
                     }
                     if let Some(err) = error {
                         out.push(err);
@@ -515,9 +581,32 @@ impl Field {
                     },
                     move |_cx| {
                         let mut out: Vec<AnyElement> = Vec::new();
-                        out.push(control);
-                        if let Some(desc) = description {
-                            out.push(desc);
+
+                        if description_before_control {
+                            if let Some(desc) = description {
+                                let desc = if error.is_none() {
+                                    let layout = decl_style::layout_style(
+                                        &theme,
+                                        LayoutRefinement::default().mt_neg(Space::N1),
+                                    );
+                                    _cx.container(
+                                        ContainerProps {
+                                            layout,
+                                            ..Default::default()
+                                        },
+                                        move |_cx| vec![desc],
+                                    )
+                                } else {
+                                    desc
+                                };
+                                out.push(desc);
+                            }
+                            out.push(control);
+                        } else {
+                            out.push(control);
+                            if let Some(desc) = description {
+                                out.push(desc);
+                            }
                         }
                         if let Some(err) = error {
                             out.push(err);
