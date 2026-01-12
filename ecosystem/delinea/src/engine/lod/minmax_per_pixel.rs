@@ -363,3 +363,84 @@ pub fn minmax_per_pixel_finalize(
 
     start..out_points.len()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_core::{Px, Size};
+
+    #[test]
+    fn minmax_finalize_is_pixel_bounded_and_index_aligned_for_monotonic_x() {
+        let n = 100_000usize;
+        let width_px = 120usize;
+        let height_px = 80usize;
+
+        let mut x = Vec::with_capacity(n);
+        let mut y = Vec::with_capacity(n);
+        for i in 0..n {
+            x.push(i as f64 / (n as f64 - 1.0));
+            y.push(((i as f64) * 0.01).sin());
+        }
+
+        let bounds = compute_bounds(&x, &y).expect("expected finite bounds");
+        let viewport = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(width_px as f32), Px(height_px as f32)),
+        );
+
+        let mut cursor = MinMaxPerPixelCursor::default();
+        let mut scratch = LodScratch::default();
+        while !minmax_per_pixel_step(
+            &mut cursor,
+            &mut scratch,
+            &x,
+            &y,
+            &bounds,
+            viewport,
+            0..n,
+            8192,
+        ) {}
+
+        let mut out_points = Vec::new();
+        let mut out_indices = Vec::new();
+        minmax_per_pixel_finalize(
+            &mut scratch,
+            &x,
+            &bounds,
+            viewport,
+            &mut out_points,
+            &mut out_indices,
+        );
+
+        assert!(!out_points.is_empty());
+        assert_eq!(out_points.len(), out_indices.len());
+        assert!(out_points.len() <= width_px * 4);
+
+        assert!(
+            out_indices.windows(2).all(|w| w[0] < w[1]),
+            "expected strictly increasing raw indices for monotonic X"
+        );
+        assert!(
+            out_indices.iter().all(|&i| (i as usize) < n),
+            "expected all indices within 0..n"
+        );
+
+        let left = viewport.origin.x.0;
+        let right = viewport.origin.x.0 + viewport.size.width.0;
+        let top = viewport.origin.y.0;
+        let bottom = viewport.origin.y.0 + viewport.size.height.0;
+
+        for p in out_points {
+            assert!(
+                p.x.0 >= left && p.x.0 <= right,
+                "x out of viewport: {}",
+                p.x.0
+            );
+            assert!(
+                p.y.0 >= top && p.y.0 <= bottom,
+                "y out of viewport: {}",
+                p.y.0
+            );
+        }
+    }
+}

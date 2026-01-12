@@ -206,6 +206,15 @@ single “at a glance” view of:
 - ECharts reference: `large`, `progressive`, sampling/decimation knobs per series type
 - ADR(s): `docs/adr/0132-delinea-large-data-and-progressive-rendering.md`
 - Evidence: `ecosystem/delinea/src/engine/lod/*` + stage budgets
+- v1 invariants (P0 baseline):
+  - Line-family (line/area/band): min/max-per-pixel bucketing over the plot width, emitting `<= 4 * plot_width_px`
+    points for monotonic-X inputs (preserves spikes while staying pixel-bounded).
+  - Scatter: exact mode for small datasets; large mode (`visible_len > 20_000`) switches to pixel-bounded LOD.
+  - LOD outputs preserve index identity: `points.len() == data_indices.len()` and indices refer to raw rows.
+- Tests (headless):
+  - `ecosystem/delinea/src/engine/lod/minmax_per_pixel.rs` (unit invariants for finalize ordering + bounds)
+  - `ecosystem/delinea/src/engine/tests.rs` (`scatter_large_mode_is_pixel_bounded`, `line_large_mode_is_pixel_bounded`)
+- Conformance doc: `docs/delinea-lod-conformance.md`
 - Validation harness (native, v1):
   - `cargo run -p fret-demo --bin chart_stress_demo`
   - Env knobs:
