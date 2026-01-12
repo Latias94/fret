@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use fret_core::{Point, Px, Rect};
 
-use crate::core::{EdgeId, Graph, PortId};
+use crate::core::{EdgeId, Graph, NodeId, PortId};
 
 use super::geometry::CanvasGeometry;
 
@@ -80,6 +80,7 @@ fn wire_aabb(from: Point, to: Point, zoom: f32, pad: f32) -> (f32, f32, f32, f32
 #[derive(Debug, Clone)]
 pub(crate) struct CanvasSpatialIndex {
     cell_size: f32,
+    nodes: HashMap<u64, Vec<NodeId>>,
     ports: HashMap<u64, Vec<PortId>>,
     edges: HashMap<u64, Vec<EdgeId>>,
 }
@@ -88,6 +89,7 @@ impl CanvasSpatialIndex {
     pub(crate) fn empty() -> Self {
         Self {
             cell_size: 1.0,
+            nodes: HashMap::new(),
             ports: HashMap::new(),
             edges: HashMap::new(),
         }
@@ -107,9 +109,31 @@ impl CanvasSpatialIndex {
         let cell_size = (256.0 / zoom).max(16.0 / zoom).max(1.0);
         let mut out = Self {
             cell_size,
+            nodes: HashMap::new(),
             ports: HashMap::new(),
             edges: HashMap::new(),
         };
+
+        // Index nodes in draw order so deterministic tie-breaking can be layered on top.
+        for node_id in geom.order.iter().copied() {
+            let Some(node_geom) = geom.nodes.get(&node_id) else {
+                continue;
+            };
+            let b = node_geom.rect;
+            let min_x = b.origin.x.0.min(b.origin.x.0 + b.size.width.0);
+            let min_y = b.origin.y.0.min(b.origin.y.0 + b.size.height.0);
+            let max_x = b.origin.x.0.max(b.origin.x.0 + b.size.width.0);
+            let max_y = b.origin.y.0.max(b.origin.y.0 + b.size.height.0);
+            let (cx0, cx1, cy0, cy1) = cell_range_for_aabb(min_x, min_y, max_x, max_y, cell_size);
+            for y in cy0..=cy1 {
+                for x in cx0..=cx1 {
+                    out.nodes
+                        .entry(cell_key(Cell { x, y }))
+                        .or_default()
+                        .push(node_id);
+                }
+            }
+        }
 
         // Insert ports in node draw order so that tie-breaking (when distances match) can prefer
         // the top-most node without relying on map iteration order.
@@ -196,6 +220,24 @@ impl CanvasSpatialIndex {
         for y in y0..=y1 {
             for x in x0..=x1 {
                 if let Some(ids) = self.edges.get(&cell_key(Cell { x, y })) {
+                    out.extend_from_slice(ids);
+                }
+            }
+        }
+        out.sort_unstable();
+        out.dedup();
+    }
+
+    pub(crate) fn query_nodes_in_rect(&self, rect: Rect, out: &mut Vec<NodeId>) {
+        out.clear();
+        let min_x = rect.origin.x.0.min(rect.origin.x.0 + rect.size.width.0);
+        let min_y = rect.origin.y.0.min(rect.origin.y.0 + rect.size.height.0);
+        let max_x = rect.origin.x.0.max(rect.origin.x.0 + rect.size.width.0);
+        let max_y = rect.origin.y.0.max(rect.origin.y.0 + rect.size.height.0);
+        let (x0, x1, y0, y1) = cell_range_for_aabb(min_x, min_y, max_x, max_y, self.cell_size);
+        for y in y0..=y1 {
+            for x in x0..=x1 {
+                if let Some(ids) = self.nodes.get(&cell_key(Cell { x, y })) {
                     out.extend_from_slice(ids);
                 }
             }
@@ -432,5 +474,82 @@ mod tests {
         index.query_edges_in_rect(rect, &mut out);
 
         assert!(out.contains(&edge));
+    }
+
+    #[test]
+    fn node_query_in_rect_returns_candidate_node() {
+        let mut graph = Graph::new(GraphId::new());
+
+        let a = NodeId::new();
+        let b = NodeId::new();
+
+        graph.nodes.insert(
+            a,
+            Node {
+                kind: NodeKindKey::new("test.a"),
+                kind_version: 1,
+                pos: CanvasPoint { x: 0.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                size: None,
+                collapsed: false,
+                ports: Vec::new(),
+                data: serde_json::Value::Null,
+            },
+        );
+        graph.nodes.insert(
+            b,
+            Node {
+                kind: NodeKindKey::new("test.b"),
+                kind_version: 1,
+                pos: CanvasPoint { x: 0.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                size: None,
+                collapsed: false,
+                ports: Vec::new(),
+                data: serde_json::Value::Null,
+            },
+        );
+
+        let mut geom = CanvasGeometry::default();
+        geom.order = vec![a, b];
+        geom.node_rank.insert(a, 0);
+        geom.node_rank.insert(b, 1);
+        geom.nodes.insert(
+            a,
+            NodeGeometry {
+                rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(80.0), Px(40.0))),
+            },
+        );
+        geom.nodes.insert(
+            b,
+            NodeGeometry {
+                rect: Rect::new(
+                    Point::new(Px(1000.0), Px(0.0)),
+                    Size::new(Px(80.0), Px(40.0)),
+                ),
+            },
+        );
+
+        let index = CanvasSpatialIndex::build(&graph, &geom, 1.0, 0.0);
+
+        let mut out: Vec<NodeId> = Vec::new();
+        index.query_nodes_in_rect(
+            Rect::new(
+                Point::new(Px(-10.0), Px(-10.0)),
+                Size::new(Px(120.0), Px(80.0)),
+            ),
+            &mut out,
+        );
+
+        assert!(out.contains(&a));
+        assert!(!out.contains(&b));
     }
 }

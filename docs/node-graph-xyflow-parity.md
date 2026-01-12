@@ -783,6 +783,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - [x] portal subtree culling by viewport: `ecosystem/fret-node/src/ui/portal.rs` (`NodeGraphPortalHost::layout`)
     - [x] canvas paint culling by viewport (nodes/edges): `ecosystem/fret-node/src/ui/canvas/widget.rs` (`NodeGraphCanvas::paint`)
     - [x] edge paint culling uses a spatial index rect query (avoids per-frame full scans): `ecosystem/fret-node/src/ui/canvas/spatial.rs` (`CanvasSpatialIndex::query_edges_in_rect`), `ecosystem/fret-node/src/ui/canvas/widget.rs` (`NodeGraphCanvas::paint`)
+    - [x] node visibility culling uses a spatial index rect query (avoids per-frame full scans): `ecosystem/fret-node/src/ui/canvas/spatial.rs` (`CanvasSpatialIndex::query_nodes_in_rect`), `ecosystem/fret-node/src/ui/canvas/widget.rs` (`NodeGraphCanvas::paint`)
     - [x] cached edge path tessellation (wires + markers; preview uses the same cache): `ecosystem/fret-node/src/ui/canvas/paint.rs` (`CanvasPaintCache`)
     - [x] cached text shaping/metrics (covers `TextService::{prepare,measure}`): `ecosystem/fret-node/src/ui/canvas/paint.rs` (`CanvasPaintCache`)
     - [ ] incremental scene op updates (true retained scene graph diffing)

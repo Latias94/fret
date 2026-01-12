@@ -7542,7 +7542,12 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
                     let mut visible_nodes: HashSet<GraphNodeId> = HashSet::new();
                     if let Some(c) = cull {
-                        for (&node, node_geom) in &geom.nodes {
+                        let mut candidates: Vec<GraphNodeId> = Vec::new();
+                        index.query_nodes_in_rect(c, &mut candidates);
+                        for node in candidates {
+                            let Some(node_geom) = geom.nodes.get(&node) else {
+                                continue;
+                            };
                             if rects_intersect(node_geom.rect, c) {
                                 visible_nodes.insert(node);
                             }
