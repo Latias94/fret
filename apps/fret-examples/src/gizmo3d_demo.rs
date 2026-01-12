@@ -230,41 +230,91 @@ struct GizmoHudState {
     snap: bool,
 }
 
+const HANDLE_GROUP_SHIFT: u32 = 16;
+const HANDLE_GROUP_TRANSLATE: u32 = 1;
+const HANDLE_GROUP_ROTATE: u32 = 2;
+const HANDLE_GROUP_SCALE: u32 = 3;
+const BOUNDS_CORNER_BASE: u32 = 20;
+const BOUNDS_CORNER_END: u32 = 27;
+const BOUNDS_FACE_BASE: u32 = 30;
+const BOUNDS_FACE_END: u32 = 35;
+
+fn handle_group_and_sub_id(handle: HandleId) -> (u32, u32) {
+    let local = handle.local();
+    let group = local >> HANDLE_GROUP_SHIFT;
+    let sub = local & 0xFFFF;
+    (group, sub)
+}
+
+fn is_bounds_handle(handle: HandleId) -> bool {
+    if handle.plugin().0 != 0 {
+        return false;
+    }
+    let (group, sub) = handle_group_and_sub_id(handle);
+    if group != HANDLE_GROUP_SCALE {
+        return false;
+    }
+    (BOUNDS_CORNER_BASE <= sub && sub <= BOUNDS_CORNER_END)
+        || (BOUNDS_FACE_BASE <= sub && sub <= BOUNDS_FACE_END)
+}
+
 fn gizmo_handle_label(handle: HandleId) -> String {
-    match handle.0 {
-        1 => "X".to_string(),
-        2 => "Y".to_string(),
-        3 => "Z".to_string(),
-        4 => "Plane XY".to_string(),
-        5 => "Plane XZ".to_string(),
-        6 => "Plane YZ".to_string(),
-        7 => "Uniform".to_string(),
-        8 => "View ring".to_string(),
-        9 => "Arcball".to_string(),
-        10 => "Screen".to_string(),
-        14 => "Scale plane XY".to_string(),
-        15 => "Scale plane XZ".to_string(),
-        16 => "Scale plane YZ".to_string(),
-        20..=27 => {
-            let bits = (handle.0 - 20) as u32;
-            let sx = if (bits & 1) != 0 { "+" } else { "-" };
-            let sy = if (bits & 2) != 0 { "+" } else { "-" };
-            let sz = if (bits & 4) != 0 { "+" } else { "-" };
-            format!("Bounds corner (X{sx} Y{sy} Z{sz})")
-        }
-        30..=35 => {
-            let v = (handle.0 - 30) as u32;
-            let axis = (v / 2) as usize;
-            let max_side = (v % 2) == 1;
-            let sign = if max_side { "+" } else { "-" };
-            let axis_name = match axis {
-                0 => "X",
-                1 => "Y",
-                _ => "Z",
-            };
-            format!("Bounds face ({axis_name}{sign})")
-        }
-        _ => format!("Handle {}", handle.0),
+    let plugin = handle.plugin().0;
+    if plugin != 0 {
+        return format!("Plugin {plugin} handle 0x{:08X}", handle.local());
+    }
+
+    let (group, sub) = handle_group_and_sub_id(handle);
+    match group {
+        HANDLE_GROUP_TRANSLATE => match sub {
+            1 => "X".to_string(),
+            2 => "Y".to_string(),
+            3 => "Z".to_string(),
+            4 => "Plane XY".to_string(),
+            5 => "Plane XZ".to_string(),
+            6 => "Plane YZ".to_string(),
+            10 => "Screen".to_string(),
+            11 => "Depth".to_string(),
+            _ => format!("Translate handle {sub}"),
+        },
+        HANDLE_GROUP_ROTATE => match sub {
+            1 => "X".to_string(),
+            2 => "Y".to_string(),
+            3 => "Z".to_string(),
+            8 => "View ring".to_string(),
+            9 => "Arcball".to_string(),
+            _ => format!("Rotate handle {sub}"),
+        },
+        HANDLE_GROUP_SCALE => match sub {
+            1 => "X".to_string(),
+            2 => "Y".to_string(),
+            3 => "Z".to_string(),
+            7 => "Uniform".to_string(),
+            14 => "Scale plane XY".to_string(),
+            15 => "Scale plane XZ".to_string(),
+            16 => "Scale plane YZ".to_string(),
+            BOUNDS_CORNER_BASE..=BOUNDS_CORNER_END => {
+                let bits = sub - BOUNDS_CORNER_BASE;
+                let sx = if (bits & 1) != 0 { "+" } else { "-" };
+                let sy = if (bits & 2) != 0 { "+" } else { "-" };
+                let sz = if (bits & 4) != 0 { "+" } else { "-" };
+                format!("Bounds corner (X{sx} Y{sy} Z{sz})")
+            }
+            BOUNDS_FACE_BASE..=BOUNDS_FACE_END => {
+                let v = sub - BOUNDS_FACE_BASE;
+                let axis = (v / 2) as usize;
+                let max_side = (v % 2) == 1;
+                let sign = if max_side { "+" } else { "-" };
+                let axis_name = match axis {
+                    0 => "X",
+                    1 => "Y",
+                    _ => "Z",
+                };
+                format!("Bounds face ({axis_name}{sign})")
+            }
+            _ => format!("Scale handle {sub}"),
+        },
+        _ => format!("Handle group={group} id={sub}"),
     }
 }
 
@@ -298,16 +348,16 @@ fn gizmo_hud_text(state: GizmoHudState, config: GizmoConfig) -> Option<String> {
                 }
                 GizmoResult::Rotation { .. } => {
                     if let Some(step) = config.rotate_snap_step_radians {
-                        let _ = write!(&mut out, " (step={:.1}°)", step.to_degrees());
+                        let _ = write!(&mut out, " (step={:.1}deg)", step.to_degrees());
                     }
                 }
                 GizmoResult::Arcball { .. } => {
                     if let Some(step) = config.rotate_snap_step_radians {
-                        let _ = write!(&mut out, " (step={:.1}°)", step.to_degrees());
+                        let _ = write!(&mut out, " (step={:.1}deg)", step.to_degrees());
                     }
                 }
                 GizmoResult::Scale { .. } => {
-                    if last.active.0 >= 20 && last.active.0 <= 35 {
+                    if is_bounds_handle(last.active) {
                         if let Some(step) = config.bounds_snap_step {
                             let _ = write!(
                                 &mut out,
@@ -330,7 +380,7 @@ fn gizmo_hud_text(state: GizmoHudState, config: GizmoConfig) -> Option<String> {
             GizmoResult::Translation { delta, total } => {
                 let _ = writeln!(
                     &mut out,
-                    "Δt=({:.3}, {:.3}, {:.3})   Σt=({:.3}, {:.3}, {:.3})",
+                    "dT=({:.3}, {:.3}, {:.3})   T=({:.3}, {:.3}, {:.3})",
                     delta.x, delta.y, delta.z, total.x, total.y, total.z
                 );
             }
@@ -341,7 +391,7 @@ fn gizmo_hud_text(state: GizmoHudState, config: GizmoConfig) -> Option<String> {
             } => {
                 let _ = writeln!(
                     &mut out,
-                    "Δr={:.1}°   Σr={:.1}°   axis=({:.2}, {:.2}, {:.2})",
+                    "dR={:.1}deg   R={:.1}deg   axis=({:.2}, {:.2}, {:.2})",
                     delta_radians.to_degrees(),
                     total_radians.to_degrees(),
                     axis.x,
@@ -354,7 +404,7 @@ fn gizmo_hud_text(state: GizmoHudState, config: GizmoConfig) -> Option<String> {
                 let (_axis_t, angle_t) = total.to_axis_angle();
                 let _ = writeln!(
                     &mut out,
-                    "Δr={:.1}°   Σr={:.1}°   (arcball)",
+                    "dR={:.1}deg   R={:.1}deg   (arcball)",
                     angle_d.to_degrees(),
                     angle_t.to_degrees()
                 );
@@ -362,7 +412,7 @@ fn gizmo_hud_text(state: GizmoHudState, config: GizmoConfig) -> Option<String> {
             GizmoResult::Scale { delta, total } => {
                 let _ = writeln!(
                     &mut out,
-                    "Δs=({:.3}, {:.3}, {:.3})   Σs=({:.3}, {:.3}, {:.3})",
+                    "dS=({:.3}, {:.3}, {:.3})   S=({:.3}, {:.3}, {:.3})",
                     delta.x, delta.y, delta.z, total.x, total.y, total.z
                 );
             }
