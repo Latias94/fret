@@ -1,5 +1,20 @@
 use super::*;
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(super) struct PickHit {
+    pub(super) handle: HandleId,
+    pub(super) score: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub(super) enum MixedPickBand {
+    TranslateCenter = 0,
+    TranslatePlaneInside = 1,
+    ScaleSolidInside = 2,
+    TranslateAxisTipIntent = 3,
+    Default = 4,
+}
+
 impl Gizmo {
     pub(super) fn pick_translate_handle(
         &self,

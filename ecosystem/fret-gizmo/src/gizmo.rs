@@ -20,20 +20,7 @@ pub use types::*;
 mod handles;
 use handles::*;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-struct PickHit {
-    handle: HandleId,
-    score: f32,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-enum MixedPickBand {
-    TranslateCenter = 0,
-    TranslatePlaneInside = 1,
-    ScaleSolidInside = 2,
-    TranslateAxisTipIntent = 3,
-    Default = 4,
-}
+use pick::{MixedPickBand, PickHit};
 
 #[derive(Debug, Default)]
 pub struct Gizmo {
