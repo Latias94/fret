@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::{FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
-use fret_ui::element::{AnyElement, TextProps};
+use fret_ui::element::{AnyElement, Length, SizeStyle, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 #[derive(Debug, Clone)]
@@ -36,7 +36,13 @@ pub fn label<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>
         .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
     cx.text_props(TextProps {
-        layout: Default::default(),
+        layout: fret_ui::element::LayoutStyle {
+            size: SizeStyle {
+                height: Length::Px(line_height),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
         text,
         style: Some(TextStyle {
             font: FontId::default(),
