@@ -75,6 +75,7 @@ mod edge_insert_drag;
 mod group_drag;
 mod group_resize;
 mod hover;
+mod insert_node_drag;
 mod left_click;
 mod marquee;
 mod node_drag;
@@ -6448,6 +6449,11 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 cancel::cancel_active_gestures(self, cx);
                 return;
             }
+            Event::InternalDrag(e) => {
+                if insert_node_drag::handle_internal_drag_event(self, cx, &snapshot, e, zoom) {
+                    return;
+                }
+            }
             Event::Timer { token } => {
                 if self
                     .interaction
@@ -7346,6 +7352,10 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     // keep going to sync auto-pan timer
                 } else if edge_drag::handle_edge_drag_move(self, cx, &snapshot, *position, zoom) {
                     // keep going to sync auto-pan timer
+                } else if insert_node_drag::handle_pending_insert_node_drag_move(
+                    self, cx, &snapshot, *position, *buttons, zoom,
+                ) {
+                    // keep going to sync auto-pan timer
                 } else if searcher::handle_searcher_pointer_move(self, cx, *position, zoom) {
                     // keep going to sync auto-pan timer
                 } else if context_menu::handle_context_menu_pointer_move(self, cx, *position, zoom)
@@ -7388,6 +7398,12 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             self, cx, &snapshot, *position, zoom,
                         );
                     }
+                    return;
+                }
+
+                if *button == MouseButton::Left
+                    && searcher::handle_searcher_pointer_up(self, cx, *position, *button, zoom)
+                {
                     return;
                 }
                 if pointer_up::handle_pointer_up(
@@ -7688,7 +7704,14 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     .as_ref()
                     .map(|d| d.edge)
             });
-        let hovered_edge = edge_insert_target.or(self.interaction.hover_edge);
+        let insert_node_drag_edge = self
+            .interaction
+            .insert_node_drag_preview
+            .as_ref()
+            .and_then(|p| p.edge);
+        let hovered_edge = edge_insert_target
+            .or(insert_node_drag_edge)
+            .or(self.interaction.hover_edge);
         let hovered_port = self.interaction.hover_port;
         let hovered_port_valid = self.interaction.hover_port_valid;
         let hovered_port_convertible = self.interaction.hover_port_convertible;
@@ -7696,6 +7719,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         let focused_port_valid = self.interaction.focused_port_valid;
         let focused_port_convertible = self.interaction.focused_port_convertible;
         let wire_drag = self.interaction.wire_drag.clone();
+        let insert_node_drag_preview = self.interaction.insert_node_drag_preview.clone();
         let edge_insert_marker_request = self
             .interaction
             .edge_insert_drag
@@ -7994,6 +8018,26 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 })
             });
 
+        let insert_node_drag_marker: Option<(Point, Color)> =
+            insert_node_drag_preview.as_ref().map(|p| {
+                if let Some(edge_id) = p.edge
+                    && let Some(edge) = render.edges.iter().find(|e| e.id == edge_id)
+                {
+                    (
+                        closest_point_on_edge_route(
+                            edge.hint.route,
+                            edge.from,
+                            edge.to,
+                            zoom,
+                            p.pos,
+                        ),
+                        edge.color,
+                    )
+                } else {
+                    (p.pos, self.style.wire_color_preview)
+                }
+            });
+
         for edge in render.edges {
             let mut width = self.style.wire_width * edge.hint.width_mul.max(0.0);
             if edge.selected {
@@ -8101,7 +8145,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
         self.paint_cache.prune(cx.services, 300, 30_000);
 
-        if let Some((pos, color)) = edge_insert_marker {
+        let mut draw_drop_marker = |pos: Point, color: Color| {
             let z = zoom.max(1.0e-6);
             let r = 7.0 / z;
             let border_w = 2.0 / z;
@@ -8144,6 +8188,13 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 border_color: Color::TRANSPARENT,
                 corner_radii: Corners::all(Px(0.0)),
             });
+        };
+
+        if let Some((pos, color)) = edge_insert_marker {
+            draw_drop_marker(pos, color);
+        }
+        if let Some((pos, color)) = insert_node_drag_marker {
+            draw_drop_marker(pos, color);
         }
 
         if !edge_labels.is_empty() {
@@ -8338,6 +8389,54 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         let corner = Px(8.0 / zoom);
         let title_pad = self.style.node_padding / zoom;
         let title_h = self.style.node_header_height / zoom;
+
+        if let Some(preview) = insert_node_drag_preview.as_ref() {
+            let z = zoom.max(1.0e-6);
+            let w = self.style.node_width / z;
+            let h = (self.style.node_header_height + 2.0 * self.style.pin_row_height) / z;
+            let rect = Rect::new(
+                Point::new(Px(preview.pos.x.0 - 0.5 * w), Px(preview.pos.y.0 - 0.5 * h)),
+                Size::new(Px(w), Px(h)),
+            );
+
+            let mut bg = self.style.node_background;
+            bg.a *= 0.55;
+            let mut border_color = self.style.node_border_selected;
+            border_color.a *= 0.85;
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(3),
+                rect,
+                background: bg,
+                border: Edges::all(Px(1.0 / z)),
+                border_color,
+                corner_radii: Corners::all(corner),
+            });
+
+            if !preview.label.is_empty() {
+                let max_w = (rect.size.width.0 - 2.0 * title_pad).max(0.0);
+                let constraints = TextConstraints {
+                    max_width: Some(Px(max_w)),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                    scale_factor: cx.scale_factor * zoom,
+                };
+                let (blob, metrics) = self.paint_cache.text_blob(
+                    cx.services,
+                    preview.label.clone(),
+                    &node_text_style,
+                    constraints,
+                );
+                let text_x = Px(rect.origin.x.0 + title_pad);
+                let inner_y = rect.origin.y.0 + (title_h - metrics.size.height.0) * 0.5;
+                let text_y = Px(inner_y + metrics.baseline.0);
+                cx.scene.push(SceneOp::Text {
+                    order: DrawOrder(4),
+                    origin: Point::new(text_x, text_y),
+                    text: blob,
+                    color: self.style.context_menu_text,
+                });
+            }
+        }
 
         for (node, rect, is_selected, title, body, pin_rows, resize_handles) in &render.nodes {
             let rect = *rect;
@@ -10077,6 +10176,125 @@ mod tests {
             searcher.target,
             super::super::state::ContextMenuTarget::EdgeInsertNodePicker(e) if e == edge_id
         ));
+    }
+
+    #[test]
+    fn internal_drag_drop_candidate_on_edge_splits_edge() {
+        use std::sync::Arc;
+
+        use fret_core::{InternalDragEvent, InternalDragKind};
+        use fret_runtime::DragKind;
+
+        use crate::core::{PortCapacity, PortDirection, PortKey, PortKind};
+        use crate::rules::{InsertNodeTemplate, PortTemplate};
+        use crate::ui::presenter::InsertNodeCandidate;
+
+        let mut host = TestUiHostImpl::default();
+        let (mut graph_value, _a, _a_in, a_out, _b, b_in) =
+            make_test_graph_two_nodes_with_ports_spaced_x(420.0);
+        let edge_id = EdgeId::new();
+        graph_value.edges.insert(
+            edge_id,
+            Edge {
+                kind: EdgeKind::Data,
+                from: a_out,
+                to: b_in,
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        );
+
+        let template_kind = NodeKindKey::new("test.mid");
+        let template = InsertNodeTemplate {
+            kind: template_kind.clone(),
+            kind_version: 1,
+            collapsed: false,
+            data: Value::Null,
+            ports: vec![
+                PortTemplate {
+                    key: PortKey::new("in"),
+                    dir: PortDirection::In,
+                    kind: PortKind::Data,
+                    capacity: PortCapacity::Single,
+                    ty: None,
+                    data: Value::Null,
+                },
+                PortTemplate {
+                    key: PortKey::new("out"),
+                    dir: PortDirection::Out,
+                    kind: PortKind::Data,
+                    capacity: PortCapacity::Single,
+                    ty: None,
+                    data: Value::Null,
+                },
+            ],
+            input: PortKey::new("in"),
+            output: PortKey::new("out"),
+        };
+        let candidate = InsertNodeCandidate {
+            kind: template_kind.clone(),
+            label: Arc::<str>::from("Mid"),
+            enabled: true,
+            template: Some(template),
+            payload: Value::Null,
+        };
+
+        host.drag = Some(DragSession::new_cross_window(
+            AppWindowId::default(),
+            DragKind::Custom,
+            Point::new(Px(0.0), Px(0.0)),
+            super::insert_node_drag::InsertNodeDragPayload { candidate },
+        ));
+
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = NullServices::default();
+        let mut cx = event_cx(&mut host, &mut services, bounds);
+
+        let snap = canvas.sync_view_state(cx.app);
+        let (geom, _index) = canvas.canvas_derived(&*cx.app, &snap);
+        let from = geom.port_center(a_out).expect("from port center");
+        let to = geom.port_center(b_in).expect("to port center");
+        let (c1, c2) = super::wire_ctrl_points(from, to, snap.zoom);
+        let pos = super::cubic_bezier(from, c1, c2, to, 0.5);
+
+        canvas.event(
+            &mut cx,
+            &Event::InternalDrag(InternalDragEvent {
+                position: pos,
+                kind: InternalDragKind::Drop,
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        let nodes_len = graph.read_ref(cx.app, |g| g.nodes.len()).unwrap_or(0);
+        let edges_len = graph.read_ref(cx.app, |g| g.edges.len()).unwrap_or(0);
+        assert_eq!(nodes_len, 3);
+        assert_eq!(edges_len, 2);
+        assert!(
+            graph
+                .read_ref(cx.app, |g| g.edges.contains_key(&edge_id))
+                .unwrap_or(false)
+        );
+        assert!(
+            graph
+                .read_ref(cx.app, |g| g
+                    .nodes
+                    .values()
+                    .any(|n| n.kind == template_kind))
+                .unwrap_or(false)
+        );
+
+        let after = canvas.sync_view_state(cx.app);
+        assert_eq!(after.selected_nodes.len(), 1);
+        assert_eq!(after.selected_edges.len(), 0);
     }
     use crate::rules::EdgeEndpoint;
     use crate::ui::commands::{

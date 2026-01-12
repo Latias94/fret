@@ -81,6 +81,8 @@ pub(crate) struct InteractionState {
     pub(crate) hover_port_convertible: bool,
     pub(crate) context_menu: Option<ContextMenuState>,
     pub(crate) searcher: Option<SearcherState>,
+    pub(crate) pending_insert_node_drag: Option<PendingInsertNodeDrag>,
+    pub(crate) insert_node_drag_preview: Option<InsertNodeDragPreview>,
     pub(crate) toast: Option<ToastState>,
     pub(crate) auto_pan_timer: Option<TimerToken>,
     pub(crate) pending_paste: Option<PendingPaste>,
@@ -207,6 +209,19 @@ pub(crate) struct SearcherState {
     pub(crate) hovered_row: Option<usize>,
     pub(crate) active_row: usize,
     pub(crate) scroll: usize,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct PendingInsertNodeDrag {
+    pub(crate) candidate: InsertNodeCandidate,
+    pub(crate) start_pos: Point,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct InsertNodeDragPreview {
+    pub(crate) label: Arc<str>,
+    pub(crate) pos: Point,
+    pub(crate) edge: Option<EdgeId>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

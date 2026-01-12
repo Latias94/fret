@@ -1,6 +1,8 @@
 use fret_core::{Modifiers, MouseButton, Point};
 use fret_ui::UiHost;
 
+use super::super::searcher::SearcherRowKind;
+use super::super::state::PendingInsertNodeDrag;
 use super::NodeGraphCanvas;
 
 pub(super) fn handle_searcher_escape<H: UiHost>(
@@ -8,6 +10,8 @@ pub(super) fn handle_searcher_escape<H: UiHost>(
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
 ) -> bool {
     if canvas.interaction.searcher.take().is_some() {
+        canvas.interaction.pending_insert_node_drag = None;
+        cx.release_pointer_capture();
         cx.stop_propagation();
         cx.request_redraw();
         cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
@@ -146,9 +150,42 @@ pub(super) fn handle_searcher_pointer_down<H: UiHost>(
     match button {
         MouseButton::Left => {
             if let Some(row_ix) = hit_row {
-                let _ = canvas.try_activate_searcher_row(cx, row_ix);
+                let row = canvas
+                    .interaction
+                    .searcher
+                    .as_ref()
+                    .and_then(|s| s.rows.get(row_ix));
+                let selectable = row.is_some_and(NodeGraphCanvas::searcher_is_selectable_row);
+                if selectable {
+                    let candidate = canvas
+                        .interaction
+                        .searcher
+                        .as_ref()
+                        .and_then(|s| s.rows.get(row_ix).cloned().zip(Some(s.candidates.clone())))
+                        .and_then(|(row, candidates)| match row.kind {
+                            SearcherRowKind::Candidate { candidate_ix } => {
+                                candidates.get(candidate_ix).cloned()
+                            }
+                            SearcherRowKind::Header => None,
+                        });
+                    if let Some(candidate) = candidate {
+                        canvas.interaction.pending_insert_node_drag = Some(PendingInsertNodeDrag {
+                            candidate,
+                            start_pos: position,
+                        });
+                        cx.capture_pointer(cx.node);
+                    }
+                }
+                if let Some(searcher) = canvas.interaction.searcher.as_mut()
+                    && selectable
+                {
+                    searcher.active_row = row_ix;
+                    NodeGraphCanvas::ensure_searcher_active_visible(searcher);
+                }
             } else if !inside {
                 canvas.interaction.searcher = None;
+                canvas.interaction.pending_insert_node_drag = None;
+                cx.release_pointer_capture();
             }
             cx.stop_propagation();
             cx.request_redraw();
@@ -157,6 +194,8 @@ pub(super) fn handle_searcher_pointer_down<H: UiHost>(
         }
         MouseButton::Right => {
             canvas.interaction.searcher = None;
+            canvas.interaction.pending_insert_node_drag = None;
+            cx.release_pointer_capture();
             cx.stop_propagation();
             cx.request_redraw();
             cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
@@ -164,12 +203,55 @@ pub(super) fn handle_searcher_pointer_down<H: UiHost>(
         }
         _ => {
             canvas.interaction.searcher = None;
+            canvas.interaction.pending_insert_node_drag = None;
+            cx.release_pointer_capture();
             cx.stop_propagation();
             cx.request_redraw();
             cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
             true
         }
     }
+}
+
+pub(super) fn handle_searcher_pointer_up<H: UiHost>(
+    canvas: &mut NodeGraphCanvas,
+    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    position: Point,
+    button: MouseButton,
+    zoom: f32,
+) -> bool {
+    if button != MouseButton::Left {
+        return false;
+    }
+    if canvas.interaction.searcher.is_none() {
+        canvas.interaction.pending_insert_node_drag = None;
+        return false;
+    }
+
+    let (inside, hit_row) = if let Some(searcher) = canvas.interaction.searcher.as_ref() {
+        let visible = super::searcher_visible_rows(searcher);
+        let rect = super::searcher_rect_at(&canvas.style, searcher.origin, visible, zoom);
+        let inside = rect.contains(position);
+        let hit_row = super::hit_searcher_row(&canvas.style, searcher, position, zoom);
+        (inside, hit_row)
+    } else {
+        (false, None)
+    };
+
+    if canvas.interaction.pending_insert_node_drag.take().is_some() {
+        cx.release_pointer_capture();
+        if let Some(row_ix) = hit_row {
+            let _ = canvas.try_activate_searcher_row(cx, row_ix);
+        } else if !inside {
+            canvas.interaction.searcher = None;
+        }
+        cx.stop_propagation();
+        cx.request_redraw();
+        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        return true;
+    }
+
+    false
 }
 
 pub(super) fn handle_searcher_pointer_move<H: UiHost>(

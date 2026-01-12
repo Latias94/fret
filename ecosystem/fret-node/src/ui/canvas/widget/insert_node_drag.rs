@@ -1,0 +1,291 @@
+use std::sync::Arc;
+
+use fret_core::{InternalDragEvent, InternalDragKind, MouseButtons, Point, Px, Rect};
+use fret_runtime::DragKind;
+use fret_ui::UiHost;
+
+use crate::REROUTE_KIND;
+use crate::core::{CanvasPoint, EdgeId};
+use crate::ops::GraphOp;
+use crate::rules::ConnectDecision;
+use crate::ui::presenter::InsertNodeCandidate;
+
+use super::super::state::{InsertNodeDragPreview, ViewSnapshot};
+use super::NodeGraphCanvas;
+use super::threshold::exceeds_drag_threshold;
+
+/// Payload type for "drag a node from the palette/searcher into the canvas".
+#[derive(Debug, Clone)]
+pub(super) struct InsertNodeDragPayload {
+    pub(super) candidate: InsertNodeCandidate,
+}
+
+fn canvas_to_window(bounds: Rect, pos: Point, pan: crate::core::CanvasPoint, zoom: f32) -> Point {
+    let z = if zoom.is_finite() && zoom > 0.0 {
+        zoom
+    } else {
+        1.0
+    };
+    let x = bounds.origin.x.0 + (pos.x.0 + pan.x) * z;
+    let y = bounds.origin.y.0 + (pos.y.0 + pan.y) * z;
+    Point::new(Px(x), Px(y))
+}
+
+pub(super) fn handle_pending_insert_node_drag_move<H: UiHost>(
+    canvas: &mut NodeGraphCanvas,
+    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    snapshot: &ViewSnapshot,
+    position: Point,
+    buttons: MouseButtons,
+    zoom: f32,
+) -> bool {
+    let Some(pending) = canvas.interaction.pending_insert_node_drag.clone() else {
+        return false;
+    };
+
+    if !buttons.left {
+        canvas.interaction.pending_insert_node_drag = None;
+        cx.release_pointer_capture();
+        return false;
+    }
+
+    if cx.window.is_none() {
+        // Can't start an internal drag without a window id.
+        canvas.interaction.pending_insert_node_drag = None;
+        cx.release_pointer_capture();
+        return false;
+    }
+
+    // Use a screen-space threshold, but positions are in canvas space (scaled by `1/zoom`).
+    let z = zoom.max(1.0e-6);
+    let threshold_canvas = 6.0 / z;
+    if !exceeds_drag_threshold(pending.start_pos, position, threshold_canvas) {
+        return false;
+    }
+
+    let Some(window) = cx.window else {
+        return false;
+    };
+    let start_window = canvas_to_window(cx.bounds, pending.start_pos, snapshot.pan, zoom);
+
+    cx.app.begin_cross_window_drag_with_kind(
+        DragKind::Custom,
+        window,
+        start_window,
+        InsertNodeDragPayload {
+            candidate: pending.candidate.clone(),
+        },
+    );
+    if let Some(drag) = cx.app.drag_mut()
+        && drag.payload::<InsertNodeDragPayload>().is_some()
+    {
+        drag.dragging = true;
+    }
+
+    canvas.interaction.searcher = None;
+    canvas.interaction.pending_insert_node_drag = None;
+    cx.release_pointer_capture();
+    cx.request_redraw();
+    cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+    true
+}
+
+pub(super) fn handle_internal_drag_event<H: UiHost>(
+    canvas: &mut NodeGraphCanvas,
+    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    snapshot: &ViewSnapshot,
+    event: &InternalDragEvent,
+    zoom: f32,
+) -> bool {
+    let payload = cx
+        .app
+        .drag()
+        .and_then(|d| d.payload::<InsertNodeDragPayload>())
+        .cloned();
+    let Some(payload) = payload else {
+        if canvas.interaction.insert_node_drag_preview.take().is_some() {
+            cx.request_redraw();
+            cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        }
+        return false;
+    };
+
+    match event.kind {
+        InternalDragKind::Enter | InternalDragKind::Over => {
+            let pos = event.position;
+            let at = CanvasPoint {
+                x: pos.x.0,
+                y: pos.y.0,
+            };
+
+            let (geom, index) = canvas.canvas_derived(&*cx.app, snapshot);
+            let edge_hit: Option<EdgeId> = canvas
+                .graph
+                .read_ref(cx.app, |graph| {
+                    let mut scratch: Vec<EdgeId> = Vec::new();
+                    canvas.hit_edge(
+                        graph,
+                        snapshot,
+                        geom.as_ref(),
+                        index.as_ref(),
+                        pos,
+                        zoom,
+                        &mut scratch,
+                    )
+                })
+                .ok()
+                .flatten();
+
+            let can_split_edge: Option<EdgeId> = edge_hit.and_then(|edge_id| {
+                let candidate = &payload.candidate;
+                let at = if candidate.kind.0 == REROUTE_KIND {
+                    canvas.reroute_pos_for_invoked_at(pos)
+                } else {
+                    at
+                };
+                canvas
+                    .graph
+                    .read_ref(cx.app, |graph| {
+                        let presenter = &mut *canvas.presenter;
+                        let plan =
+                            presenter.plan_split_edge_candidate(graph, edge_id, candidate, at);
+                        matches!(plan.decision, ConnectDecision::Accept).then_some(edge_id)
+                    })
+                    .ok()
+                    .flatten()
+            });
+
+            canvas.interaction.insert_node_drag_preview = Some(InsertNodeDragPreview {
+                label: payload.candidate.label.clone(),
+                pos,
+                edge: can_split_edge,
+            });
+
+            cx.request_redraw();
+            cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+            cx.stop_propagation();
+            return true;
+        }
+        InternalDragKind::Leave | InternalDragKind::Cancel => {
+            if canvas.interaction.insert_node_drag_preview.take().is_some() {
+                cx.request_redraw();
+                cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+            }
+            cx.stop_propagation();
+            return true;
+        }
+        InternalDragKind::Drop => {
+            let pos = event.position;
+            let at = CanvasPoint {
+                x: pos.x.0,
+                y: pos.y.0,
+            };
+            let candidate = payload.candidate.clone();
+            canvas.record_recent_kind(&candidate.kind);
+
+            let (geom, index) = canvas.canvas_derived(&*cx.app, snapshot);
+            let edge_hit: Option<EdgeId> = canvas
+                .graph
+                .read_ref(cx.app, |graph| {
+                    let mut scratch: Vec<EdgeId> = Vec::new();
+                    canvas.hit_edge(
+                        graph,
+                        snapshot,
+                        geom.as_ref(),
+                        index.as_ref(),
+                        pos,
+                        zoom,
+                        &mut scratch,
+                    )
+                })
+                .ok()
+                .flatten();
+
+            let mut applied = false;
+
+            if let Some(edge_id) = edge_hit {
+                let at = if candidate.kind.0 == REROUTE_KIND {
+                    canvas.reroute_pos_for_invoked_at(pos)
+                } else {
+                    at
+                };
+                let planned = canvas
+                    .graph
+                    .read_ref(cx.app, |graph| {
+                        let presenter = &mut *canvas.presenter;
+                        let plan =
+                            presenter.plan_split_edge_candidate(graph, edge_id, &candidate, at);
+                        match plan.decision {
+                            ConnectDecision::Accept => Some(Ok(plan.ops)),
+                            ConnectDecision::Reject => Some(Err(plan.diagnostics)),
+                        }
+                    })
+                    .ok()
+                    .flatten();
+
+                if let Some(Ok(ops)) = planned {
+                    let node_id = NodeGraphCanvas::first_added_node_id(&ops);
+                    applied = canvas.commit_ops(cx.app, cx.window, Some("Insert Node"), ops);
+                    if applied && let Some(node_id) = node_id {
+                        canvas.update_view_state(cx.app, |s| {
+                            s.selected_edges.clear();
+                            s.selected_groups.clear();
+                            s.selected_nodes.clear();
+                            s.selected_nodes.push(node_id);
+                            s.draw_order.retain(|id| *id != node_id);
+                            s.draw_order.push(node_id);
+                        });
+                    }
+                } else if let Some(Err(diags)) = planned {
+                    if let Some((sev, msg)) = NodeGraphCanvas::toast_from_diagnostics(&diags) {
+                        canvas.show_toast(cx.app, cx.window, sev, msg);
+                    }
+                }
+            }
+
+            if !applied {
+                let ops: Option<Vec<GraphOp>> = if candidate.kind.0 == REROUTE_KIND {
+                    Some(NodeGraphCanvas::build_reroute_create_ops(at))
+                } else {
+                    let presenter = &mut *canvas.presenter;
+                    canvas
+                        .graph
+                        .read_ref(cx.app, |graph| {
+                            presenter.plan_create_node(graph, &candidate, at)
+                        })
+                        .ok()
+                        .and_then(|r| r.ok())
+                };
+
+                if let Some(ops) = ops {
+                    let node_id = NodeGraphCanvas::first_added_node_id(&ops);
+                    if canvas.commit_ops(cx.app, cx.window, Some("Insert Node"), ops) {
+                        if let Some(node_id) = node_id {
+                            canvas.update_view_state(cx.app, |s| {
+                                s.selected_edges.clear();
+                                s.selected_groups.clear();
+                                s.selected_nodes.clear();
+                                s.selected_nodes.push(node_id);
+                                s.draw_order.retain(|id| *id != node_id);
+                                s.draw_order.push(node_id);
+                            });
+                        }
+                    }
+                } else {
+                    canvas.show_toast(
+                        cx.app,
+                        cx.window,
+                        crate::rules::DiagnosticSeverity::Info,
+                        Arc::<str>::from("node insertion is not supported"),
+                    );
+                }
+            }
+
+            canvas.interaction.insert_node_drag_preview = None;
+            cx.request_redraw();
+            cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+            cx.stop_propagation();
+            return true;
+        }
+    }
+}
