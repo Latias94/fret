@@ -5,7 +5,7 @@ use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle,
 };
 use fret_ui::tree::UiTree;
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Radius, Space};
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Radius, Space};
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -1095,6 +1095,409 @@ fn web_vs_fret_layout_avatar_demo_geometry() {
     );
     assert_close_px(
         "avatar group h",
+        fret_group.size.height,
+        web_group.rect.h,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_empty_avatar_geometry() {
+    let web = read_web_golden("empty-avatar");
+    let theme = web_theme(&web);
+
+    let web_avatar = web_find_by_class_contains(
+        &theme.root,
+        "relative flex shrink-0 overflow-hidden rounded-full size-12",
+    )
+    .expect("web empty avatar root");
+    let web_fallback = web_find_by_class_contains(
+        &theme.root,
+        "bg-muted flex size-full items-center justify-center rounded-full",
+    )
+    .expect("web empty avatar fallback");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let (ui, _snap, root) = run_fret_root_with_ui(bounds, |cx| {
+        let avatar = fret_ui_shadcn::Avatar::new(vec![
+            fret_ui_shadcn::AvatarFallback::new("CN").into_element(cx),
+        ])
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_px(MetricRef::Px(Px(web_avatar.rect.w)))
+                .h_px(MetricRef::Px(Px(web_avatar.rect.h))),
+        )
+        .into_element(cx);
+
+        vec![avatar]
+    });
+
+    let mut stack = vec![root];
+    let mut rects: Vec<(NodeId, Rect)> = Vec::new();
+    while let Some(node) = stack.pop() {
+        if let Some(bounds) = ui.debug_node_bounds(node) {
+            rects.push((node, bounds));
+        }
+        for child in ui.children(node).into_iter().rev() {
+            stack.push(child);
+        }
+    }
+
+    let pick_best = |label: &str, expected: WebRect, rects: &[(NodeId, Rect)]| -> Rect {
+        let mut best: Option<Rect> = None;
+        let mut best_score = f32::INFINITY;
+        for (_, rect) in rects {
+            let score =
+                (rect.size.width.0 - expected.w).abs() + (rect.size.height.0 - expected.h).abs();
+            if score < best_score {
+                best_score = score;
+                best = Some(*rect);
+            }
+        }
+        best.unwrap_or_else(|| panic!("missing {label} match"))
+    };
+
+    let fret_avatar = pick_best("avatar", web_avatar.rect, &rects);
+    let fret_fallback = pick_best("fallback", web_fallback.rect, &rects);
+
+    assert_close_px(
+        "empty avatar w",
+        fret_avatar.size.width,
+        web_avatar.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "empty avatar h",
+        fret_avatar.size.height,
+        web_avatar.rect.h,
+        1.0,
+    );
+    assert_close_px(
+        "empty avatar fallback w",
+        fret_fallback.size.width,
+        web_fallback.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "empty avatar fallback h",
+        fret_fallback.size.height,
+        web_fallback.rect.h,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_empty_avatar_group_geometry() {
+    let web = read_web_golden("empty-avatar-group");
+    let theme = web_theme(&web);
+
+    let web_group =
+        web_find_by_class_contains(&theme.root, "flex -space-x-2").expect("web empty avatar group");
+    let web_item = web_find_by_class_contains(
+        &theme.root,
+        "relative flex size-8 shrink-0 overflow-hidden rounded-full",
+    )
+    .expect("web empty avatar group item");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let (ui, _snap, root) = run_fret_root_with_ui(bounds, |cx| {
+        let image = ImageId::default();
+        let size = Px(web_item.rect.w);
+
+        let avatars = (0..3)
+            .map(|idx| {
+                let mut avatar = fret_ui_shadcn::Avatar::new(vec![
+                    fret_ui_shadcn::AvatarImage::new(image).into_element(cx),
+                    fret_ui_shadcn::AvatarFallback::new("CN")
+                        .when_image_missing(Some(image))
+                        .into_element(cx),
+                ])
+                .refine_layout(
+                    LayoutRefinement::default()
+                        .w_px(MetricRef::Px(size))
+                        .h_px(MetricRef::Px(size)),
+                );
+                if idx > 0 {
+                    avatar = avatar.refine_layout(LayoutRefinement::default().ml_neg(Space::N2));
+                }
+                avatar.into_element(cx)
+            })
+            .collect::<Vec<_>>();
+
+        let group = cx.flex(
+            FlexProps {
+                layout: LayoutStyle::default(),
+                direction: fret_core::Axis::Horizontal,
+                gap: Px(0.0),
+                padding: fret_core::Edges::all(Px(0.0)),
+                justify: MainAlign::Start,
+                align: CrossAlign::Center,
+                wrap: false,
+            },
+            move |_cx| avatars,
+        );
+
+        vec![group]
+    });
+
+    let mut stack = vec![root];
+    let mut rects: Vec<(NodeId, Rect)> = Vec::new();
+    while let Some(node) = stack.pop() {
+        if let Some(bounds) = ui.debug_node_bounds(node) {
+            rects.push((node, bounds));
+        }
+        for child in ui.children(node).into_iter().rev() {
+            stack.push(child);
+        }
+    }
+
+    let group_items: Vec<Rect> = rects
+        .iter()
+        .filter_map(|(_id, rect)| {
+            if (rect.size.width.0 - web_item.rect.w).abs() > 1.0 {
+                return None;
+            }
+            if (rect.size.height.0 - web_item.rect.h).abs() > 1.0 {
+                return None;
+            }
+            Some(*rect)
+        })
+        .collect();
+
+    assert!(
+        group_items.len() >= 3,
+        "expected at least 3 avatar group items; got={}; items={group_items:?}",
+        group_items.len(),
+    );
+
+    let mut group_items = group_items;
+    group_items.sort_by(|a, b| a.origin.x.0.total_cmp(&b.origin.x.0));
+    let group_items = &group_items[..3];
+
+    let min_x = group_items
+        .iter()
+        .map(|r| r.origin.x.0)
+        .fold(f32::INFINITY, f32::min);
+    let min_y = group_items
+        .iter()
+        .map(|r| r.origin.y.0)
+        .fold(f32::INFINITY, f32::min);
+    let max_x = group_items
+        .iter()
+        .map(|r| r.origin.x.0 + r.size.width.0)
+        .fold(f32::NEG_INFINITY, f32::max);
+    let max_y = group_items
+        .iter()
+        .map(|r| r.origin.y.0 + r.size.height.0)
+        .fold(f32::NEG_INFINITY, f32::max);
+
+    let fret_group = Rect::new(
+        Point::new(Px(min_x), Px(min_y)),
+        CoreSize::new(Px(max_x - min_x), Px(max_y - min_y)),
+    );
+
+    assert_close_px(
+        "empty avatar group w",
+        fret_group.size.width,
+        web_group.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "empty avatar group h",
+        fret_group.size.height,
+        web_group.rect.h,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_item_avatar_geometry() {
+    let web = read_web_golden("item-avatar");
+    let theme = web_theme(&web);
+
+    let web_item_avatar = web_find_by_class_contains(
+        &theme.root,
+        "relative flex shrink-0 overflow-hidden rounded-full size-10",
+    )
+    .expect("web item avatar root");
+    let web_group =
+        web_find_by_class_contains(&theme.root, "flex -space-x-2").expect("web item avatar group");
+    let web_group_item = web_find_by_class_contains(
+        &theme.root,
+        "relative flex size-8 shrink-0 overflow-hidden rounded-full",
+    )
+    .expect("web item avatar group item");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let (ui, _snap, root) = run_fret_root_with_ui(bounds, |cx| {
+        let image = ImageId::default();
+
+        let item_avatar = fret_ui_shadcn::Avatar::new(vec![
+            fret_ui_shadcn::AvatarImage::new(image).into_element(cx),
+            fret_ui_shadcn::AvatarFallback::new("CN")
+                .when_image_missing(Some(image))
+                .into_element(cx),
+        ])
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_px(MetricRef::Px(Px(web_item_avatar.rect.w)))
+                .h_px(MetricRef::Px(Px(web_item_avatar.rect.h))),
+        )
+        .into_element(cx);
+
+        let group_items = (0..3)
+            .map(|idx| {
+                let mut avatar = fret_ui_shadcn::Avatar::new(vec![
+                    fret_ui_shadcn::AvatarImage::new(image).into_element(cx),
+                    fret_ui_shadcn::AvatarFallback::new("CN")
+                        .when_image_missing(Some(image))
+                        .into_element(cx),
+                ])
+                .refine_layout(
+                    LayoutRefinement::default()
+                        .w_px(MetricRef::Px(Px(web_group_item.rect.w)))
+                        .h_px(MetricRef::Px(Px(web_group_item.rect.h))),
+                );
+                if idx > 0 {
+                    avatar = avatar.refine_layout(LayoutRefinement::default().ml_neg(Space::N2));
+                }
+                avatar.into_element(cx)
+            })
+            .collect::<Vec<_>>();
+
+        let group = cx.flex(
+            FlexProps {
+                layout: LayoutStyle::default(),
+                direction: fret_core::Axis::Horizontal,
+                gap: Px(0.0),
+                padding: fret_core::Edges::all(Px(0.0)),
+                justify: MainAlign::Start,
+                align: CrossAlign::Center,
+                wrap: false,
+            },
+            move |_cx| group_items,
+        );
+
+        let col = cx.flex(
+            FlexProps {
+                layout: LayoutStyle::default(),
+                direction: fret_core::Axis::Vertical,
+                gap: Px(16.0),
+                padding: fret_core::Edges::all(Px(0.0)),
+                justify: MainAlign::Start,
+                align: CrossAlign::Start,
+                wrap: false,
+            },
+            move |_cx| vec![item_avatar, group],
+        );
+
+        vec![col]
+    });
+
+    let mut stack = vec![root];
+    let mut rects: Vec<(NodeId, Rect)> = Vec::new();
+    while let Some(node) = stack.pop() {
+        if let Some(bounds) = ui.debug_node_bounds(node) {
+            rects.push((node, bounds));
+        }
+        for child in ui.children(node).into_iter().rev() {
+            stack.push(child);
+        }
+    }
+
+    let pick_best = |label: &str, expected: WebRect, rects: &[(NodeId, Rect)]| -> Rect {
+        let mut best: Option<Rect> = None;
+        let mut best_score = f32::INFINITY;
+        for (_, rect) in rects {
+            let score =
+                (rect.size.width.0 - expected.w).abs() + (rect.size.height.0 - expected.h).abs();
+            if score < best_score {
+                best_score = score;
+                best = Some(*rect);
+            }
+        }
+        best.unwrap_or_else(|| panic!("missing {label} match"))
+    };
+
+    let fret_item_avatar = pick_best("item avatar", web_item_avatar.rect, &rects);
+
+    let group_items: Vec<Rect> = rects
+        .iter()
+        .filter_map(|(_id, rect)| {
+            if (rect.size.width.0 - web_group_item.rect.w).abs() > 1.0 {
+                return None;
+            }
+            if (rect.size.height.0 - web_group_item.rect.h).abs() > 1.0 {
+                return None;
+            }
+            Some(*rect)
+        })
+        .collect();
+
+    assert!(
+        group_items.len() >= 3,
+        "expected at least 3 item-avatar group items; got={}; items={group_items:?}",
+        group_items.len(),
+    );
+
+    let mut group_items = group_items;
+    group_items.sort_by(|a, b| a.origin.x.0.total_cmp(&b.origin.x.0));
+    let group_items = &group_items[..3];
+
+    let min_x = group_items
+        .iter()
+        .map(|r| r.origin.x.0)
+        .fold(f32::INFINITY, f32::min);
+    let min_y = group_items
+        .iter()
+        .map(|r| r.origin.y.0)
+        .fold(f32::INFINITY, f32::min);
+    let max_x = group_items
+        .iter()
+        .map(|r| r.origin.x.0 + r.size.width.0)
+        .fold(f32::NEG_INFINITY, f32::max);
+    let max_y = group_items
+        .iter()
+        .map(|r| r.origin.y.0 + r.size.height.0)
+        .fold(f32::NEG_INFINITY, f32::max);
+
+    let fret_group = Rect::new(
+        Point::new(Px(min_x), Px(min_y)),
+        CoreSize::new(Px(max_x - min_x), Px(max_y - min_y)),
+    );
+
+    assert_close_px(
+        "item avatar w",
+        fret_item_avatar.size.width,
+        web_item_avatar.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "item avatar h",
+        fret_item_avatar.size.height,
+        web_item_avatar.rect.h,
+        1.0,
+    );
+    assert_close_px(
+        "item avatar group w",
+        fret_group.size.width,
+        web_group.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "item avatar group h",
         fret_group.size.height,
         web_group.rect.h,
         1.0,
