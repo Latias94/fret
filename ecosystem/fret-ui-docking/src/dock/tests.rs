@@ -1825,6 +1825,7 @@ fn dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
         DockPanelDragPayload {
             panel: PanelKey::new("core.viewport"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            tear_off_requested: false,
         },
     );
 
@@ -1872,6 +1873,7 @@ fn dock_drag_requests_animation_frames_while_dragging() {
         DockPanelDragPayload {
             panel: PanelKey::new("core.viewport"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            tear_off_requested: false,
         },
     );
     if let Some(drag) = harness.app.drag_mut() {
@@ -2134,6 +2136,7 @@ fn dock_tab_drop_outside_window_requests_float() {
         DockPanelDragPayload {
             panel: PanelKey::new("core.hierarchy"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            tear_off_requested: false,
         },
     );
     if let Some(drag) = app.drag_mut() {
@@ -2162,6 +2165,90 @@ fn dock_tab_drop_outside_window_requests_float() {
                 if *panel == PanelKey::new("core.hierarchy")
         )),
         "expected a float request effect when dropping outside the window"
+    );
+}
+
+#[test]
+fn dock_tab_drop_outside_window_does_not_request_tear_off_twice() {
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(root);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.hierarchy")],
+            active: 0,
+        });
+        dock.graph.set_window_root(window, tabs);
+        dock.panels.insert(
+            PanelKey::new("core.hierarchy"),
+            DockPanel {
+                title: "Hierarchy".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+    });
+
+    app.begin_cross_window_drag_with_kind(
+        DragKind::DockPanel,
+        window,
+        Point::new(Px(24.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: PanelKey::new("core.hierarchy"),
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+            tear_off_requested: false,
+        },
+    );
+    if let Some(drag) = app.drag_mut() {
+        drag.dragging = true;
+    }
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+
+    let outside = Point::new(Px(-32.0), Px(12.0));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::InternalDrag(InternalDragEvent {
+            position: outside,
+            kind: InternalDragKind::Over,
+            modifiers: Modifiers::default(),
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::InternalDrag(InternalDragEvent {
+            position: outside,
+            kind: InternalDragKind::Drop,
+            modifiers: Modifiers::default(),
+        }),
+    );
+
+    let effects = app.take_effects();
+    let count = effects
+        .iter()
+        .filter(|e| {
+            matches!(
+                e,
+                Effect::Dock(DockOp::RequestFloatPanelToNewWindow { panel, .. })
+                    if *panel == PanelKey::new("core.hierarchy")
+            )
+        })
+        .count();
+    assert_eq!(
+        count, 1,
+        "expected at most one tear-off request for a single drag session"
     );
 }
 
@@ -2202,6 +2289,7 @@ fn dock_tab_drop_outside_window_floats_in_window_when_tear_off_disabled() {
         DockPanelDragPayload {
             panel: PanelKey::new("core.hierarchy"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            tear_off_requested: false,
         },
     );
     if let Some(drag) = app.drag_mut() {
@@ -2271,6 +2359,7 @@ fn dock_tab_drop_outside_window_floats_in_window_when_multi_window_is_disabled()
         DockPanelDragPayload {
             panel: PanelKey::new("core.hierarchy"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            tear_off_requested: false,
         },
     );
     if let Some(drag) = app.drag_mut() {
@@ -2344,6 +2433,7 @@ fn dock_tab_drop_outside_routes_to_dock_space() {
         DockPanelDragPayload {
             panel: PanelKey::new("core.hierarchy"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            tear_off_requested: false,
         },
     );
     if let Some(drag) = app.drag_mut() {

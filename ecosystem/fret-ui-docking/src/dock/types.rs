@@ -7,6 +7,7 @@ use fret_core::{
 pub(super) struct DockPanelDragPayload {
     pub(super) panel: PanelKey,
     pub(super) grab_offset: Point,
+    pub(super) tear_off_requested: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]

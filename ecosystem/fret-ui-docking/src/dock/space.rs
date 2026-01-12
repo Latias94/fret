@@ -43,7 +43,6 @@ pub struct DockSpace {
     panel_content: HashMap<PanelKey, NodeId>,
     panel_last_sizes: HashMap<PanelKey, Size>,
     viewport_capture: Option<ViewportCaptureState>,
-    tear_off_in_flight: Option<DockTearOffKey>,
     tab_titles: HashMap<PanelKey, PreparedTabTitle>,
     empty_state: Option<PreparedTabTitle>,
     hovered_tab: Option<(DockNodeId, usize)>,
@@ -58,13 +57,6 @@ pub struct DockSpace {
     last_empty_state_theme_revision: Option<u64>,
     last_tab_text_scale_factor: Option<f32>,
     last_theme_revision: Option<u64>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-struct DockTearOffKey {
-    source_window: fret_core::AppWindowId,
-    start: Point,
-    panel: PanelKey,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -102,7 +94,6 @@ impl DockSpace {
             panel_content: HashMap::new(),
             panel_last_sizes: HashMap::new(),
             viewport_capture: None,
-            tear_off_in_flight: None,
             tab_titles: HashMap::new(),
             empty_state: None,
             hovered_tab: None,
@@ -487,6 +478,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             dragging: bool,
             panel: PanelKey,
             grab_offset: Point,
+            tear_off_requested: bool,
         }
 
         fn is_outside_bounds_with_margin(bounds: Rect, position: Point, margin: Px) -> bool {
@@ -547,6 +539,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     dragging: d.dragging,
                     panel: p.panel.clone(),
                     grab_offset: p.grab_offset,
+                    tear_off_requested: p.tear_off_requested,
                 })
         });
         // While a dock drag session exists (even before it crosses the drag threshold), we must
@@ -570,23 +563,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
             .unwrap_or(1.0);
         let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
 
-        match dock_drag.as_ref() {
-            Some(drag) => {
-                let key = DockTearOffKey {
-                    source_window: drag.source_window,
-                    start: drag.start,
-                    panel: drag.panel.clone(),
-                };
-                if self.tear_off_in_flight.as_ref() != Some(&key) {
-                    self.tear_off_in_flight = None;
-                }
-            }
-            None => self.tear_off_in_flight = None,
-        }
-
         let mut begin_drag: Option<(Point, PanelKey, Point)> = None;
         let mut update_drag: Option<(Point, bool)> = None;
         let mut end_dock_drag = false;
+        let mut mark_drag_tear_off_requested = false;
 
         {
             cx.app
@@ -1382,14 +1362,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             position,
                                             margin,
                                         )
-                                        && self.tear_off_in_flight.is_none();
+                                        && !drag.tear_off_requested
+                                        && !mark_drag_tear_off_requested;
 
                                     if requested_tear_off {
-                                        self.tear_off_in_flight = Some(DockTearOffKey {
-                                            source_window: drag.source_window,
-                                            start: drag.start,
-                                            panel: drag.panel.clone(),
-                                        });
+                                        mark_drag_tear_off_requested = true;
                                         pending_effects.push(Effect::Dock(
                                             DockOp::RequestFloatPanelToNewWindow {
                                                 source_window: drag.source_window,
@@ -1529,16 +1506,26 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 && (!window_bounds.contains(position)
                                                     || float_zone(dock_bounds).contains(position));
                                             if wants_tear_off {
-                                                pending_effects.push(Effect::Dock(
-                                                    DockOp::RequestFloatPanelToNewWindow {
-                                                        source_window: drag.source_window,
-                                                        panel: drag.panel.clone(),
-                                                        anchor: Some(fret_core::WindowAnchor {
-                                                            window: self.window,
-                                                            position: drag.grab_offset,
-                                                        }),
-                                                    },
-                                                ));
+                                                // Avoid requesting the same tear-off twice for a
+                                                // single dock drag session. The runner may deliver
+                                                // `Drop` via multiple routes (e.g. device events
+                                                // outside windows), but the window creation request
+                                                // should remain idempotent at the UI layer.
+                                                if !drag.tear_off_requested
+                                                    && !mark_drag_tear_off_requested
+                                                {
+                                                    mark_drag_tear_off_requested = true;
+                                                    pending_effects.push(Effect::Dock(
+                                                        DockOp::RequestFloatPanelToNewWindow {
+                                                            source_window: drag.source_window,
+                                                            panel: drag.panel.clone(),
+                                                            anchor: Some(fret_core::WindowAnchor {
+                                                                window: self.window,
+                                                                position: drag.grab_offset,
+                                                            }),
+                                                        },
+                                                    ));
+                                                }
                                             } else {
                                                 let rect = self.default_floating_rect_for_panel(
                                                     &drag.panel,
@@ -1562,16 +1549,23 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 || float_zone(dock_bounds).contains(position)
                                             {
                                                 if allow_tear_off {
-                                                    pending_effects.push(Effect::Dock(
-                                                        DockOp::RequestFloatPanelToNewWindow {
-                                                            source_window: drag.source_window,
-                                                            panel: drag.panel.clone(),
-                                                            anchor: Some(fret_core::WindowAnchor {
-                                                                window: self.window,
-                                                                position: drag.grab_offset,
-                                                            }),
-                                                        },
-                                                    ));
+                                                    if !drag.tear_off_requested
+                                                        && !mark_drag_tear_off_requested
+                                                    {
+                                                        mark_drag_tear_off_requested = true;
+                                                        pending_effects.push(Effect::Dock(
+                                                            DockOp::RequestFloatPanelToNewWindow {
+                                                                source_window: drag.source_window,
+                                                                panel: drag.panel.clone(),
+                                                                anchor: Some(
+                                                                    fret_core::WindowAnchor {
+                                                                        window: self.window,
+                                                                        position: drag.grab_offset,
+                                                                    },
+                                                                ),
+                                                            },
+                                                        ));
+                                                    }
                                                 } else {
                                                     let rect = self
                                                         .default_floating_rect_for_panel(
@@ -1628,7 +1622,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 DragKind::DockPanel,
                 self.window,
                 start,
-                DockPanelDragPayload { panel, grab_offset },
+                DockPanelDragPayload {
+                    panel,
+                    grab_offset,
+                    tear_off_requested: false,
+                },
             );
         }
 
@@ -1645,6 +1643,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
         {
             drag.position = position;
             drag.dragging = dragging;
+            if mark_drag_tear_off_requested {
+                if let Some(payload) = drag.payload_mut::<DockPanelDragPayload>() {
+                    payload.tear_off_requested = true;
+                }
+            }
         }
 
         if end_dock_drag
@@ -1654,7 +1657,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 .and_then(|d| d.payload::<DockPanelDragPayload>())
                 .is_some()
         {
-            self.tear_off_in_flight = None;
             cx.app.cancel_drag();
         }
 
@@ -1809,8 +1811,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let wants_animation_frames = is_dock_dragging
             || self.divider_drag.is_some()
             || self.floating_drag.is_some()
-            || self.viewport_capture.is_some()
-            || self.tear_off_in_flight.is_some();
+            || self.viewport_capture.is_some();
         if wants_animation_frames && let Some(window) = cx.window {
             cx.app.push_effect(Effect::RequestAnimationFrame(window));
         }
