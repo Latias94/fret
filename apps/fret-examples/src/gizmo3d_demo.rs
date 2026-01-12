@@ -904,7 +904,6 @@ struct PendingUndoRecords {
     custom_scalars: Option<UndoRecord<ValueTx<HashMap<CustomScalarKey, f32>>>>,
 }
 
-#[derive(Debug)]
 struct Gizmo3dDemoModel {
     viewport_target: RenderTargetId,
     viewport_px: (u32, u32),
@@ -1052,18 +1051,18 @@ impl Gizmo3dDemoModel {
             return None;
         }
 
-        let label = match edits.first().copied() {
+        let label = match edits.first() {
             Some(GizmoCustomEdit::Scalar { key, .. })
-                if key == LightRadiusGizmoPlugin::PROPERTY_RADIUS =>
+                if *key == LightRadiusGizmoPlugin::PROPERTY_RADIUS =>
             {
                 "Light Radius"
             }
             _ => "Property",
         };
 
-        let tool = match edits.first().copied() {
+        let tool = match edits.first() {
             Some(GizmoCustomEdit::Scalar { key, .. })
-                if key == LightRadiusGizmoPlugin::PROPERTY_RADIUS =>
+                if *key == LightRadiusGizmoPlugin::PROPERTY_RADIUS =>
             {
                 "gizmo.light_radius"
             }
@@ -1316,16 +1315,23 @@ const DEMO_THEME_PRESETS: [(&str, &str); 3] = [
 ];
 
 fn apply_viewport_gizmo_theme(theme: &Theme, model: &mut Gizmo3dDemoModel) {
-    let gizmo_cfg = &mut model.gizmo_mut().config;
-    gizmo_cfg.x_color = theme.color_required("color.viewport.gizmo.x");
-    gizmo_cfg.y_color = theme.color_required("color.viewport.gizmo.y");
-    gizmo_cfg.z_color = theme.color_required("color.viewport.gizmo.z");
-    gizmo_cfg.hover_color = theme.color_required("color.viewport.gizmo.hover");
+    let x_color = theme.color_required("color.viewport.gizmo.x");
+    let y_color = theme.color_required("color.viewport.gizmo.y");
+    let z_color = theme.color_required("color.viewport.gizmo.z");
+    let hover_color = theme.color_required("color.viewport.gizmo.hover");
 
-    model.view_gizmo.config.x_color = gizmo_cfg.x_color;
-    model.view_gizmo.config.y_color = gizmo_cfg.y_color;
-    model.view_gizmo.config.z_color = gizmo_cfg.z_color;
-    model.view_gizmo.config.hover_color = gizmo_cfg.hover_color;
+    {
+        let gizmo_cfg = &mut model.gizmo_mut().config;
+        gizmo_cfg.x_color = x_color;
+        gizmo_cfg.y_color = y_color;
+        gizmo_cfg.z_color = z_color;
+        gizmo_cfg.hover_color = hover_color;
+    }
+
+    model.view_gizmo.config.x_color = x_color;
+    model.view_gizmo.config.y_color = y_color;
+    model.view_gizmo.config.z_color = z_color;
+    model.view_gizmo.config.hover_color = hover_color;
     model.view_gizmo.config.face_color = theme.color_required("color.viewport.view_gizmo.face");
     model.view_gizmo.config.edge_color = theme.color_required("color.viewport.view_gizmo.edge");
 }
@@ -3624,10 +3630,11 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         m.capture_custom_scalar_drag_start(&update.custom_edits);
                         m.apply_custom_scalar_totals(&update.custom_edits);
 
+                        let selection = m.selection.clone();
                         pending.custom_scalars = m.commit_custom_scalar_undo_record(
                             &update.custom_edits,
                             m.active_target,
-                            &m.selection,
+                            &selection,
                         );
 
                         if let Some(before) = m.drag_start_targets.take() {
