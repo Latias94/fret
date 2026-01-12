@@ -4361,6 +4361,160 @@ fn axis_pointer_axis_trigger_snaps_axis_value_to_nearest_sample_when_enabled() {
 }
 
 #[test]
+fn axis_pointer_axis_trigger_uses_first_visible_series_as_primary() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis_a = crate::ids::AxisId::new(1);
+    let x_axis_b = crate::ids::AxisId::new(2);
+    let y_axis = crate::ids::AxisId::new(3);
+    let series_a = crate::ids::SeriesId::new(1);
+    let series_b = crate::ids::SeriesId::new(2);
+
+    let x_a = crate::ids::FieldId::new(1);
+    let y_a = crate::ids::FieldId::new(2);
+    let x_b = crate::ids::FieldId::new(3);
+    let y_b = crate::ids::FieldId::new(4);
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        )),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec { id: x_a, column: 0 },
+                FieldSpec { id: y_a, column: 1 },
+                FieldSpec { id: x_b, column: 2 },
+                FieldSpec { id: y_b, column: 3 },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis_a,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: x_axis_b,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        data_zoom_y: vec![],
+        tooltip: None,
+        axis_pointer: Some(AxisPointerSpec {
+            enabled: true,
+            trigger: crate::spec::AxisPointerTrigger::Axis,
+            snap: true,
+            trigger_distance_px: 10_000.0,
+            throttle_px: 0.0,
+        }),
+        visual_maps: vec![],
+        series: vec![
+            SeriesSpec {
+                id: series_a,
+                name: Some("A".to_string()),
+                kind: SeriesKind::Line,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_a,
+                    y: y_a,
+                    y2: None,
+                },
+                x_axis: x_axis_a,
+                y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+            },
+            SeriesSpec {
+                id: series_b,
+                name: Some("B".to_string()),
+                kind: SeriesKind::Line,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_b,
+                    y: y_b,
+                    y2: None,
+                },
+                x_axis: x_axis_b,
+                y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+            },
+        ],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(vec![0.0, 1.0]));
+    table.push_column(Column::F64(vec![0.0, 1.0]));
+    table.push_column(Column::F64(vec![0.0, 1.0]));
+    table.push_column(Column::F64(vec![10.0, 11.0]));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 32))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    engine.apply_action(Action::SetSeriesVisible {
+        series: series_a,
+        visible: false,
+    });
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(32_768, 0, 8))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    engine.apply_action(Action::HoverAt {
+        point: Point::new(Px(25.0), Px(10.0)),
+    });
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(32_768, 0, 8))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let axis_pointer = engine.output().axis_pointer.as_ref().unwrap();
+    let crate::TooltipOutput::Axis(axis) = &axis_pointer.tooltip else {
+        panic!("expected axis-trigger tooltip payload");
+    };
+    assert_eq!(axis.axis, x_axis_b);
+    assert_eq!(axis.axis_kind, AxisKind::X);
+    assert_eq!(axis.series.len(), 1);
+    assert_eq!(axis.series[0].series, series_b);
+    assert_eq!(
+        axis.series[0].value,
+        crate::TooltipSeriesValue::Scalar(10.0)
+    );
+}
+
+#[test]
 fn axis_pointer_axis_trigger_snaps_category_y_to_band_center_when_enabled() {
     let dataset_id = crate::ids::DatasetId::new(1);
     let grid_id = crate::ids::GridId::new(1);

@@ -182,6 +182,7 @@ single “at a glance” view of:
   - When a series is already isolated, `LMB double-click` restores all series visibility.
   - `Shift + LMB click` toggles a contiguous range (anchor -> clicked) to match the clicked toggle target.
   - `RMB click` inside the legend panel restores all series visibility.
+  - Hidden series do not participate in axisPointer primary selection and are excluded from axis-trigger tooltip rows.
 - What exists in v1:
   - A built-in legend overlay in `fret-chart` (panel + swatch + hover highlight).
   - Visibility is wired through `delinea::Action::SetSeriesVisible` (headless model is authoritative).
