@@ -652,6 +652,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - split plan: `ecosystem/fret-node/src/ui/presenter.rs` (`plan_split_edge` / `plan_split_edge_candidate`)
     - edge menu action: `CMD_NODE_GRAPH_INSERT_REROUTE` in `ecosystem/fret-node/src/ui/canvas/widget.rs`
     - double-click wire insertion (optional): `NodeGraphInteractionState.reroute_on_edge_double_click` + `NodeGraphCanvas::event` in `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - alt+double-click wire opens the insert-node picker (searcher UX): `NodeGraphCanvas::event` -> `open_edge_insert_node_picker` in `ecosystem/fret-node/src/ui/canvas/widget.rs`
 
 ---
 

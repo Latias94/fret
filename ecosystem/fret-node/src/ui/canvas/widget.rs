@@ -6919,6 +6919,83 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
                 if *button == MouseButton::Left
                     && *click_count == 2
+                    && (modifiers.alt || modifiers.alt_gr)
+                    && self.interaction.searcher.is_none()
+                    && self.interaction.context_menu.is_none()
+                {
+                    let (geom, index) = self.canvas_derived(&*cx.app, &snapshot);
+                    let hit: Option<EdgeId> = self
+                        .graph
+                        .read_ref(cx.app, |graph| {
+                            let mut scratch_ports: Vec<PortId> = Vec::new();
+                            let mut scratch_edges: Vec<EdgeId> = Vec::new();
+
+                            if self
+                                .hit_port(
+                                    geom.as_ref(),
+                                    index.as_ref(),
+                                    *position,
+                                    zoom,
+                                    &mut scratch_ports,
+                                )
+                                .is_some()
+                            {
+                                return None;
+                            }
+                            if self
+                                .hit_edge_focus_anchor(
+                                    graph,
+                                    &snapshot,
+                                    geom.as_ref(),
+                                    index.as_ref(),
+                                    *position,
+                                    zoom,
+                                    &mut scratch_edges,
+                                )
+                                .is_some()
+                            {
+                                return None;
+                            }
+                            if geom.nodes.values().any(|ng| ng.rect.contains(*position)) {
+                                return None;
+                            }
+                            if graph.groups.values().any(|group| {
+                                group_resize::group_rect_to_px(group.rect).contains(*position)
+                            }) {
+                                return None;
+                            }
+                            self.hit_edge(
+                                graph,
+                                &snapshot,
+                                geom.as_ref(),
+                                index.as_ref(),
+                                *position,
+                                zoom,
+                                &mut scratch_edges,
+                            )
+                        })
+                        .ok()
+                        .flatten();
+
+                    if let Some(edge_id) = hit {
+                        self.update_view_state(cx.app, |s| {
+                            s.selected_nodes.clear();
+                            s.selected_groups.clear();
+                            if !s.selected_edges.iter().any(|id| *id == edge_id) {
+                                s.selected_edges.clear();
+                                s.selected_edges.push(edge_id);
+                            }
+                        });
+                        self.open_edge_insert_node_picker(cx.app, cx.window, edge_id, *position);
+                        cx.stop_propagation();
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
+                        return;
+                    }
+                }
+
+                if *button == MouseButton::Left
+                    && *click_count == 2
                     && snapshot.interaction.reroute_on_edge_double_click
                     && self.interaction.searcher.is_none()
                     && self.interaction.context_menu.is_none()
@@ -9692,6 +9769,70 @@ mod tests {
         assert_eq!(after.selected_edges.len(), 0);
         assert_eq!(after.selected_nodes.len(), 1);
         assert_eq!(after.zoom, 1.0);
+    }
+
+    #[test]
+    fn alt_double_click_edge_opens_insert_node_picker() {
+        let mut host = TestUiHostImpl::default();
+        let (mut graph_value, _a, _a_in, a_out, _b, b_in) =
+            make_test_graph_two_nodes_with_ports_spaced_x(420.0);
+        let edge_id = EdgeId::new();
+        graph_value.edges.insert(
+            edge_id,
+            Edge {
+                kind: EdgeKind::Data,
+                from: a_out,
+                to: b_in,
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        );
+
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = NullServices::default();
+        let mut cx = event_cx(&mut host, &mut services, bounds);
+
+        let snap = canvas.sync_view_state(cx.app);
+        let (geom, _index) = canvas.canvas_derived(&*cx.app, &snap);
+        let from = geom.port_center(a_out).expect("from port center");
+        let to = geom.port_center(b_in).expect("to port center");
+        let (c1, c2) = super::wire_ctrl_points(from, to, snap.zoom);
+        let pos = super::cubic_bezier(from, c1, c2, to, 0.5);
+
+        canvas.event(
+            &mut cx,
+            &Event::Pointer(PointerEvent::Down {
+                position: pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers {
+                    alt: true,
+                    ..Modifiers::default()
+                },
+                click_count: 2,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let nodes_len = graph.read_ref(cx.app, |g| g.nodes.len()).unwrap_or(0);
+        let edges_len = graph.read_ref(cx.app, |g| g.edges.len()).unwrap_or(0);
+        assert_eq!(nodes_len, 2);
+        assert_eq!(edges_len, 1);
+
+        let Some(searcher) = canvas.interaction.searcher.as_ref() else {
+            panic!("expected searcher to be open");
+        };
+        assert!(matches!(
+            searcher.target,
+            super::super::state::ContextMenuTarget::EdgeInsertNodePicker(e) if e == edge_id
+        ));
     }
     use crate::rules::EdgeEndpoint;
     use crate::ui::commands::{
