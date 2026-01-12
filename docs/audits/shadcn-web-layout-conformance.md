@@ -71,12 +71,15 @@ patterns:
 - `radio-group-demo`
 - `tabs-demo`
 - `switch-demo`
+- `empty-avatar`
+- `empty-avatar-group`
 - `popover-demo` (overlay placement + transform origin)
 - `dropdown-menu-demo` (overlay placement + max-height/scrolling)
 - `select-scrollable` (available-height clamping + scrolling)
 - `scroll-area-demo`
 - `slider-demo`
 - `avatar-demo`
+- `item-avatar`
 - `separator-demo`
 - `textarea-demo`
 

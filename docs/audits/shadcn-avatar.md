@@ -29,3 +29,7 @@ This audit compares Fret’s shadcn-aligned `Avatar` against the upstream shadcn
 
 - Web layout gate: `cargo nextest run -p fret-ui-shadcn -F fret-ui/layout-engine-v2 --test web_vs_fret_layout`
   (`web_vs_fret_layout_avatar_demo_geometry`).
+- Additional avatar gates in the same suite:
+  - `web_vs_fret_layout_empty_avatar_geometry`
+  - `web_vs_fret_layout_empty_avatar_group_geometry`
+  - `web_vs_fret_layout_item_avatar_geometry`
