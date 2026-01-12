@@ -2,8 +2,9 @@ use std::sync::Arc;
 
 use fret_app::{App, CommandId, Effect};
 use fret_bootstrap::ui_app_with_hooks;
-use fret_core::{AppWindowId, UiServices};
+use fret_core::{AppWindowId, SemanticsRole, UiServices};
 use fret_core::{TextOverflow, TextWrap};
+use fret_ui::element::SemanticsProps;
 use fret_ui::element::{HoverRegionProps, TextProps};
 use fret_ui::{Invalidation, Theme};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -312,7 +313,14 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
         })
     };
 
-    vec![page]
+    vec![cx.semantics(
+        SemanticsProps {
+            role: SemanticsRole::Panel,
+            label: Some(Arc::from("Debug:todo-demo:page")),
+            ..Default::default()
+        },
+        move |_cx| vec![page],
+    )]
 }
 
 fn todo_list_panel(

@@ -256,27 +256,58 @@ impl<H: UiHost> UiTree<H> {
 
         // When debugging complex demos or golden-gated layouts, it is often easier to filter by a
         // stable element label (e.g. a `SemanticsProps.label`) than by ephemeral `NodeId`s.
-        if let Ok(filter) = std::env::var("FRET_TAFFY_DUMP_ROOT_LABEL") {
+        let dump_root = if let Ok(filter) = std::env::var("FRET_TAFFY_DUMP_ROOT_LABEL") {
             let root_label = crate::declarative::frame::element_record_for_node(app, window, root)
                 .map(|r| format!("{:?}", r.instance))
                 .unwrap_or_default();
-            if !root_label.contains(&filter) {
-                return;
+            if root_label.contains(&filter) {
+                root
+            } else {
+                let mut stack: Vec<NodeId> = vec![root];
+                let mut visited: std::collections::HashSet<NodeId> =
+                    std::collections::HashSet::new();
+                let mut found: Option<NodeId> = None;
+                while let Some(node) = stack.pop() {
+                    if !visited.insert(node) {
+                        continue;
+                    }
+
+                    let label =
+                        crate::declarative::frame::element_record_for_node(app, window, node)
+                            .map(|r| format!("{:?}", r.instance))
+                            .unwrap_or_default();
+                    if label.contains(&filter) {
+                        found = Some(node);
+                        break;
+                    }
+
+                    if let Some(node) = self.nodes.get(node) {
+                        stack.extend(node.children.iter().copied());
+                    }
+                }
+
+                let Some(found) = found else {
+                    return;
+                };
+
+                found
             }
-        }
+        } else {
+            root
+        };
 
         let out_dir = std::env::var("FRET_TAFFY_DUMP_DIR")
             .ok()
             .unwrap_or_else(|| ".fret/taffy-dumps".to_string());
 
         let frame = app.frame_id().0;
-        let root_slug: String = format!("{root:?}")
+        let root_slug: String = format!("{dump_root:?}")
             .chars()
             .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '_' })
             .collect();
         let filename = format!("taffy_{frame}_{root_slug}.json");
 
-        let dump = engine.debug_dump_subtree_json(root, |node| {
+        let dump = engine.debug_dump_subtree_json(dump_root, |node| {
             crate::declarative::frame::element_record_for_node(app, window, node)
                 .map(|r| format!("{:?}", r.instance))
         });

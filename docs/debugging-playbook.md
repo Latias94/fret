@@ -97,7 +97,8 @@ $env:FRET_TAFFY_DUMP_MAX=30
 $env:FRET_TAFFY_DUMP_ROOT="NodeId(46"
 # Optional: only dump roots whose element debug label contains this substring.
 # Tip: if you wrap a region in a `SemanticsProps { label: Some("Golden:..."), .. }`, you can
-# filter by that label.
+# filter by that label. Note: the label match is applied to the root subtree, so you can match a
+# nested `SemanticsProps.label` even if the window root is an internal wrapper.
 $env:FRET_TAFFY_DUMP_ROOT_LABEL="Golden:input-with-label"
 
 # Run a repro with layout-engine-v2 enabled (example):
@@ -111,8 +112,18 @@ Notes:
   and a debug `label` derived from the element instance.
 - Prefer filtering by a stable semantics label when possible:
   - Wrap the root you care about with `SemanticsProps { label: Some("Golden:..."), .. }`.
-  - Set `FRET_TAFFY_DUMP_ROOT_LABEL="Golden:..."` to capture only that subtree, without chasing
-    unstable `NodeId(...)` values across runs.
+  - Set `FRET_TAFFY_DUMP_ROOT_LABEL="Golden:..."` to dump the first matching node’s subtree,
+    without chasing unstable `NodeId(...)` values across runs.
+
+Example (todo demo):
+
+```powershell
+$env:FRET_TAFFY_DUMP=1
+$env:FRET_TAFFY_DUMP_ONCE=1
+$env:FRET_TAFFY_DUMP_DIR=".fret\\taffy-dumps"
+$env:FRET_TAFFY_DUMP_ROOT_LABEL="Debug:todo-demo:page"
+cargo run -p fret-demo --features layout-engine-v2 --bin todo_demo
+```
 
 ### 2.2 Prefer a unit test when possible
 
