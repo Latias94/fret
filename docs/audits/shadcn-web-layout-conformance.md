@@ -77,6 +77,9 @@ patterns:
 - `input-with-label`
 - `field-input`
 - `field-checkbox`
+- `field-group`
+- `field-fieldset`
+- `field-choice-card`
 - `field-switch`
 - `field-select`
 - `field-radio`
