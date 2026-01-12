@@ -4188,14 +4188,7 @@ impl Gizmo {
                     } else {
                         base
                     };
-
-                    let mut prev = origin + u * r;
-                    for i in 1..=segments {
-                        let t = (i as f32) / (segments as f32) * std::f32::consts::TAU;
-                        let p = origin + (u * t.cos() + v * t.sin()) * r;
-                        self.push_line(&mut out.lines, prev, p, c, DepthMode::Always);
-                        prev = p;
-                    }
+                    push_ring_band(u, v, r, c, DepthMode::Always);
                 }
             }
         }
