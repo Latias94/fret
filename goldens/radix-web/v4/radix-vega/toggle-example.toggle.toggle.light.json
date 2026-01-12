@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseUrl": "http://localhost:4020",
+  "baseUrl": "http://localhost:4000",
   "base": "radix",
   "style": "vega",
   "baseColor": "neutral",
@@ -13,12 +13,12 @@
   "item": "toggle-example",
   "primitive": "toggle",
   "scenario": "toggle",
-  "url": "http://localhost:4020/preview/radix/toggle-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "url": "http://localhost:4000/preview/radix/toggle-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
   "steps": [
     {
       "action": {
         "kind": "load",
-        "url": "http://localhost:4020/preview/radix/toggle-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+        "url": "http://localhost:4000/preview/radix/toggle-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
       },
       "snapshot": {
         "focus": {
@@ -53,7 +53,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -63,7 +65,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -74,7 +78,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -102,6 +108,7 @@
                                       "attrs": {
                                         "aria-pressed": "true",
                                         "data-state": "on",
+                                        "data-slot": "toggle",
                                         "aria-label": "Toggle bold"
                                       },
                                       "children": []
@@ -120,6 +127,7 @@
                                       "attrs": {
                                         "aria-pressed": "false",
                                         "data-state": "off",
+                                        "data-slot": "toggle",
                                         "aria-label": "Toggle italic"
                                       },
                                       "children": []
@@ -138,6 +146,7 @@
                                       "attrs": {
                                         "aria-pressed": "false",
                                         "data-state": "off",
+                                        "data-slot": "toggle",
                                         "aria-label": "Toggle underline"
                                       },
                                       "children": []
@@ -157,7 +166,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -168,7 +179,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -196,6 +209,7 @@
                                       "attrs": {
                                         "aria-pressed": "false",
                                         "data-state": "off",
+                                        "data-slot": "toggle",
                                         "aria-label": "Toggle italic"
                                       },
                                       "children": [],
@@ -215,6 +229,7 @@
                                       "attrs": {
                                         "aria-pressed": "false",
                                         "data-state": "off",
+                                        "data-slot": "toggle",
                                         "aria-label": "Toggle bold"
                                       },
                                       "children": [],
@@ -237,7 +252,9 @@
                             0,
                             2
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -248,7 +265,9 @@
                                 2,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -276,6 +295,7 @@
                                       "attrs": {
                                         "aria-pressed": "false",
                                         "data-state": "off",
+                                        "data-slot": "toggle",
                                         "aria-label": "Toggle small"
                                       },
                                       "children": [],
@@ -295,6 +315,7 @@
                                       "attrs": {
                                         "aria-pressed": "false",
                                         "data-state": "off",
+                                        "data-slot": "toggle",
                                         "aria-label": "Toggle default"
                                       },
                                       "children": [],
@@ -314,6 +335,7 @@
                                       "attrs": {
                                         "aria-pressed": "false",
                                         "data-state": "off",
+                                        "data-slot": "toggle",
                                         "aria-label": "Toggle large"
                                       },
                                       "children": [],
@@ -336,7 +358,9 @@
                             0,
                             3
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -347,7 +371,9 @@
                                 3,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -386,7 +412,9 @@
                                             0,
                                             0
                                           ],
-                                          "attrs": {},
+                                          "attrs": {
+                                            "data-slot": "button"
+                                          },
                                           "children": [],
                                           "text": "Button"
                                         },
@@ -405,6 +433,7 @@
                                           "attrs": {
                                             "aria-pressed": "false",
                                             "data-state": "off",
+                                            "data-slot": "toggle",
                                             "aria-label": "Toggle sm"
                                           },
                                           "children": [],
@@ -438,7 +467,9 @@
                                             1,
                                             0
                                           ],
-                                          "attrs": {},
+                                          "attrs": {
+                                            "data-slot": "button"
+                                          },
                                           "children": [],
                                           "text": "Button"
                                         },
@@ -457,6 +488,7 @@
                                           "attrs": {
                                             "aria-pressed": "false",
                                             "data-state": "off",
+                                            "data-slot": "toggle",
                                             "aria-label": "Toggle default"
                                           },
                                           "children": [],
@@ -490,7 +522,9 @@
                                             2,
                                             0
                                           ],
-                                          "attrs": {},
+                                          "attrs": {
+                                            "data-slot": "button"
+                                          },
                                           "children": [],
                                           "text": "Button"
                                         },
@@ -509,6 +543,7 @@
                                           "attrs": {
                                             "aria-pressed": "false",
                                             "data-state": "off",
+                                            "data-slot": "toggle",
                                             "aria-label": "Toggle lg"
                                           },
                                           "children": [],
@@ -534,7 +569,9 @@
                             0,
                             4
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -545,7 +582,9 @@
                                 4,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -584,7 +623,9 @@
                                             0,
                                             0
                                           ],
-                                          "attrs": {},
+                                          "attrs": {
+                                            "data-slot": "button"
+                                          },
                                           "children": []
                                         },
                                         {
@@ -602,6 +643,7 @@
                                           "attrs": {
                                             "aria-pressed": "false",
                                             "data-state": "off",
+                                            "data-slot": "toggle",
                                             "aria-label": "Toggle sm icon"
                                           },
                                           "children": []
@@ -633,7 +675,9 @@
                                             1,
                                             0
                                           ],
-                                          "attrs": {},
+                                          "attrs": {
+                                            "data-slot": "button"
+                                          },
                                           "children": []
                                         },
                                         {
@@ -651,6 +695,7 @@
                                           "attrs": {
                                             "aria-pressed": "false",
                                             "data-state": "off",
+                                            "data-slot": "toggle",
                                             "aria-label": "Toggle default icon"
                                           },
                                           "children": []
@@ -682,7 +727,9 @@
                                             2,
                                             0
                                           ],
-                                          "attrs": {},
+                                          "attrs": {
+                                            "data-slot": "button"
+                                          },
                                           "children": []
                                         },
                                         {
@@ -700,6 +747,7 @@
                                           "attrs": {
                                             "aria-pressed": "false",
                                             "data-state": "off",
+                                            "data-slot": "toggle",
                                             "aria-label": "Toggle lg icon"
                                           },
                                           "children": []
@@ -721,7 +769,9 @@
                             0,
                             5
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -732,7 +782,9 @@
                                 5,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -771,7 +823,9 @@
                                             0,
                                             0
                                           ],
-                                          "attrs": {},
+                                          "attrs": {
+                                            "data-slot": "button"
+                                          },
                                           "children": [],
                                           "text": "Button"
                                         },
@@ -790,6 +844,7 @@
                                           "attrs": {
                                             "aria-pressed": "false",
                                             "data-state": "off",
+                                            "data-slot": "toggle",
                                             "aria-label": "Toggle sm icon text"
                                           },
                                           "children": [],
@@ -823,7 +878,9 @@
                                             1,
                                             0
                                           ],
-                                          "attrs": {},
+                                          "attrs": {
+                                            "data-slot": "button"
+                                          },
                                           "children": [],
                                           "text": "Button"
                                         },
@@ -842,6 +899,7 @@
                                           "attrs": {
                                             "aria-pressed": "false",
                                             "data-state": "off",
+                                            "data-slot": "toggle",
                                             "aria-label": "Toggle default icon text"
                                           },
                                           "children": [],
@@ -875,7 +933,9 @@
                                             2,
                                             0
                                           ],
-                                          "attrs": {},
+                                          "attrs": {
+                                            "data-slot": "button"
+                                          },
                                           "children": [],
                                           "text": "Button"
                                         },
@@ -894,6 +954,7 @@
                                           "attrs": {
                                             "aria-pressed": "false",
                                             "data-state": "off",
+                                            "data-slot": "toggle",
                                             "aria-label": "Toggle lg icon text"
                                           },
                                           "children": [],
@@ -919,7 +980,9 @@
                             0,
                             6
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -930,7 +993,9 @@
                                 6,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -959,6 +1024,7 @@
                                         "aria-pressed": "false",
                                         "data-state": "off",
                                         "data-disabled": "",
+                                        "data-slot": "toggle",
                                         "aria-label": "Toggle disabled"
                                       },
                                       "children": [],
@@ -979,6 +1045,7 @@
                                         "aria-pressed": "false",
                                         "data-state": "off",
                                         "data-disabled": "",
+                                        "data-slot": "toggle",
                                         "aria-label": "Toggle disabled outline"
                                       },
                                       "children": [],
@@ -1001,7 +1068,9 @@
                             0,
                             7
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1012,7 +1081,9 @@
                                 7,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1040,6 +1111,7 @@
                                       "attrs": {
                                         "aria-pressed": "true",
                                         "data-state": "on",
+                                        "data-slot": "toggle",
                                         "aria-label": "Toggle bookmark"
                                       },
                                       "children": []
@@ -1058,6 +1130,7 @@
                                       "attrs": {
                                         "aria-pressed": "false",
                                         "data-state": "off",
+                                        "data-slot": "toggle",
                                         "aria-label": "Toggle bookmark outline"
                                       },
                                       "children": [],
@@ -1277,6 +1350,30 @@
               "pressed": false
             },
             {
+              "role": "StaticText",
+              "name": "xs"
+            },
+            {
+              "role": "StaticText",
+              "name": "sm"
+            },
+            {
+              "role": "StaticText",
+              "name": "md"
+            },
+            {
+              "role": "StaticText",
+              "name": "lg"
+            },
+            {
+              "role": "StaticText",
+              "name": "xl"
+            },
+            {
+              "role": "StaticText",
+              "name": "2xl"
+            },
+            {
               "role": "region",
               "name": "Notifications alt+T"
             }
@@ -1304,6 +1401,7 @@
           "attrs": {
             "aria-pressed": "false",
             "data-state": "off",
+            "data-slot": "toggle",
             "aria-label": "Toggle bold"
           }
         },
@@ -1334,7 +1432,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -1344,7 +1444,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1355,7 +1457,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1383,6 +1487,7 @@
                                       "attrs": {
                                         "aria-pressed": "false",
                                         "data-state": "off",
+                                        "data-slot": "toggle",
                                         "aria-label": "Toggle bold"
                                       },
                                       "children": []
@@ -1401,6 +1506,7 @@
                                       "attrs": {
                                         "aria-pressed": "false",
                                         "data-state": "off",
+                                        "data-slot": "toggle",
                                         "aria-label": "Toggle italic"
                                       },
                                       "children": []
@@ -1419,6 +1525,7 @@
                                       "attrs": {
                                         "aria-pressed": "false",
                                         "data-state": "off",
+                                        "data-slot": "toggle",
                                         "aria-label": "Toggle underline"
                                       },
                                       "children": []
@@ -1438,7 +1545,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1449,7 +1558,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1477,6 +1588,7 @@
                                       "attrs": {
                                         "aria-pressed": "false",
                                         "data-state": "off",
+                                        "data-slot": "toggle",
                                         "aria-label": "Toggle italic"
                                       },
                                       "children": [],
@@ -1496,6 +1608,7 @@
                                       "attrs": {
                                         "aria-pressed": "false",
                                         "data-state": "off",
+                                        "data-slot": "toggle",
                                         "aria-label": "Toggle bold"
                                       },
                                       "children": [],
@@ -1518,7 +1631,9 @@
                             0,
                             2
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1529,7 +1644,9 @@
                                 2,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1557,6 +1674,7 @@
                                       "attrs": {
                                         "aria-pressed": "false",
                                         "data-state": "off",
+                                        "data-slot": "toggle",
                                         "aria-label": "Toggle small"
                                       },
                                       "children": [],
@@ -1576,6 +1694,7 @@
                                       "attrs": {
                                         "aria-pressed": "false",
                                         "data-state": "off",
+                                        "data-slot": "toggle",
                                         "aria-label": "Toggle default"
                                       },
                                       "children": [],
@@ -1595,6 +1714,7 @@
                                       "attrs": {
                                         "aria-pressed": "false",
                                         "data-state": "off",
+                                        "data-slot": "toggle",
                                         "aria-label": "Toggle large"
                                       },
                                       "children": [],
@@ -1617,7 +1737,9 @@
                             0,
                             3
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1628,7 +1750,9 @@
                                 3,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1667,7 +1791,9 @@
                                             0,
                                             0
                                           ],
-                                          "attrs": {},
+                                          "attrs": {
+                                            "data-slot": "button"
+                                          },
                                           "children": [],
                                           "text": "Button"
                                         },
@@ -1686,6 +1812,7 @@
                                           "attrs": {
                                             "aria-pressed": "false",
                                             "data-state": "off",
+                                            "data-slot": "toggle",
                                             "aria-label": "Toggle sm"
                                           },
                                           "children": [],
@@ -1719,7 +1846,9 @@
                                             1,
                                             0
                                           ],
-                                          "attrs": {},
+                                          "attrs": {
+                                            "data-slot": "button"
+                                          },
                                           "children": [],
                                           "text": "Button"
                                         },
@@ -1738,6 +1867,7 @@
                                           "attrs": {
                                             "aria-pressed": "false",
                                             "data-state": "off",
+                                            "data-slot": "toggle",
                                             "aria-label": "Toggle default"
                                           },
                                           "children": [],
@@ -1771,7 +1901,9 @@
                                             2,
                                             0
                                           ],
-                                          "attrs": {},
+                                          "attrs": {
+                                            "data-slot": "button"
+                                          },
                                           "children": [],
                                           "text": "Button"
                                         },
@@ -1790,6 +1922,7 @@
                                           "attrs": {
                                             "aria-pressed": "false",
                                             "data-state": "off",
+                                            "data-slot": "toggle",
                                             "aria-label": "Toggle lg"
                                           },
                                           "children": [],
@@ -1815,7 +1948,9 @@
                             0,
                             4
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1826,7 +1961,9 @@
                                 4,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1865,7 +2002,9 @@
                                             0,
                                             0
                                           ],
-                                          "attrs": {},
+                                          "attrs": {
+                                            "data-slot": "button"
+                                          },
                                           "children": []
                                         },
                                         {
@@ -1883,6 +2022,7 @@
                                           "attrs": {
                                             "aria-pressed": "false",
                                             "data-state": "off",
+                                            "data-slot": "toggle",
                                             "aria-label": "Toggle sm icon"
                                           },
                                           "children": []
@@ -1914,7 +2054,9 @@
                                             1,
                                             0
                                           ],
-                                          "attrs": {},
+                                          "attrs": {
+                                            "data-slot": "button"
+                                          },
                                           "children": []
                                         },
                                         {
@@ -1932,6 +2074,7 @@
                                           "attrs": {
                                             "aria-pressed": "false",
                                             "data-state": "off",
+                                            "data-slot": "toggle",
                                             "aria-label": "Toggle default icon"
                                           },
                                           "children": []
@@ -1963,7 +2106,9 @@
                                             2,
                                             0
                                           ],
-                                          "attrs": {},
+                                          "attrs": {
+                                            "data-slot": "button"
+                                          },
                                           "children": []
                                         },
                                         {
@@ -1981,6 +2126,7 @@
                                           "attrs": {
                                             "aria-pressed": "false",
                                             "data-state": "off",
+                                            "data-slot": "toggle",
                                             "aria-label": "Toggle lg icon"
                                           },
                                           "children": []
@@ -2002,7 +2148,9 @@
                             0,
                             5
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2013,7 +2161,9 @@
                                 5,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -2052,7 +2202,9 @@
                                             0,
                                             0
                                           ],
-                                          "attrs": {},
+                                          "attrs": {
+                                            "data-slot": "button"
+                                          },
                                           "children": [],
                                           "text": "Button"
                                         },
@@ -2071,6 +2223,7 @@
                                           "attrs": {
                                             "aria-pressed": "false",
                                             "data-state": "off",
+                                            "data-slot": "toggle",
                                             "aria-label": "Toggle sm icon text"
                                           },
                                           "children": [],
@@ -2104,7 +2257,9 @@
                                             1,
                                             0
                                           ],
-                                          "attrs": {},
+                                          "attrs": {
+                                            "data-slot": "button"
+                                          },
                                           "children": [],
                                           "text": "Button"
                                         },
@@ -2123,6 +2278,7 @@
                                           "attrs": {
                                             "aria-pressed": "false",
                                             "data-state": "off",
+                                            "data-slot": "toggle",
                                             "aria-label": "Toggle default icon text"
                                           },
                                           "children": [],
@@ -2156,7 +2312,9 @@
                                             2,
                                             0
                                           ],
-                                          "attrs": {},
+                                          "attrs": {
+                                            "data-slot": "button"
+                                          },
                                           "children": [],
                                           "text": "Button"
                                         },
@@ -2175,6 +2333,7 @@
                                           "attrs": {
                                             "aria-pressed": "false",
                                             "data-state": "off",
+                                            "data-slot": "toggle",
                                             "aria-label": "Toggle lg icon text"
                                           },
                                           "children": [],
@@ -2200,7 +2359,9 @@
                             0,
                             6
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2211,7 +2372,9 @@
                                 6,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -2240,6 +2403,7 @@
                                         "aria-pressed": "false",
                                         "data-state": "off",
                                         "data-disabled": "",
+                                        "data-slot": "toggle",
                                         "aria-label": "Toggle disabled"
                                       },
                                       "children": [],
@@ -2260,6 +2424,7 @@
                                         "aria-pressed": "false",
                                         "data-state": "off",
                                         "data-disabled": "",
+                                        "data-slot": "toggle",
                                         "aria-label": "Toggle disabled outline"
                                       },
                                       "children": [],
@@ -2282,7 +2447,9 @@
                             0,
                             7
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2293,7 +2460,9 @@
                                 7,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -2321,6 +2490,7 @@
                                       "attrs": {
                                         "aria-pressed": "true",
                                         "data-state": "on",
+                                        "data-slot": "toggle",
                                         "aria-label": "Toggle bookmark"
                                       },
                                       "children": []
@@ -2339,6 +2509,7 @@
                                       "attrs": {
                                         "aria-pressed": "false",
                                         "data-state": "off",
+                                        "data-slot": "toggle",
                                         "aria-label": "Toggle bookmark outline"
                                       },
                                       "children": [],
@@ -2557,6 +2728,30 @@
               "role": "button",
               "name": "Toggle bookmark outline",
               "pressed": false
+            },
+            {
+              "role": "StaticText",
+              "name": "xs"
+            },
+            {
+              "role": "StaticText",
+              "name": "sm"
+            },
+            {
+              "role": "StaticText",
+              "name": "md"
+            },
+            {
+              "role": "StaticText",
+              "name": "lg"
+            },
+            {
+              "role": "StaticText",
+              "name": "xl"
+            },
+            {
+              "role": "StaticText",
+              "name": "2xl"
             },
             {
               "role": "region",

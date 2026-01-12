@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseUrl": "http://localhost:4020",
+  "baseUrl": "http://localhost:4000",
   "base": "radix",
   "style": "vega",
   "baseColor": "neutral",
@@ -13,12 +13,12 @@
   "item": "radio-group-example",
   "primitive": "radio-group",
   "scenario": "select-second",
-  "url": "http://localhost:4020/preview/radix/radio-group-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "url": "http://localhost:4000/preview/radix/radio-group-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
   "steps": [
     {
       "action": {
         "kind": "load",
-        "url": "http://localhost:4020/preview/radix/radio-group-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+        "url": "http://localhost:4000/preview/radix/radio-group-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
       },
       "snapshot": {
         "focus": {
@@ -53,7 +53,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -63,7 +65,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -74,7 +78,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -89,6 +95,7 @@
                                   "attrs": {
                                     "role": "radiogroup",
                                     "aria-required": "false",
+                                    "data-slot": "radio-group",
                                     "tabindex": "0"
                                   },
                                   "children": [
@@ -105,6 +112,7 @@
                                       ],
                                       "attrs": {
                                         "role": "group",
+                                        "data-slot": "field",
                                         "data-orientation": "horizontal"
                                       },
                                       "children": [
@@ -124,10 +132,29 @@
                                             "role": "radio",
                                             "aria-checked": "false",
                                             "data-state": "unchecked",
+                                            "data-slot": "radio-group-item",
                                             "tabindex": "-1",
                                             "data-radix-collection-item": ""
                                           },
                                           "children": []
+                                        },
+                                        {
+                                          "tag": "label",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            0,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "field-label"
+                                          },
+                                          "children": [],
+                                          "text": "Default"
                                         }
                                       ],
                                       "text": "Default"
@@ -145,6 +172,7 @@
                                       ],
                                       "attrs": {
                                         "role": "group",
+                                        "data-slot": "field",
                                         "data-orientation": "horizontal"
                                       },
                                       "children": [
@@ -164,6 +192,7 @@
                                             "role": "radio",
                                             "aria-checked": "true",
                                             "data-state": "checked",
+                                            "data-slot": "radio-group-item",
                                             "tabindex": "-1",
                                             "data-radix-collection-item": ""
                                           },
@@ -182,11 +211,30 @@
                                                 0
                                               ],
                                               "attrs": {
-                                                "data-state": "checked"
+                                                "data-state": "checked",
+                                                "data-slot": "radio-group-indicator"
                                               },
                                               "children": []
                                             }
                                           ]
+                                        },
+                                        {
+                                          "tag": "label",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            1,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "field-label"
+                                          },
+                                          "children": [],
+                                          "text": "Comfortable"
                                         }
                                       ],
                                       "text": "Comfortable"
@@ -204,6 +252,7 @@
                                       ],
                                       "attrs": {
                                         "role": "group",
+                                        "data-slot": "field",
                                         "data-orientation": "horizontal"
                                       },
                                       "children": [
@@ -223,10 +272,29 @@
                                             "role": "radio",
                                             "aria-checked": "false",
                                             "data-state": "unchecked",
+                                            "data-slot": "radio-group-item",
                                             "tabindex": "-1",
                                             "data-radix-collection-item": ""
                                           },
                                           "children": []
+                                        },
+                                        {
+                                          "tag": "label",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            2,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "field-label"
+                                          },
+                                          "children": [],
+                                          "text": "Compact"
                                         }
                                       ],
                                       "text": "Compact"
@@ -248,7 +316,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -259,7 +329,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -274,6 +346,7 @@
                                   "attrs": {
                                     "role": "radiogroup",
                                     "aria-required": "false",
+                                    "data-slot": "radio-group",
                                     "tabindex": "0"
                                   },
                                   "children": [
@@ -288,7 +361,9 @@
                                         0,
                                         0
                                       ],
-                                      "attrs": {},
+                                      "attrs": {
+                                        "data-slot": "field-label"
+                                      },
                                       "children": [
                                         {
                                           "tag": "div",
@@ -304,9 +379,50 @@
                                           ],
                                           "attrs": {
                                             "role": "group",
+                                            "data-slot": "field",
                                             "data-orientation": "horizontal"
                                           },
                                           "children": [
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "field-content"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "p",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    1
+                                                  ],
+                                                  "attrs": {
+                                                    "data-slot": "field-description"
+                                                  },
+                                                  "children": [],
+                                                  "text": "For individuals and small teams"
+                                                }
+                                              ],
+                                              "text": "PlusFor individuals and small teams"
+                                            },
                                             {
                                               "tag": "button",
                                               "path": [
@@ -324,6 +440,7 @@
                                                 "role": "radio",
                                                 "aria-checked": "true",
                                                 "data-state": "checked",
+                                                "data-slot": "radio-group-item",
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
@@ -343,7 +460,8 @@
                                                     0
                                                   ],
                                                   "attrs": {
-                                                    "data-state": "checked"
+                                                    "data-state": "checked",
+                                                    "data-slot": "radio-group-indicator"
                                                   },
                                                   "children": []
                                                 }
@@ -366,7 +484,9 @@
                                         0,
                                         1
                                       ],
-                                      "attrs": {},
+                                      "attrs": {
+                                        "data-slot": "field-label"
+                                      },
                                       "children": [
                                         {
                                           "tag": "div",
@@ -382,9 +502,50 @@
                                           ],
                                           "attrs": {
                                             "role": "group",
+                                            "data-slot": "field",
                                             "data-orientation": "horizontal"
                                           },
                                           "children": [
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "field-content"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "p",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    1
+                                                  ],
+                                                  "attrs": {
+                                                    "data-slot": "field-description"
+                                                  },
+                                                  "children": [],
+                                                  "text": "For growing businesses"
+                                                }
+                                              ],
+                                              "text": "ProFor growing businesses"
+                                            },
                                             {
                                               "tag": "button",
                                               "path": [
@@ -402,6 +563,7 @@
                                                 "role": "radio",
                                                 "aria-checked": "false",
                                                 "data-state": "unchecked",
+                                                "data-slot": "radio-group-item",
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
@@ -424,7 +586,9 @@
                                         0,
                                         2
                                       ],
-                                      "attrs": {},
+                                      "attrs": {
+                                        "data-slot": "field-label"
+                                      },
                                       "children": [
                                         {
                                           "tag": "div",
@@ -440,9 +604,50 @@
                                           ],
                                           "attrs": {
                                             "role": "group",
+                                            "data-slot": "field",
                                             "data-orientation": "horizontal"
                                           },
                                           "children": [
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                2,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "field-content"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "p",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0,
+                                                    2,
+                                                    0,
+                                                    0,
+                                                    1
+                                                  ],
+                                                  "attrs": {
+                                                    "data-slot": "field-description"
+                                                  },
+                                                  "children": [],
+                                                  "text": "For large teams and enterprises"
+                                                }
+                                              ],
+                                              "text": "EnterpriseFor large teams and enterprises"
+                                            },
                                             {
                                               "tag": "button",
                                               "path": [
@@ -460,6 +665,7 @@
                                                 "role": "radio",
                                                 "aria-checked": "false",
                                                 "data-state": "unchecked",
+                                                "data-slot": "radio-group-item",
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
@@ -488,7 +694,9 @@
                             0,
                             2
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -499,7 +707,9 @@
                                 2,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "fieldset",
@@ -511,8 +721,44 @@
                                     1,
                                     0
                                   ],
-                                  "attrs": {},
+                                  "attrs": {
+                                    "data-slot": "field-set"
+                                  },
                                   "children": [
+                                    {
+                                      "tag": "legend",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "field-legend"
+                                      },
+                                      "children": [],
+                                      "text": "Battery Level"
+                                    },
+                                    {
+                                      "tag": "p",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "field-description"
+                                      },
+                                      "children": [],
+                                      "text": "Choose your preferred battery level."
+                                    },
                                     {
                                       "tag": "div",
                                       "path": [
@@ -527,6 +773,7 @@
                                       "attrs": {
                                         "role": "radiogroup",
                                         "aria-required": "false",
+                                        "data-slot": "radio-group",
                                         "tabindex": "0"
                                       },
                                       "children": [
@@ -544,6 +791,7 @@
                                           ],
                                           "attrs": {
                                             "role": "group",
+                                            "data-slot": "field",
                                             "data-orientation": "horizontal"
                                           },
                                           "children": [
@@ -564,10 +812,30 @@
                                                 "role": "radio",
                                                 "aria-checked": "false",
                                                 "data-state": "unchecked",
+                                                "data-slot": "radio-group-item",
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
                                               "children": []
+                                            },
+                                            {
+                                              "tag": "label",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                2,
+                                                1,
+                                                0,
+                                                2,
+                                                0,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "field-label"
+                                              },
+                                              "children": [],
+                                              "text": "High"
                                             }
                                           ],
                                           "text": "High"
@@ -586,6 +854,7 @@
                                           ],
                                           "attrs": {
                                             "role": "group",
+                                            "data-slot": "field",
                                             "data-orientation": "horizontal"
                                           },
                                           "children": [
@@ -606,6 +875,7 @@
                                                 "role": "radio",
                                                 "aria-checked": "true",
                                                 "data-state": "checked",
+                                                "data-slot": "radio-group-item",
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
@@ -625,11 +895,31 @@
                                                     0
                                                   ],
                                                   "attrs": {
-                                                    "data-state": "checked"
+                                                    "data-state": "checked",
+                                                    "data-slot": "radio-group-indicator"
                                                   },
                                                   "children": []
                                                 }
                                               ]
+                                            },
+                                            {
+                                              "tag": "label",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                2,
+                                                1,
+                                                0,
+                                                2,
+                                                1,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "field-label"
+                                              },
+                                              "children": [],
+                                              "text": "Medium"
                                             }
                                           ],
                                           "text": "Medium"
@@ -648,6 +938,7 @@
                                           ],
                                           "attrs": {
                                             "role": "group",
+                                            "data-slot": "field",
                                             "data-orientation": "horizontal"
                                           },
                                           "children": [
@@ -668,10 +959,30 @@
                                                 "role": "radio",
                                                 "aria-checked": "false",
                                                 "data-state": "unchecked",
+                                                "data-slot": "radio-group-item",
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
                                               "children": []
+                                            },
+                                            {
+                                              "tag": "label",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                2,
+                                                1,
+                                                0,
+                                                2,
+                                                2,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "field-label"
+                                              },
+                                              "children": [],
+                                              "text": "Low"
                                             }
                                           ],
                                           "text": "Low"
@@ -696,7 +1007,9 @@
                             0,
                             3
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -707,7 +1020,9 @@
                                 3,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -722,6 +1037,7 @@
                                   "attrs": {
                                     "role": "radiogroup",
                                     "aria-required": "false",
+                                    "data-slot": "radio-group",
                                     "tabindex": "0"
                                   },
                                   "children": [
@@ -736,7 +1052,9 @@
                                         0,
                                         0
                                       ],
-                                      "attrs": {},
+                                      "attrs": {
+                                        "data-slot": "field-label"
+                                      },
                                       "children": [
                                         {
                                           "tag": "div",
@@ -752,6 +1070,7 @@
                                           ],
                                           "attrs": {
                                             "role": "group",
+                                            "data-slot": "field",
                                             "data-orientation": "horizontal"
                                           },
                                           "children": [
@@ -772,6 +1091,7 @@
                                                 "role": "radio",
                                                 "aria-checked": "false",
                                                 "data-state": "unchecked",
+                                                "data-slot": "radio-group-item",
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
@@ -794,7 +1114,9 @@
                                         0,
                                         1
                                       ],
-                                      "attrs": {},
+                                      "attrs": {
+                                        "data-slot": "field-label"
+                                      },
                                       "children": [
                                         {
                                           "tag": "div",
@@ -810,6 +1132,7 @@
                                           ],
                                           "attrs": {
                                             "role": "group",
+                                            "data-slot": "field",
                                             "data-orientation": "horizontal"
                                           },
                                           "children": [
@@ -830,6 +1153,7 @@
                                                 "role": "radio",
                                                 "aria-checked": "true",
                                                 "data-state": "checked",
+                                                "data-slot": "radio-group-item",
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
@@ -849,7 +1173,8 @@
                                                     0
                                                   ],
                                                   "attrs": {
-                                                    "data-state": "checked"
+                                                    "data-state": "checked",
+                                                    "data-slot": "radio-group-indicator"
                                                   },
                                                   "children": []
                                                 }
@@ -872,7 +1197,9 @@
                                         0,
                                         2
                                       ],
-                                      "attrs": {},
+                                      "attrs": {
+                                        "data-slot": "field-label"
+                                      },
                                       "children": [
                                         {
                                           "tag": "div",
@@ -888,6 +1215,7 @@
                                           ],
                                           "attrs": {
                                             "role": "group",
+                                            "data-slot": "field",
                                             "data-orientation": "horizontal"
                                           },
                                           "children": [
@@ -908,6 +1236,7 @@
                                                 "role": "radio",
                                                 "aria-checked": "false",
                                                 "data-state": "unchecked",
+                                                "data-slot": "radio-group-item",
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
@@ -930,7 +1259,9 @@
                                         0,
                                         3
                                       ],
-                                      "attrs": {},
+                                      "attrs": {
+                                        "data-slot": "field-label"
+                                      },
                                       "children": [
                                         {
                                           "tag": "div",
@@ -946,6 +1277,7 @@
                                           ],
                                           "attrs": {
                                             "role": "group",
+                                            "data-slot": "field",
                                             "data-orientation": "horizontal"
                                           },
                                           "children": [
@@ -966,6 +1298,7 @@
                                                 "role": "radio",
                                                 "aria-checked": "false",
                                                 "data-state": "unchecked",
+                                                "data-slot": "radio-group-item",
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
@@ -994,7 +1327,9 @@
                             0,
                             4
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1005,7 +1340,9 @@
                                 4,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1021,6 +1358,7 @@
                                     "role": "radiogroup",
                                     "aria-required": "false",
                                     "data-disabled": "",
+                                    "data-slot": "radio-group",
                                     "tabindex": "-1"
                                   },
                                   "children": [
@@ -1037,6 +1375,7 @@
                                       ],
                                       "attrs": {
                                         "role": "group",
+                                        "data-slot": "field",
                                         "data-orientation": "horizontal"
                                       },
                                       "children": [
@@ -1057,10 +1396,29 @@
                                             "aria-checked": "false",
                                             "data-state": "unchecked",
                                             "data-disabled": "",
+                                            "data-slot": "radio-group-item",
                                             "tabindex": "-1",
                                             "data-radix-collection-item": ""
                                           },
                                           "children": []
+                                        },
+                                        {
+                                          "tag": "label",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            0,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "field-label"
+                                          },
+                                          "children": [],
+                                          "text": "Option 1"
                                         }
                                       ],
                                       "text": "Option 1"
@@ -1078,6 +1436,7 @@
                                       ],
                                       "attrs": {
                                         "role": "group",
+                                        "data-slot": "field",
                                         "data-orientation": "horizontal"
                                       },
                                       "children": [
@@ -1098,6 +1457,7 @@
                                             "aria-checked": "true",
                                             "data-state": "checked",
                                             "data-disabled": "",
+                                            "data-slot": "radio-group-item",
                                             "tabindex": "-1",
                                             "data-radix-collection-item": ""
                                           },
@@ -1117,11 +1477,30 @@
                                               ],
                                               "attrs": {
                                                 "data-state": "checked",
-                                                "data-disabled": ""
+                                                "data-disabled": "",
+                                                "data-slot": "radio-group-indicator"
                                               },
                                               "children": []
                                             }
                                           ]
+                                        },
+                                        {
+                                          "tag": "label",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            1,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "field-label"
+                                          },
+                                          "children": [],
+                                          "text": "Option 2"
                                         }
                                       ],
                                       "text": "Option 2"
@@ -1139,6 +1518,7 @@
                                       ],
                                       "attrs": {
                                         "role": "group",
+                                        "data-slot": "field",
                                         "data-orientation": "horizontal"
                                       },
                                       "children": [
@@ -1159,10 +1539,29 @@
                                             "aria-checked": "false",
                                             "data-state": "unchecked",
                                             "data-disabled": "",
+                                            "data-slot": "radio-group-item",
                                             "tabindex": "-1",
                                             "data-radix-collection-item": ""
                                           },
                                           "children": []
+                                        },
+                                        {
+                                          "tag": "label",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            2,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "field-label"
+                                          },
+                                          "children": [],
+                                          "text": "Option 3"
                                         }
                                       ],
                                       "text": "Option 3"
@@ -1184,7 +1583,9 @@
                             0,
                             5
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1195,7 +1596,9 @@
                                 5,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "fieldset",
@@ -1207,8 +1610,44 @@
                                     1,
                                     0
                                   ],
-                                  "attrs": {},
+                                  "attrs": {
+                                    "data-slot": "field-set"
+                                  },
                                   "children": [
+                                    {
+                                      "tag": "legend",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "field-legend"
+                                      },
+                                      "children": [],
+                                      "text": "Notification Preferences"
+                                    },
+                                    {
+                                      "tag": "p",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "field-description"
+                                      },
+                                      "children": [],
+                                      "text": "Choose how you want to receive notifications."
+                                    },
                                     {
                                       "tag": "div",
                                       "path": [
@@ -1223,6 +1662,7 @@
                                       "attrs": {
                                         "role": "radiogroup",
                                         "aria-required": "false",
+                                        "data-slot": "radio-group",
                                         "tabindex": "0"
                                       },
                                       "children": [
@@ -1240,6 +1680,7 @@
                                           ],
                                           "attrs": {
                                             "role": "group",
+                                            "data-slot": "field",
                                             "data-orientation": "horizontal"
                                           },
                                           "children": [
@@ -1260,6 +1701,7 @@
                                                 "role": "radio",
                                                 "aria-checked": "true",
                                                 "data-state": "checked",
+                                                "data-slot": "radio-group-item",
                                                 "aria-invalid": "true",
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
@@ -1280,11 +1722,31 @@
                                                     0
                                                   ],
                                                   "attrs": {
-                                                    "data-state": "checked"
+                                                    "data-state": "checked",
+                                                    "data-slot": "radio-group-indicator"
                                                   },
                                                   "children": []
                                                 }
                                               ]
+                                            },
+                                            {
+                                              "tag": "label",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                5,
+                                                1,
+                                                0,
+                                                2,
+                                                0,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "field-label"
+                                              },
+                                              "children": [],
+                                              "text": "Email only"
                                             }
                                           ],
                                           "text": "Email only"
@@ -1303,6 +1765,7 @@
                                           ],
                                           "attrs": {
                                             "role": "group",
+                                            "data-slot": "field",
                                             "data-orientation": "horizontal"
                                           },
                                           "children": [
@@ -1323,11 +1786,31 @@
                                                 "role": "radio",
                                                 "aria-checked": "false",
                                                 "data-state": "unchecked",
+                                                "data-slot": "radio-group-item",
                                                 "aria-invalid": "true",
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
                                               "children": []
+                                            },
+                                            {
+                                              "tag": "label",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                5,
+                                                1,
+                                                0,
+                                                2,
+                                                1,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "field-label"
+                                              },
+                                              "children": [],
+                                              "text": "SMS only"
                                             }
                                           ],
                                           "text": "SMS only"
@@ -1346,6 +1829,7 @@
                                           ],
                                           "attrs": {
                                             "role": "group",
+                                            "data-slot": "field",
                                             "data-orientation": "horizontal"
                                           },
                                           "children": [
@@ -1366,11 +1850,31 @@
                                                 "role": "radio",
                                                 "aria-checked": "false",
                                                 "data-state": "unchecked",
+                                                "data-slot": "radio-group-item",
                                                 "aria-invalid": "true",
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
                                               "children": []
+                                            },
+                                            {
+                                              "tag": "label",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                5,
+                                                1,
+                                                0,
+                                                2,
+                                                2,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "field-label"
+                                              },
+                                              "children": [],
+                                              "text": "Both Email & SMS"
                                             }
                                           ],
                                           "text": "Both Email & SMS"
@@ -1682,6 +2186,30 @@
               ]
             },
             {
+              "role": "StaticText",
+              "name": "xs"
+            },
+            {
+              "role": "StaticText",
+              "name": "sm"
+            },
+            {
+              "role": "StaticText",
+              "name": "md"
+            },
+            {
+              "role": "StaticText",
+              "name": "lg"
+            },
+            {
+              "role": "StaticText",
+              "name": "xl"
+            },
+            {
+              "role": "StaticText",
+              "name": "2xl"
+            },
+            {
               "role": "region",
               "name": "Notifications alt+T"
             }
@@ -1711,6 +2239,7 @@
             "role": "radio",
             "aria-checked": "true",
             "data-state": "checked",
+            "data-slot": "radio-group-item",
             "tabindex": "0",
             "data-radix-collection-item": ""
           }
@@ -1742,7 +2271,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -1752,7 +2283,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1763,7 +2296,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1778,6 +2313,7 @@
                                   "attrs": {
                                     "role": "radiogroup",
                                     "aria-required": "false",
+                                    "data-slot": "radio-group",
                                     "tabindex": "0"
                                   },
                                   "children": [
@@ -1794,6 +2330,7 @@
                                       ],
                                       "attrs": {
                                         "role": "group",
+                                        "data-slot": "field",
                                         "data-orientation": "horizontal"
                                       },
                                       "children": [
@@ -1813,10 +2350,29 @@
                                             "role": "radio",
                                             "aria-checked": "false",
                                             "data-state": "unchecked",
+                                            "data-slot": "radio-group-item",
                                             "tabindex": "-1",
                                             "data-radix-collection-item": ""
                                           },
                                           "children": []
+                                        },
+                                        {
+                                          "tag": "label",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            0,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "field-label"
+                                          },
+                                          "children": [],
+                                          "text": "Default"
                                         }
                                       ],
                                       "text": "Default"
@@ -1834,6 +2390,7 @@
                                       ],
                                       "attrs": {
                                         "role": "group",
+                                        "data-slot": "field",
                                         "data-orientation": "horizontal"
                                       },
                                       "children": [
@@ -1853,6 +2410,7 @@
                                             "role": "radio",
                                             "aria-checked": "true",
                                             "data-state": "checked",
+                                            "data-slot": "radio-group-item",
                                             "tabindex": "0",
                                             "data-radix-collection-item": ""
                                           },
@@ -1871,11 +2429,30 @@
                                                 0
                                               ],
                                               "attrs": {
-                                                "data-state": "checked"
+                                                "data-state": "checked",
+                                                "data-slot": "radio-group-indicator"
                                               },
                                               "children": []
                                             }
                                           ]
+                                        },
+                                        {
+                                          "tag": "label",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            1,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "field-label"
+                                          },
+                                          "children": [],
+                                          "text": "Comfortable"
                                         }
                                       ],
                                       "text": "Comfortable"
@@ -1893,6 +2470,7 @@
                                       ],
                                       "attrs": {
                                         "role": "group",
+                                        "data-slot": "field",
                                         "data-orientation": "horizontal"
                                       },
                                       "children": [
@@ -1912,10 +2490,29 @@
                                             "role": "radio",
                                             "aria-checked": "false",
                                             "data-state": "unchecked",
+                                            "data-slot": "radio-group-item",
                                             "tabindex": "-1",
                                             "data-radix-collection-item": ""
                                           },
                                           "children": []
+                                        },
+                                        {
+                                          "tag": "label",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            2,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "field-label"
+                                          },
+                                          "children": [],
+                                          "text": "Compact"
                                         }
                                       ],
                                       "text": "Compact"
@@ -1937,7 +2534,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1948,7 +2547,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1963,6 +2564,7 @@
                                   "attrs": {
                                     "role": "radiogroup",
                                     "aria-required": "false",
+                                    "data-slot": "radio-group",
                                     "tabindex": "0"
                                   },
                                   "children": [
@@ -1977,7 +2579,9 @@
                                         0,
                                         0
                                       ],
-                                      "attrs": {},
+                                      "attrs": {
+                                        "data-slot": "field-label"
+                                      },
                                       "children": [
                                         {
                                           "tag": "div",
@@ -1993,9 +2597,50 @@
                                           ],
                                           "attrs": {
                                             "role": "group",
+                                            "data-slot": "field",
                                             "data-orientation": "horizontal"
                                           },
                                           "children": [
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "field-content"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "p",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    1
+                                                  ],
+                                                  "attrs": {
+                                                    "data-slot": "field-description"
+                                                  },
+                                                  "children": [],
+                                                  "text": "For individuals and small teams"
+                                                }
+                                              ],
+                                              "text": "PlusFor individuals and small teams"
+                                            },
                                             {
                                               "tag": "button",
                                               "path": [
@@ -2013,6 +2658,7 @@
                                                 "role": "radio",
                                                 "aria-checked": "true",
                                                 "data-state": "checked",
+                                                "data-slot": "radio-group-item",
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
@@ -2032,7 +2678,8 @@
                                                     0
                                                   ],
                                                   "attrs": {
-                                                    "data-state": "checked"
+                                                    "data-state": "checked",
+                                                    "data-slot": "radio-group-indicator"
                                                   },
                                                   "children": []
                                                 }
@@ -2055,7 +2702,9 @@
                                         0,
                                         1
                                       ],
-                                      "attrs": {},
+                                      "attrs": {
+                                        "data-slot": "field-label"
+                                      },
                                       "children": [
                                         {
                                           "tag": "div",
@@ -2071,9 +2720,50 @@
                                           ],
                                           "attrs": {
                                             "role": "group",
+                                            "data-slot": "field",
                                             "data-orientation": "horizontal"
                                           },
                                           "children": [
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "field-content"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "p",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    1
+                                                  ],
+                                                  "attrs": {
+                                                    "data-slot": "field-description"
+                                                  },
+                                                  "children": [],
+                                                  "text": "For growing businesses"
+                                                }
+                                              ],
+                                              "text": "ProFor growing businesses"
+                                            },
                                             {
                                               "tag": "button",
                                               "path": [
@@ -2091,6 +2781,7 @@
                                                 "role": "radio",
                                                 "aria-checked": "false",
                                                 "data-state": "unchecked",
+                                                "data-slot": "radio-group-item",
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
@@ -2113,7 +2804,9 @@
                                         0,
                                         2
                                       ],
-                                      "attrs": {},
+                                      "attrs": {
+                                        "data-slot": "field-label"
+                                      },
                                       "children": [
                                         {
                                           "tag": "div",
@@ -2129,9 +2822,50 @@
                                           ],
                                           "attrs": {
                                             "role": "group",
+                                            "data-slot": "field",
                                             "data-orientation": "horizontal"
                                           },
                                           "children": [
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                2,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "field-content"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "p",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0,
+                                                    2,
+                                                    0,
+                                                    0,
+                                                    1
+                                                  ],
+                                                  "attrs": {
+                                                    "data-slot": "field-description"
+                                                  },
+                                                  "children": [],
+                                                  "text": "For large teams and enterprises"
+                                                }
+                                              ],
+                                              "text": "EnterpriseFor large teams and enterprises"
+                                            },
                                             {
                                               "tag": "button",
                                               "path": [
@@ -2149,6 +2883,7 @@
                                                 "role": "radio",
                                                 "aria-checked": "false",
                                                 "data-state": "unchecked",
+                                                "data-slot": "radio-group-item",
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
@@ -2177,7 +2912,9 @@
                             0,
                             2
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2188,7 +2925,9 @@
                                 2,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "fieldset",
@@ -2200,8 +2939,44 @@
                                     1,
                                     0
                                   ],
-                                  "attrs": {},
+                                  "attrs": {
+                                    "data-slot": "field-set"
+                                  },
                                   "children": [
+                                    {
+                                      "tag": "legend",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "field-legend"
+                                      },
+                                      "children": [],
+                                      "text": "Battery Level"
+                                    },
+                                    {
+                                      "tag": "p",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "field-description"
+                                      },
+                                      "children": [],
+                                      "text": "Choose your preferred battery level."
+                                    },
                                     {
                                       "tag": "div",
                                       "path": [
@@ -2216,6 +2991,7 @@
                                       "attrs": {
                                         "role": "radiogroup",
                                         "aria-required": "false",
+                                        "data-slot": "radio-group",
                                         "tabindex": "0"
                                       },
                                       "children": [
@@ -2233,6 +3009,7 @@
                                           ],
                                           "attrs": {
                                             "role": "group",
+                                            "data-slot": "field",
                                             "data-orientation": "horizontal"
                                           },
                                           "children": [
@@ -2253,10 +3030,30 @@
                                                 "role": "radio",
                                                 "aria-checked": "false",
                                                 "data-state": "unchecked",
+                                                "data-slot": "radio-group-item",
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
                                               "children": []
+                                            },
+                                            {
+                                              "tag": "label",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                2,
+                                                1,
+                                                0,
+                                                2,
+                                                0,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "field-label"
+                                              },
+                                              "children": [],
+                                              "text": "High"
                                             }
                                           ],
                                           "text": "High"
@@ -2275,6 +3072,7 @@
                                           ],
                                           "attrs": {
                                             "role": "group",
+                                            "data-slot": "field",
                                             "data-orientation": "horizontal"
                                           },
                                           "children": [
@@ -2295,6 +3093,7 @@
                                                 "role": "radio",
                                                 "aria-checked": "true",
                                                 "data-state": "checked",
+                                                "data-slot": "radio-group-item",
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
@@ -2314,11 +3113,31 @@
                                                     0
                                                   ],
                                                   "attrs": {
-                                                    "data-state": "checked"
+                                                    "data-state": "checked",
+                                                    "data-slot": "radio-group-indicator"
                                                   },
                                                   "children": []
                                                 }
                                               ]
+                                            },
+                                            {
+                                              "tag": "label",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                2,
+                                                1,
+                                                0,
+                                                2,
+                                                1,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "field-label"
+                                              },
+                                              "children": [],
+                                              "text": "Medium"
                                             }
                                           ],
                                           "text": "Medium"
@@ -2337,6 +3156,7 @@
                                           ],
                                           "attrs": {
                                             "role": "group",
+                                            "data-slot": "field",
                                             "data-orientation": "horizontal"
                                           },
                                           "children": [
@@ -2357,10 +3177,30 @@
                                                 "role": "radio",
                                                 "aria-checked": "false",
                                                 "data-state": "unchecked",
+                                                "data-slot": "radio-group-item",
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
                                               "children": []
+                                            },
+                                            {
+                                              "tag": "label",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                2,
+                                                1,
+                                                0,
+                                                2,
+                                                2,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "field-label"
+                                              },
+                                              "children": [],
+                                              "text": "Low"
                                             }
                                           ],
                                           "text": "Low"
@@ -2385,7 +3225,9 @@
                             0,
                             3
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2396,7 +3238,9 @@
                                 3,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -2411,6 +3255,7 @@
                                   "attrs": {
                                     "role": "radiogroup",
                                     "aria-required": "false",
+                                    "data-slot": "radio-group",
                                     "tabindex": "0"
                                   },
                                   "children": [
@@ -2425,7 +3270,9 @@
                                         0,
                                         0
                                       ],
-                                      "attrs": {},
+                                      "attrs": {
+                                        "data-slot": "field-label"
+                                      },
                                       "children": [
                                         {
                                           "tag": "div",
@@ -2441,6 +3288,7 @@
                                           ],
                                           "attrs": {
                                             "role": "group",
+                                            "data-slot": "field",
                                             "data-orientation": "horizontal"
                                           },
                                           "children": [
@@ -2461,6 +3309,7 @@
                                                 "role": "radio",
                                                 "aria-checked": "false",
                                                 "data-state": "unchecked",
+                                                "data-slot": "radio-group-item",
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
@@ -2483,7 +3332,9 @@
                                         0,
                                         1
                                       ],
-                                      "attrs": {},
+                                      "attrs": {
+                                        "data-slot": "field-label"
+                                      },
                                       "children": [
                                         {
                                           "tag": "div",
@@ -2499,6 +3350,7 @@
                                           ],
                                           "attrs": {
                                             "role": "group",
+                                            "data-slot": "field",
                                             "data-orientation": "horizontal"
                                           },
                                           "children": [
@@ -2519,6 +3371,7 @@
                                                 "role": "radio",
                                                 "aria-checked": "true",
                                                 "data-state": "checked",
+                                                "data-slot": "radio-group-item",
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
@@ -2538,7 +3391,8 @@
                                                     0
                                                   ],
                                                   "attrs": {
-                                                    "data-state": "checked"
+                                                    "data-state": "checked",
+                                                    "data-slot": "radio-group-indicator"
                                                   },
                                                   "children": []
                                                 }
@@ -2561,7 +3415,9 @@
                                         0,
                                         2
                                       ],
-                                      "attrs": {},
+                                      "attrs": {
+                                        "data-slot": "field-label"
+                                      },
                                       "children": [
                                         {
                                           "tag": "div",
@@ -2577,6 +3433,7 @@
                                           ],
                                           "attrs": {
                                             "role": "group",
+                                            "data-slot": "field",
                                             "data-orientation": "horizontal"
                                           },
                                           "children": [
@@ -2597,6 +3454,7 @@
                                                 "role": "radio",
                                                 "aria-checked": "false",
                                                 "data-state": "unchecked",
+                                                "data-slot": "radio-group-item",
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
@@ -2619,7 +3477,9 @@
                                         0,
                                         3
                                       ],
-                                      "attrs": {},
+                                      "attrs": {
+                                        "data-slot": "field-label"
+                                      },
                                       "children": [
                                         {
                                           "tag": "div",
@@ -2635,6 +3495,7 @@
                                           ],
                                           "attrs": {
                                             "role": "group",
+                                            "data-slot": "field",
                                             "data-orientation": "horizontal"
                                           },
                                           "children": [
@@ -2655,6 +3516,7 @@
                                                 "role": "radio",
                                                 "aria-checked": "false",
                                                 "data-state": "unchecked",
+                                                "data-slot": "radio-group-item",
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
@@ -2683,7 +3545,9 @@
                             0,
                             4
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2694,7 +3558,9 @@
                                 4,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -2710,6 +3576,7 @@
                                     "role": "radiogroup",
                                     "aria-required": "false",
                                     "data-disabled": "",
+                                    "data-slot": "radio-group",
                                     "tabindex": "-1"
                                   },
                                   "children": [
@@ -2726,6 +3593,7 @@
                                       ],
                                       "attrs": {
                                         "role": "group",
+                                        "data-slot": "field",
                                         "data-orientation": "horizontal"
                                       },
                                       "children": [
@@ -2746,10 +3614,29 @@
                                             "aria-checked": "false",
                                             "data-state": "unchecked",
                                             "data-disabled": "",
+                                            "data-slot": "radio-group-item",
                                             "tabindex": "-1",
                                             "data-radix-collection-item": ""
                                           },
                                           "children": []
+                                        },
+                                        {
+                                          "tag": "label",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            0,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "field-label"
+                                          },
+                                          "children": [],
+                                          "text": "Option 1"
                                         }
                                       ],
                                       "text": "Option 1"
@@ -2767,6 +3654,7 @@
                                       ],
                                       "attrs": {
                                         "role": "group",
+                                        "data-slot": "field",
                                         "data-orientation": "horizontal"
                                       },
                                       "children": [
@@ -2787,6 +3675,7 @@
                                             "aria-checked": "true",
                                             "data-state": "checked",
                                             "data-disabled": "",
+                                            "data-slot": "radio-group-item",
                                             "tabindex": "-1",
                                             "data-radix-collection-item": ""
                                           },
@@ -2806,11 +3695,30 @@
                                               ],
                                               "attrs": {
                                                 "data-state": "checked",
-                                                "data-disabled": ""
+                                                "data-disabled": "",
+                                                "data-slot": "radio-group-indicator"
                                               },
                                               "children": []
                                             }
                                           ]
+                                        },
+                                        {
+                                          "tag": "label",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            1,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "field-label"
+                                          },
+                                          "children": [],
+                                          "text": "Option 2"
                                         }
                                       ],
                                       "text": "Option 2"
@@ -2828,6 +3736,7 @@
                                       ],
                                       "attrs": {
                                         "role": "group",
+                                        "data-slot": "field",
                                         "data-orientation": "horizontal"
                                       },
                                       "children": [
@@ -2848,10 +3757,29 @@
                                             "aria-checked": "false",
                                             "data-state": "unchecked",
                                             "data-disabled": "",
+                                            "data-slot": "radio-group-item",
                                             "tabindex": "-1",
                                             "data-radix-collection-item": ""
                                           },
                                           "children": []
+                                        },
+                                        {
+                                          "tag": "label",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            2,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "field-label"
+                                          },
+                                          "children": [],
+                                          "text": "Option 3"
                                         }
                                       ],
                                       "text": "Option 3"
@@ -2873,7 +3801,9 @@
                             0,
                             5
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2884,7 +3814,9 @@
                                 5,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "fieldset",
@@ -2896,8 +3828,44 @@
                                     1,
                                     0
                                   ],
-                                  "attrs": {},
+                                  "attrs": {
+                                    "data-slot": "field-set"
+                                  },
                                   "children": [
+                                    {
+                                      "tag": "legend",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "field-legend"
+                                      },
+                                      "children": [],
+                                      "text": "Notification Preferences"
+                                    },
+                                    {
+                                      "tag": "p",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "field-description"
+                                      },
+                                      "children": [],
+                                      "text": "Choose how you want to receive notifications."
+                                    },
                                     {
                                       "tag": "div",
                                       "path": [
@@ -2912,6 +3880,7 @@
                                       "attrs": {
                                         "role": "radiogroup",
                                         "aria-required": "false",
+                                        "data-slot": "radio-group",
                                         "tabindex": "0"
                                       },
                                       "children": [
@@ -2929,6 +3898,7 @@
                                           ],
                                           "attrs": {
                                             "role": "group",
+                                            "data-slot": "field",
                                             "data-orientation": "horizontal"
                                           },
                                           "children": [
@@ -2949,6 +3919,7 @@
                                                 "role": "radio",
                                                 "aria-checked": "true",
                                                 "data-state": "checked",
+                                                "data-slot": "radio-group-item",
                                                 "aria-invalid": "true",
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
@@ -2969,11 +3940,31 @@
                                                     0
                                                   ],
                                                   "attrs": {
-                                                    "data-state": "checked"
+                                                    "data-state": "checked",
+                                                    "data-slot": "radio-group-indicator"
                                                   },
                                                   "children": []
                                                 }
                                               ]
+                                            },
+                                            {
+                                              "tag": "label",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                5,
+                                                1,
+                                                0,
+                                                2,
+                                                0,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "field-label"
+                                              },
+                                              "children": [],
+                                              "text": "Email only"
                                             }
                                           ],
                                           "text": "Email only"
@@ -2992,6 +3983,7 @@
                                           ],
                                           "attrs": {
                                             "role": "group",
+                                            "data-slot": "field",
                                             "data-orientation": "horizontal"
                                           },
                                           "children": [
@@ -3012,11 +4004,31 @@
                                                 "role": "radio",
                                                 "aria-checked": "false",
                                                 "data-state": "unchecked",
+                                                "data-slot": "radio-group-item",
                                                 "aria-invalid": "true",
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
                                               "children": []
+                                            },
+                                            {
+                                              "tag": "label",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                5,
+                                                1,
+                                                0,
+                                                2,
+                                                1,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "field-label"
+                                              },
+                                              "children": [],
+                                              "text": "SMS only"
                                             }
                                           ],
                                           "text": "SMS only"
@@ -3035,6 +4047,7 @@
                                           ],
                                           "attrs": {
                                             "role": "group",
+                                            "data-slot": "field",
                                             "data-orientation": "horizontal"
                                           },
                                           "children": [
@@ -3055,11 +4068,31 @@
                                                 "role": "radio",
                                                 "aria-checked": "false",
                                                 "data-state": "unchecked",
+                                                "data-slot": "radio-group-item",
                                                 "aria-invalid": "true",
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
                                               "children": []
+                                            },
+                                            {
+                                              "tag": "label",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                5,
+                                                1,
+                                                0,
+                                                2,
+                                                2,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "field-label"
+                                              },
+                                              "children": [],
+                                              "text": "Both Email & SMS"
                                             }
                                           ],
                                           "text": "Both Email & SMS"
@@ -3370,6 +4403,30 @@
                   "name": "Both Email & SMS"
                 }
               ]
+            },
+            {
+              "role": "StaticText",
+              "name": "xs"
+            },
+            {
+              "role": "StaticText",
+              "name": "sm"
+            },
+            {
+              "role": "StaticText",
+              "name": "md"
+            },
+            {
+              "role": "StaticText",
+              "name": "lg"
+            },
+            {
+              "role": "StaticText",
+              "name": "xl"
+            },
+            {
+              "role": "StaticText",
+              "name": "2xl"
             },
             {
               "role": "region",

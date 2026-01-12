@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseUrl": "http://localhost:4020",
+  "baseUrl": "http://localhost:4000",
   "base": "radix",
   "style": "vega",
   "baseColor": "neutral",
@@ -13,12 +13,12 @@
   "item": "context-menu-example",
   "primitive": "context-menu",
   "scenario": "context-open-close",
-  "url": "http://localhost:4020/preview/radix/context-menu-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "url": "http://localhost:4000/preview/radix/context-menu-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
   "steps": [
     {
       "action": {
         "kind": "load",
-        "url": "http://localhost:4020/preview/radix/context-menu-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+        "url": "http://localhost:4000/preview/radix/context-menu-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
       },
       "snapshot": {
         "focus": {
@@ -53,7 +53,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -63,7 +65,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -74,7 +78,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -87,7 +93,8 @@
                                     0
                                   ],
                                   "attrs": {
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
                                   "text": "Right click here"
@@ -106,7 +113,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -117,7 +126,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -143,7 +154,8 @@
                                         0
                                       ],
                                       "attrs": {
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "context-menu-trigger"
                                       },
                                       "children": [],
                                       "text": "Right click (top)"
@@ -160,7 +172,8 @@
                                         1
                                       ],
                                       "attrs": {
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "context-menu-trigger"
                                       },
                                       "children": [],
                                       "text": "Right click (right)"
@@ -177,7 +190,8 @@
                                         2
                                       ],
                                       "attrs": {
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "context-menu-trigger"
                                       },
                                       "children": [],
                                       "text": "Right click (bottom)"
@@ -194,7 +208,8 @@
                                         3
                                       ],
                                       "attrs": {
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "context-menu-trigger"
                                       },
                                       "children": [],
                                       "text": "Right click (left)"
@@ -216,7 +231,9 @@
                             0,
                             2
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -227,7 +244,9 @@
                                 2,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -240,7 +259,8 @@
                                     0
                                   ],
                                   "attrs": {
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
                                   "text": "Right click here"
@@ -259,7 +279,9 @@
                             0,
                             3
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -270,7 +292,9 @@
                                 3,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -283,7 +307,8 @@
                                     0
                                   ],
                                   "attrs": {
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
                                   "text": "Right click here"
@@ -302,7 +327,9 @@
                             0,
                             4
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -313,7 +340,9 @@
                                 4,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -326,7 +355,8 @@
                                     0
                                   ],
                                   "attrs": {
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
                                   "text": "Right click here"
@@ -345,7 +375,9 @@
                             0,
                             5
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -356,7 +388,9 @@
                                 5,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -369,7 +403,8 @@
                                     0
                                   ],
                                   "attrs": {
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
                                   "text": "Right click here"
@@ -388,7 +423,9 @@
                             0,
                             6
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -399,7 +436,9 @@
                                 6,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -412,7 +451,8 @@
                                     0
                                   ],
                                   "attrs": {
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
                                   "text": "Right click here"
@@ -431,7 +471,9 @@
                             0,
                             7
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -442,7 +484,9 @@
                                 7,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -455,7 +499,8 @@
                                     0
                                   ],
                                   "attrs": {
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
                                   "text": "Right click here"
@@ -474,7 +519,9 @@
                             0,
                             8
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -485,7 +532,9 @@
                                 8,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -498,7 +547,8 @@
                                     0
                                   ],
                                   "attrs": {
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
                                   "text": "Right click here"
@@ -517,7 +567,9 @@
                             0,
                             9
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -528,7 +580,9 @@
                                 9,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -541,6 +595,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dialog-trigger",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_3_",
@@ -678,6 +733,30 @@
               "haspopup": "dialog"
             },
             {
+              "role": "StaticText",
+              "name": "xs"
+            },
+            {
+              "role": "StaticText",
+              "name": "sm"
+            },
+            {
+              "role": "StaticText",
+              "name": "md"
+            },
+            {
+              "role": "StaticText",
+              "name": "lg"
+            },
+            {
+              "role": "StaticText",
+              "name": "xl"
+            },
+            {
+              "role": "StaticText",
+              "name": "2xl"
+            },
+            {
               "role": "region",
               "name": "Notifications alt+T"
             }
@@ -694,7 +773,7 @@
         "focus": {
           "tag": "div",
           "path": [
-            27,
+            57,
             0
           ],
           "attrs": {
@@ -703,6 +782,7 @@
             "role": "menu",
             "aria-orientation": "vertical",
             "data-state": "open",
+            "data-slot": "context-menu-content",
             "tabindex": "-1",
             "data-orientation": "vertical"
           },
@@ -758,7 +838,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -768,7 +850,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -779,7 +863,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -792,7 +878,8 @@
                                     0
                                   ],
                                   "attrs": {
-                                    "data-state": "open"
+                                    "data-state": "open",
+                                    "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
                                   "text": "Right click here"
@@ -811,7 +898,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -822,7 +911,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -848,7 +939,8 @@
                                         0
                                       ],
                                       "attrs": {
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "context-menu-trigger"
                                       },
                                       "children": [],
                                       "text": "Right click (top)"
@@ -865,7 +957,8 @@
                                         1
                                       ],
                                       "attrs": {
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "context-menu-trigger"
                                       },
                                       "children": [],
                                       "text": "Right click (right)"
@@ -882,7 +975,8 @@
                                         2
                                       ],
                                       "attrs": {
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "context-menu-trigger"
                                       },
                                       "children": [],
                                       "text": "Right click (bottom)"
@@ -899,7 +993,8 @@
                                         3
                                       ],
                                       "attrs": {
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "context-menu-trigger"
                                       },
                                       "children": [],
                                       "text": "Right click (left)"
@@ -921,7 +1016,9 @@
                             0,
                             2
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -932,7 +1029,9 @@
                                 2,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -945,7 +1044,8 @@
                                     0
                                   ],
                                   "attrs": {
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
                                   "text": "Right click here"
@@ -964,7 +1064,9 @@
                             0,
                             3
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -975,7 +1077,9 @@
                                 3,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -988,7 +1092,8 @@
                                     0
                                   ],
                                   "attrs": {
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
                                   "text": "Right click here"
@@ -1007,7 +1112,9 @@
                             0,
                             4
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1018,7 +1125,9 @@
                                 4,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -1031,7 +1140,8 @@
                                     0
                                   ],
                                   "attrs": {
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
                                   "text": "Right click here"
@@ -1050,7 +1160,9 @@
                             0,
                             5
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1061,7 +1173,9 @@
                                 5,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -1074,7 +1188,8 @@
                                     0
                                   ],
                                   "attrs": {
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
                                   "text": "Right click here"
@@ -1093,7 +1208,9 @@
                             0,
                             6
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1104,7 +1221,9 @@
                                 6,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -1117,7 +1236,8 @@
                                     0
                                   ],
                                   "attrs": {
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
                                   "text": "Right click here"
@@ -1136,7 +1256,9 @@
                             0,
                             7
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1147,7 +1269,9 @@
                                 7,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -1160,7 +1284,8 @@
                                     0
                                   ],
                                   "attrs": {
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
                                   "text": "Right click here"
@@ -1179,7 +1304,9 @@
                             0,
                             8
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1190,7 +1317,9 @@
                                 8,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -1203,7 +1332,8 @@
                                     0
                                   ],
                                   "attrs": {
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
                                   "text": "Right click here"
@@ -1222,7 +1352,9 @@
                             0,
                             9
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1233,7 +1365,9 @@
                                 9,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -1246,6 +1380,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dialog-trigger",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_3_",
@@ -1265,6 +1400,18 @@
                     }
                   ],
                   "text": "BasicRight click hereWith SidesRight click (top)Right click (right)Right click (bottom)Right click (left)With IconsRight…"
+                },
+                {
+                  "tag": "div",
+                  "path": [
+                    3,
+                    4
+                  ],
+                  "attrs": {
+                    "aria-hidden": "true"
+                  },
+                  "children": [],
+                  "text": "xssmmdlgxl2xl"
                 }
               ],
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
@@ -1284,9 +1431,190 @@
               "children": []
             },
             {
+              "tag": "title",
+              "path": [
+                8
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": [],
+              "text": "context-menu-example - shadcn/ui"
+            },
+            {
+              "tag": "link",
+              "path": [
+                9
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                10
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "link",
+              "path": [
+                11
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                12
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                13
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                14
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                15
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                16
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                17
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                18
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                19
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                20
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                21
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                22
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                23
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                24
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "link",
+              "path": [
+                25
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
               "tag": "next-route-announcer",
               "path": [
-                26
+                56
               ],
               "attrs": {
                 "aria-hidden": "true"
@@ -1296,14 +1624,14 @@
             {
               "tag": "div",
               "path": [
-                27
+                57
               ],
               "attrs": {},
               "children": [
                 {
                   "tag": "div",
                   "path": [
-                    27,
+                    57,
                     0
                   ],
                   "attrs": {
@@ -1312,6 +1640,7 @@
                     "role": "menu",
                     "aria-orientation": "vertical",
                     "data-state": "open",
+                    "data-slot": "context-menu-content",
                     "tabindex": "-1",
                     "data-orientation": "vertical"
                   },
@@ -1319,24 +1648,26 @@
                     {
                       "tag": "div",
                       "path": [
-                        27,
+                        57,
                         0,
                         0
                       ],
                       "attrs": {
-                        "role": "group"
+                        "role": "group",
+                        "data-slot": "context-menu-group"
                       },
                       "children": [
                         {
                           "tag": "div",
                           "path": [
-                            27,
+                            57,
                             0,
                             0,
                             0
                           ],
                           "attrs": {
                             "role": "menuitem",
+                            "data-slot": "context-menu-item",
                             "tabindex": "-1",
                             "data-orientation": "vertical",
                             "data-radix-collection-item": ""
@@ -1347,7 +1678,7 @@
                         {
                           "tag": "div",
                           "path": [
-                            27,
+                            57,
                             0,
                             0,
                             1
@@ -1356,6 +1687,7 @@
                             "role": "menuitem",
                             "aria-disabled": "true",
                             "data-disabled": "",
+                            "data-slot": "context-menu-item",
                             "tabindex": "-1",
                             "data-orientation": "vertical",
                             "data-radix-collection-item": ""
@@ -1366,13 +1698,14 @@
                         {
                           "tag": "div",
                           "path": [
-                            27,
+                            57,
                             0,
                             0,
                             2
                           ],
                           "attrs": {
                             "role": "menuitem",
+                            "data-slot": "context-menu-item",
                             "tabindex": "-1",
                             "data-orientation": "vertical",
                             "data-radix-collection-item": ""
@@ -1392,7 +1725,7 @@
             {
               "tag": "span",
               "path": [
-                28
+                58
               ],
               "attrs": {
                 "tabindex": "0",
@@ -1473,7 +1806,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -1483,7 +1818,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1494,7 +1831,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -1507,7 +1846,8 @@
                                     0
                                   ],
                                   "attrs": {
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
                                   "text": "Right click here"
@@ -1526,7 +1866,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1537,7 +1879,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1563,7 +1907,8 @@
                                         0
                                       ],
                                       "attrs": {
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "context-menu-trigger"
                                       },
                                       "children": [],
                                       "text": "Right click (top)"
@@ -1580,7 +1925,8 @@
                                         1
                                       ],
                                       "attrs": {
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "context-menu-trigger"
                                       },
                                       "children": [],
                                       "text": "Right click (right)"
@@ -1597,7 +1943,8 @@
                                         2
                                       ],
                                       "attrs": {
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "context-menu-trigger"
                                       },
                                       "children": [],
                                       "text": "Right click (bottom)"
@@ -1614,7 +1961,8 @@
                                         3
                                       ],
                                       "attrs": {
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "context-menu-trigger"
                                       },
                                       "children": [],
                                       "text": "Right click (left)"
@@ -1636,7 +1984,9 @@
                             0,
                             2
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1647,7 +1997,9 @@
                                 2,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -1660,7 +2012,8 @@
                                     0
                                   ],
                                   "attrs": {
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
                                   "text": "Right click here"
@@ -1679,7 +2032,9 @@
                             0,
                             3
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1690,7 +2045,9 @@
                                 3,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -1703,7 +2060,8 @@
                                     0
                                   ],
                                   "attrs": {
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
                                   "text": "Right click here"
@@ -1722,7 +2080,9 @@
                             0,
                             4
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1733,7 +2093,9 @@
                                 4,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -1746,7 +2108,8 @@
                                     0
                                   ],
                                   "attrs": {
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
                                   "text": "Right click here"
@@ -1765,7 +2128,9 @@
                             0,
                             5
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1776,7 +2141,9 @@
                                 5,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -1789,7 +2156,8 @@
                                     0
                                   ],
                                   "attrs": {
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
                                   "text": "Right click here"
@@ -1808,7 +2176,9 @@
                             0,
                             6
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1819,7 +2189,9 @@
                                 6,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -1832,7 +2204,8 @@
                                     0
                                   ],
                                   "attrs": {
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
                                   "text": "Right click here"
@@ -1851,7 +2224,9 @@
                             0,
                             7
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1862,7 +2237,9 @@
                                 7,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -1875,7 +2252,8 @@
                                     0
                                   ],
                                   "attrs": {
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
                                   "text": "Right click here"
@@ -1894,7 +2272,9 @@
                             0,
                             8
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1905,7 +2285,9 @@
                                 8,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -1918,7 +2300,8 @@
                                     0
                                   ],
                                   "attrs": {
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "context-menu-trigger"
                                   },
                                   "children": [],
                                   "text": "Right click here"
@@ -1937,7 +2320,9 @@
                             0,
                             9
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1948,7 +2333,9 @@
                                 9,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -1961,6 +2348,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dialog-trigger",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_3_",
@@ -2096,6 +2484,30 @@
               "role": "button",
               "name": "Open Dialog",
               "haspopup": "dialog"
+            },
+            {
+              "role": "StaticText",
+              "name": "xs"
+            },
+            {
+              "role": "StaticText",
+              "name": "sm"
+            },
+            {
+              "role": "StaticText",
+              "name": "md"
+            },
+            {
+              "role": "StaticText",
+              "name": "lg"
+            },
+            {
+              "role": "StaticText",
+              "name": "xl"
+            },
+            {
+              "role": "StaticText",
+              "name": "2xl"
             },
             {
               "role": "region",

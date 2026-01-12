@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseUrl": "http://localhost:4020",
+  "baseUrl": "http://localhost:4000",
   "base": "radix",
   "style": "vega",
   "baseColor": "neutral",
@@ -13,12 +13,12 @@
   "item": "menubar-example",
   "primitive": "menubar",
   "scenario": "open-navigate-close",
-  "url": "http://localhost:4020/preview/radix/menubar-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "url": "http://localhost:4000/preview/radix/menubar-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
   "steps": [
     {
       "action": {
         "kind": "load",
-        "url": "http://localhost:4020/preview/radix/menubar-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+        "url": "http://localhost:4000/preview/radix/menubar-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
       },
       "snapshot": {
         "focus": {
@@ -53,7 +53,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -63,7 +65,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -74,7 +78,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -88,6 +94,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -108,6 +115,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -131,6 +139,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -155,7 +164,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -166,7 +177,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -180,6 +193,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -200,6 +214,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -223,6 +238,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -247,7 +263,9 @@
                             0,
                             2
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -258,7 +276,9 @@
                                 2,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -272,6 +292,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -292,6 +313,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -315,6 +337,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -339,7 +362,9 @@
                             0,
                             3
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -350,7 +375,9 @@
                                 3,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -364,6 +391,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -384,6 +412,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -407,6 +436,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -431,7 +461,9 @@
                             0,
                             4
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -442,7 +474,9 @@
                                 4,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -456,6 +490,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -476,6 +511,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -499,6 +535,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -523,7 +560,9 @@
                             0,
                             5
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -534,7 +573,9 @@
                                 5,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -548,6 +589,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -568,6 +610,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -591,6 +634,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -615,7 +659,9 @@
                             0,
                             6
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -626,7 +672,9 @@
                                 6,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -640,6 +688,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -660,6 +709,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -683,6 +733,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -707,7 +758,9 @@
                             0,
                             7
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -718,7 +771,9 @@
                                 7,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -732,6 +787,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -752,6 +808,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -775,6 +832,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -799,7 +857,9 @@
                             0,
                             8
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -810,7 +870,9 @@
                                 8,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -824,6 +886,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -844,6 +907,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -867,6 +931,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -891,7 +956,9 @@
                             0,
                             9
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -902,7 +969,9 @@
                                 9,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -915,6 +984,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dialog-trigger",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_4j_",
@@ -1157,6 +1227,30 @@
               "haspopup": "dialog"
             },
             {
+              "role": "StaticText",
+              "name": "xs"
+            },
+            {
+              "role": "StaticText",
+              "name": "sm"
+            },
+            {
+              "role": "StaticText",
+              "name": "md"
+            },
+            {
+              "role": "StaticText",
+              "name": "lg"
+            },
+            {
+              "role": "StaticText",
+              "name": "xl"
+            },
+            {
+              "role": "StaticText",
+              "name": "2xl"
+            },
+            {
               "role": "region",
               "name": "Notifications alt+T"
             }
@@ -1173,7 +1267,7 @@
         "focus": {
           "tag": "div",
           "path": [
-            27,
+            57,
             0
           ],
           "attrs": {
@@ -1183,6 +1277,7 @@
             "aria-orientation": "vertical",
             "data-state": "open",
             "aria-labelledby": "radix-_r_2c_",
+            "data-slot": "menubar-content",
             "tabindex": "-1",
             "data-orientation": "vertical"
           },
@@ -1225,7 +1320,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -1235,7 +1332,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1246,7 +1345,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1260,6 +1361,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -1280,6 +1382,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "true",
                                         "data-state": "open",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "0",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": "",
@@ -1304,6 +1407,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -1328,7 +1432,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1339,7 +1445,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1353,6 +1461,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -1373,6 +1482,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -1396,6 +1506,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -1420,7 +1531,9 @@
                             0,
                             2
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1431,7 +1544,9 @@
                                 2,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1445,6 +1560,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -1465,6 +1581,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -1488,6 +1605,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -1512,7 +1630,9 @@
                             0,
                             3
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1523,7 +1643,9 @@
                                 3,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1537,6 +1659,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -1557,6 +1680,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -1580,6 +1704,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -1604,7 +1729,9 @@
                             0,
                             4
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1615,7 +1742,9 @@
                                 4,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1629,6 +1758,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -1649,6 +1779,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -1672,6 +1803,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -1696,7 +1828,9 @@
                             0,
                             5
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1707,7 +1841,9 @@
                                 5,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1721,6 +1857,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -1741,6 +1878,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -1764,6 +1902,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -1788,7 +1927,9 @@
                             0,
                             6
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1799,7 +1940,9 @@
                                 6,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1813,6 +1956,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -1833,6 +1977,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -1856,6 +2001,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -1880,7 +2026,9 @@
                             0,
                             7
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1891,7 +2039,9 @@
                                 7,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1905,6 +2055,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -1925,6 +2076,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -1948,6 +2100,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -1972,7 +2125,9 @@
                             0,
                             8
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1983,7 +2138,9 @@
                                 8,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1997,6 +2154,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -2017,6 +2175,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -2040,6 +2199,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -2064,7 +2224,9 @@
                             0,
                             9
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2075,7 +2237,9 @@
                                 9,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -2088,6 +2252,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dialog-trigger",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_4j_",
@@ -2128,14 +2293,14 @@
             {
               "tag": "div",
               "path": [
-                27
+                57
               ],
               "attrs": {},
               "children": [
                 {
                   "tag": "div",
                   "path": [
-                    27,
+                    57,
                     0
                   ],
                   "attrs": {
@@ -2145,6 +2310,7 @@
                     "aria-orientation": "vertical",
                     "data-state": "open",
                     "aria-labelledby": "radix-_r_2c_",
+                    "data-slot": "menubar-content",
                     "tabindex": "-1",
                     "data-orientation": "vertical"
                   },
@@ -2152,52 +2318,87 @@
                     {
                       "tag": "div",
                       "path": [
-                        27,
+                        57,
                         0,
                         0
                       ],
                       "attrs": {
-                        "role": "group"
+                        "role": "group",
+                        "data-slot": "menubar-group"
                       },
                       "children": [
                         {
                           "tag": "div",
                           "path": [
-                            27,
+                            57,
                             0,
                             0,
                             0
                           ],
                           "attrs": {
                             "role": "menuitem",
+                            "data-slot": "menubar-item",
                             "tabindex": "-1",
                             "data-orientation": "vertical",
                             "data-radix-collection-item": ""
                           },
-                          "children": [],
+                          "children": [
+                            {
+                              "tag": "span",
+                              "path": [
+                                57,
+                                0,
+                                0,
+                                0,
+                                0
+                              ],
+                              "attrs": {
+                                "data-slot": "menubar-shortcut"
+                              },
+                              "children": [],
+                              "text": "⌘T"
+                            }
+                          ],
                           "text": "New Tab ⌘T"
                         },
                         {
                           "tag": "div",
                           "path": [
-                            27,
+                            57,
                             0,
                             0,
                             1
                           ],
                           "attrs": {
                             "role": "menuitem",
+                            "data-slot": "menubar-item",
                             "tabindex": "-1",
                             "data-orientation": "vertical",
                             "data-radix-collection-item": ""
                           },
-                          "children": [],
+                          "children": [
+                            {
+                              "tag": "span",
+                              "path": [
+                                57,
+                                0,
+                                0,
+                                1,
+                                0
+                              ],
+                              "attrs": {
+                                "data-slot": "menubar-shortcut"
+                              },
+                              "children": [],
+                              "text": "⌘N"
+                            }
+                          ],
                           "text": "New Window ⌘N"
                         },
                         {
                           "tag": "div",
                           "path": [
-                            27,
+                            57,
                             0,
                             0,
                             2
@@ -2206,6 +2407,7 @@
                             "role": "menuitem",
                             "aria-disabled": "true",
                             "data-disabled": "",
+                            "data-slot": "menubar-item",
                             "tabindex": "-1",
                             "data-orientation": "vertical",
                             "data-radix-collection-item": ""
@@ -2219,42 +2421,61 @@
                     {
                       "tag": "div",
                       "path": [
-                        27,
+                        57,
                         0,
                         1
                       ],
                       "attrs": {
                         "role": "separator",
-                        "aria-orientation": "horizontal"
+                        "aria-orientation": "horizontal",
+                        "data-slot": "menubar-separator"
                       },
                       "children": []
                     },
                     {
                       "tag": "div",
                       "path": [
-                        27,
+                        57,
                         0,
                         2
                       ],
                       "attrs": {
-                        "role": "group"
+                        "role": "group",
+                        "data-slot": "menubar-group"
                       },
                       "children": [
                         {
                           "tag": "div",
                           "path": [
-                            27,
+                            57,
                             0,
                             2,
                             0
                           ],
                           "attrs": {
                             "role": "menuitem",
+                            "data-slot": "menubar-item",
                             "tabindex": "-1",
                             "data-orientation": "vertical",
                             "data-radix-collection-item": ""
                           },
-                          "children": [],
+                          "children": [
+                            {
+                              "tag": "span",
+                              "path": [
+                                57,
+                                0,
+                                2,
+                                0,
+                                0
+                              ],
+                              "attrs": {
+                                "data-slot": "menubar-shortcut"
+                              },
+                              "children": [],
+                              "text": "⌘P"
+                            }
+                          ],
                           "text": "Print... ⌘P"
                         }
                       ],
@@ -2269,7 +2490,7 @@
             {
               "tag": "span",
               "path": [
-                28
+                58
               ],
               "attrs": {
                 "tabindex": "0"
@@ -2486,6 +2707,30 @@
               "haspopup": "dialog"
             },
             {
+              "role": "StaticText",
+              "name": "xs"
+            },
+            {
+              "role": "StaticText",
+              "name": "sm"
+            },
+            {
+              "role": "StaticText",
+              "name": "md"
+            },
+            {
+              "role": "StaticText",
+              "name": "lg"
+            },
+            {
+              "role": "StaticText",
+              "name": "xl"
+            },
+            {
+              "role": "StaticText",
+              "name": "2xl"
+            },
+            {
               "role": "region",
               "name": "Notifications alt+T"
             },
@@ -2544,6 +2789,7 @@
             "aria-haspopup": "menu",
             "aria-expanded": "false",
             "data-state": "closed",
+            "data-slot": "menubar-trigger",
             "tabindex": "0",
             "data-orientation": "horizontal",
             "data-radix-collection-item": "",
@@ -2578,7 +2824,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -2588,7 +2836,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2599,7 +2849,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -2613,6 +2865,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -2633,6 +2886,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "0",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": "",
@@ -2657,6 +2911,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -2681,7 +2936,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2692,7 +2949,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -2706,6 +2965,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -2726,6 +2986,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -2749,6 +3010,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -2773,7 +3035,9 @@
                             0,
                             2
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2784,7 +3048,9 @@
                                 2,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -2798,6 +3064,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -2818,6 +3085,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -2841,6 +3109,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -2865,7 +3134,9 @@
                             0,
                             3
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2876,7 +3147,9 @@
                                 3,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -2890,6 +3163,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -2910,6 +3184,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -2933,6 +3208,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -2957,7 +3233,9 @@
                             0,
                             4
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2968,7 +3246,9 @@
                                 4,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -2982,6 +3262,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -3002,6 +3283,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -3025,6 +3307,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -3049,7 +3332,9 @@
                             0,
                             5
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -3060,7 +3345,9 @@
                                 5,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -3074,6 +3361,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -3094,6 +3382,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -3117,6 +3406,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -3141,7 +3431,9 @@
                             0,
                             6
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -3152,7 +3444,9 @@
                                 6,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -3166,6 +3460,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -3186,6 +3481,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -3209,6 +3505,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -3233,7 +3530,9 @@
                             0,
                             7
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -3244,7 +3543,9 @@
                                 7,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -3258,6 +3559,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -3278,6 +3580,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -3301,6 +3604,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -3325,7 +3629,9 @@
                             0,
                             8
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -3336,7 +3642,9 @@
                                 8,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -3350,6 +3658,7 @@
                                   ],
                                   "attrs": {
                                     "role": "menubar",
+                                    "data-slot": "menubar",
                                     "tabindex": "0",
                                     "data-orientation": "horizontal"
                                   },
@@ -3370,6 +3679,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -3393,6 +3703,7 @@
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed",
+                                        "data-slot": "menubar-trigger",
                                         "tabindex": "-1",
                                         "data-orientation": "horizontal",
                                         "data-radix-collection-item": ""
@@ -3417,7 +3728,9 @@
                             0,
                             9
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -3428,7 +3741,9 @@
                                 9,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -3441,6 +3756,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dialog-trigger",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_4j_",
@@ -3682,6 +3998,30 @@
               "role": "button",
               "name": "Open Dialog",
               "haspopup": "dialog"
+            },
+            {
+              "role": "StaticText",
+              "name": "xs"
+            },
+            {
+              "role": "StaticText",
+              "name": "sm"
+            },
+            {
+              "role": "StaticText",
+              "name": "md"
+            },
+            {
+              "role": "StaticText",
+              "name": "lg"
+            },
+            {
+              "role": "StaticText",
+              "name": "xl"
+            },
+            {
+              "role": "StaticText",
+              "name": "2xl"
             },
             {
               "role": "region",

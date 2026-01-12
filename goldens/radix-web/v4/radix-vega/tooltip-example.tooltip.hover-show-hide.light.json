@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseUrl": "http://localhost:4020",
+  "baseUrl": "http://localhost:4000",
   "base": "radix",
   "style": "vega",
   "baseColor": "neutral",
@@ -13,12 +13,12 @@
   "item": "tooltip-example",
   "primitive": "tooltip",
   "scenario": "hover-show-hide",
-  "url": "http://localhost:4020/preview/radix/tooltip-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "url": "http://localhost:4000/preview/radix/tooltip-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
   "steps": [
     {
       "action": {
         "kind": "load",
-        "url": "http://localhost:4020/preview/radix/tooltip-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+        "url": "http://localhost:4000/preview/radix/tooltip-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
       },
       "snapshot": {
         "focus": {
@@ -570,19 +570,19 @@
             },
             {
               "role": "button",
-              "name": "Top"
+              "name": "top"
             },
             {
               "role": "button",
-              "name": "Right"
+              "name": "right"
             },
             {
               "role": "button",
-              "name": "Bottom"
+              "name": "bottom"
             },
             {
               "role": "button",
-              "name": "Left"
+              "name": "left"
             },
             {
               "role": "StaticText",
@@ -632,6 +632,30 @@
             {
               "role": "button",
               "name": "Status"
+            },
+            {
+              "role": "StaticText",
+              "name": "xs"
+            },
+            {
+              "role": "StaticText",
+              "name": "sm"
+            },
+            {
+              "role": "StaticText",
+              "name": "md"
+            },
+            {
+              "role": "StaticText",
+              "name": "lg"
+            },
+            {
+              "role": "StaticText",
+              "name": "xl"
+            },
+            {
+              "role": "StaticText",
+              "name": "2xl"
             },
             {
               "role": "region",
@@ -1180,18 +1204,18 @@
             {
               "tag": "div",
               "path": [
-                26
+                56
               ],
               "attrs": {},
               "children": [
                 {
                   "tag": "div",
                   "path": [
-                    26,
+                    56,
                     0
                   ],
                   "attrs": {
-                    "data-side": "top",
+                    "data-side": "bottom",
                     "data-align": "center",
                     "data-state": "delayed-open",
                     "data-slot": "tooltip-content"
@@ -1200,7 +1224,7 @@
                     {
                       "tag": "span",
                       "path": [
-                        26,
+                        56,
                         0,
                         2
                       ],
@@ -1237,19 +1261,19 @@
             },
             {
               "role": "button",
-              "name": "Top"
+              "name": "top"
             },
             {
               "role": "button",
-              "name": "Right"
+              "name": "right"
             },
             {
               "role": "button",
-              "name": "Bottom"
+              "name": "bottom"
             },
             {
               "role": "button",
-              "name": "Left"
+              "name": "left"
             },
             {
               "role": "StaticText",
@@ -1299,6 +1323,30 @@
             {
               "role": "button",
               "name": "Status"
+            },
+            {
+              "role": "StaticText",
+              "name": "xs"
+            },
+            {
+              "role": "StaticText",
+              "name": "sm"
+            },
+            {
+              "role": "StaticText",
+              "name": "md"
+            },
+            {
+              "role": "StaticText",
+              "name": "lg"
+            },
+            {
+              "role": "StaticText",
+              "name": "xl"
+            },
+            {
+              "role": "StaticText",
+              "name": "2xl"
             },
             {
               "role": "region",
@@ -1871,19 +1919,19 @@
             },
             {
               "role": "button",
-              "name": "Top"
+              "name": "top"
             },
             {
               "role": "button",
-              "name": "Right"
+              "name": "right"
             },
             {
               "role": "button",
-              "name": "Bottom"
+              "name": "bottom"
             },
             {
               "role": "button",
-              "name": "Left"
+              "name": "left"
             },
             {
               "role": "StaticText",
@@ -1933,6 +1981,30 @@
             {
               "role": "button",
               "name": "Status"
+            },
+            {
+              "role": "StaticText",
+              "name": "xs"
+            },
+            {
+              "role": "StaticText",
+              "name": "sm"
+            },
+            {
+              "role": "StaticText",
+              "name": "md"
+            },
+            {
+              "role": "StaticText",
+              "name": "lg"
+            },
+            {
+              "role": "StaticText",
+              "name": "xl"
+            },
+            {
+              "role": "StaticText",
+              "name": "2xl"
             },
             {
               "role": "region",

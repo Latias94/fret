@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseUrl": "http://localhost:4020",
+  "baseUrl": "http://localhost:4000",
   "base": "radix",
   "style": "vega",
   "baseColor": "neutral",
@@ -13,12 +13,12 @@
   "item": "select-example",
   "primitive": "select",
   "scenario": "open-navigate-select",
-  "url": "http://localhost:4020/preview/radix/select-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "url": "http://localhost:4000/preview/radix/select-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
   "steps": [
     {
       "action": {
         "kind": "load",
-        "url": "http://localhost:4020/preview/radix/select-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+        "url": "http://localhost:4000/preview/radix/select-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
       },
       "snapshot": {
         "focus": {
@@ -53,7 +53,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -63,7 +65,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -74,7 +78,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -91,9 +97,27 @@
                                     "aria-controls": "radix-_r_16_",
                                     "aria-expanded": "false",
                                     "aria-autocomplete": "none",
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "select-trigger"
                                   },
                                   "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "select-value"
+                                      },
+                                      "children": [],
+                                      "text": "Select a fruit"
+                                    },
                                     {
                                       "tag": "svg",
                                       "path": [
@@ -127,7 +151,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -138,7 +164,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -168,9 +196,28 @@
                                         "aria-controls": "radix-_r_18_",
                                         "aria-expanded": "false",
                                         "aria-autocomplete": "none",
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "select-trigger"
                                       },
                                       "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "select-value"
+                                          },
+                                          "children": [],
+                                          "text": "Chart Type"
+                                        },
                                         {
                                           "tag": "svg",
                                           "path": [
@@ -207,9 +254,28 @@
                                         "aria-controls": "radix-_r_1b_",
                                         "aria-expanded": "false",
                                         "aria-autocomplete": "none",
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "select-trigger"
                                       },
                                       "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "select-value"
+                                          },
+                                          "children": [],
+                                          "text": "Chart Type"
+                                        },
                                         {
                                           "tag": "svg",
                                           "path": [
@@ -247,7 +313,9 @@
                             0,
                             2
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -258,7 +326,9 @@
                                 2,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -275,9 +345,27 @@
                                     "aria-controls": "radix-_r_1e_",
                                     "aria-expanded": "false",
                                     "aria-autocomplete": "none",
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "select-trigger"
                                   },
                                   "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "select-value"
+                                      },
+                                      "children": [],
+                                      "text": "Select a fruit"
+                                    },
                                     {
                                       "tag": "svg",
                                       "path": [
@@ -311,7 +399,9 @@
                             0,
                             3
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -322,7 +412,9 @@
                                 3,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -339,9 +431,27 @@
                                     "aria-controls": "radix-_r_1g_",
                                     "aria-expanded": "false",
                                     "aria-autocomplete": "none",
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "select-trigger"
                                   },
                                   "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "select-value"
+                                      },
+                                      "children": [],
+                                      "text": "Select an item"
+                                    },
                                     {
                                       "tag": "svg",
                                       "path": [
@@ -375,7 +485,9 @@
                             0,
                             4
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -386,7 +498,9 @@
                                 4,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -416,9 +530,28 @@
                                         "aria-controls": "radix-_r_1i_",
                                         "aria-expanded": "false",
                                         "aria-autocomplete": "none",
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "select-trigger"
                                       },
                                       "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "select-value"
+                                          },
+                                          "children": [],
+                                          "text": "Small size"
+                                        },
                                         {
                                           "tag": "svg",
                                           "path": [
@@ -455,9 +588,28 @@
                                         "aria-controls": "radix-_r_1k_",
                                         "aria-expanded": "false",
                                         "aria-autocomplete": "none",
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "select-trigger"
                                       },
                                       "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "select-value"
+                                          },
+                                          "children": [],
+                                          "text": "Default size"
+                                        },
                                         {
                                           "tag": "svg",
                                           "path": [
@@ -495,7 +647,9 @@
                             0,
                             5
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -506,7 +660,9 @@
                                 5,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -523,9 +679,107 @@
                                     "aria-controls": "radix-_r_1m_",
                                     "aria-expanded": "false",
                                     "aria-autocomplete": "none",
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "select-trigger"
                                   },
                                   "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "select-value"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "item"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                5,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "item-content"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "div",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    5,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-slot": "item-title"
+                                                  },
+                                                  "children": [],
+                                                  "text": "Starter"
+                                                },
+                                                {
+                                                  "tag": "p",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    5,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    1
+                                                  ],
+                                                  "attrs": {
+                                                    "data-slot": "item-description"
+                                                  },
+                                                  "children": [],
+                                                  "text": "Perfect for individuals getting started."
+                                                }
+                                              ],
+                                              "text": "StarterPerfect for individuals getting started."
+                                            }
+                                          ],
+                                          "text": "StarterPerfect for individuals getting started."
+                                        }
+                                      ],
+                                      "text": "StarterPerfect for individuals getting started."
+                                    },
                                     {
                                       "tag": "svg",
                                       "path": [
@@ -559,7 +813,9 @@
                             0,
                             6
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -570,7 +826,9 @@
                                 6,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -614,9 +872,29 @@
                                             "aria-controls": "radix-_r_1o_",
                                             "aria-expanded": "false",
                                             "aria-autocomplete": "none",
-                                            "data-state": "closed"
+                                            "data-state": "closed",
+                                            "data-slot": "select-trigger"
                                           },
                                           "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                6,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "select-value"
+                                              },
+                                              "children": [],
+                                              "text": "Small"
+                                            },
                                             {
                                               "tag": "svg",
                                               "path": [
@@ -650,7 +928,9 @@
                                             0,
                                             1
                                           ],
-                                          "attrs": {},
+                                          "attrs": {
+                                            "data-slot": "button"
+                                          },
                                           "children": [],
                                           "text": "Submit"
                                         }
@@ -687,9 +967,29 @@
                                             "aria-controls": "radix-_r_1q_",
                                             "aria-expanded": "false",
                                             "aria-autocomplete": "none",
-                                            "data-state": "closed"
+                                            "data-state": "closed",
+                                            "data-slot": "select-trigger"
                                           },
                                           "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                6,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "select-value"
+                                              },
+                                              "children": [],
+                                              "text": "Default"
+                                            },
                                             {
                                               "tag": "svg",
                                               "path": [
@@ -723,7 +1023,9 @@
                                             1,
                                             1
                                           ],
-                                          "attrs": {},
+                                          "attrs": {
+                                            "data-slot": "button"
+                                          },
                                           "children": [],
                                           "text": "Submit"
                                         }
@@ -747,7 +1049,9 @@
                             0,
                             7
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -758,7 +1062,9 @@
                                 7,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -775,9 +1081,27 @@
                                     "aria-controls": "radix-_r_1s_",
                                     "aria-expanded": "false",
                                     "aria-autocomplete": "none",
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "select-trigger"
                                   },
                                   "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        7,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "select-value"
+                                      },
+                                      "children": [],
+                                      "text": "Select a fruit"
+                                    },
                                     {
                                       "tag": "svg",
                                       "path": [
@@ -811,7 +1135,9 @@
                             0,
                             8
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -822,7 +1148,9 @@
                                 8,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -836,9 +1164,27 @@
                                   ],
                                   "attrs": {
                                     "role": "group",
+                                    "data-slot": "field",
                                     "data-orientation": "vertical"
                                   },
                                   "children": [
+                                    {
+                                      "tag": "label",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        8,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "field-label"
+                                      },
+                                      "children": [],
+                                      "text": "Favorite Fruit"
+                                    },
                                     {
                                       "tag": "button",
                                       "path": [
@@ -855,9 +1201,28 @@
                                         "aria-controls": "radix-_r_1u_",
                                         "aria-expanded": "false",
                                         "aria-autocomplete": "none",
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "select-trigger"
                                       },
                                       "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            8,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "select-value"
+                                          },
+                                          "children": [],
+                                          "text": "Select a fruit"
+                                        },
                                         {
                                           "tag": "svg",
                                           "path": [
@@ -877,6 +1242,23 @@
                                         }
                                       ],
                                       "text": "Select a fruit"
+                                    },
+                                    {
+                                      "tag": "p",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        8,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "field-description"
+                                      },
+                                      "children": [],
+                                      "text": "Choose your favorite fruit from the list."
                                     }
                                   ],
                                   "text": "Favorite FruitSelect a fruitChoose your favorite fruit from the list."
@@ -895,7 +1277,9 @@
                             0,
                             9
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -906,7 +1290,9 @@
                                 9,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -937,9 +1323,28 @@
                                         "aria-expanded": "false",
                                         "aria-autocomplete": "none",
                                         "data-state": "closed",
+                                        "data-slot": "select-trigger",
                                         "aria-invalid": "true"
                                       },
                                       "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            9,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "select-value"
+                                          },
+                                          "children": [],
+                                          "text": "Select a fruit"
+                                        },
                                         {
                                           "tag": "svg",
                                           "path": [
@@ -973,9 +1378,28 @@
                                       ],
                                       "attrs": {
                                         "role": "group",
+                                        "data-slot": "field",
                                         "data-orientation": "vertical"
                                       },
                                       "children": [
+                                        {
+                                          "tag": "label",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            9,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "field-label"
+                                          },
+                                          "children": [],
+                                          "text": "Favorite Fruit"
+                                        },
                                         {
                                           "tag": "button",
                                           "path": [
@@ -994,9 +1418,29 @@
                                             "aria-expanded": "false",
                                             "aria-autocomplete": "none",
                                             "data-state": "closed",
+                                            "data-slot": "select-trigger",
                                             "aria-invalid": "true"
                                           },
                                           "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                9,
+                                                1,
+                                                0,
+                                                1,
+                                                1,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "select-value"
+                                              },
+                                              "children": [],
+                                              "text": "Select a fruit"
+                                            },
                                             {
                                               "tag": "svg",
                                               "path": [
@@ -1031,7 +1475,8 @@
                                             2
                                           ],
                                           "attrs": {
-                                            "role": "alert"
+                                            "role": "alert",
+                                            "data-slot": "field-error"
                                           },
                                           "children": [],
                                           "text": "Please select a valid fruit."
@@ -1056,7 +1501,9 @@
                             0,
                             10
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1067,7 +1514,9 @@
                                 10,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1092,7 +1541,9 @@
                                         0,
                                         0
                                       ],
-                                      "attrs": {},
+                                      "attrs": {
+                                        "data-slot": "input"
+                                      },
                                       "children": []
                                     },
                                     {
@@ -1111,9 +1562,28 @@
                                         "aria-controls": "radix-_r_24_",
                                         "aria-expanded": "false",
                                         "aria-autocomplete": "none",
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "select-trigger"
                                       },
                                       "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            10,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "select-value"
+                                          },
+                                          "children": [],
+                                          "text": "Filter"
+                                        },
                                         {
                                           "tag": "svg",
                                           "path": [
@@ -1145,7 +1615,9 @@
                                         0,
                                         2
                                       ],
-                                      "attrs": {},
+                                      "attrs": {
+                                        "data-slot": "native-select-wrapper"
+                                      },
                                       "children": [
                                         {
                                           "tag": "select",
@@ -1159,8 +1631,87 @@
                                             2,
                                             0
                                           ],
-                                          "attrs": {},
-                                          "children": [],
+                                          "attrs": {
+                                            "data-slot": "native-select"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "option",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                10,
+                                                1,
+                                                0,
+                                                2,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "native-select-option"
+                                              },
+                                              "children": [],
+                                              "text": "Sort by"
+                                            },
+                                            {
+                                              "tag": "option",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                10,
+                                                1,
+                                                0,
+                                                2,
+                                                0,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "native-select-option"
+                                              },
+                                              "children": [],
+                                              "text": "Name"
+                                            },
+                                            {
+                                              "tag": "option",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                10,
+                                                1,
+                                                0,
+                                                2,
+                                                0,
+                                                2
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "native-select-option"
+                                              },
+                                              "children": [],
+                                              "text": "Date"
+                                            },
+                                            {
+                                              "tag": "option",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                10,
+                                                1,
+                                                0,
+                                                2,
+                                                0,
+                                                3
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "native-select-option"
+                                              },
+                                              "children": [],
+                                              "text": "Status"
+                                            }
+                                          ],
                                           "text": "Sort byNameDateStatus"
                                         },
                                         {
@@ -1176,7 +1727,8 @@
                                             1
                                           ],
                                           "attrs": {
-                                            "aria-hidden": "true"
+                                            "aria-hidden": "true",
+                                            "data-slot": "native-select-icon"
                                           },
                                           "children": []
                                         }
@@ -1200,7 +1752,9 @@
                             0,
                             11
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1211,7 +1765,9 @@
                                 11,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -1229,9 +1785,27 @@
                                     "aria-expanded": "false",
                                     "aria-autocomplete": "none",
                                     "data-state": "closed",
-                                    "data-disabled": ""
+                                    "data-disabled": "",
+                                    "data-slot": "select-trigger"
                                   },
                                   "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        11,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "select-value"
+                                      },
+                                      "children": [],
+                                      "text": "Disabled"
+                                    },
                                     {
                                       "tag": "svg",
                                       "path": [
@@ -1265,7 +1839,9 @@
                             0,
                             12
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1276,7 +1852,9 @@
                                 12,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -1289,6 +1867,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dialog-trigger",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_29_",
@@ -1542,6 +2121,30 @@
               "haspopup": "dialog"
             },
             {
+              "role": "StaticText",
+              "name": "xs"
+            },
+            {
+              "role": "StaticText",
+              "name": "sm"
+            },
+            {
+              "role": "StaticText",
+              "name": "md"
+            },
+            {
+              "role": "StaticText",
+              "name": "lg"
+            },
+            {
+              "role": "StaticText",
+              "name": "xl"
+            },
+            {
+              "role": "StaticText",
+              "name": "2xl"
+            },
+            {
               "role": "region",
               "name": "Notifications alt+T"
             }
@@ -1558,7 +2161,7 @@
         "focus": {
           "tag": "div",
           "path": [
-            27,
+            57,
             0,
             1,
             0,
@@ -1570,6 +2173,7 @@
             "aria-selected": "false",
             "data-state": "unchecked",
             "tabindex": "-1",
+            "data-slot": "select-item",
             "data-radix-collection-item": "",
             "data-highlighted": ""
           },
@@ -1625,7 +2229,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -1635,7 +2241,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1646,7 +2254,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -1663,9 +2273,27 @@
                                     "aria-controls": "radix-_r_16_",
                                     "aria-expanded": "true",
                                     "aria-autocomplete": "none",
-                                    "data-state": "open"
+                                    "data-state": "open",
+                                    "data-slot": "select-trigger"
                                   },
                                   "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "select-value"
+                                      },
+                                      "children": [],
+                                      "text": "Select a fruit"
+                                    },
                                     {
                                       "tag": "svg",
                                       "path": [
@@ -1699,7 +2327,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1710,7 +2340,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1740,9 +2372,28 @@
                                         "aria-controls": "radix-_r_18_",
                                         "aria-expanded": "false",
                                         "aria-autocomplete": "none",
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "select-trigger"
                                       },
                                       "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            3,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "select-value"
+                                          },
+                                          "children": [],
+                                          "text": "Chart Type"
+                                        },
                                         {
                                           "tag": "svg",
                                           "path": [
@@ -1779,9 +2430,28 @@
                                         "aria-controls": "radix-_r_1b_",
                                         "aria-expanded": "false",
                                         "aria-autocomplete": "none",
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "select-trigger"
                                       },
                                       "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            3,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "select-value"
+                                          },
+                                          "children": [],
+                                          "text": "Chart Type"
+                                        },
                                         {
                                           "tag": "svg",
                                           "path": [
@@ -1819,7 +2489,9 @@
                             0,
                             2
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1830,7 +2502,9 @@
                                 2,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -1847,9 +2521,27 @@
                                     "aria-controls": "radix-_r_1e_",
                                     "aria-expanded": "false",
                                     "aria-autocomplete": "none",
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "select-trigger"
                                   },
                                   "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "select-value"
+                                      },
+                                      "children": [],
+                                      "text": "Select a fruit"
+                                    },
                                     {
                                       "tag": "svg",
                                       "path": [
@@ -1883,7 +2575,9 @@
                             0,
                             3
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1894,7 +2588,9 @@
                                 3,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -1911,9 +2607,27 @@
                                     "aria-controls": "radix-_r_1g_",
                                     "aria-expanded": "false",
                                     "aria-autocomplete": "none",
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "select-trigger"
                                   },
                                   "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "select-value"
+                                      },
+                                      "children": [],
+                                      "text": "Select an item"
+                                    },
                                     {
                                       "tag": "svg",
                                       "path": [
@@ -1947,7 +2661,9 @@
                             0,
                             4
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1958,7 +2674,9 @@
                                 4,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1988,9 +2706,28 @@
                                         "aria-controls": "radix-_r_1i_",
                                         "aria-expanded": "false",
                                         "aria-autocomplete": "none",
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "select-trigger"
                                       },
                                       "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            3,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "select-value"
+                                          },
+                                          "children": [],
+                                          "text": "Small size"
+                                        },
                                         {
                                           "tag": "svg",
                                           "path": [
@@ -2027,9 +2764,28 @@
                                         "aria-controls": "radix-_r_1k_",
                                         "aria-expanded": "false",
                                         "aria-autocomplete": "none",
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "select-trigger"
                                       },
                                       "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            3,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "select-value"
+                                          },
+                                          "children": [],
+                                          "text": "Default size"
+                                        },
                                         {
                                           "tag": "svg",
                                           "path": [
@@ -2067,7 +2823,9 @@
                             0,
                             5
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2078,7 +2836,9 @@
                                 5,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -2095,9 +2855,107 @@
                                     "aria-controls": "radix-_r_1m_",
                                     "aria-expanded": "false",
                                     "aria-autocomplete": "none",
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "select-trigger"
                                   },
                                   "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "select-value"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            3,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "item"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                3,
+                                                3,
+                                                0,
+                                                5,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "item-content"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "div",
+                                                  "path": [
+                                                    3,
+                                                    3,
+                                                    0,
+                                                    5,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-slot": "item-title"
+                                                  },
+                                                  "children": [],
+                                                  "text": "Starter"
+                                                },
+                                                {
+                                                  "tag": "p",
+                                                  "path": [
+                                                    3,
+                                                    3,
+                                                    0,
+                                                    5,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    1
+                                                  ],
+                                                  "attrs": {
+                                                    "data-slot": "item-description"
+                                                  },
+                                                  "children": [],
+                                                  "text": "Perfect for individuals getting started."
+                                                }
+                                              ],
+                                              "text": "StarterPerfect for individuals getting started."
+                                            }
+                                          ],
+                                          "text": "StarterPerfect for individuals getting started."
+                                        }
+                                      ],
+                                      "text": "StarterPerfect for individuals getting started."
+                                    },
                                     {
                                       "tag": "svg",
                                       "path": [
@@ -2131,7 +2989,9 @@
                             0,
                             6
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2142,7 +3002,9 @@
                                 6,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -2186,9 +3048,29 @@
                                             "aria-controls": "radix-_r_1o_",
                                             "aria-expanded": "false",
                                             "aria-autocomplete": "none",
-                                            "data-state": "closed"
+                                            "data-state": "closed",
+                                            "data-slot": "select-trigger"
                                           },
                                           "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                3,
+                                                3,
+                                                0,
+                                                6,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "select-value"
+                                              },
+                                              "children": [],
+                                              "text": "Small"
+                                            },
                                             {
                                               "tag": "svg",
                                               "path": [
@@ -2222,7 +3104,9 @@
                                             0,
                                             1
                                           ],
-                                          "attrs": {},
+                                          "attrs": {
+                                            "data-slot": "button"
+                                          },
                                           "children": [],
                                           "text": "Submit"
                                         }
@@ -2259,9 +3143,29 @@
                                             "aria-controls": "radix-_r_1q_",
                                             "aria-expanded": "false",
                                             "aria-autocomplete": "none",
-                                            "data-state": "closed"
+                                            "data-state": "closed",
+                                            "data-slot": "select-trigger"
                                           },
                                           "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                3,
+                                                3,
+                                                0,
+                                                6,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "select-value"
+                                              },
+                                              "children": [],
+                                              "text": "Default"
+                                            },
                                             {
                                               "tag": "svg",
                                               "path": [
@@ -2295,7 +3199,9 @@
                                             1,
                                             1
                                           ],
-                                          "attrs": {},
+                                          "attrs": {
+                                            "data-slot": "button"
+                                          },
                                           "children": [],
                                           "text": "Submit"
                                         }
@@ -2319,7 +3225,9 @@
                             0,
                             7
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2330,7 +3238,9 @@
                                 7,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -2347,9 +3257,27 @@
                                     "aria-controls": "radix-_r_1s_",
                                     "aria-expanded": "false",
                                     "aria-autocomplete": "none",
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "select-trigger"
                                   },
                                   "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        7,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "select-value"
+                                      },
+                                      "children": [],
+                                      "text": "Select a fruit"
+                                    },
                                     {
                                       "tag": "svg",
                                       "path": [
@@ -2383,7 +3311,9 @@
                             0,
                             8
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2394,7 +3324,9 @@
                                 8,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -2408,9 +3340,27 @@
                                   ],
                                   "attrs": {
                                     "role": "group",
+                                    "data-slot": "field",
                                     "data-orientation": "vertical"
                                   },
                                   "children": [
+                                    {
+                                      "tag": "label",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        8,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "field-label"
+                                      },
+                                      "children": [],
+                                      "text": "Favorite Fruit"
+                                    },
                                     {
                                       "tag": "button",
                                       "path": [
@@ -2427,9 +3377,28 @@
                                         "aria-controls": "radix-_r_1u_",
                                         "aria-expanded": "false",
                                         "aria-autocomplete": "none",
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "select-trigger"
                                       },
                                       "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            3,
+                                            3,
+                                            0,
+                                            8,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "select-value"
+                                          },
+                                          "children": [],
+                                          "text": "Select a fruit"
+                                        },
                                         {
                                           "tag": "svg",
                                           "path": [
@@ -2449,6 +3418,23 @@
                                         }
                                       ],
                                       "text": "Select a fruit"
+                                    },
+                                    {
+                                      "tag": "p",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        8,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "field-description"
+                                      },
+                                      "children": [],
+                                      "text": "Choose your favorite fruit from the list."
                                     }
                                   ],
                                   "text": "Favorite FruitSelect a fruitChoose your favorite fruit from the list."
@@ -2467,7 +3453,9 @@
                             0,
                             9
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2478,7 +3466,9 @@
                                 9,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -2509,9 +3499,28 @@
                                         "aria-expanded": "false",
                                         "aria-autocomplete": "none",
                                         "data-state": "closed",
+                                        "data-slot": "select-trigger",
                                         "aria-invalid": "true"
                                       },
                                       "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            3,
+                                            3,
+                                            0,
+                                            9,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "select-value"
+                                          },
+                                          "children": [],
+                                          "text": "Select a fruit"
+                                        },
                                         {
                                           "tag": "svg",
                                           "path": [
@@ -2545,9 +3554,28 @@
                                       ],
                                       "attrs": {
                                         "role": "group",
+                                        "data-slot": "field",
                                         "data-orientation": "vertical"
                                       },
                                       "children": [
+                                        {
+                                          "tag": "label",
+                                          "path": [
+                                            3,
+                                            3,
+                                            0,
+                                            9,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "field-label"
+                                          },
+                                          "children": [],
+                                          "text": "Favorite Fruit"
+                                        },
                                         {
                                           "tag": "button",
                                           "path": [
@@ -2566,9 +3594,29 @@
                                             "aria-expanded": "false",
                                             "aria-autocomplete": "none",
                                             "data-state": "closed",
+                                            "data-slot": "select-trigger",
                                             "aria-invalid": "true"
                                           },
                                           "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                3,
+                                                3,
+                                                0,
+                                                9,
+                                                1,
+                                                0,
+                                                1,
+                                                1,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "select-value"
+                                              },
+                                              "children": [],
+                                              "text": "Select a fruit"
+                                            },
                                             {
                                               "tag": "svg",
                                               "path": [
@@ -2603,7 +3651,8 @@
                                             2
                                           ],
                                           "attrs": {
-                                            "role": "alert"
+                                            "role": "alert",
+                                            "data-slot": "field-error"
                                           },
                                           "children": [],
                                           "text": "Please select a valid fruit."
@@ -2628,7 +3677,9 @@
                             0,
                             10
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2639,7 +3690,9 @@
                                 10,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -2664,7 +3717,9 @@
                                         0,
                                         0
                                       ],
-                                      "attrs": {},
+                                      "attrs": {
+                                        "data-slot": "input"
+                                      },
                                       "children": []
                                     },
                                     {
@@ -2683,9 +3738,28 @@
                                         "aria-controls": "radix-_r_24_",
                                         "aria-expanded": "false",
                                         "aria-autocomplete": "none",
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "select-trigger"
                                       },
                                       "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            3,
+                                            3,
+                                            0,
+                                            10,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "select-value"
+                                          },
+                                          "children": [],
+                                          "text": "Filter"
+                                        },
                                         {
                                           "tag": "svg",
                                           "path": [
@@ -2717,7 +3791,9 @@
                                         0,
                                         2
                                       ],
-                                      "attrs": {},
+                                      "attrs": {
+                                        "data-slot": "native-select-wrapper"
+                                      },
                                       "children": [
                                         {
                                           "tag": "select",
@@ -2731,8 +3807,87 @@
                                             2,
                                             0
                                           ],
-                                          "attrs": {},
-                                          "children": [],
+                                          "attrs": {
+                                            "data-slot": "native-select"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "option",
+                                              "path": [
+                                                3,
+                                                3,
+                                                0,
+                                                10,
+                                                1,
+                                                0,
+                                                2,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "native-select-option"
+                                              },
+                                              "children": [],
+                                              "text": "Sort by"
+                                            },
+                                            {
+                                              "tag": "option",
+                                              "path": [
+                                                3,
+                                                3,
+                                                0,
+                                                10,
+                                                1,
+                                                0,
+                                                2,
+                                                0,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "native-select-option"
+                                              },
+                                              "children": [],
+                                              "text": "Name"
+                                            },
+                                            {
+                                              "tag": "option",
+                                              "path": [
+                                                3,
+                                                3,
+                                                0,
+                                                10,
+                                                1,
+                                                0,
+                                                2,
+                                                0,
+                                                2
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "native-select-option"
+                                              },
+                                              "children": [],
+                                              "text": "Date"
+                                            },
+                                            {
+                                              "tag": "option",
+                                              "path": [
+                                                3,
+                                                3,
+                                                0,
+                                                10,
+                                                1,
+                                                0,
+                                                2,
+                                                0,
+                                                3
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "native-select-option"
+                                              },
+                                              "children": [],
+                                              "text": "Status"
+                                            }
+                                          ],
                                           "text": "Sort byNameDateStatus"
                                         },
                                         {
@@ -2748,7 +3903,8 @@
                                             1
                                           ],
                                           "attrs": {
-                                            "aria-hidden": "true"
+                                            "aria-hidden": "true",
+                                            "data-slot": "native-select-icon"
                                           },
                                           "children": []
                                         }
@@ -2772,7 +3928,9 @@
                             0,
                             11
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2783,7 +3941,9 @@
                                 11,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -2801,9 +3961,27 @@
                                     "aria-expanded": "false",
                                     "aria-autocomplete": "none",
                                     "data-state": "closed",
-                                    "data-disabled": ""
+                                    "data-disabled": "",
+                                    "data-slot": "select-trigger"
                                   },
                                   "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        11,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "select-value"
+                                      },
+                                      "children": [],
+                                      "text": "Disabled"
+                                    },
                                     {
                                       "tag": "svg",
                                       "path": [
@@ -2837,7 +4015,9 @@
                             0,
                             12
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2848,7 +4028,9 @@
                                 12,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -2861,6 +4043,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dialog-trigger",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_29_",
@@ -2880,6 +4063,18 @@
                     }
                   ],
                   "text": "BasicSelect a fruitWith IconsChart TypeChart TypeWith Groups & LabelsSelect a fruitLarge ListSelect an itemSizesSmall si…"
+                },
+                {
+                  "tag": "div",
+                  "path": [
+                    3,
+                    4
+                  ],
+                  "attrs": {
+                    "aria-hidden": "true"
+                  },
+                  "children": [],
+                  "text": "xssmmdlgxl2xl"
                 }
               ],
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
@@ -2899,9 +4094,190 @@
               "children": []
             },
             {
+              "tag": "title",
+              "path": [
+                8
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": [],
+              "text": "select-example - shadcn/ui"
+            },
+            {
+              "tag": "link",
+              "path": [
+                9
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                10
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "link",
+              "path": [
+                11
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                12
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                13
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                14
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                15
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                16
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                17
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                18
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                19
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                20
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                21
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                22
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                23
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "meta",
+              "path": [
+                24
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "link",
+              "path": [
+                25
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
               "tag": "next-route-announcer",
               "path": [
-                26
+                56
               ],
               "attrs": {
                 "aria-hidden": "true"
@@ -2911,26 +4287,27 @@
             {
               "tag": "div",
               "path": [
-                27
+                57
               ],
               "attrs": {},
               "children": [
                 {
                   "tag": "div",
                   "path": [
-                    27,
+                    57,
                     0
                   ],
                   "attrs": {
                     "role": "listbox",
                     "data-state": "open",
+                    "data-slot": "select-content",
                     "tabindex": "-1"
                   },
                   "children": [
                     {
                       "tag": "div",
                       "path": [
-                        27,
+                        57,
                         0,
                         1
                       ],
@@ -2941,20 +4318,21 @@
                         {
                           "tag": "div",
                           "path": [
-                            27,
+                            57,
                             0,
                             1,
                             0
                           ],
                           "attrs": {
                             "role": "group",
-                            "aria-labelledby": "radix-_r_84_"
+                            "aria-labelledby": "radix-_r_84_",
+                            "data-slot": "select-group"
                           },
                           "children": [
                             {
                               "tag": "div",
                               "path": [
-                                27,
+                                57,
                                 0,
                                 1,
                                 0,
@@ -2966,6 +4344,7 @@
                                 "aria-selected": "false",
                                 "data-state": "unchecked",
                                 "tabindex": "-1",
+                                "data-slot": "select-item",
                                 "data-radix-collection-item": "",
                                 "data-highlighted": ""
                               },
@@ -2975,7 +4354,7 @@
                             {
                               "tag": "div",
                               "path": [
-                                27,
+                                57,
                                 0,
                                 1,
                                 0,
@@ -2987,6 +4366,7 @@
                                 "aria-selected": "false",
                                 "data-state": "unchecked",
                                 "tabindex": "-1",
+                                "data-slot": "select-item",
                                 "data-radix-collection-item": ""
                               },
                               "children": [],
@@ -2995,7 +4375,7 @@
                             {
                               "tag": "div",
                               "path": [
-                                27,
+                                57,
                                 0,
                                 1,
                                 0,
@@ -3007,6 +4387,7 @@
                                 "aria-selected": "false",
                                 "data-state": "unchecked",
                                 "tabindex": "-1",
+                                "data-slot": "select-item",
                                 "data-radix-collection-item": ""
                               },
                               "children": [],
@@ -3015,7 +4396,7 @@
                             {
                               "tag": "div",
                               "path": [
-                                27,
+                                57,
                                 0,
                                 1,
                                 0,
@@ -3028,6 +4409,7 @@
                                 "data-state": "unchecked",
                                 "aria-disabled": "true",
                                 "data-disabled": "",
+                                "data-slot": "select-item",
                                 "data-radix-collection-item": ""
                               },
                               "children": [],
@@ -3036,7 +4418,7 @@
                             {
                               "tag": "div",
                               "path": [
-                                27,
+                                57,
                                 0,
                                 1,
                                 0,
@@ -3048,6 +4430,7 @@
                                 "aria-selected": "false",
                                 "data-state": "unchecked",
                                 "tabindex": "-1",
+                                "data-slot": "select-item",
                                 "data-radix-collection-item": ""
                               },
                               "children": [],
@@ -3068,7 +4451,7 @@
             {
               "tag": "span",
               "path": [
-                28
+                58
               ],
               "attrs": {
                 "tabindex": "0",
@@ -3135,7 +4518,8 @@
             "aria-controls": "radix-_r_16_",
             "aria-expanded": "false",
             "aria-autocomplete": "none",
-            "data-state": "closed"
+            "data-state": "closed",
+            "data-slot": "select-trigger"
           },
           "text": "Banana"
         },
@@ -3166,7 +4550,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -3176,7 +4562,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -3187,7 +4575,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -3204,9 +4594,27 @@
                                     "aria-controls": "radix-_r_16_",
                                     "aria-expanded": "false",
                                     "aria-autocomplete": "none",
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "select-trigger"
                                   },
                                   "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "select-value"
+                                      },
+                                      "children": [],
+                                      "text": "Banana"
+                                    },
                                     {
                                       "tag": "svg",
                                       "path": [
@@ -3240,7 +4648,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -3251,7 +4661,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -3281,9 +4693,28 @@
                                         "aria-controls": "radix-_r_18_",
                                         "aria-expanded": "false",
                                         "aria-autocomplete": "none",
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "select-trigger"
                                       },
                                       "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "select-value"
+                                          },
+                                          "children": [],
+                                          "text": "Chart Type"
+                                        },
                                         {
                                           "tag": "svg",
                                           "path": [
@@ -3320,9 +4751,28 @@
                                         "aria-controls": "radix-_r_1b_",
                                         "aria-expanded": "false",
                                         "aria-autocomplete": "none",
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "select-trigger"
                                       },
                                       "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "select-value"
+                                          },
+                                          "children": [],
+                                          "text": "Chart Type"
+                                        },
                                         {
                                           "tag": "svg",
                                           "path": [
@@ -3360,7 +4810,9 @@
                             0,
                             2
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -3371,7 +4823,9 @@
                                 2,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -3388,9 +4842,27 @@
                                     "aria-controls": "radix-_r_1e_",
                                     "aria-expanded": "false",
                                     "aria-autocomplete": "none",
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "select-trigger"
                                   },
                                   "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "select-value"
+                                      },
+                                      "children": [],
+                                      "text": "Select a fruit"
+                                    },
                                     {
                                       "tag": "svg",
                                       "path": [
@@ -3424,7 +4896,9 @@
                             0,
                             3
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -3435,7 +4909,9 @@
                                 3,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -3452,9 +4928,27 @@
                                     "aria-controls": "radix-_r_1g_",
                                     "aria-expanded": "false",
                                     "aria-autocomplete": "none",
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "select-trigger"
                                   },
                                   "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "select-value"
+                                      },
+                                      "children": [],
+                                      "text": "Select an item"
+                                    },
                                     {
                                       "tag": "svg",
                                       "path": [
@@ -3488,7 +4982,9 @@
                             0,
                             4
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -3499,7 +4995,9 @@
                                 4,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -3529,9 +5027,28 @@
                                         "aria-controls": "radix-_r_1i_",
                                         "aria-expanded": "false",
                                         "aria-autocomplete": "none",
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "select-trigger"
                                       },
                                       "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "select-value"
+                                          },
+                                          "children": [],
+                                          "text": "Small size"
+                                        },
                                         {
                                           "tag": "svg",
                                           "path": [
@@ -3568,9 +5085,28 @@
                                         "aria-controls": "radix-_r_1k_",
                                         "aria-expanded": "false",
                                         "aria-autocomplete": "none",
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "select-trigger"
                                       },
                                       "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "select-value"
+                                          },
+                                          "children": [],
+                                          "text": "Default size"
+                                        },
                                         {
                                           "tag": "svg",
                                           "path": [
@@ -3608,7 +5144,9 @@
                             0,
                             5
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -3619,7 +5157,9 @@
                                 5,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -3636,9 +5176,107 @@
                                     "aria-controls": "radix-_r_1m_",
                                     "aria-expanded": "false",
                                     "aria-autocomplete": "none",
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "select-trigger"
                                   },
                                   "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "select-value"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "item"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                5,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "item-content"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "div",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    5,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-slot": "item-title"
+                                                  },
+                                                  "children": [],
+                                                  "text": "Starter"
+                                                },
+                                                {
+                                                  "tag": "p",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    5,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    1
+                                                  ],
+                                                  "attrs": {
+                                                    "data-slot": "item-description"
+                                                  },
+                                                  "children": [],
+                                                  "text": "Perfect for individuals getting started."
+                                                }
+                                              ],
+                                              "text": "StarterPerfect for individuals getting started."
+                                            }
+                                          ],
+                                          "text": "StarterPerfect for individuals getting started."
+                                        }
+                                      ],
+                                      "text": "StarterPerfect for individuals getting started."
+                                    },
                                     {
                                       "tag": "svg",
                                       "path": [
@@ -3672,7 +5310,9 @@
                             0,
                             6
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -3683,7 +5323,9 @@
                                 6,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -3727,9 +5369,29 @@
                                             "aria-controls": "radix-_r_1o_",
                                             "aria-expanded": "false",
                                             "aria-autocomplete": "none",
-                                            "data-state": "closed"
+                                            "data-state": "closed",
+                                            "data-slot": "select-trigger"
                                           },
                                           "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                6,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "select-value"
+                                              },
+                                              "children": [],
+                                              "text": "Small"
+                                            },
                                             {
                                               "tag": "svg",
                                               "path": [
@@ -3763,7 +5425,9 @@
                                             0,
                                             1
                                           ],
-                                          "attrs": {},
+                                          "attrs": {
+                                            "data-slot": "button"
+                                          },
                                           "children": [],
                                           "text": "Submit"
                                         }
@@ -3800,9 +5464,29 @@
                                             "aria-controls": "radix-_r_1q_",
                                             "aria-expanded": "false",
                                             "aria-autocomplete": "none",
-                                            "data-state": "closed"
+                                            "data-state": "closed",
+                                            "data-slot": "select-trigger"
                                           },
                                           "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                6,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "select-value"
+                                              },
+                                              "children": [],
+                                              "text": "Default"
+                                            },
                                             {
                                               "tag": "svg",
                                               "path": [
@@ -3836,7 +5520,9 @@
                                             1,
                                             1
                                           ],
-                                          "attrs": {},
+                                          "attrs": {
+                                            "data-slot": "button"
+                                          },
                                           "children": [],
                                           "text": "Submit"
                                         }
@@ -3860,7 +5546,9 @@
                             0,
                             7
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -3871,7 +5559,9 @@
                                 7,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -3888,9 +5578,27 @@
                                     "aria-controls": "radix-_r_1s_",
                                     "aria-expanded": "false",
                                     "aria-autocomplete": "none",
-                                    "data-state": "closed"
+                                    "data-state": "closed",
+                                    "data-slot": "select-trigger"
                                   },
                                   "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        7,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "select-value"
+                                      },
+                                      "children": [],
+                                      "text": "Select a fruit"
+                                    },
                                     {
                                       "tag": "svg",
                                       "path": [
@@ -3924,7 +5632,9 @@
                             0,
                             8
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -3935,7 +5645,9 @@
                                 8,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -3949,9 +5661,27 @@
                                   ],
                                   "attrs": {
                                     "role": "group",
+                                    "data-slot": "field",
                                     "data-orientation": "vertical"
                                   },
                                   "children": [
+                                    {
+                                      "tag": "label",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        8,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "field-label"
+                                      },
+                                      "children": [],
+                                      "text": "Favorite Fruit"
+                                    },
                                     {
                                       "tag": "button",
                                       "path": [
@@ -3968,9 +5698,28 @@
                                         "aria-controls": "radix-_r_1u_",
                                         "aria-expanded": "false",
                                         "aria-autocomplete": "none",
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "select-trigger"
                                       },
                                       "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            8,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "select-value"
+                                          },
+                                          "children": [],
+                                          "text": "Select a fruit"
+                                        },
                                         {
                                           "tag": "svg",
                                           "path": [
@@ -3990,6 +5739,23 @@
                                         }
                                       ],
                                       "text": "Select a fruit"
+                                    },
+                                    {
+                                      "tag": "p",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        8,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "field-description"
+                                      },
+                                      "children": [],
+                                      "text": "Choose your favorite fruit from the list."
                                     }
                                   ],
                                   "text": "Favorite FruitSelect a fruitChoose your favorite fruit from the list."
@@ -4008,7 +5774,9 @@
                             0,
                             9
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -4019,7 +5787,9 @@
                                 9,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -4050,9 +5820,28 @@
                                         "aria-expanded": "false",
                                         "aria-autocomplete": "none",
                                         "data-state": "closed",
+                                        "data-slot": "select-trigger",
                                         "aria-invalid": "true"
                                       },
                                       "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            9,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "select-value"
+                                          },
+                                          "children": [],
+                                          "text": "Select a fruit"
+                                        },
                                         {
                                           "tag": "svg",
                                           "path": [
@@ -4086,9 +5875,28 @@
                                       ],
                                       "attrs": {
                                         "role": "group",
+                                        "data-slot": "field",
                                         "data-orientation": "vertical"
                                       },
                                       "children": [
+                                        {
+                                          "tag": "label",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            9,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "field-label"
+                                          },
+                                          "children": [],
+                                          "text": "Favorite Fruit"
+                                        },
                                         {
                                           "tag": "button",
                                           "path": [
@@ -4107,9 +5915,29 @@
                                             "aria-expanded": "false",
                                             "aria-autocomplete": "none",
                                             "data-state": "closed",
+                                            "data-slot": "select-trigger",
                                             "aria-invalid": "true"
                                           },
                                           "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                9,
+                                                1,
+                                                0,
+                                                1,
+                                                1,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "select-value"
+                                              },
+                                              "children": [],
+                                              "text": "Select a fruit"
+                                            },
                                             {
                                               "tag": "svg",
                                               "path": [
@@ -4144,7 +5972,8 @@
                                             2
                                           ],
                                           "attrs": {
-                                            "role": "alert"
+                                            "role": "alert",
+                                            "data-slot": "field-error"
                                           },
                                           "children": [],
                                           "text": "Please select a valid fruit."
@@ -4169,7 +5998,9 @@
                             0,
                             10
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -4180,7 +6011,9 @@
                                 10,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -4205,7 +6038,9 @@
                                         0,
                                         0
                                       ],
-                                      "attrs": {},
+                                      "attrs": {
+                                        "data-slot": "input"
+                                      },
                                       "children": []
                                     },
                                     {
@@ -4224,9 +6059,28 @@
                                         "aria-controls": "radix-_r_24_",
                                         "aria-expanded": "false",
                                         "aria-autocomplete": "none",
-                                        "data-state": "closed"
+                                        "data-state": "closed",
+                                        "data-slot": "select-trigger"
                                       },
                                       "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            10,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "select-value"
+                                          },
+                                          "children": [],
+                                          "text": "Filter"
+                                        },
                                         {
                                           "tag": "svg",
                                           "path": [
@@ -4258,7 +6112,9 @@
                                         0,
                                         2
                                       ],
-                                      "attrs": {},
+                                      "attrs": {
+                                        "data-slot": "native-select-wrapper"
+                                      },
                                       "children": [
                                         {
                                           "tag": "select",
@@ -4272,8 +6128,87 @@
                                             2,
                                             0
                                           ],
-                                          "attrs": {},
-                                          "children": [],
+                                          "attrs": {
+                                            "data-slot": "native-select"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "option",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                10,
+                                                1,
+                                                0,
+                                                2,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "native-select-option"
+                                              },
+                                              "children": [],
+                                              "text": "Sort by"
+                                            },
+                                            {
+                                              "tag": "option",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                10,
+                                                1,
+                                                0,
+                                                2,
+                                                0,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "native-select-option"
+                                              },
+                                              "children": [],
+                                              "text": "Name"
+                                            },
+                                            {
+                                              "tag": "option",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                10,
+                                                1,
+                                                0,
+                                                2,
+                                                0,
+                                                2
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "native-select-option"
+                                              },
+                                              "children": [],
+                                              "text": "Date"
+                                            },
+                                            {
+                                              "tag": "option",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                10,
+                                                1,
+                                                0,
+                                                2,
+                                                0,
+                                                3
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "native-select-option"
+                                              },
+                                              "children": [],
+                                              "text": "Status"
+                                            }
+                                          ],
                                           "text": "Sort byNameDateStatus"
                                         },
                                         {
@@ -4289,7 +6224,8 @@
                                             1
                                           ],
                                           "attrs": {
-                                            "aria-hidden": "true"
+                                            "aria-hidden": "true",
+                                            "data-slot": "native-select-icon"
                                           },
                                           "children": []
                                         }
@@ -4313,7 +6249,9 @@
                             0,
                             11
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -4324,7 +6262,9 @@
                                 11,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -4342,9 +6282,27 @@
                                     "aria-expanded": "false",
                                     "aria-autocomplete": "none",
                                     "data-state": "closed",
-                                    "data-disabled": ""
+                                    "data-disabled": "",
+                                    "data-slot": "select-trigger"
                                   },
                                   "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        11,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "select-value"
+                                      },
+                                      "children": [],
+                                      "text": "Disabled"
+                                    },
                                     {
                                       "tag": "svg",
                                       "path": [
@@ -4378,7 +6336,9 @@
                             0,
                             12
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -4389,7 +6349,9 @@
                                 12,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -4402,6 +6364,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dialog-trigger",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_29_",
@@ -4654,6 +6617,30 @@
               "role": "button",
               "name": "Open Dialog",
               "haspopup": "dialog"
+            },
+            {
+              "role": "StaticText",
+              "name": "xs"
+            },
+            {
+              "role": "StaticText",
+              "name": "sm"
+            },
+            {
+              "role": "StaticText",
+              "name": "md"
+            },
+            {
+              "role": "StaticText",
+              "name": "lg"
+            },
+            {
+              "role": "StaticText",
+              "name": "xl"
+            },
+            {
+              "role": "StaticText",
+              "name": "2xl"
             },
             {
               "role": "region",

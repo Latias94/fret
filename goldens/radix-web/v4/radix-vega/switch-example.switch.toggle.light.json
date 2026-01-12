@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseUrl": "http://localhost:4020",
+  "baseUrl": "http://localhost:4000",
   "base": "radix",
   "style": "vega",
   "baseColor": "neutral",
@@ -13,12 +13,12 @@
   "item": "switch-example",
   "primitive": "switch",
   "scenario": "toggle",
-  "url": "http://localhost:4020/preview/radix/switch-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "url": "http://localhost:4000/preview/radix/switch-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
   "steps": [
     {
       "action": {
         "kind": "load",
-        "url": "http://localhost:4020/preview/radix/switch-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+        "url": "http://localhost:4000/preview/radix/switch-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
       },
       "snapshot": {
         "focus": {
@@ -53,7 +53,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -63,7 +65,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -74,7 +78,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -88,6 +94,7 @@
                                   ],
                                   "attrs": {
                                     "role": "group",
+                                    "data-slot": "field",
                                     "data-orientation": "horizontal"
                                   },
                                   "children": [
@@ -105,7 +112,8 @@
                                       "attrs": {
                                         "role": "switch",
                                         "aria-checked": "false",
-                                        "data-state": "unchecked"
+                                        "data-state": "unchecked",
+                                        "data-slot": "switch"
                                       },
                                       "children": [
                                         {
@@ -121,11 +129,29 @@
                                             0
                                           ],
                                           "attrs": {
-                                            "data-state": "unchecked"
+                                            "data-state": "unchecked",
+                                            "data-slot": "switch-thumb"
                                           },
                                           "children": []
                                         }
                                       ]
+                                    },
+                                    {
+                                      "tag": "label",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "field-label"
+                                      },
+                                      "children": [],
+                                      "text": "Airplane Mode"
                                     }
                                   ],
                                   "text": "Airplane Mode"
@@ -144,7 +170,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -155,7 +183,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "label",
@@ -167,7 +197,9 @@
                                     1,
                                     0
                                   ],
-                                  "attrs": {},
+                                  "attrs": {
+                                    "data-slot": "field-label"
+                                  },
                                   "children": [
                                     {
                                       "tag": "div",
@@ -182,9 +214,67 @@
                                       ],
                                       "attrs": {
                                         "role": "group",
+                                        "data-slot": "field",
                                         "data-orientation": "horizontal"
                                       },
                                       "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "field-content"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "field-label"
+                                              },
+                                              "children": [],
+                                              "text": "Share across devices"
+                                            },
+                                            {
+                                              "tag": "p",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "field-description"
+                                              },
+                                              "children": [],
+                                              "text": "Focus is shared across devices, and turns off when you leave the app."
+                                            }
+                                          ],
+                                          "text": "Share across devicesFocus is shared across devices, and turns off when you leave the app."
+                                        },
                                         {
                                           "tag": "button",
                                           "path": [
@@ -200,7 +290,8 @@
                                           "attrs": {
                                             "role": "switch",
                                             "aria-checked": "false",
-                                            "data-state": "unchecked"
+                                            "data-state": "unchecked",
+                                            "data-slot": "switch"
                                           },
                                           "children": [
                                             {
@@ -217,7 +308,8 @@
                                                 0
                                               ],
                                               "attrs": {
-                                                "data-state": "unchecked"
+                                                "data-state": "unchecked",
+                                                "data-slot": "switch-thumb"
                                               },
                                               "children": []
                                             }
@@ -243,7 +335,9 @@
                             0,
                             2
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -254,7 +348,9 @@
                                 2,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -297,7 +393,8 @@
                                             "role": "switch",
                                             "aria-checked": "false",
                                             "data-state": "unchecked",
-                                            "data-disabled": ""
+                                            "data-disabled": "",
+                                            "data-slot": "switch"
                                           },
                                           "children": [
                                             {
@@ -315,11 +412,30 @@
                                               ],
                                               "attrs": {
                                                 "data-state": "unchecked",
-                                                "data-disabled": ""
+                                                "data-disabled": "",
+                                                "data-slot": "switch-thumb"
                                               },
                                               "children": []
                                             }
                                           ]
+                                        },
+                                        {
+                                          "tag": "label",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            2,
+                                            1,
+                                            0,
+                                            0,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "label"
+                                          },
+                                          "children": [],
+                                          "text": "Disabled (Unchecked)"
                                         }
                                       ],
                                       "text": "Disabled (Unchecked)"
@@ -353,7 +469,8 @@
                                             "role": "switch",
                                             "aria-checked": "true",
                                             "data-state": "checked",
-                                            "data-disabled": ""
+                                            "data-disabled": "",
+                                            "data-slot": "switch"
                                           },
                                           "children": [
                                             {
@@ -371,11 +488,30 @@
                                               ],
                                               "attrs": {
                                                 "data-state": "checked",
-                                                "data-disabled": ""
+                                                "data-disabled": "",
+                                                "data-slot": "switch-thumb"
                                               },
                                               "children": []
                                             }
                                           ]
+                                        },
+                                        {
+                                          "tag": "label",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            2,
+                                            1,
+                                            0,
+                                            1,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "label"
+                                          },
+                                          "children": [],
+                                          "text": "Disabled (Checked)"
                                         }
                                       ],
                                       "text": "Disabled (Checked)"
@@ -397,7 +533,9 @@
                             0,
                             3
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -408,7 +546,9 @@
                                 3,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -450,7 +590,8 @@
                                           "attrs": {
                                             "role": "switch",
                                             "aria-checked": "false",
-                                            "data-state": "unchecked"
+                                            "data-state": "unchecked",
+                                            "data-slot": "switch"
                                           },
                                           "children": [
                                             {
@@ -467,11 +608,30 @@
                                                 0
                                               ],
                                               "attrs": {
-                                                "data-state": "unchecked"
+                                                "data-state": "unchecked",
+                                                "data-slot": "switch-thumb"
                                               },
                                               "children": []
                                             }
                                           ]
+                                        },
+                                        {
+                                          "tag": "label",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            0,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "label"
+                                          },
+                                          "children": [],
+                                          "text": "Small"
                                         }
                                       ],
                                       "text": "Small"
@@ -504,7 +664,8 @@
                                           "attrs": {
                                             "role": "switch",
                                             "aria-checked": "false",
-                                            "data-state": "unchecked"
+                                            "data-state": "unchecked",
+                                            "data-slot": "switch"
                                           },
                                           "children": [
                                             {
@@ -521,11 +682,30 @@
                                                 0
                                               ],
                                               "attrs": {
-                                                "data-state": "unchecked"
+                                                "data-state": "unchecked",
+                                                "data-slot": "switch-thumb"
                                               },
                                               "children": []
                                             }
                                           ]
+                                        },
+                                        {
+                                          "tag": "label",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            1,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "label"
+                                          },
+                                          "children": [],
+                                          "text": "Default"
                                         }
                                       ],
                                       "text": "Default"
@@ -645,6 +825,30 @@
               "name": "Default"
             },
             {
+              "role": "StaticText",
+              "name": "xs"
+            },
+            {
+              "role": "StaticText",
+              "name": "sm"
+            },
+            {
+              "role": "StaticText",
+              "name": "md"
+            },
+            {
+              "role": "StaticText",
+              "name": "lg"
+            },
+            {
+              "role": "StaticText",
+              "name": "xl"
+            },
+            {
+              "role": "StaticText",
+              "name": "2xl"
+            },
+            {
               "role": "region",
               "name": "Notifications alt+T"
             }
@@ -672,7 +876,8 @@
           "attrs": {
             "role": "switch",
             "aria-checked": "true",
-            "data-state": "checked"
+            "data-state": "checked",
+            "data-slot": "switch"
           }
         },
         "dom": {
@@ -702,7 +907,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -712,7 +919,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -723,7 +932,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -737,6 +948,7 @@
                                   ],
                                   "attrs": {
                                     "role": "group",
+                                    "data-slot": "field",
                                     "data-orientation": "horizontal"
                                   },
                                   "children": [
@@ -754,7 +966,8 @@
                                       "attrs": {
                                         "role": "switch",
                                         "aria-checked": "true",
-                                        "data-state": "checked"
+                                        "data-state": "checked",
+                                        "data-slot": "switch"
                                       },
                                       "children": [
                                         {
@@ -770,11 +983,29 @@
                                             0
                                           ],
                                           "attrs": {
-                                            "data-state": "checked"
+                                            "data-state": "checked",
+                                            "data-slot": "switch-thumb"
                                           },
                                           "children": []
                                         }
                                       ]
+                                    },
+                                    {
+                                      "tag": "label",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "field-label"
+                                      },
+                                      "children": [],
+                                      "text": "Airplane Mode"
                                     }
                                   ],
                                   "text": "Airplane Mode"
@@ -793,7 +1024,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -804,7 +1037,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "label",
@@ -816,7 +1051,9 @@
                                     1,
                                     0
                                   ],
-                                  "attrs": {},
+                                  "attrs": {
+                                    "data-slot": "field-label"
+                                  },
                                   "children": [
                                     {
                                       "tag": "div",
@@ -831,9 +1068,67 @@
                                       ],
                                       "attrs": {
                                         "role": "group",
+                                        "data-slot": "field",
                                         "data-orientation": "horizontal"
                                       },
                                       "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "field-content"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "field-label"
+                                              },
+                                              "children": [],
+                                              "text": "Share across devices"
+                                            },
+                                            {
+                                              "tag": "p",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "field-description"
+                                              },
+                                              "children": [],
+                                              "text": "Focus is shared across devices, and turns off when you leave the app."
+                                            }
+                                          ],
+                                          "text": "Share across devicesFocus is shared across devices, and turns off when you leave the app."
+                                        },
                                         {
                                           "tag": "button",
                                           "path": [
@@ -849,7 +1144,8 @@
                                           "attrs": {
                                             "role": "switch",
                                             "aria-checked": "false",
-                                            "data-state": "unchecked"
+                                            "data-state": "unchecked",
+                                            "data-slot": "switch"
                                           },
                                           "children": [
                                             {
@@ -866,7 +1162,8 @@
                                                 0
                                               ],
                                               "attrs": {
-                                                "data-state": "unchecked"
+                                                "data-state": "unchecked",
+                                                "data-slot": "switch-thumb"
                                               },
                                               "children": []
                                             }
@@ -892,7 +1189,9 @@
                             0,
                             2
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -903,7 +1202,9 @@
                                 2,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -946,7 +1247,8 @@
                                             "role": "switch",
                                             "aria-checked": "false",
                                             "data-state": "unchecked",
-                                            "data-disabled": ""
+                                            "data-disabled": "",
+                                            "data-slot": "switch"
                                           },
                                           "children": [
                                             {
@@ -964,11 +1266,30 @@
                                               ],
                                               "attrs": {
                                                 "data-state": "unchecked",
-                                                "data-disabled": ""
+                                                "data-disabled": "",
+                                                "data-slot": "switch-thumb"
                                               },
                                               "children": []
                                             }
                                           ]
+                                        },
+                                        {
+                                          "tag": "label",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            2,
+                                            1,
+                                            0,
+                                            0,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "label"
+                                          },
+                                          "children": [],
+                                          "text": "Disabled (Unchecked)"
                                         }
                                       ],
                                       "text": "Disabled (Unchecked)"
@@ -1002,7 +1323,8 @@
                                             "role": "switch",
                                             "aria-checked": "true",
                                             "data-state": "checked",
-                                            "data-disabled": ""
+                                            "data-disabled": "",
+                                            "data-slot": "switch"
                                           },
                                           "children": [
                                             {
@@ -1020,11 +1342,30 @@
                                               ],
                                               "attrs": {
                                                 "data-state": "checked",
-                                                "data-disabled": ""
+                                                "data-disabled": "",
+                                                "data-slot": "switch-thumb"
                                               },
                                               "children": []
                                             }
                                           ]
+                                        },
+                                        {
+                                          "tag": "label",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            2,
+                                            1,
+                                            0,
+                                            1,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "label"
+                                          },
+                                          "children": [],
+                                          "text": "Disabled (Checked)"
                                         }
                                       ],
                                       "text": "Disabled (Checked)"
@@ -1046,7 +1387,9 @@
                             0,
                             3
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1057,7 +1400,9 @@
                                 3,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1099,7 +1444,8 @@
                                           "attrs": {
                                             "role": "switch",
                                             "aria-checked": "false",
-                                            "data-state": "unchecked"
+                                            "data-state": "unchecked",
+                                            "data-slot": "switch"
                                           },
                                           "children": [
                                             {
@@ -1116,11 +1462,30 @@
                                                 0
                                               ],
                                               "attrs": {
-                                                "data-state": "unchecked"
+                                                "data-state": "unchecked",
+                                                "data-slot": "switch-thumb"
                                               },
                                               "children": []
                                             }
                                           ]
+                                        },
+                                        {
+                                          "tag": "label",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            0,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "label"
+                                          },
+                                          "children": [],
+                                          "text": "Small"
                                         }
                                       ],
                                       "text": "Small"
@@ -1153,7 +1518,8 @@
                                           "attrs": {
                                             "role": "switch",
                                             "aria-checked": "false",
-                                            "data-state": "unchecked"
+                                            "data-state": "unchecked",
+                                            "data-slot": "switch"
                                           },
                                           "children": [
                                             {
@@ -1170,11 +1536,30 @@
                                                 0
                                               ],
                                               "attrs": {
-                                                "data-state": "unchecked"
+                                                "data-state": "unchecked",
+                                                "data-slot": "switch-thumb"
                                               },
                                               "children": []
                                             }
                                           ]
+                                        },
+                                        {
+                                          "tag": "label",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            1,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "label"
+                                          },
+                                          "children": [],
+                                          "text": "Default"
                                         }
                                       ],
                                       "text": "Default"
@@ -1293,6 +1678,30 @@
             {
               "role": "StaticText",
               "name": "Default"
+            },
+            {
+              "role": "StaticText",
+              "name": "xs"
+            },
+            {
+              "role": "StaticText",
+              "name": "sm"
+            },
+            {
+              "role": "StaticText",
+              "name": "md"
+            },
+            {
+              "role": "StaticText",
+              "name": "lg"
+            },
+            {
+              "role": "StaticText",
+              "name": "xl"
+            },
+            {
+              "role": "StaticText",
+              "name": "2xl"
             },
             {
               "role": "region",
