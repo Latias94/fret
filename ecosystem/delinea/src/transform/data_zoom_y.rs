@@ -22,7 +22,7 @@ impl DataZoomYNode {
         axis_filter_1d(self.axis_range, self.state_window, self.filter_mode)
     }
 
-    pub fn apply_scatter_filter(
+    pub fn apply_y_filter_indices(
         self,
         y_values: &[f64],
         selection: &RowSelection,

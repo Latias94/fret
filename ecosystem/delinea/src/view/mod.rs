@@ -123,8 +123,13 @@ impl ViewState {
                 data_zoom_x_node(model, state, series.x_axis, x_axis_range).apply(x, base_range);
 
             let mut selection = x_window.selection;
-            if series.kind == crate::spec::SeriesKind::Scatter
-                && series.stack.is_none()
+            if series.stack.is_none()
+                && matches!(
+                    series.kind,
+                    crate::spec::SeriesKind::Scatter
+                        | crate::spec::SeriesKind::Line
+                        | crate::spec::SeriesKind::Area
+                )
                 && matches!(
                     selection,
                     RowSelection::All | RowSelection::Range(_) | RowSelection::Indices(_)
@@ -147,7 +152,9 @@ impl ViewState {
                             .unwrap_or_default();
                         let node = data_zoom_y_node(model, state, series.y_axis, y_axis_range);
                         const MAX_VIEW_LEN: usize = 200_000;
-                        if let Some(next) = node.apply_scatter_filter(y, &selection, MAX_VIEW_LEN) {
+                        if let Some(next) =
+                            node.apply_y_filter_indices(y, &selection, MAX_VIEW_LEN)
+                        {
                             selection = next;
                         }
                     }

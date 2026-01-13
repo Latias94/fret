@@ -4,8 +4,9 @@ use crate::data::DatasetStore;
 use crate::engine::ChartState;
 use crate::engine::lod::{
     BoundsAccum, BoundsCursor, DataBounds, LodScratch, MinMaxPerPixelCursor,
-    compute_bounds_step_selection, compute_bounds_step_selection_with, finalize_bounds,
-    minmax_per_pixel_finalize, minmax_per_pixel_step_segmented_with,
+    SegmentedMinMaxPerPixelSelectionCursor, compute_bounds_step_selection,
+    compute_bounds_step_selection_with, finalize_bounds, minmax_per_pixel_finalize,
+    minmax_per_pixel_step_segmented_selection_with, minmax_per_pixel_step_segmented_with,
     minmax_per_pixel_step_selection, minmax_per_pixel_step_selection_with,
 };
 use crate::engine::model::ChartModel;
@@ -77,6 +78,7 @@ pub struct MarksStage {
     series_index: usize,
     cursor: MinMaxPerPixelCursor,
     segmented_cursor: crate::engine::lod::SegmentedMinMaxPerPixelCursor,
+    segmented_selection_cursor: SegmentedMinMaxPerPixelSelectionCursor,
     segmented_series: Option<SeriesId>,
     segmented_segment_index: u64,
     bounds_cursor: BoundsCursor,
@@ -1702,22 +1704,35 @@ impl MarksStage {
                     self.segmented_series = Some(series.id);
                     self.segmented_cursor =
                         crate::engine::lod::SegmentedMinMaxPerPixelCursor::default();
+                    self.segmented_selection_cursor =
+                        SegmentedMinMaxPerPixelSelectionCursor::default();
                     self.segmented_segment_index = 0;
                     scratch.reset_buckets();
                 }
 
-                let row_range = selection.as_range(table.row_count);
-                let mut row_end = row_range.end.min(x.len()).min(y0.len());
-                if let Some(y1) = y1 {
-                    row_end = row_end.min(y1.len());
-                }
-                let row_range = row_range.start.min(row_end)..row_end;
+                let is_sparse = matches!(selection, RowSelection::Indices(_));
+                let row_range = if !is_sparse {
+                    let row_range = selection.as_range(table.row_count);
+                    let mut row_end = row_range.end.min(x.len()).min(y0.len());
+                    if let Some(y1) = y1 {
+                        row_end = row_end.min(y1.len());
+                    }
+                    row_range.start.min(row_end)..row_end
+                } else {
+                    0..0
+                };
 
                 let stroke = Some((crate::ids::PaintId(0), StrokeStyleV2::default()));
                 let base_order = self.series_index as u32;
 
                 loop {
-                    if self.segmented_cursor.next_index >= row_range.end {
+                    if is_sparse {
+                        if self.segmented_selection_cursor.next_view_index
+                            >= selection.view_len(table.row_count)
+                        {
+                            break;
+                        }
+                    } else if self.segmented_cursor.next_index >= row_range.end {
                         break;
                     }
 
@@ -1730,72 +1745,153 @@ impl MarksStage {
                         let Some(y1) = y1 else {
                             return false;
                         };
-                        minmax_per_pixel_step_segmented_with(
-                            &mut self.segmented_cursor,
-                            scratch,
-                            x,
-                            &bounds,
-                            viewport,
-                            row_range.clone(),
-                            points_budget,
-                            &mut marks.arena.points,
-                            &mut marks.arena.data_indices,
-                            |i| y0.get(i).copied().unwrap_or(f64::NAN),
-                            |i, xi, _yi| {
-                                view_x_filter.contains(xi)
-                                    && y0.get(i).copied().unwrap_or(f64::NAN).is_finite()
-                                    && y1.get(i).copied().unwrap_or(f64::NAN).is_finite()
-                            },
-                        )
+                        if is_sparse {
+                            minmax_per_pixel_step_segmented_selection_with(
+                                &mut self.segmented_selection_cursor,
+                                scratch,
+                                x,
+                                &bounds,
+                                viewport,
+                                &selection,
+                                points_budget,
+                                &mut marks.arena.points,
+                                &mut marks.arena.data_indices,
+                                |i| y0.get(i).copied().unwrap_or(f64::NAN),
+                                |i, xi, _yi| {
+                                    view_x_filter.contains(xi)
+                                        && y0.get(i).copied().unwrap_or(f64::NAN).is_finite()
+                                        && y1.get(i).copied().unwrap_or(f64::NAN).is_finite()
+                                },
+                            )
+                        } else {
+                            minmax_per_pixel_step_segmented_with(
+                                &mut self.segmented_cursor,
+                                scratch,
+                                x,
+                                &bounds,
+                                viewport,
+                                row_range.clone(),
+                                points_budget,
+                                &mut marks.arena.points,
+                                &mut marks.arena.data_indices,
+                                |i| y0.get(i).copied().unwrap_or(f64::NAN),
+                                |i, xi, _yi| {
+                                    view_x_filter.contains(xi)
+                                        && y0.get(i).copied().unwrap_or(f64::NAN).is_finite()
+                                        && y1.get(i).copied().unwrap_or(f64::NAN).is_finite()
+                                },
+                            )
+                        }
                     } else if series.kind == crate::spec::SeriesKind::Area && series.stack.is_some()
                     {
                         let Some(arrays) = stack_arrays.as_ref() else {
                             return false;
                         };
-                        minmax_per_pixel_step_segmented_with(
-                            &mut self.segmented_cursor,
-                            scratch,
-                            x,
-                            &bounds,
-                            viewport,
-                            row_range.clone(),
-                            points_budget,
-                            &mut marks.arena.points,
-                            &mut marks.arena.data_indices,
-                            |i| arrays.stacked.get(i).copied().unwrap_or(f64::NAN),
-                            |i, xi, _yi| {
-                                view_x_filter.contains(xi)
-                                    && arrays.base.get(i).copied().unwrap_or(f64::NAN).is_finite()
-                            },
-                        )
+                        if is_sparse {
+                            minmax_per_pixel_step_segmented_selection_with(
+                                &mut self.segmented_selection_cursor,
+                                scratch,
+                                x,
+                                &bounds,
+                                viewport,
+                                &selection,
+                                points_budget,
+                                &mut marks.arena.points,
+                                &mut marks.arena.data_indices,
+                                |i| arrays.stacked.get(i).copied().unwrap_or(f64::NAN),
+                                |i, xi, _yi| {
+                                    view_x_filter.contains(xi)
+                                        && arrays
+                                            .base
+                                            .get(i)
+                                            .copied()
+                                            .unwrap_or(f64::NAN)
+                                            .is_finite()
+                                },
+                            )
+                        } else {
+                            minmax_per_pixel_step_segmented_with(
+                                &mut self.segmented_cursor,
+                                scratch,
+                                x,
+                                &bounds,
+                                viewport,
+                                row_range.clone(),
+                                points_budget,
+                                &mut marks.arena.points,
+                                &mut marks.arena.data_indices,
+                                |i| arrays.stacked.get(i).copied().unwrap_or(f64::NAN),
+                                |i, xi, _yi| {
+                                    view_x_filter.contains(xi)
+                                        && arrays
+                                            .base
+                                            .get(i)
+                                            .copied()
+                                            .unwrap_or(f64::NAN)
+                                            .is_finite()
+                                },
+                            )
+                        }
                     } else if let Some(arrays) = stack_arrays.as_ref() {
-                        minmax_per_pixel_step_segmented_with(
-                            &mut self.segmented_cursor,
-                            scratch,
-                            x,
-                            &bounds,
-                            viewport,
-                            row_range.clone(),
-                            points_budget,
-                            &mut marks.arena.points,
-                            &mut marks.arena.data_indices,
-                            |i| arrays.stacked.get(i).copied().unwrap_or(f64::NAN),
-                            |_, xi, _yi| view_x_filter.contains(xi),
-                        )
+                        if is_sparse {
+                            minmax_per_pixel_step_segmented_selection_with(
+                                &mut self.segmented_selection_cursor,
+                                scratch,
+                                x,
+                                &bounds,
+                                viewport,
+                                &selection,
+                                points_budget,
+                                &mut marks.arena.points,
+                                &mut marks.arena.data_indices,
+                                |i| arrays.stacked.get(i).copied().unwrap_or(f64::NAN),
+                                |_, xi, _yi| view_x_filter.contains(xi),
+                            )
+                        } else {
+                            minmax_per_pixel_step_segmented_with(
+                                &mut self.segmented_cursor,
+                                scratch,
+                                x,
+                                &bounds,
+                                viewport,
+                                row_range.clone(),
+                                points_budget,
+                                &mut marks.arena.points,
+                                &mut marks.arena.data_indices,
+                                |i| arrays.stacked.get(i).copied().unwrap_or(f64::NAN),
+                                |_, xi, _yi| view_x_filter.contains(xi),
+                            )
+                        }
                     } else {
-                        minmax_per_pixel_step_segmented_with(
-                            &mut self.segmented_cursor,
-                            scratch,
-                            x,
-                            &bounds,
-                            viewport,
-                            row_range.clone(),
-                            points_budget,
-                            &mut marks.arena.points,
-                            &mut marks.arena.data_indices,
-                            |i| y0.get(i).copied().unwrap_or(f64::NAN),
-                            |_, xi, _yi| view_x_filter.contains(xi),
-                        )
+                        if is_sparse {
+                            minmax_per_pixel_step_segmented_selection_with(
+                                &mut self.segmented_selection_cursor,
+                                scratch,
+                                x,
+                                &bounds,
+                                viewport,
+                                &selection,
+                                points_budget,
+                                &mut marks.arena.points,
+                                &mut marks.arena.data_indices,
+                                |i| y0.get(i).copied().unwrap_or(f64::NAN),
+                                |_, xi, _yi| view_x_filter.contains(xi),
+                            )
+                        } else {
+                            minmax_per_pixel_step_segmented_with(
+                                &mut self.segmented_cursor,
+                                scratch,
+                                x,
+                                &bounds,
+                                viewport,
+                                row_range.clone(),
+                                points_budget,
+                                &mut marks.arena.points,
+                                &mut marks.arena.data_indices,
+                                |i| y0.get(i).copied().unwrap_or(f64::NAN),
+                                |_, xi, _yi| view_x_filter.contains(xi),
+                            )
+                        }
                     };
 
                     let Some(step) = step else {
@@ -2116,6 +2212,7 @@ impl MarksStage {
                 self.series_index += 1;
                 self.cursor.next_index = 0;
                 self.segmented_cursor.next_index = 0;
+                self.segmented_selection_cursor.next_view_index = 0;
                 self.scatter_next_index = 0;
                 self.scatter_points_start = 0;
                 self.scatter_node_index = None;

@@ -68,6 +68,13 @@ pub struct SegmentedMinMaxPerPixelCursor {
     segment_points_seen: u32,
 }
 
+#[derive(Debug, Default, Clone)]
+pub struct SegmentedMinMaxPerPixelSelectionCursor {
+    pub next_view_index: usize,
+    in_segment: bool,
+    segment_points_seen: u32,
+}
+
 #[derive(Debug, Clone)]
 pub struct SegmentedMinMaxPerPixelStepResult {
     pub done: bool,
@@ -416,6 +423,139 @@ pub fn minmax_per_pixel_step_segmented_with(
     }
 
     if cursor.next_index >= end_limit && cursor.in_segment && cursor.segment_points_seen > 0 {
+        let seg_points_seen = cursor.segment_points_seen;
+        cursor.in_segment = false;
+        cursor.segment_points_seen = 0;
+
+        let segment =
+            minmax_per_pixel_finalize(scratch, x, bounds, viewport, out_points, out_indices);
+        scratch.reset_buckets();
+
+        return Some(SegmentedMinMaxPerPixelStepResult {
+            done: true,
+            segment,
+            segment_points_seen: seg_points_seen,
+        });
+    }
+
+    None
+}
+
+pub fn minmax_per_pixel_step_segmented_selection_with(
+    cursor: &mut SegmentedMinMaxPerPixelSelectionCursor,
+    scratch: &mut LodScratch,
+    x: &[f64],
+    bounds: &DataBounds,
+    viewport: Rect,
+    selection: &RowSelection,
+    max_points_to_process: usize,
+    out_points: &mut Vec<Point>,
+    out_indices: &mut Vec<u32>,
+    mut y_at: impl FnMut(usize) -> f64,
+    mut is_valid: impl FnMut(usize, f64, f64) -> bool,
+) -> Option<SegmentedMinMaxPerPixelStepResult> {
+    let width_px = viewport.size.width.0.max(1.0).ceil() as usize;
+    scratch.ensure_bucket_count(width_px);
+
+    let len = x.len();
+    if cursor.next_view_index == 0 {
+        cursor.in_segment = false;
+        cursor.segment_points_seen = 0;
+    }
+
+    let end_limit = selection.view_len(len);
+    if cursor.next_view_index >= end_limit {
+        cursor.in_segment = false;
+        cursor.segment_points_seen = 0;
+        return None;
+    }
+
+    let x_span = bounds.x_max - bounds.x_min;
+    if x_span <= 0.0 || !x_span.is_finite() {
+        cursor.next_view_index = end_limit;
+        cursor.in_segment = false;
+        cursor.segment_points_seen = 0;
+        return None;
+    }
+
+    let mut processed = 0usize;
+    while cursor.next_view_index < end_limit && processed < max_points_to_process {
+        let view_index = cursor.next_view_index;
+        cursor.next_view_index += 1;
+        processed += 1;
+
+        let Some(i) = selection.get_raw_index(len, view_index) else {
+            continue;
+        };
+
+        let xi = x.get(i).copied().unwrap_or(f64::NAN);
+        let yi = y_at(i);
+        let valid = xi.is_finite()
+            && yi.is_finite()
+            && xi >= bounds.x_min
+            && xi <= bounds.x_max
+            && is_valid(i, xi, yi);
+
+        if !valid {
+            if cursor.in_segment && cursor.segment_points_seen > 0 {
+                let seg_points_seen = cursor.segment_points_seen;
+                cursor.in_segment = false;
+                cursor.segment_points_seen = 0;
+
+                let segment = minmax_per_pixel_finalize(
+                    scratch,
+                    x,
+                    bounds,
+                    viewport,
+                    out_points,
+                    out_indices,
+                );
+                scratch.reset_buckets();
+
+                return Some(SegmentedMinMaxPerPixelStepResult {
+                    done: false,
+                    segment,
+                    segment_points_seen: seg_points_seen,
+                });
+            }
+            continue;
+        }
+
+        let t = (xi - bounds.x_min) / x_span;
+        if !t.is_finite() {
+            continue;
+        }
+        let bucket =
+            ((t.clamp(0.0, 1.0) * (width_px - 1) as f64).round() as usize).min(width_px - 1);
+
+        let b = &mut scratch.buckets[bucket];
+        let yi_clamped = yi.clamp(bounds.y_min, bounds.y_max);
+        let c = Candidate {
+            index: i,
+            y: yi,
+            y_clamped: yi_clamped,
+        };
+
+        if b.first.is_none() {
+            b.first = Some(c);
+        }
+        b.last = Some(c);
+
+        let min_y = b.min.map(|m| m.y_clamped).unwrap_or(yi_clamped);
+        if yi_clamped < min_y || b.min.is_none() {
+            b.min = Some(c);
+        }
+
+        let max_y = b.max.map(|m| m.y_clamped).unwrap_or(yi_clamped);
+        if yi_clamped > max_y || b.max.is_none() {
+            b.max = Some(c);
+        }
+
+        cursor.in_segment = true;
+        cursor.segment_points_seen = cursor.segment_points_seen.saturating_add(1);
+    }
+
+    if cursor.next_view_index >= end_limit && cursor.in_segment && cursor.segment_points_seen > 0 {
         let seg_points_seen = cursor.segment_points_seen;
         cursor.in_segment = false;
         cursor.segment_points_seen = 0;
