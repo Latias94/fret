@@ -113,6 +113,10 @@ Legend:
 
 ### B) `fret-render` text system v2 implementation
 
+**B0 — Legacy backend hardening (pre-Parley)**
+- [x] Split shaping vs paint cache keys (geometry reuse across theme-only changes).
+- [x] Keep per-span paint as a palette (no paint baked into glyph quads / shaping outputs).
+
 **B1 — Font + fallback + stable keys**
 - [ ] Define a “font stack key” / revision model that invalidates caches on font DB changes.
 - [ ] Implement family overrides (`TextFontFamilyConfig`) in the new system.
@@ -172,3 +176,4 @@ Legend:
 - 2026-01-13: ADR 0157 added (design locked), worktree created.
 - 2026-01-13: M0 contract landed (commit `3bb0fc8`).
 - 2026-01-13: M1 started: add Parley dependency + single-line shaper prototype in `crates/fret-render/src/text_v2/mod.rs`.
+- 2026-01-13: M1.1: split shaping/paint caches in the current text backend (`TextShapeKey` + per-span palette; theme-only changes no longer force reshaping).
