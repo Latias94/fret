@@ -327,7 +327,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0113-ecosystem-integration-contracts.md`
 - `docs/adr/0114-ui-assets-facade-and-golden-path-wiring.md`
 - `docs/adr/0093-crate-structure-core-backends-apps.md`
-- `docs/adr/0090-radix-aligned-headless-primitives-in-fret-ui-kit.md`
+- `docs/adr/0090-radix-aligned-headless-primitives-in-fret-components-ui.md`
 - `docs/adr/0101-headless-table-engine.md`
 - `docs/adr/0135-node-graph-editor-and-typed-connections.md`
 - `docs/adr/0058-typography-v1-textstyle-weight-lineheight-tracking.md`

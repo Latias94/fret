@@ -38,9 +38,9 @@ Key surfaces:
 Note: `repo-ref/transform-gizmo` is not guaranteed to be present in all workspaces (see `docs/repo-ref.md`).
 If it is missing locally, clone the upstream into `repo-ref/transform-gizmo` before following the file path anchors below.
 
-- Crate overview: `repo-ref/transform-gizmo/crates/transform-gizmo/src/lib.rs`
-- Configuration and mode taxonomy: `repo-ref/transform-gizmo/crates/transform-gizmo/src/config.rs`
-- Core update/draw: `repo-ref/transform-gizmo/crates/transform-gizmo/src/gizmo.rs`
+- Crate overview: transform-gizmo `src/lib.rs`
+- Configuration and mode taxonomy: transform-gizmo `src/config.rs`
+- Core update/draw: transform-gizmo `src/gizmo.rs`
 
 Key surfaces:
 

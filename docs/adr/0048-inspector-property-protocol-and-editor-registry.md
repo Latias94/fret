@@ -15,10 +15,10 @@ Editor-grade workflows (Unity/Unreal/Godot-class) depend heavily on a productive
 Fyrox demonstrates that “reflection path + property changed events + command stack” yields a highly
 productive editor workflow:
 
-- Command pattern foundation (undo/redo, coalescing, significant vs insignificant):
-  - `repo-ref/Fyrox/editor/src/command/mod.rs`
-- Plugin MVC discipline (UI does not own business state; sync-to-model after commands):
-  - `repo-ref/Fyrox/editor/src/plugin.rs`
+- Command pattern foundation (undo/redo, coalescing, significant vs insignificant).
+- Plugin MVC discipline (UI does not own business state; sync-to-model after commands).
+
+Note: the Fyrox reference checkout is optional; see `docs/repo-ref.md` for how to clone it into `repo-ref/`.
 
 Godot demonstrates a scalable “custom inspector plugin stack” where later-registered plugins can
 override default editors:
@@ -147,8 +147,6 @@ Phased edit validation:
 - Framework/editor boundary: `docs/adr/0027-framework-scope-and-responsibilities.md`
 - Plugin boundaries: `docs/adr/0016-plugin-and-panel-boundaries.md`
 - Undo/redo transactions (deferred): `docs/adr/0024-undo-redo-and-edit-transactions.md`
-- Fyrox command stack + plugin MVC:
-  - `repo-ref/Fyrox/editor/src/command/mod.rs`
-  - `repo-ref/Fyrox/editor/src/plugin.rs`
+- Fyrox command stack + plugin MVC (optional reference checkout; see `docs/repo-ref.md`).
 - Godot inspector plugin chain:
   - `repo-ref/godot/editor/inspector/editor_inspector.cpp`

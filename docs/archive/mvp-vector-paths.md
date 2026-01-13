@@ -35,11 +35,11 @@ We “follow the mature upstream” here:
   - `crates/fret-core/src/vector_path.rs` (`PathCommand`, `PathService`)
   - `crates/fret-core/src/scene.rs` (`SceneOp::Path`, `SceneOp::MaskImage`)
 - Renderer:
-  - `crates/fret-render/src/renderer.rs` (path tessellation cache, path MSAA intermediate + composite, mask pipeline)
+  - `crates/fret-render/src/renderer/mod.rs` (path tessellation cache, path MSAA intermediate + composite, mask pipeline)
   - `crates/fret-render/src/svg.rs` (CPU SVG rasterization + upload helpers)
 - UI primitives:
-  - `crates/fret-ui/src/primitives/path.rs`
-  - `crates/fret-ui/src/primitives/mask_image.rs`
+  - `SvgIcon` (tinted alpha-mask icon): `crates/fret-ui/src/element.rs` (`SvgIconProps`), paint in `crates/fret-ui/src/declarative/host_widget/paint.rs`
+  - `SceneOp::Path` (used by plots today): `ecosystem/fret-plot/src/retained/canvas/mod.rs`
 
 Non-goal for Fret: introduce an app-facing “offscreen render target + composite” API as the primary vector path solution.
 If we use intermediate textures internally for correctness/quality (like GPUI’s path pipeline), that is an implementation

@@ -36,14 +36,14 @@ Code anchors:
 - Effects/models: `crates/fret-app/src/app.rs`
 - Runner scheduling: `crates/fret-launch/src/runner/mod.rs`
 - Dock identity/persistence ops: `crates/fret-core/src/panels.rs`, `crates/fret-core/src/dock_layout.rs`, `crates/fret-core/src/dock_op.rs`
-- Demo persistence: implemented in `crates/fret-demo` (entrypoints evolve; search for `.fret/` usage).
+- Demo persistence: implemented in `apps/fret-demo` (entrypoints evolve; search for `.fret/` usage).
 - Declarative elements skeleton: `crates/fret-ui/src/elements/mod.rs`
-- Declarative demo widget: `crates/fret-demo/src/elements_mvp2.rs`
+- Declarative demo widget: `apps/fret-examples/src/components_gallery.rs` (entrypoint evolves; search for declarative roots)
 - IME plumbing + cursor-area effects: `crates/fret-launch/src/runner/mod.rs`
 - Text system + atlas uploads: `crates/fret-render/src/text.rs`
-- `SceneOp::Text` rendering: `crates/fret-render/src/renderer.rs`
+- `SceneOp::Text` rendering: `crates/fret-render/src/renderer/mod.rs`
 - Minimal `Text` / `TextInput` widgets: `crates/fret-ui/src/text_input/mod.rs`
-- Demo property rows with labels: `crates/fret-demo/src/property_row.rs`
+- Demo property rows with labels: `apps/fret-editor/src/inspector_edit.rs`
 - Keymap/when parsing + resolver: `crates/fret-app/src/keymap.rs`, `crates/fret-app/src/when_expr.rs`
 - KeyDown → Command resolution (window-scoped): `crates/fret-ui/src/tree/mod.rs`
 - Command dispatch (effects → runner → driver → UiTree): `crates/fret-launch/src/runner/mod.rs`
@@ -120,7 +120,7 @@ Goal: land the minimum GPUI-style authoring/runtime skeleton (ADR 0028 / ADR 003
 
 **Status**
 
-- MVP done in `fret-demo` (see `crates/fret-demo/src/elements_mvp2.rs`)
+- MVP done in the demo harness (entrypoints evolve; see `apps/fret-examples/src/components_gallery.rs` for declarative roots).
 
 ## MVP 3 — Docking Identity + Persistence v1
 

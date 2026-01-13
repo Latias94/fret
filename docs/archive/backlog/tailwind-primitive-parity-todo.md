@@ -44,14 +44,14 @@ composition and shadcn-style component parity.
   - Styling vocabulary usage: `repo-ref/gpui-component/crates/ui/src/styled.rs`
   - Theme keys (semantic palette): `repo-ref/gpui-component/crates/ui/src/theme/default-theme.json`
 - Fret:
-  - Typed primitive surface: `ecosystem/fret-ui-kit/src/style.rs`, `ecosystem/fret-ui-kit/src/styled.rs`
+  - Typed primitive surface: `ecosystem/fret-ui-kit/src/style/mod.rs`, `ecosystem/fret-ui-kit/src/styled.rs`
   - Declarative bridging: `ecosystem/fret-ui-kit/src/declarative/style.rs`
   - Runtime layout vocabulary: `crates/fret-ui/src/element.rs`, `crates/fret-ui/src/declarative.rs`
 
 ## Current primitive baseline (what exists today)
 
 - Typed scales:
-  - `Space` + `Radius` in `ecosystem/fret-ui-kit/src/style.rs`
+  - `Space` + `Radius` in `ecosystem/fret-ui-kit/src/style/mod.rs`
   - Theme extension keys: `component.space.*`, `component.radius.*`
   - Fallback behavior to baseline `metric.*` (see `docs/archive/backlog/ui-kit-gap.md`)
 - Style patches (“Tailwind-like”), split by intent:
@@ -115,7 +115,7 @@ Fret does **not** need to replicate every numeric preset from gpui-component, bu
 - [x] Add `gap-x` / `gap-y` semantics (or decide to keep a single `gap` and document it).
   - Implemented for component-layer stacks: `HStackProps::gap_x` and `VStackProps::gap_y`.
 - [x] Add typed alignment wrappers (`items_*`, `justify_*`) to avoid leaking runtime enums into recipes.
-  - `Justify` / `Items` live in `ecosystem/fret-ui-kit/src/style.rs` and are used by `hstack/vstack`.
+  - `Justify` / `Items` live in `ecosystem/fret-ui-kit/src/style/mod.rs` and are used by `hstack/vstack`.
 - [x] Add typed sizing wrappers (`w_*`, `h_*`, `min_w_*`, `max_w_*`, `size_full`, `w_full`, `h_full`).
   - Decide which are “scale-based” (Space) vs “absolute” (Px) vs “semantic” (`full`).
   - Note: we currently provide `LayoutRefinement::{w/h/min/max,w_full,h_full,size_full}`; the
@@ -142,7 +142,7 @@ Fret does **not** need to replicate every numeric preset from gpui-component, bu
 ## Implementation notes (where code will likely land)
 
 - Typed primitives and fluent API surface:
-  - `ecosystem/fret-ui-kit/src/style.rs`
+  - `ecosystem/fret-ui-kit/src/style/mod.rs`
   - `ecosystem/fret-ui-kit/src/styled.rs`
 - Declarative bridging helpers (style patch → `fret-ui` props):
   - `ecosystem/fret-ui-kit/src/declarative/style.rs`
