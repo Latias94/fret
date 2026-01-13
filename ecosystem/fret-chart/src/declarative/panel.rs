@@ -4,6 +4,7 @@ use std::time::{Duration, Instant};
 use delinea::engine::model::{ChartPatch, PatchMode};
 use delinea::engine::window::DataWindow;
 use delinea::marks::{MarkKind, MarkPayloadRef, MarkTree};
+use delinea::tooltip::TooltipOutput;
 use delinea::{Action, ChartEngine, WorkBudget};
 use fret_core::{
     Color, Corners, DrawOrder, Edges, MouseButton, PathCommand, PathStyle, Point, Px, Rect, Size,
@@ -16,8 +17,8 @@ use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::recipes::canvas_pan_zoom::{PanZoomCanvasPaintCx, PanZoomCanvasSurfacePanelProps};
 use fret_ui_kit::recipes::canvas_tool_router::{
     CanvasToolDownResult, CanvasToolEntry, CanvasToolHandlers, CanvasToolId, CanvasToolRouterProps,
-    OnCanvasToolPointerDown, OnCanvasToolPointerMove, OnCanvasToolPointerUp, OnCanvasToolWheel,
-    canvas_tool_router_panel,
+    OnCanvasToolPinch, OnCanvasToolPointerDown, OnCanvasToolPointerMove, OnCanvasToolPointerUp,
+    OnCanvasToolWheel, canvas_tool_router_panel,
 };
 
 use crate::input_map::{ChartInputMap, ModifierKey};
@@ -125,17 +126,31 @@ fn ensure_engine_model<H: UiHost>(
 
 #[derive(Debug, Clone)]
 struct MarksCache {
-    rev: delinea::ids::Revision,
+    marks_rev: delinea::ids::Revision,
+    output_rev: delinea::ids::Revision,
     marks: Arc<MarkTree>,
+    axis_pointer: Option<AxisPointerPaintData>,
+    hover_point_px: Option<Point>,
 }
 
 impl Default for MarksCache {
     fn default() -> Self {
         Self {
-            rev: delinea::ids::Revision::default(),
+            marks_rev: delinea::ids::Revision::default(),
+            output_rev: delinea::ids::Revision::default(),
             marks: Arc::new(MarkTree::default()),
+            axis_pointer: None,
+            hover_point_px: None,
         }
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct AxisPointerPaintData {
+    crosshair_px: Point,
+    shadow_rect_px: Option<Rect>,
+    draw_x: bool,
+    draw_y: bool,
 }
 
 #[derive(Clone)]
@@ -203,8 +218,16 @@ pub fn chart_canvas_panel<H: UiHost>(
     // Step the engine during declarative render and cache the current marks snapshot.
     let bounds = cx.bounds;
     let mut unfinished = false;
-    let mut marks_rev = delinea::ids::Revision::default();
-    let mut output_marks: Arc<MarkTree> = Arc::new(MarkTree::default());
+
+    let (prev_marks_rev, prev_output_rev) = cx.with_state(MarksCache::default, |cache| {
+        (cache.marks_rev, cache.output_rev)
+    });
+
+    let mut marks_rev = prev_marks_rev;
+    let mut output_rev = prev_output_rev;
+    let mut output_marks: Option<Arc<MarkTree>> = None;
+    let mut axis_pointer: Option<AxisPointerPaintData> = None;
+    let mut hover_point_px: Option<Point> = None;
 
     let _ = engine.update(cx.app, |engine, _cx| {
         if engine.model().viewport != Some(bounds) {
@@ -236,18 +259,58 @@ pub fn chart_canvas_panel<H: UiHost>(
         }
 
         unfinished = still_unfinished;
-        marks_rev = engine.output().marks.revision;
-        output_marks = Arc::new(engine.output().marks.clone());
+
+        let output = engine.output();
+        output_rev = output.revision;
+        marks_rev = output.marks.revision;
+
+        if marks_rev != prev_marks_rev {
+            output_marks = Some(Arc::new(output.marks.clone()));
+        }
+
+        if output_rev != prev_output_rev {
+            hover_point_px = output.hover.map(|hit| hit.point_px);
+
+            if let Some(axis_pointer_out) = output.axis_pointer.as_ref() {
+                let (draw_x, draw_y) = match &axis_pointer_out.tooltip {
+                    TooltipOutput::Axis(axis) => match axis.axis_kind {
+                        delinea::AxisKind::X => (true, false),
+                        delinea::AxisKind::Y => (false, true),
+                    },
+                    TooltipOutput::Item(_) => (true, true),
+                };
+
+                axis_pointer = Some(AxisPointerPaintData {
+                    crosshair_px: axis_pointer_out.crosshair_px,
+                    shadow_rect_px: axis_pointer_out.shadow_rect_px,
+                    draw_x,
+                    draw_y,
+                });
+            } else {
+                axis_pointer = None;
+            }
+        }
     });
 
-    let cache = cx.with_state(MarksCache::default, |cache| {
-        if cache.rev != marks_rev {
-            *cache = MarksCache {
-                rev: marks_rev,
-                marks: output_marks.clone(),
-            };
+    let (cache, axis_pointer, hover_point_px) = cx.with_state(MarksCache::default, |cache| {
+        if cache.marks_rev != marks_rev {
+            if let Some(marks) = output_marks.clone() {
+                cache.marks_rev = marks_rev;
+                cache.marks = marks;
+            }
         }
-        cache.marks.clone()
+
+        if cache.output_rev != output_rev {
+            cache.output_rev = output_rev;
+            cache.axis_pointer = axis_pointer;
+            cache.hover_point_px = hover_point_px;
+        }
+
+        (
+            cache.marks.clone(),
+            cache.axis_pointer,
+            cache.hover_point_px,
+        )
     });
 
     let style = props.style;
@@ -420,6 +483,72 @@ pub fn chart_canvas_panel<H: UiHost>(
         true
     });
 
+    let engine_c = engine.clone();
+    let on_pinch_zoom: OnCanvasToolPinch = Arc::new(move |host, action_cx, tool_cx, pinch| {
+        if !pinch.delta.is_finite() {
+            return false;
+        }
+
+        let width = tool_cx.bounds.size.width.0;
+        let height = tool_cx.bounds.size.height.0;
+        if width <= 0.0 || height <= 0.0 {
+            return false;
+        }
+
+        let Some((x_axis, y_axis)) = host
+            .models_mut()
+            .read(&engine_c, |engine| primary_axes(engine))
+            .ok()
+            .flatten()
+        else {
+            return false;
+        };
+
+        let (base_x, base_y) = host
+            .models_mut()
+            .read(&engine_c, |engine| {
+                (
+                    window_for_axis_x(engine, x_axis),
+                    window_for_axis_y(engine, y_axis),
+                )
+            })
+            .ok()
+            .unwrap_or((fallback_window(), fallback_window()));
+
+        // Match `fret-ui-kit`'s pinch mapping: factor = 1 + delta.
+        let delta = pinch.delta.clamp(-0.95, 10.0);
+        let factor = (1.0 + delta).max(0.01);
+        let log2_scale = factor.log2();
+        if !log2_scale.is_finite() || log2_scale.abs() <= 1.0e-9 {
+            return false;
+        }
+
+        let local_x = (pinch.position.x.0 - tool_cx.bounds.origin.x.0).clamp(0.0, width);
+        let local_y = (pinch.position.y.0 - tool_cx.bounds.origin.y.0).clamp(0.0, height);
+        let center_x = local_x;
+        let center_y_from_bottom = height - local_y;
+
+        let _ = host.models_mut().update(&engine_c, |engine| {
+            engine.apply_action(Action::ZoomDataWindowXFromBase {
+                axis: x_axis,
+                base: base_x,
+                center_px: center_x,
+                log2_scale,
+                viewport_span_px: width,
+            });
+            engine.apply_action(Action::ZoomDataWindowYFromBase {
+                axis: y_axis,
+                base: base_y,
+                center_px: center_y_from_bottom,
+                log2_scale,
+                viewport_span_px: height,
+            });
+        });
+
+        host.request_redraw(action_cx.window);
+        true
+    });
+
     let tools = vec![
         CanvasToolEntry {
             id: CanvasToolId::new(1),
@@ -436,6 +565,14 @@ pub fn chart_canvas_panel<H: UiHost>(
             priority: 50,
             handlers: CanvasToolHandlers {
                 on_wheel: Some(on_wheel_zoom),
+                ..Default::default()
+            },
+        },
+        CanvasToolEntry {
+            id: CanvasToolId::new(4),
+            priority: 50,
+            handlers: CanvasToolHandlers {
+                on_pinch: Some(on_pinch_zoom),
                 ..Default::default()
             },
         },
@@ -628,6 +765,82 @@ pub fn chart_canvas_panel<H: UiHost>(
                     }
                     _ => {}
                 }
+            }
+
+            let overlay_order = DrawOrder(style.draw_order.0.saturating_add(10_000));
+            let shadow_order = DrawOrder(style.draw_order.0.saturating_add(9_900));
+
+            if let Some(axis_pointer) = axis_pointer {
+                if let Some(rect) = axis_pointer.shadow_rect_px {
+                    let color = Color {
+                        a: 0.08,
+                        ..style.selection_fill
+                    };
+                    painter.scene().push(fret_core::SceneOp::Quad {
+                        order: shadow_order,
+                        rect,
+                        background: color,
+                        border: Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: Corners::all(Px(0.0)),
+                    });
+                } else {
+                    let plot = bounds;
+                    let crosshair_w = style.crosshair_width.0.max(1.0);
+                    let x = axis_pointer
+                        .crosshair_px
+                        .x
+                        .0
+                        .clamp(plot.origin.x.0, plot.origin.x.0 + plot.size.width.0);
+                    let y = axis_pointer
+                        .crosshair_px
+                        .y
+                        .0
+                        .clamp(plot.origin.y.0, plot.origin.y.0 + plot.size.height.0);
+
+                    if axis_pointer.draw_x {
+                        painter.scene().push(fret_core::SceneOp::Quad {
+                            order: overlay_order,
+                            rect: Rect::new(
+                                Point::new(Px(x - 0.5 * crosshair_w), plot.origin.y),
+                                Size::new(Px(crosshair_w), plot.size.height),
+                            ),
+                            background: style.crosshair_color,
+                            border: Edges::all(Px(0.0)),
+                            border_color: Color::TRANSPARENT,
+                            corner_radii: Corners::all(Px(0.0)),
+                        });
+                    }
+                    if axis_pointer.draw_y {
+                        painter.scene().push(fret_core::SceneOp::Quad {
+                            order: overlay_order,
+                            rect: Rect::new(
+                                Point::new(plot.origin.x, Px(y - 0.5 * crosshair_w)),
+                                Size::new(plot.size.width, Px(crosshair_w)),
+                            ),
+                            background: style.crosshair_color,
+                            border: Edges::all(Px(0.0)),
+                            border_color: Color::TRANSPARENT,
+                            corner_radii: Corners::all(Px(0.0)),
+                        });
+                    }
+                }
+            }
+
+            if let Some(point) = hover_point_px {
+                let size = style.hover_point_size.0.max(1.0);
+                let r = 0.5 * size;
+                painter.scene().push(fret_core::SceneOp::Quad {
+                    order: overlay_order,
+                    rect: Rect::new(
+                        Point::new(Px(point.x.0 - r), Px(point.y.0 - r)),
+                        Size::new(Px(size), Px(size)),
+                    ),
+                    background: style.hover_point_color,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: Corners::all(Px(r)),
+                });
             }
         });
     };
