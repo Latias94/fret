@@ -70,7 +70,7 @@ If you want images/SVG caches out-of-the-box, enable `fret-bootstrap/ui-assets`:
 
 ```toml
 fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver", "preload-icon-svgs", "ui-assets"] }
-fret-ui-assets = { path = "../../ecosystem/fret-ui-assets" }
+fret-ui-assets = { path = "../../ecosystem/fret-ui-assets", features = ["app-integration"] }
 ```
 
 ## Minimal startup
@@ -82,6 +82,9 @@ use fret_ui_shadcn::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme};
 fn main() -> anyhow::Result<()> {
     fret_bootstrap::ui_app_with_hooks("todo", init_window, view, |d| d.on_command(on_command))
         .with_default_config_files()?
+        // Optional: install ecosystem integrations that only need `App` (no GPU services).
+        // For UI render asset caches (images/SVG): enable `fret-bootstrap/ui-assets` and call:
+        // .install_app(fret_ui_assets::install_app)
         .init_app(|app| {
             // Optional: apply a built-in shadcn theme preset for a “new-york-v4” look.
             fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
@@ -232,8 +235,9 @@ When using hotpatch (ADR 0107):
 
 ## Asset caches (images / SVGs)
 
-If you want UI render asset conveniences (not an editor/project asset pipeline), enable the bootstrap `ui-assets` feature.
-It wires `ImageAssetCache` / `SvgAssetCache` as globals and (via `UiAppDriver`) drives the image cache from the event
-pipeline.
+If you want UI render asset conveniences (not an editor/project asset pipeline):
+
+- Enable `fret-bootstrap/ui-assets` (so `UiAppDriver` drives the image cache state machine from the event pipeline).
+- Add `fret-ui-assets` and call `.install_app(fret_ui_assets::install_app)` to configure the global caches (budgets, etc).
 
 See the runnable demo: `apps/fret-demo/src/bin/assets_demo.rs`.
