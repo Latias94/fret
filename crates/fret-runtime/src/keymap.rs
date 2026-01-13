@@ -3,7 +3,7 @@ use fret_core::{KeyCode, Modifiers};
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PlatformFilter {
     All,
     Macos,
@@ -42,6 +42,37 @@ pub struct DefaultKeybinding {
 #[derive(Debug, Default, Clone)]
 pub struct Keymap {
     bindings: Vec<Binding>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct KeymapBindingSignature {
+    pub platform: PlatformFilter,
+    pub sequence: Vec<KeyChord>,
+    pub when: Option<WhenExpr>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum KeymapConflictKind {
+    /// Multiple bindings exist, but they all resolve to the same command payload.
+    Redundant,
+    /// Later bindings override earlier ones (last-wins) with a different command payload.
+    Override,
+    /// At least one binding explicitly unbinds (`command: null`), shadowing earlier bindings.
+    Unbind,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KeymapConflictEntry {
+    pub index: usize,
+    pub command: Option<CommandId>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KeymapConflict {
+    pub signature: KeymapBindingSignature,
+    pub kind: KeymapConflictKind,
+    /// Oldest -> newest (so the effective winner is `entries.last()`).
+    pub entries: Vec<KeymapConflictEntry>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -311,6 +342,63 @@ impl Keymap {
         self.bindings.extend(other.bindings);
     }
 
+    /// Returns keymap conflicts, defined as multiple bindings sharing the same
+    /// `(platform, when, sequence)` tuple (ADR 0021 section 7).
+    ///
+    /// This is intended for diagnostics and future UI reporting.
+    pub fn conflicts(&self) -> Vec<KeymapConflict> {
+        let mut by_sig: HashMap<KeymapBindingSignature, Vec<KeymapConflictEntry>> = HashMap::new();
+
+        for (index, b) in self.bindings.iter().enumerate() {
+            let sig = KeymapBindingSignature {
+                platform: b.platform,
+                sequence: b.sequence.clone(),
+                when: b.when.clone(),
+            };
+            by_sig.entry(sig).or_default().push(KeymapConflictEntry {
+                index,
+                command: b.command.clone(),
+            });
+        }
+
+        let mut out: Vec<KeymapConflict> = Vec::new();
+        for (signature, mut entries) in by_sig {
+            if entries.len() <= 1 {
+                continue;
+            }
+
+            entries.sort_by_key(|e| e.index);
+
+            let mut commands: HashSet<Option<&CommandId>> = HashSet::new();
+            let mut any_unbind = false;
+            for e in &entries {
+                any_unbind |= e.command.is_none();
+                commands.insert(e.command.as_ref());
+            }
+
+            let kind = if commands.len() <= 1 {
+                KeymapConflictKind::Redundant
+            } else if any_unbind {
+                KeymapConflictKind::Unbind
+            } else {
+                KeymapConflictKind::Override
+            };
+
+            out.push(KeymapConflict {
+                signature,
+                kind,
+                entries,
+            });
+        }
+
+        out.sort_by(|a, b| {
+            let ka = a.entries.last().map(|e| e.index).unwrap_or_default();
+            let kb = b.entries.last().map(|e| e.index).unwrap_or_default();
+            ka.cmp(&kb)
+        });
+        out
+    }
+
     /// Best-effort reverse lookup for UI display (command palette / menus).
     ///
     /// This applies the same platform + `when` matching rules as `resolve`, then finds any chord
@@ -522,5 +610,30 @@ mod tests {
             err,
             KeymapError::WhenValidationFailed { index: 0, .. }
         ));
+    }
+
+    #[test]
+    fn keymap_conflicts_detects_last_wins_overrides() {
+        let bytes = br#"{
+            "keymap_version": 1,
+            "bindings": [
+                { "command": "test.a", "keys": { "mods": ["ctrl"], "key": "KeyP" } },
+                { "command": "test.b", "keys": { "mods": ["ctrl"], "key": "KeyP" } }
+            ]
+        }"#;
+
+        let km = Keymap::from_bytes(bytes).unwrap();
+        let conflicts = km.conflicts();
+        assert_eq!(conflicts.len(), 1);
+        assert_eq!(conflicts[0].kind, KeymapConflictKind::Override);
+        assert_eq!(conflicts[0].entries.len(), 2);
+        assert_eq!(
+            conflicts[0].entries[0].command.as_ref().unwrap().as_str(),
+            "test.a"
+        );
+        assert_eq!(
+            conflicts[0].entries[1].command.as_ref().unwrap().as_str(),
+            "test.b"
+        );
     }
 }
