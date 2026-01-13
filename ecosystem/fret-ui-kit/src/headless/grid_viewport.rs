@@ -1,3 +1,4 @@
+use std::fmt;
 use std::hash::Hash;
 use std::sync::Arc;
 
@@ -77,16 +78,29 @@ struct FixedAxisMetrics {
 /// Notes:
 /// - Size caching is keyed by `K` to preserve measured sizes across reordering.
 /// - We scale `Px` into integer units to reduce float precision drift in hot offset math.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct GridAxisMetrics<K> {
     mode: GridAxisMeasureMode,
     estimate: Px,
     gap: Px,
     padding_start: Px,
     keys_signature: (u64, usize),
-    keys: Arc<Vec<K>>,
     inner: virtualizer::Virtualizer<K>,
     fixed: FixedAxisMetrics,
+    get_item_key: Arc<dyn Fn(usize) -> K + Send + Sync + 'static>,
+}
+
+impl<K> fmt::Debug for GridAxisMetrics<K> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("GridAxisMetrics")
+            .field("mode", &self.mode)
+            .field("estimate", &self.estimate)
+            .field("gap", &self.gap)
+            .field("padding_start", &self.padding_start)
+            .field("signature", &self.keys_signature)
+            .field("fixed_count", &self.fixed.count)
+            .finish()
+    }
 }
 
 impl<K> Default for GridAxisMetrics<K>
@@ -110,7 +124,6 @@ where
             gap: Px(0.0),
             padding_start: Px(0.0),
             keys_signature: (0, 0),
-            keys: Arc::new(Vec::new()),
             inner: virtualizer::Virtualizer::new(options),
             fixed: FixedAxisMetrics {
                 count: 0,
@@ -118,6 +131,9 @@ where
                 gap_units: 0,
                 padding_start_units: 0,
             },
+            get_item_key: Arc::new(|_| {
+                panic!("GridAxisMetrics get_item_key should not be called before ensure_*")
+            }),
         }
     }
 }
@@ -153,11 +169,29 @@ where
         gap: Px,
         padding_start: Px,
     ) {
+        let count = keys.len();
+        let get_key = move |i: usize| {
+            keys.get(i)
+                .cloned()
+                .unwrap_or_else(|| keys.last().expect("non-empty keys").clone())
+        };
+        self.ensure_measured_with_key(count, items_revision, estimate, gap, padding_start, get_key);
+    }
+
+    pub fn ensure_measured_with_key(
+        &mut self,
+        count: usize,
+        items_revision: u64,
+        estimate: Px,
+        gap: Px,
+        padding_start: Px,
+        get_key: impl Fn(usize) -> K + Send + Sync + 'static,
+    ) {
         let estimate = Px(estimate.0.max(0.0));
         let gap = Px(gap.0.max(0.0));
         let padding_start = Px(padding_start.0.max(0.0));
 
-        let signature = (items_revision, keys.len());
+        let signature = (items_revision, count);
         if self.mode == GridAxisMeasureMode::Measured
             && self.keys_signature == signature
             && self.estimate == estimate
@@ -172,24 +206,29 @@ where
         self.gap = gap;
         self.padding_start = padding_start;
         self.keys_signature = signature;
-        self.keys = Arc::clone(&keys);
 
         let estimate_units = px_to_units_u32(estimate);
         let gap_units = px_to_units_u32(gap);
         let padding_start_units = px_to_units_u32(padding_start);
 
         let mut options = self.inner.options().clone();
-        options.count = keys.len();
+        options.count = count;
         options.gap = gap_units;
         options.padding_start = padding_start_units;
         options.padding_end = 0;
         options.scroll_margin = 0;
         options.estimate_size = Arc::new(move |_| estimate_units);
-        options.get_item_key = Arc::new(move |i| {
-            keys.get(i)
-                .cloned()
-                .unwrap_or_else(|| keys.last().expect("non-empty keys").clone())
-        });
+
+        let key_fn = Arc::new(get_key);
+        let key_fn_clamped: Arc<dyn Fn(usize) -> K + Send + Sync + 'static> =
+            Arc::new(move |i: usize| {
+                if count == 0 {
+                    panic!("GridAxisMetrics measured key resolver called with count=0");
+                }
+                (key_fn)(i.min(count.saturating_sub(1)))
+            });
+        self.get_item_key = Arc::clone(&key_fn_clamped);
+        options.get_item_key = key_fn_clamped;
         self.inner.set_options(options);
     }
 
@@ -201,11 +240,29 @@ where
         gap: Px,
         padding_start: Px,
     ) {
+        let count = keys.len();
+        let get_key = move |i: usize| {
+            keys.get(i)
+                .cloned()
+                .unwrap_or_else(|| keys.last().expect("non-empty keys").clone())
+        };
+        self.ensure_fixed_with_key(count, items_revision, estimate, gap, padding_start, get_key);
+    }
+
+    pub fn ensure_fixed_with_key(
+        &mut self,
+        count: usize,
+        items_revision: u64,
+        estimate: Px,
+        gap: Px,
+        padding_start: Px,
+        get_key: impl Fn(usize) -> K + Send + Sync + 'static,
+    ) {
         let estimate = Px(estimate.0.max(0.0));
         let gap = Px(gap.0.max(0.0));
         let padding_start = Px(padding_start.0.max(0.0));
 
-        let signature = (items_revision, keys.len());
+        let signature = (items_revision, count);
         if self.mode == GridAxisMeasureMode::Fixed
             && self.keys_signature == signature
             && self.estimate == estimate
@@ -220,10 +277,19 @@ where
         self.gap = gap;
         self.padding_start = padding_start;
         self.keys_signature = signature;
-        self.keys = keys;
+
+        let key_fn = Arc::new(get_key);
+        let key_fn_clamped: Arc<dyn Fn(usize) -> K + Send + Sync + 'static> =
+            Arc::new(move |i: usize| {
+                if count == 0 {
+                    panic!("GridAxisMetrics fixed key resolver called with count=0");
+                }
+                (key_fn)(i.min(count.saturating_sub(1)))
+            });
+        self.get_item_key = key_fn_clamped;
 
         self.fixed = FixedAxisMetrics {
-            count: self.keys.len(),
+            count,
             estimate_units: px_to_units_u32(estimate),
             gap_units: px_to_units_u32(gap),
             padding_start_units: px_to_units_u32(padding_start),
@@ -260,7 +326,14 @@ where
     }
 
     pub fn axis_item(&self, index: usize) -> Option<GridAxisItem<K>> {
-        let key = self.keys.get(index)?.clone();
+        let count = match self.mode {
+            GridAxisMeasureMode::Measured => self.inner.options().count,
+            GridAxisMeasureMode::Fixed => self.fixed.count,
+        };
+        if index >= count {
+            return None;
+        }
+        let key = (self.get_item_key)(index);
         let start = self.offset_for_index(index);
         let size = self.size_at(index);
         let end = Px((start.0 + size.0).max(0.0));
