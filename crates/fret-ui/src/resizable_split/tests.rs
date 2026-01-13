@@ -15,7 +15,7 @@ struct FakeUiServices;
 impl TextService for FakeUiServices {
     fn prepare(
         &mut self,
-        _input: fret_core::TextInput<'_>,
+        _input: &fret_core::TextInput,
         _constraints: TextConstraints,
     ) -> (fret_core::TextBlobId, TextMetrics) {
         (

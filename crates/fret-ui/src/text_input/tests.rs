@@ -17,13 +17,10 @@ struct FakeTextService {
 impl TextService for FakeTextService {
     fn prepare(
         &mut self,
-        input: fret_core::TextInput<'_>,
+        input: &fret_core::TextInput,
         _constraints: TextConstraints,
     ) -> (fret_core::TextBlobId, TextMetrics) {
-        let text = match input {
-            fret_core::TextInput::Plain { text, .. } => text,
-            fret_core::TextInput::Attributed { text, .. } => text,
-        };
+        let text = input.text();
         self.prepared.push(text.to_string());
         (
             fret_core::TextBlobId::default(),
@@ -215,13 +212,10 @@ struct ImeTextService {}
 impl TextService for ImeTextService {
     fn prepare(
         &mut self,
-        input: fret_core::TextInput<'_>,
+        input: &fret_core::TextInput,
         _constraints: TextConstraints,
     ) -> (fret_core::TextBlobId, TextMetrics) {
-        let text = match input {
-            fret_core::TextInput::Plain { text, .. } => text,
-            fret_core::TextInput::Attributed { text, .. } => text,
-        };
+        let text = input.text();
         (
             fret_core::TextBlobId::default(),
             TextMetrics {

@@ -233,7 +233,7 @@ struct FakeServices;
 impl fret_core::TextService for FakeServices {
     fn prepare(
         &mut self,
-        _input: fret_core::TextInput<'_>,
+        _input: &fret_core::TextInput,
         _constraints: fret_core::TextConstraints,
     ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
         (
@@ -280,12 +280,22 @@ struct StyleAwareServices;
 impl fret_core::TextService for StyleAwareServices {
     fn prepare(
         &mut self,
-        input: fret_core::TextInput<'_>,
+        input: &fret_core::TextInput,
         constraints: fret_core::TextConstraints,
     ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
         let (text, style) = match input {
-            fret_core::TextInput::Plain { text, style } => (text, style),
-            fret_core::TextInput::Attributed { text, base, .. } => (text, base),
+            fret_core::TextInput::Plain { text, style } => (text.as_ref(), style),
+            fret_core::TextInput::Attributed { text, base, .. } => (text.as_ref(), base),
+            _ => {
+                debug_assert!(false, "unsupported TextInput variant");
+                return (
+                    fret_core::TextBlobId::default(),
+                    fret_core::TextMetrics {
+                        size: CoreSize::new(Px(0.0), Px(0.0)),
+                        baseline: Px(0.0),
+                    },
+                );
+            }
         };
         let line_height = style
             .line_height

@@ -1415,7 +1415,7 @@ mod tests {
     impl TextService for FakeServices {
         fn prepare(
             &mut self,
-            _input: fret_core::TextInput<'_>,
+            _input: &fret_core::TextInput,
             _constraints: TextConstraints,
         ) -> (TextBlobId, TextMetrics) {
             (
@@ -1928,7 +1928,7 @@ mod tests {
     impl TextService for MeasuredServices {
         fn prepare(
             &mut self,
-            _input: fret_core::TextInput<'_>,
+            _input: &fret_core::TextInput,
             _constraints: TextConstraints,
         ) -> (TextBlobId, TextMetrics) {
             (

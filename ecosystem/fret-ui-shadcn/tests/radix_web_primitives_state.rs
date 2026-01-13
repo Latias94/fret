@@ -170,7 +170,7 @@ struct FakeServices;
 impl fret_core::TextService for FakeServices {
     fn prepare(
         &mut self,
-        _input: fret_core::TextInput<'_>,
+        _input: &fret_core::TextInput,
         _constraints: fret_core::TextConstraints,
     ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
         (

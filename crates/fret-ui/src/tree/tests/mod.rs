@@ -38,7 +38,7 @@ struct FakeUiServices;
 impl TextService for FakeUiServices {
     fn prepare(
         &mut self,
-        _input: fret_core::TextInput<'_>,
+        _input: &fret_core::TextInput,
         _constraints: TextConstraints,
     ) -> (fret_core::TextBlobId, TextMetrics) {
         (
@@ -114,13 +114,13 @@ impl<H: UiHost> Widget<H> for HitTestObservingWidget {
 impl<H: UiHost> Widget<H> for ObservingWidget {
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         cx.observe_model(&self.model, Invalidation::Layout);
-        let style = TextStyle {
-            font: fret_core::FontId::default(),
-            size: fret_core::Px(12.0),
-            ..Default::default()
-        };
-        let _ = cx.services.text().prepare(
-            fret_core::TextInput::plain("x", &style),
+        let _ = cx.services.text().prepare_str(
+            "x",
+            &TextStyle {
+                font: fret_core::FontId::default(),
+                size: fret_core::Px(12.0),
+                ..Default::default()
+            },
             TextConstraints {
                 max_width: None,
                 wrap: TextWrap::None,
