@@ -76,6 +76,7 @@ pub(crate) fn build_viewport_flow_subtree<H: UiHost>(
     );
 }
 
+#[stacksafe::stacksafe]
 fn build_flow_subtree_impl<H: UiHost>(
     engine: &mut TaffyLayoutEngine,
     app: &mut H,
