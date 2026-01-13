@@ -467,7 +467,7 @@ struct OrbitCamera {
     projection: OrbitProjection,
     orbiting: bool,
     panning: bool,
-    last_cursor_px: Vec2,
+    last_cursor_screen_px: Vec2,
     frame_anim: Option<FrameAnim>,
 }
 
@@ -484,7 +484,7 @@ impl Default for OrbitCamera {
             projection: OrbitProjection::Perspective,
             orbiting: false,
             panning: false,
-            last_cursor_px: Vec2::ZERO,
+            last_cursor_screen_px: Vec2::ZERO,
             frame_anim: None,
         }
     }
@@ -3030,11 +3030,12 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 return PendingUndoRecords::default();
             }
 
-            let cursor_px = viewport_input_cursor_target_px(&event).unwrap_or_else(|| {
+            let cursor_target_px = viewport_input_cursor_target_px(&event).unwrap_or_else(|| {
                 // Fallback: use UV instead of integer target pixels to avoid quantization.
                 let (tw, th) = event.geometry.target_px_size;
                 Vec2::new(event.uv.0 * tw as f32, event.uv.1 * th as f32)
             });
+            let cursor_screen_px = Vec2::new(event.cursor_px.x.0, event.cursor_px.y.0);
 
             let mut pending = PendingUndoRecords::default();
 
@@ -3046,7 +3047,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     m.camera.frame_anim = None;
                     m.camera.orbiting = true;
                     m.camera.panning = false;
-                    m.camera.last_cursor_px = cursor_px;
+                    m.camera.last_cursor_screen_px = cursor_screen_px;
                 }
                 ViewportInputKind::PointerDown {
                     button: fret_core::MouseButton::Middle,
@@ -3055,7 +3056,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     m.camera.frame_anim = None;
                     m.camera.panning = true;
                     m.camera.orbiting = false;
-                    m.camera.last_cursor_px = cursor_px;
+                    m.camera.last_cursor_screen_px = cursor_screen_px;
                 }
                 ViewportInputKind::PointerUp {
                     button: fret_core::MouseButton::Right,
@@ -3081,8 +3082,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     }
 
                     if m.camera.orbiting || m.camera.panning {
-                        let delta = cursor_px - m.camera.last_cursor_px;
-                        m.camera.last_cursor_px = cursor_px;
+                        let delta = cursor_screen_px - m.camera.last_cursor_screen_px;
+                        m.camera.last_cursor_screen_px = cursor_screen_px;
 
                         if m.camera.orbiting {
                             let orbit_sensitivity = 0.008;
@@ -3200,7 +3201,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 _ => (false, false),
             };
             let view_gizmo_input = ViewGizmoInput {
-                cursor_px,
+                cursor_px: cursor_target_px,
                 hovered,
                 drag_started: view_gizmo_drag_started,
                 dragging: view_gizmo_dragging,
@@ -3217,7 +3218,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 m.selection_before_select = None;
                 m.active_before_select = None;
                 m.input = GizmoInput {
-                    cursor_px,
+                    cursor_px: cursor_target_px,
                     hovered: false,
                     drag_started: false,
                     dragging: false,
@@ -3368,7 +3369,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                             .collect();
 
                         let hover_input = GizmoInput {
-                            cursor_px,
+                            cursor_px: cursor_target_px,
                             hovered: true,
                             drag_started: false,
                             dragging: false,
@@ -3399,7 +3400,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                             m.selection_before_select = Some(m.selection.clone());
                             m.active_before_select = Some(m.active_target);
                             m.pending_selection = Some(PendingSelection {
-                                start_cursor_px: cursor_px,
+                                start_cursor_px: cursor_target_px,
                                 click_count,
                             });
                             m.marquee = None;
@@ -3410,24 +3411,26 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     }
                     ViewportInputKind::PointerMove { buttons, modifiers } => {
                         const MARQUEE_THRESHOLD_PX: f32 = 4.0;
-                        let threshold_sq = MARQUEE_THRESHOLD_PX * MARQUEE_THRESHOLD_PX;
+                        let threshold_target_px =
+                            MARQUEE_THRESHOLD_PX * event.geometry.pixels_per_point;
+                        let threshold_sq = threshold_target_px * threshold_target_px;
 
                         if buttons.left {
                             if let Some(pending) = m.pending_selection {
-                                if (cursor_px - pending.start_cursor_px).length_squared()
+                                if (cursor_target_px - pending.start_cursor_px).length_squared()
                                     >= threshold_sq
                                 {
                                     m.pending_selection = None;
                                     m.marquee = Some(MarqueeSelection {
                                         start_cursor_px: pending.start_cursor_px,
-                                        cursor_px,
+                                        cursor_px: cursor_target_px,
                                         op: selection_op(&modifiers),
                                     });
                                 }
                             }
 
                             if let Some(mut marquee) = m.marquee {
-                                marquee.cursor_px = cursor_px;
+                                marquee.cursor_px = cursor_target_px;
                                 marquee.op = selection_op(&modifiers);
                                 m.marquee = Some(marquee);
                             }
@@ -3506,7 +3509,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                                 if let Some(ray) = fret_gizmo::ray_from_screen(
                                     view_projection,
                                     viewport,
-                                    cursor_px,
+                                    cursor_target_px,
                                     m.gizmo().config.depth_range,
                                 ) {
                                     let hit = pick_target_id(ray, &m.targets);
@@ -3553,7 +3556,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             }
 
             m.input = GizmoInput {
-                cursor_px,
+                cursor_px: cursor_target_px,
                 hovered: scene_hovered,
                 drag_started,
                 dragging,
