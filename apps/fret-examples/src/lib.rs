@@ -95,6 +95,8 @@ pub mod table_demo;
 pub mod table_stress_demo;
 pub mod tags_demo;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod tanstack_datatable_demo;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod todo_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod virtual_list_stress_demo;
