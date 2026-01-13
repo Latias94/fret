@@ -8,6 +8,10 @@ pub(crate) struct TextCacheGroup {
 }
 
 impl TextCacheGroup {
+    pub(crate) fn begin_frame(&mut self) -> u64 {
+        self.cache.begin_frame()
+    }
+
     pub(crate) fn clear(&mut self, services: &mut dyn UiServices) {
         self.cache.clear(services);
         self.key = None;
@@ -29,6 +33,15 @@ impl TextCacheGroup {
         constraints: TextConstraints,
     ) -> PreparedText {
         self.cache.prepare(services, text, style, constraints)
+    }
+
+    pub(crate) fn prune(
+        &mut self,
+        services: &mut dyn UiServices,
+        max_age_frames: u64,
+        max_entries: usize,
+    ) {
+        self.cache.prune(services, max_age_frames, max_entries);
     }
 }
 

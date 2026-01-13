@@ -3949,6 +3949,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             self.sync_viewport(self.last_layout.plot);
         }
 
+        // Advance per-frame counters for optional cache pruning.
+        self.axis_text.begin_frame();
+        self.legend_text.begin_frame();
+
         let mut measurer = NullTextMeasurer::default();
 
         // P0: run the engine synchronously, but allow multiple internal steps per paint so that
@@ -5068,6 +5072,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         }
 
         self.draw_axes(cx);
+
+        // Conservative hygiene: long-lived charts should not grow text caches unbounded.
+        self.axis_text.prune(cx.services, 1_200, 4_096);
+        self.legend_text.prune(cx.services, 1_200, 4_096);
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {

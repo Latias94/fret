@@ -10,6 +10,7 @@
 
 pub mod drag;
 pub mod scale;
+pub mod spatial;
 pub mod text;
 pub mod view;
 pub mod wires;
