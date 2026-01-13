@@ -3181,14 +3181,14 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
                     let current_window = self.current_visual_map_window(vm_id, vm);
 
-                    let handle_hit = 8.0f32;
+                    let handle_hit_px = 8.0f32;
                     let y_min = Self::visual_map_y_at_value(track, domain, current_window.min);
                     let y_max = Self::visual_map_y_at_value(track, domain, current_window.max);
                     let (top, bottom) = (y_max.min(y_min), y_max.max(y_min));
 
-                    let (kind, start_window) = if (position.y.0 - y_min).abs() <= handle_hit {
+                    let (kind, start_window) = if (position.y.0 - y_min).abs() <= handle_hit_px {
                         (SliderDragKind::HandleMin, current_window)
-                    } else if (position.y.0 - y_max).abs() <= handle_hit {
+                    } else if (position.y.0 - y_max).abs() <= handle_hit_px {
                         (SliderDragKind::HandleMax, current_window)
                     } else if position.y.0 >= top && position.y.0 <= bottom {
                         (SliderDragKind::Pan, current_window)
@@ -3364,11 +3364,11 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                 let left = track.origin.x.0 + t0 * track.size.width.0;
                                 let right = track.origin.x.0 + t1 * track.size.width.0;
 
-                                let handle_hit = 7.0f32;
+                                let handle_hit_px = 7.0f32;
                                 let x = position.x.0;
-                                let kind = if (x - left).abs() <= handle_hit {
+                                let kind = if (x - left).abs() <= handle_hit_px {
                                     SliderDragKind::HandleMin
-                                } else if (x - right).abs() <= handle_hit {
+                                } else if (x - right).abs() <= handle_hit_px {
                                     SliderDragKind::HandleMax
                                 } else if x >= left && x <= right {
                                     SliderDragKind::Pan
@@ -3451,7 +3451,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                 let t0 = Self::slider_norm(extent, window.min);
                                 let t1 = Self::slider_norm(extent, window.max);
 
-                                let handle_hit = 7.0f32;
+                                let handle_hit_px = 7.0f32;
                                 let height = track.size.height.0;
                                 let bottom = track.origin.y.0 + height;
                                 let y_from_bottom =
@@ -3460,9 +3460,9 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                 let min_handle = t0 * height;
                                 let max_handle = t1 * height;
 
-                                let kind = if (y_from_bottom - min_handle).abs() <= handle_hit {
+                                let kind = if (y_from_bottom - min_handle).abs() <= handle_hit_px {
                                     SliderDragKind::HandleMin
-                                } else if (y_from_bottom - max_handle).abs() <= handle_hit {
+                                } else if (y_from_bottom - max_handle).abs() <= handle_hit_px {
                                     SliderDragKind::HandleMax
                                 } else if y_from_bottom >= min_handle && y_from_bottom <= max_handle
                                 {
