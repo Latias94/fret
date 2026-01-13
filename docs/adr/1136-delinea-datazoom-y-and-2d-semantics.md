@@ -139,12 +139,16 @@ P1:
 ## Amendments
 
 - 2026-01-13 (ECharts replica workstream): `DataZoomYSpec` gained an opt-in `filter_mode` to explore
-  ECharts-style multi-dimensional filtering. The default remains mapping-only (`filter_mode=None`),
-  and the initial implementation materializes sparse selections only for non-stacked scatter series.
+  ECharts-style multi-dimensional filtering. The default remains mapping-only (`filter_mode=None`).
+  The current v1 subset materializes sparse indices selections only for non-stacked cartesian series
+  (Line/Area/Band/Scatter) under view-size caps, and expresses `Empty` as a typed view-level mask
+  (`SeriesEmptyMask`) consumed consistently by marks + axisPointer/tooltip (see ADR 1150).
 
 ## Evidence
 
 - Action surface: `ecosystem/delinea/src/action/mod.rs` (`ZoomDataWindowYFromBase`, `PanDataWindowYFromBase`, `SetViewWindow2DFromZoom`)
 - Engine semantics: `ecosystem/delinea/src/engine/mod.rs` (lock gating + window writes for Y and 2D actions)
+- Budgeted indices carriers for filtering/masks: `ecosystem/delinea/src/engine/stages/data_view.rs`
+- View-level `Empty` participation contract: `ecosystem/delinea/src/view/mod.rs` (`SeriesEmptyMask`)
 - UI adapter (multi-axis routing + 2D box zoom): `ecosystem/fret-chart/src/retained/canvas.rs`
 - Conformance harness (desktop + wasm): `apps/fret-examples/src/chart_multi_axis_demo.rs`

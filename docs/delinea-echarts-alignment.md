@@ -125,7 +125,7 @@ single “at a glance” view of:
 - Missing vs ECharts (high value):
   - Y-driven filtering semantics (and ordering rules when multiple dims are filtered),
   - full ECharts-class `weakFilter` behavior across arbitrary dimension sets and axis types (beyond cartesian XY),
-  - ECharts-style `empty` masking beyond mark-level segment breaks (typed validity/masking surfaces; unified tooltip/hit-test semantics),
+  - ECharts-style `empty` masking parity across all series kinds (scatter/bar) and across all consumers (marks + axisPointer/tooltip + brush/hit-test),
   - 2D zoom interactions that can materialize sparse selections when needed.
 
 **S3 - 2D box zoom writes an atomic paired window action** (`[x]`)
@@ -401,7 +401,7 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 - `[x]` Dataset + field indirection (`DatasetSpec` + `FieldSpec`) (ADR 1140).
 - `[x]` `encode`-style mapping (series `x/y/y2` fields) (ADR 1128).
 - `[x]` Row range gating (`SetDatasetRowRange`) for external virtualization (ADR 1137).
-- `[x]` X filtering via `FilterMode` (`Filter` / `None`) (ADR 1129).
+- `[x]` X filtering via `FilterMode` (`Filter` / `None` / `WeakFilter` / `Empty`) (ADR 1129 / ADR 1150).
 - `[~]` `FilterMode::{WeakFilter,Empty}` surface + v1 subset semantics (ADR 1150); multi-dimensional parity still pending.
 
 ### Axes, scales, and grids

@@ -86,6 +86,8 @@ ECharts intent: preserve indices but treat out-of-window samples as missing.
 Contract in `delinea`:
 
 - The filtered view keeps a stable row/index space (no row dropping).
+- `Empty` is expressed as a typed per-series mask (`SeriesEmptyMask`) computed during view rebuild, so marks
+  emission and axisPointer/tooltip sampling share the same missing-sample policy.
 - Samples that fail the axis filter predicate are treated as “missing” for mark generation:
   - line/area/band: breaks segments at window boundaries (no synthetic connections across excluded samples),
   - scatter/bar: do not emit a mark for excluded samples.
@@ -100,8 +102,9 @@ We will implement these modes without materializing new columns:
 - Filtering carriers:
   - `RowSelection::{Range, Indices}` remain the primary view selection types.
   - `Empty` introduces a “missing sample” carrier (conceptually equivalent to mapping a value to `NaN` in ECharts),
-    implemented as a per-series predicate applied during mark emission (and by splitting line-family marks into
-    multiple polylines when needed).
+    represented as a typed per-series mask (`SeriesEmptyMask`) and consumed consistently by:
+    - marks emission (line-family segment splitting, and non-emission for point-like marks),
+    - axisPointer/tooltip sampling (masked samples return `Missing`).
 - Budgeting:
   - Any indices/masks that require scanning must be built under `WorkBudget` and cached by dataset revision +
     transform parameters (ECharts `DataStore._indices` direction).
@@ -115,9 +118,7 @@ We will implement these modes without materializing new columns:
 
 ## Follow-ups
 
-- Implement `FilterMode::{WeakFilter,Empty}` behavior in `delinea` (initially for X dataZoom).
-- Add conformance tests:
-  - `Empty` breaks line segments across excluded samples.
-  - `WeakFilter` behavior once multi-dimensional filtering is introduced.
-- Update `docs/delinea-echarts-alignment.md` to track parity explicitly.
-
+- Validate `FilterMode::{WeakFilter,Empty}` semantics across both X and Y dataZoom, including view-size cap behavior.
+- Extend `Empty` parity to point-like series kinds (scatter/bar) and define the row/index stability contract for each.
+- Define a single “filter processor” stage that owns ordering-sensitive composition (X-before-Y) and outputs a unified
+  participation contract (selection + masks) consumable by marks, hit-test, tooltip, and brush export.
