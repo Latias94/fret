@@ -12,8 +12,8 @@ use fret_gizmo::{
     GizmoPluginManagerConfig, GizmoPropertyKey, GizmoResult, GizmoSizePolicy, GizmoTarget3d,
     GizmoTargetId, GizmoVisualPreset, Grid3d, HandleId, LightRadiusGizmoPlugin,
     RingScaleGizmoPlugin, Transform3d, TransformGizmoPlugin, ViewGizmo, ViewGizmoAnchor,
-    ViewGizmoConfig, ViewGizmoInput, ViewGizmoProjection, ViewGizmoUpdate, ViewGizmoVisualPreset,
-    ViewportRect,
+    ViewGizmoConfig, ViewGizmoProjection, ViewGizmoUpdate, ViewGizmoVisualPreset, ViewportRect,
+    ViewportToolInput,
 };
 use fret_launch::{
     EngineFrameUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService,
@@ -3068,22 +3068,18 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         };
 
         let pending_undo = model.update(app, |m, _cx| {
-            let target_px_per_screen_px = event
-                .target_px_per_screen_px()
-                .unwrap_or(event.geometry.pixels_per_point.max(1.0e-6));
-            apply_gizmo_cursor_units_per_screen_px(m, target_px_per_screen_px);
             if m.viewport_target != event.target {
                 return PendingUndoRecords::default();
             }
 
-            let cursor_target_px = event
-                .cursor_target_px_f32()
-                .map(|(x, y)| Vec2::new(x, y))
-                .unwrap_or_else(|| {
-                    // Fallback: use UV instead of integer target pixels to avoid quantization.
-                    let (tw, th) = event.geometry.target_px_size;
-                    Vec2::new(event.uv.0 * tw as f32, event.uv.1 * th as f32)
-                });
+            let tool_input = ViewportToolInput::from_viewport_input_target_px(
+                &event,
+                fret_core::MouseButton::Left,
+            );
+            let target_px_per_screen_px = tool_input.cursor_units_per_screen_px;
+            apply_gizmo_cursor_units_per_screen_px(m, target_px_per_screen_px);
+
+            let cursor_target_px = tool_input.cursor_px;
             let cursor_screen_px = Vec2::new(event.cursor_px.x.0, event.cursor_px.y.0);
 
             let mut pending = PendingUndoRecords::default();
@@ -3235,30 +3231,12 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 (drag_started, dragging)
             };
 
-            let view_projection = camera_view_projection(m.viewport_px, m.camera);
-            let viewport = ViewportRect::new(
-                Vec2::ZERO,
-                Vec2::new(m.viewport_px.0 as f32, m.viewport_px.1 as f32),
-            );
+            let viewport_px = event.geometry.target_px_size;
+            let view_projection = camera_view_projection(viewport_px, m.camera);
+            let viewport = tool_input.viewport;
 
-            let (view_gizmo_drag_started, view_gizmo_dragging) = match event.kind {
-                ViewportInputKind::PointerDown {
-                    button: fret_core::MouseButton::Left,
-                    ..
-                } => (true, true),
-                ViewportInputKind::PointerMove { buttons, .. } => (false, buttons.left),
-                ViewportInputKind::PointerUp {
-                    button: fret_core::MouseButton::Left,
-                    ..
-                } => (false, false),
-                _ => (false, false),
-            };
-            let view_gizmo_input = ViewGizmoInput {
-                cursor_px: cursor_target_px,
-                hovered,
-                drag_started: view_gizmo_drag_started,
-                dragging: view_gizmo_dragging,
-            };
+            let view_gizmo_drag_started = tool_input.drag_started;
+            let view_gizmo_input = tool_input.to_view_gizmo_input(hovered);
             let view_gizmo_update =
                 m.view_gizmo
                     .update(view_projection, viewport, view_gizmo_input);
@@ -3580,13 +3558,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                                             .filter(|t| m.selection.contains(&t.id))
                                             .collect();
                                         if let Some((min, max)) = targets_world_aabb(&targets) {
-                                            frame_aabb(
-                                                &mut m.camera,
-                                                m.viewport_px,
-                                                min,
-                                                max,
-                                                0.18,
-                                            );
+                                            frame_aabb(&mut m.camera, viewport_px, min, max, 0.18);
                                         }
                                     }
                                 } else if matches!(op, SelectionOp::Replace) {
