@@ -6,10 +6,10 @@ use fret_core::{
     Color, DrawOrder, Point, Px, Rect, RichText, Scene, SceneOp, TextConstraints, TextMetrics,
     TextOverflow, TextStyle, TextWrap,
 };
+use fret_core::{PathCommand, PathConstraints, PathMetrics, PathStyle};
 use fret_runtime::ModelId;
 
 use crate::Theme;
-use crate::elements::stable_hash;
 use crate::widget::Invalidation;
 use crate::{UiHost, widget::PaintCx};
 
@@ -201,6 +201,35 @@ impl<'a> CanvasPainter<'a> {
             scene,
         )
     }
+
+    /// Draw a cached tessellated path prepared at `raster_scale_factor`.
+    ///
+    /// - `key` must be stable across frames for the *same* logical path instance.
+    /// - `raster_scale_factor` should usually be `device_scale_factor * zoom`, where zoom is an
+    ///   explicit policy decision of the caller (ADR 0156).
+    pub fn path(
+        &mut self,
+        key: u64,
+        order: DrawOrder,
+        origin: Point,
+        commands: &[PathCommand],
+        style: PathStyle,
+        color: Color,
+        raster_scale_factor: f32,
+    ) -> PathMetrics {
+        let (services, scene) = self.host.services_and_scene();
+        self.cache.path(
+            services,
+            key,
+            order,
+            origin,
+            commands,
+            style,
+            color,
+            raster_scale_factor,
+            scene,
+        )
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -222,17 +251,20 @@ impl Default for CanvasTextConstraints {
 
 #[derive(Default)]
 pub(crate) struct CanvasCache {
-    text_by_key: HashMap<u64, HostedTextEntry>,
-    text_used: HashSet<u64>,
+    text_by_key: HashMap<CanvasTextCacheKey, HostedTextEntry>,
+    text_used: HashSet<CanvasTextCacheKey>,
+    path_by_key: HashMap<CanvasPathCacheKey, HostedPathEntry>,
+    path_used: HashSet<CanvasPathCacheKey>,
 }
 
 impl CanvasCache {
     pub(crate) fn begin_paint(&mut self) {
         self.text_used.clear();
+        self.path_used.clear();
     }
 
     pub(crate) fn end_paint(&mut self, services: &mut dyn fret_core::UiServices) {
-        let mut to_remove: Vec<u64> = Vec::new();
+        let mut to_remove: Vec<CanvasTextCacheKey> = Vec::new();
         for (&key, entry) in self.text_by_key.iter() {
             if self.text_used.contains(&key) {
                 continue;
@@ -249,6 +281,24 @@ impl CanvasCache {
                 }
             }
         }
+
+        let mut to_remove: Vec<CanvasPathCacheKey> = Vec::new();
+        for (&key, entry) in self.path_by_key.iter() {
+            if self.path_used.contains(&key) {
+                continue;
+            }
+            if entry.path.is_some() {
+                to_remove.push(key);
+            }
+        }
+
+        for key in to_remove {
+            if let Some(mut entry) = self.path_by_key.remove(&key) {
+                if let Some(path) = entry.path.take() {
+                    services.path().release(path);
+                }
+            }
+        }
     }
 
     pub(crate) fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
@@ -257,7 +307,13 @@ impl CanvasCache {
                 services.text().release(blob);
             }
         }
+        for (_, mut entry) in self.path_by_key.drain() {
+            if let Some(path) = entry.path.take() {
+                services.path().release(path);
+            }
+        }
         self.text_used.clear();
+        self.path_used.clear();
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -278,7 +334,7 @@ impl CanvasCache {
         let raster_scale_factor = normalize_scale_factor(raster_scale_factor);
         let scale_bits = raster_scale_factor.to_bits();
 
-        let cache_key = stable_hash(&("fret_ui.canvas.text", key, scale_bits));
+        let cache_key = CanvasTextCacheKey { key, scale_bits };
         self.text_used.insert(cache_key);
 
         let entry = self
@@ -347,6 +403,76 @@ impl CanvasCache {
         });
         metrics
     }
+
+    #[allow(clippy::too_many_arguments)]
+    fn path(
+        &mut self,
+        services: &mut dyn fret_core::UiServices,
+        key: u64,
+        order: DrawOrder,
+        origin: Point,
+        commands: &[PathCommand],
+        style: PathStyle,
+        color: Color,
+        raster_scale_factor: f32,
+        scene: &mut Scene,
+    ) -> PathMetrics {
+        let raster_scale_factor = normalize_scale_factor(raster_scale_factor);
+        let scale_bits = raster_scale_factor.to_bits();
+
+        let cache_key = CanvasPathCacheKey { key, scale_bits };
+        self.path_used.insert(cache_key);
+
+        let entry = self
+            .path_by_key
+            .entry(cache_key)
+            .or_insert_with(|| HostedPathEntry {
+                path: None,
+                metrics: None,
+                fingerprint: None,
+            });
+
+        let fingerprint = HostedPathFingerprint {
+            commands_hash: hash_path_commands(commands),
+            commands_len: commands.len(),
+            style,
+            scale_bits,
+        };
+
+        let needs_prepare =
+            entry.path.is_none() || entry.fingerprint.as_ref() != Some(&fingerprint);
+        if needs_prepare {
+            if let Some(path) = entry.path.take() {
+                services.path().release(path);
+            }
+            let constraints = PathConstraints {
+                scale_factor: raster_scale_factor,
+            };
+            let (path, metrics) = services.path().prepare(commands, style, constraints);
+            entry.path = Some(path);
+            entry.metrics = Some(metrics);
+            entry.fingerprint = Some(fingerprint);
+        }
+
+        let Some(path) = entry.path else {
+            return PathMetrics::default();
+        };
+        let metrics = entry.metrics.unwrap_or_default();
+
+        scene.push(SceneOp::Path {
+            order,
+            origin,
+            path,
+            color,
+        });
+        metrics
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct CanvasTextCacheKey {
+    key: u64,
+    scale_bits: u32,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -371,10 +497,84 @@ struct HostedTextEntry {
     fingerprint: Option<HostedTextFingerprint>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct HostedPathFingerprint {
+    commands_hash: u64,
+    commands_len: usize,
+    style: PathStyle,
+    scale_bits: u32,
+}
+
+#[derive(Default)]
+struct HostedPathEntry {
+    path: Option<fret_core::PathId>,
+    metrics: Option<PathMetrics>,
+    fingerprint: Option<HostedPathFingerprint>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct CanvasPathCacheKey {
+    key: u64,
+    scale_bits: u32,
+}
+
 fn normalize_scale_factor(scale_factor: f32) -> f32 {
     if !scale_factor.is_finite() || scale_factor <= 0.0 {
         1.0
     } else {
         scale_factor
     }
+}
+
+fn hash_path_commands(commands: &[PathCommand]) -> u64 {
+    let mut state = 0u64;
+    for cmd in commands {
+        match *cmd {
+            PathCommand::MoveTo(p) => {
+                state = mix_u64(state, 1);
+                state = mix_point(state, p);
+            }
+            PathCommand::LineTo(p) => {
+                state = mix_u64(state, 2);
+                state = mix_point(state, p);
+            }
+            PathCommand::QuadTo { ctrl, to } => {
+                state = mix_u64(state, 3);
+                state = mix_point(state, ctrl);
+                state = mix_point(state, to);
+            }
+            PathCommand::CubicTo { ctrl1, ctrl2, to } => {
+                state = mix_u64(state, 4);
+                state = mix_point(state, ctrl1);
+                state = mix_point(state, ctrl2);
+                state = mix_point(state, to);
+            }
+            PathCommand::Close => {
+                state = mix_u64(state, 5);
+            }
+        }
+    }
+    state
+}
+
+fn mix_u64(mut state: u64, value: u64) -> u64 {
+    // Keep mixing deterministic and reasonably avalanche-y (not cryptographic).
+    state ^= value.wrapping_add(0x9E37_79B9_7F4A_7C15);
+    state = state.rotate_left(7);
+    state = state.wrapping_mul(0xD6E8_FEB8_6659_FD93);
+    state
+}
+
+fn mix_f32(state: u64, value: f32) -> u64 {
+    mix_u64(state, u64::from(value.to_bits()))
+}
+
+fn mix_px(state: u64, value: fret_core::Px) -> u64 {
+    mix_f32(state, value.0)
+}
+
+fn mix_point(mut state: u64, p: fret_core::Point) -> u64 {
+    state = mix_px(state, p.x);
+    state = mix_px(state, p.y);
+    state
 }

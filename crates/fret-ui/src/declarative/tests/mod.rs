@@ -19,6 +19,8 @@ use fret_runtime::{CommandId, Effect};
 struct FakeTextService {
     prepare_calls: usize,
     release_calls: usize,
+    path_prepare_calls: usize,
+    path_release_calls: usize,
 }
 
 impl TextService for FakeTextService {
@@ -50,13 +52,16 @@ impl fret_core::PathService for FakeTextService {
         _style: fret_core::PathStyle,
         _constraints: fret_core::PathConstraints,
     ) -> (fret_core::PathId, fret_core::PathMetrics) {
+        self.path_prepare_calls += 1;
         (
             fret_core::PathId::default(),
             fret_core::PathMetrics::default(),
         )
     }
 
-    fn release(&mut self, _path: fret_core::PathId) {}
+    fn release(&mut self, _path: fret_core::PathId) {
+        self.path_release_calls += 1;
+    }
 }
 
 impl fret_core::SvgService for FakeTextService {
