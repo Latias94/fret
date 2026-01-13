@@ -200,7 +200,7 @@ fn write_new_file(path: &Path, contents: &str) -> Result<(), String> {
 fn todo_template_cargo_toml(package_name: &str, ui_assets: bool) -> String {
     let ui_assets_features = if ui_assets { ", \"ui-assets\"" } else { "" };
     let ui_assets_deps = if ui_assets {
-        "\nfret-ui-assets = { path = \"../../ecosystem/fret-ui-assets\" }\n"
+        "\nfret-ui-assets = { path = \"../../ecosystem/fret-ui-assets\", features = [\"app-integration\"] }\n"
     } else {
         ""
     };
@@ -225,7 +225,7 @@ fret-icons-lucide = {{ path = "../../ecosystem/fret-icons-lucide" }}
 
 fn todo_template_main_rs(_package_name: &str, ui_assets: bool) -> String {
     let ui_assets_builder = if ui_assets {
-        "\n        .with_ui_assets_budgets(64 * 1024 * 1024, 2048, 16 * 1024 * 1024, 4096)"
+        "\n        .install_app(fret_ui_assets::install_app)"
     } else {
         ""
     };
