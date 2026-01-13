@@ -5,7 +5,8 @@
 
 use std::collections::HashMap;
 
-use fret_core::{Point, Px, Rect};
+use fret_canvas::wires as canvas_wires;
+use fret_core::{Point, Rect};
 
 use crate::core::{EdgeId, Graph, NodeId, PortId};
 
@@ -48,22 +49,8 @@ fn cell_range_for_aabb(
     (min_x, max_x, min_y, max_y)
 }
 
-fn wire_ctrl_points(from: Point, to: Point, zoom: f32) -> (Point, Point) {
-    let zoom = if zoom.is_finite() && zoom > 0.0 {
-        zoom
-    } else {
-        1.0
-    };
-    let dx = to.x.0 - from.x.0;
-    let ctrl = (dx.abs() * 0.5).clamp(40.0 / zoom, 160.0 / zoom);
-    let dir = if dx >= 0.0 { 1.0 } else { -1.0 };
-    let c1 = Point::new(Px(from.x.0 + dir * ctrl), from.y);
-    let c2 = Point::new(Px(to.x.0 - dir * ctrl), to.y);
-    (c1, c2)
-}
-
 fn wire_aabb(from: Point, to: Point, zoom: f32, pad: f32) -> (f32, f32, f32, f32) {
-    let (c1, c2) = wire_ctrl_points(from, to, zoom);
+    let (c1, c2) = canvas_wires::wire_ctrl_points(from, to, zoom);
     let mut min_x = from.x.0.min(to.x.0).min(c1.x.0).min(c2.x.0);
     let mut max_x = from.x.0.max(to.x.0).max(c1.x.0).max(c2.x.0);
     let mut min_y = from.y.0.min(to.y.0).min(c1.y.0).min(c2.y.0);

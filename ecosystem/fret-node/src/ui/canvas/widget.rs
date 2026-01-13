@@ -3013,6 +3013,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         zoom: f32,
         scratch: &mut Vec<EdgeId>,
     ) -> Option<EdgeId> {
+        let bezier_steps = usize::from(snapshot.interaction.bezier_hit_test_steps.max(1));
         let hit_w = canvas_units_from_screen_px(snapshot.interaction.edge_interaction_width, zoom)
             .max(self.style.wire_width / zoom);
         let threshold2 = hit_w * hit_w;
@@ -3035,7 +3036,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
             let route = self.edge_render_hint(graph, edge_id).route;
             let d2 = match route {
-                EdgeRouteKind::Bezier => wire_distance2(pos, from, to, zoom),
+                EdgeRouteKind::Bezier => wire_distance2(pos, from, to, zoom, bezier_steps),
                 EdgeRouteKind::Straight => dist2_point_to_segment(pos, from, to),
                 EdgeRouteKind::Step => step_wire_distance2(pos, from, to),
             };
@@ -8121,11 +8122,19 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
         let mut edges_hovered: Vec<EdgePaint> = Vec::new();
         let mut edge_labels: Vec<(Point, Point, EdgeRouteKind, Arc<str>, bool, bool)> = Vec::new();
 
+        let bezier_steps = usize::from(snapshot.interaction.bezier_hit_test_steps.max(1));
         let edge_insert_marker: Option<(Point, Color)> =
             edge_insert_marker_request.and_then(|(edge_id, pos)| {
                 render.edges.iter().find(|e| e.id == edge_id).map(|e| {
                     (
-                        closest_point_on_edge_route(e.hint.route, e.from, e.to, zoom, pos),
+                        closest_point_on_edge_route(
+                            e.hint.route,
+                            e.from,
+                            e.to,
+                            zoom,
+                            bezier_steps,
+                            pos,
+                        ),
                         e.color,
                     )
                 })
@@ -8142,6 +8151,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                             edge.from,
                             edge.to,
                             zoom,
+                            bezier_steps,
                             p.pos,
                         ),
                         edge.color,
@@ -9161,21 +9171,8 @@ fn hit_context_menu_item(
     (ix < menu.items.len()).then_some(ix)
 }
 
-fn wire_distance2(p: Point, from: Point, to: Point, zoom: f32) -> f32 {
-    let (c1, c2) = wire_ctrl_points(from, to, zoom);
-
-    let steps: usize = 24;
-    let mut best = f32::INFINITY;
-
-    let mut prev = from;
-    for i in 1..=steps {
-        let t = i as f32 / steps as f32;
-        let cur = cubic_bezier(from, c1, c2, to, t);
-        best = best.min(dist2_point_to_segment(p, prev, cur));
-        prev = cur;
-    }
-
-    best
+fn wire_distance2(p: Point, from: Point, to: Point, zoom: f32, bezier_steps: usize) -> f32 {
+    fret_canvas::wires::bezier_wire_distance2(p, from, to, zoom, bezier_steps)
 }
 
 fn closest_point_on_edge_route(
@@ -9183,33 +9180,24 @@ fn closest_point_on_edge_route(
     from: Point,
     to: Point,
     zoom: f32,
+    bezier_steps: usize,
     p: Point,
 ) -> Point {
     match route {
-        EdgeRouteKind::Bezier => closest_point_on_wire_bezier(p, from, to, zoom),
+        EdgeRouteKind::Bezier => closest_point_on_wire_bezier(p, from, to, zoom, bezier_steps),
         EdgeRouteKind::Straight => closest_point_on_segment(p, from, to).0,
         EdgeRouteKind::Step => closest_point_on_step_wire(p, from, to).0,
     }
 }
 
-fn closest_point_on_wire_bezier(p: Point, from: Point, to: Point, zoom: f32) -> Point {
-    let (c1, c2) = wire_ctrl_points(from, to, zoom);
-
-    let steps: usize = 24;
-    let mut best = (from, f32::INFINITY);
-
-    let mut prev = from;
-    for i in 1..=steps {
-        let t = i as f32 / steps as f32;
-        let cur = cubic_bezier(from, c1, c2, to, t);
-        let cand = closest_point_on_segment(p, prev, cur);
-        if cand.1 < best.1 {
-            best = cand;
-        }
-        prev = cur;
-    }
-
-    best.0
+fn closest_point_on_wire_bezier(
+    p: Point,
+    from: Point,
+    to: Point,
+    zoom: f32,
+    bezier_steps: usize,
+) -> Point {
+    fret_canvas::wires::closest_point_on_bezier_wire(p, from, to, zoom, bezier_steps)
 }
 
 fn closest_point_on_step_wire(p: Point, from: Point, to: Point) -> (Point, f32) {

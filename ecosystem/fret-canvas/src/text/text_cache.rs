@@ -1,12 +1,13 @@
 use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextStyle, UiServices};
+use std::cmp::Reverse;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::hash::{Hash, Hasher};
+use std::sync::Arc;
 
-fn hash_value<T: Hash>(value: &T) -> u64 {
-    use std::collections::hash_map::DefaultHasher;
-    let mut hasher = DefaultHasher::new();
-    value.hash(&mut hasher);
+fn hash_text(text: &str) -> u64 {
+    let mut hasher = Fnv1a64::default();
+    hasher.write(text.as_bytes());
     hasher.finish()
 }
 
@@ -18,28 +19,103 @@ pub struct PreparedText {
     pub key: u64,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct TextCacheKey {
+    text_hash: u64,
+    text_len: u32,
+    text: Arc<str>,
+    font: fret_core::FontId,
+    size_bits: u32,
+    weight: u16,
+    slant: u8,
+    line_height_bits: Option<u32>,
+    letter_spacing_em_bits: Option<u32>,
+    scale_factor_bits: u32,
+    max_width_bits: Option<u32>,
+    wrap: fret_core::TextWrap,
+    overflow: fret_core::TextOverflow,
+}
+
+impl Hash for TextCacheKey {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.text_hash.hash(state);
+        self.text_len.hash(state);
+        self.font.hash(state);
+        self.size_bits.hash(state);
+        self.weight.hash(state);
+        self.slant.hash(state);
+        self.line_height_bits.hash(state);
+        self.letter_spacing_em_bits.hash(state);
+        self.scale_factor_bits.hash(state);
+        self.max_width_bits.hash(state);
+        self.wrap.hash(state);
+        self.overflow.hash(state);
+    }
+}
+
+impl TextCacheKey {
+    fn new(text: &str, style: &TextStyle, constraints: TextConstraints) -> Self {
+        Self {
+            text_hash: hash_text(text),
+            text_len: text.len() as u32,
+            text: Arc::<str>::from(text),
+            font: style.font.clone(),
+            size_bits: style.size.0.to_bits(),
+            weight: style.weight.0,
+            slant: style.slant as u8,
+            line_height_bits: style.line_height.map(|v| v.0.to_bits()),
+            letter_spacing_em_bits: style.letter_spacing_em.map(f32::to_bits),
+            scale_factor_bits: constraints.scale_factor.to_bits(),
+            max_width_bits: constraints.max_width.map(|v| v.0.to_bits()),
+            wrap: constraints.wrap,
+            overflow: constraints.overflow,
+        }
+    }
+
+    fn stable_key(&self) -> u64 {
+        let mut hasher = Fnv1a64::default();
+        self.hash(&mut hasher);
+        hasher.finish()
+    }
+}
+
+#[derive(Debug, Clone)]
+struct TextCacheEntry {
+    prepared: PreparedText,
+    last_used_frame: u64,
+}
+
 /// A small keyed cache for prepared text blobs.
 ///
 /// The cache owns the `TextBlobId`s and must be cleared (or dropped) with access to `UiServices`
 /// so resources can be released deterministically.
 #[derive(Debug, Default)]
 pub struct TextCache {
-    entries: HashMap<u64, PreparedText>,
+    frame: u64,
+    entries: HashMap<TextCacheKey, TextCacheEntry>,
 }
 
 impl TextCache {
+    /// Increments and returns the internal frame counter used for optional pruning.
+    ///
+    /// Callers may ignore this entirely; the cache remains correct without pruning.
+    pub fn begin_frame(&mut self) -> u64 {
+        self.frame = self.frame.wrapping_add(1);
+        self.frame
+    }
+
     /// Releases all cached blobs.
     pub fn clear(&mut self, services: &mut dyn UiServices) {
         for t in self.entries.values() {
-            services.text().release(t.blob);
+            services.text().release(t.prepared.blob);
         }
         self.entries.clear();
     }
 
     /// Prepares text and caches it by a stable key derived from `(text, style, constraints)`.
     ///
-    /// Note: this currently includes `constraints.scale_factor` in the key; callers that apply
-    /// additional view-zoom scaling should incorporate that into `constraints`.
+    /// Note: callers that apply additional view-zoom scaling should incorporate that into
+    /// `constraints.scale_factor` (e.g. `dpi * zoom`).
     pub fn prepare(
         &mut self,
         services: &mut dyn UiServices,
@@ -47,67 +123,88 @@ impl TextCache {
         style: &TextStyle,
         constraints: TextConstraints,
     ) -> PreparedText {
-        let key = Self::key_for(text, style, constraints);
+        let key = TextCacheKey::new(text, style, constraints);
         match self.entries.entry(key) {
-            Entry::Occupied(e) => *e.get(),
+            Entry::Occupied(mut e) => {
+                e.get_mut().last_used_frame = self.frame;
+                e.get().prepared
+            }
             Entry::Vacant(e) => {
                 let (blob, metrics) = services.text().prepare(text, style, constraints);
-                let prepared = PreparedText { blob, metrics, key };
-                e.insert(prepared);
+                let prepared = PreparedText {
+                    blob,
+                    metrics,
+                    key: e.key().stable_key(),
+                };
+                e.insert(TextCacheEntry {
+                    prepared,
+                    last_used_frame: self.frame,
+                });
                 prepared
             }
         }
     }
 
-    fn key_for(text: &str, style: &TextStyle, constraints: TextConstraints) -> u64 {
-        let mut state = 0u64;
-        for b in text.as_bytes() {
-            state ^= u64::from(*b)
-                .wrapping_add(0x9e3779b97f4a7c15)
-                .wrapping_add(state << 6)
-                .wrapping_add(state >> 2);
+    /// Drops old cache entries and releases their blobs.
+    ///
+    /// This is intentionally simple and conservative: it is an optional hygiene helper for long-lived
+    /// canvases (plots/editors) to avoid unbounded growth.
+    pub fn prune(
+        &mut self,
+        services: &mut dyn UiServices,
+        max_age_frames: u64,
+        max_entries: usize,
+    ) {
+        let now = self.frame;
+        self.entries.retain(|_, entry| {
+            let keep = now.saturating_sub(entry.last_used_frame) <= max_age_frames;
+            if !keep {
+                services.text().release(entry.prepared.blob);
+            }
+            keep
+        });
+
+        if self.entries.len() <= max_entries {
+            return;
         }
-        state ^= hash_value(&style.font)
-            .wrapping_add(0x9e3779b97f4a7c15)
-            .wrapping_add(state << 6)
-            .wrapping_add(state >> 2);
-        state ^= u64::from(style.weight.0)
-            .wrapping_add(0x9e3779b97f4a7c15)
-            .wrapping_add(state << 6)
-            .wrapping_add(state >> 2);
-        state ^= u64::from(style.slant as u8)
-            .wrapping_add(0x9e3779b97f4a7c15)
-            .wrapping_add(state << 6)
-            .wrapping_add(state >> 2);
-        state ^= u64::from(style.size.0.to_bits())
-            .wrapping_add(0x9e3779b97f4a7c15)
-            .wrapping_add(state << 6)
-            .wrapping_add(state >> 2);
-        state ^= u64::from(style.line_height.map(|v| v.0.to_bits()).unwrap_or(0))
-            .wrapping_add(0x9e3779b97f4a7c15)
-            .wrapping_add(state << 6)
-            .wrapping_add(state >> 2);
-        state ^= u64::from(style.letter_spacing_em.map(|v| v.to_bits()).unwrap_or(0))
-            .wrapping_add(0x9e3779b97f4a7c15)
-            .wrapping_add(state << 6)
-            .wrapping_add(state >> 2);
-        state ^= u64::from(constraints.scale_factor.to_bits())
-            .wrapping_add(0x9e3779b97f4a7c15)
-            .wrapping_add(state << 6)
-            .wrapping_add(state >> 2);
-        state ^= u64::from(constraints.max_width.map(|v| v.0.to_bits()).unwrap_or(0))
-            .wrapping_add(0x9e3779b97f4a7c15)
-            .wrapping_add(state << 6)
-            .wrapping_add(state >> 2);
-        state ^= hash_value(&constraints.wrap)
-            .wrapping_add(0x9e3779b97f4a7c15)
-            .wrapping_add(state << 6)
-            .wrapping_add(state >> 2);
-        state ^= hash_value(&constraints.overflow)
-            .wrapping_add(0x9e3779b97f4a7c15)
-            .wrapping_add(state << 6)
-            .wrapping_add(state >> 2);
-        state
+
+        let mut keys: Vec<(Reverse<u64>, TextCacheKey)> = self
+            .entries
+            .iter()
+            .map(|(k, v)| (Reverse(v.last_used_frame), k.clone()))
+            .collect();
+        keys.sort_by(|a, b| a.0.cmp(&b.0));
+
+        for (_, key) in keys.into_iter().skip(max_entries) {
+            if let Some(entry) = self.entries.remove(&key) {
+                services.text().release(entry.prepared.blob);
+            }
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+struct Fnv1a64(u64);
+
+impl Hasher for Fnv1a64 {
+    fn write(&mut self, bytes: &[u8]) {
+        if self.0 == 0 {
+            self.0 = 0xcbf29ce484222325;
+        }
+        let mut state = self.0;
+        for b in bytes {
+            state ^= u64::from(*b);
+            state = state.wrapping_mul(0x100000001b3);
+        }
+        self.0 = state;
+    }
+
+    fn finish(&self) -> u64 {
+        if self.0 == 0 {
+            0xcbf29ce484222325
+        } else {
+            self.0
+        }
     }
 }
 
@@ -127,8 +224,8 @@ mod tests {
             ..TextStyle::default()
         };
 
-        let k_a = TextCache::key_for("hello", &style_a, TextConstraints::default());
-        let k_b = TextCache::key_for("hello", &style_b, TextConstraints::default());
+        let k_a = TextCacheKey::new("hello", &style_a, TextConstraints::default()).stable_key();
+        let k_b = TextCacheKey::new("hello", &style_b, TextConstraints::default()).stable_key();
         assert_ne!(k_a, k_b);
     }
 
@@ -143,8 +240,8 @@ mod tests {
             ..TextStyle::default()
         };
 
-        let k_a = TextCache::key_for("hello", &style_a, TextConstraints::default());
-        let k_b = TextCache::key_for("hello", &style_b, TextConstraints::default());
+        let k_a = TextCacheKey::new("hello", &style_a, TextConstraints::default()).stable_key();
+        let k_b = TextCacheKey::new("hello", &style_b, TextConstraints::default()).stable_key();
         assert_ne!(k_a, k_b);
     }
 
@@ -158,8 +255,18 @@ mod tests {
         let mut b = a;
         b.scale_factor = 2.0;
 
-        let k_a = TextCache::key_for("hello", &TextStyle::default(), a);
-        let k_b = TextCache::key_for("hello", &TextStyle::default(), b);
+        let k_a = TextCacheKey::new("hello", &TextStyle::default(), a).stable_key();
+        let k_b = TextCacheKey::new("hello", &TextStyle::default(), b).stable_key();
         assert_ne!(k_a, k_b);
+    }
+
+    #[test]
+    fn key_is_collision_safe_on_equal_hash() {
+        // This is intentionally not trying to manufacture a real FNV collision (impractical here).
+        // The invariant we care about: even if a hash collides, `TextCacheKey` equality compares
+        // the full text, so correctness does not depend on the stable key alone.
+        let a = TextCacheKey::new("hello", &TextStyle::default(), TextConstraints::default());
+        let b = TextCacheKey::new("hello!", &TextStyle::default(), TextConstraints::default());
+        assert_ne!(a, b);
     }
 }

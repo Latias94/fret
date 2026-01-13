@@ -439,6 +439,10 @@ fn default_edges_deletable() -> bool {
     true
 }
 
+fn default_bezier_hit_test_steps() -> u8 {
+    24
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum NodeGraphPanOnScrollMode {
@@ -506,6 +510,10 @@ pub struct NodeGraphInteractionState {
     /// Edge hit slop width in screen pixels (independent from wire stroke thickness).
     #[serde(default = "default_edge_interaction_width")]
     pub edge_interaction_width: f32,
+
+    /// Subdivision count used for Bezier wire hit-testing (higher is more accurate, but slower).
+    #[serde(default = "default_bezier_hit_test_steps")]
+    pub bezier_hit_test_steps: u8,
 
     /// Snap nodes to a grid during move/resize interactions.
     #[serde(default)]
@@ -722,6 +730,7 @@ impl Default for NodeGraphInteractionState {
             reconnect_radius: default_reconnect_radius(),
             reconnect_on_drop_empty: false,
             edge_interaction_width: default_edge_interaction_width(),
+            bezier_hit_test_steps: default_bezier_hit_test_steps(),
             snap_to_grid: false,
             snap_grid: default_snap_grid(),
             snaplines: default_snaplines(),
