@@ -1112,9 +1112,12 @@ impl Gizmo3dDemoModel {
 
         let viewport_px = (self.viewport_px.0.max(1), self.viewport_px.1.max(1));
         let view_projection = camera_view_projection(viewport_px, self.camera);
-        let viewport = ViewportRect::new(
-            Vec2::ZERO,
-            Vec2::new(viewport_px.0 as f32, viewport_px.1 as f32),
+        let viewport = ViewportToolInput::from_target_px_viewport(
+            viewport_px,
+            self.input.cursor_px,
+            false,
+            false,
+            self.gizmo_cursor_units_per_screen_px,
         );
 
         let mut input = self.input;
@@ -1133,7 +1136,7 @@ impl Gizmo3dDemoModel {
         self.sync_light_radius_plugin(&selected);
         let update = self.gizmo_mgr.update(
             view_projection,
-            viewport,
+            viewport.viewport,
             self.gizmo().config.depth_range,
             input,
             self.active_target,

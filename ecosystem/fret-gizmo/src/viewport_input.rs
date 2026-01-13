@@ -53,6 +53,35 @@ impl ViewportToolInput {
         }
     }
 
+    /// Builds a tool input in render-target pixel space when the host already has cursor
+    /// coordinates in target pixels (no `ViewportInputEvent` required).
+    ///
+    /// This is useful for non-UI hosts or for input paths that do not originate from
+    /// `Effect::ViewportInput` (e.g. command-driven cancellation).
+    pub fn from_target_px_viewport(
+        target_px_size: (u32, u32),
+        cursor_px: Vec2,
+        drag_started: bool,
+        dragging: bool,
+        cursor_units_per_screen_px: f32,
+    ) -> Self {
+        let (tw, th) = target_px_size;
+        Self {
+            viewport: ViewportRect::new(Vec2::ZERO, Vec2::new(tw as f32, th as f32)),
+            cursor_px,
+            drag_started,
+            dragging,
+            cursor_units_per_screen_px: if cursor_units_per_screen_px.is_finite()
+                && cursor_units_per_screen_px > 0.0
+            {
+                cursor_units_per_screen_px
+            } else {
+                1.0
+            },
+            cursor_over_draw_rect: true,
+        }
+    }
+
     /// Derives a gizmo-friendly input in window logical pixel space.
     pub fn from_viewport_input_screen_px(
         event: &ViewportInputEvent,
@@ -249,6 +278,22 @@ mod tests {
         assert_eq!(derived.viewport.size, Vec2::new(100.0, 50.0));
         assert_eq!(derived.cursor_px, Vec2::new(60.0, 45.0));
         assert!((derived.cursor_units_per_screen_px - 1.0).abs() < 1e-6);
+        assert!(derived.cursor_over_draw_rect);
+    }
+
+    #[test]
+    fn target_px_viewport_constructor_uses_target_bounds() {
+        let derived = ViewportToolInput::from_target_px_viewport(
+            (800, 600),
+            Vec2::new(10.0, 20.0),
+            false,
+            false,
+            3.0,
+        );
+        assert_eq!(derived.viewport.min, Vec2::ZERO);
+        assert_eq!(derived.viewport.size, Vec2::new(800.0, 600.0));
+        assert_eq!(derived.cursor_px, Vec2::new(10.0, 20.0));
+        assert!((derived.cursor_units_per_screen_px - 3.0).abs() < 1e-6);
         assert!(derived.cursor_over_draw_rect);
     }
 }
