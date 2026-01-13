@@ -60,7 +60,7 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 
 **Use it when:** you are rendering UI (apps or portable component libraries).
 
-**Notes:** feature flags include `unstable-retained-bridge` (compat retained widgets) and `layout-engine-v2`.
+**Notes:** feature flags include `unstable-retained-bridge` (compat retained widgets). The window-scoped layout engine v2 is enabled by default in this repository; `layout-engine-v2` is retained as a compatibility feature for downstream crates that explicitly enable it.
 
 ### `fret-app`
 

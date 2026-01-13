@@ -22,6 +22,5 @@ This audit compares Fret’s shadcn-aligned `Badge` against the upstream shadcn/
 
 ## Validation
 
-- Web layout gate: `cargo nextest run -p fret-ui-shadcn -F fret-ui/layout-engine-v2 --test web_vs_fret_layout`
+- Web layout gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
   (`web_vs_fret_layout_badge_demo_heights`).
-

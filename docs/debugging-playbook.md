@@ -165,9 +165,9 @@ Practical workflow:
 3. Verify child bounds propagation (especially when using absolute positioning helpers).
 4. If the issue is about what the user “sees”, validate visual bounds vs layout bounds (ADR 0083).
 
-### 2.1 Dump Taffy layout trees (layout-engine-v2)
+### 2.1 Dump Taffy layout trees (layout engine v2)
 
-When debugging layout-engine-v2, it is often faster to inspect the solved Taffy tree(s) than to
+When debugging layout engine v2 (enabled by default in this repository), it is often faster to inspect the solved Taffy tree(s) than to
 guess which wrapper collapsed. Fret can emit JSON dumps under `.fret/`.
 
 ```powershell
@@ -185,8 +185,8 @@ $env:FRET_TAFFY_DUMP_ROOT="NodeId(46"
 # nested `SemanticsProps.label` even if the window root is an internal wrapper.
 $env:FRET_TAFFY_DUMP_ROOT_LABEL="Golden:input-with-label"
 
-# Run a repro with layout-engine-v2 enabled (example):
-cargo run -p fret-demo --features layout-engine-v2 --bin todo_demo
+# Run a repro (example):
+cargo run -p fret-demo --bin todo_demo
 ```
 
 Notes:
@@ -206,7 +206,7 @@ $env:FRET_TAFFY_DUMP=1
 $env:FRET_TAFFY_DUMP_ONCE=1
 $env:FRET_TAFFY_DUMP_DIR=".fret\\taffy-dumps"
 $env:FRET_TAFFY_DUMP_ROOT_LABEL="Debug:todo-demo:page"
-cargo run -p fret-demo --features layout-engine-v2 --bin todo_demo
+cargo run -p fret-demo --bin todo_demo
 ```
 
 ### 2.2 Prefer a unit test when possible
@@ -326,7 +326,7 @@ To locate the bottleneck, enable frame hitch logging (writes only when a frame e
 $env:FRET_FRAME_HITCH_LOG=1
 # Default is 24ms; adjust as needed for your monitor / expectation.
 $env:FRET_FRAME_HITCH_MS=24
-cargo run -p fret-demo --features layout-engine-v2 --bin todo_demo
+cargo run -p fret-demo --bin todo_demo
 ```
 
 The log is written to `.fret/frame_hitches.log` (and also mirrored under the system temp dir).
@@ -338,7 +338,7 @@ the UI tree work (e.g. surface acquire/present or GPU work). Enable redraw hitch
 ```powershell
 $env:FRET_REDRAW_HITCH_LOG=1
 $env:FRET_REDRAW_HITCH_MS=24
-cargo run -p fret-demo --features layout-engine-v2 --bin todo_demo
+cargo run -p fret-demo --bin todo_demo
 ```
 
 The log is written to `.fret/redraw_hitches.log` and includes `prepare` / `render` / `record` /

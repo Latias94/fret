@@ -50,7 +50,7 @@ GPUI reference (implementation, not contract):
 ## Current Progress Snapshot
 
 - P1: `AvailableSpace` + non-reentrant `measure_in`. (**Done**; merged.)
-- P2: window-scoped engine skeleton behind `fret-ui/layout-engine-v2`. (**In progress**; iterating in `wt-layout-engine2`.)
+- P2: window-scoped engine skeleton (layout engine v2; enabled by default in-repo). (**In progress**; iterating in `wt-layout-engine2`.)
 - P3: multi-viewport roots + engine-backed flow migration. (**In progress**; viewport-root plumbing + conformance tests landed; Flex/Grid v2 root solves are centralized and redundant precompute is guarded when subtrees are already engine-backed; viewport-root coverage now locks wrapper + region nodes (Pressable/Semantics/FocusScope/Opacity/VisualTransform/InteractivityGate/PointerRegion/WheelRegion), including absolute-only children that must still fill the region; host widget v2 "engine fast path" checks are deduped via `try_layout_children_from_engine_or_manual_absolute`.)
 
 Update this section by editing this file (avoid scattering progress notes across ADRs).
@@ -74,8 +74,9 @@ Acceptance:
 
 ## P2: Window-Scoped Layout Engine Skeleton + Two-Phase Protocol (ADR 0116)
 
-Goal: introduce a per-window `TaffyLayoutEngine` without changing behavior by default, and enforce
-the separation between "build/request" and "compute/apply".
+Goal: introduce a per-window `TaffyLayoutEngine` and enforce the separation between "build/request"
+and "compute/apply" (layout engine v2 is enabled by default in-repo; the feature flag remains for
+downstream compatibility).
 
 Deliverables:
 
@@ -93,8 +94,7 @@ Deliverables:
 
 Acceptance:
 
-- With feature off: no behavior change; tests pass.
-- With feature on: empty graphs and small trees solve; tests pass.
+- Tests pass and deep trees remain stacksafe.
 
 ## P3: Multi-Viewport Roots + Flow Migration (End-State Convergence)
 
@@ -114,7 +114,7 @@ Acceptance:
 
 - Conformance test: no cross-viewport coupling for percent/flex distribution.
 - Docking demos behave consistently across DPI scales (bounds stable within rounding policy).
-- Dogfood demo (manual): `cargo run -p fret-demo --features layout-engine-v2 --bin todo_demo` matches the shadcn-style composition (Card + Input + Tabs + ScrollArea + hover-only actions) without re-entrant layout or stack growth.
+- Dogfood demo (manual): `cargo run -p fret-demo --bin todo_demo` matches the shadcn-style composition (Card + Input + Tabs + ScrollArea + hover-only actions) without re-entrant layout or stack growth.
 
 ## Open Decisions (Track Here)
 
