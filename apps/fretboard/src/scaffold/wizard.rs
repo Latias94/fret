@@ -94,8 +94,8 @@ pub(super) fn new_wizard() -> Result<(), String> {
 
     match template {
         NewTemplate::Empty => init_empty_at(&out_dir, &package_name),
-        NewTemplate::Hello => init_hello_at(&out_dir, &package_name, opts),
-        NewTemplate::Todo => init_todo_at(&out_dir, &package_name, opts),
+        NewTemplate::Hello => init_hello_at(&root, &out_dir, &package_name, opts),
+        NewTemplate::Todo => init_todo_at(&root, &out_dir, &package_name, opts),
     }
 }
 

@@ -6,11 +6,14 @@ mod fs;
 mod templates;
 mod wizard;
 
-use fs::{ensure_dir_is_new_or_empty, sanitize_package_name, write_new_file};
+use fs::{
+    ensure_dir_is_new_or_empty, sanitize_package_name, workspace_prefix_from_out_dir,
+    write_file_if_missing, write_new_file,
+};
 use templates::{
     empty_template_cargo_toml, empty_template_main_rs, empty_template_readme_md,
     hello_template_cargo_toml, hello_template_main_rs, hello_template_readme_md,
-    todo_template_cargo_toml, todo_template_main_rs, todo_template_readme_md,
+    template_gitignore, todo_template_cargo_toml, todo_template_main_rs, todo_template_readme_md,
 };
 
 pub(crate) fn init_cmd(args: Vec<String>) -> Result<(), String> {
@@ -160,6 +163,7 @@ fn init_todo(args: Vec<String>) -> Result<(), String> {
 
     let out_dir = out_path.unwrap_or_else(|| root.join("local").join(&package_name));
     init_todo_at(
+        &root,
         &out_dir,
         &package_name,
         ScaffoldOptions {
@@ -170,11 +174,19 @@ fn init_todo(args: Vec<String>) -> Result<(), String> {
     )
 }
 
-fn init_todo_at(out_dir: &Path, package_name: &str, opts: ScaffoldOptions) -> Result<(), String> {
+fn init_todo_at(
+    workspace_root: &Path,
+    out_dir: &Path,
+    package_name: &str,
+    opts: ScaffoldOptions,
+) -> Result<(), String> {
     ensure_dir_is_new_or_empty(out_dir)?;
 
-    let cargo_toml = todo_template_cargo_toml(package_name, opts);
+    let workspace_prefix = workspace_prefix_from_out_dir(workspace_root, out_dir)?;
+
+    let cargo_toml = todo_template_cargo_toml(package_name, opts, &workspace_prefix);
     write_new_file(&out_dir.join("Cargo.toml"), &cargo_toml)?;
+    write_file_if_missing(&out_dir.join(".gitignore"), template_gitignore())?;
 
     let src_dir = out_dir.join("src");
     std::fs::create_dir_all(&src_dir).map_err(|e| e.to_string())?;
@@ -236,6 +248,7 @@ fn init_hello(args: Vec<String>) -> Result<(), String> {
 
     let out_dir = out_path.unwrap_or_else(|| root.join("local").join(&package_name));
     init_hello_at(
+        &root,
         &out_dir,
         &package_name,
         ScaffoldOptions {
@@ -246,11 +259,19 @@ fn init_hello(args: Vec<String>) -> Result<(), String> {
     )
 }
 
-fn init_hello_at(out_dir: &Path, package_name: &str, opts: ScaffoldOptions) -> Result<(), String> {
+fn init_hello_at(
+    workspace_root: &Path,
+    out_dir: &Path,
+    package_name: &str,
+    opts: ScaffoldOptions,
+) -> Result<(), String> {
     ensure_dir_is_new_or_empty(out_dir)?;
 
-    let cargo_toml = hello_template_cargo_toml(package_name, opts);
+    let workspace_prefix = workspace_prefix_from_out_dir(workspace_root, out_dir)?;
+
+    let cargo_toml = hello_template_cargo_toml(package_name, opts, &workspace_prefix);
     write_new_file(&out_dir.join("Cargo.toml"), &cargo_toml)?;
+    write_file_if_missing(&out_dir.join(".gitignore"), template_gitignore())?;
 
     let src_dir = out_dir.join("src");
     std::fs::create_dir_all(&src_dir).map_err(|e| e.to_string())?;
@@ -277,6 +298,7 @@ fn init_empty_at(out_dir: &Path, package_name: &str) -> Result<(), String> {
 
     let cargo_toml = empty_template_cargo_toml(package_name);
     write_new_file(&out_dir.join("Cargo.toml"), &cargo_toml)?;
+    write_file_if_missing(&out_dir.join(".gitignore"), template_gitignore())?;
 
     let src_dir = out_dir.join("src");
     std::fs::create_dir_all(&src_dir).map_err(|e| e.to_string())?;
