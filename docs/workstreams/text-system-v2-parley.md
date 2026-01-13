@@ -155,9 +155,10 @@ Legend:
 - [x] Define eviction semantics based on “last used frame” and document in-flight safety constraints.
 
 **B7 — Unified glyph key + subpixel policy (ADR 0160)**
-- [ ] Introduce renderer-owned `GlyphKey` and a stable `FontFaceKey` registry (no backend-specific keys).
+- [x] Introduce renderer-owned `GlyphKey` and remove backend-specific glyph keys.
+- [ ] Introduce a stable `FontFaceKey` registry (decouple from Parley fontique IDs; reserve variable font support).
 - [ ] Add `GlyphKind::Subpixel` (atlas + shader) and lock `SUBPIXEL_VARIANTS_X/Y` as a platform policy.
-- [ ] Converge shaping/layout to Parley-only and remove the legacy shaping backend gate.
+- [x] Converge shaping/layout to Parley-only and remove the legacy shaping backend gate.
 
 ### C) `fret-ui` integration surface
 
@@ -199,3 +200,4 @@ Legend:
 - 2026-01-13: M1.8: evict unused glyphs from the atlas via per-glyph live refs (commit `2983e98`).
 - 2026-01-13: B6: decouple text layout from glyph atlas residency + add `prepare_for_scene` and atlas revision cache key (commit `4885937`).
 - 2026-01-13: ADR 0160 added: unify glyph identity (`GlyphKey`) + subpixel rendering policy (commit `d56a8be`).
+- 2026-01-13: B7.1: unify glyph key and switch `prepare` to Parley-only (commit `797fe93`).
