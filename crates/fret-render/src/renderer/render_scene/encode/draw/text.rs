@@ -29,6 +29,7 @@ pub(in super::super) fn encode_text(
     let paint_opacity = group_opacity * color.a;
 
     let mut active_kind: Option<TextDrawKind> = None;
+    let mut active_page: u16 = 0;
     let mut group_first_vertex = state.text_vertices.len() as u32;
 
     for g in blob.shape.glyphs.as_ref() {
@@ -37,7 +38,7 @@ pub(in super::super) fn encode_text(
             GlyphQuadKind::Color => TextDrawKind::Color,
         };
 
-        if active_kind != Some(kind) {
+        if active_kind != Some(kind) || (active_kind.is_some() && active_page != g.atlas_page) {
             if let Some(prev) = active_kind {
                 let vertex_count =
                     (state.text_vertices.len() as u32).saturating_sub(group_first_vertex);
@@ -48,10 +49,12 @@ pub(in super::super) fn encode_text(
                         first_vertex: group_first_vertex,
                         vertex_count,
                         kind: prev,
+                        atlas_page: active_page,
                     }));
                 }
             }
             active_kind = Some(kind);
+            active_page = g.atlas_page;
             group_first_vertex = state.text_vertices.len() as u32;
         }
 
@@ -125,6 +128,7 @@ pub(in super::super) fn encode_text(
                 first_vertex: group_first_vertex,
                 vertex_count,
                 kind,
+                atlas_page: active_page,
             }));
         }
     }

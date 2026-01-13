@@ -543,6 +543,7 @@ impl Renderer {
                             .expect("path pipeline must exist");
 
                         let mut active_pipeline = ActivePipeline::None;
+                        let mut active_text_page: Option<u16> = None;
 
                         fn begin_main_pass<'a>(
                             encoder: &'a mut wgpu::CommandEncoder,
@@ -889,7 +890,8 @@ impl Renderer {
                                                 );
                                                 pass.set_bind_group(
                                                     1,
-                                                    self.text_system.mask_atlas_bind_group(),
+                                                    self.text_system
+                                                        .mask_atlas_bind_group(draw.atlas_page),
                                                     &[],
                                                 );
                                                 if perf_enabled {
@@ -902,6 +904,24 @@ impl Renderer {
                                                             .saturating_add(1);
                                                 }
                                                 active_pipeline = ActivePipeline::TextMask;
+                                                active_text_page = Some(draw.atlas_page);
+                                            } else if active_text_page != Some(draw.atlas_page) {
+                                                pass.set_bind_group(
+                                                    1,
+                                                    self.text_system
+                                                        .mask_atlas_bind_group(draw.atlas_page),
+                                                    &[],
+                                                );
+                                                if perf_enabled {
+                                                    frame_perf.bind_group_switches = frame_perf
+                                                        .bind_group_switches
+                                                        .saturating_add(1);
+                                                    frame_perf.texture_bind_group_switches =
+                                                        frame_perf
+                                                            .texture_bind_group_switches
+                                                            .saturating_add(1);
+                                                }
+                                                active_text_page = Some(draw.atlas_page);
                                             }
                                         }
                                         TextDrawKind::Color => {
@@ -923,7 +943,8 @@ impl Renderer {
                                                 );
                                                 pass.set_bind_group(
                                                     1,
-                                                    self.text_system.color_atlas_bind_group(),
+                                                    self.text_system
+                                                        .color_atlas_bind_group(draw.atlas_page),
                                                     &[],
                                                 );
                                                 if perf_enabled {
@@ -936,6 +957,24 @@ impl Renderer {
                                                             .saturating_add(1);
                                                 }
                                                 active_pipeline = ActivePipeline::TextColor;
+                                                active_text_page = Some(draw.atlas_page);
+                                            } else if active_text_page != Some(draw.atlas_page) {
+                                                pass.set_bind_group(
+                                                    1,
+                                                    self.text_system
+                                                        .color_atlas_bind_group(draw.atlas_page),
+                                                    &[],
+                                                );
+                                                if perf_enabled {
+                                                    frame_perf.bind_group_switches = frame_perf
+                                                        .bind_group_switches
+                                                        .saturating_add(1);
+                                                    frame_perf.texture_bind_group_switches =
+                                                        frame_perf
+                                                            .texture_bind_group_switches
+                                                            .saturating_add(1);
+                                                }
+                                                active_text_page = Some(draw.atlas_page);
                                             }
                                         }
                                     }

@@ -348,6 +348,7 @@ pub(super) struct TextDraw {
     pub(super) first_vertex: u32,
     pub(super) vertex_count: u32,
     pub(super) kind: TextDrawKind,
+    pub(super) atlas_page: u16,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

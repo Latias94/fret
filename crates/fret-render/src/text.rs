@@ -212,6 +212,7 @@ pub struct GlyphQuad {
     /// Normalized UV rect in the atlas: (u0, v0, u1, v1).
     pub uv: [f32; 4],
     pub kind: GlyphQuadKind,
+    pub atlas_page: u16,
     /// Index into `TextBlob::paint_palette` for per-span overrides (when present).
     ///
     /// This intentionally carries no actual paint data so theme/color changes do not invalidate
@@ -411,8 +412,11 @@ fn subpixel_bin_as_float(bin: u8) -> f32 {
     }
 }
 
-#[derive(Debug, Clone)]
+const TEXT_ATLAS_MAX_PAGES: usize = 2;
+
+#[derive(Debug, Clone, Copy)]
 struct GlyphAtlasEntry {
+    page: u16,
     x: u32,
     y: u32,
     w: u32,
@@ -429,63 +433,175 @@ struct PendingUpload {
     data: Vec<u8>,
 }
 
-#[derive(Debug)]
+struct GlyphAtlasPage {
+    allocator: etagere::BucketedAtlasAllocator,
+    pending: Vec<PendingUpload>,
+    bind_group: wgpu::BindGroup,
+    _texture: wgpu::Texture,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum GlyphAtlasInsertError {
+    OutOfSpace,
+    TooLarge,
+}
+
 struct GlyphAtlas {
     width: u32,
     height: u32,
-
-    pen_x: u32,
-    pen_y: u32,
-    row_h: u32,
-
+    padding_px: u32,
+    pages: Vec<GlyphAtlasPage>,
     glyphs: HashMap<GlyphRasterKey, GlyphAtlasEntry>,
-    pending: Vec<PendingUpload>,
 }
 
 impl GlyphAtlas {
-    fn new(width: u32, height: u32) -> Self {
+    fn new(
+        device: &wgpu::Device,
+        atlas_bind_group_layout: &wgpu::BindGroupLayout,
+        atlas_sampler: &wgpu::Sampler,
+        label_prefix: &str,
+        width: u32,
+        height: u32,
+        format: wgpu::TextureFormat,
+        page_count: usize,
+    ) -> Self {
+        let padding_px = 1;
+        let mut pages: Vec<GlyphAtlasPage> = Vec::with_capacity(page_count.max(1));
+
+        for i in 0..page_count.max(1) {
+            let texture = device.create_texture(&wgpu::TextureDescriptor {
+                label: Some(&format!("{label_prefix} page {i}")),
+                size: wgpu::Extent3d {
+                    width,
+                    height,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+                view_formats: &[],
+            });
+
+            let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some(&format!("{label_prefix} bind group page {i}")),
+                layout: atlas_bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::Sampler(atlas_sampler),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::TextureView(&view),
+                    },
+                ],
+            });
+
+            pages.push(GlyphAtlasPage {
+                allocator: etagere::BucketedAtlasAllocator::new(etagere::Size::new(
+                    width as i32,
+                    height as i32,
+                )),
+                pending: Vec::new(),
+                bind_group,
+                _texture: texture,
+            });
+        }
+
         Self {
             width,
             height,
-            pen_x: 1,
-            pen_y: 1,
-            row_h: 0,
+            padding_px,
+            pages,
             glyphs: HashMap::new(),
-            pending: Vec::new(),
         }
     }
 
     fn reset(&mut self) {
-        self.pen_x = 1;
-        self.pen_y = 1;
-        self.row_h = 0;
         self.glyphs.clear();
-        self.pending.clear();
+        for page in &mut self.pages {
+            page.allocator = etagere::BucketedAtlasAllocator::new(etagere::Size::new(
+                self.width as i32,
+                self.height as i32,
+            ));
+            page.pending.clear();
+        }
     }
 
-    fn allocate(&mut self, w: u32, h: u32) -> Option<(u32, u32)> {
-        let w = w.saturating_add(2);
-        let h = h.saturating_add(2);
+    fn bind_group(&self, page: u16) -> &wgpu::BindGroup {
+        let idx = (page as usize).min(self.pages.len().saturating_sub(1));
+        &self.pages[idx].bind_group
+    }
 
-        if w > self.width || h > self.height {
-            return None;
+    fn flush_uploads(&mut self, queue: &wgpu::Queue) {
+        for page in &mut self.pages {
+            for upload in std::mem::take(&mut page.pending) {
+                if upload.w == 0 || upload.h == 0 {
+                    continue;
+                }
+
+                let bytes_per_row = upload.w.saturating_mul(upload.bytes_per_pixel);
+                if bytes_per_row == 0 {
+                    continue;
+                }
+
+                let expected_len = (bytes_per_row as usize).saturating_mul(upload.h as usize);
+                debug_assert_eq!(upload.data.len(), expected_len);
+                if upload.data.len() != expected_len {
+                    continue;
+                }
+
+                let aligned_bytes_per_row = bytes_per_row
+                    .div_ceil(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT)
+                    * wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
+                let aligned_bytes_per_row = aligned_bytes_per_row.max(bytes_per_row);
+
+                let mut owned: Vec<u8> = Vec::new();
+                let bytes: &[u8] = if aligned_bytes_per_row == bytes_per_row {
+                    &upload.data
+                } else {
+                    owned.resize(
+                        (aligned_bytes_per_row as usize).saturating_mul(upload.h as usize),
+                        0,
+                    );
+                    for row in 0..upload.h as usize {
+                        let src0 = row.saturating_mul(bytes_per_row as usize);
+                        let src1 = src0.saturating_add(bytes_per_row as usize);
+                        let dst0 = row.saturating_mul(aligned_bytes_per_row as usize);
+                        let dst1 = dst0.saturating_add(bytes_per_row as usize);
+                        owned[dst0..dst1].copy_from_slice(&upload.data[src0..src1]);
+                    }
+                    &owned
+                };
+
+                queue.write_texture(
+                    wgpu::TexelCopyTextureInfo {
+                        texture: &page._texture,
+                        mip_level: 0,
+                        origin: wgpu::Origin3d {
+                            x: upload.x,
+                            y: upload.y,
+                            z: 0,
+                        },
+                        aspect: wgpu::TextureAspect::All,
+                    },
+                    bytes,
+                    wgpu::TexelCopyBufferLayout {
+                        offset: 0,
+                        bytes_per_row: Some(aligned_bytes_per_row),
+                        rows_per_image: Some(upload.h),
+                    },
+                    wgpu::Extent3d {
+                        width: upload.w,
+                        height: upload.h,
+                        depth_or_array_layers: 1,
+                    },
+                );
+            }
         }
-
-        if self.pen_x.saturating_add(w) > self.width {
-            self.pen_x = 1;
-            self.pen_y = self.pen_y.saturating_add(self.row_h).saturating_add(1);
-            self.row_h = 0;
-        }
-
-        if self.pen_y.saturating_add(h) > self.height {
-            return None;
-        }
-
-        let x = self.pen_x;
-        let y = self.pen_y;
-        self.pen_x = self.pen_x.saturating_add(w).saturating_add(1);
-        self.row_h = self.row_h.max(h);
-        Some((x, y))
     }
 
     fn get_or_insert(
@@ -495,22 +611,59 @@ impl GlyphAtlas {
         h: u32,
         bytes_per_pixel: u32,
         data: Vec<u8>,
-    ) -> Option<&GlyphAtlasEntry> {
-        if self.glyphs.contains_key(&key) {
-            return self.glyphs.get(&key);
+    ) -> Result<GlyphAtlasEntry, GlyphAtlasInsertError> {
+        if let Some(hit) = self.glyphs.get(&key).copied() {
+            return Ok(hit);
         }
 
-        let (x, y) = self.allocate(w, h)?;
-        self.pending.push(PendingUpload {
-            x,
-            y,
-            w,
-            h,
-            bytes_per_pixel,
-            data,
-        });
-        self.glyphs.insert(key, GlyphAtlasEntry { x, y, w, h });
-        self.glyphs.get(&key)
+        let pad = self.padding_px;
+        let w_pad = w.saturating_add(pad.saturating_mul(2));
+        let h_pad = h.saturating_add(pad.saturating_mul(2));
+        if w == 0 || h == 0 || w_pad == 0 || h_pad == 0 || w_pad > self.width || h_pad > self.height
+        {
+            return Err(GlyphAtlasInsertError::TooLarge);
+        }
+
+        let size = etagere::Size::new(w_pad as i32, h_pad as i32);
+
+        for (page_index, page) in self.pages.iter_mut().enumerate() {
+            let Some(allocation) = page.allocator.allocate(size) else {
+                continue;
+            };
+
+            let Ok(base_x) = u32::try_from(allocation.rectangle.min.x) else {
+                page.allocator.deallocate(allocation.id);
+                continue;
+            };
+            let Ok(base_y) = u32::try_from(allocation.rectangle.min.y) else {
+                page.allocator.deallocate(allocation.id);
+                continue;
+            };
+
+            let x = base_x.saturating_add(pad);
+            let y = base_y.saturating_add(pad);
+
+            page.pending.push(PendingUpload {
+                x,
+                y,
+                w,
+                h,
+                bytes_per_pixel,
+                data,
+            });
+
+            let entry = GlyphAtlasEntry {
+                page: page_index as u16,
+                x,
+                y,
+                w,
+                h,
+            };
+            self.glyphs.insert(key, entry);
+            return Ok(entry);
+        }
+
+        Err(GlyphAtlasInsertError::OutOfSpace)
     }
 }
 
@@ -655,11 +808,7 @@ pub struct TextSystem {
 
     mask_atlas: GlyphAtlas,
     color_atlas: GlyphAtlas,
-    mask_atlas_texture: wgpu::Texture,
-    color_atlas_texture: wgpu::Texture,
     atlas_bind_group_layout: wgpu::BindGroupLayout,
-    mask_atlas_bind_group: wgpu::BindGroup,
-    color_atlas_bind_group: wgpu::BindGroup,
 }
 
 fn family_for_font_id(font: &fret_core::FontId) -> Family<'_> {
@@ -722,41 +871,6 @@ impl TextSystem {
     pub fn new(device: &wgpu::Device) -> Self {
         let atlas_width = 2048;
         let atlas_height = 2048;
-
-        let mask_atlas_texture = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("fret glyph mask atlas"),
-            size: wgpu::Extent3d {
-                width: atlas_width,
-                height: atlas_height,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::R8Unorm,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-            view_formats: &[],
-        });
-
-        let color_atlas_texture = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("fret glyph color atlas"),
-            size: wgpu::Extent3d {
-                width: atlas_width,
-                height: atlas_height,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba8UnormSrgb,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-            view_formats: &[],
-        });
-
-        let mask_atlas_view =
-            mask_atlas_texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let color_atlas_view =
-            color_atlas_texture.create_view(&wgpu::TextureViewDescriptor::default());
         let atlas_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("fret glyph atlas sampler"),
             address_mode_u: wgpu::AddressMode::ClampToEdge,
@@ -791,35 +905,26 @@ impl TextSystem {
                 ],
             });
 
-        let mask_atlas_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("fret glyph mask atlas bind group"),
-            layout: &atlas_bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::Sampler(&atlas_sampler),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::TextureView(&mask_atlas_view),
-                },
-            ],
-        });
-
-        let color_atlas_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("fret glyph color atlas bind group"),
-            layout: &atlas_bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::Sampler(&atlas_sampler),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::TextureView(&color_atlas_view),
-                },
-            ],
-        });
+        let mask_atlas = GlyphAtlas::new(
+            device,
+            &atlas_bind_group_layout,
+            &atlas_sampler,
+            "fret glyph mask atlas",
+            atlas_width,
+            atlas_height,
+            wgpu::TextureFormat::R8Unorm,
+            TEXT_ATLAS_MAX_PAGES,
+        );
+        let color_atlas = GlyphAtlas::new(
+            device,
+            &atlas_bind_group_layout,
+            &atlas_sampler,
+            "fret glyph color atlas",
+            atlas_width,
+            atlas_height,
+            wgpu::TextureFormat::Rgba8UnormSrgb,
+            TEXT_ATLAS_MAX_PAGES,
+        );
 
         let (locale, mut db) = FontSystem::new().into_locale_and_db();
         let installed = build_installed_family_set(&db);
@@ -871,13 +976,9 @@ impl TextSystem {
             shape_cache: HashMap::new(),
             measure_cache: HashMap::new(),
 
-            mask_atlas: GlyphAtlas::new(atlas_width, atlas_height),
-            color_atlas: GlyphAtlas::new(atlas_width, atlas_height),
-            mask_atlas_texture,
-            color_atlas_texture,
+            mask_atlas,
+            color_atlas,
             atlas_bind_group_layout,
-            mask_atlas_bind_group,
-            color_atlas_bind_group,
         }
     }
 
@@ -970,90 +1071,17 @@ impl TextSystem {
         &self.atlas_bind_group_layout
     }
 
-    pub fn mask_atlas_bind_group(&self) -> &wgpu::BindGroup {
-        &self.mask_atlas_bind_group
+    pub fn mask_atlas_bind_group(&self, page: u16) -> &wgpu::BindGroup {
+        self.mask_atlas.bind_group(page)
     }
 
-    pub fn color_atlas_bind_group(&self) -> &wgpu::BindGroup {
-        &self.color_atlas_bind_group
+    pub fn color_atlas_bind_group(&self, page: u16) -> &wgpu::BindGroup {
+        self.color_atlas.bind_group(page)
     }
 
     pub fn flush_uploads(&mut self, queue: &wgpu::Queue) {
-        fn flush(pending: &mut Vec<PendingUpload>, texture: &wgpu::Texture, queue: &wgpu::Queue) {
-            for upload in std::mem::take(pending) {
-                if upload.w == 0 || upload.h == 0 {
-                    continue;
-                }
-
-                let bytes_per_row = upload.w.saturating_mul(upload.bytes_per_pixel);
-                if bytes_per_row == 0 {
-                    continue;
-                }
-
-                let aligned_bytes_per_row = bytes_per_row
-                    .div_ceil(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT)
-                    * wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
-                let aligned_bytes_per_row = aligned_bytes_per_row.max(bytes_per_row);
-
-                let expected_len = (bytes_per_row.saturating_mul(upload.h)) as usize;
-                if upload.data.len() != expected_len {
-                    continue;
-                }
-
-                let data = if aligned_bytes_per_row == bytes_per_row {
-                    upload.data
-                } else {
-                    let mut padded = vec![0u8; (aligned_bytes_per_row * upload.h) as usize];
-                    for row in 0..upload.h as usize {
-                        let src0 = row * bytes_per_row as usize;
-                        let src1 = src0 + bytes_per_row as usize;
-                        let dst0 = row * aligned_bytes_per_row as usize;
-                        let dst1 = dst0 + bytes_per_row as usize;
-                        padded[dst0..dst1].copy_from_slice(&upload.data[src0..src1]);
-                    }
-                    padded
-                };
-
-                queue.write_texture(
-                    wgpu::TexelCopyTextureInfo {
-                        texture,
-                        mip_level: 0,
-                        origin: wgpu::Origin3d {
-                            x: upload.x,
-                            y: upload.y,
-                            z: 0,
-                        },
-                        aspect: wgpu::TextureAspect::All,
-                    },
-                    &data,
-                    wgpu::TexelCopyBufferLayout {
-                        offset: 0,
-                        bytes_per_row: Some(aligned_bytes_per_row),
-                        rows_per_image: Some(upload.h),
-                    },
-                    wgpu::Extent3d {
-                        width: upload.w,
-                        height: upload.h,
-                        depth_or_array_layers: 1,
-                    },
-                );
-            }
-        }
-
-        if !self.mask_atlas.pending.is_empty() {
-            flush(
-                &mut self.mask_atlas.pending,
-                &self.mask_atlas_texture,
-                queue,
-            );
-        }
-        if !self.color_atlas.pending.is_empty() {
-            flush(
-                &mut self.color_atlas.pending,
-                &self.color_atlas_texture,
-                queue,
-            );
-        }
+        self.mask_atlas.flush_uploads(queue);
+        self.color_atlas.flush_uploads(queue);
     }
 
     pub fn blob(&self, id: TextBlobId) -> Option<&TextBlob> {
@@ -1133,213 +1161,250 @@ impl TextSystem {
         } else {
             if key.backend == 1 {
                 let scale = constraints.scale_factor.max(1.0);
-                let input = match spans {
-                    Some(spans) => TextInput::Attributed {
-                        text: text.as_ref(),
-                        base: style,
-                        spans,
-                    },
-                    None => TextInput::Plain {
-                        text: text.as_ref(),
-                        style,
-                    },
-                };
 
-                let wrapped = crate::text_v2::wrapper::wrap_with_constraints(
-                    &mut self.parley_shaper,
-                    input,
-                    constraints,
-                );
-                let kept_end = wrapped.kept_end;
-
-                let first_baseline_px = wrapped
-                    .lines
-                    .first()
-                    .map(|l| l.baseline.max(0.0))
-                    .unwrap_or(0.0);
-
-                let mut max_w_px = 0.0_f32;
-                let mut total_h_px = 0.0_f32;
-                for line in &wrapped.lines {
-                    max_w_px = max_w_px.max(line.width.max(0.0));
-                    total_h_px += line.line_height.max(0.0);
-                }
-
-                let metrics = TextMetrics {
-                    size: Size::new(
-                        Px((max_w_px / scale).max(0.0)),
-                        Px((total_h_px / scale).max(0.0)),
-                    ),
-                    baseline: Px((first_baseline_px / scale).max(0.0)),
-                };
-
-                let mut glyphs: Vec<GlyphQuad> = Vec::new();
-                let mut lines: Vec<TextLine> = Vec::with_capacity(wrapped.lines.len().max(1));
-                let mut first_line_caret_stops: Vec<(usize, Px)> = Vec::new();
-
-                let mut line_top_px = 0.0_f32;
-                for (i, (range, line)) in wrapped
-                    .line_ranges
-                    .iter()
-                    .cloned()
-                    .zip(wrapped.lines.into_iter())
-                    .enumerate()
-                {
-                    let line_height_px = line.line_height.max(0.0);
-                    let line_baseline_px = line.baseline.max(0.0);
-                    let line_offset_px = (line_top_px + line_baseline_px) - first_baseline_px;
-
-                    let slice = &text[range.clone()];
-                    let caret_stops = caret_stops_for_slice(
-                        slice,
-                        range.start,
-                        &line.clusters,
-                        line.width.max(0.0),
-                        scale,
-                        kept_end,
+                let mut did_retry_atlas = false;
+                let shape = loop {
+                    let input = match spans {
+                        Some(spans) => TextInput::Attributed {
+                            text: text.as_ref(),
+                            base: style,
+                            spans,
+                        },
+                        None => TextInput::Plain {
+                            text: text.as_ref(),
+                            style,
+                        },
+                    };
+                    let wrapped = crate::text_v2::wrapper::wrap_with_constraints(
+                        &mut self.parley_shaper,
+                        input,
+                        constraints,
                     );
-                    if i == 0 {
-                        first_line_caret_stops = caret_stops.clone();
+                    let kept_end = wrapped.kept_end;
+
+                    let first_baseline_px = wrapped
+                        .lines
+                        .first()
+                        .map(|l| l.baseline.max(0.0))
+                        .unwrap_or(0.0);
+
+                    let mut max_w_px = 0.0_f32;
+                    let mut total_h_px = 0.0_f32;
+                    for line in &wrapped.lines {
+                        max_w_px = max_w_px.max(line.width.max(0.0));
+                        total_h_px += line.line_height.max(0.0);
                     }
 
-                    lines.push(TextLine {
-                        start: range.start,
-                        end: range.end.min(kept_end),
-                        width: Px((line.width / scale).max(0.0)),
-                        y_top: Px((line_top_px / scale).max(0.0)),
-                        height: Px((line_height_px / scale).max(0.0)),
-                        caret_stops,
-                    });
+                    let metrics = TextMetrics {
+                        size: Size::new(
+                            Px((max_w_px / scale).max(0.0)),
+                            Px((total_h_px / scale).max(0.0)),
+                        ),
+                        baseline: Px((first_baseline_px / scale).max(0.0)),
+                    };
 
-                    for g in line.glyphs {
-                        let Ok(glyph_id) = u16::try_from(g.id) else {
-                            continue;
-                        };
-                        let Some(font_ref) = parley::swash::FontRef::from_index(
-                            g.font.data.data(),
-                            g.font.index as usize,
-                        ) else {
-                            continue;
-                        };
+                    let mut glyphs: Vec<GlyphQuad> = Vec::new();
+                    let mut lines: Vec<TextLine> = Vec::with_capacity(wrapped.lines.len().max(1));
+                    let mut first_line_caret_stops: Vec<(usize, Px)> = Vec::new();
 
-                        let mut scaler = self
-                            .parley_scale
-                            .builder(font_ref)
-                            .size(g.font_size.max(1.0))
-                            .hint(false)
-                            .build();
+                    let mut atlas_overflowed = false;
+                    let mut line_top_px = 0.0_f32;
 
-                        let pos_y = g.y + line_offset_px;
-                        let (x, x_bin) = subpixel_bin_q4(g.x);
-                        let (y, y_bin) = subpixel_bin_q4(pos_y);
-                        let offset_px = parley::swash::zeno::Vector::new(
-                            subpixel_bin_as_float(x_bin),
-                            subpixel_bin_as_float(y_bin),
+                    'build: for (i, (range, line)) in wrapped
+                        .line_ranges
+                        .iter()
+                        .cloned()
+                        .zip(wrapped.lines.into_iter())
+                        .enumerate()
+                    {
+                        let line_height_px = line.line_height.max(0.0);
+                        let line_baseline_px = line.baseline.max(0.0);
+                        let line_offset_px = (line_top_px + line_baseline_px) - first_baseline_px;
+
+                        let slice = &text[range.clone()];
+                        let caret_stops = caret_stops_for_slice(
+                            slice,
+                            range.start,
+                            &line.clusters,
+                            line.width.max(0.0),
+                            scale,
+                            kept_end,
                         );
-
-                        let Some(image) = parley::swash::scale::Render::new(&[
-                            parley::swash::scale::Source::ColorOutline(0),
-                            parley::swash::scale::Source::ColorBitmap(
-                                parley::swash::scale::StrikeWith::BestFit,
-                            ),
-                            parley::swash::scale::Source::Outline,
-                        ])
-                        .offset(offset_px)
-                        .render(&mut scaler, glyph_id) else {
-                            continue;
-                        };
-
-                        if image.placement.width == 0 || image.placement.height == 0 {
-                            continue;
+                        if i == 0 {
+                            first_line_caret_stops = caret_stops.clone();
                         }
 
-                        let (kind, bytes_per_pixel, data) = match image.content {
-                            parley::swash::scale::image::Content::Mask => {
-                                (GlyphQuadKind::Mask, 1, image.data)
-                            }
-                            parley::swash::scale::image::Content::Color => {
-                                (GlyphQuadKind::Color, 4, image.data)
-                            }
-                            parley::swash::scale::image::Content::SubpixelMask => {
-                                (GlyphQuadKind::Mask, 1, subpixel_mask_to_alpha(&image.data))
-                            }
-                        };
-
-                        let raster_key = GlyphRasterKey::Parley(ParleyGlyphKey {
-                            font_blob_id: g.font.data.id(),
-                            font_index: g.font.index,
-                            glyph_id: g.id,
-                            size_bits: g.font_size.to_bits(),
-                            x_bin,
-                            y_bin,
+                        lines.push(TextLine {
+                            start: range.start,
+                            end: range.end.min(kept_end),
+                            width: Px((line.width / scale).max(0.0)),
+                            y_top: Px((line_top_px / scale).max(0.0)),
+                            height: Px((line_height_px / scale).max(0.0)),
+                            caret_stops,
                         });
 
-                        let (atlas_w, atlas_h, ex, ey, ew, eh) = match kind {
-                            GlyphQuadKind::Mask => {
-                                let (atlas_w, atlas_h) =
-                                    (self.mask_atlas.width as f32, self.mask_atlas.height as f32);
-                                let Some(e) = self.mask_atlas.get_or_insert(
-                                    raster_key,
-                                    image.placement.width,
-                                    image.placement.height,
-                                    bytes_per_pixel,
-                                    data,
-                                ) else {
-                                    continue;
-                                };
-                                (atlas_w, atlas_h, e.x, e.y, e.w, e.h)
+                        for g in line.glyphs {
+                            let Ok(glyph_id) = u16::try_from(g.id) else {
+                                continue;
+                            };
+                            let Some(font_ref) = parley::swash::FontRef::from_index(
+                                g.font.data.data(),
+                                g.font.index as usize,
+                            ) else {
+                                continue;
+                            };
+
+                            let mut scaler = self
+                                .parley_scale
+                                .builder(font_ref)
+                                .size(g.font_size.max(1.0))
+                                .hint(false)
+                                .build();
+
+                            let pos_y = g.y + line_offset_px;
+                            let (x, x_bin) = subpixel_bin_q4(g.x);
+                            let (y, y_bin) = subpixel_bin_q4(pos_y);
+                            let offset_px = parley::swash::zeno::Vector::new(
+                                subpixel_bin_as_float(x_bin),
+                                subpixel_bin_as_float(y_bin),
+                            );
+
+                            let Some(image) = parley::swash::scale::Render::new(&[
+                                parley::swash::scale::Source::ColorOutline(0),
+                                parley::swash::scale::Source::ColorBitmap(
+                                    parley::swash::scale::StrikeWith::BestFit,
+                                ),
+                                parley::swash::scale::Source::Outline,
+                            ])
+                            .offset(offset_px)
+                            .render(&mut scaler, glyph_id) else {
+                                continue;
+                            };
+
+                            if image.placement.width == 0 || image.placement.height == 0 {
+                                continue;
                             }
-                            GlyphQuadKind::Color => {
-                                let (atlas_w, atlas_h) = (
-                                    self.color_atlas.width as f32,
-                                    self.color_atlas.height as f32,
-                                );
-                                let Some(e) = self.color_atlas.get_or_insert(
-                                    raster_key,
-                                    image.placement.width,
-                                    image.placement.height,
-                                    bytes_per_pixel,
-                                    data,
-                                ) else {
-                                    continue;
-                                };
-                                (atlas_w, atlas_h, e.x, e.y, e.w, e.h)
-                            }
-                        };
 
-                        let x0_px = x as f32 + image.placement.left as f32;
-                        let y0_px = y as f32 - image.placement.top as f32;
-                        let w_px = image.placement.width as f32;
-                        let h_px = image.placement.height as f32;
+                            let (kind, bytes_per_pixel, data) = match image.content {
+                                parley::swash::scale::image::Content::Mask => {
+                                    (GlyphQuadKind::Mask, 1, image.data)
+                                }
+                                parley::swash::scale::image::Content::Color => {
+                                    (GlyphQuadKind::Color, 4, image.data)
+                                }
+                                parley::swash::scale::image::Content::SubpixelMask => {
+                                    (GlyphQuadKind::Mask, 1, subpixel_mask_to_alpha(&image.data))
+                                }
+                            };
 
-                        let u0 = ex as f32 / atlas_w;
-                        let v0 = ey as f32 / atlas_h;
-                        let u1 = (ex + ew) as f32 / atlas_w;
-                        let v1 = (ey + eh) as f32 / atlas_h;
+                            let raster_key = GlyphRasterKey::Parley(ParleyGlyphKey {
+                                font_blob_id: g.font.data.id(),
+                                font_index: g.font.index,
+                                glyph_id: g.id,
+                                size_bits: g.font_size.to_bits(),
+                                x_bin,
+                                y_bin,
+                            });
 
-                        let text_range =
-                            (range.start + g.text_range.start)..(range.start + g.text_range.end);
-                        let paint_span = resolved_spans
-                            .as_deref()
-                            .and_then(|spans| paint_span_for_text_range(spans, &text_range));
+                            let (atlas_w, atlas_h, ex, ey, ew, eh, atlas_page) = match kind {
+                                GlyphQuadKind::Mask => {
+                                    let (atlas_w, atlas_h) = (
+                                        self.mask_atlas.width as f32,
+                                        self.mask_atlas.height as f32,
+                                    );
+                                    let entry = match self.mask_atlas.get_or_insert(
+                                        raster_key,
+                                        image.placement.width,
+                                        image.placement.height,
+                                        bytes_per_pixel,
+                                        data,
+                                    ) {
+                                        Ok(e) => e,
+                                        Err(GlyphAtlasInsertError::TooLarge) => continue,
+                                        Err(GlyphAtlasInsertError::OutOfSpace) => {
+                                            atlas_overflowed = true;
+                                            break 'build;
+                                        }
+                                    };
+                                    (
+                                        atlas_w, atlas_h, entry.x, entry.y, entry.w, entry.h,
+                                        entry.page,
+                                    )
+                                }
+                                GlyphQuadKind::Color => {
+                                    let (atlas_w, atlas_h) = (
+                                        self.color_atlas.width as f32,
+                                        self.color_atlas.height as f32,
+                                    );
+                                    let entry = match self.color_atlas.get_or_insert(
+                                        raster_key,
+                                        image.placement.width,
+                                        image.placement.height,
+                                        bytes_per_pixel,
+                                        data,
+                                    ) {
+                                        Ok(e) => e,
+                                        Err(GlyphAtlasInsertError::TooLarge) => continue,
+                                        Err(GlyphAtlasInsertError::OutOfSpace) => {
+                                            atlas_overflowed = true;
+                                            break 'build;
+                                        }
+                                    };
+                                    (
+                                        atlas_w, atlas_h, entry.x, entry.y, entry.w, entry.h,
+                                        entry.page,
+                                    )
+                                }
+                            };
 
-                        glyphs.push(GlyphQuad {
-                            rect: [x0_px / scale, y0_px / scale, w_px / scale, h_px / scale],
-                            uv: [u0, v0, u1, v1],
-                            kind,
-                            paint_span,
-                        });
+                            let x0_px = x as f32 + image.placement.left as f32;
+                            let y0_px = y as f32 - image.placement.top as f32;
+                            let w_px = image.placement.width as f32;
+                            let h_px = image.placement.height as f32;
+
+                            let u0 = ex as f32 / atlas_w;
+                            let v0 = ey as f32 / atlas_h;
+                            let u1 = (ex + ew) as f32 / atlas_w;
+                            let v1 = (ey + eh) as f32 / atlas_h;
+
+                            let text_range = (range.start + g.text_range.start)
+                                ..(range.start + g.text_range.end);
+                            let paint_span = resolved_spans
+                                .as_deref()
+                                .and_then(|spans| paint_span_for_text_range(spans, &text_range));
+
+                            glyphs.push(GlyphQuad {
+                                rect: [x0_px / scale, y0_px / scale, w_px / scale, h_px / scale],
+                                uv: [u0, v0, u1, v1],
+                                kind,
+                                atlas_page,
+                                paint_span,
+                            });
+                        }
+
+                        line_top_px += line_height_px;
                     }
 
-                    line_top_px += line_height_px;
-                }
+                    if atlas_overflowed && !did_retry_atlas {
+                        self.blobs.clear();
+                        self.blob_cache.clear();
+                        self.blob_key_by_id.clear();
+                        self.shape_cache.clear();
+                        self.measure_cache.clear();
+                        self.mask_atlas.reset();
+                        self.color_atlas.reset();
+                        did_retry_atlas = true;
+                        continue;
+                    }
 
-                let shape = Arc::new(TextShape {
-                    glyphs: Arc::from(glyphs),
-                    metrics,
-                    lines: Arc::from(lines),
-                    caret_stops: Arc::from(first_line_caret_stops),
-                });
+                    break Arc::new(TextShape {
+                        glyphs: Arc::from(glyphs),
+                        metrics,
+                        lines: Arc::from(lines),
+                        caret_stops: Arc::from(first_line_caret_stops),
+                    });
+                };
+
                 self.shape_cache.insert(shape_key.clone(), shape.clone());
                 shape
             } else {
@@ -1366,182 +1431,213 @@ impl TextSystem {
                     }
                 }
 
-                let (layout, line_starts) = layout_text(
-                    &mut self.font_system,
-                    &mut self.scratch,
-                    text.as_ref(),
-                    &attrs,
-                    spans,
-                    font_size_px,
-                    constraints,
-                    scale,
-                );
-
-                let metrics = layout.metrics;
-                let first_ascent_px = metrics.baseline.0 * scale;
-
-                let mut glyphs: Vec<GlyphQuad> = Vec::new();
-                let mut lines: Vec<TextLine> = Vec::with_capacity(layout.lines.len().max(1));
-
-                for (i, l) in layout.lines.iter().enumerate() {
-                    let base_offset = line_starts[i];
-
-                    let line_height_px = l
-                        .line_height_opt
-                        .unwrap_or_else(|| (l.max_ascent + l.max_descent).max(0.0))
-                        .max((l.max_ascent + l.max_descent).max(0.0))
-                        .max(0.0);
-
-                    let y_top_px = layout.line_tops_px[i];
-
-                    let ascent_px = l.max_ascent.max(0.0);
-                    let descent_px = l.max_descent.max(0.0);
-                    let padding_top_px = ((line_height_px - ascent_px - descent_px) * 0.5).max(0.0);
-                    let line_baseline_px = y_top_px + padding_top_px + ascent_px;
-                    let line_offset_px = line_baseline_px - first_ascent_px;
-
-                    let local_start = layout.local_starts[i];
-                    let local_end = layout.local_ends[i];
-
-                    let mut boundaries_local: Vec<usize> =
-                        utf8_char_boundaries(&text[base_offset..layout.paragraph_ends[i]])
-                            .into_iter()
-                            .filter(|b| *b >= local_start && *b <= local_end)
-                            .collect();
-                    boundaries_local.push(local_start);
-                    boundaries_local.push(local_end);
-                    boundaries_local.sort_unstable();
-                    boundaries_local.dedup();
-
-                    let caret_stops = build_line_caret_stops(
-                        base_offset,
-                        &boundaries_local,
-                        l.glyphs.as_slice(),
-                        local_start,
-                        local_end,
-                        l.w,
+                let mut did_retry_atlas = false;
+                let shape = loop {
+                    let (layout, line_starts) = layout_text(
+                        &mut self.font_system,
+                        &mut self.scratch,
+                        text.as_ref(),
+                        &attrs,
+                        spans,
+                        font_size_px,
+                        constraints,
                         scale,
                     );
 
-                    lines.push(TextLine {
-                        start: base_offset + local_start,
-                        end: base_offset + local_end,
-                        width: Px(l.w / scale),
-                        y_top: Px(y_top_px / scale),
-                        height: Px(line_height_px / scale),
-                        caret_stops,
-                    });
+                    let metrics = layout.metrics;
+                    let first_ascent_px = metrics.baseline.0 * scale;
 
-                    for g in &l.glyphs {
-                        // Cosmic's glyph cache key bins fractional positions into 1/4px buckets and
-                        // returns the integer component (`x`, `y`) that must be used for placement to
-                        // match the cached raster.
-                        //
-                        // If we ignore the returned integer coordinates and place glyph quads at the
-                        // original float positions, the cached subpixel variant can mismatch the quad
-                        // placement (visible as softer/blurry text under non-integer scale factors).
-                        //
-                        // We also clamp Y to integer pixels (matching cosmic-text's
-                        // `LayoutGlyph::physical` behavior) to keep vertical alignment stable.
-                        let pos_x = g.x;
-                        let pos_y = (line_offset_px + g.y).trunc();
-                        let (cache_key, x, y) = CacheKey::new(
-                            g.font_id,
-                            g.glyph_id,
-                            g.font_size,
-                            (pos_x, pos_y),
-                            g.font_weight,
-                            g.cache_key_flags,
+                    let mut glyphs: Vec<GlyphQuad> = Vec::new();
+                    let mut lines: Vec<TextLine> = Vec::with_capacity(layout.lines.len().max(1));
+                    let mut atlas_overflowed = false;
+
+                    'build: for (i, l) in layout.lines.iter().enumerate() {
+                        let base_offset = line_starts[i];
+
+                        let line_height_px = l
+                            .line_height_opt
+                            .unwrap_or_else(|| (l.max_ascent + l.max_descent).max(0.0))
+                            .max((l.max_ascent + l.max_descent).max(0.0))
+                            .max(0.0);
+
+                        let y_top_px = layout.line_tops_px[i];
+
+                        let ascent_px = l.max_ascent.max(0.0);
+                        let descent_px = l.max_descent.max(0.0);
+                        let padding_top_px =
+                            ((line_height_px - ascent_px - descent_px) * 0.5).max(0.0);
+                        let line_baseline_px = y_top_px + padding_top_px + ascent_px;
+                        let line_offset_px = line_baseline_px - first_ascent_px;
+
+                        let local_start = layout.local_starts[i];
+                        let local_end = layout.local_ends[i];
+
+                        let mut boundaries_local: Vec<usize> =
+                            utf8_char_boundaries(&text[base_offset..layout.paragraph_ends[i]])
+                                .into_iter()
+                                .filter(|b| *b >= local_start && *b <= local_end)
+                                .collect();
+                        boundaries_local.push(local_start);
+                        boundaries_local.push(local_end);
+                        boundaries_local.sort_unstable();
+                        boundaries_local.dedup();
+
+                        let caret_stops = build_line_caret_stops(
+                            base_offset,
+                            &boundaries_local,
+                            l.glyphs.as_slice(),
+                            local_start,
+                            local_end,
+                            l.w,
+                            scale,
                         );
 
-                        let Some(image) = self
-                            .swash_cache
-                            .get_image(&mut self.font_system, cache_key)
-                            .clone()
-                        else {
-                            continue;
-                        };
-
-                        if image.placement.width == 0 || image.placement.height == 0 {
-                            continue;
-                        }
-
-                        let (kind, bytes_per_pixel, data) = match image.content {
-                            SwashContent::Mask => (GlyphQuadKind::Mask, 1, image.data),
-                            SwashContent::Color => (GlyphQuadKind::Color, 4, image.data),
-                            SwashContent::SubpixelMask => {
-                                (GlyphQuadKind::Mask, 1, subpixel_mask_to_alpha(&image.data))
-                            }
-                        };
-
-                        let raster_key = GlyphRasterKey::Cosmic(cache_key);
-                        let (atlas_w, atlas_h, ex, ey, ew, eh) = match kind {
-                            GlyphQuadKind::Mask => {
-                                let (atlas_w, atlas_h) =
-                                    (self.mask_atlas.width as f32, self.mask_atlas.height as f32);
-                                let Some(e) = self.mask_atlas.get_or_insert(
-                                    raster_key,
-                                    image.placement.width,
-                                    image.placement.height,
-                                    bytes_per_pixel,
-                                    data,
-                                ) else {
-                                    continue;
-                                };
-                                (atlas_w, atlas_h, e.x, e.y, e.w, e.h)
-                            }
-                            GlyphQuadKind::Color => {
-                                let (atlas_w, atlas_h) = (
-                                    self.color_atlas.width as f32,
-                                    self.color_atlas.height as f32,
-                                );
-                                let Some(e) = self.color_atlas.get_or_insert(
-                                    raster_key,
-                                    image.placement.width,
-                                    image.placement.height,
-                                    bytes_per_pixel,
-                                    data,
-                                ) else {
-                                    continue;
-                                };
-                                (atlas_w, atlas_h, e.x, e.y, e.w, e.h)
-                            }
-                        };
-
-                        let x0_px = x as f32 + image.placement.left as f32;
-                        let y0_px = y as f32 - image.placement.top as f32;
-                        let w_px = image.placement.width as f32;
-                        let h_px = image.placement.height as f32;
-
-                        let u0 = ex as f32 / atlas_w;
-                        let v0 = ey as f32 / atlas_h;
-                        let u1 = (ex + ew) as f32 / atlas_w;
-                        let v1 = (ey + eh) as f32 / atlas_h;
-
-                        let paint_span = resolved_spans
-                            .as_deref()
-                            .and_then(|spans| paint_span_for_glyph(spans, base_offset, g));
-
-                        glyphs.push(GlyphQuad {
-                            rect: [x0_px / scale, y0_px / scale, w_px / scale, h_px / scale],
-                            uv: [u0, v0, u1, v1],
-                            kind,
-                            paint_span,
+                        lines.push(TextLine {
+                            start: base_offset + local_start,
+                            end: base_offset + local_end,
+                            width: Px(l.w / scale),
+                            y_top: Px(y_top_px / scale),
+                            height: Px(line_height_px / scale),
+                            caret_stops,
                         });
+
+                        for g in &l.glyphs {
+                            // Cosmic's glyph cache key bins fractional positions into 1/4px buckets and
+                            // returns the integer component (`x`, `y`) that must be used for placement to
+                            // match the cached raster.
+                            //
+                            // If we ignore the returned integer coordinates and place glyph quads at the
+                            // original float positions, the cached subpixel variant can mismatch the quad
+                            // placement (visible as softer/blurry text under non-integer scale factors).
+                            //
+                            // We also clamp Y to integer pixels (matching cosmic-text's
+                            // `LayoutGlyph::physical` behavior) to keep vertical alignment stable.
+                            let pos_x = g.x;
+                            let pos_y = (line_offset_px + g.y).trunc();
+                            let (cache_key, x, y) = CacheKey::new(
+                                g.font_id,
+                                g.glyph_id,
+                                g.font_size,
+                                (pos_x, pos_y),
+                                g.font_weight,
+                                g.cache_key_flags,
+                            );
+
+                            let Some(image) = self
+                                .swash_cache
+                                .get_image(&mut self.font_system, cache_key)
+                                .clone()
+                            else {
+                                continue;
+                            };
+
+                            if image.placement.width == 0 || image.placement.height == 0 {
+                                continue;
+                            }
+
+                            let (kind, bytes_per_pixel, data) = match image.content {
+                                SwashContent::Mask => (GlyphQuadKind::Mask, 1, image.data),
+                                SwashContent::Color => (GlyphQuadKind::Color, 4, image.data),
+                                SwashContent::SubpixelMask => {
+                                    (GlyphQuadKind::Mask, 1, subpixel_mask_to_alpha(&image.data))
+                                }
+                            };
+
+                            let raster_key = GlyphRasterKey::Cosmic(cache_key);
+                            let (atlas_w, atlas_h, ex, ey, ew, eh, atlas_page) = match kind {
+                                GlyphQuadKind::Mask => {
+                                    let (atlas_w, atlas_h) = (
+                                        self.mask_atlas.width as f32,
+                                        self.mask_atlas.height as f32,
+                                    );
+                                    let e = match self.mask_atlas.get_or_insert(
+                                        raster_key,
+                                        image.placement.width,
+                                        image.placement.height,
+                                        bytes_per_pixel,
+                                        data,
+                                    ) {
+                                        Ok(e) => e,
+                                        Err(GlyphAtlasInsertError::TooLarge) => continue,
+                                        Err(GlyphAtlasInsertError::OutOfSpace) => {
+                                            atlas_overflowed = true;
+                                            break 'build;
+                                        }
+                                    };
+                                    (atlas_w, atlas_h, e.x, e.y, e.w, e.h, e.page)
+                                }
+                                GlyphQuadKind::Color => {
+                                    let (atlas_w, atlas_h) = (
+                                        self.color_atlas.width as f32,
+                                        self.color_atlas.height as f32,
+                                    );
+                                    let e = match self.color_atlas.get_or_insert(
+                                        raster_key,
+                                        image.placement.width,
+                                        image.placement.height,
+                                        bytes_per_pixel,
+                                        data,
+                                    ) {
+                                        Ok(e) => e,
+                                        Err(GlyphAtlasInsertError::TooLarge) => continue,
+                                        Err(GlyphAtlasInsertError::OutOfSpace) => {
+                                            atlas_overflowed = true;
+                                            break 'build;
+                                        }
+                                    };
+                                    (atlas_w, atlas_h, e.x, e.y, e.w, e.h, e.page)
+                                }
+                            };
+
+                            let x0_px = x as f32 + image.placement.left as f32;
+                            let y0_px = y as f32 - image.placement.top as f32;
+                            let w_px = image.placement.width as f32;
+                            let h_px = image.placement.height as f32;
+
+                            let u0 = ex as f32 / atlas_w;
+                            let v0 = ey as f32 / atlas_h;
+                            let u1 = (ex + ew) as f32 / atlas_w;
+                            let v1 = (ey + eh) as f32 / atlas_h;
+
+                            let paint_span = resolved_spans
+                                .as_deref()
+                                .and_then(|spans| paint_span_for_glyph(spans, base_offset, g));
+
+                            glyphs.push(GlyphQuad {
+                                rect: [x0_px / scale, y0_px / scale, w_px / scale, h_px / scale],
+                                uv: [u0, v0, u1, v1],
+                                kind,
+                                atlas_page,
+                                paint_span,
+                            });
+                        }
                     }
-                }
 
-                let caret_stops = lines
-                    .first()
-                    .map(|l| l.caret_stops.clone())
-                    .unwrap_or_else(|| vec![(0, Px(0.0))]);
+                    if atlas_overflowed && !did_retry_atlas {
+                        self.blobs.clear();
+                        self.blob_cache.clear();
+                        self.blob_key_by_id.clear();
+                        self.shape_cache.clear();
+                        self.measure_cache.clear();
+                        self.mask_atlas.reset();
+                        self.color_atlas.reset();
+                        did_retry_atlas = true;
+                        continue;
+                    }
 
-                let shape = Arc::new(TextShape {
-                    glyphs: Arc::from(glyphs),
-                    metrics,
-                    lines: Arc::from(lines),
-                    caret_stops: Arc::from(caret_stops),
-                });
+                    let caret_stops = lines
+                        .first()
+                        .map(|l| l.caret_stops.clone())
+                        .unwrap_or_else(|| vec![(0, Px(0.0))]);
+
+                    break Arc::new(TextShape {
+                        glyphs: Arc::from(glyphs),
+                        metrics,
+                        lines: Arc::from(lines),
+                        caret_stops: Arc::from(caret_stops),
+                    });
+                };
+
                 self.shape_cache.insert(shape_key.clone(), shape.clone());
                 shape
             }
