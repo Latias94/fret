@@ -9,7 +9,11 @@ repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
 
+[features]
+default = []
+# Use f64 for internal projection/unprojection math to improve large-world stability.
+f64-math = []
+
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
 glam.workspace = true
-

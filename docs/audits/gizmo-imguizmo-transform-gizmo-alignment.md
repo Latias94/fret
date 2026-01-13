@@ -205,7 +205,7 @@ These are the editor-feel invariants that the audit treats as P0 correctness req
 | Orthographic camera | Yes (`SetOrthographic`) | Yes (projection inference) | **Aligned (basic)** | Ortho projection is covered by invariants tests (translate axis drag stability) in `ecosystem/fret-gizmo/src/gizmo.rs`. |
 | Left-handed vs right-handed | N/A (depends) | Yes (detects) | **Aligned (host opt-in)** | Fret models handedness via `GizmoConfig::handedness` to control the user-facing rotation sign (evidence: `GizmoHandedness`, `handedness_rotation_sign`, tests in `ecosystem/fret-gizmo/src/gizmo.rs`). For hosts that want auto-detection, `GizmoHandedness::detect_from_projection(projection)` is available as a convenience helper (`ecosystem/fret-gizmo/src/gizmo/types.rs`). |
 | Behind-camera culling / stability | Yes | Yes | **Aligned (basic)** | `project_point` rejects behind-camera points (`clip.w <= 0`), and regression tests cover translate/rotate/scale (including Universal) behind-camera and near-plane scenarios in `ecosystem/fret-gizmo/src/gizmo.rs`. |
-| Numeric stability at large scales | Mixed | Better (f64) | **Partially aligned** | Fret uses `glam` f32 types; consider f64 internal math if large-world support becomes a requirement. |
+| Numeric stability at large scales | Mixed | Better (f64) | **Partially aligned** | Fret is f32-first, but supports an opt-in `fret-gizmo/f64-math` feature that uses f64 for projection/unprojection (picking-critical) math. Remaining gap: most gizmo update math still runs in f32; full large-world support may require broader internal f64 or an explicit scene-units/rebasing policy. |
 
 ### G) Rendering, styling, and customization
 
