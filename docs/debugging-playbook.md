@@ -257,7 +257,7 @@ new ad-hoc debug output.
 Sometimes it is useful to inspect the readback pixels directly in an image viewer. This should remain a
 **local debugging workflow**:
 
-- write outputs under `.fret/debug/` (ignored by git),
+- write outputs under `.fret/debug/` (ignored by git by default),
 - avoid writing files in CI (gate behind a local env var),
 - do not treat disk output as a stable contract (tests should assert on pixels, not rely on files).
 

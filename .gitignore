@@ -3,8 +3,11 @@
 /repo-ref
 .DS_Store
 /local
-/.fret
-.fret/
+/.fret/**
+!/.fret/
+!/.fret/settings.json
+!/.fret/keymap.json
+!/.fret/layout.json
 /.worktrees
 /.codanna
 /.fastembed_cache
