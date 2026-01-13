@@ -1,6 +1,8 @@
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
+use std::io::{IsTerminal as _, Write as _};
+
 fn main() -> ExitCode {
     match run() {
         Ok(()) => ExitCode::SUCCESS,
@@ -44,8 +46,10 @@ fn help() -> Result<(), String> {
 
 Usage:
   fretboard help
-  fretboard new todo [--path <path>] [--name <name>] [--ui-assets]
-  fretboard new hello [--path <path>] [--name <name>]
+  fretboard new [template] [--path <path>] [--name <name>] [--ui-assets]
+  fretboard new             # interactive wizard
+  fretboard new todo        # non-interactive (template shortcut)
+  fretboard new hello       # non-interactive (template shortcut)
   fretboard init <template> [...]    # alias for `new` (compat)
   fretboard hotpatch poke [--path <path>]
   fretboard hotpatch path [--path <path>]
@@ -92,6 +96,9 @@ fn init_cmd(args: Vec<String>) -> Result<(), String> {
 }
 
 fn new_cmd(args: Vec<String>) -> Result<(), String> {
+    if args.is_empty() {
+        return new_wizard();
+    }
     new_template_cmd("new", args)
 }
 
@@ -102,10 +109,115 @@ fn new_template_cmd(invoked_as: &str, args: Vec<String>) -> Result<(), String> {
     };
 
     match template.as_str() {
+        "empty" => init_empty(it.collect()),
         "todo" => init_todo(it.collect()),
         "hello" | "hello-world" => init_hello(it.collect()),
         other => Err(format!("unknown template for {invoked_as}: {other}")),
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum NewTemplate {
+    Empty,
+    Hello,
+    Todo,
+}
+
+fn new_wizard() -> Result<(), String> {
+    if !std::io::stdin().is_terminal() {
+        return Err(
+            "interactive wizard requires a TTY (try: `fretboard new todo --name my-todo`)"
+                .to_string(),
+        );
+    }
+
+    let root = workspace_root()?;
+
+    println!("Fretboard new (interactive)");
+    println!();
+
+    let template = prompt_choice(
+        "Template",
+        &[
+            ("empty", NewTemplate::Empty),
+            ("hello", NewTemplate::Hello),
+            ("todo", NewTemplate::Todo),
+        ],
+        1,
+    )?;
+
+    let default_name = match template {
+        NewTemplate::Empty => "my-app",
+        NewTemplate::Hello => "hello-world",
+        NewTemplate::Todo => "todo-app",
+    };
+
+    let name_raw = prompt_line("Package name", Some(default_name))?;
+    let package_name = sanitize_package_name(&name_raw)?;
+
+    let default_out = root.join("local").join(&package_name);
+    let out_raw = prompt_line(
+        "Output path (blank = default)",
+        Some(default_out.to_string_lossy().as_ref()),
+    )?;
+    let out_dir = PathBuf::from(out_raw);
+
+    let ui_assets = match template {
+        NewTemplate::Todo => prompt_yes_no("Enable UI assets cache? (--ui-assets)", false)?,
+        _ => false,
+    };
+
+    println!();
+    println!("Summary:");
+    println!("  template: {:?}", template);
+    println!("  name:     {package_name}");
+    println!("  path:     {}", out_dir.display());
+    if matches!(template, NewTemplate::Todo) {
+        println!("  ui-assets: {ui_assets}");
+    }
+    println!();
+
+    if !prompt_yes_no("Proceed?", true)? {
+        return Err("aborted".to_string());
+    }
+
+    match template {
+        NewTemplate::Empty => init_empty_at(&out_dir, &package_name),
+        NewTemplate::Hello => init_hello_at(&out_dir, &package_name),
+        NewTemplate::Todo => init_todo_at(&out_dir, &package_name, ui_assets),
+    }
+}
+
+fn init_empty(args: Vec<String>) -> Result<(), String> {
+    let root = workspace_root()?;
+
+    let mut out_path: Option<PathBuf> = None;
+    let mut name: Option<String> = None;
+
+    let mut it = args.into_iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--path" => {
+                let raw = it
+                    .next()
+                    .ok_or_else(|| "--path requires a value".to_string())?;
+                out_path = Some(PathBuf::from(raw));
+            }
+            "--name" => {
+                name = Some(
+                    it.next()
+                        .ok_or_else(|| "--name requires a value".to_string())?,
+                );
+            }
+            "--help" | "-h" => return help(),
+            other => return Err(format!("unknown argument for init empty: {other}")),
+        }
+    }
+
+    let package_name = sanitize_package_name(name.as_deref().unwrap_or("my-app"))?;
+
+    let out_dir = out_path.unwrap_or_else(|| root.join("local").join(&package_name));
+    init_empty_at(&out_dir, &package_name)
 }
 
 fn init_todo(args: Vec<String>) -> Result<(), String> {
@@ -139,7 +251,11 @@ fn init_todo(args: Vec<String>) -> Result<(), String> {
     let package_name = sanitize_package_name(name.as_deref().unwrap_or("todo-app"))?;
 
     let out_dir = out_path.unwrap_or_else(|| root.join("local").join(&package_name));
-    ensure_dir_is_new_or_empty(&out_dir)?;
+    init_todo_at(&out_dir, &package_name, ui_assets)
+}
+
+fn init_todo_at(out_dir: &Path, package_name: &str, ui_assets: bool) -> Result<(), String> {
+    ensure_dir_is_new_or_empty(out_dir)?;
 
     let cargo_toml = todo_template_cargo_toml(&package_name, ui_assets);
     write_new_file(&out_dir.join("Cargo.toml"), &cargo_toml)?;
@@ -193,20 +309,24 @@ fn init_hello(args: Vec<String>) -> Result<(), String> {
     let package_name = sanitize_package_name(name.as_deref().unwrap_or("hello-world"))?;
 
     let out_dir = out_path.unwrap_or_else(|| root.join("local").join(&package_name));
-    ensure_dir_is_new_or_empty(&out_dir)?;
+    init_hello_at(&out_dir, &package_name)
+}
 
-    let cargo_toml = hello_template_cargo_toml(&package_name);
+fn init_hello_at(out_dir: &Path, package_name: &str) -> Result<(), String> {
+    ensure_dir_is_new_or_empty(out_dir)?;
+
+    let cargo_toml = hello_template_cargo_toml(package_name);
     write_new_file(&out_dir.join("Cargo.toml"), &cargo_toml)?;
 
     let src_dir = out_dir.join("src");
     std::fs::create_dir_all(&src_dir).map_err(|e| e.to_string())?;
     write_new_file(
         &src_dir.join("main.rs"),
-        &hello_template_main_rs(&package_name),
+        &hello_template_main_rs(package_name),
     )?;
     write_new_file(
         &out_dir.join("README.md"),
-        &hello_template_readme_md(&package_name),
+        &hello_template_readme_md(package_name),
     )?;
 
     println!("Initialized hello template at: {}", out_dir.display());
@@ -237,6 +357,29 @@ fn sanitize_package_name(raw: &str) -> Result<String, String> {
     }
 
     Ok(out)
+}
+
+fn init_empty_at(out_dir: &Path, package_name: &str) -> Result<(), String> {
+    ensure_dir_is_new_or_empty(out_dir)?;
+
+    let cargo_toml = empty_template_cargo_toml(package_name);
+    write_new_file(&out_dir.join("Cargo.toml"), &cargo_toml)?;
+
+    let src_dir = out_dir.join("src");
+    std::fs::create_dir_all(&src_dir).map_err(|e| e.to_string())?;
+    write_new_file(&src_dir.join("main.rs"), empty_template_main_rs())?;
+    write_new_file(
+        &out_dir.join("README.md"),
+        &empty_template_readme_md(package_name),
+    )?;
+
+    println!("Initialized empty template at: {}", out_dir.display());
+    println!("Next:");
+    println!(
+        "  cargo run --manifest-path {}",
+        out_dir.join("Cargo.toml").display()
+    );
+    Ok(())
 }
 
 fn ensure_dir_is_new_or_empty(path: &Path) -> Result<(), String> {
@@ -278,6 +421,21 @@ anyhow = "1"
 fret-app = {{ path = "../../crates/fret-app" }}
 fret-bootstrap = {{ path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver", "preload-icon-svgs", "icons-lucide", "diagnostics"{ui_assets_features}] }}
 fret-ui-shadcn = {{ path = "../../ecosystem/fret-ui-shadcn", features = ["app-integration"] }}
+[workspace]
+"#
+    )
+}
+
+fn empty_template_cargo_toml(package_name: &str) -> String {
+    format!(
+        r#"[package]
+name = "{package_name}"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1"
+
 [workspace]
 "#
     )
@@ -665,6 +823,14 @@ fn on_command(
     )
 }
 
+fn empty_template_main_rs() -> &'static str {
+    r#"fn main() -> anyhow::Result<()> {
+    println!("Hello from Fret!");
+    Ok(())
+}
+"#
+}
+
 fn todo_template_readme_md(package_name: &str, ui_assets: bool) -> String {
     let ui_assets_line = if ui_assets {
         "- UI assets: enabled (`fret-bootstrap/ui-assets`)\n"
@@ -696,6 +862,21 @@ cargo run
     )
 }
 
+fn empty_template_readme_md(package_name: &str) -> String {
+    format!(
+        r#"# {package_name}
+
+Generated by `fretboard new`.
+
+## Run
+
+```bash
+cargo run
+```
+"#
+    )
+}
+
 fn hello_template_readme_md(package_name: &str) -> String {
     format!(
         r#"# {package_name}
@@ -714,6 +895,82 @@ cargo run
 - Next: edit `src/main.rs` and replace the view tree
 "#
     )
+}
+
+fn prompt_line(prompt: &str, default: Option<&str>) -> Result<String, String> {
+    let mut stdout = std::io::stdout();
+    match default {
+        Some(default) => {
+            write!(&mut stdout, "{prompt} [{default}]: ").map_err(|e| e.to_string())?;
+        }
+        None => {
+            write!(&mut stdout, "{prompt}: ").map_err(|e| e.to_string())?;
+        }
+    }
+    stdout.flush().map_err(|e| e.to_string())?;
+
+    let mut line = String::new();
+    std::io::stdin()
+        .read_line(&mut line)
+        .map_err(|e| e.to_string())?;
+    let line = line.trim().to_string();
+    if line.is_empty() {
+        Ok(default.unwrap_or_default().to_string())
+    } else {
+        Ok(line)
+    }
+}
+
+fn prompt_yes_no(prompt: &str, default: bool) -> Result<bool, String> {
+    let hint = if default { "Y/n" } else { "y/N" };
+    loop {
+        let v = prompt_line(prompt, Some(hint))?;
+        let v = v.trim().to_ascii_lowercase();
+        match v.as_str() {
+            "" => return Ok(default),
+            "y" | "yes" | "true" | "1" => return Ok(true),
+            "n" | "no" | "false" | "0" => return Ok(false),
+            _ => {
+                println!("Please enter y/n.");
+            }
+        }
+    }
+}
+
+fn prompt_choice<T: Copy>(
+    prompt: &str,
+    items: &[(&str, T)],
+    default_index: usize,
+) -> Result<T, String> {
+    if items.is_empty() {
+        return Err("prompt_choice requires at least one item".to_string());
+    }
+    let default_index = default_index.min(items.len().saturating_sub(1));
+
+    println!("{prompt}:");
+    for (i, (label, _)) in items.iter().enumerate() {
+        if i == default_index {
+            println!("  {}) {} (default)", i + 1, label);
+        } else {
+            println!("  {}) {}", i + 1, label);
+        }
+    }
+
+    loop {
+        let raw = prompt_line("Select", Some(&(default_index + 1).to_string()))?;
+        let raw = raw.trim();
+        if raw.is_empty() {
+            return Ok(items[default_index].1);
+        }
+        let Ok(n) = raw.parse::<usize>() else {
+            println!("Please enter a number.");
+            continue;
+        };
+        if (1..=items.len()).contains(&n) {
+            return Ok(items[n - 1].1);
+        }
+        println!("Please enter a number between 1 and {}.", items.len());
+    }
 }
 
 fn list_native_demos() -> Result<(), String> {
