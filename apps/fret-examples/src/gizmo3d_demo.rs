@@ -530,6 +530,19 @@ fn precision_multiplier(modifiers: &fret_core::Modifiers) -> f32 {
     if modifiers.shift { 0.2 } else { 1.0 }
 }
 
+fn viewport_modifiers(kind: ViewportInputKind) -> fret_core::Modifiers {
+    match kind {
+        ViewportInputKind::PointerMove { modifiers, .. } => modifiers,
+        ViewportInputKind::PointerDown { modifiers, .. } => modifiers,
+        ViewportInputKind::PointerUp { modifiers, .. } => modifiers,
+        ViewportInputKind::Wheel { modifiers, .. } => modifiers,
+    }
+}
+
+fn gizmo_snap_from_modifiers(modifiers: &fret_core::Modifiers) -> bool {
+    modifiers.ctrl || modifiers.meta
+}
+
 fn transform_gizmo_kind_for_handle(handle: HandleId) -> Option<GizmoMode> {
     let group = (handle.local() >> 16) as u32;
     match group {
@@ -3200,27 +3213,9 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 _ => (false, m.input.dragging),
             };
 
-            let snap = match event.kind {
-                ViewportInputKind::PointerMove { modifiers, .. } => {
-                    modifiers.ctrl || modifiers.meta
-                }
-                ViewportInputKind::PointerDown { modifiers, .. } => {
-                    modifiers.ctrl || modifiers.meta
-                }
-                ViewportInputKind::PointerUp { modifiers, .. } => modifiers.ctrl || modifiers.meta,
-                ViewportInputKind::Wheel { modifiers, .. } => modifiers.ctrl || modifiers.meta,
-            };
-
-            let precision = match event.kind {
-                ViewportInputKind::PointerMove { modifiers, .. } => {
-                    precision_multiplier(&modifiers)
-                }
-                ViewportInputKind::PointerDown { modifiers, .. } => {
-                    precision_multiplier(&modifiers)
-                }
-                ViewportInputKind::PointerUp { modifiers, .. } => precision_multiplier(&modifiers),
-                ViewportInputKind::Wheel { modifiers, .. } => precision_multiplier(&modifiers),
-            };
+            let modifiers = viewport_modifiers(event.kind);
+            let snap = gizmo_snap_from_modifiers(&modifiers);
+            let precision = precision_multiplier(&modifiers);
 
             let is_navigating = m.camera.orbiting || m.camera.panning;
             let hovered = !is_navigating;
