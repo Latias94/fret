@@ -3466,6 +3466,41 @@ fn universal_is_not_pickable_when_origin_is_behind_camera() {
 }
 
 #[test]
+fn universal_effective_ops_respects_universal_rotate_toggles() {
+    let mut gizmo = base_gizmo(GizmoMode::Universal);
+    gizmo.config.operation_mask = None;
+
+    // Default: include rotate view ring, exclude arcball.
+    let ops = gizmo.effective_ops();
+    assert!(ops.contains(GizmoOps::rotate_view()));
+    assert!(!ops.contains(GizmoOps::rotate_arcball()));
+
+    gizmo.config.universal_includes_rotate_view_ring = false;
+    gizmo.config.universal_includes_arcball = true;
+    let ops = gizmo.effective_ops();
+    assert!(!ops.contains(GizmoOps::rotate_view()));
+    assert!(ops.contains(GizmoOps::rotate_arcball()));
+}
+
+#[test]
+fn rotate_effective_ops_ignores_universal_rotate_toggles() {
+    let mut gizmo = base_gizmo(GizmoMode::Rotate);
+    gizmo.config.operation_mask = None;
+
+    // Rotate mode uses the rotate-specific toggles.
+    gizmo.config.show_view_axis_ring = false;
+    gizmo.config.show_arcball = false;
+
+    // Flip the universal toggles; rotate mode should ignore them.
+    gizmo.config.universal_includes_rotate_view_ring = true;
+    gizmo.config.universal_includes_arcball = true;
+
+    let ops = gizmo.effective_ops();
+    assert!(!ops.contains(GizmoOps::rotate_view()));
+    assert!(!ops.contains(GizmoOps::rotate_arcball()));
+}
+
+#[test]
 fn size_policy_pixels_clamped_by_selection_bounds_clamps_world_length() {
     let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
     let view_proj = test_view_projection((800.0, 600.0));

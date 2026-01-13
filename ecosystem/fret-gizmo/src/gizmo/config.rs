@@ -67,9 +67,9 @@ pub struct GizmoConfig {
     pub mode: GizmoMode,
     /// Optional fine-grained operation mask (ImGuizmo `OPERATION` / transform-gizmo mode set).
     ///
-    /// When `Some`, this overrides `mode` and the `show_*` toggles that imply optional sub-modes
-    /// (`show_view_axis_ring`, `show_arcball`, `show_bounds`). The mask controls both drawing and
-    /// picking for the enabled sub-operations.
+    /// When `Some`, this overrides `mode` and the `show_*`/`universal_includes_*` toggles that
+    /// imply optional sub-modes. The mask controls both drawing and picking for the enabled
+    /// sub-operations.
     pub operation_mask: Option<GizmoOps>,
     pub orientation: GizmoOrientation,
     pub pivot_mode: GizmoPivotMode,
@@ -112,7 +112,7 @@ pub struct GizmoConfig {
     pub show_occluded: bool,
     /// Alpha multiplier for the occluded always-on-top pass.
     pub occluded_alpha: f32,
-    /// When `true`, includes a view-axis rotation ring (camera-facing) in `Rotate`/`Universal`.
+    /// When `true`, includes a view-axis rotation ring (camera-facing) in `GizmoMode::Rotate`.
     pub show_view_axis_ring: bool,
     /// Radius multiplier for the view-axis ring (outer ring).
     pub view_axis_ring_radius_scale: f32,
@@ -123,7 +123,7 @@ pub struct GizmoConfig {
     ///
     /// This reduces ring clutter and prevents edge-on rings from stealing interaction.
     pub rotate_ring_fade_dot: (f32, f32),
-    /// When `true`, includes a free-rotation arcball (trackball) in `Rotate`/`Universal`.
+    /// When `true`, includes a free-rotation arcball (trackball) in `GizmoMode::Rotate`.
     ///
     /// This is intended to match transform-gizmo's `Arcball` affordance: click/drag inside the
     /// arcball circle to perform unconstrained rotation.
@@ -150,6 +150,15 @@ pub struct GizmoConfig {
     /// This is a Fret extension: the depth handle is a small ring around the center that moves
     /// along the camera view direction.
     pub universal_includes_translate_depth: bool,
+    /// When `true`, `GizmoMode::Universal` includes the view-axis rotate ring.
+    ///
+    /// This corresponds to ImGuizmo's `ROTATE_SCREEN` behavior and transform-gizmo's `RotateView`.
+    pub universal_includes_rotate_view_ring: bool,
+    /// When `true`, `GizmoMode::Universal` includes the arcball rotate handle.
+    ///
+    /// ImGuizmo's "universal" mode does not include arcball (it is a transform-gizmo-style
+    /// affordance), so this is opt-in by default.
+    pub universal_includes_arcball: bool,
     /// When `true` (default), axes may flip direction for better screen-space visibility
     /// (ImGuizmo `AllowAxisFlip` behavior).
     pub allow_axis_flip: bool,
@@ -211,6 +220,8 @@ impl Default for GizmoConfig {
             bounds_handle_size_px: 12.0,
             universal_includes_scale: true,
             universal_includes_translate_depth: false,
+            universal_includes_rotate_view_ring: true,
+            universal_includes_arcball: false,
             allow_axis_flip: true,
             axis_fade_px: (4.0, 18.0),
             plane_fade_px2: (120.0, 520.0),

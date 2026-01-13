@@ -17,11 +17,14 @@ impl Gizmo {
                     mask.contains(GizmoOps::rotate_arcball()),
                 )
             } else {
-                (
-                    true,
-                    self.config.show_view_axis_ring,
-                    self.config.show_arcball,
-                )
+                let (view, arcball) = match self.config.mode {
+                    GizmoMode::Universal => (
+                        self.config.universal_includes_rotate_view_ring,
+                        self.config.universal_includes_arcball,
+                    ),
+                    _ => (self.config.show_view_axis_ring, self.config.show_arcball),
+                };
+                (true, view, arcball)
             };
 
         let radius_world = size_length_world;
