@@ -124,6 +124,7 @@ pub struct ChartEngine {
     view: ViewState,
     data_view_stage: DataViewStage,
     filter_processor_stage: FilterProcessorStage,
+    participation: crate::engine::stages::ParticipationState,
     ordinal_index_stage: OrdinalIndexStage,
     nearest_x_index_stage: NearestXIndexStage,
     bar_layout_stage: BarLayoutStage,
@@ -176,6 +177,7 @@ impl ChartEngine {
             view: ViewState::default(),
             data_view_stage: DataViewStage::default(),
             filter_processor_stage: FilterProcessorStage::default(),
+            participation: crate::engine::stages::ParticipationState::default(),
             ordinal_index_stage: OrdinalIndexStage::default(),
             nearest_x_index_stage: NearestXIndexStage::default(),
             bar_layout_stage: BarLayoutStage::default(),
@@ -877,6 +879,8 @@ impl ChartEngine {
         if view_changed {
             self.view.rebuild(&self.model, &self.datasets, &self.state);
         }
+        self.participation
+            .rebuild_from_view(&self.model, &self.view);
 
         if self.state.link.group.is_some()
             && self.brush_link_cache.last_brush != self.state.brush_selection_2d
@@ -887,48 +891,6 @@ impl ChartEngine {
                 .push(LinkEvent::BrushSelectionChanged {
                     selection: self.state.brush_selection_2d,
                 });
-        }
-
-        // Brush selection is an output-only interaction (ADR 1144). We compute the derived X-only
-        // row range output after the view has been updated so the selection is scoped to the
-        // effective series view (base range + X dataZoom).
-        if let Some(brush) = self.state.brush_selection_2d {
-            for series_id in &self.model.series_order {
-                let Some(series) = self.model.series.get(series_id) else {
-                    continue;
-                };
-                if !series.visible {
-                    continue;
-                }
-                if series.x_axis != brush.x_axis || series.y_axis != brush.y_axis {
-                    continue;
-                }
-
-                let Some(series_view) = self.view.series_view(*series_id) else {
-                    continue;
-                };
-                let RowSelection::Range(base_range) = series_view.selection else {
-                    continue;
-                };
-
-                let Some(dataset_model) = self.model.datasets.get(&series.dataset) else {
-                    continue;
-                };
-                let Some(x_col) = dataset_model.fields.get(&series.encode.x).copied() else {
-                    continue;
-                };
-                let Some(table) = self.datasets.dataset(series.dataset) else {
-                    continue;
-                };
-                let Some(x_values) = table.column_f64(x_col) else {
-                    continue;
-                };
-
-                let range = crate::transform::row_range_for_x_window(x_values, base_range, brush.x);
-                self.output
-                    .brush_x_row_ranges_by_series
-                    .insert(*series_id, range);
-            }
         }
 
         let hover_px = self.state.hover_px;
@@ -944,7 +906,7 @@ impl ChartEngine {
                 &mut self.ordinal_index_stage,
                 &self.model,
                 &self.datasets,
-                &self.view,
+                &self.participation,
             );
         }
         self.ordinal_index_stage.prepare_requests(&self.datasets);
@@ -962,7 +924,7 @@ impl ChartEngine {
                 &mut self.nearest_x_index_stage,
                 &self.model,
                 &self.datasets,
-                &self.view,
+                &self.participation,
             );
         }
         self.nearest_x_index_stage.prepare_requests(&self.datasets);
@@ -1007,8 +969,54 @@ impl ChartEngine {
         );
         let xy_weak_filter_pending = filter_result.xy_weak_filter_pending;
 
+        self.participation
+            .rebuild_from_view(&self.model, &self.view);
+
+        // Brush selection is an output-only interaction (ADR 1144). We compute the derived X-only
+        // row range output after the participation contract has been updated so the output is
+        // scoped to the effective series view (base range + X dataZoom + optional indices views).
+        if let Some(brush) = self.state.brush_selection_2d {
+            for series_id in &self.model.series_order {
+                let Some(series) = self.model.series.get(series_id) else {
+                    continue;
+                };
+                if !series.visible {
+                    continue;
+                }
+                if series.x_axis != brush.x_axis || series.y_axis != brush.y_axis {
+                    continue;
+                }
+
+                let Some(participation) = self.participation.series_participation(*series_id)
+                else {
+                    continue;
+                };
+                let RowSelection::Range(base_range) = participation.selection else {
+                    continue;
+                };
+
+                let Some(dataset_model) = self.model.datasets.get(&series.dataset) else {
+                    continue;
+                };
+                let Some(x_col) = dataset_model.fields.get(&series.encode.x).copied() else {
+                    continue;
+                };
+                let Some(table) = self.datasets.dataset(series.dataset) else {
+                    continue;
+                };
+                let Some(x_values) = table.column_f64(x_col) else {
+                    continue;
+                };
+
+                let range = crate::transform::row_range_for_x_window(x_values, base_range, brush.x);
+                self.output
+                    .brush_x_row_ranges_by_series
+                    .insert(*series_id, range);
+            }
+        }
+
         self.marks_stage
-            .sync_inputs(&self.model, &self.datasets, &self.view);
+            .sync_inputs(&self.model, &self.datasets, &self.participation);
         let wants_append_rebuild = self.marks_stage.take_append_rebuild();
         if self.marks_stage.is_dirty() {
             self.output.marks.clear();
@@ -1033,10 +1041,10 @@ impl ChartEngine {
                 &self.model,
                 &self.datasets,
                 &self.state,
-                &self.view,
                 &self.data_view_stage,
                 &self.stack_dims_stage,
                 &self.bar_layout_stage,
+                &self.participation,
                 viewport,
                 &mut budget,
                 &mut self.lod_scratch,
@@ -1132,7 +1140,7 @@ impl ChartEngine {
                                 self.axis_pointer_cache.output = compute_axis_axis_pointer_output(
                                     &self.model,
                                     &self.datasets,
-                                    &self.view,
+                                    &self.participation,
                                     &self.data_view_stage,
                                     &self.stack_dims_stage,
                                     &self.ordinal_index_stage,
@@ -1192,7 +1200,7 @@ fn request_nearest_x_indices_for_axis_pointer(
     stage: &mut NearestXIndexStage,
     model: &ChartModel,
     datasets: &DatasetStore,
-    view: &ViewState,
+    participation: &crate::engine::stages::ParticipationState,
 ) {
     let Some(primary) = model.series_in_order().find(|s| s.visible) else {
         return;
@@ -1229,7 +1237,7 @@ fn request_nearest_x_indices_for_axis_pointer(
             continue;
         }
 
-        let Some(series_view) = view.series_view(series.id) else {
+        let Some(series_view) = participation.series_participation(series.id) else {
             continue;
         };
         let (RowSelection::All | RowSelection::Range(_)) = series_view.selection else {
@@ -1309,7 +1317,7 @@ fn compute_item_axis_pointer_output(
 fn compute_axis_axis_pointer_output(
     model: &ChartModel,
     datasets: &DatasetStore,
-    view: &ViewState,
+    participation: &crate::engine::stages::ParticipationState,
     data_views: &DataViewStage,
     stack_dims: &StackDimsStage,
     ordinal_indices: &OrdinalIndexStage,
@@ -1361,7 +1369,7 @@ fn compute_axis_axis_pointer_output(
         if let Some((snapped_axis_value, snapped_hit)) = snap_axis_pointer_to_nearest_sample(
             model,
             datasets,
-            view,
+            participation,
             data_views,
             stack_dims,
             nearest_x_indices,
@@ -1528,32 +1536,31 @@ fn compute_axis_axis_pointer_output(
             None
         };
 
-        let series_view = view.series_view(series.id);
-        let empty_mask = series_view
-            .map(|v| v.empty_mask(series.kind, series.stack.is_some()))
-            .unwrap_or_default();
-        let (selection_range, filter, base_selection) = match series_view {
-            Some(series_view) => {
-                let selection_range = series_view.selection.as_range(table.row_count);
-                let selection_range = RowRange {
-                    start: selection_range.start,
-                    end: selection_range.end,
-                };
-                (
-                    selection_range,
-                    series_view.x_policy.filter,
-                    series_view.selection.clone(),
-                )
-            }
-            None => (
-                RowRange {
-                    start: 0,
-                    end: table.row_count,
-                },
-                crate::engine::window_policy::AxisFilter1D::default(),
-                RowSelection::default(),
-            ),
-        };
+        let (selection_range, filter, base_selection, empty_mask) =
+            match participation.series_participation(series.id) {
+                Some(series_view) => {
+                    let selection_range = series_view.selection.as_range(table.row_count);
+                    let selection_range = RowRange {
+                        start: selection_range.start,
+                        end: selection_range.end,
+                    };
+                    (
+                        selection_range,
+                        series_view.x_policy.filter,
+                        series_view.selection.clone(),
+                        series_view.empty_mask,
+                    )
+                }
+                None => (
+                    RowRange {
+                        start: 0,
+                        end: table.row_count,
+                    },
+                    crate::engine::window_policy::AxisFilter1D::default(),
+                    RowSelection::default(),
+                    Default::default(),
+                ),
+            };
 
         let selection_for_index = base_selection.clone();
         let filter_for_index = if series_trigger_axis == series.x_axis {
@@ -1726,7 +1733,7 @@ fn compute_axis_axis_pointer_output(
 fn snap_axis_pointer_to_nearest_sample(
     model: &ChartModel,
     datasets: &DatasetStore,
-    view: &ViewState,
+    participation: &crate::engine::stages::ParticipationState,
     data_views: &DataViewStage,
     stack_dims: &StackDimsStage,
     nearest_x_indices: &NearestXIndexStage,
@@ -1763,7 +1770,7 @@ fn snap_axis_pointer_to_nearest_sample(
         crate::spec::AxisKind::X => snap_axis_pointer_x_to_series(
             model,
             datasets,
-            view,
+            participation,
             data_views,
             stack_dims,
             nearest_x_indices,
@@ -1777,7 +1784,7 @@ fn snap_axis_pointer_to_nearest_sample(
         crate::spec::AxisKind::Y => snap_axis_pointer_y_to_series(
             model,
             datasets,
-            view,
+            participation,
             data_views,
             stack_dims,
             axis_windows,
@@ -1793,7 +1800,7 @@ fn snap_axis_pointer_to_nearest_sample(
 fn snap_axis_pointer_x_to_series(
     model: &ChartModel,
     datasets: &DatasetStore,
-    view: &ViewState,
+    participation: &crate::engine::stages::ParticipationState,
     data_views: &DataViewStage,
     stack_dims: &StackDimsStage,
     nearest_x_indices: &NearestXIndexStage,
@@ -1824,32 +1831,31 @@ fn snap_axis_pointer_x_to_series(
         .and_then(|y2_field| dataset.fields.get(&y2_field).copied())
         .and_then(|y2_col| table.column_f64(y2_col));
 
-    let series_view = view.series_view(primary.id);
-    let empty_mask = series_view
-        .map(|v| v.empty_mask(primary.kind, primary.stack.is_some()))
-        .unwrap_or_default();
-    let (selection_range, filter, base_selection) = match series_view {
-        Some(series_view) => {
-            let selection_range = series_view.selection.as_range(table.row_count);
-            let selection_range = RowRange {
-                start: selection_range.start,
-                end: selection_range.end,
-            };
-            (
-                selection_range,
-                series_view.x_policy.filter,
-                series_view.selection.clone(),
-            )
-        }
-        None => (
-            RowRange {
-                start: 0,
-                end: table.row_count,
-            },
-            crate::engine::window_policy::AxisFilter1D::default(),
-            RowSelection::default(),
-        ),
-    };
+    let (selection_range, filter, base_selection, empty_mask) =
+        match participation.series_participation(primary.id) {
+            Some(series_view) => {
+                let selection_range = series_view.selection.as_range(table.row_count);
+                let selection_range = RowRange {
+                    start: selection_range.start,
+                    end: selection_range.end,
+                };
+                (
+                    selection_range,
+                    series_view.x_policy.filter,
+                    series_view.selection.clone(),
+                    series_view.empty_mask,
+                )
+            }
+            None => (
+                RowRange {
+                    start: 0,
+                    end: table.row_count,
+                },
+                crate::engine::window_policy::AxisFilter1D::default(),
+                RowSelection::default(),
+                Default::default(),
+            ),
+        };
 
     let table_view = data_views.table_view_for(
         table,
@@ -2009,7 +2015,7 @@ fn nearest_raw_index_at_x_view(
 fn snap_axis_pointer_y_to_series(
     model: &ChartModel,
     datasets: &DatasetStore,
-    view: &ViewState,
+    participation: &crate::engine::stages::ParticipationState,
     data_views: &DataViewStage,
     stack_dims: &StackDimsStage,
     axis_windows: &BTreeMap<crate::ids::AxisId, window::DataWindow>,
@@ -2051,32 +2057,31 @@ fn snap_axis_pointer_y_to_series(
         .and_then(|y2_field| dataset.fields.get(&y2_field).copied())
         .and_then(|y2_col| table.column_f64(y2_col));
 
-    let series_view = view.series_view(primary.id);
-    let empty_mask = series_view
-        .map(|v| v.empty_mask(primary.kind, primary.stack.is_some()))
-        .unwrap_or_default();
-    let (selection_range, filter, base_selection) = match series_view {
-        Some(series_view) => {
-            let selection_range = series_view.selection.as_range(table.row_count);
-            let selection_range = RowRange {
-                start: selection_range.start,
-                end: selection_range.end,
-            };
-            (
-                selection_range,
-                series_view.x_policy.filter,
-                series_view.selection.clone(),
-            )
-        }
-        None => (
-            RowRange {
-                start: 0,
-                end: table.row_count,
-            },
-            crate::engine::window_policy::AxisFilter1D::default(),
-            RowSelection::default(),
-        ),
-    };
+    let (selection_range, filter, base_selection, empty_mask) =
+        match participation.series_participation(primary.id) {
+            Some(series_view) => {
+                let selection_range = series_view.selection.as_range(table.row_count);
+                let selection_range = RowRange {
+                    start: selection_range.start,
+                    end: selection_range.end,
+                };
+                (
+                    selection_range,
+                    series_view.x_policy.filter,
+                    series_view.selection.clone(),
+                    series_view.empty_mask,
+                )
+            }
+            None => (
+                RowRange {
+                    start: 0,
+                    end: table.row_count,
+                },
+                crate::engine::window_policy::AxisFilter1D::default(),
+                RowSelection::default(),
+                Default::default(),
+            ),
+        };
 
     let table_view = data_views.table_view_for(
         table,
@@ -2262,7 +2267,7 @@ fn request_ordinal_indices_for_axis_pointer(
     ordinal_indices: &mut OrdinalIndexStage,
     model: &ChartModel,
     datasets: &DatasetStore,
-    view: &ViewState,
+    participation: &crate::engine::stages::ParticipationState,
 ) {
     for series in model.series_in_order() {
         if !series.visible {
@@ -2298,28 +2303,29 @@ fn request_ordinal_indices_for_axis_pointer(
             continue;
         };
 
-        let (selection_range, filter, selection) = match view.series_view(series.id) {
-            Some(series_view) => {
-                let selection_range = series_view.selection.as_range(table.row_count);
-                let selection_range = RowRange {
-                    start: selection_range.start,
-                    end: selection_range.end,
-                };
-                (
-                    selection_range,
-                    series_view.x_policy.filter,
-                    series_view.selection.clone(),
-                )
-            }
-            None => (
-                RowRange {
-                    start: 0,
-                    end: table.row_count,
-                },
-                crate::engine::window_policy::AxisFilter1D::default(),
-                RowSelection::default(),
-            ),
-        };
+        let (selection_range, filter, selection) =
+            match participation.series_participation(series.id) {
+                Some(series_view) => {
+                    let selection_range = series_view.selection.as_range(table.row_count);
+                    let selection_range = RowRange {
+                        start: selection_range.start,
+                        end: selection_range.end,
+                    };
+                    (
+                        selection_range,
+                        series_view.x_policy.filter,
+                        series_view.selection.clone(),
+                    )
+                }
+                None => (
+                    RowRange {
+                        start: 0,
+                        end: table.row_count,
+                    },
+                    crate::engine::window_policy::AxisFilter1D::default(),
+                    RowSelection::default(),
+                ),
+            };
 
         if matches!(selection, RowSelection::Indices(_)) {
             continue;

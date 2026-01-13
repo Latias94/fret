@@ -2,11 +2,91 @@ use super::DataViewStage;
 use crate::data::DatasetStore;
 use crate::engine::ChartState;
 use crate::engine::model::ChartModel;
-use crate::transform::RowSelection;
+use crate::ids::{DatasetId, Revision, SeriesId};
+use crate::spec::FilterMode;
+use crate::transform::{RowSelection, SeriesXPolicy};
+use crate::view::SeriesEmptyMask;
 use crate::view::ViewState;
+use std::collections::BTreeMap;
 
 #[derive(Debug, Default, Clone)]
 pub struct FilterProcessorStage;
+
+#[derive(Debug, Default, Clone)]
+pub struct SeriesParticipation {
+    pub series: SeriesId,
+    pub dataset: DatasetId,
+    pub revision: Revision,
+    pub data_revision: Revision,
+    pub selection: RowSelection,
+    pub x_policy: SeriesXPolicy,
+    pub x_filter_mode: FilterMode,
+    pub y_filter_mode: FilterMode,
+    pub y_filter: crate::engine::window_policy::AxisFilter1D,
+    pub empty_mask: SeriesEmptyMask,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct ParticipationState {
+    pub revision: Revision,
+    pub series: Vec<SeriesParticipation>,
+    series_index: BTreeMap<SeriesId, usize>,
+}
+
+impl ParticipationState {
+    pub fn clear(&mut self) {
+        self.revision = Revision::default();
+        self.series.clear();
+        self.series_index.clear();
+    }
+
+    pub fn series_participation(&self, series: SeriesId) -> Option<&SeriesParticipation> {
+        self.series_index
+            .get(&series)
+            .copied()
+            .and_then(|i| self.series.get(i))
+    }
+
+    pub fn rebuild_from_view(&mut self, model: &ChartModel, view: &ViewState) {
+        self.series.clear();
+        self.series_index.clear();
+        self.series.reserve(model.series_order.len());
+        self.revision = view.revision;
+
+        for (i, series_id) in model.series_order.iter().copied().enumerate() {
+            self.series_index.insert(series_id, i);
+            let Some(series_model) = model.series.get(&series_id) else {
+                self.series.push(SeriesParticipation {
+                    series: series_id,
+                    ..Default::default()
+                });
+                continue;
+            };
+
+            if let Some(v) = view.series_view(series_id) {
+                let empty_mask = v.empty_mask(series_model.kind, series_model.stack.is_some());
+                self.series.push(SeriesParticipation {
+                    series: series_id,
+                    dataset: series_model.dataset,
+                    revision: v.revision,
+                    data_revision: v.data_revision,
+                    selection: v.selection.clone(),
+                    x_policy: v.x_policy,
+                    x_filter_mode: v.x_filter_mode,
+                    y_filter_mode: v.y_filter_mode,
+                    y_filter: v.y_filter,
+                    empty_mask,
+                });
+            } else {
+                self.series.push(SeriesParticipation {
+                    series: series_id,
+                    dataset: series_model.dataset,
+                    ..Default::default()
+                });
+            }
+        }
+    }
+}
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct FilterProcessorResult {

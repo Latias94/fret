@@ -24,10 +24,9 @@ use crate::spec::AxisRange;
 use crate::spec::BarWidthSpec;
 use crate::stats::EngineStats;
 use crate::transform::RowSelection;
-use crate::view::ViewState;
 use std::collections::BTreeMap;
 
-use super::{BarLayoutStage, DataViewStage, StackDimsStage};
+use super::{BarLayoutStage, DataViewStage, ParticipationState, StackDimsStage};
 
 #[derive(Debug, Default, Clone)]
 struct MinMaxAppendCache {
@@ -100,7 +99,7 @@ pub struct MarksStage {
     last_series_count: usize,
     last_model_marks_rev: crate::ids::Revision,
     last_data_sig: u64,
-    last_view_rev: crate::ids::Revision,
+    last_participation_rev: crate::ids::Revision,
     pending_append_rebuild: bool,
     last_dataset_meta: BTreeMap<crate::ids::DatasetId, (crate::ids::Revision, usize, usize)>,
     append_rebuild_mode: bool,
@@ -118,7 +117,12 @@ impl MarksStage {
         self.dirty = true;
     }
 
-    pub fn sync_inputs(&mut self, model: &ChartModel, datasets: &DatasetStore, view: &ViewState) {
+    pub fn sync_inputs(
+        &mut self,
+        model: &ChartModel,
+        datasets: &DatasetStore,
+        participation: &ParticipationState,
+    ) {
         let series_count = model.series_order.len();
         if series_count != self.last_series_count {
             self.dirty = true;
@@ -203,16 +207,16 @@ impl MarksStage {
         let data_sig = dataset_store_signature(model, datasets);
         self.last_data_sig = data_sig;
 
-        if view.revision != self.last_view_rev {
-            // `ViewState` revision bumps on any view-affecting input change, including the dataset
-            // signature. For append-only dataset growth we keep the previous `MarkTree` around and
-            // rebuild nodes in-place under budget, so a revision bump should not force a full
-            // reset.
+        if participation.revision != self.last_participation_rev {
+            // The participation revision bumps on any view-affecting input change, including the
+            // dataset signature. For append-only dataset growth we keep the previous `MarkTree`
+            // around and rebuild nodes in-place under budget, so a revision bump should not force
+            // a full reset.
             if !self.pending_append_rebuild {
                 self.dirty = true;
             }
         }
-        self.last_view_rev = view.revision;
+        self.last_participation_rev = participation.revision;
     }
 
     pub fn take_append_rebuild(&mut self) -> bool {
@@ -289,10 +293,10 @@ impl MarksStage {
         model: &ChartModel,
         datasets: &DatasetStore,
         state: &ChartState,
-        view: &ViewState,
         selection_stage: &DataViewStage,
         stack_dims: &StackDimsStage,
         bar_layout: &BarLayoutStage,
+        participation: &ParticipationState,
         viewport: Rect,
         budget: &mut WorkBudget,
         scratch: &mut LodScratch,
@@ -322,7 +326,7 @@ impl MarksStage {
                 x_filter_mode,
                 y_filter_mode,
                 view_y_filter,
-            ) = if let Some(v) = view.series_view(series.id) {
+            ) = if let Some(v) = participation.series_participation(series.id) {
                 (
                     v.selection.clone(),
                     v.x_policy.filter,
