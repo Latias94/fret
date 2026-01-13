@@ -11,9 +11,8 @@ documentation.workspace = true
 
 [features]
 default = []
-# Heavy, app-specific composites (e.g. data grids / dashboard blocks).
-datagrid = []
 app-integration = ["dep:fret-app"]
+tanstack-table = ["fret-ui-kit/table"]
 
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }

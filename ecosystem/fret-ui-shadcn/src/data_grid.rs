@@ -244,6 +244,9 @@ impl DataGrid {
                                 fret_ui::element::VirtualListOptions::new(Px(160.0), overscan_cols);
                             options.axis = fret_core::Axis::Horizontal;
                             options.items_revision = cols_revision;
+                            options.measure_mode = fret_ui::element::VirtualListMeasureMode::Fixed;
+                            options.key_cache =
+                                fret_ui::element::VirtualListKeyCacheMode::VisibleOnly;
 
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Fill;
@@ -281,6 +284,8 @@ impl DataGrid {
                             fret_ui::element::VirtualListOptions::new(row_height, overscan_rows);
                         options.axis = fret_core::Axis::Vertical;
                         options.items_revision = rows_revision;
+                        options.measure_mode = fret_ui::element::VirtualListMeasureMode::Fixed;
+                        options.key_cache = fret_ui::element::VirtualListKeyCacheMode::VisibleOnly;
 
                         let col_handle = col_handle.clone();
                         let theme = theme.clone();
@@ -357,6 +362,10 @@ impl DataGrid {
                                         );
                                         options.axis = fret_core::Axis::Horizontal;
                                         options.items_revision = cols_revision;
+                                        options.measure_mode =
+                                            fret_ui::element::VirtualListMeasureMode::Fixed;
+                                        options.key_cache =
+                                            fret_ui::element::VirtualListKeyCacheMode::VisibleOnly;
 
                                         let mut layout = LayoutStyle::default();
                                         layout.size.width = Length::Fill;

@@ -134,6 +134,8 @@ impl DataTable {
             let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
             let mut options = fret_ui::element::VirtualListOptions::new(row_height, overscan);
             options.items_revision = items_revision;
+            options.measure_mode = fret_ui::element::VirtualListMeasureMode::Fixed;
+            options.key_cache = fret_ui::element::VirtualListKeyCacheMode::VisibleOnly;
             let body = cx.virtual_list_keyed_with_layout(
                 list_layout_style(),
                 rows,

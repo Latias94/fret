@@ -23,10 +23,11 @@ pub mod collapsible;
 pub mod combobox;
 pub mod command;
 pub mod context_menu;
-#[cfg(feature = "datagrid")]
 pub mod data_grid;
-#[cfg(feature = "datagrid")]
+pub mod data_grid_canvas;
 pub mod data_table;
+#[cfg(feature = "tanstack-table")]
+pub mod data_table_tanstack;
 pub mod dialog;
 pub mod drawer;
 pub mod dropdown_menu;
@@ -104,13 +105,14 @@ pub use context_menu::{
     ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItem, ContextMenuRadioItemSpec,
     ContextMenuShortcut,
 };
-#[cfg(feature = "datagrid")]
 pub use data_grid::{DataGrid, DataGridRowState};
-#[cfg(feature = "datagrid")]
+pub use data_grid_canvas::{DataGridCanvas, DataGridCanvasAxis};
 pub use data_table::{
     DataTable, DataTableColumnOption, DataTableGlobalFilterInput, DataTableRowState,
     DataTableViewOptions,
 };
+#[cfg(feature = "tanstack-table")]
+pub use data_table_tanstack::DataTableTanstack;
 pub use dialog::{
     Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 };
