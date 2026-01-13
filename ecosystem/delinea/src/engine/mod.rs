@@ -985,7 +985,7 @@ impl ChartEngine {
             .step(&self.model, &self.datasets, &mut budget);
 
         self.data_view_stage.begin_frame();
-        self.marks_stage.request_data_views(
+        self.filter_processor_stage.request_data_views(
             &self.model,
             &self.datasets,
             &self.state,
