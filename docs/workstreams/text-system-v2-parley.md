@@ -156,7 +156,7 @@ Legend:
 
 **B7 — Unified glyph key + subpixel policy (ADR 0160)**
 - [x] Introduce renderer-owned `GlyphKey` and remove backend-specific glyph keys.
-- [ ] Introduce a stable `FontFaceKey` registry (decouple from Parley fontique IDs; reserve variable font support).
+- [x] Introduce a stable `FontFaceKey` registry (decouple from Parley fontique IDs; reserve variable font support).
 - [x] Add `GlyphKind::Subpixel` (atlas + shader) and lock `SUBPIXEL_VARIANTS_X/Y` as a platform policy.
 - [x] Converge shaping/layout to Parley-only and remove the legacy shaping backend gate.
 
@@ -202,3 +202,4 @@ Legend:
 - 2026-01-13: ADR 0160 added: unify glyph identity (`GlyphKey`) + subpixel rendering policy (commit `d56a8be`).
 - 2026-01-13: B7.1: unify glyph key and switch `prepare` to Parley-only (commit `797fe93`).
 - 2026-01-13: B7.2: add subpixel atlas + shader/pipeline and platform subpixel policy (commit `8282cf1`).
+- 2026-01-13: B7.3: add stable `FontFaceKey` registry (commit `9a7f81a`).
