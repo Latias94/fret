@@ -1,5 +1,8 @@
 use fret_core::geometry::{Point, Px};
-use fret_core::{AppWindowId, Modifiers, MouseButton, RenderTargetId, ViewportInputEvent};
+use fret_core::{
+    AppWindowId, Modifiers, MouseButton, MouseButtons, RenderTargetId, ViewportInputEvent,
+    ViewportInputKind,
+};
 
 /// Default drag threshold for viewport tools (screen-space logical pixels).
 ///
@@ -202,4 +205,176 @@ pub struct RotateGizmoInteraction {
     pub dragging: bool,
     pub targets: Vec<u64>,
     pub start_rotations: Vec<(u64, f32)>,
+}
+
+impl ViewportToolManager {
+    pub fn handle_viewport_input(&mut self, event: &ViewportInputEvent) -> bool {
+        match event.kind {
+            ViewportInputKind::PointerDown {
+                button, modifiers, ..
+            } => self.handle_pointer_down(event, button, modifiers),
+            ViewportInputKind::PointerMove { buttons, modifiers } => {
+                self.handle_pointer_move(event, buttons, modifiers)
+            }
+            ViewportInputKind::PointerUp {
+                button, modifiers, ..
+            } => self.handle_pointer_up(event, button, modifiers),
+            ViewportInputKind::Wheel { .. } => false,
+        }
+    }
+
+    pub fn overlay(&self) -> crate::viewport_overlays::ViewportOverlay {
+        let mut overlay = crate::viewport_overlays::ViewportOverlay {
+            marquee: None,
+            drag_line: None,
+            selection_rect: None,
+            gizmo: None,
+            rotate_gizmo: None,
+            marker: None,
+        };
+
+        let Some(interaction) = self.interaction.as_ref() else {
+            return overlay;
+        };
+
+        match interaction {
+            ViewportInteraction::MarqueeSelect(m) => {
+                if m.dragging() {
+                    overlay.marquee = Some(crate::viewport_overlays::ViewportMarquee {
+                        a_uv: m.start_uv,
+                        b_uv: m.current_uv,
+                    });
+                }
+            }
+            ViewportInteraction::PanOrbit(_)
+            | ViewportInteraction::TranslateGizmo(_)
+            | ViewportInteraction::RotateGizmo(_) => {}
+        }
+
+        overlay
+    }
+
+    fn handle_pointer_down(
+        &mut self,
+        event: &ViewportInputEvent,
+        button: MouseButton,
+        modifiers: Modifiers,
+    ) -> bool {
+        if self.interaction.is_some() {
+            return false;
+        }
+
+        match button {
+            MouseButton::Left => match self.active {
+                ViewportToolMode::Select => {
+                    self.interaction = Some(ViewportInteraction::MarqueeSelect(
+                        MarqueeSelectInteraction {
+                            window: event.window,
+                            target: event.target,
+                            start_modifiers: modifiers,
+                            start_cursor_px: event.cursor_px,
+                            current_cursor_px: event.cursor_px,
+                            start_uv: event.uv,
+                            current_uv: event.uv,
+                            start_target_px: event.target_px,
+                            current_target_px: event.target_px,
+                        },
+                    ));
+                    true
+                }
+                ViewportToolMode::Move | ViewportToolMode::Rotate => false,
+            },
+            MouseButton::Right | MouseButton::Middle => {
+                let kind = if button == MouseButton::Middle {
+                    PanOrbitKind::Pan
+                } else {
+                    PanOrbitKind::Orbit
+                };
+                self.interaction = Some(ViewportInteraction::PanOrbit(PanOrbitInteraction {
+                    window: event.window,
+                    target: event.target,
+                    kind,
+                    button,
+                    start_modifiers: modifiers,
+                    start_cursor_px: event.cursor_px,
+                    last_cursor_px: event.cursor_px,
+                    current_cursor_px: event.cursor_px,
+                    start_uv: event.uv,
+                    last_uv: event.uv,
+                    current_uv: event.uv,
+                    start_target_px: event.target_px,
+                    last_target_px: event.target_px,
+                    current_target_px: event.target_px,
+                    dragging: false,
+                }));
+                true
+            }
+            MouseButton::Back | MouseButton::Forward | MouseButton::Other(_) => false,
+        }
+    }
+
+    fn handle_pointer_move(
+        &mut self,
+        event: &ViewportInputEvent,
+        buttons: MouseButtons,
+        _modifiers: Modifiers,
+    ) -> bool {
+        let Some(interaction) = self.interaction.as_mut() else {
+            let _ = buttons;
+            return false;
+        };
+
+        if interaction.window_target() != (event.window, event.target) {
+            return false;
+        }
+
+        match interaction {
+            ViewportInteraction::MarqueeSelect(m) => {
+                m.current_cursor_px = event.cursor_px;
+                m.current_uv = event.uv;
+                m.current_target_px = event.target_px;
+                true
+            }
+            ViewportInteraction::PanOrbit(m) => {
+                m.last_cursor_px = m.current_cursor_px;
+                m.last_uv = m.current_uv;
+                m.last_target_px = m.current_target_px;
+
+                m.current_cursor_px = event.cursor_px;
+                m.current_uv = event.uv;
+                m.current_target_px = event.target_px;
+                m.update_dragging_flag();
+                true
+            }
+            ViewportInteraction::TranslateGizmo(_) | ViewportInteraction::RotateGizmo(_) => false,
+        }
+    }
+
+    fn handle_pointer_up(
+        &mut self,
+        event: &ViewportInputEvent,
+        button: MouseButton,
+        _modifiers: Modifiers,
+    ) -> bool {
+        let Some(interaction) = self.interaction.as_ref() else {
+            return false;
+        };
+
+        if interaction.window_target() != (event.window, event.target) {
+            return false;
+        }
+
+        let end = match interaction {
+            ViewportInteraction::MarqueeSelect(_) => button == MouseButton::Left,
+            ViewportInteraction::PanOrbit(m) => button == m.button,
+            ViewportInteraction::TranslateGizmo(_) => button == MouseButton::Left,
+            ViewportInteraction::RotateGizmo(_) => button == MouseButton::Left,
+        };
+        if !end {
+            return false;
+        }
+
+        self.interaction = None;
+        true
+    }
 }
