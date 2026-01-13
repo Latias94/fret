@@ -145,6 +145,85 @@ fn web_find_by_class_contains<'a>(root: &'a WebNode, needle: &str) -> Option<&'a
     })
 }
 
+fn class_has_token(node: &WebNode, token: &str) -> bool {
+    node.class_name
+        .as_deref()
+        .unwrap_or("")
+        .split_whitespace()
+        .any(|t| t == token)
+}
+
+fn class_has_all_tokens(node: &WebNode, tokens: &[&str]) -> bool {
+    tokens.iter().all(|t| class_has_token(node, t))
+}
+
+fn web_find_by_class_tokens<'a>(root: &'a WebNode, tokens: &[&str]) -> Option<&'a WebNode> {
+    find_first(root, &|n| class_has_all_tokens(n, tokens))
+}
+
+fn web_collect_all<'a>(node: &'a WebNode, out: &mut Vec<&'a WebNode>) {
+    out.push(node);
+    for child in &node.children {
+        web_collect_all(child, out);
+    }
+}
+
+fn web_find_best_by<'a>(
+    root: &'a WebNode,
+    pred: &impl Fn(&'a WebNode) -> bool,
+    score: &impl Fn(&'a WebNode) -> f32,
+) -> Option<&'a WebNode> {
+    let mut all = Vec::new();
+    web_collect_all(root, &mut all);
+
+    let mut best: Option<&WebNode> = None;
+    let mut best_score = f32::INFINITY;
+    let mut best_area = f32::INFINITY;
+    for node in all.into_iter().filter(|n| pred(n)) {
+        let s = score(node);
+        if !s.is_finite() {
+            continue;
+        }
+        let area = node.rect.w * node.rect.h;
+        if s < best_score || (s == best_score && area < best_area) {
+            best = Some(node);
+            best_score = s;
+            best_area = area;
+        }
+    }
+    best
+}
+
+fn rect_contains(outer: WebRect, inner: WebRect) -> bool {
+    let eps = 0.01;
+    inner.x + eps >= outer.x
+        && inner.y + eps >= outer.y
+        && inner.x + inner.w <= outer.x + outer.w + eps
+        && inner.y + inner.h <= outer.y + outer.h + eps
+}
+
+fn web_find_smallest_container<'a>(root: &'a WebNode, nodes: &[&WebNode]) -> Option<&'a WebNode> {
+    if nodes.is_empty() {
+        return None;
+    }
+
+    let mut all = Vec::new();
+    web_collect_all(root, &mut all);
+
+    let mut best: Option<&WebNode> = None;
+    let mut best_area = f32::INFINITY;
+    for candidate in all {
+        if nodes.iter().all(|n| rect_contains(candidate.rect, n.rect)) {
+            let area = candidate.rect.w * candidate.rect.h;
+            if area < best_area {
+                best_area = area;
+                best = Some(candidate);
+            }
+        }
+    }
+    best
+}
+
 fn assert_close_px(label: &str, actual: Px, expected: f32, tol: f32) {
     let delta = (actual.0 - expected).abs();
     assert!(
@@ -818,20 +897,41 @@ fn web_vs_fret_layout_radio_group_demo_row_geometry() {
 fn web_vs_fret_layout_slider_demo_geometry() {
     let web = read_web_golden("slider-demo");
     let theme = web_theme(&web);
-    let web_track = web_find_by_class_contains(
-        &theme.root,
-        "bg-muted relative grow overflow-hidden rounded-full",
-    )
-    .expect("web slider track");
-    let web_range = web_find_by_class_contains(
-        &theme.root,
-        "bg-primary absolute data-[orientation=horizontal]:h-full",
-    )
-    .expect("web slider range");
     let web_thumb = find_first(&theme.root, &|n| {
         n.attrs.get("role").is_some_and(|r| r == "slider")
     })
     .expect("web slider thumb");
+
+    let thumb_center_y = web_thumb.rect.y + web_thumb.rect.h * 0.5;
+    let web_track = web_find_best_by(
+        &theme.root,
+        &|n| {
+            n.tag == "span"
+                && n.attrs
+                    .get("data-orientation")
+                    .is_some_and(|v| v == "horizontal")
+                && class_has_token(n, "bg-muted")
+                && class_has_token(n, "rounded-full")
+                && (n.rect.h - 6.0).abs() <= 0.1
+        },
+        &|n| ((n.rect.y + n.rect.h * 0.5) - thumb_center_y).abs(),
+    )
+    .expect("web slider track");
+
+    let web_range = web_find_best_by(
+        &theme.root,
+        &|n| {
+            n.tag == "span"
+                && n.attrs
+                    .get("data-orientation")
+                    .is_some_and(|v| v == "horizontal")
+                && class_has_token(n, "bg-primary")
+                && class_has_token(n, "absolute")
+                && (n.rect.h - 6.0).abs() <= 0.1
+        },
+        &|n| ((n.rect.y + n.rect.h * 0.5) - thumb_center_y).abs(),
+    )
+    .expect("web slider range");
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -1245,18 +1345,32 @@ fn web_vs_fret_layout_avatar_demo_geometry() {
     let web = read_web_golden("avatar-demo");
     let theme = web_theme(&web);
 
-    let web_avatar_round = web_find_by_class_contains(
+    let web_avatar_round = web_find_by_class_tokens(
         &theme.root,
-        "relative flex size-8 shrink-0 overflow-hidden rounded-full",
+        &[
+            "relative",
+            "flex",
+            "size-8",
+            "shrink-0",
+            "overflow-hidden",
+            "rounded-full",
+        ],
     )
     .expect("web avatar round");
-    let web_avatar_rounded = web_find_by_class_contains(
+    let web_avatar_rounded = web_find_by_class_tokens(
         &theme.root,
-        "relative flex size-8 shrink-0 overflow-hidden rounded-lg",
+        &[
+            "relative",
+            "flex",
+            "size-8",
+            "shrink-0",
+            "overflow-hidden",
+            "rounded-lg",
+        ],
     )
     .expect("web avatar rounded");
     let web_group =
-        web_find_by_class_contains(&theme.root, "flex -space-x-2").expect("web avatar group");
+        web_find_by_class_tokens(&theme.root, &["flex", "-space-x-2"]).expect("web avatar group");
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -1491,14 +1605,28 @@ fn web_vs_fret_layout_empty_avatar_geometry() {
     let web = read_web_golden("empty-avatar");
     let theme = web_theme(&web);
 
-    let web_avatar = web_find_by_class_contains(
+    let web_avatar = web_find_by_class_tokens(
         &theme.root,
-        "relative flex shrink-0 overflow-hidden rounded-full size-12",
+        &[
+            "relative",
+            "flex",
+            "shrink-0",
+            "overflow-hidden",
+            "rounded-full",
+            "size-12",
+        ],
     )
     .expect("web empty avatar root");
-    let web_fallback = web_find_by_class_contains(
+    let web_fallback = web_find_by_class_tokens(
         &theme.root,
-        "bg-muted flex size-full items-center justify-center rounded-full",
+        &[
+            "bg-muted",
+            "flex",
+            "size-full",
+            "items-center",
+            "justify-center",
+            "rounded-full",
+        ],
     )
     .expect("web empty avatar fallback");
 
@@ -1580,11 +1708,18 @@ fn web_vs_fret_layout_empty_avatar_group_geometry() {
     let web = read_web_golden("empty-avatar-group");
     let theme = web_theme(&web);
 
-    let web_group =
-        web_find_by_class_contains(&theme.root, "flex -space-x-2").expect("web empty avatar group");
-    let web_item = web_find_by_class_contains(
+    let web_group = web_find_by_class_tokens(&theme.root, &["flex", "-space-x-2"])
+        .expect("web empty avatar group");
+    let web_item = web_find_by_class_tokens(
         &theme.root,
-        "relative flex size-8 shrink-0 overflow-hidden rounded-full",
+        &[
+            "relative",
+            "flex",
+            "size-8",
+            "shrink-0",
+            "overflow-hidden",
+            "rounded-full",
+        ],
     )
     .expect("web empty avatar group item");
 
@@ -1708,16 +1843,30 @@ fn web_vs_fret_layout_item_avatar_geometry() {
     let web = read_web_golden("item-avatar");
     let theme = web_theme(&web);
 
-    let web_item_avatar = web_find_by_class_contains(
+    let web_item_avatar = web_find_by_class_tokens(
         &theme.root,
-        "relative flex shrink-0 overflow-hidden rounded-full size-10",
+        &[
+            "relative",
+            "flex",
+            "shrink-0",
+            "overflow-hidden",
+            "rounded-full",
+            "size-10",
+        ],
     )
     .expect("web item avatar root");
-    let web_group =
-        web_find_by_class_contains(&theme.root, "flex -space-x-2").expect("web item avatar group");
-    let web_group_item = web_find_by_class_contains(
+    let web_group = web_find_by_class_tokens(&theme.root, &["flex", "-space-x-2"])
+        .expect("web item avatar group");
+    let web_group_item = web_find_by_class_tokens(
         &theme.root,
-        "relative flex size-8 shrink-0 overflow-hidden rounded-full",
+        &[
+            "relative",
+            "flex",
+            "size-8",
+            "shrink-0",
+            "overflow-hidden",
+            "rounded-full",
+        ],
     )
     .expect("web item avatar group item");
 
@@ -1893,9 +2042,15 @@ fn web_vs_fret_layout_item_avatar_geometry() {
 fn web_vs_fret_layout_tabs_demo_tab_list_height() {
     let web = read_web_golden("tabs-demo");
     let theme = web_theme(&web);
-    let web_tab_list = web_find_by_class_contains(
+    let web_tab_list = web_find_by_class_tokens(
         &theme.root,
-        "bg-muted text-muted-foreground inline-flex h-9 w-fit",
+        &[
+            "bg-muted",
+            "text-muted-foreground",
+            "inline-flex",
+            "h-9",
+            "w-fit",
+        ],
     )
     .expect("web tab list");
 
@@ -2012,8 +2167,11 @@ fn web_vs_fret_layout_tabs_demo_panel_gap() {
 fn web_vs_fret_layout_scroll_area_demo_root_size() {
     let web = read_web_golden("scroll-area-demo");
     let theme = web_theme(&web);
-    let web_root = web_find_by_class_contains(&theme.root, "relative h-72 w-48 rounded-md border")
-        .expect("web scroll area root");
+    let web_root = web_find_by_class_tokens(
+        &theme.root,
+        &["relative", "h-72", "w-48", "rounded-md", "border"],
+    )
+    .expect("web scroll area root");
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -2067,7 +2225,7 @@ fn web_vs_fret_layout_select_scrollable_trigger_size() {
     let web = read_web_golden("select-scrollable");
     let theme = web_theme(&web);
     let web_trigger =
-        web_find_by_class_contains(&theme.root, "w-[280px]").expect("web select trigger");
+        web_find_by_class_tokens(&theme.root, &["w-[280px]"]).expect("web select trigger");
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -2292,7 +2450,7 @@ fn web_vs_fret_layout_input_with_label_geometry() {
 fn web_vs_fret_layout_input_group_dropdown_height() {
     let web = read_web_golden("input-group-dropdown");
     let theme = web_theme(&web);
-    let web_group = web_find_by_class_contains(&theme.root, "group/input-group border-input")
+    let web_group = web_find_by_class_tokens(&theme.root, &["group/input-group", "border-input"])
         .expect("web input group root");
 
     let bounds = Rect::new(
@@ -2379,9 +2537,15 @@ fn web_vs_fret_layout_input_group_dropdown_height() {
 fn web_vs_fret_layout_card_with_form_width() {
     let web = read_web_golden("card-with-form");
     let theme = web_theme(&web);
-    let web_card = web_find_by_class_contains(
+    let web_card = web_find_by_class_tokens(
         &theme.root,
-        "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm w-[350px]",
+        &[
+            "bg-card",
+            "text-card-foreground",
+            "rounded-xl",
+            "border",
+            "w-[350px]",
+        ],
     )
     .expect("web card root");
 
@@ -2430,7 +2594,6 @@ fn web_vs_fret_layout_field_input_geometry() {
     let web = read_web_golden("field-input");
     let theme = web_theme(&web);
 
-    let web_root = web_find_by_class_contains(&theme.root, "w-full max-w-md").expect("web root");
     let web_username_label =
         web_find_by_tag_and_text(&theme.root, "label", "Username").expect("web username label");
     let web_password_label =
@@ -2464,6 +2627,12 @@ fn web_vs_fret_layout_field_input_geometry() {
     .expect("web username desc");
     let web_password_desc = web_find_by_tag_and_text(&theme.root, "p", "Must be at least 8")
         .expect("web password desc");
+
+    let web_root = web_find_smallest_container(
+        &theme.root,
+        &[web_username_label, web_password_desc, web_password_input],
+    )
+    .expect("web root container");
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -2712,9 +2881,11 @@ fn web_vs_fret_layout_field_checkbox_geometry() {
     let web = read_web_golden("field-checkbox");
     let theme = web_theme(&web);
 
-    let web_root = web_find_by_class_contains(&theme.root, "w-full max-w-md").expect("web root");
-    let web_outer_group = web_find_by_class_contains(&theme.root, "flex w-full flex-col gap-7")
-        .expect("web outer group");
+    let web_root =
+        web_find_by_class_tokens(&theme.root, &["w-full", "max-w-md"]).expect("web root");
+    let web_outer_group =
+        web_find_by_class_tokens(&theme.root, &["flex", "w-full", "flex-col", "gap-7"])
+            .expect("web outer group");
     let web_row_1 = find_first(&theme.root, &|n| {
         n.attrs.get("role").is_some_and(|v| v == "group")
             && n.attrs
@@ -2971,7 +3142,8 @@ fn web_vs_fret_layout_field_switch_geometry() {
     let web = read_web_golden("field-switch");
     let theme = web_theme(&web);
 
-    let web_root = web_find_by_class_contains(&theme.root, "w-full max-w-md").expect("web root");
+    let web_root =
+        web_find_by_class_tokens(&theme.root, &["w-full", "max-w-md"]).expect("web root");
     let web_switch = find_first(&theme.root, &|n| {
         n.tag == "button"
             && n.attrs.get("role").is_some_and(|v| v == "switch")
@@ -3089,7 +3261,8 @@ fn web_vs_fret_layout_field_select_geometry() {
     let web = read_web_golden("field-select");
     let theme = web_theme(&web);
 
-    let web_root = web_find_by_class_contains(&theme.root, "w-full max-w-md").expect("web root");
+    let web_root =
+        web_find_by_class_tokens(&theme.root, &["w-full", "max-w-md"]).expect("web root");
     let web_label =
         web_find_by_tag_and_text(&theme.root, "label", "Department").expect("web label");
     let web_trigger = find_first(&theme.root, &|n| {
@@ -3242,7 +3415,8 @@ fn web_vs_fret_layout_field_radio_geometry() {
     let web = read_web_golden("field-radio");
     let theme = web_theme(&web);
 
-    let web_root = web_find_by_class_contains(&theme.root, "w-full max-w-md").expect("web root");
+    let web_root =
+        web_find_by_class_tokens(&theme.root, &["w-full", "max-w-md"]).expect("web root");
     let web_label =
         web_find_by_tag_and_text(&theme.root, "label", "Subscription Plan").expect("web label");
     let web_desc =
@@ -3383,7 +3557,8 @@ fn web_vs_fret_layout_field_textarea_geometry() {
     let web = read_web_golden("field-textarea");
     let theme = web_theme(&web);
 
-    let web_root = web_find_by_class_contains(&theme.root, "w-full max-w-md").expect("web root");
+    let web_root =
+        web_find_by_class_tokens(&theme.root, &["w-full", "max-w-md"]).expect("web root");
     let web_label = web_find_by_tag_and_text(&theme.root, "label", "Feedback").expect("web label");
     let web_textarea = find_first(&theme.root, &|n| n.tag == "textarea").expect("web textarea");
     let web_desc =
@@ -3525,7 +3700,8 @@ fn web_vs_fret_layout_field_group_geometry() {
     let web = read_web_golden("field-group");
     let theme = web_theme(&web);
 
-    let web_root = web_find_by_class_contains(&theme.root, "w-full max-w-md").expect("web root");
+    let web_root =
+        web_find_by_class_tokens(&theme.root, &["w-full", "max-w-md"]).expect("web root");
     let web_responses_label =
         web_find_by_tag_and_text(&theme.root, "label", "Responses").expect("web responses label");
     let web_responses_desc =
@@ -3836,8 +4012,8 @@ fn web_vs_fret_layout_field_fieldset_geometry() {
     let web = read_web_golden("field-fieldset");
     let theme = web_theme(&web);
 
-    let web_root =
-        web_find_by_class_contains(&theme.root, "w-full max-w-md space-y-6").expect("web root");
+    let web_root = web_find_by_class_tokens(&theme.root, &["w-full", "max-w-md", "space-y-6"])
+        .expect("web root");
     let web_legend =
         web_find_by_tag_and_text(&theme.root, "legend", "Address Information").expect("web legend");
     let web_desc = web_find_by_tag_and_text(&theme.root, "p", "We need your address")
@@ -4137,7 +4313,8 @@ fn web_vs_fret_layout_field_choice_card_geometry() {
     let web = read_web_golden("field-choice-card");
     let theme = web_theme(&web);
 
-    let web_root = web_find_by_class_contains(&theme.root, "w-full max-w-md").expect("web root");
+    let web_root =
+        web_find_by_class_tokens(&theme.root, &["w-full", "max-w-md"]).expect("web root");
 
     let web_radio_group = find_first(&theme.root, &|n| {
         n.tag == "div"
