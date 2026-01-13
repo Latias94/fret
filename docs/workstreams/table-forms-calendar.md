@@ -93,7 +93,7 @@ As of the initial audit:
   - `DataTable` (first pass) exists at `ecosystem/fret-ui-shadcn/src/data_table.rs`.
     - It provides: fixed header + vertical virtualization with a fixed row height.
     - It explicitly does **not** target TanStack parity (matches ADR 0101’s “first pass” note).
-  - `DataTableTanstack` exists at `ecosystem/fret-ui-shadcn/src/data_table_tanstack.rs` (feature: `fret-ui-shadcn/tanstack-table`).
+  - `DataTableTanstack` exists at `ecosystem/fret-ui-shadcn/src/data_table_tanstack.rs` (no feature gate; `fret-ui-shadcn/tanstack-table` is now a no-op compatibility alias).
   - `DataGrid` prototype exists at `ecosystem/fret-ui-shadcn/src/data_grid.rs`.
     - It explores 2D virtualization (rows + columns) and custom scrollbars.
   - `DataTable` and `DataGrid` used to be behind the `datagrid` crate feature; the gate has been removed because it had no heavy deps.
@@ -129,7 +129,7 @@ As of the initial audit:
 
 - [x] Implement `DataTable` composition in `ecosystem/fret-ui-shadcn`.
 - [x] Remove the `datagrid` feature gate (no heavy deps).
-- [x] Add `DataTableTanstack` behind `fret-ui-shadcn/tanstack-table`.
+- [x] Add `DataTableTanstack` (ungated).
 - [ ] Add a demo page in `apps/fret-examples` to validate interaction outcomes.
 
 ### M3 — Forms (headless + shadcn wrappers)

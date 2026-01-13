@@ -26,7 +26,6 @@ pub mod context_menu;
 pub mod data_grid;
 pub mod data_grid_canvas;
 pub mod data_table;
-#[cfg(feature = "tanstack-table")]
 pub mod data_table_tanstack;
 pub mod dialog;
 pub mod drawer;
@@ -111,7 +110,6 @@ pub use data_table::{
     DataTable, DataTableColumnOption, DataTableGlobalFilterInput, DataTableRowState,
     DataTableViewOptions,
 };
-#[cfg(feature = "tanstack-table")]
 pub use data_table_tanstack::DataTableTanstack;
 pub use dialog::{
     Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
