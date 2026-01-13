@@ -244,6 +244,75 @@ impl MarksStage {
             }
             let filter_mode = zoom_state.filter_mode;
 
+            // Multi-dimensional `weakFilter` (v1 subset): request an indices view when both X and Y
+            // dataZoom are `WeakFilter` and the Y window is active. This is correctness-critical
+            // for the subset because X-only range slicing cannot represent weakFilter semantics.
+            if filter_mode == crate::spec::FilterMode::WeakFilter {
+                let y_filter_mode = model
+                    .data_zoom_y_by_axis
+                    .get(&series.y_axis)
+                    .and_then(|id| model.data_zoom_y.get(id))
+                    .map(|z| z.filter_mode)
+                    .unwrap_or(crate::spec::FilterMode::None);
+
+                const MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN: usize = 200_000;
+                if y_filter_mode == crate::spec::FilterMode::WeakFilter
+                    && state.data_window_y.get(&series.y_axis).is_some()
+                    && series.stack.is_none()
+                    && matches!(
+                        series.kind,
+                        crate::spec::SeriesKind::Scatter
+                            | crate::spec::SeriesKind::Line
+                            | crate::spec::SeriesKind::Area
+                    )
+                {
+                    let Some(series_view) = view.series_view(*series_id) else {
+                        continue;
+                    };
+                    let Some(dataset_view) = view.dataset_view(series.dataset) else {
+                        continue;
+                    };
+
+                    let base_range = dataset_view.row_range;
+                    let base_len = base_range.end.saturating_sub(base_range.start);
+                    if base_len <= MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN
+                        && matches!(series_view.selection, RowSelection::All | RowSelection::Range(_))
+                    {
+                        let x_axis_range = model
+                            .axes
+                            .get(&series.x_axis)
+                            .map(|a| a.range)
+                            .unwrap_or_default();
+                        let y_axis_range = model
+                            .axes
+                            .get(&series.y_axis)
+                            .map(|a| a.range)
+                            .unwrap_or_default();
+
+                        let x_filter = crate::engine::window_policy::axis_filter_1d(
+                            x_axis_range,
+                            zoom_state.window,
+                            crate::spec::FilterMode::WeakFilter,
+                        );
+                        let y_filter = crate::engine::window_policy::axis_filter_1d(
+                            y_axis_range,
+                            state.data_window_y.get(&series.y_axis).copied(),
+                            crate::spec::FilterMode::WeakFilter,
+                        );
+
+                        let _ = data_view.request_xy_weak_filter_for_series(
+                            model,
+                            datasets,
+                            view,
+                            *series_id,
+                            base_range,
+                            x_filter,
+                            y_filter,
+                        );
+                    }
+                }
+            }
+
             // ADR 1150:
             // - `Filter` / `WeakFilter` may use indices views as an optimization carrier.
             // - `Empty` must preserve a stable row/index space (avoid indices-backed selections).

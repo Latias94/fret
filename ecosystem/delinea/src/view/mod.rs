@@ -8,77 +8,6 @@ use crate::transform::{RowRange, RowSelection, SeriesXPolicy, data_zoom_x_node, 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-fn row_selection_for_xy_weak_filter(
-    x_values: &[f64],
-    y_values: &[f64],
-    base_range: RowRange,
-    x_filter: crate::engine::window_policy::AxisFilter1D,
-    y_filter: crate::engine::window_policy::AxisFilter1D,
-    max_view_len: usize,
-) -> Option<RowSelection> {
-    let mut base_range = base_range;
-    let len = x_values.len().min(y_values.len());
-    base_range.clamp_to_len(len);
-    if base_range.is_empty() {
-        return Some(RowSelection::Indices(std::sync::Arc::from([])));
-    }
-
-    let view_len = base_range.end.saturating_sub(base_range.start);
-    if view_len > max_view_len {
-        return None;
-    }
-
-    #[derive(Clone, Copy, PartialEq, Eq)]
-    enum Side {
-        Below,
-        Inside,
-        Above,
-    }
-
-    fn side(filter: crate::engine::window_policy::AxisFilter1D, v: f64) -> Side {
-        if let Some(min) = filter.min
-            && v < min
-        {
-            return Side::Below;
-        }
-        if let Some(max) = filter.max
-            && v > max
-        {
-            return Side::Above;
-        }
-        Side::Inside
-    }
-
-    let mut kept: Vec<u32> = Vec::new();
-    kept.reserve(view_len.min(4096));
-
-    let mut kept_count = 0usize;
-    for raw in base_range.start..base_range.end {
-        let xi = x_values.get(raw).copied().unwrap_or(f64::NAN);
-        let yi = y_values.get(raw).copied().unwrap_or(f64::NAN);
-        if !xi.is_finite() || !yi.is_finite() {
-            continue;
-        }
-
-        // ECharts `weakFilter`: filter only if all relevant dimensions are out of the window
-        // on the same side (all below or all above). For XY, that means dropping only:
-        // - (x below, y below)
-        // - (x above, y above)
-        let sx = side(x_filter, xi);
-        let sy = side(y_filter, yi);
-        let keep = !matches!((sx, sy), (Side::Below, Side::Below) | (Side::Above, Side::Above));
-        if keep {
-            kept.push(raw.min(u32::MAX as usize) as u32);
-            kept_count += 1;
-        }
-    }
-
-    if kept_count == view_len {
-        return None;
-    }
-    Some(RowSelection::Indices(kept.into()))
-}
-
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct DatasetView {
@@ -195,65 +124,59 @@ impl ViewState {
             let mut x_window = x_node.apply(x, base_range);
 
             let mut selection = x_window.selection;
-            if series.stack.is_none()
+
+            let y_filter_mode = model
+                .data_zoom_y_by_axis
+                .get(&series.y_axis)
+                .and_then(|id| model.data_zoom_y.get(id))
+                .map(|z| z.filter_mode)
+                .unwrap_or(FilterMode::None);
+
+            const MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN: usize = 200_000;
+            let xy_weak_filter_active = series.stack.is_none()
                 && matches!(
                     series.kind,
                     crate::spec::SeriesKind::Scatter
                         | crate::spec::SeriesKind::Line
                         | crate::spec::SeriesKind::Area
                 )
+                && x_filter_mode == FilterMode::WeakFilter
+                && y_filter_mode == FilterMode::WeakFilter
+                && x_node.window().is_some()
+                && state.data_window_y.get(&series.y_axis).is_some()
+                && base_range
+                    .end
+                    .saturating_sub(base_range.start)
+                    <= MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN;
+
+            if xy_weak_filter_active {
+                selection = RowSelection::Range(base_range);
+                x_window.x_policy.filter = Default::default();
+            } else if series.stack.is_none()
+                && matches!(
+                    series.kind,
+                    crate::spec::SeriesKind::Scatter
+                        | crate::spec::SeriesKind::Line
+                        | crate::spec::SeriesKind::Area
+                )
+                && y_filter_mode != FilterMode::None
                 && matches!(
                     selection,
                     RowSelection::All | RowSelection::Range(_) | RowSelection::Indices(_)
                 )
             {
-                let y_filter_mode = model
-                    .data_zoom_y_by_axis
-                    .get(&series.y_axis)
-                    .and_then(|id| model.data_zoom_y.get(id))
-                    .map(|z| z.filter_mode)
-                    .unwrap_or(FilterMode::None);
-                if y_filter_mode != FilterMode::None {
-                    if let Some(y_col) = dataset.fields.get(&series.encode.y).copied()
-                        && let Some(y) = table.column_f64(y_col)
-                    {
-                        let y_axis_range = model
-                            .axes
-                            .get(&series.y_axis)
-                            .map(|a| a.range)
-                            .unwrap_or_default();
-                        let node = data_zoom_y_node(model, state, series.y_axis, y_axis_range);
-                        const MAX_VIEW_LEN: usize = 200_000;
-
-                        if x_filter_mode == FilterMode::WeakFilter
-                            && y_filter_mode == FilterMode::WeakFilter
-                        {
-                            let x_filter = x_node.x_filter();
-                            let y_filter = node.y_filter();
-                            let multi_active = (x_filter.min.is_some() || x_filter.max.is_some())
-                                && (y_filter.min.is_some() || y_filter.max.is_some());
-                            if multi_active {
-                                if let Some(next) = row_selection_for_xy_weak_filter(
-                                    x,
-                                    y,
-                                    base_range,
-                                    x_filter,
-                                    y_filter,
-                                    MAX_VIEW_LEN,
-                                ) {
-                                    selection = next;
-                                    x_window.x_policy.filter = Default::default();
-                                }
-                            } else if let Some(next) =
-                                node.apply_y_filter_indices(y, &selection, MAX_VIEW_LEN)
-                            {
-                                selection = next;
-                            }
-                        } else if let Some(next) =
-                            node.apply_y_filter_indices(y, &selection, MAX_VIEW_LEN)
-                        {
-                            selection = next;
-                        }
+                if let Some(y_col) = dataset.fields.get(&series.encode.y).copied()
+                    && let Some(y) = table.column_f64(y_col)
+                {
+                    let y_axis_range = model
+                        .axes
+                        .get(&series.y_axis)
+                        .map(|a| a.range)
+                        .unwrap_or_default();
+                    let node = data_zoom_y_node(model, state, series.y_axis, y_axis_range);
+                    const MAX_VIEW_LEN: usize = 200_000;
+                    if let Some(next) = node.apply_y_filter_indices(y, &selection, MAX_VIEW_LEN) {
+                        selection = next;
                     }
                 }
             }

@@ -31,6 +31,16 @@ pub enum DataViewKind {
         min_bits: u64,
         max_bits: u64,
     },
+    XYWeakFilter {
+        x_col: usize,
+        y_col: usize,
+        start: u32,
+        end: u32,
+        x_min_bits: u64,
+        x_max_bits: u64,
+        y_min_bits: u64,
+        y_max_bits: u64,
+    },
 }
 
 impl DataViewKey {
@@ -48,6 +58,29 @@ impl DataViewKey {
                 end: range.end.min(u32::MAX as usize) as u32,
                 min_bits: filter.min.map(|v| v.to_bits()).unwrap_or(u64::MAX),
                 max_bits: filter.max.map(|v| v.to_bits()).unwrap_or(u64::MAX),
+            },
+        }
+    }
+
+    pub fn xy_weak_filter(
+        dataset: DatasetId,
+        x_col: usize,
+        y_col: usize,
+        range: RowRange,
+        x_filter: AxisFilter1D,
+        y_filter: AxisFilter1D,
+    ) -> Self {
+        Self {
+            dataset,
+            kind: DataViewKind::XYWeakFilter {
+                x_col,
+                y_col,
+                start: range.start.min(u32::MAX as usize) as u32,
+                end: range.end.min(u32::MAX as usize) as u32,
+                x_min_bits: x_filter.min.map(|v| v.to_bits()).unwrap_or(u64::MAX),
+                x_max_bits: x_filter.max.map(|v| v.to_bits()).unwrap_or(u64::MAX),
+                y_min_bits: y_filter.min.map(|v| v.to_bits()).unwrap_or(u64::MAX),
+                y_max_bits: y_filter.max.map(|v| v.to_bits()).unwrap_or(u64::MAX),
             },
         }
     }
@@ -154,6 +187,79 @@ impl DataViewStage {
         ))
     }
 
+    pub fn request_xy_weak_filter_for_series(
+        &mut self,
+        model: &ChartModel,
+        datasets: &DatasetStore,
+        view: &ViewState,
+        series_id: crate::ids::SeriesId,
+        selection_range: RowRange,
+        x_filter: AxisFilter1D,
+        y_filter: AxisFilter1D,
+    ) -> bool {
+        let Some(series) = model.series.get(&series_id) else {
+            return false;
+        };
+        if !series.visible {
+            return false;
+        }
+
+        if series.stack.is_some() {
+            return false;
+        }
+        if !matches!(
+            series.kind,
+            crate::spec::SeriesKind::Scatter | crate::spec::SeriesKind::Line | crate::spec::SeriesKind::Area
+        ) {
+            return false;
+        }
+
+        let Some(series_view) = view.series_view(series_id) else {
+            return false;
+        };
+        if !matches!(series_view.selection, RowSelection::All | RowSelection::Range(_)) {
+            return false;
+        }
+
+        let table = datasets.dataset(series.dataset);
+        let Some(table) = table else {
+            return false;
+        };
+
+        let visible_len = selection_range.end.saturating_sub(selection_range.start);
+        if visible_len == 0 {
+            return false;
+        }
+
+        if (x_filter.min.is_none() && x_filter.max.is_none())
+            || (y_filter.min.is_none() && y_filter.max.is_none())
+        {
+            return false;
+        }
+
+        let Some(dataset) = model.datasets.get(&series.dataset) else {
+            return false;
+        };
+        let Some(x_col) = dataset.fields.get(&series.encode.x).copied() else {
+            return false;
+        };
+        let Some(y_col) = dataset.fields.get(&series.encode.y).copied() else {
+            return false;
+        };
+        if table.column_f64(x_col).is_none() || table.column_f64(y_col).is_none() {
+            return false;
+        }
+
+        self.request(DataViewKey::xy_weak_filter(
+            series.dataset,
+            x_col,
+            y_col,
+            selection_range,
+            x_filter,
+            y_filter,
+        ))
+    }
+
     pub fn prepare_requests(&mut self, datasets: &DatasetStore) {
         // Prune cache entries that are no longer desired, but keep a single best "prefix" entry
         // per requested key so append-only streams can reuse prefix scans when the request end grows.
@@ -174,27 +280,42 @@ impl DataViewStage {
             let Some(table) = table else {
                 continue;
             };
-            let DataViewKind::XFilter { start, end, .. } = key.kind;
 
-            // Append-only optimization: if the request end grew (typical when selection is `All`),
-            // reuse the best available prefix entry and continue scanning from its completion point.
-            let mut seed_indices: Vec<u32> = Vec::new();
-            let mut seed_next = start as usize;
-            if let Some((seed, seed_end_limit)) = self.best_prefix_x_filter_seed(*key) {
-                seed_indices = seed;
-                seed_next = seed_end_limit;
+            match key.kind {
+                DataViewKind::XFilter { start, end, .. } => {
+                    // Append-only optimization: if the request end grew (typical when selection is `All`),
+                    // reuse the best available prefix entry and continue scanning from its completion point.
+                    let mut seed_indices: Vec<u32> = Vec::new();
+                    let mut seed_next = start as usize;
+                    if let Some((seed, seed_end_limit)) = self.best_prefix_x_filter_seed(*key) {
+                        seed_indices = seed;
+                        seed_next = seed_end_limit;
+                    }
+
+                    self.cache.insert(
+                        *key,
+                        DataViewEntry::Building {
+                            data_rev: table.revision,
+                            row_count: table.row_count,
+                            next: seed_next,
+                            end: end as usize,
+                            indices: seed_indices,
+                        },
+                    );
+                }
+                DataViewKind::XYWeakFilter { start, end, .. } => {
+                    self.cache.insert(
+                        *key,
+                        DataViewEntry::Building {
+                            data_rev: table.revision,
+                            row_count: table.row_count,
+                            next: start as usize,
+                            end: end as usize,
+                            indices: Vec::new(),
+                        },
+                    );
+                }
             }
-
-            self.cache.insert(
-                *key,
-                DataViewEntry::Building {
-                    data_rev: table.revision,
-                    row_count: table.row_count,
-                    next: seed_next,
-                    end: end as usize,
-                    indices: seed_indices,
-                },
-            );
         }
     }
 
@@ -205,7 +326,10 @@ impl DataViewStage {
             end,
             min_bits,
             max_bits,
-        } = requested.kind;
+        } = requested.kind
+        else {
+            return None;
+        };
 
         let requested_end = end as usize;
         let mut best: Option<(usize, DataViewKey)> = None;
@@ -220,7 +344,10 @@ impl DataViewStage {
                 end: e,
                 min_bits: min_b,
                 max_bits: max_b,
-            } = k.kind;
+            } = k.kind
+            else {
+                continue;
+            };
             if c != x_col || s != start || min_b != min_bits || max_b != max_bits {
                 continue;
             }
@@ -246,7 +373,10 @@ impl DataViewStage {
             end,
             min_bits,
             max_bits,
-        } = requested.kind;
+        } = requested.kind
+        else {
+            return None;
+        };
 
         let requested_end = end as usize;
         let mut best: Option<(usize, Vec<u32>, usize)> = None;
@@ -261,7 +391,10 @@ impl DataViewStage {
                 end: e,
                 min_bits: min_b,
                 max_bits: max_b,
-            } = k.kind;
+            } = k.kind
+            else {
+                continue;
+            };
             if c != x_col || s != start || min_b != min_bits || max_b != max_bits {
                 continue;
             }
@@ -328,7 +461,10 @@ impl DataViewStage {
                         continue;
                     }
 
-                    let DataViewKind::XFilter { start, end, .. } = key.kind;
+                    let (start, end) = match key.kind {
+                        DataViewKind::XFilter { start, end, .. }
+                        | DataViewKind::XYWeakFilter { start, end, .. } => (start, end),
+                    };
                     let requested_end = end as usize;
                     let next_end_limit = requested_end.min(table.row_count);
 
@@ -369,7 +505,10 @@ impl DataViewStage {
                     ..
                 } => {
                     if *r != data_rev {
-                        let DataViewKind::XFilter { start, .. } = key.kind;
+                        let start = match key.kind {
+                            DataViewKind::XFilter { start, .. }
+                            | DataViewKind::XYWeakFilter { start, .. } => start,
+                        };
                         let is_append_only = table.row_count >= *cached_len;
                         let can_resume = is_append_only && *next <= *cached_len;
 
@@ -391,24 +530,6 @@ impl DataViewStage {
                 continue;
             };
 
-            let DataViewKind::XFilter {
-                x_col,
-                min_bits,
-                max_bits,
-                ..
-            } = key.kind;
-
-            let Some(x_values) = table.column_f64(x_col) else {
-                self.cache.remove(&key);
-                self.cursor += 1;
-                continue;
-            };
-
-            let filter = AxisFilter1D {
-                min: (min_bits != u64::MAX).then(|| f64::from_bits(min_bits)),
-                max: (max_bits != u64::MAX).then(|| f64::from_bits(max_bits)),
-            };
-
             let points_budget = budget.take_points(4096) as usize;
             if points_budget == 0 {
                 return false;
@@ -416,37 +537,150 @@ impl DataViewStage {
 
             points_consumed += points_budget;
 
-            let len = x_values.len();
-            let end_limit = (*end).min(len);
-            if *next > end_limit {
-                *next = end_limit;
-            }
-            let chunk_end = (*next + points_budget).min(end_limit);
+            match key.kind {
+                DataViewKind::XFilter {
+                    x_col,
+                    min_bits,
+                    max_bits,
+                    ..
+                } => {
+                    let Some(x_values) = table.column_f64(x_col) else {
+                        self.cache.remove(&key);
+                        self.cursor += 1;
+                        continue;
+                    };
 
-            for i in *next..chunk_end {
-                let xi = x_values.get(i).copied().unwrap_or(f64::NAN);
-                if !xi.is_finite() {
-                    continue;
-                }
-                if !filter.contains(xi) {
-                    continue;
-                }
-                if i <= u32::MAX as usize {
-                    indices.push(i as u32);
-                }
-            }
+                    let filter = AxisFilter1D {
+                        min: (min_bits != u64::MAX).then(|| f64::from_bits(min_bits)),
+                        max: (max_bits != u64::MAX).then(|| f64::from_bits(max_bits)),
+                    };
 
-            *next = chunk_end;
+                    let len = x_values.len();
+                    let end_limit = (*end).min(len);
+                    if *next > end_limit {
+                        *next = end_limit;
+                    }
+                    let chunk_end = (*next + points_budget).min(end_limit);
 
-            if *next >= end_limit {
-                let frozen: Arc<[u32]> = std::mem::take(indices).into();
-                *entry = DataViewEntry::Ready {
-                    data_rev,
-                    row_count: table.row_count,
-                    end_limit,
-                    indices: frozen,
-                };
-                self.cursor += 1;
+                    for i in *next..chunk_end {
+                        let xi = x_values.get(i).copied().unwrap_or(f64::NAN);
+                        if !xi.is_finite() {
+                            continue;
+                        }
+                        if !filter.contains(xi) {
+                            continue;
+                        }
+                        if i <= u32::MAX as usize {
+                            indices.push(i as u32);
+                        }
+                    }
+
+                    *next = chunk_end;
+
+                    if *next >= end_limit {
+                        let frozen: Arc<[u32]> = std::mem::take(indices).into();
+                        *entry = DataViewEntry::Ready {
+                            data_rev,
+                            row_count: table.row_count,
+                            end_limit,
+                            indices: frozen,
+                        };
+                        self.cursor += 1;
+                    }
+                }
+                DataViewKind::XYWeakFilter {
+                    x_col,
+                    y_col,
+                    x_min_bits,
+                    x_max_bits,
+                    y_min_bits,
+                    y_max_bits,
+                    ..
+                } => {
+                    let Some(x_values) = table.column_f64(x_col) else {
+                        self.cache.remove(&key);
+                        self.cursor += 1;
+                        continue;
+                    };
+                    let Some(y_values) = table.column_f64(y_col) else {
+                        self.cache.remove(&key);
+                        self.cursor += 1;
+                        continue;
+                    };
+
+                    let x_filter = AxisFilter1D {
+                        min: (x_min_bits != u64::MAX).then(|| f64::from_bits(x_min_bits)),
+                        max: (x_max_bits != u64::MAX).then(|| f64::from_bits(x_max_bits)),
+                    };
+                    let y_filter = AxisFilter1D {
+                        min: (y_min_bits != u64::MAX).then(|| f64::from_bits(y_min_bits)),
+                        max: (y_max_bits != u64::MAX).then(|| f64::from_bits(y_max_bits)),
+                    };
+
+                    #[derive(Clone, Copy, PartialEq, Eq)]
+                    enum Side {
+                        Below,
+                        Inside,
+                        Above,
+                    }
+
+                    fn side(filter: AxisFilter1D, v: f64) -> Side {
+                        if let Some(min) = filter.min
+                            && v < min
+                        {
+                            return Side::Below;
+                        }
+                        if let Some(max) = filter.max
+                            && v > max
+                        {
+                            return Side::Above;
+                        }
+                        Side::Inside
+                    }
+
+                    let len = x_values.len().min(y_values.len());
+                    let end_limit = (*end).min(len);
+                    if *next > end_limit {
+                        *next = end_limit;
+                    }
+                    let chunk_end = (*next + points_budget).min(end_limit);
+
+                    for i in *next..chunk_end {
+                        let xi = x_values.get(i).copied().unwrap_or(f64::NAN);
+                        let yi = y_values.get(i).copied().unwrap_or(f64::NAN);
+                        if !xi.is_finite() || !yi.is_finite() {
+                            continue;
+                        }
+
+                        // ECharts `weakFilter` (XY subset): filter only when both dims are
+                        // out-of-window on the same side.
+                        let sx = side(x_filter, xi);
+                        let sy = side(y_filter, yi);
+                        if matches!(
+                            (sx, sy),
+                            (Side::Below, Side::Below) | (Side::Above, Side::Above)
+                        ) {
+                            continue;
+                        }
+
+                        if i <= u32::MAX as usize {
+                            indices.push(i as u32);
+                        }
+                    }
+
+                    *next = chunk_end;
+
+                    if *next >= end_limit {
+                        let frozen: Arc<[u32]> = std::mem::take(indices).into();
+                        *entry = DataViewEntry::Ready {
+                            data_rev,
+                            row_count: table.row_count,
+                            end_limit,
+                            indices: frozen,
+                        };
+                        self.cursor += 1;
+                    }
+                }
             }
 
             if points_consumed >= max_points_per_step {
@@ -466,6 +700,25 @@ impl DataViewStage {
         table_rev: Revision,
     ) -> Option<RowSelection> {
         let key = DataViewKey::x_filter(dataset, x_col, selection_range, filter);
+        match self.cache.get(&key) {
+            Some(DataViewEntry::Ready {
+                data_rev, indices, ..
+            }) if *data_rev == table_rev => Some(RowSelection::Indices(indices.clone())),
+            _ => None,
+        }
+    }
+
+    pub fn selection_for_xy_weak_filter(
+        &self,
+        dataset: DatasetId,
+        x_col: usize,
+        y_col: usize,
+        selection_range: RowRange,
+        x_filter: AxisFilter1D,
+        y_filter: AxisFilter1D,
+        table_rev: Revision,
+    ) -> Option<RowSelection> {
+        let key = DataViewKey::xy_weak_filter(dataset, x_col, y_col, selection_range, x_filter, y_filter);
         match self.cache.get(&key) {
             Some(DataViewEntry::Ready {
                 data_rev, indices, ..
@@ -512,7 +765,9 @@ mod tests {
         let mut stage = DataViewStage::default();
         stage.requested.push(key);
         stage.requested_set.insert(key);
-        let DataViewKind::XFilter { start, end, .. } = key.kind;
+        let DataViewKind::XFilter { start, end, .. } = key.kind else {
+            panic!("expected x_filter key");
+        };
         stage.cache.insert(
             key,
             DataViewEntry::Building {

@@ -993,6 +993,148 @@ impl ChartEngine {
         self.data_view_stage.prepare_requests(&self.datasets);
         let selection_done = self.data_view_stage.step(&self.datasets, &mut budget);
 
+        // Multi-dimensional `weakFilter` (v1 subset) is materialized as an indices-backed selection.
+        // When the cached selection becomes available, patch the view in-place so all downstream
+        // consumers (marks, hit testing, tooltips) observe the correct row participation contract.
+        let mut xy_weak_filter_pending = false;
+        let mut xy_weak_filter_applied = false;
+        const MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN: usize = 200_000;
+
+        for series_id in &self.model.series_order {
+            let Some(series) = self.model.series.get(series_id) else {
+                continue;
+            };
+            if !series.visible || series.stack.is_some() {
+                continue;
+            }
+            if !matches!(
+                series.kind,
+                crate::spec::SeriesKind::Scatter
+                    | crate::spec::SeriesKind::Line
+                    | crate::spec::SeriesKind::Area
+            ) {
+                continue;
+            }
+
+            let Some(zoom_state) = self.state.data_zoom_x.get(&series.x_axis) else {
+                continue;
+            };
+            if zoom_state.filter_mode != crate::spec::FilterMode::WeakFilter || zoom_state.window.is_none() {
+                continue;
+            }
+
+            let y_filter_mode = self
+                .model
+                .data_zoom_y_by_axis
+                .get(&series.y_axis)
+                .and_then(|id| self.model.data_zoom_y.get(id))
+                .map(|z| z.filter_mode)
+                .unwrap_or(crate::spec::FilterMode::None);
+            if y_filter_mode != crate::spec::FilterMode::WeakFilter {
+                continue;
+            }
+
+            let Some(y_window) = self.state.data_window_y.get(&series.y_axis).copied() else {
+                continue;
+            };
+
+            let Some(series_view_index) = self.view.series.iter().position(|v| v.series == *series_id) else {
+                continue;
+            };
+            if !matches!(
+                self.view.series[series_view_index].selection,
+                RowSelection::All | RowSelection::Range(_) | RowSelection::Indices(_)
+            ) {
+                continue;
+            }
+
+            let Some(table) = self.datasets.dataset(series.dataset) else {
+                continue;
+            };
+            let Some(dataset) = self.model.datasets.get(&series.dataset) else {
+                continue;
+            };
+            let Some(x_col) = dataset.fields.get(&series.encode.x).copied() else {
+                continue;
+            };
+            let Some(y_col) = dataset.fields.get(&series.encode.y).copied() else {
+                continue;
+            };
+
+            let base_range = self
+                .view
+                .dataset_view(series.dataset)
+                .map(|v| v.row_range)
+                .unwrap_or(crate::transform::RowRange {
+                    start: 0,
+                    end: table.row_count,
+                });
+            let base_len = base_range.end.saturating_sub(base_range.start);
+            if base_len > MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN {
+                continue;
+            }
+
+            let x_axis_range = self
+                .model
+                .axes
+                .get(&series.x_axis)
+                .map(|a| a.range)
+                .unwrap_or_default();
+            let y_axis_range = self
+                .model
+                .axes
+                .get(&series.y_axis)
+                .map(|a| a.range)
+                .unwrap_or_default();
+
+            let x_filter = crate::engine::window_policy::axis_filter_1d(
+                x_axis_range,
+                zoom_state.window,
+                crate::spec::FilterMode::WeakFilter,
+            );
+            let y_filter = crate::engine::window_policy::axis_filter_1d(
+                y_axis_range,
+                Some(y_window),
+                crate::spec::FilterMode::WeakFilter,
+            );
+            let multi_active = (x_filter.min.is_some() || x_filter.max.is_some())
+                && (y_filter.min.is_some() || y_filter.max.is_some());
+            if !multi_active {
+                continue;
+            }
+
+            let sel = self.data_view_stage.selection_for_xy_weak_filter(
+                series.dataset,
+                x_col,
+                y_col,
+                base_range,
+                x_filter,
+                y_filter,
+                table.revision,
+            );
+
+            if let Some(sel) = sel {
+                let series_view = &mut self.view.series[series_view_index];
+                if series_view.selection != sel {
+                    series_view.selection = sel;
+                    xy_weak_filter_applied = true;
+                }
+                if series_view.x_policy.filter != Default::default() {
+                    series_view.x_policy.filter = Default::default();
+                    xy_weak_filter_applied = true;
+                }
+            } else {
+                xy_weak_filter_pending = true;
+            }
+        }
+
+        if xy_weak_filter_applied {
+            self.view.revision.bump();
+            for series_view in &mut self.view.series {
+                series_view.revision = self.view.revision;
+            }
+        }
+
         self.marks_stage
             .sync_inputs(&self.model, &self.datasets, &self.view);
         let wants_append_rebuild = self.marks_stage.take_append_rebuild();
@@ -1012,20 +1154,24 @@ impl ChartEngine {
         self.stats.stage_marks_runs += 1;
 
         let viewport = self.output.viewport.unwrap();
-        let done = self.marks_stage.step(
-            &self.model,
-            &self.datasets,
-            &self.state,
-            &self.view,
-            &self.data_view_stage,
-            &self.stack_dims_stage,
-            &self.bar_layout_stage,
-            viewport,
-            &mut budget,
-            &mut self.lod_scratch,
-            &mut self.output.marks,
-            &mut self.stats,
-        );
+        let done = if xy_weak_filter_pending {
+            false
+        } else {
+            self.marks_stage.step(
+                &self.model,
+                &self.datasets,
+                &self.state,
+                &self.view,
+                &self.data_view_stage,
+                &self.stack_dims_stage,
+                &self.bar_layout_stage,
+                viewport,
+                &mut budget,
+                &mut self.lod_scratch,
+                &mut self.output.marks,
+                &mut self.stats,
+            )
+        };
 
         self.output
             .axis_windows
@@ -1045,7 +1191,8 @@ impl ChartEngine {
             }
         }
 
-        let unfinished = !done
+        let unfinished = xy_weak_filter_pending
+            || !done
             || !selection_done
             || !stack_dims_done
             || !ordinal_indices_done
