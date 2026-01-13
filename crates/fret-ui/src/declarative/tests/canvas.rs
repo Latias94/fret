@@ -149,3 +149,75 @@ fn canvas_hosts_path_and_releases_on_cleanup() {
         "canvas should release hosted path resources on cleanup"
     );
 }
+
+#[test]
+fn canvas_hosts_svg_and_releases_on_cleanup() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let paint = |p: &mut crate::canvas::CanvasPainter<'_>| {
+        let svg = crate::SvgSource::Static(b"<svg/>");
+        p.svg_mask_icon(
+            3,
+            fret_core::DrawOrder(0),
+            Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0))),
+            &svg,
+            fret_core::SvgFit::Contain,
+            Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 1.0,
+            },
+            1.0,
+        );
+    };
+
+    let mut root: Option<NodeId> = None;
+    for pass in 0..2 {
+        let node = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "canvas-hosts-svg",
+            |cx| vec![cx.canvas(crate::element::CanvasProps::default(), paint)],
+        );
+        root.get_or_insert(node);
+        ui.set_root(node);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        assert!(
+            scene
+                .ops()
+                .iter()
+                .any(|op| matches!(op, SceneOp::SvgMaskIcon { .. }))
+        );
+
+        if pass == 0 {
+            assert_eq!(services.svg_register_calls, 1);
+            assert_eq!(services.svg_unregister_calls, 0);
+        } else {
+            assert_eq!(services.svg_register_calls, 1, "svg should be cached");
+        }
+
+        app.advance_frame();
+    }
+
+    ui.cleanup_subtree(&mut services, root.expect("root"));
+    assert_eq!(
+        services.svg_unregister_calls, 1,
+        "canvas should release hosted svg resources on cleanup"
+    );
+}

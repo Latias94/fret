@@ -2,6 +2,7 @@ use std::any::TypeId;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use fret_core::SvgFit;
 use fret_core::{
     Color, DrawOrder, Point, Px, Rect, RichText, Scene, SceneOp, TextConstraints, TextMetrics,
     TextOverflow, TextStyle, TextWrap,
@@ -11,7 +12,7 @@ use fret_runtime::ModelId;
 
 use crate::Theme;
 use crate::widget::Invalidation;
-use crate::{UiHost, widget::PaintCx};
+use crate::{SvgSource, UiHost, widget::PaintCx};
 
 pub type OnCanvasPaint = Arc<dyn for<'a> Fn(&mut CanvasPainter<'a>) + 'static>;
 
@@ -230,6 +231,58 @@ impl<'a> CanvasPainter<'a> {
             scene,
         )
     }
+
+    pub fn svg_mask_icon(
+        &mut self,
+        key: u64,
+        order: DrawOrder,
+        rect: Rect,
+        svg: &SvgSource,
+        fit: SvgFit,
+        color: Color,
+        opacity: f32,
+    ) {
+        let opacity = opacity.clamp(0.0, 1.0);
+        if opacity <= 0.0 || color.a <= 0.0 {
+            return;
+        }
+
+        let (services, scene) = self.host.services_and_scene();
+        let svg_id = self.cache.svg(services, key, svg);
+        scene.push(SceneOp::SvgMaskIcon {
+            order,
+            rect,
+            svg: svg_id,
+            fit,
+            color,
+            opacity,
+        });
+    }
+
+    pub fn svg_image(
+        &mut self,
+        key: u64,
+        order: DrawOrder,
+        rect: Rect,
+        svg: &SvgSource,
+        fit: SvgFit,
+        opacity: f32,
+    ) {
+        let opacity = opacity.clamp(0.0, 1.0);
+        if opacity <= 0.0 {
+            return;
+        }
+
+        let (services, scene) = self.host.services_and_scene();
+        let svg_id = self.cache.svg(services, key, svg);
+        scene.push(SceneOp::SvgImage {
+            order,
+            rect,
+            svg: svg_id,
+            fit,
+            opacity,
+        });
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -255,12 +308,15 @@ pub(crate) struct CanvasCache {
     text_used: HashSet<CanvasTextCacheKey>,
     path_by_key: HashMap<CanvasPathCacheKey, HostedPathEntry>,
     path_used: HashSet<CanvasPathCacheKey>,
+    svg_by_key: HashMap<CanvasSvgCacheKey, HostedSvgEntry>,
+    svg_used: HashSet<CanvasSvgCacheKey>,
 }
 
 impl CanvasCache {
     pub(crate) fn begin_paint(&mut self) {
         self.text_used.clear();
         self.path_used.clear();
+        self.svg_used.clear();
     }
 
     pub(crate) fn end_paint(&mut self, services: &mut dyn fret_core::UiServices) {
@@ -299,6 +355,24 @@ impl CanvasCache {
                 }
             }
         }
+
+        let mut to_remove: Vec<CanvasSvgCacheKey> = Vec::new();
+        for (&key, entry) in self.svg_by_key.iter() {
+            if self.svg_used.contains(&key) {
+                continue;
+            }
+            if entry.svg.is_some() {
+                to_remove.push(key);
+            }
+        }
+
+        for key in to_remove {
+            if let Some(mut entry) = self.svg_by_key.remove(&key)
+                && let Some(svg) = entry.svg.take()
+            {
+                let _ = services.svg().unregister_svg(svg);
+            }
+        }
     }
 
     pub(crate) fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
@@ -312,8 +386,14 @@ impl CanvasCache {
                 services.path().release(path);
             }
         }
+        for (_, mut entry) in self.svg_by_key.drain() {
+            if let Some(svg) = entry.svg.take() {
+                let _ = services.svg().unregister_svg(svg);
+            }
+        }
         self.text_used.clear();
         self.path_used.clear();
+        self.svg_used.clear();
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -467,6 +547,50 @@ impl CanvasCache {
         });
         metrics
     }
+
+    fn svg(
+        &mut self,
+        services: &mut dyn fret_core::UiServices,
+        key: u64,
+        svg: &SvgSource,
+    ) -> fret_core::SvgId {
+        match svg {
+            SvgSource::Id(id) => *id,
+            SvgSource::Static(bytes) => self.svg_bytes(services, key, SvgBytesKey::Static(*bytes)),
+            SvgSource::Bytes(bytes) => {
+                self.svg_bytes(services, key, SvgBytesKey::Bytes(bytes.clone()))
+            }
+        }
+    }
+
+    fn svg_bytes(
+        &mut self,
+        services: &mut dyn fret_core::UiServices,
+        key: u64,
+        bytes: SvgBytesKey,
+    ) -> fret_core::SvgId {
+        let cache_key = CanvasSvgCacheKey { key };
+        self.svg_used.insert(cache_key);
+
+        let entry = self.svg_by_key.entry(cache_key).or_default();
+        let fingerprint = SvgFingerprint {
+            bytes: bytes.fingerprint(),
+        };
+
+        let needs_prepare = entry.svg.is_none() || entry.fingerprint.as_ref() != Some(&fingerprint);
+        if needs_prepare {
+            let svg_id = match &bytes {
+                SvgBytesKey::Static(bytes) => services.svg().register_svg(bytes),
+                SvgBytesKey::Bytes(bytes) => services.svg().register_svg(bytes),
+            };
+            if let Some(old) = entry.svg.replace(svg_id) {
+                let _ = services.svg().unregister_svg(old);
+            }
+            entry.fingerprint = Some(fingerprint);
+        }
+
+        entry.svg.unwrap_or_default()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -510,6 +634,22 @@ struct HostedPathEntry {
     path: Option<fret_core::PathId>,
     metrics: Option<PathMetrics>,
     fingerprint: Option<HostedPathFingerprint>,
+}
+
+#[derive(Default)]
+struct HostedSvgEntry {
+    svg: Option<fret_core::SvgId>,
+    fingerprint: Option<SvgFingerprint>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct SvgFingerprint {
+    bytes: SvgBytesFingerprint,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct CanvasSvgCacheKey {
+    key: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -577,4 +717,31 @@ fn mix_point(mut state: u64, p: fret_core::Point) -> u64 {
     state = mix_px(state, p.x);
     state = mix_px(state, p.y);
     state
+}
+
+#[derive(Clone)]
+enum SvgBytesKey {
+    Static(&'static [u8]),
+    Bytes(Arc<[u8]>),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SvgBytesFingerprint {
+    Static { ptr: usize, len: usize },
+    Bytes { ptr: usize, len: usize },
+}
+
+impl SvgBytesKey {
+    fn fingerprint(&self) -> SvgBytesFingerprint {
+        match self {
+            SvgBytesKey::Static(bytes) => SvgBytesFingerprint::Static {
+                ptr: bytes.as_ptr() as usize,
+                len: bytes.len(),
+            },
+            SvgBytesKey::Bytes(bytes) => SvgBytesFingerprint::Bytes {
+                ptr: bytes.as_ptr() as usize,
+                len: bytes.len(),
+            },
+        }
+    }
 }

@@ -21,6 +21,8 @@ struct FakeTextService {
     release_calls: usize,
     path_prepare_calls: usize,
     path_release_calls: usize,
+    svg_register_calls: usize,
+    svg_unregister_calls: usize,
 }
 
 impl TextService for FakeTextService {
@@ -66,11 +68,13 @@ impl fret_core::PathService for FakeTextService {
 
 impl fret_core::SvgService for FakeTextService {
     fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+        self.svg_register_calls += 1;
         fret_core::SvgId::default()
     }
 
     fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
-        false
+        self.svg_unregister_calls += 1;
+        true
     }
 }
 
