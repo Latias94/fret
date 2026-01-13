@@ -34,9 +34,10 @@ desktop-first now, wasm/WebGPU later, and a clean split between UI contracts and
 
 ## Platform Capabilities
 
-- Clipboard access is implemented at the runner boundary (not in UI/core):
-  - `arboard` is used by `fret-launch` (desktop glue) to read/write clipboard text,
-  - UI requests clipboard access via `Effect`s (see ADR 0041).
+- Clipboard access is implemented at the platform backend boundary (not in UI/core):
+  - `fret-platform` defines the portable clipboard contract,
+  - `fret-platform-native` uses `arboard` to implement desktop clipboard I/O,
+  - apps/runners drain clipboard effects via `Effect`s (see ADR 0041).
 
 ## Drift Checks
 

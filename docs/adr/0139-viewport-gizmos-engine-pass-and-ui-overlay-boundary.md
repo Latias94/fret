@@ -24,7 +24,8 @@ References:
   `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`
 - Renderer ordering contract: `docs/adr/0002-display-list.md`, `docs/adr/0009-renderer-ordering-and-batching.md`
 - Canvas/interactive surfaces guidance: `docs/adr/0137-canvas-widgets-and-interactive-surfaces.md`
-- 3D gizmo design reference (update/draw split + visuals vocabulary): `repo-ref/transform-gizmo`
+- 3D gizmo design reference (update/draw split + visuals vocabulary): optional `repo-ref/transform-gizmo`
+  (not always present; see `docs/repo-ref.md`).
 - Godot editor viewport hooks (input + draw-over-viewport + explicit overlay update):
   `repo-ref/godot/editor/plugins/editor_plugin.h`
 
@@ -130,7 +131,7 @@ Cons / Costs:
 
 - Ecosystem direction: create `ecosystem/fret-gizmo` as a policy-heavy editor/tool crate (ADR 0027).
   - Core API should separate `update(...)` (interaction/math) from engine-facing draw outputs, similar in spirit
-    to `repo-ref/transform-gizmo`, but without inheriting framework-specific types.
+    to `transform-gizmo` (optional `repo-ref/transform-gizmo` checkout), but without inheriting framework-specific types.
 - Renderer substrate: provide a minimal engine-pass overlay hook in `fret-render` so engines/runners can draw
   depth-tested gizmo geometry inside the viewport render pass without adding new `SceneOp` primitives.
   - `fret_render::viewport_overlay::{ViewportOverlay3dContext, ViewportOverlay3d, run_overlays}`

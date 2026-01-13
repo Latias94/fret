@@ -3,7 +3,7 @@
 This audit compares Fret's `ecosystem/fret-gizmo` against two widely used reference implementations:
 
 - **ImGuizmo** (Dear ImGui overlay gizmo): `repo-ref/ImGuizmo`
-- **transform-gizmo** (Rust gizmo with sub-gizmos): `repo-ref/transform-gizmo`
+- **transform-gizmo** (Rust gizmo with sub-gizmos): optional `repo-ref/transform-gizmo`
 
 Goal: enumerate **feature-level parity** (what users can do + how it feels), mark the **current alignment
 status** per item, and provide an ordered list of **next alignment targets**.
@@ -34,6 +34,9 @@ Key surfaces:
 - Style knobs: per-part colors and line/arrow thickness (`Style`)
 
 ### transform-gizmo
+
+Note: `repo-ref/transform-gizmo` is not guaranteed to be present in all workspaces (see `docs/repo-ref.md`).
+If it is missing locally, clone the upstream into `repo-ref/transform-gizmo` before following the file path anchors below.
 
 - Crate overview: `repo-ref/transform-gizmo/crates/transform-gizmo/src/lib.rs`
 - Configuration and mode taxonomy: `repo-ref/transform-gizmo/crates/transform-gizmo/src/config.rs`

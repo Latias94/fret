@@ -21,7 +21,14 @@ Locked boundary:
 
 - Engine viewport integration hook exists: `WinitAppDriver::record_engine_frame`
   (`apps/fret-examples/src/plot3d_demo.rs` is an end-to-end reference).
-- New crate scaffold: `ecosystem/fret-gizmo` (glam-based math + minimal translate axes skeleton).
+- Gizmo subsystem exists as an ecosystem crate: `ecosystem/fret-gizmo`
+  - built-in transform manipulator (Translate/Rotate/Scale/Universal) with begin/update/commit/cancel phases
+  - view gizmo (`ViewGizmo`) for camera orbit/snaps
+  - pick primitives + policy (`picking.rs`, `GizmoPickPolicy`)
+  - plugin contract + manager (`GizmoPlugin`, `GizmoPluginManager`) and example plugins
+- End-to-end demo exists: `apps/fret-examples/src/gizmo3d_demo.rs`
+  - engine-pass depth-tested rendering via viewport overlay hooks
+  - UI overlay HUD readouts above the viewport surface (ADR 0139 boundary)
 
 ## MVPs
 

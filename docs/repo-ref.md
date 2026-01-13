@@ -3,6 +3,14 @@
 This repository contains local reference checkouts under `repo-ref/` to validate design decisions against proven implementations.
 These directories are **not** build dependencies of Fret; they exist to avoid “reading the wrong upstream code”.
 
+## Important: `repo-ref/` is local state (not committed)
+
+`repo-ref/` is intentionally ignored by git in this repository. That means:
+
+- Fresh clones will not include any upstream checkouts under `repo-ref/`.
+- Many docs (especially `docs/audits/*`) reference file paths under `repo-ref/` as a reading aid.
+- To reproduce those paths locally, use `tools/fetch_repo_refs.ps1` (PowerShell) or clone the refs manually.
+
 ## Pin Policy
 
 - `repo-ref/` is a curated set of upstream sources that we actively reference in ADRs and design reviews.
@@ -22,7 +30,7 @@ When you need to cite or inspect dependency behavior:
 ## Recorded HEADs (Fast-Moving References)
 
 These directories may track `main`/`master`/`trunk`. When you cite behavior from them, also cite the commit SHA.
-As a baseline, this workspace currently has:
+As a baseline, the project tracks the following reference SHAs (local checkouts may include only a subset):
 
 - `repo-ref/aria-practices`: `84b921a0`
 - `repo-ref/cmdk`: `dd2250e`
@@ -46,10 +54,19 @@ As a baseline, this workspace currently has:
 - `repo-ref/makepad`: `b40b9af49`
 - `repo-ref/winit`: `da622006`
 
+### Bootstrap script (recommended)
+
+If you want the two refs most frequently used by goldens + audits:
+
+- `./tools/fetch_repo_refs.ps1` (defaults to `ui` + `primitives`)
+- `./tools/fetch_repo_refs.ps1 -UiOnly`
+- `./tools/fetch_repo_refs.ps1 -PrimitivesOnly`
+
 ## Optional checkouts (not always present)
 
 Some references are useful but are not guaranteed to be present in every workspace checkout:
 
+- transform-gizmo: clone into `repo-ref/transform-gizmo` when needed (used by gizmo ADRs/audits).
 - Vello: clone into `repo-ref/vello` when needed.
 - (Historical) TanStack Virtual: we no longer keep a checkout by default; use `repo-ref/virtualizer` as the primary reference.
 
