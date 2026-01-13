@@ -5,7 +5,7 @@ use crate::engine::ChartState;
 use crate::engine::lod::{
     BoundsAccum, BoundsCursor, DataBounds, LodScratch, MinMaxPerPixelCursor,
     compute_bounds_step_selection, compute_bounds_step_selection_with, finalize_bounds,
-    minmax_per_pixel_finalize, minmax_per_pixel_step_selection,
+    minmax_per_pixel_finalize, minmax_per_pixel_step_segmented_with, minmax_per_pixel_step_selection,
     minmax_per_pixel_step_selection_with,
 };
 use crate::engine::model::ChartModel;
@@ -76,6 +76,9 @@ struct BarBucketBuild {
 pub struct MarksStage {
     series_index: usize,
     cursor: MinMaxPerPixelCursor,
+    segmented_cursor: crate::engine::lod::SegmentedMinMaxPerPixelCursor,
+    segmented_series: Option<SeriesId>,
+    segmented_segment_index: u64,
     bounds_cursor: BoundsCursor,
     bounds_accum: BoundsAccum,
     active_series: Option<SeriesId>,
@@ -256,6 +259,9 @@ impl MarksStage {
     pub fn reset(&mut self) {
         self.series_index = 0;
         self.cursor = MinMaxPerPixelCursor::default();
+        self.segmented_cursor = crate::engine::lod::SegmentedMinMaxPerPixelCursor::default();
+        self.segmented_series = None;
+        self.segmented_segment_index = 0;
         self.bounds_cursor = BoundsCursor::default();
         self.bounds_accum.reset();
         self.active_series = None;
@@ -283,6 +289,9 @@ impl MarksStage {
     pub fn begin_append_rebuild(&mut self) {
         self.series_index = 0;
         self.cursor = MinMaxPerPixelCursor::default();
+        self.segmented_cursor = crate::engine::lod::SegmentedMinMaxPerPixelCursor::default();
+        self.segmented_series = None;
+        self.segmented_segment_index = 0;
         self.bounds_cursor = BoundsCursor::default();
         self.bounds_accum.reset();
         self.active_series = None;
@@ -1676,13 +1685,430 @@ impl MarksStage {
                 continue;
             }
 
-            let mut finished_scan = false;
+            let filter_mode = state
+                .data_zoom_x
+                .get(&series.x_axis)
+                .map(|s| s.filter_mode)
+                .unwrap_or_default();
             let stack_arrays = series.stack.and_then(|stack| {
                 stack_dims.stack_arrays(stack, series.id, model.revs.marks, table.revision)
             });
             if series.stack.is_some() && stack_arrays.is_none() {
                 return false;
             }
+
+            if filter_mode == crate::spec::FilterMode::Empty {
+                if self.segmented_series != Some(series.id) {
+                    self.segmented_series = Some(series.id);
+                    self.segmented_cursor =
+                        crate::engine::lod::SegmentedMinMaxPerPixelCursor::default();
+                    self.segmented_segment_index = 0;
+                    scratch.reset_buckets();
+                }
+
+                let row_range = selection.as_range(table.row_count);
+                let row_end = row_range.end.min(x.len().min(y0.len()));
+                let row_range = row_range.start.min(row_end)..row_end;
+
+                let stroke = Some((crate::ids::PaintId(0), StrokeStyleV2::default()));
+                let base_order = self.series_index as u32;
+
+                loop {
+                    if self.segmented_cursor.next_index >= row_range.end {
+                        break;
+                    }
+
+                    let points_budget = budget.take_points(4096) as usize;
+                    if points_budget == 0 {
+                        return false;
+                    }
+
+                    let step = if series.kind == crate::spec::SeriesKind::Band {
+                        let Some(y1) = y1 else {
+                            return false;
+                        };
+                        minmax_per_pixel_step_segmented_with(
+                            &mut self.segmented_cursor,
+                            scratch,
+                            x,
+                            &bounds,
+                            viewport,
+                            row_range.clone(),
+                            points_budget,
+                            &mut marks.arena.points,
+                            &mut marks.arena.data_indices,
+                            |i| y0.get(i).copied().unwrap_or(f64::NAN),
+                            |i, xi, _yi| {
+                                view_x_filter.contains(xi)
+                                    && y0.get(i).copied().unwrap_or(f64::NAN).is_finite()
+                                    && y1.get(i).copied().unwrap_or(f64::NAN).is_finite()
+                            },
+                        )
+                    } else if series.kind == crate::spec::SeriesKind::Area && series.stack.is_some()
+                    {
+                        let Some(arrays) = stack_arrays.as_ref() else {
+                            return false;
+                        };
+                        minmax_per_pixel_step_segmented_with(
+                            &mut self.segmented_cursor,
+                            scratch,
+                            x,
+                            &bounds,
+                            viewport,
+                            row_range.clone(),
+                            points_budget,
+                            &mut marks.arena.points,
+                            &mut marks.arena.data_indices,
+                            |i| arrays.stacked.get(i).copied().unwrap_or(f64::NAN),
+                            |i, xi, _yi| {
+                                view_x_filter.contains(xi)
+                                    && arrays.base.get(i).copied().unwrap_or(f64::NAN).is_finite()
+                            },
+                        )
+                    } else if let Some(arrays) = stack_arrays.as_ref() {
+                        minmax_per_pixel_step_segmented_with(
+                            &mut self.segmented_cursor,
+                            scratch,
+                            x,
+                            &bounds,
+                            viewport,
+                            row_range.clone(),
+                            points_budget,
+                            &mut marks.arena.points,
+                            &mut marks.arena.data_indices,
+                            |i| arrays.stacked.get(i).copied().unwrap_or(f64::NAN),
+                            |_, xi, _yi| view_x_filter.contains(xi),
+                        )
+                    } else {
+                        minmax_per_pixel_step_segmented_with(
+                            &mut self.segmented_cursor,
+                            scratch,
+                            x,
+                            &bounds,
+                            viewport,
+                            row_range.clone(),
+                            points_budget,
+                            &mut marks.arena.points,
+                            &mut marks.arena.data_indices,
+                            |i| y0.get(i).copied().unwrap_or(f64::NAN),
+                            |_, xi, _yi| view_x_filter.contains(xi),
+                        )
+                    };
+
+                    let Some(step) = step else {
+                        continue;
+                    };
+
+                    let range_len = step.segment.end.saturating_sub(step.segment.start);
+                    if range_len < 2 {
+                        marks.arena.points.truncate(step.segment.start);
+                        marks.arena.data_indices.truncate(step.segment.start);
+                        if step.done {
+                            break;
+                        }
+                        continue;
+                    }
+
+                    let seg = self.segmented_segment_index;
+                    self.segmented_segment_index = self.segmented_segment_index.saturating_add(1);
+
+                    let mut created = 0u64;
+
+                    if series.kind == crate::spec::SeriesKind::Band {
+                        let Some(y1) = y1 else {
+                            return false;
+                        };
+                        let lower_range = step.segment.clone();
+
+                        let start_upper = marks.arena.points.len();
+                        let indices = scratch.tmp_indices_mut();
+                        indices.clear();
+                        indices.extend(
+                            marks.arena.data_indices[lower_range.clone()]
+                                .iter()
+                                .copied()
+                                .map(|i| i as usize),
+                        );
+
+                        marks.arena.points.reserve(indices.len());
+                        marks.arena.data_indices.reserve(indices.len());
+
+                        let x_span = (bounds.x_max - bounds.x_min).max(f64::MIN_POSITIVE);
+                        let y_span = (bounds.y_max - bounds.y_min).max(f64::MIN_POSITIVE);
+
+                        for &i in indices.iter() {
+                            let xi = x.get(i).copied().unwrap_or(f64::NAN);
+                            let yi = y1.get(i).copied().unwrap_or(f64::NAN);
+                            if !xi.is_finite() || !yi.is_finite() {
+                                continue;
+                            }
+                            let yi = yi.clamp(bounds.y_min, bounds.y_max);
+                            let tx = ((xi - bounds.x_min) / x_span).clamp(0.0, 1.0);
+                            let ty = ((yi - bounds.y_min) / y_span).clamp(0.0, 1.0);
+                            let px_x =
+                                viewport.origin.x.0 + (tx as f32) * viewport.size.width.0;
+                            let px_y = viewport.origin.y.0
+                                + (1.0 - (ty as f32)) * viewport.size.height.0;
+                            marks.arena.points.push(Point::new(Px(px_x), Px(px_y)));
+                            marks.arena.data_indices.push(i as u32);
+                        }
+
+                        let upper_range = start_upper..marks.arena.points.len();
+
+                        let lower_id = series_mark_id(series.id, 1 + seg.saturating_mul(2));
+                        let lower_index =
+                            if let Some(i) = marks.nodes.iter().position(|n| n.id == lower_id) {
+                                i
+                            } else {
+                                if budget.take_marks(1) == 0 {
+                                    return false;
+                                }
+                                created += 1;
+                                marks.nodes.push(MarkNode {
+                                    id: lower_id,
+                                    parent: None,
+                                    layer: crate::ids::LayerId(1),
+                                    order: MarkOrderKey(
+                                        base_order
+                                            .saturating_mul(2)
+                                            .saturating_add((seg.saturating_mul(2)) as u32),
+                                    ),
+                                    kind: MarkKind::Polyline,
+                                    source_series: Some(series.id),
+                                    payload: MarkPayloadRef::Polyline(MarkPolylineRef {
+                                        points: lower_range.clone(),
+                                        stroke: stroke.clone(),
+                                    }),
+                                });
+                                marks.nodes.len() - 1
+                            };
+
+                        let upper_id = series_mark_id(series.id, 2 + seg.saturating_mul(2));
+                        let upper_index =
+                            if let Some(i) = marks.nodes.iter().position(|n| n.id == upper_id) {
+                                i
+                            } else {
+                                if budget.take_marks(1) == 0 {
+                                    return false;
+                                }
+                                created += 1;
+                                marks.nodes.push(MarkNode {
+                                    id: upper_id,
+                                    parent: None,
+                                    layer: crate::ids::LayerId(1),
+                                    order: MarkOrderKey(
+                                        base_order
+                                            .saturating_mul(2)
+                                            .saturating_add((seg.saturating_mul(2)) as u32)
+                                            .saturating_add(1),
+                                    ),
+                                    kind: MarkKind::Polyline,
+                                    source_series: Some(series.id),
+                                    payload: MarkPayloadRef::Polyline(MarkPolylineRef {
+                                        points: upper_range.clone(),
+                                        stroke: stroke.clone(),
+                                    }),
+                                });
+                                marks.nodes.len() - 1
+                            };
+
+                        if let Some(node) = marks.nodes.get_mut(lower_index) {
+                            let MarkPayloadRef::Polyline(p) = &mut node.payload else {
+                                return false;
+                            };
+                            p.points = lower_range.clone();
+                            p.stroke.clone_from(&stroke);
+                        }
+                        if let Some(node) = marks.nodes.get_mut(upper_index) {
+                            let MarkPayloadRef::Polyline(p) = &mut node.payload else {
+                                return false;
+                            };
+                            p.points = upper_range.clone();
+                            p.stroke.clone_from(&stroke);
+                        }
+
+                        stats.points_emitted += (lower_range.end - lower_range.start) as u64;
+                        stats.points_emitted += (upper_range.end - upper_range.start) as u64;
+                    } else if series.kind == crate::spec::SeriesKind::Area && series.stack.is_some()
+                    {
+                        let Some(arrays) = stack_arrays.as_ref() else {
+                            return false;
+                        };
+
+                        let upper_range = step.segment.clone();
+                        let start_lower = marks.arena.points.len();
+
+                        let indices = scratch.tmp_indices_mut();
+                        indices.clear();
+                        indices.extend(
+                            marks.arena.data_indices[upper_range.clone()]
+                                .iter()
+                                .copied()
+                                .map(|i| i as usize),
+                        );
+
+                        marks.arena.points.reserve(indices.len());
+                        marks.arena.data_indices.reserve(indices.len());
+
+                        let x_span = (bounds.x_max - bounds.x_min).max(f64::MIN_POSITIVE);
+                        let y_span = (bounds.y_max - bounds.y_min).max(f64::MIN_POSITIVE);
+
+                        for &i in indices.iter() {
+                            let xi = x.get(i).copied().unwrap_or(f64::NAN);
+                            let yi = arrays.base.get(i).copied().unwrap_or(f64::NAN);
+                            if !xi.is_finite() || !yi.is_finite() {
+                                continue;
+                            }
+                            let yi = yi.clamp(bounds.y_min, bounds.y_max);
+                            let tx = ((xi - bounds.x_min) / x_span).clamp(0.0, 1.0);
+                            let ty = ((yi - bounds.y_min) / y_span).clamp(0.0, 1.0);
+                            let px_x =
+                                viewport.origin.x.0 + (tx as f32) * viewport.size.width.0;
+                            let px_y = viewport.origin.y.0
+                                + (1.0 - (ty as f32)) * viewport.size.height.0;
+                            marks.arena.points.push(Point::new(Px(px_x), Px(px_y)));
+                            marks.arena.data_indices.push(i as u32);
+                        }
+
+                        let lower_range = start_lower..marks.arena.points.len();
+
+                        let lower_id = series_mark_id(series.id, 1 + seg.saturating_mul(2));
+                        let lower_index =
+                            if let Some(i) = marks.nodes.iter().position(|n| n.id == lower_id) {
+                                i
+                            } else {
+                                if budget.take_marks(1) == 0 {
+                                    return false;
+                                }
+                                created += 1;
+                                marks.nodes.push(MarkNode {
+                                    id: lower_id,
+                                    parent: None,
+                                    layer: crate::ids::LayerId(1),
+                                    order: MarkOrderKey(
+                                        base_order
+                                            .saturating_mul(2)
+                                            .saturating_add((seg.saturating_mul(2)) as u32),
+                                    ),
+                                    kind: MarkKind::Polyline,
+                                    source_series: Some(series.id),
+                                    payload: MarkPayloadRef::Polyline(MarkPolylineRef {
+                                        points: lower_range.clone(),
+                                        stroke: stroke.clone(),
+                                    }),
+                                });
+                                marks.nodes.len() - 1
+                            };
+
+                        let upper_id = series_mark_id(series.id, 2 + seg.saturating_mul(2));
+                        let upper_index =
+                            if let Some(i) = marks.nodes.iter().position(|n| n.id == upper_id) {
+                                i
+                            } else {
+                                if budget.take_marks(1) == 0 {
+                                    return false;
+                                }
+                                created += 1;
+                                marks.nodes.push(MarkNode {
+                                    id: upper_id,
+                                    parent: None,
+                                    layer: crate::ids::LayerId(1),
+                                    order: MarkOrderKey(
+                                        base_order
+                                            .saturating_mul(2)
+                                            .saturating_add((seg.saturating_mul(2)) as u32)
+                                            .saturating_add(1),
+                                    ),
+                                    kind: MarkKind::Polyline,
+                                    source_series: Some(series.id),
+                                    payload: MarkPayloadRef::Polyline(MarkPolylineRef {
+                                        points: upper_range.clone(),
+                                        stroke: stroke.clone(),
+                                    }),
+                                });
+                                marks.nodes.len() - 1
+                            };
+
+                        if let Some(node) = marks.nodes.get_mut(lower_index) {
+                            let MarkPayloadRef::Polyline(p) = &mut node.payload else {
+                                return false;
+                            };
+                            p.points = lower_range.clone();
+                            p.stroke.clone_from(&stroke);
+                        }
+                        if let Some(node) = marks.nodes.get_mut(upper_index) {
+                            let MarkPayloadRef::Polyline(p) = &mut node.payload else {
+                                return false;
+                            };
+                            p.points = upper_range.clone();
+                            p.stroke.clone_from(&stroke);
+                        }
+
+                        stats.points_emitted += (lower_range.end - lower_range.start) as u64;
+                        stats.points_emitted += (upper_range.end - upper_range.start) as u64;
+                    } else {
+                        let id = series_mark_id(series.id, seg);
+                        let node_index = marks.nodes.iter().position(|n| n.id == id);
+                        let node_index = if let Some(i) = node_index {
+                            i
+                        } else {
+                            if budget.take_marks(1) == 0 {
+                                return false;
+                            }
+                            created += 1;
+                            marks.nodes.push(MarkNode {
+                                id,
+                                parent: None,
+                                layer: crate::ids::LayerId(1),
+                                order: MarkOrderKey(
+                                    base_order.saturating_mul(2).saturating_add(seg as u32),
+                                ),
+                                kind: MarkKind::Polyline,
+                                source_series: Some(series.id),
+                                payload: MarkPayloadRef::Polyline(MarkPolylineRef {
+                                    points: step.segment.clone(),
+                                    stroke: stroke.clone(),
+                                }),
+                            });
+                            marks.nodes.len() - 1
+                        };
+
+                        if let Some(node) = marks.nodes.get_mut(node_index) {
+                            let MarkPayloadRef::Polyline(p) = &mut node.payload else {
+                                return false;
+                            };
+                            p.points = step.segment.clone();
+                            p.stroke.clone_from(&stroke);
+                        }
+
+                        stats.points_emitted += range_len as u64;
+                    }
+
+                    stats.marks_emitted += created;
+                    marks.revision.bump();
+
+                    if step.done {
+                        break;
+                    }
+                }
+
+                self.series_index += 1;
+                self.cursor.next_index = 0;
+                self.segmented_cursor.next_index = 0;
+                self.scatter_next_index = 0;
+                self.scatter_points_start = 0;
+                self.scatter_node_index = None;
+                self.scatter_bucket_build = None;
+                self.bar_next_index = 0;
+                self.bar_rects_start = 0;
+                self.bar_node_index = None;
+                self.bar_bucket_build = None;
+                self.bounds = None;
+                scratch.clear();
+                continue;
+            }
+
+            let mut finished_scan = false;
 
             let width_px = viewport.size.width.0.max(1.0).ceil() as usize;
             if self.append_rebuild_mode {
