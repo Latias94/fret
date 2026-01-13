@@ -594,14 +594,23 @@ impl WinitAppDriver for DockingArbitrationDriver {
     }
 
     fn viewport_input(&mut self, app: &mut App, event: ViewportInputEvent) {
+        let cursor_target_px = event
+            .cursor_target_px_f32()
+            .map(|(x, y)| format!("{x:.1},{y:.1}"))
+            .unwrap_or_else(|| "n/a".to_string());
+        let target_px_per_screen_px = event.target_px_per_screen_px().unwrap_or(0.0);
         let msg: Arc<str> = Arc::from(
             format!(
-                "{:?} uv=({:.3},{:.3}) target_px=({}, {}) window={:?}",
+                "{:?} cursor_px=({:.1},{:.1}) uv=({:.3},{:.3}) target_px=({}, {}) cursor_target_px=({}) target_px_per_screen_px={:.3} window={:?}",
                 event.kind,
+                event.cursor_px.x.0,
+                event.cursor_px.y.0,
                 event.uv.0,
                 event.uv.1,
                 event.target_px.0,
                 event.target_px.1,
+                cursor_target_px,
+                target_px_per_screen_px,
                 event.window,
             )
             .into_boxed_str(),
