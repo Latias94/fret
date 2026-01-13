@@ -149,10 +149,10 @@ Legend:
 - [ ] Ensure quality knobs participate in cache keys (layout/raster).
 
 **B6 — Cache boundary refactor (ADR 0158)**
-- [ ] Split “layout cache” from “glyph residency cache” (no UVs embedded in `TextShape`).
-- [ ] Add a frame-driven `TextSystem::prepare_for_scene(...)` that runs even when scene encoding is cached.
-- [ ] Move atlas allocation/uploads out of `prepare(...)` and into the scene-driven ensure step.
-- [ ] Define eviction semantics based on “last used frame” and document in-flight safety constraints.
+- [x] Split “layout cache” from “glyph residency cache” (no UVs embedded in `TextShape`).
+- [x] Add a frame-driven `TextSystem::prepare_for_scene(...)` that runs even when scene encoding is cached.
+- [x] Move atlas allocation/uploads out of `prepare(...)` and into the scene-driven ensure step.
+- [x] Define eviction semantics based on “last used frame” and document in-flight safety constraints.
 
 ### C) `fret-ui` integration surface
 
@@ -192,3 +192,4 @@ Legend:
 - 2026-01-13: M1.6: add multipage glyph atlas budget + plumb atlas page through draws (commit `c29a866`).
 - 2026-01-13: M1.7: evict unreferenced glyph atlas pages (commit `eac5619`).
 - 2026-01-13: M1.8: evict unused glyphs from the atlas via per-glyph live refs (commit `2983e98`).
+- 2026-01-13: B6: decouple text layout from glyph atlas residency + add `prepare_for_scene` and atlas revision cache key (commit `4885937`).
