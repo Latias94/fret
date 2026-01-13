@@ -1753,11 +1753,22 @@ impl MarksStage {
                 continue;
             }
 
-            let filter_mode = state
+            let x_filter_mode = state
                 .data_zoom_x
                 .get(&series.x_axis)
                 .map(|s| s.filter_mode)
                 .unwrap_or_default();
+            let y_filter_mode = model
+                .data_zoom_y_by_axis
+                .get(&series.y_axis)
+                .and_then(|id| model.data_zoom_y.get(id))
+                .map(|z| z.filter_mode)
+                .unwrap_or(crate::spec::FilterMode::None);
+
+            // v1 policy: `Empty` masking is implemented via mark-level segmentation for line-family series.
+            // For now, apply Y-empty only for non-stacked series (stacked empty semantics are TBD).
+            let y_empty_active =
+                y_filter_mode == crate::spec::FilterMode::Empty && series.stack.is_none();
             let stack_arrays = series.stack.and_then(|stack| {
                 stack_dims.stack_arrays(stack, series.id, model.revs.marks, table.revision)
             });
@@ -1765,7 +1776,8 @@ impl MarksStage {
                 return false;
             }
 
-            if filter_mode == crate::spec::FilterMode::Empty {
+            let empty_active = x_filter_mode == crate::spec::FilterMode::Empty || y_empty_active;
+            if empty_active {
                 if self.segmented_series != Some(series.id) {
                     self.segmented_series = Some(series.id);
                     self.segmented_cursor =
@@ -1775,6 +1787,17 @@ impl MarksStage {
                     self.segmented_segment_index = 0;
                     scratch.reset_buckets();
                 }
+
+                let y_axis_range = model
+                    .axes
+                    .get(&series.y_axis)
+                    .map(|a| a.range)
+                    .unwrap_or_default();
+                let view_y_filter = crate::engine::window_policy::axis_filter_1d(
+                    y_axis_range,
+                    state.data_window_y.get(&series.y_axis).copied(),
+                    crate::spec::FilterMode::Empty,
+                );
 
                 let is_sparse = matches!(selection, RowSelection::Indices(_));
                 let row_range = if !is_sparse {
@@ -1825,6 +1848,12 @@ impl MarksStage {
                                 |i| y0.get(i).copied().unwrap_or(f64::NAN),
                                 |i, xi, _yi| {
                                     view_x_filter.contains(xi)
+                                        && (!y_empty_active
+                                            || (view_y_filter
+                                                .contains(y0.get(i).copied().unwrap_or(f64::NAN))
+                                                && view_y_filter.contains(
+                                                    y1.get(i).copied().unwrap_or(f64::NAN),
+                                                )))
                                         && y0.get(i).copied().unwrap_or(f64::NAN).is_finite()
                                         && y1.get(i).copied().unwrap_or(f64::NAN).is_finite()
                                 },
@@ -1843,6 +1872,12 @@ impl MarksStage {
                                 |i| y0.get(i).copied().unwrap_or(f64::NAN),
                                 |i, xi, _yi| {
                                     view_x_filter.contains(xi)
+                                        && (!y_empty_active
+                                            || (view_y_filter
+                                                .contains(y0.get(i).copied().unwrap_or(f64::NAN))
+                                                && view_y_filter.contains(
+                                                    y1.get(i).copied().unwrap_or(f64::NAN),
+                                                )))
                                         && y0.get(i).copied().unwrap_or(f64::NAN).is_finite()
                                         && y1.get(i).copied().unwrap_or(f64::NAN).is_finite()
                                 },
@@ -1941,7 +1976,10 @@ impl MarksStage {
                                 &mut marks.arena.points,
                                 &mut marks.arena.data_indices,
                                 |i| y0.get(i).copied().unwrap_or(f64::NAN),
-                                |_, xi, _yi| view_x_filter.contains(xi),
+                                |_, xi, yi| {
+                                    view_x_filter.contains(xi)
+                                        && (!y_empty_active || view_y_filter.contains(yi))
+                                },
                             )
                         } else {
                             minmax_per_pixel_step_segmented_with(
@@ -1955,7 +1993,10 @@ impl MarksStage {
                                 &mut marks.arena.points,
                                 &mut marks.arena.data_indices,
                                 |i| y0.get(i).copied().unwrap_or(f64::NAN),
-                                |_, xi, _yi| view_x_filter.contains(xi),
+                                |_, xi, yi| {
+                                    view_x_filter.contains(xi)
+                                        && (!y_empty_active || view_y_filter.contains(yi))
+                                },
                             )
                         }
                     };
