@@ -26,7 +26,8 @@ References:
 - Canvas/interactive surfaces guidance: `docs/adr/0137-canvas-widgets-and-interactive-surfaces.md`
 - 3D gizmo design reference (update/draw split + visuals vocabulary): optional `repo-ref/transform-gizmo`
   (not always present; see `docs/repo-ref.md`).
-- Godot editor viewport hooks (input + draw-over-viewport + explicit overlay update):
+- Godot editor viewport hooks (input + draw-over-viewport + explicit overlay update): optional `repo-ref/godot`
+  checkout (not always present; see `docs/repo-ref.md`):
   `repo-ref/godot/editor/plugins/editor_plugin.h`
 
 ## Goals

@@ -114,8 +114,9 @@ Deliverables:
 
 - Define a stable public API surface:
   - `Gizmo::update(...)` (input + camera + targets -> phase/result)
-  - `Gizmo::draw_engine(...)` (engine draw commands; depth mode explicit)
-  - optional: `Gizmo::draw_ui_overlay(...)` (labels/HUD as UI primitives)
+  - `Gizmo::draw(...) -> GizmoDrawList3d` (engine-pass 3D draw lists; depth mode explicit)
+  - UI overlay (labels/HUD) remains an app/UI-layer concern rendered above the viewport surface (ADR 0139);
+    see `apps/fret-examples/src/gizmo3d_demo.rs` for an end-to-end reference.
 - Decide math types at API boundary:
   - internal `glam`; external: `mint` or Fret-owned lightweight structs
 - Picking math:
