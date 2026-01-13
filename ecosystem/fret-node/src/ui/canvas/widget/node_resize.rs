@@ -282,7 +282,7 @@ pub(super) fn handle_node_resize_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     _modifiers: Modifiers,
     zoom: f32,
 ) -> bool {
-    let Some(resize) = canvas.interaction.node_resize.clone() else {
+    let Some(mut resize) = canvas.interaction.node_resize.clone() else {
         return false;
     };
 
@@ -364,18 +364,23 @@ pub(super) fn handle_node_resize_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
             .then_some(snapshot.interaction.snap_grid),
     );
 
-    let _ = canvas.graph.update(cx.app, |g, _cx| {
-        let Some(node) = g.nodes.get_mut(&resize.node) else {
-            return;
-        };
-        node.pos = new_pos;
-        node.size = Some(new_size_px);
-
-        let expand_parent = node.expand_parent.unwrap_or(false);
-        if expand_parent
-            && let Some(parent) = node.parent
-            && let Some(group) = g.groups.get_mut(&parent)
-        {
+    let current_size_opt = Some(new_size_px);
+    let current_groups: Vec<(crate::core::GroupId, CanvasRect)> = canvas
+        .graph
+        .read_ref(cx.app, |g| {
+            let Some(node) = g.nodes.get(&resize.node) else {
+                return Vec::new();
+            };
+            let expand_parent = node.expand_parent.unwrap_or(false);
+            let Some(parent) = node.parent else {
+                return Vec::new();
+            };
+            if !expand_parent {
+                return Vec::new();
+            }
+            let Some(group) = g.groups.get(&parent) else {
+                return Vec::new();
+            };
             let z = zoom.max(1.0e-6);
             let child_rect = CanvasRect {
                 origin: new_pos,
@@ -384,12 +389,22 @@ pub(super) fn handle_node_resize_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
                     height: (new_size_px.height / z).max(0.0),
                 },
             };
-            group.rect = canvas_rect_union(group.rect, child_rect);
-        }
-    });
+            vec![(parent, canvas_rect_union(group.rect, child_rect))]
+        })
+        .ok()
+        .unwrap_or_default();
 
-    // Invalidate derived geometry caches that depend on node bounds.
-    canvas.geometry.key = None;
+    if resize.current_node_pos != new_pos
+        || resize.current_size_opt != current_size_opt
+        || resize.current_groups != current_groups
+    {
+        resize.current_node_pos = new_pos;
+        resize.current_size_opt = current_size_opt;
+        resize.current_groups = current_groups;
+        resize.preview_rev = resize.preview_rev.wrapping_add(1);
+    }
+    canvas.interaction.node_resize = Some(resize);
+
     cx.request_redraw();
     cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
     true

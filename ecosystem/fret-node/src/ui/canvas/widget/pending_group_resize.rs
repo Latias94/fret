@@ -29,6 +29,8 @@ pub(super) fn handle_pending_group_resize_move<H: UiHost, M: NodeGraphCanvasMidd
         group: pending.group,
         start_pos: pending.start_pos,
         start_rect: pending.start_rect,
+        current_rect: pending.start_rect,
+        preview_rev: 0,
     });
 
     false

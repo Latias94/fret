@@ -501,11 +501,19 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         hasher.finish()
     }
 
-    fn group_rect_with_drag_preview(
+    fn group_rect_with_preview(
         &self,
         group_id: crate::core::GroupId,
         base: crate::core::CanvasRect,
     ) -> crate::core::CanvasRect {
+        if let Some(resize) = self
+            .interaction
+            .group_resize
+            .as_ref()
+            .filter(|r| r.group == group_id)
+        {
+            return resize.current_rect;
+        }
         if let Some(drag) = self
             .interaction
             .group_drag
@@ -513,6 +521,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             .filter(|d| d.group == group_id)
         {
             return drag.current_rect;
+        }
+        if let Some(rect) = self.interaction.node_resize.as_ref().and_then(|r| {
+            r.current_groups
+                .iter()
+                .find(|(id, _)| *id == group_id)
+                .map(|(_, rect)| *rect)
+        }) {
+            return rect;
         }
         if let Some(rect) = self.interaction.node_drag.as_ref().and_then(|d| {
             d.current_groups
@@ -636,6 +652,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let index = self.geometry.index.clone();
         let node_drag = self.interaction.node_drag.clone();
         let group_drag = self.interaction.group_drag.clone();
+        let node_resize = self.interaction.node_resize.clone();
 
         if let Some(drag) = node_drag.as_ref() {
             if let Some((geom, index)) = self.drag_preview_derived(
@@ -654,6 +671,17 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 DragPreviewKind::GroupDrag,
                 drag.preview_rev,
                 &drag.current_nodes,
+            ) {
+                return (geom, index);
+            }
+        } else if let Some(resize) = node_resize.as_ref() {
+            if let Some((geom, index)) = self.node_resize_preview_derived(
+                host,
+                snapshot,
+                resize.preview_rev,
+                resize.node,
+                resize.current_node_pos,
+                resize.current_size_opt,
             ) {
                 return (geom, index);
             }
@@ -704,6 +732,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             let mut geom = (*base_geom).clone();
             let mut index = (*base_index).clone();
             let mut node_positions: HashMap<GraphNodeId, CanvasPoint> = HashMap::new();
+            let mut node_rects: HashMap<GraphNodeId, Rect> = HashMap::new();
 
             for (id, pos) in nodes {
                 node_positions.insert(*id, *pos);
@@ -721,6 +750,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
                 node_geom.rect = Rect::new(Point::new(Px(pos.x), Px(pos.y)), node_geom.rect.size);
                 index.update_node_rect(*id, node_geom.rect);
+                node_rects.insert(*id, node_geom.rect);
 
                 let Some(ports) = node_ports.get(id) else {
                     continue;
@@ -784,6 +814,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 geom: Arc::new(geom),
                 index: Arc::new(index),
                 node_positions,
+                node_rects,
                 node_ports,
             });
         }
@@ -820,6 +851,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         node_geom.rect =
                             Rect::new(Point::new(Px(next.x), Px(next.y)), node_geom.rect.size);
                         index_mut.update_node_rect(*id, node_geom.rect);
+                        cache.node_rects.insert(*id, node_geom.rect);
                     }
 
                     if let Some(ports) = cache.node_ports.get(id) {
@@ -882,6 +914,249 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         }
 
         Some((cache.geom.clone(), cache.index.clone()))
+    }
+
+    fn node_resize_preview_derived<H: UiHost>(
+        &mut self,
+        host: &H,
+        snapshot: &ViewSnapshot,
+        preview_rev: u64,
+        node_id: GraphNodeId,
+        pos: CanvasPoint,
+        size_opt_px: Option<CanvasSize>,
+    ) -> Option<(Arc<CanvasGeometry>, Arc<CanvasSpatialIndex>)> {
+        let base_key = self.geometry.key?;
+        let base_geom = self.geometry.geom.clone();
+        let base_index = self.geometry.index.clone();
+
+        let zoom = snapshot.zoom.max(1.0e-6);
+        let base_rect = base_geom.nodes.get(&node_id)?.rect;
+        let size = size_opt_px
+            .map(|s| {
+                Size::new(
+                    Px((s.width / zoom).max(0.0)),
+                    Px((s.height / zoom).max(0.0)),
+                )
+            })
+            .unwrap_or(base_rect.size);
+        let next_rect = Rect::new(Point::new(Px(pos.x), Px(pos.y)), size);
+
+        let rebuild = self.geometry.drag_preview.as_ref().is_none_or(|cache| {
+            cache.kind != DragPreviewKind::NodeResize || cache.base_key != base_key
+        });
+        if rebuild {
+            let node_ports = self
+                .graph
+                .read_ref(host, |g| {
+                    let mut out: HashMap<GraphNodeId, Vec<PortId>> = HashMap::new();
+                    if let Some(node) = g.nodes.get(&node_id) {
+                        out.insert(node_id, node.ports.clone());
+                    }
+                    out
+                })
+                .ok()
+                .unwrap_or_default();
+
+            let mut geom = (*base_geom).clone();
+            let mut index = (*base_index).clone();
+            let mut node_positions: HashMap<GraphNodeId, CanvasPoint> = HashMap::new();
+            let mut node_rects: HashMap<GraphNodeId, Rect> = HashMap::new();
+            node_positions.insert(node_id, pos);
+            node_rects.insert(node_id, next_rect);
+
+            if let Some(node_geom) = geom.nodes.get_mut(&node_id) {
+                let prev_rect = node_geom.rect;
+                if prev_rect != next_rect {
+                    node_geom.rect = next_rect;
+                    index.update_node_rect(node_id, next_rect);
+                    Self::update_ports_for_node_rect_change(
+                        &mut geom,
+                        &mut index,
+                        node_id,
+                        prev_rect,
+                        next_rect,
+                        node_ports
+                            .get(&node_id)
+                            .map(|v| v.as_slice())
+                            .unwrap_or(&[]),
+                    );
+                }
+            }
+
+            Self::update_edges_for_ports(
+                &mut geom,
+                &mut index,
+                snapshot.zoom,
+                node_ports
+                    .get(&node_id)
+                    .map(|v| v.as_slice())
+                    .unwrap_or(&[]),
+                |edge_ids| {
+                    self.graph
+                        .read_ref(host, |g| {
+                            edge_ids
+                                .iter()
+                                .filter_map(|edge_id| {
+                                    g.edges.get(edge_id).map(|e| (*edge_id, e.from, e.to))
+                                })
+                                .collect::<Vec<_>>()
+                        })
+                        .ok()
+                        .unwrap_or_default()
+                },
+            );
+
+            self.geometry.drag_preview = Some(DragPreviewCache {
+                kind: DragPreviewKind::NodeResize,
+                base_key,
+                preview_rev,
+                geom: Arc::new(geom),
+                index: Arc::new(index),
+                node_positions,
+                node_rects,
+                node_ports,
+            });
+        }
+
+        let Some(cache) = self.geometry.drag_preview.as_mut() else {
+            return None;
+        };
+        if cache.preview_rev != preview_rev {
+            let geom_mut = Arc::make_mut(&mut cache.geom);
+            let index_mut = Arc::make_mut(&mut cache.index);
+
+            let prev_rect = cache.node_rects.get(&node_id).copied().unwrap_or(base_rect);
+            if prev_rect != next_rect {
+                if let Some(node_geom) = geom_mut.nodes.get_mut(&node_id) {
+                    node_geom.rect = next_rect;
+                    index_mut.update_node_rect(node_id, next_rect);
+                    Self::update_ports_for_node_rect_change(
+                        geom_mut,
+                        index_mut,
+                        node_id,
+                        prev_rect,
+                        next_rect,
+                        cache
+                            .node_ports
+                            .get(&node_id)
+                            .map(|v| v.as_slice())
+                            .unwrap_or(&[]),
+                    );
+                }
+
+                Self::update_edges_for_ports(
+                    geom_mut,
+                    index_mut,
+                    snapshot.zoom,
+                    cache
+                        .node_ports
+                        .get(&node_id)
+                        .map(|v| v.as_slice())
+                        .unwrap_or(&[]),
+                    |edge_ids| {
+                        self.graph
+                            .read_ref(host, |g| {
+                                edge_ids
+                                    .iter()
+                                    .filter_map(|edge_id| {
+                                        g.edges.get(edge_id).map(|e| (*edge_id, e.from, e.to))
+                                    })
+                                    .collect::<Vec<_>>()
+                            })
+                            .ok()
+                            .unwrap_or_default()
+                    },
+                );
+            }
+
+            cache.node_positions.insert(node_id, pos);
+            cache.node_rects.insert(node_id, next_rect);
+            cache.preview_rev = preview_rev;
+        }
+
+        Some((cache.geom.clone(), cache.index.clone()))
+    }
+
+    fn update_ports_for_node_rect_change(
+        geom: &mut CanvasGeometry,
+        index: &mut CanvasSpatialIndex,
+        node_id: GraphNodeId,
+        prev_rect: Rect,
+        next_rect: Rect,
+        ports: &[PortId],
+    ) {
+        let eps = 1.0e-3;
+        let prev_w = prev_rect.size.width.0;
+        let next_w = next_rect.size.width.0;
+
+        for port_id in ports {
+            let Some(handle) = geom.ports.get_mut(port_id) else {
+                continue;
+            };
+            if handle.node != node_id {
+                continue;
+            }
+
+            let local_x = handle.center.x.0 - prev_rect.origin.x.0;
+            let local_y = handle.center.y.0 - prev_rect.origin.y.0;
+            let mut next_local_x = local_x;
+            match handle.dir {
+                PortDirection::In => {
+                    if (local_x - 0.0).abs() <= eps {
+                        next_local_x = 0.0;
+                    }
+                }
+                PortDirection::Out => {
+                    if (local_x - prev_w).abs() <= eps {
+                        next_local_x = next_w;
+                    }
+                }
+            }
+
+            let center = Point::new(
+                Px(next_rect.origin.x.0 + next_local_x),
+                Px(next_rect.origin.y.0 + local_y),
+            );
+            let half_w = 0.5 * handle.bounds.size.width.0;
+            let half_h = 0.5 * handle.bounds.size.height.0;
+            let bounds = Rect::new(
+                Point::new(Px(center.x.0 - half_w), Px(center.y.0 - half_h)),
+                handle.bounds.size,
+            );
+            handle.center = center;
+            handle.bounds = bounds;
+            index.update_port_rect(*port_id, bounds);
+        }
+    }
+
+    fn update_edges_for_ports(
+        geom: &mut CanvasGeometry,
+        index: &mut CanvasSpatialIndex,
+        zoom: f32,
+        ports: &[PortId],
+        resolve_edges: impl FnOnce(&HashSet<EdgeId>) -> Vec<(EdgeId, PortId, PortId)>,
+    ) {
+        let mut edge_ids: HashSet<EdgeId> = HashSet::new();
+        for port in ports {
+            if let Some(edges) = index.edges_for_port(*port) {
+                edge_ids.extend(edges.iter().copied());
+            }
+        }
+        if edge_ids.is_empty() {
+            return;
+        }
+
+        let endpoints = resolve_edges(&edge_ids);
+        for (edge_id, from, to) in endpoints {
+            let Some(p0) = geom.port_center(from) else {
+                continue;
+            };
+            let Some(p1) = geom.port_center(to) else {
+                continue;
+            };
+            let rect = index.edge_aabb(p0, p1, zoom);
+            index.update_edge_rect(edge_id, rect);
+        }
     }
 
     pub fn new_with_middleware(
@@ -7284,8 +7559,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                                 return false;
                             }
                             !graph.groups.iter().any(|(group_id, group)| {
-                                let rect0 =
-                                    self.group_rect_with_drag_preview(*group_id, group.rect);
+                                let rect0 = self.group_rect_with_preview(*group_id, group.rect);
                                 group_resize::group_rect_to_px(rect0).contains(*position)
                             })
                         })
@@ -7367,8 +7641,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                                 return None;
                             }
                             if graph.groups.iter().any(|(group_id, group)| {
-                                let rect0 =
-                                    self.group_rect_with_drag_preview(*group_id, group.rect);
+                                let rect0 = self.group_rect_with_preview(*group_id, group.rect);
                                 group_resize::group_rect_to_px(rect0).contains(*position)
                             }) {
                                 return None;
@@ -7446,8 +7719,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                                 return None;
                             }
                             if graph.groups.iter().any(|(group_id, group)| {
-                                let rect0 =
-                                    self.group_rect_with_drag_preview(*group_id, group.rect);
+                                let rect0 = self.group_rect_with_preview(*group_id, group.rect);
                                 group_resize::group_rect_to_px(rect0).contains(*position)
                             }) {
                                 return None;
@@ -8122,8 +8394,6 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
         let focused_port = self.interaction.focused_port;
         let focused_port_valid = self.interaction.focused_port_valid;
         let focused_port_convertible = self.interaction.focused_port_convertible;
-        let node_drag = self.interaction.node_drag.clone();
-        let group_drag = self.interaction.group_drag.clone();
         let wire_drag = self.interaction.wire_drag.clone();
         let insert_node_drag_preview = self.interaction.insert_node_drag_preview.clone();
         let edge_insert_marker_request = self
@@ -8171,22 +8441,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                         let Some(group) = graph.groups.get(&group_id) else {
                             continue;
                         };
-                        let rect0 = if let Some(drag) = group_drag
-                            .as_ref()
-                            .filter(|d| d.group == group_id)
-                            .map(|d| d.current_rect)
-                        {
-                            drag
-                        } else if let Some(rect) = node_drag.as_ref().and_then(|d| {
-                            d.current_groups
-                                .iter()
-                                .find(|(id, _)| *id == group_id)
-                                .map(|(_, r)| *r)
-                        }) {
-                            rect
-                        } else {
-                            group.rect
-                        };
+                        let rect0 = this.group_rect_with_preview(group_id, group.rect);
                         let rect = Rect::new(
                             Point::new(Px(rect0.origin.x), Px(rect0.origin.y)),
                             Size::new(Px(rect0.size.width), Px(rect0.size.height)),

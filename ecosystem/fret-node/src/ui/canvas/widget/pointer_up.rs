@@ -85,16 +85,8 @@ pub(super) fn handle_pointer_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
     if let Some(resize) = canvas.interaction.node_resize.take() {
         canvas.interaction.pending_node_resize = None;
 
-        let (end_pos, end_size) = canvas
-            .graph
-            .read_ref(cx.app, |g| {
-                g.nodes
-                    .get(&resize.node)
-                    .map(|n| (n.pos, n.size))
-                    .unwrap_or((resize.start_node_pos, resize.start_size_opt))
-            })
-            .ok()
-            .unwrap_or((resize.start_node_pos, resize.start_size_opt));
+        let end_pos = resize.current_node_pos;
+        let end_size = resize.current_size_opt;
 
         let mut ops: Vec<GraphOp> = Vec::new();
         if resize.start_node_pos != end_pos {
@@ -112,6 +104,26 @@ pub(super) fn handle_pointer_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
             });
         }
 
+        let group_rect_ops: Vec<GraphOp> = canvas
+            .graph
+            .read_ref(cx.app, |graph| {
+                resize
+                    .current_groups
+                    .iter()
+                    .filter_map(|(id, to)| {
+                        let from = graph.groups.get(id).map(|g| g.rect)?;
+                        (from != *to).then_some(GraphOp::SetGroupRect {
+                            id: *id,
+                            from,
+                            to: *to,
+                        })
+                    })
+                    .collect()
+            })
+            .ok()
+            .unwrap_or_default();
+        ops.extend(group_rect_ops);
+
         if !ops.is_empty() {
             let _ = canvas.commit_ops(cx.app, cx.window, Some("Resize Node"), ops);
         }
@@ -125,15 +137,8 @@ pub(super) fn handle_pointer_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
     if let Some(resize) = canvas.interaction.group_resize.take() {
         canvas.interaction.pending_group_resize = None;
 
-        let end = canvas
-            .graph
-            .read_ref(cx.app, |g| g.groups.get(&resize.group).map(|gr| gr.rect))
-            .ok()
-            .flatten();
-
-        if let Some(end) = end
-            && end != resize.start_rect
-        {
+        let end = resize.current_rect;
+        if end != resize.start_rect {
             let _ = canvas.commit_ops(
                 cx.app,
                 cx.window,

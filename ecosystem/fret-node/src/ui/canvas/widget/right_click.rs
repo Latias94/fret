@@ -41,24 +41,7 @@ pub(super) fn handle_right_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddl
                         continue;
                     };
 
-                    let rect0 = if let Some(drag) = this
-                        .interaction
-                        .group_drag
-                        .as_ref()
-                        .filter(|d| d.group == *group_id)
-                        .map(|d| d.current_rect)
-                    {
-                        drag
-                    } else if let Some(rect) = this.interaction.node_drag.as_ref().and_then(|d| {
-                        d.current_groups
-                            .iter()
-                            .find(|(id, _)| *id == *group_id)
-                            .map(|(_, r)| *r)
-                    }) {
-                        rect
-                    } else {
-                        group.rect
-                    };
+                    let rect0 = this.group_rect_with_preview(*group_id, group.rect);
 
                     let rect = super::group_resize::group_rect_to_px(rect0);
                     let handle = this.resize_handle_rect(rect, zoom);

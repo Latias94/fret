@@ -10,10 +10,10 @@ use crate::rules::EdgeEndpoint;
 use crate::ui::edge_types::{EdgeTypeKey, NodeGraphEdgeTypes};
 
 use super::super::super::state::{EdgeDrag, WireDragKind};
-use super::super::super::state::{NodeDrag, NodeResize, NodeResizeHandle};
+use super::super::super::state::{GroupResize, NodeDrag, NodeResize, NodeResizeHandle};
 use super::super::{
-    NodeGraphCanvas, edge_drag, left_click, marquee, node_drag, node_resize, pending_drag,
-    pointer_up,
+    NodeGraphCanvas, edge_drag, group_resize, left_click, marquee, node_drag, node_resize,
+    pending_drag, pointer_up,
 };
 use super::{NullServices, TestUiHostImpl, event_cx, make_test_graph_two_nodes_with_size};
 use fret_ui::retained_bridge::Widget as _;
@@ -544,6 +544,13 @@ fn node_resize_expands_group_when_expand_parent_is_true() {
             width: 80.0,
             height: 40.0,
         }),
+        current_node_pos: CanvasPoint { x: 10.0, y: 10.0 },
+        current_size_opt: Some(CanvasSize {
+            width: 80.0,
+            height: 40.0,
+        }),
+        current_groups: Vec::new(),
+        preview_rev: 0,
     });
 
     let bounds = Rect::new(
@@ -563,8 +570,8 @@ fn node_resize_expands_group_when_expand_parent_is_true() {
         snapshot.zoom,
     ));
 
-    let (group_rect, node) = graph
-        .read_ref(&mut host, |g| {
+    let (group_rect_after_move, node_after_move) = graph
+        .read_ref(cx.app, |g| {
             (
                 g.groups.get(&group_id).map(|gr| gr.rect),
                 g.nodes.get(&node_id).cloned(),
@@ -572,20 +579,157 @@ fn node_resize_expands_group_when_expand_parent_is_true() {
         })
         .unwrap();
 
-    let group_rect = group_rect.unwrap();
-    let node = node.unwrap();
+    let group_rect_after_move = group_rect_after_move.unwrap();
+    let node_after_move = node_after_move.unwrap();
+    assert_eq!(node_after_move.pos, CanvasPoint { x: 10.0, y: 10.0 });
+    assert_eq!(
+        node_after_move.size,
+        Some(CanvasSize {
+            width: 80.0,
+            height: 40.0,
+        })
+    );
+    assert_eq!(
+        group_rect_after_move.size.width, 100.0,
+        "group should not mutate during resize preview"
+    );
+
+    let resize = canvas
+        .interaction
+        .node_resize
+        .as_ref()
+        .expect("node resize active");
+    assert_eq!(resize.current_node_pos, CanvasPoint { x: 10.0, y: 10.0 });
+    let size_px = resize.current_size_opt.expect("preview size");
+    assert!(
+        size_px.width > 80.0,
+        "node width should increase in preview"
+    );
+    assert!(
+        resize
+            .current_groups
+            .iter()
+            .any(|(id, rect)| *id == group_id && rect.size.width > 100.0),
+        "group should expand in preview"
+    );
+
+    assert!(pointer_up::handle_pointer_up(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        Point::new(Px(80.0), Px(0.0)),
+        fret_core::MouseButton::Left,
+        1,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    let group_rect = graph
+        .read_ref(cx.app, |g| g.groups.get(&group_id).map(|gr| gr.rect))
+        .unwrap()
+        .unwrap();
+    let node = graph
+        .read_ref(cx.app, |g| g.nodes.get(&node_id).cloned())
+        .unwrap()
+        .unwrap();
 
     let z = snapshot.zoom.max(1.0e-6);
     let size_px = node.size.unwrap();
     let node_w_canvas = size_px.width / z;
     let right = node.pos.x + node_w_canvas;
     let group_right = group_rect.origin.x + group_rect.size.width;
-
-    assert!(group_rect.size.width > 100.0, "group should expand");
+    assert!(
+        group_rect.size.width > 100.0,
+        "group should expand after commit"
+    );
     assert!(
         group_right + 1.0e-3 >= right,
         "group must contain resized node (group_right={group_right}, node_right={right})"
     );
+}
+
+#[test]
+fn group_resize_is_previewed_and_committed_on_pointer_up() {
+    let mut host = TestUiHostImpl::default();
+    let mut graph_value = Graph::new(GraphId::new());
+
+    let group_id = crate::core::GroupId::new();
+    let start_rect = crate::core::CanvasRect {
+        origin: CanvasPoint { x: 0.0, y: 0.0 },
+        size: CanvasSize {
+            width: 100.0,
+            height: 100.0,
+        },
+    };
+    graph_value.groups.insert(
+        group_id,
+        crate::core::Group {
+            title: "G".to_string(),
+            rect: start_rect,
+            color: None,
+        },
+    );
+
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    canvas.interaction.group_resize = Some(GroupResize {
+        group: group_id,
+        start_pos: Point::new(Px(0.0), Px(0.0)),
+        start_rect,
+        current_rect: start_rect,
+        preview_rev: 0,
+    });
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    assert!(group_resize::handle_group_resize_move(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        Point::new(Px(50.0), Px(40.0)),
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    let rect_after_move = graph
+        .read_ref(cx.app, |g| g.groups.get(&group_id).map(|gr| gr.rect))
+        .unwrap()
+        .unwrap();
+    assert_eq!(rect_after_move, start_rect);
+
+    let resize = canvas
+        .interaction
+        .group_resize
+        .as_ref()
+        .expect("group resize active");
+    assert!(resize.current_rect.size.width > start_rect.size.width);
+    assert!(resize.current_rect.size.height > start_rect.size.height);
+
+    assert!(pointer_up::handle_pointer_up(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        Point::new(Px(50.0), Px(40.0)),
+        fret_core::MouseButton::Left,
+        1,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    let rect_after_commit = graph
+        .read_ref(cx.app, |g| g.groups.get(&group_id).map(|gr| gr.rect))
+        .unwrap()
+        .unwrap();
+    assert!(rect_after_commit.size.width > start_rect.size.width);
+    assert!(rect_after_commit.size.height > start_rect.size.height);
 }
 
 #[test]
