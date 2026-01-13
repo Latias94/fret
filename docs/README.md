@@ -12,6 +12,7 @@ contracts early to avoid large rewrites later.
 - GPU debugging (RenderDoc): `docs/renderdoc-inspection.md`
 - Debugging playbook: `docs/debugging-playbook.md`
 - Viewport panels (engine/video): `docs/viewport-panels.md`
+- Gizmo + viewport integration: `docs/gizmo-viewport-integration.md`
 - Contracts: `docs/adr/`
 - Workstream notes (non-authoritative): `docs/workstreams/`
 - Historical planning docs: `docs/archive/`
