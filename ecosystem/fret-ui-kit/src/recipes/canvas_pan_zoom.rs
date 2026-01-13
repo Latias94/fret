@@ -259,11 +259,20 @@ pub fn pan_zoom_canvas_surface_panel<H: UiHost>(
                 return false;
             };
 
+            let zoom = host
+                .models_mut()
+                .read(&view_c, |view| view.zoom)
+                .ok()
+                .unwrap_or(1.0);
+            let zoom = PanZoom2D::sanitize_zoom(zoom, 1.0);
+            let new_zoom = (zoom * factor).clamp(min_zoom, max_zoom);
+            if (new_zoom - zoom).abs() <= 1.0e-9 {
+                return false;
+            }
+
             let bounds = host.bounds();
             let _ = host.models_mut().update(&view_c, |view| {
-                let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0);
                 let mut tmp = *view;
-                let new_zoom = (zoom * factor).clamp(min_zoom, max_zoom);
                 tmp.zoom_about_screen_point(bounds, wheel.position, new_zoom);
                 *view = tmp;
             });
@@ -292,11 +301,20 @@ pub fn pan_zoom_canvas_surface_panel<H: UiHost>(
             let delta = pinch.delta.clamp(-0.95, 10.0);
             let factor = (1.0 + delta * speed).max(0.01);
 
+            let zoom = host
+                .models_mut()
+                .read(&view_c, |view| view.zoom)
+                .ok()
+                .unwrap_or(1.0);
+            let zoom = PanZoom2D::sanitize_zoom(zoom, 1.0);
+            let new_zoom = (zoom * factor).clamp(min_zoom, max_zoom);
+            if (new_zoom - zoom).abs() <= 1.0e-9 {
+                return false;
+            }
+
             let bounds = host.bounds();
             let _ = host.models_mut().update(&view_c, |view| {
-                let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0);
                 let mut tmp = *view;
-                let new_zoom = (zoom * factor).clamp(min_zoom, max_zoom);
                 tmp.zoom_about_screen_point(bounds, pinch.position, new_zoom);
                 *view = tmp;
             });

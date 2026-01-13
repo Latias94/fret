@@ -55,10 +55,11 @@ impl DataZoomXNode {
 
     pub fn apply(self, x_values: &[f64], base_range: RowRange) -> XWindowResult {
         let x_policy = self.x_policy();
-        let selection = if self.filter_mode() == FilterMode::Filter {
-            row_selection_for_x_filter(x_values, base_range, x_policy.filter)
-        } else {
-            RowSelection::Range(base_range)
+        let selection = match self.filter_mode() {
+            FilterMode::Filter | FilterMode::WeakFilter => {
+                row_selection_for_x_filter(x_values, base_range, x_policy.filter)
+            }
+            FilterMode::Empty | FilterMode::None => RowSelection::Range(base_range),
         };
 
         XWindowResult {

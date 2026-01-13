@@ -10,7 +10,11 @@ Historical MVP planning snapshots live under `docs/archive/` (e.g. `docs/archive
 `docs/archive/mvp/active-plan.md`). These are kept for context only and are not maintained as
 active plans.
 
-Workstream notes live under `docs/workstreams/` (not a roadmap; do not treat as progress tracking).
+Workstream docs live under `docs/workstreams/` (living implementation trackers; not normative contracts).
+
+Active tracker highlights:
+
+- Text system v2 (Parley + attributed spans): `docs/workstreams/text-system-v2-parley.md` (see also `docs/todo-tracker.md`).
 
 For the “foundation-first, component-validated” execution loop (Plan C), see `docs/foundation-first-workflow.md`.
 
@@ -322,7 +326,7 @@ Notes:
 
 - P1: Basic text for inspector/property panels (layout + glyph atlas). (MVP done in demo; see `docs/archive/mvp-archive.md`)
 - P0: Text system boundary (`TextBlobId` + metrics contract). (done; see ADR 0006)
-- P2: `cosmic-text` integration for editor-grade text shaping/layout (ADR 0029). (MVP done for single-line)
+- P2: Parley-based text system v2 (attributed spans + wrapper-owned layout) (ADR 0157). (in progress)
 - P2: Shaped-run caching + incremental atlas uploads for large documents.
 - P1: IME plumbing (winit `Ime` events + `set_ime_cursor_area` feedback path). (prototype implemented; see ADR 0012)
 - P2: IME composition UI (inline preedit rendering in text widgets). (MVP done for single-line)

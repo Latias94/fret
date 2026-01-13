@@ -156,6 +156,7 @@ pub struct ChartCanvas {
     style_source: ChartStyleSource,
     last_theme_revision: u64,
     force_uncached_paint: bool,
+    text_cache_prune: ChartTextCachePruneTuning,
     tooltip_formatter: Box<dyn TooltipFormatter>,
     input_map: ChartInputMap,
     last_bounds: Rect,
@@ -193,6 +194,21 @@ pub struct ChartCanvas {
     output: ChartCanvasOutput,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct ChartTextCachePruneTuning {
+    pub max_age_frames: u64,
+    pub max_entries: usize,
+}
+
+impl Default for ChartTextCachePruneTuning {
+    fn default() -> Self {
+        Self {
+            max_age_frames: 1_200,
+            max_entries: 4_096,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChartStyleSource {
     Theme,
@@ -224,6 +240,7 @@ impl ChartCanvas {
             style_source: ChartStyleSource::Theme,
             last_theme_revision: 0,
             force_uncached_paint: true,
+            text_cache_prune: ChartTextCachePruneTuning::default(),
             tooltip_formatter: Box::new(DefaultTooltipFormatter::default()),
             input_map: ChartInputMap::default(),
             last_bounds: Rect::default(),
@@ -260,6 +277,10 @@ impl ChartCanvas {
             output_model: None,
             output: ChartCanvasOutput::default(),
         })
+    }
+
+    pub fn set_text_cache_prune_tuning(&mut self, tuning: ChartTextCachePruneTuning) {
+        self.text_cache_prune = tuning;
     }
 
     pub fn engine(&self) -> &ChartEngine {
@@ -719,6 +740,10 @@ impl ChartCanvas {
 
         match current {
             FilterMode::Filter => self.set_data_window_x_filter_mode(axis, Some(FilterMode::None)),
+            FilterMode::WeakFilter => {
+                self.set_data_window_x_filter_mode(axis, Some(FilterMode::None))
+            }
+            FilterMode::Empty => self.set_data_window_x_filter_mode(axis, Some(FilterMode::None)),
             FilterMode::None => self.set_data_window_x_filter_mode(axis, None),
         }
     }
@@ -2337,14 +2362,14 @@ impl ChartCanvas {
             self.series_rank_by_id.insert(*series_id, i);
         }
 
-        let mut band_ranges: BTreeMap<
-            delinea::SeriesId,
-            (Option<Range<usize>>, Option<Range<usize>>),
-        > = BTreeMap::new();
-        let mut band_mark_ids: BTreeMap<
-            delinea::SeriesId,
-            (Option<delinea::ids::MarkId>, Option<delinea::ids::MarkId>),
-        > = BTreeMap::new();
+        #[derive(Default)]
+        struct BandSegment {
+            lower: Option<Range<usize>>,
+            upper: Option<Range<usize>>,
+            lower_id: Option<delinea::ids::MarkId>,
+        }
+
+        let mut band_segments: BTreeMap<delinea::SeriesId, Vec<BandSegment>> = BTreeMap::new();
 
         for node in &marks.nodes {
             if node.kind != MarkKind::Polyline {
@@ -2367,19 +2392,23 @@ impl ChartCanvas {
             if (series_kind == Some(delinea::SeriesKind::Band) || is_stacked_area)
                 && let Some(series_id) = node.source_series
             {
-                let variant = delinea::ids::mark_variant(node.id) as u8;
-                let entry = band_ranges.entry(series_id).or_default();
-                let ids = band_mark_ids.entry(series_id).or_default();
-                match variant {
-                    1 => {
-                        entry.0 = Some(poly.points.clone());
-                        ids.0 = Some(node.id);
-                    }
-                    2 => {
-                        entry.1 = Some(poly.points.clone());
-                        ids.1 = Some(node.id);
-                    }
-                    _ => {}
+                let variant = delinea::ids::mark_variant(node.id);
+                if variant < 1 {
+                    continue;
+                }
+                let segment = ((variant - 1) / 2) as usize;
+                let role = ((variant - 1) % 2) as u8;
+
+                let segments = band_segments.entry(series_id).or_default();
+                if segments.len() <= segment {
+                    segments.resize_with(segment + 1, BandSegment::default);
+                }
+                let entry = &mut segments[segment];
+                if role == 0 {
+                    entry.lower = Some(poly.points.clone());
+                    entry.lower_id = Some(node.id);
+                } else {
+                    entry.upper = Some(poly.points.clone());
                 }
             }
 
@@ -2477,70 +2506,70 @@ impl ChartCanvas {
             );
         }
 
-        for (series_id, (lower, upper)) in band_ranges {
-            let (Some(lower_range), Some(upper_range)) = (lower, upper) else {
-                continue;
-            };
-            let Some((Some(lower_id), Some(_upper_id))) = band_mark_ids.get(&series_id).copied()
-            else {
-                continue;
-            };
+        for (series_id, segments) in band_segments {
+            for seg in segments {
+                let (Some(lower_range), Some(upper_range), Some(lower_id)) =
+                    (seg.lower, seg.upper, seg.lower_id)
+                else {
+                    continue;
+                };
 
-            if upper_range.end <= upper_range.start || lower_range.end <= lower_range.start {
-                continue;
-            }
-            if upper_range.end > marks.arena.points.len()
-                || lower_range.end > marks.arena.points.len()
-            {
-                continue;
-            }
+                if upper_range.end <= upper_range.start || lower_range.end <= lower_range.start {
+                    continue;
+                }
+                if upper_range.end > marks.arena.points.len()
+                    || lower_range.end > marks.arena.points.len()
+                {
+                    continue;
+                }
 
-            let upper_points = &marks.arena.points[upper_range.start..upper_range.end];
-            let lower_points = &marks.arena.points[lower_range.start..lower_range.end];
-            if upper_points.len() < 2 || lower_points.len() < 2 {
-                continue;
-            }
+                let upper_points = &marks.arena.points[upper_range.start..upper_range.end];
+                let lower_points = &marks.arena.points[lower_range.start..lower_range.end];
+                if upper_points.len() < 2 || lower_points.len() < 2 {
+                    continue;
+                }
 
-            let mut fill_commands: Vec<PathCommand> =
-                Vec::with_capacity(upper_points.len() + lower_points.len() + 1);
-            let first = upper_points[0];
-            fill_commands.push(PathCommand::MoveTo(fret_core::Point::new(
-                Px(first.x.0 - origin.x.0),
-                Px(first.y.0 - origin.y.0),
-            )));
-            for p in &upper_points[1..] {
-                fill_commands.push(PathCommand::LineTo(fret_core::Point::new(
-                    Px(p.x.0 - origin.x.0),
-                    Px(p.y.0 - origin.y.0),
+                let mut fill_commands: Vec<PathCommand> =
+                    Vec::with_capacity(upper_points.len() + lower_points.len() + 1);
+                let first = upper_points[0];
+                fill_commands.push(PathCommand::MoveTo(fret_core::Point::new(
+                    Px(first.x.0 - origin.x.0),
+                    Px(first.y.0 - origin.y.0),
                 )));
-            }
-            for p in lower_points.iter().rev() {
-                fill_commands.push(PathCommand::LineTo(fret_core::Point::new(
-                    Px(p.x.0 - origin.x.0),
-                    Px(p.y.0 - origin.y.0),
-                )));
-            }
-            fill_commands.push(PathCommand::Close);
+                for p in &upper_points[1..] {
+                    fill_commands.push(PathCommand::LineTo(fret_core::Point::new(
+                        Px(p.x.0 - origin.x.0),
+                        Px(p.y.0 - origin.y.0),
+                    )));
+                }
+                for p in lower_points.iter().rev() {
+                    fill_commands.push(PathCommand::LineTo(fret_core::Point::new(
+                        Px(p.x.0 - origin.x.0),
+                        Px(p.y.0 - origin.y.0),
+                    )));
+                }
+                fill_commands.push(PathCommand::Close);
 
-            let (fill_path, _metrics) = cx.services.path().prepare(
-                &fill_commands,
-                PathStyle::Fill(fret_core::FillStyle::default()),
-                PathConstraints {
-                    scale_factor: effective_scale_factor(cx.scale_factor, 1.0),
-                },
-            );
+                let (fill_path, _metrics) = cx.services.path().prepare(
+                    &fill_commands,
+                    PathStyle::Fill(fret_core::FillStyle::default()),
+                    PathConstraints {
+                        scale_factor: effective_scale_factor(cx.scale_factor, 1.0),
+                    },
+                );
 
-            let fill_alpha = match model.series.get(&series_id).map(|s| s.kind) {
-                Some(delinea::SeriesKind::Band) => self.style.band_fill_color.a,
-                Some(delinea::SeriesKind::Area) => self.style.area_fill_color.a,
-                _ => self.style.area_fill_color.a,
-            };
+                let fill_alpha = match model.series.get(&series_id).map(|s| s.kind) {
+                    Some(delinea::SeriesKind::Band) => self.style.band_fill_color.a,
+                    Some(delinea::SeriesKind::Area) => self.style.area_fill_color.a,
+                    _ => self.style.area_fill_color.a,
+                };
 
-            if let Some(cached) = self.cached_paths.get_mut(&lower_id) {
-                cached.fill = Some(fill_path);
-                cached.fill_alpha = Some(fill_alpha);
-            } else {
-                cx.services.path().release(fill_path);
+                if let Some(cached) = self.cached_paths.get_mut(&lower_id) {
+                    cached.fill = Some(fill_path);
+                    cached.fill_alpha = Some(fill_alpha);
+                } else {
+                    cx.services.path().release(fill_path);
+                }
             }
         }
 
@@ -3941,6 +3970,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             self.sync_viewport(self.last_layout.plot);
         }
 
+        // Advance per-frame counters for optional cache pruning.
+        self.axis_text.begin_frame();
+        self.legend_text.begin_frame();
+
         let mut measurer = NullTextMeasurer::default();
 
         // P0: run the engine synchronously, but allow multiple internal steps per paint so that
@@ -5060,6 +5093,15 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         }
 
         self.draw_axes(cx);
+
+        // Conservative hygiene: long-lived charts should not grow text caches unbounded.
+        let t = self.text_cache_prune;
+        if t.max_entries > 0 && t.max_age_frames > 0 {
+            self.axis_text
+                .prune(cx.services, t.max_age_frames, t.max_entries);
+            self.legend_text
+                .prune(cx.services, t.max_age_frames, t.max_entries);
+        }
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {

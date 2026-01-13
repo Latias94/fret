@@ -5,7 +5,7 @@ and how it maps to `delinea`’s headless semantics.
 
 The goal is to provide an ImPlot-like “muscle memory” baseline without committing to ImPlot API compatibility.
 
-For ECharts alignment and durable contracts, prefer the ADR series under `docs/adr/0128-0143-*` and
+For ECharts alignment and durable contracts, prefer the ADR series under `docs/adr/1128-1147-*` and
 `docs/delinea-echarts-alignment.md`.
 
 ## Coordinate conventions

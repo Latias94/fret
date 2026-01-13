@@ -315,21 +315,20 @@ Crate placement (recommended):
 
   Option A (no new crate, lowest friction):
 
-  - Add `ecosystem/fret-ui-kit/src/canvas/*` for small reusable helpers used by multiple canvases:
-    - pan/zoom math helpers,
-    - constant-pixel stroke helpers (`1/zoom` scaling),
-    - common drag phase state (`Begin/Update/Commit/Cancel`) aligned with ADR 0136,
-    - overlay anchoring helpers that rely on ADR 0011/0064/0083.
-  - Pros: simple; `fret-plot` already depends on `fret-ui-kit`.
-  - Cons: pulls “kit” dependencies into canvases that otherwise want to stay minimal (e.g.
-    `fret-chart`, `fret-node`), and makes “canvas substrate” look like a design-system concern.
+  - Add small reusable helpers under `ecosystem/fret-canvas` (policy-light substrate) used by multiple canvases:
+    - pan/zoom math helpers (`ecosystem/fret-canvas/src/view.rs`, `ecosystem/fret-canvas/src/scale.rs`),
+    - constant-pixel stroke helpers (`ecosystem/fret-canvas/src/scale.rs`),
+    - common drag phase state (`ecosystem/fret-canvas/src/drag.rs`) aligned with ADR 0136,
+    - optional declarative wrappers (`ecosystem/fret-canvas/src/declarative/*`).
+  - Pros: keeps canvas substrate reusable without pulling in UI kit policy/recipes.
+  - Cons: still requires discipline to avoid growing it into a second UI runtime.
 
   Option B (recommended long-term; preferred):
 
-  - Add a small dedicated crate `ecosystem/fret-canvas` for shared canvas substrate:
+  - Use a small dedicated crate `ecosystem/fret-canvas` for shared canvas substrate:
     - depends on `fret-core` + `fret-runtime` + `fret-ui` (no platform/backend deps),
     - contains only reusable value types + pure helpers (no shadcn design system),
-    - can expose an optional `headless` feature if any math/types are useful without `fret-ui`.
+    - can expose an optional `headless`/`declarative` feature when useful.
   - Pros: keeps layering clean; canvases can reuse substrate helpers without depending on UI kit
     policies/recipes; easier to version/scope.
   - Cons: adds one more crate; requires intentional API design to avoid premature over-abstraction.

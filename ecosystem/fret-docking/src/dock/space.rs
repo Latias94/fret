@@ -295,7 +295,7 @@ impl DockSpace {
             scale_factor,
         };
 
-        let (close_blob, close_metrics) = services.text().prepare(
+        let (close_blob, close_metrics) = services.text().prepare_str(
             "×",
             &self.tab_close_style,
             TextConstraints {
@@ -317,9 +317,10 @@ impl DockSpace {
                 .map(|p| p.title.as_str())
                 .unwrap_or(panel.kind.0.as_str());
             let title_hash = hash_title(title);
-            let (blob, metrics) = services
-                .text()
-                .prepare(title, &self.tab_text_style, constraints);
+            let (blob, metrics) =
+                services
+                    .text()
+                    .prepare_str(title, &self.tab_text_style, constraints);
             self.tab_titles.insert(
                 panel,
                 PreparedTabTitle {
@@ -408,7 +409,7 @@ impl DockSpace {
             overflow: TextOverflow::Clip,
             scale_factor,
         };
-        let (blob, metrics) = services.text().prepare(
+        let (blob, metrics) = services.text().prepare_str(
             "No panels in this window.\nUse File → Layout → Reset Layout.",
             &self.empty_state_style,
             constraints,

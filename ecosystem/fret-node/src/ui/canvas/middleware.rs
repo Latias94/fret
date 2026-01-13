@@ -240,6 +240,8 @@ fn op_non_finite_field(op: &crate::ops::GraphOp) -> Option<&'static str> {
             .or_else(|| (!endpoints_is_finite(*to)).then_some("SetEdgeEndpoints.to")),
 
         GraphOp::RemoveNode { .. }
+        | GraphOp::SetNodeKind { .. }
+        | GraphOp::SetNodeKindVersion { .. }
         | GraphOp::SetNodeParent { .. }
         | GraphOp::SetNodeCollapsed { .. }
         | GraphOp::SetNodePorts { .. }

@@ -33,7 +33,9 @@ use fret_node::io::NodeGraphViewStateFileV1;
 use fret_node::ops::{GraphOp, GraphTransaction};
 use fret_node::profile::{DataflowProfile, apply_transaction_with_profile};
 use fret_node::runtime::store::NodeGraphStore;
-use fret_node::schema::{NodeRegistry, NodeSchema, PortDecl};
+use fret_node::schema::{
+    NodeKindMigrateError, NodeKindMigrator, NodeRegistry, NodeSchema, PortDecl,
+};
 use fret_node::ui::canvas::RejectNonFiniteTx;
 use fret_node::ui::presenter::{
     EdgeMarker, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate, NodeGraphContextMenuItem,
@@ -74,6 +76,7 @@ const CMD_RESET_GRAPH: &str = "node_graph_demo.reset_graph";
 const CMD_SPAWN_STRESS_1K: &str = "node_graph_demo.spawn_stress_1k";
 const CMD_SPAWN_STRESS_5K: &str = "node_graph_demo.spawn_stress_5k";
 const CMD_SPAWN_STRESS_10K: &str = "node_graph_demo.spawn_stress_10k";
+const CMD_UPGRADE_GRAPH: &str = "node_graph_demo.upgrade_graph";
 const WEIRD_KIND: &str = "demo.weird_layout";
 
 #[derive(Clone)]
@@ -309,13 +312,54 @@ impl NodeGraphPresenter for DemoPresenter {
     }
 }
 
+#[derive(Debug)]
+struct DemoFloatMigrator;
+
+impl NodeKindMigrator for DemoFloatMigrator {
+    fn migrate(
+        &self,
+        from_version: u32,
+        to_version: u32,
+        data: &Value,
+    ) -> Result<Value, NodeKindMigrateError> {
+        if from_version == to_version {
+            return Ok(data.clone());
+        }
+        if from_version != 0 || to_version != 1 {
+            return Err(NodeKindMigrateError::message(format!(
+                "unsupported float migration: {from_version} -> {to_version}"
+            )));
+        }
+
+        let mut obj = match data {
+            Value::Object(map) => map.clone(),
+            Value::Number(n) => {
+                let mut map = serde_json::Map::new();
+                map.insert("val".to_string(), Value::Number(n.clone()));
+                map
+            }
+            _ => serde_json::Map::new(),
+        };
+
+        let value = obj
+            .get("value")
+            .and_then(|v| v.as_f64())
+            .or_else(|| obj.get("val").and_then(|v| v.as_f64()))
+            .unwrap_or(0.0);
+
+        obj.insert("value".to_string(), Value::from(value));
+        obj.remove("val");
+        Ok(Value::Object(obj))
+    }
+}
+
 fn build_demo_registry() -> NodeRegistry {
     let mut reg = NodeRegistry::new();
 
     reg.register(NodeSchema {
         kind: NodeKindKey::new("demo.float"),
         latest_kind_version: 1,
-        kind_aliases: Vec::new(),
+        kind_aliases: vec![NodeKindKey::new("demo.float.v0")],
         title: "Float".to_string(),
         category: vec!["Demo".to_string()],
         keywords: vec!["number".to_string(), "float".to_string()],
@@ -329,6 +373,7 @@ fn build_demo_registry() -> NodeRegistry {
         }],
         default_data: serde_json::Value::Null,
     });
+    reg.register_migrator(NodeKindKey::new("demo.float"), Arc::new(DemoFloatMigrator));
 
     reg.register(NodeSchema {
         kind: NodeKindKey::new("fret.variadic_merge"),
@@ -481,8 +526,8 @@ fn build_demo_graph(graph_id: GraphId) -> Graph {
     graph.nodes.insert(
         node_value_a,
         Node {
-            kind: NodeKindKey::new("demo.float"),
-            kind_version: 1,
+            kind: NodeKindKey::new("demo.float.v0"),
+            kind_version: 0,
             pos: CanvasPoint { x: 40.0, y: 60.0 },
             selectable: None,
             draggable: None,
@@ -494,7 +539,7 @@ fn build_demo_graph(graph_id: GraphId) -> Graph {
             size: None,
             collapsed: false,
             ports: vec![port_value_a_out],
-            data: serde_json::json!({ "value": 0.25 }),
+            data: serde_json::json!({ "val": 0.25 }),
         },
     );
     graph.nodes.insert(
@@ -1415,6 +1460,56 @@ impl WinitAppDriver for NodeGraphDemoDriver {
             return;
         }
 
+        if command.as_str() == CMD_UPGRADE_GRAPH {
+            let Some(models) = app.global::<NodeGraphDemoModels>().cloned() else {
+                return;
+            };
+            let Some(registry) = app.global::<NodeRegistry>().cloned() else {
+                return;
+            };
+
+            let result = models.store.update(app, move |store, _cx| {
+                let graph = store.graph();
+
+                let canonicalize = registry.plan_canonicalize_kinds(graph);
+                let mut migrate = registry.plan_migrate_nodes(graph);
+                migrate.tx.label = Some("Upgrade Node Graph".to_string());
+
+                let report = migrate.report;
+                let rewrite_count = canonicalize.rewrites.len();
+
+                if migrate.tx.is_empty() {
+                    return (rewrite_count, report, false);
+                }
+
+                let ok = store.dispatch_transaction(&migrate.tx).is_ok();
+                (rewrite_count, report, ok)
+            });
+
+            match result {
+                Ok((rewrites, report, did_apply)) => {
+                    if !did_apply && rewrites == 0 {
+                        tracing::info!("upgrade: no changes required");
+                    } else {
+                        tracing::info!(
+                            rewrites,
+                            upgraded = report.upgraded.len(),
+                            missing_schema = report.missing_schema.len(),
+                            missing_migrator = report.missing_migrator.len(),
+                            newer_than_schema = report.newer_than_schema.len(),
+                            errors = report.errors.len(),
+                            did_apply,
+                            "upgrade: completed"
+                        );
+                    }
+                }
+                Err(_) => tracing::warn!("upgrade: store unavailable"),
+            }
+
+            app.request_redraw(window);
+            return;
+        }
+
         if command.as_str() == CMD_TOGGLE_WEIRD_LAYOUT {
             let Some(toggle) = app.global::<Arc<DemoWeirdLayoutMeasuredState>>().cloned() else {
                 return;
@@ -1867,6 +1962,21 @@ fn register_demo_commands(registry: &mut CommandRegistry) {
             .with_keywords(["reset", "graph", "demo"])
             .with_scope(CommandScope::App)
             .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr")),
+    );
+
+    registry.register(
+        CommandId::new(CMD_UPGRADE_GRAPH),
+        CommandMeta::new("Upgrade Node Graph (Canonicalize + Migrate)")
+            .with_category("Demo")
+            .with_keywords(["upgrade", "migrate", "canonicalize", "schema", "version"])
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr"))
+            .with_default_keybindings([
+                mac_cmd(KeyCode::KeyU),
+                win_ctrl(KeyCode::KeyU),
+                linux_ctrl(KeyCode::KeyU),
+                web_ctrl(KeyCode::KeyU),
+            ]),
     );
 
     registry.register(

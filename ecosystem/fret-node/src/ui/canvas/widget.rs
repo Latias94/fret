@@ -110,9 +110,10 @@ use super::searcher::{SEARCHER_MAX_VISIBLE_ROWS, SearcherRow, SearcherRowKind};
 use super::snaplines::SnapGuides;
 use super::spatial::CanvasSpatialIndex;
 use super::state::{
-    ContextMenuState, ContextMenuTarget, GeometryCache, GeometryCacheKey, InteractionState,
-    InternalsCacheKey, MarqueeDrag, NodeResizeHandle, PanInertiaState, PasteSeries, PendingPaste,
-    SearcherState, ToastState, ViewSnapshot, WireDrag, WireDragKind,
+    ContextMenuState, ContextMenuTarget, DragPreviewCache, DragPreviewKind, GeometryCache,
+    GeometryCacheKey, InteractionState, InternalsCacheKey, MarqueeDrag, NodeResizeHandle,
+    PanInertiaState, PasteSeries, PendingPaste, SearcherState, ToastState, ViewSnapshot, WireDrag,
+    WireDragKind,
 };
 use super::workflow;
 
@@ -500,6 +501,46 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         hasher.finish()
     }
 
+    fn group_rect_with_preview(
+        &self,
+        group_id: crate::core::GroupId,
+        base: crate::core::CanvasRect,
+    ) -> crate::core::CanvasRect {
+        if let Some(resize) = self
+            .interaction
+            .group_resize
+            .as_ref()
+            .filter(|r| r.group == group_id)
+        {
+            return resize.current_rect;
+        }
+        if let Some(drag) = self
+            .interaction
+            .group_drag
+            .as_ref()
+            .filter(|d| d.group == group_id)
+        {
+            return drag.current_rect;
+        }
+        if let Some(rect) = self.interaction.node_resize.as_ref().and_then(|r| {
+            r.current_groups
+                .iter()
+                .find(|(id, _)| *id == group_id)
+                .map(|(_, rect)| *rect)
+        }) {
+            return rect;
+        }
+        if let Some(rect) = self.interaction.node_drag.as_ref().and_then(|d| {
+            d.current_groups
+                .iter()
+                .find(|(id, _)| *id == group_id)
+                .map(|(_, r)| *r)
+        }) {
+            return rect;
+        }
+        base
+    }
+
     fn canvas_geometry<H: UiHost>(
         &mut self,
         host: &H,
@@ -515,6 +556,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         };
 
         if self.geometry.key != Some(key) {
+            self.geometry.drag_preview = None;
             let style = self.style.clone();
             let draw_order = snapshot.draw_order.clone();
             let zoom = snapshot.zoom;
@@ -529,8 +571,19 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         zoom,
                         presenter,
                     );
-                    let max_hit_pad_canvas = 96.0 / zoom.max(1.0e-6);
-                    let index = CanvasSpatialIndex::build(graph, &geom, zoom, max_hit_pad_canvas);
+                    let z = zoom.max(1.0e-6);
+                    let tuning = snapshot.interaction.spatial_index;
+                    let cell_size_canvas = (tuning.cell_size_screen_px / z)
+                        .max(tuning.min_cell_size_screen_px / z)
+                        .max(1.0);
+                    let max_hit_pad_canvas = (tuning.edge_aabb_pad_screen_px / z).max(0.0);
+                    let index = CanvasSpatialIndex::build(
+                        graph,
+                        &geom,
+                        zoom,
+                        max_hit_pad_canvas,
+                        cell_size_canvas,
+                    );
                     (geom, index)
                 })
                 .ok()
@@ -597,7 +650,513 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     ) -> (Arc<CanvasGeometry>, Arc<CanvasSpatialIndex>) {
         let geom = self.canvas_geometry(host, snapshot);
         let index = self.geometry.index.clone();
+        let node_drag = self.interaction.node_drag.clone();
+        let group_drag = self.interaction.group_drag.clone();
+        let node_resize = self.interaction.node_resize.clone();
+
+        if let Some(drag) = node_drag.as_ref() {
+            if let Some((geom, index)) = self.drag_preview_derived(
+                host,
+                snapshot,
+                DragPreviewKind::NodeDrag,
+                drag.preview_rev,
+                &drag.current_nodes,
+            ) {
+                return (geom, index);
+            }
+        } else if let Some(drag) = group_drag.as_ref() {
+            if let Some((geom, index)) = self.drag_preview_derived(
+                host,
+                snapshot,
+                DragPreviewKind::GroupDrag,
+                drag.preview_rev,
+                &drag.current_nodes,
+            ) {
+                return (geom, index);
+            }
+        } else if let Some(resize) = node_resize.as_ref() {
+            if let Some((geom, index)) = self.node_resize_preview_derived(
+                host,
+                snapshot,
+                resize.preview_rev,
+                resize.node,
+                resize.current_node_pos,
+                resize.current_size_opt,
+            ) {
+                return (geom, index);
+            }
+        } else {
+            self.geometry.drag_preview = None;
+        }
+
         (geom, index)
+    }
+
+    fn drag_preview_derived<H: UiHost>(
+        &mut self,
+        host: &H,
+        snapshot: &ViewSnapshot,
+        kind: DragPreviewKind,
+        preview_rev: u64,
+        nodes: &[(GraphNodeId, CanvasPoint)],
+    ) -> Option<(Arc<CanvasGeometry>, Arc<CanvasSpatialIndex>)> {
+        if nodes.is_empty() {
+            return None;
+        }
+
+        let base_key = self.geometry.key?;
+        let base_geom = self.geometry.geom.clone();
+        let base_index = self.geometry.index.clone();
+
+        let rebuild = self
+            .geometry
+            .drag_preview
+            .as_ref()
+            .is_none_or(|cache| cache.kind != kind || cache.base_key != base_key);
+        if rebuild {
+            let node_ports = self
+                .graph
+                .read_ref(host, |g| {
+                    let mut out: HashMap<GraphNodeId, Vec<PortId>> = HashMap::new();
+                    for (id, _pos) in nodes {
+                        let Some(node) = g.nodes.get(id) else {
+                            continue;
+                        };
+                        out.insert(*id, node.ports.clone());
+                    }
+                    out
+                })
+                .ok()
+                .unwrap_or_default();
+
+            let mut geom = (*base_geom).clone();
+            let mut index = (*base_index).clone();
+            let mut node_positions: HashMap<GraphNodeId, CanvasPoint> = HashMap::new();
+            let mut node_rects: HashMap<GraphNodeId, Rect> = HashMap::new();
+
+            for (id, pos) in nodes {
+                node_positions.insert(*id, *pos);
+                let Some(node_geom) = geom.nodes.get_mut(id) else {
+                    continue;
+                };
+
+                let base_x = node_geom.rect.origin.x.0;
+                let base_y = node_geom.rect.origin.y.0;
+                let dx = pos.x - base_x;
+                let dy = pos.y - base_y;
+                if !dx.is_finite() || !dy.is_finite() {
+                    continue;
+                }
+
+                node_geom.rect = Rect::new(Point::new(Px(pos.x), Px(pos.y)), node_geom.rect.size);
+                index.update_node_rect(*id, node_geom.rect);
+                node_rects.insert(*id, node_geom.rect);
+
+                let Some(ports) = node_ports.get(id) else {
+                    continue;
+                };
+                for port_id in ports {
+                    let Some(handle) = geom.ports.get_mut(port_id) else {
+                        continue;
+                    };
+                    handle.center =
+                        Point::new(Px(handle.center.x.0 + dx), Px(handle.center.y.0 + dy));
+                    handle.bounds = Rect::new(
+                        Point::new(
+                            Px(handle.bounds.origin.x.0 + dx),
+                            Px(handle.bounds.origin.y.0 + dy),
+                        ),
+                        handle.bounds.size,
+                    );
+                    index.update_port_rect(*port_id, handle.bounds);
+                }
+            }
+
+            let mut affected_edges: HashSet<EdgeId> = HashSet::new();
+            for (id, _pos) in nodes {
+                let Some(ports) = node_ports.get(id) else {
+                    continue;
+                };
+                for port in ports {
+                    if let Some(edges) = index.edges_for_port(*port) {
+                        affected_edges.extend(edges.iter().copied());
+                    }
+                }
+            }
+
+            let edge_endpoints: Vec<(EdgeId, PortId, PortId)> = self
+                .graph
+                .read_ref(host, |g| {
+                    affected_edges
+                        .iter()
+                        .filter_map(|edge_id| {
+                            g.edges.get(edge_id).map(|e| (*edge_id, e.from, e.to))
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .ok()
+                .unwrap_or_default();
+            for (edge_id, from, to) in edge_endpoints {
+                let Some(p0) = geom.port_center(from) else {
+                    continue;
+                };
+                let Some(p1) = geom.port_center(to) else {
+                    continue;
+                };
+                let rect = index.edge_aabb(p0, p1, snapshot.zoom);
+                index.update_edge_rect(edge_id, rect);
+            }
+
+            self.geometry.drag_preview = Some(DragPreviewCache {
+                kind,
+                base_key,
+                preview_rev,
+                geom: Arc::new(geom),
+                index: Arc::new(index),
+                node_positions,
+                node_rects,
+                node_ports,
+            });
+        }
+
+        let Some(cache) = self.geometry.drag_preview.as_mut() else {
+            return None;
+        };
+
+        if cache.preview_rev != preview_rev {
+            let mut next_positions: HashMap<GraphNodeId, CanvasPoint> = HashMap::new();
+            for (id, pos) in nodes {
+                next_positions.insert(*id, *pos);
+            }
+
+            let geom_mut = Arc::make_mut(&mut cache.geom);
+            let index_mut = Arc::make_mut(&mut cache.index);
+
+            let moved_nodes: Vec<(GraphNodeId, CanvasPoint, CanvasPoint)> = next_positions
+                .iter()
+                .filter_map(|(&id, &next)| {
+                    let prev = cache.node_positions.get(&id).copied().unwrap_or(next);
+                    (prev != next).then_some((id, prev, next))
+                })
+                .collect();
+            if !moved_nodes.is_empty() {
+                for (id, prev, next) in &moved_nodes {
+                    let dx = next.x - prev.x;
+                    let dy = next.y - prev.y;
+                    if !dx.is_finite() || !dy.is_finite() {
+                        continue;
+                    }
+
+                    if let Some(node_geom) = geom_mut.nodes.get_mut(id) {
+                        node_geom.rect =
+                            Rect::new(Point::new(Px(next.x), Px(next.y)), node_geom.rect.size);
+                        index_mut.update_node_rect(*id, node_geom.rect);
+                        cache.node_rects.insert(*id, node_geom.rect);
+                    }
+
+                    if let Some(ports) = cache.node_ports.get(id) {
+                        for port_id in ports {
+                            let Some(handle) = geom_mut.ports.get_mut(port_id) else {
+                                continue;
+                            };
+                            handle.center =
+                                Point::new(Px(handle.center.x.0 + dx), Px(handle.center.y.0 + dy));
+                            handle.bounds = Rect::new(
+                                Point::new(
+                                    Px(handle.bounds.origin.x.0 + dx),
+                                    Px(handle.bounds.origin.y.0 + dy),
+                                ),
+                                handle.bounds.size,
+                            );
+                            index_mut.update_port_rect(*port_id, handle.bounds);
+                        }
+                    }
+                }
+
+                let mut affected_edges: HashSet<EdgeId> = HashSet::new();
+                for (id, _prev, _next) in &moved_nodes {
+                    let Some(ports) = cache.node_ports.get(id) else {
+                        continue;
+                    };
+                    for port in ports {
+                        if let Some(edges) = index_mut.edges_for_port(*port) {
+                            affected_edges.extend(edges.iter().copied());
+                        }
+                    }
+                }
+
+                let edge_endpoints: Vec<(EdgeId, PortId, PortId)> = self
+                    .graph
+                    .read_ref(host, |g| {
+                        affected_edges
+                            .iter()
+                            .filter_map(|edge_id| {
+                                g.edges.get(edge_id).map(|e| (*edge_id, e.from, e.to))
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                    .ok()
+                    .unwrap_or_default();
+                for (edge_id, from, to) in edge_endpoints {
+                    let Some(p0) = geom_mut.port_center(from) else {
+                        continue;
+                    };
+                    let Some(p1) = geom_mut.port_center(to) else {
+                        continue;
+                    };
+                    let rect = index_mut.edge_aabb(p0, p1, snapshot.zoom);
+                    index_mut.update_edge_rect(edge_id, rect);
+                }
+
+                cache.node_positions = next_positions;
+            }
+            cache.preview_rev = preview_rev;
+        }
+
+        Some((cache.geom.clone(), cache.index.clone()))
+    }
+
+    fn node_resize_preview_derived<H: UiHost>(
+        &mut self,
+        host: &H,
+        snapshot: &ViewSnapshot,
+        preview_rev: u64,
+        node_id: GraphNodeId,
+        pos: CanvasPoint,
+        size_opt_px: Option<CanvasSize>,
+    ) -> Option<(Arc<CanvasGeometry>, Arc<CanvasSpatialIndex>)> {
+        let base_key = self.geometry.key?;
+        let base_geom = self.geometry.geom.clone();
+        let base_index = self.geometry.index.clone();
+
+        let zoom = snapshot.zoom.max(1.0e-6);
+        let base_rect = base_geom.nodes.get(&node_id)?.rect;
+        let size = size_opt_px
+            .map(|s| {
+                Size::new(
+                    Px((s.width / zoom).max(0.0)),
+                    Px((s.height / zoom).max(0.0)),
+                )
+            })
+            .unwrap_or(base_rect.size);
+        let next_rect = Rect::new(Point::new(Px(pos.x), Px(pos.y)), size);
+
+        let rebuild = self.geometry.drag_preview.as_ref().is_none_or(|cache| {
+            cache.kind != DragPreviewKind::NodeResize || cache.base_key != base_key
+        });
+        if rebuild {
+            let node_ports = self
+                .graph
+                .read_ref(host, |g| {
+                    let mut out: HashMap<GraphNodeId, Vec<PortId>> = HashMap::new();
+                    if let Some(node) = g.nodes.get(&node_id) {
+                        out.insert(node_id, node.ports.clone());
+                    }
+                    out
+                })
+                .ok()
+                .unwrap_or_default();
+
+            let mut geom = (*base_geom).clone();
+            let mut index = (*base_index).clone();
+            let mut node_positions: HashMap<GraphNodeId, CanvasPoint> = HashMap::new();
+            let mut node_rects: HashMap<GraphNodeId, Rect> = HashMap::new();
+            node_positions.insert(node_id, pos);
+            node_rects.insert(node_id, next_rect);
+
+            if let Some(node_geom) = geom.nodes.get_mut(&node_id) {
+                let prev_rect = node_geom.rect;
+                if prev_rect != next_rect {
+                    node_geom.rect = next_rect;
+                    index.update_node_rect(node_id, next_rect);
+                    Self::update_ports_for_node_rect_change(
+                        &mut geom,
+                        &mut index,
+                        node_id,
+                        prev_rect,
+                        next_rect,
+                        node_ports
+                            .get(&node_id)
+                            .map(|v| v.as_slice())
+                            .unwrap_or(&[]),
+                    );
+                }
+            }
+
+            Self::update_edges_for_ports(
+                &mut geom,
+                &mut index,
+                snapshot.zoom,
+                node_ports
+                    .get(&node_id)
+                    .map(|v| v.as_slice())
+                    .unwrap_or(&[]),
+                |edge_ids| {
+                    self.graph
+                        .read_ref(host, |g| {
+                            edge_ids
+                                .iter()
+                                .filter_map(|edge_id| {
+                                    g.edges.get(edge_id).map(|e| (*edge_id, e.from, e.to))
+                                })
+                                .collect::<Vec<_>>()
+                        })
+                        .ok()
+                        .unwrap_or_default()
+                },
+            );
+
+            self.geometry.drag_preview = Some(DragPreviewCache {
+                kind: DragPreviewKind::NodeResize,
+                base_key,
+                preview_rev,
+                geom: Arc::new(geom),
+                index: Arc::new(index),
+                node_positions,
+                node_rects,
+                node_ports,
+            });
+        }
+
+        let Some(cache) = self.geometry.drag_preview.as_mut() else {
+            return None;
+        };
+        if cache.preview_rev != preview_rev {
+            let geom_mut = Arc::make_mut(&mut cache.geom);
+            let index_mut = Arc::make_mut(&mut cache.index);
+
+            let prev_rect = cache.node_rects.get(&node_id).copied().unwrap_or(base_rect);
+            if prev_rect != next_rect {
+                if let Some(node_geom) = geom_mut.nodes.get_mut(&node_id) {
+                    node_geom.rect = next_rect;
+                    index_mut.update_node_rect(node_id, next_rect);
+                    Self::update_ports_for_node_rect_change(
+                        geom_mut,
+                        index_mut,
+                        node_id,
+                        prev_rect,
+                        next_rect,
+                        cache
+                            .node_ports
+                            .get(&node_id)
+                            .map(|v| v.as_slice())
+                            .unwrap_or(&[]),
+                    );
+                }
+
+                Self::update_edges_for_ports(
+                    geom_mut,
+                    index_mut,
+                    snapshot.zoom,
+                    cache
+                        .node_ports
+                        .get(&node_id)
+                        .map(|v| v.as_slice())
+                        .unwrap_or(&[]),
+                    |edge_ids| {
+                        self.graph
+                            .read_ref(host, |g| {
+                                edge_ids
+                                    .iter()
+                                    .filter_map(|edge_id| {
+                                        g.edges.get(edge_id).map(|e| (*edge_id, e.from, e.to))
+                                    })
+                                    .collect::<Vec<_>>()
+                            })
+                            .ok()
+                            .unwrap_or_default()
+                    },
+                );
+            }
+
+            cache.node_positions.insert(node_id, pos);
+            cache.node_rects.insert(node_id, next_rect);
+            cache.preview_rev = preview_rev;
+        }
+
+        Some((cache.geom.clone(), cache.index.clone()))
+    }
+
+    fn update_ports_for_node_rect_change(
+        geom: &mut CanvasGeometry,
+        index: &mut CanvasSpatialIndex,
+        node_id: GraphNodeId,
+        prev_rect: Rect,
+        next_rect: Rect,
+        ports: &[PortId],
+    ) {
+        let eps = 1.0e-3;
+        let prev_w = prev_rect.size.width.0;
+        let next_w = next_rect.size.width.0;
+
+        for port_id in ports {
+            let Some(handle) = geom.ports.get_mut(port_id) else {
+                continue;
+            };
+            if handle.node != node_id {
+                continue;
+            }
+
+            let local_x = handle.center.x.0 - prev_rect.origin.x.0;
+            let local_y = handle.center.y.0 - prev_rect.origin.y.0;
+            let mut next_local_x = local_x;
+            match handle.dir {
+                PortDirection::In => {
+                    if (local_x - 0.0).abs() <= eps {
+                        next_local_x = 0.0;
+                    }
+                }
+                PortDirection::Out => {
+                    if (local_x - prev_w).abs() <= eps {
+                        next_local_x = next_w;
+                    }
+                }
+            }
+
+            let center = Point::new(
+                Px(next_rect.origin.x.0 + next_local_x),
+                Px(next_rect.origin.y.0 + local_y),
+            );
+            let half_w = 0.5 * handle.bounds.size.width.0;
+            let half_h = 0.5 * handle.bounds.size.height.0;
+            let bounds = Rect::new(
+                Point::new(Px(center.x.0 - half_w), Px(center.y.0 - half_h)),
+                handle.bounds.size,
+            );
+            handle.center = center;
+            handle.bounds = bounds;
+            index.update_port_rect(*port_id, bounds);
+        }
+    }
+
+    fn update_edges_for_ports(
+        geom: &mut CanvasGeometry,
+        index: &mut CanvasSpatialIndex,
+        zoom: f32,
+        ports: &[PortId],
+        resolve_edges: impl FnOnce(&HashSet<EdgeId>) -> Vec<(EdgeId, PortId, PortId)>,
+    ) {
+        let mut edge_ids: HashSet<EdgeId> = HashSet::new();
+        for port in ports {
+            if let Some(edges) = index.edges_for_port(*port) {
+                edge_ids.extend(edges.iter().copied());
+            }
+        }
+        if edge_ids.is_empty() {
+            return;
+        }
+
+        let endpoints = resolve_edges(&edge_ids);
+        for (edge_id, from, to) in endpoints {
+            let Some(p0) = geom.port_center(from) else {
+                continue;
+            };
+            let Some(p1) = geom.port_center(to) else {
+                continue;
+            };
+            let rect = index.edge_aabb(p0, p1, zoom);
+            index.update_edge_rect(edge_id, rect);
+        }
     }
 
     pub fn new_with_middleware(
@@ -2236,6 +2795,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let ops = self
             .graph
             .read_ref(host, |g| {
+                let mut delta = delta;
                 let mut ops: Vec<GraphOp> = Vec::new();
 
                 let selected_groups_set: std::collections::HashSet<crate::core::GroupId> =
@@ -2255,6 +2815,65 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     selected_nodes.iter().copied().collect();
                 for id in &moved_by_group {
                     moved_nodes.insert(*id);
+                }
+
+                let multi_move = moved_nodes.len() > 1;
+                if multi_move && let Some(extent) = snapshot.interaction.node_extent {
+                    let mut min_x: f32 = f32::INFINITY;
+                    let mut min_y: f32 = f32::INFINITY;
+                    let mut max_x: f32 = f32::NEG_INFINITY;
+                    let mut max_y: f32 = f32::NEG_INFINITY;
+                    let mut any = false;
+
+                    for node_id in moved_nodes.iter().copied() {
+                        let Some(node_geom) = geom_for_extent.nodes.get(&node_id) else {
+                            continue;
+                        };
+                        let x0 = node_geom.rect.origin.x.0;
+                        let y0 = node_geom.rect.origin.y.0;
+                        let w = node_geom.rect.size.width.0.max(0.0);
+                        let h = node_geom.rect.size.height.0.max(0.0);
+                        if !x0.is_finite() || !y0.is_finite() || !w.is_finite() || !h.is_finite() {
+                            continue;
+                        }
+
+                        any = true;
+                        min_x = min_x.min(x0);
+                        min_y = min_y.min(y0);
+                        max_x = max_x.max(x0 + w);
+                        max_y = max_y.max(y0 + h);
+                    }
+
+                    if any
+                        && min_x.is_finite()
+                        && min_y.is_finite()
+                        && max_x.is_finite()
+                        && max_y.is_finite()
+                    {
+                        let group_min = CanvasPoint { x: min_x, y: min_y };
+                        let group_size = CanvasSize {
+                            width: (max_x - min_x).max(0.0),
+                            height: (max_y - min_y).max(0.0),
+                        };
+                        let group_w = group_size.width.max(0.0);
+                        let group_h = group_size.height.max(0.0);
+                        let extent_w = extent.size.width.max(0.0);
+                        let extent_h = extent.size.height.max(0.0);
+
+                        let min_dx = extent.origin.x - group_min.x;
+                        let mut max_dx = extent.origin.x + (extent_w - group_w) - group_min.x;
+                        if !max_dx.is_finite() || max_dx < min_dx {
+                            max_dx = min_dx;
+                        }
+                        delta.x = delta.x.clamp(min_dx, max_dx);
+
+                        let min_dy = extent.origin.y - group_min.y;
+                        let mut max_dy = extent.origin.y + (extent_h - group_h) - group_min.y;
+                        if !max_dy.is_finite() || max_dy < min_dy {
+                            max_dy = min_dy;
+                        }
+                        delta.y = delta.y.clamp(min_dy, max_dy);
+                    }
                 }
 
                 let mut groups_sorted = selected_groups.clone();
@@ -2297,7 +2916,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         let node_w = node_geom.rect.size.width.0;
                         let node_h = node_geom.rect.size.height.0;
 
-                        if let Some(extent) = snapshot.interaction.node_extent {
+                        if !multi_move && let Some(extent) = snapshot.interaction.node_extent {
                             let min_x = extent.origin.x;
                             let min_y = extent.origin.y;
                             let max_x = extent.origin.x + (extent.size.width - node_w).max(0.0);
@@ -2622,13 +3241,207 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     }
                 }
 
+                let aligns = matches!(
+                    mode,
+                    AlignDistributeMode::AlignLeft
+                        | AlignDistributeMode::AlignRight
+                        | AlignDistributeMode::AlignTop
+                        | AlignDistributeMode::AlignBottom
+                        | AlignDistributeMode::AlignCenterX
+                        | AlignDistributeMode::AlignCenterY
+                );
+                let affects_x = matches!(
+                    mode,
+                    AlignDistributeMode::AlignLeft
+                        | AlignDistributeMode::AlignRight
+                        | AlignDistributeMode::AlignCenterX
+                );
+                let affects_y = matches!(
+                    mode,
+                    AlignDistributeMode::AlignTop
+                        | AlignDistributeMode::AlignBottom
+                        | AlignDistributeMode::AlignCenterY
+                );
+
+                let moved_nodes: std::collections::HashSet<GraphNodeId> = selected_nodes
+                    .iter()
+                    .copied()
+                    .chain(moved_by_group.iter().copied())
+                    .collect();
+                let multi_move = moved_nodes.len() > 1;
+                let skip_node_extent_clamp = aligns && multi_move;
+
+                let mut shift = CanvasPoint::default();
+                let any_delta = !per_group_delta.is_empty() || !per_node_delta.is_empty();
+                if aligns
+                    && any_delta
+                    && multi_move
+                    && let Some(extent) = snapshot.interaction.node_extent
+                {
+                    let mut min_x: f32 = f32::INFINITY;
+                    let mut min_y: f32 = f32::INFINITY;
+                    let mut max_x: f32 = f32::NEG_INFINITY;
+                    let mut max_y: f32 = f32::NEG_INFINITY;
+                    let mut any = false;
+
+                    for node_id in moved_nodes.iter().copied() {
+                        let Some(node_geom) = geom.nodes.get(&node_id) else {
+                            continue;
+                        };
+                        let w = node_geom.rect.size.width.0.max(0.0);
+                        let h = node_geom.rect.size.height.0.max(0.0);
+                        if !w.is_finite() || !h.is_finite() {
+                            continue;
+                        }
+
+                        let base_delta = if moved_by_group.contains(&node_id) {
+                            g.nodes
+                                .get(&node_id)
+                                .and_then(|n| n.parent)
+                                .and_then(|p| per_group_delta.get(&p).copied())
+                                .unwrap_or_default()
+                        } else {
+                            per_node_delta.get(&node_id).copied().unwrap_or_default()
+                        };
+
+                        let x0 = node_geom.rect.origin.x.0 + base_delta.x;
+                        let y0 = node_geom.rect.origin.y.0 + base_delta.y;
+                        if !x0.is_finite() || !y0.is_finite() {
+                            continue;
+                        }
+
+                        any = true;
+                        min_x = min_x.min(x0);
+                        min_y = min_y.min(y0);
+                        max_x = max_x.max(x0 + w);
+                        max_y = max_y.max(y0 + h);
+                    }
+
+                    if any
+                        && min_x.is_finite()
+                        && min_y.is_finite()
+                        && max_x.is_finite()
+                        && max_y.is_finite()
+                    {
+                        let bbox_w = (max_x - min_x).max(0.0);
+                        let bbox_h = (max_y - min_y).max(0.0);
+                        let extent_w = extent.size.width.max(0.0);
+                        let extent_h = extent.size.height.max(0.0);
+
+                        if affects_x
+                            && extent.origin.x.is_finite()
+                            && extent_w.is_finite()
+                            && bbox_w.is_finite()
+                        {
+                            let min_dx = extent.origin.x - min_x;
+                            let mut max_dx = extent.origin.x + (extent_w - bbox_w).max(0.0) - min_x;
+                            if !max_dx.is_finite() || max_dx < min_dx {
+                                max_dx = min_dx;
+                            }
+                            shift.x = 0.0_f32.clamp(min_dx, max_dx);
+                        }
+
+                        if affects_y
+                            && extent.origin.y.is_finite()
+                            && extent_h.is_finite()
+                            && bbox_h.is_finite()
+                        {
+                            let min_dy = extent.origin.y - min_y;
+                            let mut max_dy = extent.origin.y + (extent_h - bbox_h).max(0.0) - min_y;
+                            if !max_dy.is_finite() || max_dy < min_dy {
+                                max_dy = min_dy;
+                            }
+                            shift.y = 0.0_f32.clamp(min_dy, max_dy);
+                        }
+                    }
+                }
+
                 // Apply group deltas first (and move their child nodes).
                 let mut groups_sorted = selected_groups.clone();
                 groups_sorted.sort();
                 for group_id in groups_sorted {
-                    let Some(delta) = per_group_delta.get(&group_id).copied() else {
-                        continue;
+                    let base = per_group_delta.get(&group_id).copied().unwrap_or_default();
+                    let mut delta = CanvasPoint {
+                        x: base.x + shift.x,
+                        y: base.y + shift.y,
                     };
+
+                    if !aligns
+                        && (delta.x.abs() > 1.0e-9 || delta.y.abs() > 1.0e-9)
+                        && let Some(extent) = snapshot.interaction.node_extent
+                    {
+                        let mut min_x: f32 = f32::INFINITY;
+                        let mut min_y: f32 = f32::INFINITY;
+                        let mut max_x: f32 = f32::NEG_INFINITY;
+                        let mut max_y: f32 = f32::NEG_INFINITY;
+                        let mut any = false;
+
+                        for (&node_id, node) in &g.nodes {
+                            if node.parent != Some(group_id) {
+                                continue;
+                            }
+                            let Some(node_geom) = geom.nodes.get(&node_id) else {
+                                continue;
+                            };
+                            let x0 = node_geom.rect.origin.x.0;
+                            let y0 = node_geom.rect.origin.y.0;
+                            let w = node_geom.rect.size.width.0.max(0.0);
+                            let h = node_geom.rect.size.height.0.max(0.0);
+                            if !x0.is_finite()
+                                || !y0.is_finite()
+                                || !w.is_finite()
+                                || !h.is_finite()
+                            {
+                                continue;
+                            }
+
+                            any = true;
+                            min_x = min_x.min(x0);
+                            min_y = min_y.min(y0);
+                            max_x = max_x.max(x0 + w);
+                            max_y = max_y.max(y0 + h);
+                        }
+
+                        if any
+                            && min_x.is_finite()
+                            && min_y.is_finite()
+                            && max_x.is_finite()
+                            && max_y.is_finite()
+                        {
+                            let bbox_w = (max_x - min_x).max(0.0);
+                            let bbox_h = (max_y - min_y).max(0.0);
+                            let extent_w = extent.size.width.max(0.0);
+                            let extent_h = extent.size.height.max(0.0);
+
+                            if min_x.is_finite()
+                                && bbox_w.is_finite()
+                                && extent.origin.x.is_finite()
+                                && extent_w.is_finite()
+                            {
+                                let min_dx = extent.origin.x - min_x;
+                                let mut max_dx =
+                                    extent.origin.x + (extent_w - bbox_w).max(0.0) - min_x;
+                                if !max_dx.is_finite() || max_dx < min_dx {
+                                    max_dx = min_dx;
+                                }
+                                delta.x = delta.x.clamp(min_dx, max_dx);
+                            }
+
+                            if min_y.is_finite()
+                                && bbox_h.is_finite()
+                                && extent.origin.y.is_finite()
+                                && extent_h.is_finite()
+                            {
+                                let min_dy = extent.origin.y - min_y;
+                                let mut max_dy =
+                                    extent.origin.y + (extent_h - bbox_h).max(0.0) - min_y;
+                                if !max_dy.is_finite() || max_dy < min_dy {
+                                    max_dy = min_dy;
+                                }
+                                delta.y = delta.y.clamp(min_dy, max_dy);
+                            }
+                        }
+                    }
                     let Some(group) = g.groups.get(&group_id) else {
                         continue;
                     };
@@ -2648,6 +3461,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         });
                     }
 
+                    if delta.x.abs() <= 1.0e-9 && delta.y.abs() <= 1.0e-9 {
+                        continue;
+                    }
                     for (&node_id, node) in &g.nodes {
                         if node.parent != Some(group_id) {
                             continue;
@@ -2674,9 +3490,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     if moved_by_group.contains(&node_id) {
                         continue;
                     }
-                    let Some(delta) = per_node_delta.get(&node_id).copied() else {
-                        continue;
+                    let base = per_node_delta.get(&node_id).copied().unwrap_or_default();
+                    let delta = CanvasPoint {
+                        x: base.x + shift.x,
+                        y: base.y + shift.y,
                     };
+                    let moved = delta.x.abs() > 1.0e-9 || delta.y.abs() > 1.0e-9;
                     let Some(node) = g.nodes.get(&node_id) else {
                         continue;
                     };
@@ -2691,7 +3510,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         let node_w = node_geom.rect.size.width.0;
                         let node_h = node_geom.rect.size.height.0;
 
-                        if let Some(extent) = snapshot.interaction.node_extent {
+                        if moved
+                            && !skip_node_extent_clamp
+                            && let Some(extent) = snapshot.interaction.node_extent
+                        {
                             let min_x = extent.origin.x;
                             let min_y = extent.origin.y;
                             let max_x = extent.origin.x + (extent.size.width - node_w).max(0.0);
@@ -3013,6 +3835,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         zoom: f32,
         scratch: &mut Vec<EdgeId>,
     ) -> Option<EdgeId> {
+        let bezier_steps = usize::from(snapshot.interaction.bezier_hit_test_steps.max(1));
         let hit_w = canvas_units_from_screen_px(snapshot.interaction.edge_interaction_width, zoom)
             .max(self.style.wire_width / zoom);
         let threshold2 = hit_w * hit_w;
@@ -3035,7 +3858,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
             let route = self.edge_render_hint(graph, edge_id).route;
             let d2 = match route {
-                EdgeRouteKind::Bezier => wire_distance2(pos, from, to, zoom),
+                EdgeRouteKind::Bezier => wire_distance2(pos, from, to, zoom, bezier_steps),
                 EdgeRouteKind::Straight => dist2_point_to_segment(pos, from, to),
                 EdgeRouteKind::Step => step_wire_distance2(pos, from, to),
             };
@@ -6998,8 +7821,9 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                             {
                                 return false;
                             }
-                            !graph.groups.values().any(|group| {
-                                group_resize::group_rect_to_px(group.rect).contains(*position)
+                            !graph.groups.iter().any(|(group_id, group)| {
+                                let rect0 = self.group_rect_with_preview(*group_id, group.rect);
+                                group_resize::group_rect_to_px(rect0).contains(*position)
                             })
                         })
                         .unwrap_or(false);
@@ -7079,8 +7903,9 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                             if geom.nodes.values().any(|ng| ng.rect.contains(*position)) {
                                 return None;
                             }
-                            if graph.groups.values().any(|group| {
-                                group_resize::group_rect_to_px(group.rect).contains(*position)
+                            if graph.groups.iter().any(|(group_id, group)| {
+                                let rect0 = self.group_rect_with_preview(*group_id, group.rect);
+                                group_resize::group_rect_to_px(rect0).contains(*position)
                             }) {
                                 return None;
                             }
@@ -7156,8 +7981,9 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                             if geom.nodes.values().any(|ng| ng.rect.contains(*position)) {
                                 return None;
                             }
-                            if graph.groups.values().any(|group| {
-                                group_resize::group_rect_to_px(group.rect).contains(*position)
+                            if graph.groups.iter().any(|(group_id, group)| {
+                                let rect0 = self.group_rect_with_preview(*group_id, group.rect);
+                                group_resize::group_rect_to_px(rect0).contains(*position)
                             }) {
                                 return None;
                             }
@@ -7878,9 +8704,10 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                         let Some(group) = graph.groups.get(&group_id) else {
                             continue;
                         };
+                        let rect0 = this.group_rect_with_preview(group_id, group.rect);
                         let rect = Rect::new(
-                            Point::new(Px(group.rect.origin.x), Px(group.rect.origin.y)),
-                            Size::new(Px(group.rect.size.width), Px(group.rect.size.height)),
+                            Point::new(Px(rect0.origin.x), Px(rect0.origin.y)),
+                            Size::new(Px(rect0.size.width), Px(rect0.size.height)),
                         );
                         if cull.is_some_and(|c| !rects_intersect(rect, c)) {
                             continue;
@@ -8121,11 +8948,19 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
         let mut edges_hovered: Vec<EdgePaint> = Vec::new();
         let mut edge_labels: Vec<(Point, Point, EdgeRouteKind, Arc<str>, bool, bool)> = Vec::new();
 
+        let bezier_steps = usize::from(snapshot.interaction.bezier_hit_test_steps.max(1));
         let edge_insert_marker: Option<(Point, Color)> =
             edge_insert_marker_request.and_then(|(edge_id, pos)| {
                 render.edges.iter().find(|e| e.id == edge_id).map(|e| {
                     (
-                        closest_point_on_edge_route(e.hint.route, e.from, e.to, zoom, pos),
+                        closest_point_on_edge_route(
+                            e.hint.route,
+                            e.from,
+                            e.to,
+                            zoom,
+                            bezier_steps,
+                            pos,
+                        ),
                         e.color,
                     )
                 })
@@ -8142,6 +8977,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                             edge.from,
                             edge.to,
                             zoom,
+                            bezier_steps,
                             p.pos,
                         ),
                         edge.color,
@@ -8256,7 +9092,11 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
             }
         }
 
-        self.paint_cache.prune(cx.services, 300, 30_000);
+        let prune = snapshot.interaction.paint_cache_prune;
+        if prune.max_entries > 0 && prune.max_age_frames > 0 {
+            self.paint_cache
+                .prune(cx.services, prune.max_age_frames, prune.max_entries);
+        }
 
         let mut draw_drop_marker = |pos: Point, color: Color| {
             let z = zoom.max(1.0e-6);
@@ -9161,21 +10001,8 @@ fn hit_context_menu_item(
     (ix < menu.items.len()).then_some(ix)
 }
 
-fn wire_distance2(p: Point, from: Point, to: Point, zoom: f32) -> f32 {
-    let (c1, c2) = wire_ctrl_points(from, to, zoom);
-
-    let steps: usize = 24;
-    let mut best = f32::INFINITY;
-
-    let mut prev = from;
-    for i in 1..=steps {
-        let t = i as f32 / steps as f32;
-        let cur = cubic_bezier(from, c1, c2, to, t);
-        best = best.min(dist2_point_to_segment(p, prev, cur));
-        prev = cur;
-    }
-
-    best
+fn wire_distance2(p: Point, from: Point, to: Point, zoom: f32, bezier_steps: usize) -> f32 {
+    fret_canvas::wires::bezier_wire_distance2(p, from, to, zoom, bezier_steps)
 }
 
 fn closest_point_on_edge_route(
@@ -9183,33 +10010,24 @@ fn closest_point_on_edge_route(
     from: Point,
     to: Point,
     zoom: f32,
+    bezier_steps: usize,
     p: Point,
 ) -> Point {
     match route {
-        EdgeRouteKind::Bezier => closest_point_on_wire_bezier(p, from, to, zoom),
+        EdgeRouteKind::Bezier => closest_point_on_wire_bezier(p, from, to, zoom, bezier_steps),
         EdgeRouteKind::Straight => closest_point_on_segment(p, from, to).0,
         EdgeRouteKind::Step => closest_point_on_step_wire(p, from, to).0,
     }
 }
 
-fn closest_point_on_wire_bezier(p: Point, from: Point, to: Point, zoom: f32) -> Point {
-    let (c1, c2) = wire_ctrl_points(from, to, zoom);
-
-    let steps: usize = 24;
-    let mut best = (from, f32::INFINITY);
-
-    let mut prev = from;
-    for i in 1..=steps {
-        let t = i as f32 / steps as f32;
-        let cur = cubic_bezier(from, c1, c2, to, t);
-        let cand = closest_point_on_segment(p, prev, cur);
-        if cand.1 < best.1 {
-            best = cand;
-        }
-        prev = cur;
-    }
-
-    best.0
+fn closest_point_on_wire_bezier(
+    p: Point,
+    from: Point,
+    to: Point,
+    zoom: f32,
+    bezier_steps: usize,
+) -> Point {
+    fret_canvas::wires::closest_point_on_bezier_wire(p, from, to, zoom, bezier_steps)
 }
 
 fn closest_point_on_step_wire(p: Point, from: Point, to: Point) -> (Point, f32) {
@@ -10412,8 +11230,9 @@ mod tests {
     }
     use crate::rules::EdgeEndpoint;
     use crate::ui::commands::{
-        CMD_NODE_GRAPH_ACTIVATE, CMD_NODE_GRAPH_ALIGN_LEFT, CMD_NODE_GRAPH_DELETE_SELECTION,
-        CMD_NODE_GRAPH_FOCUS_NEXT, CMD_NODE_GRAPH_FOCUS_NEXT_PORT, CMD_NODE_GRAPH_FOCUS_PORT_LEFT,
+        CMD_NODE_GRAPH_ACTIVATE, CMD_NODE_GRAPH_ALIGN_CENTER_X, CMD_NODE_GRAPH_ALIGN_LEFT,
+        CMD_NODE_GRAPH_DELETE_SELECTION, CMD_NODE_GRAPH_DISTRIBUTE_X, CMD_NODE_GRAPH_FOCUS_NEXT,
+        CMD_NODE_GRAPH_FOCUS_NEXT_PORT, CMD_NODE_GRAPH_FOCUS_PORT_LEFT,
         CMD_NODE_GRAPH_FOCUS_PORT_RIGHT, CMD_NODE_GRAPH_FOCUS_PREV, CMD_NODE_GRAPH_FOCUS_PREV_PORT,
         CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_SELECT_ALL,
     };
@@ -10427,8 +11246,7 @@ mod tests {
     impl fret_core::TextService for NullServices {
         fn prepare(
             &mut self,
-            _text: &str,
-            _style: &fret_core::TextStyle,
+            _input: fret_core::TextInput<'_>,
             _constraints: fret_core::TextConstraints,
         ) -> (TextBlobId, fret_core::TextMetrics) {
             (
@@ -11141,6 +11959,12 @@ mod tests {
                 (a, CanvasPoint { x: 0.0, y: 0.0 }),
                 (b, CanvasPoint { x: 10.0, y: 0.0 }),
             ],
+            current_nodes: vec![
+                (a, CanvasPoint { x: 0.0, y: 0.0 }),
+                (b, CanvasPoint { x: 10.0, y: 0.0 }),
+            ],
+            current_groups: Vec::new(),
+            preview_rev: 0,
             grab_offset: Point::new(Px(0.0), Px(0.0)),
             start_pos: Point::new(Px(0.0), Px(0.0)),
         });
@@ -11343,6 +12167,39 @@ mod tests {
             read_node_pos(&mut host, &graph, b),
             CanvasPoint { x: 10.0, y: 0.0 }
         );
+    }
+
+    #[test]
+    fn nudge_multi_selection_respects_node_extent_by_selection_bounds() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, a, b) = make_test_graph_two_nodes_with_size();
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+        canvas.sync_view_state(&mut host);
+
+        view.update(&mut host, |s, _cx| {
+            s.selected_nodes = vec![a, b];
+            s.interaction.node_extent = Some(CanvasRect {
+                origin: CanvasPoint { x: 0.0, y: 0.0 },
+                size: CanvasSize {
+                    width: 50.0,
+                    height: 100.0,
+                },
+            });
+        })
+        .unwrap();
+
+        let mut services = NullServices::default();
+        let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
+        let mut cx = command_cx(&mut host, &mut services, &mut tree);
+
+        assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_NUDGE_RIGHT)));
+        assert_eq!(canvas.history.undo_len(), 0);
+
+        assert_eq!(read_node_pos(&mut host, &graph, a).x, 0.0);
+        assert_eq!(read_node_pos(&mut host, &graph, b).x, 10.0);
     }
 
     #[test]
@@ -11647,6 +12504,366 @@ mod tests {
             read_node_pos(&mut host, &graph, b),
             CanvasPoint { x: 10.0, y: 5.0 }
         );
+    }
+
+    #[test]
+    fn align_center_x_preserves_alignment_under_node_extent_bounds() {
+        let mut host = TestUiHostImpl::default();
+
+        let mut graph_value = Graph::new(GraphId::new());
+        let kind = NodeKindKey::new("test.node");
+
+        let a = NodeId::new();
+        let b = NodeId::new();
+        graph_value.nodes.insert(
+            a,
+            Node {
+                kind: kind.clone(),
+                kind_version: 1,
+                pos: CanvasPoint { x: 90.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: Some(CanvasSize {
+                    width: 10.0,
+                    height: 20.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+        graph_value.nodes.insert(
+            b,
+            Node {
+                kind,
+                kind_version: 1,
+                pos: CanvasPoint { x: 150.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: Some(CanvasSize {
+                    width: 40.0,
+                    height: 20.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+        canvas.sync_view_state(&mut host);
+
+        view.update(&mut host, |s, _cx| {
+            s.selected_nodes = vec![a, b];
+            s.interaction.node_extent = Some(CanvasRect {
+                origin: CanvasPoint { x: 0.0, y: 0.0 },
+                size: CanvasSize {
+                    width: 100.0,
+                    height: 100.0,
+                },
+            });
+        })
+        .unwrap();
+
+        let mut services = NullServices::default();
+        let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
+        let mut cx = command_cx(&mut host, &mut services, &mut tree);
+
+        assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_ALIGN_CENTER_X)));
+        assert_eq!(canvas.history.undo_len(), 1);
+
+        let pos_a = read_node_pos(&mut host, &graph, a);
+        let pos_b = read_node_pos(&mut host, &graph, b);
+        assert_eq!(pos_a.x, 75.0);
+        assert_eq!(pos_b.x, 60.0);
+
+        let center_a = pos_a.x + 5.0;
+        let center_b = pos_b.x + 20.0;
+        assert!((center_a - center_b).abs() <= 1.0e-6);
+    }
+
+    #[test]
+    fn distribute_x_clamps_nodes_to_node_extent_rect_like_xyflow() {
+        let mut host = TestUiHostImpl::default();
+
+        let mut graph_value = Graph::new(GraphId::new());
+        let kind = NodeKindKey::new("test.node");
+
+        let a = NodeId::new();
+        let b = NodeId::new();
+        let c = NodeId::new();
+        let d = NodeId::new();
+
+        graph_value.nodes.insert(
+            a,
+            Node {
+                kind: kind.clone(),
+                kind_version: 1,
+                pos: CanvasPoint { x: 0.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: Some(CanvasSize {
+                    width: 10.0,
+                    height: 20.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+        graph_value.nodes.insert(
+            b,
+            Node {
+                kind: kind.clone(),
+                kind_version: 1,
+                pos: CanvasPoint { x: 10.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: Some(CanvasSize {
+                    width: 10.0,
+                    height: 20.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+        graph_value.nodes.insert(
+            c,
+            Node {
+                kind: kind.clone(),
+                kind_version: 1,
+                pos: CanvasPoint { x: 60.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: Some(CanvasSize {
+                    width: 80.0,
+                    height: 20.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+        graph_value.nodes.insert(
+            d,
+            Node {
+                kind,
+                kind_version: 1,
+                pos: CanvasPoint { x: 90.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: Some(CanvasSize {
+                    width: 10.0,
+                    height: 20.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+        canvas.sync_view_state(&mut host);
+
+        view.update(&mut host, |s, _cx| {
+            s.selected_nodes = vec![a, b, c, d];
+            s.interaction.node_extent = Some(CanvasRect {
+                origin: CanvasPoint { x: 0.0, y: 0.0 },
+                size: CanvasSize {
+                    width: 100.0,
+                    height: 100.0,
+                },
+            });
+        })
+        .unwrap();
+
+        let mut services = NullServices::default();
+        let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
+        let mut cx = command_cx(&mut host, &mut services, &mut tree);
+
+        assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_DISTRIBUTE_X)));
+        assert_eq!(canvas.history.undo_len(), 1);
+
+        assert_eq!(read_node_pos(&mut host, &graph, a).x, 0.0);
+        assert_eq!(read_node_pos(&mut host, &graph, b).x, 30.0);
+
+        // Desired position would be x=25, but node extent clamps to max_x=20 for a 80px-wide node.
+        assert_eq!(read_node_pos(&mut host, &graph, c).x, 20.0);
+        assert_eq!(read_node_pos(&mut host, &graph, d).x, 90.0);
+    }
+
+    #[test]
+    fn distribute_x_clamps_selected_group_children_to_node_extent_rect_like_xyflow() {
+        let mut host = TestUiHostImpl::default();
+
+        let mut graph_value = Graph::new(GraphId::new());
+        let kind = NodeKindKey::new("test.node");
+
+        let left = NodeId::new();
+        let right = NodeId::new();
+        let child = NodeId::new();
+
+        let group_id = GroupId::new();
+        graph_value.groups.insert(
+            group_id,
+            Group {
+                title: "G".to_string(),
+                rect: CanvasRect {
+                    origin: CanvasPoint { x: 10.0, y: 0.0 },
+                    size: CanvasSize {
+                        width: 20.0,
+                        height: 20.0,
+                    },
+                },
+                color: None,
+            },
+        );
+
+        graph_value.nodes.insert(
+            left,
+            Node {
+                kind: kind.clone(),
+                kind_version: 1,
+                pos: CanvasPoint { x: 0.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: Some(CanvasSize {
+                    width: 10.0,
+                    height: 20.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+        graph_value.nodes.insert(
+            right,
+            Node {
+                kind: kind.clone(),
+                kind_version: 1,
+                pos: CanvasPoint { x: 90.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: Some(CanvasSize {
+                    width: 10.0,
+                    height: 20.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+
+        graph_value.nodes.insert(
+            child,
+            Node {
+                kind,
+                kind_version: 1,
+                pos: CanvasPoint { x: 50.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: Some(group_id),
+                extent: None,
+                expand_parent: None,
+                size: Some(CanvasSize {
+                    width: 40.0,
+                    height: 20.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+        canvas.sync_view_state(&mut host);
+
+        view.update(&mut host, |s, _cx| {
+            s.selected_nodes = vec![left, right];
+            s.selected_groups = vec![group_id];
+            s.interaction.node_extent = Some(CanvasRect {
+                origin: CanvasPoint { x: 0.0, y: 0.0 },
+                size: CanvasSize {
+                    width: 100.0,
+                    height: 100.0,
+                },
+            });
+        })
+        .unwrap();
+
+        let mut services = NullServices::default();
+        let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
+        let mut cx = command_cx(&mut host, &mut services, &mut tree);
+
+        assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_DISTRIBUTE_X)));
+        assert_eq!(canvas.history.undo_len(), 1);
+
+        // Left/right are the endpoints and remain fixed; the group is the interior element.
+        assert_eq!(read_node_pos(&mut host, &graph, left).x, 0.0);
+        assert_eq!(read_node_pos(&mut host, &graph, right).x, 90.0);
+
+        // The group's desired shift would move the child to x=80. Node extent clamps to max_x=60.
+        assert_eq!(read_node_pos(&mut host, &graph, child).x, 60.0);
+        let group_origin_x = graph
+            .read_ref(&mut host, |g| {
+                g.groups.get(&group_id).map(|gr| gr.rect.origin.x)
+            })
+            .ok()
+            .flatten()
+            .unwrap_or_default();
+        assert_eq!(group_origin_x, 20.0);
     }
 
     #[test]

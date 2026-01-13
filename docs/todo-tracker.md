@@ -65,6 +65,28 @@ It complements (but does not replace) ADRs:
   - Option: add an **opt-in** "optical centering" mode for single-line control labels (compute ink bounds per shaped run and apply a small offset at paint time; cache the bounds in the prepared text blob).
   - TODO: add a deterministic regression harness in `apps/fret-examples/src/components_gallery.rs` that toggles a known-problem font and captures a centered-label alignment snapshot (baseline centering regressions only).
 
+## P1 - Text System v2 (Parley / Attributed Spans)
+
+- **Unify rich text under attributed spans (shaping vs paint split)**
+  - Goal: make Markdown/code highlighting structurally compatible with wrapping and geometry queries without “many Text nodes”.
+  - ADRs: `docs/adr/0157-text-system-v2-parley-attributed-spans-and-quality-baseline.md`
+  - Workstream: `docs/workstreams/text-system-v2-parley.md`
+
+- **Stop theme-only changes from forcing reshaping/re-wrapping**
+  - Problem: current v1 `RichText` run colors participate in shaping/layout cache keys, so recolors can trigger expensive rework.
+  - ADRs: `docs/adr/0157-text-system-v2-parley-attributed-spans-and-quality-baseline.md`, `docs/adr/0109-rich-text-runs-and-text-quality-v2.md`
+  - Workstream: `docs/workstreams/text-system-v2-parley.md`
+
+- **Wrapper-owned wrapping and truncation (not backend-owned)**
+  - Goal: keep wrapping/ellipsis policy stable and testable across backends and platforms.
+  - Reference: Zed/GPUI `LineWrapper` (`repo-ref/zed/crates/gpui/src/text_system/line_wrapper.rs`)
+  - Workstream: `docs/workstreams/text-system-v2-parley.md`
+
+- **Budgeted, evictable glyph atlases**
+  - Problem: append-only atlas growth is a long-session risk; eviction must be deterministic and observable.
+  - ADRs: `docs/adr/0157-text-system-v2-parley-attributed-spans-and-quality-baseline.md`, `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
+  - Workstream: `docs/workstreams/text-system-v2-parley.md`
+
 ## P0 - Themes / Token Consistency / shadcn Alignment
 
 - **Enforce token-only reads in shadcn-aligned surfaces**

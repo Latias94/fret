@@ -265,7 +265,7 @@ impl ElementHostWidget {
                     let (blob, metrics) =
                         cx.services
                             .text()
-                            .prepare(props.text.as_ref(), &style, constraints);
+                            .prepare_str(props.text.as_ref(), &style, constraints);
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
@@ -341,10 +341,12 @@ impl ElementHostWidget {
                     if let Some(blob) = self.text_cache.blob.take() {
                         cx.services.text().release(blob);
                     }
-                    let (blob, metrics) =
-                        cx.services
-                            .text()
-                            .prepare_rich(&props.rich, &style, constraints);
+                    let input = fret_core::TextInput::attributed(
+                        props.rich.text.clone(),
+                        style.clone(),
+                        props.rich.spans.clone(),
+                    );
+                    let (blob, metrics) = cx.services.text().prepare(&input, constraints);
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
@@ -421,10 +423,12 @@ impl ElementHostWidget {
                     if let Some(blob) = self.text_cache.blob.take() {
                         cx.services.text().release(blob);
                     }
-                    let (blob, metrics) =
-                        cx.services
-                            .text()
-                            .prepare_rich(&props.rich, &style, constraints);
+                    let input = fret_core::TextInput::attributed(
+                        props.rich.text.clone(),
+                        style.clone(),
+                        props.rich.spans.clone(),
+                    );
+                    let (blob, metrics) = cx.services.text().prepare(&input, constraints);
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.prepared_scale_factor_bits = Some(scale_bits);

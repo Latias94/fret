@@ -1,6 +1,17 @@
 #![allow(clippy::arc_with_non_send_sync)]
 
 use super::*;
+use std::sync::Arc;
+
+fn attributed_plain(text: &str) -> fret_core::AttributedText {
+    fret_core::AttributedText::new(
+        Arc::<str>::from(text),
+        [fret_core::TextSpan {
+            len: text.len(),
+            ..Default::default()
+        }],
+    )
+}
 
 #[test]
 fn pressable_state_reports_focused_when_focused() {
@@ -388,10 +399,7 @@ fn selectable_text_drag_autoscrolls_scroll_container() {
                         },
                         |cx| {
                             let mut out: Vec<AnyElement> = Vec::new();
-                            out.push(cx.selectable_text(fret_core::RichText::new(
-                                "hello selectable text",
-                                Arc::<[fret_core::TextRun]>::from([]),
-                            )));
+                            out.push(cx.selectable_text(attributed_plain("hello selectable text")));
                             for _ in 0..50 {
                                 out.push(cx.text("filler"));
                             }
@@ -507,9 +515,8 @@ fn selectable_text_drag_autoscrolls_horizontal_scroll_container() {
                         |cx| {
                             vec![cx.selectable_text_props(crate::element::SelectableTextProps {
                                 layout: Default::default(),
-                                rich: fret_core::RichText::new(
+                                rich: attributed_plain(
                                     "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
-                                    Arc::<[fret_core::TextRun]>::from([]),
                                 ),
                                 style: None,
                                 color: None,
@@ -590,10 +597,7 @@ fn selectable_text_double_and_triple_click_select() {
     let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(60.0)));
     let mut services = FakeTextService::default();
 
-    let rich = fret_core::RichText::new(
-        "hello world\nsecond line",
-        Arc::<[fret_core::TextRun]>::from([]),
-    );
+    let rich = attributed_plain("hello world\nsecond line");
 
     let root = render_root(
         &mut ui,
@@ -681,7 +685,7 @@ fn selectable_text_sets_active_text_selection() {
     let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(60.0)));
     let mut services = FakeTextService::default();
 
-    let rich = fret_core::RichText::new("hello world", Arc::<[fret_core::TextRun]>::from([]));
+    let rich = attributed_plain("hello world");
     let root_name = "selectable-text-active-text-selection";
     let root = render_root(
         &mut ui,

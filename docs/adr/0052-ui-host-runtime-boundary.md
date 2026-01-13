@@ -113,8 +113,8 @@ This section is a **living checklist** to keep the Option B plan concrete and to
 
 - [x] Introduce `UiHost` used by the `fret-ui` runtime (`crates/fret-runtime/src/ui_host.rs`).
 - [x] Implement `UiHost` for `fret_app::App` to keep the demo behavior unchanged (`crates/fret-app/src/ui_host.rs`).
-- [x] Keep runtime primitives host-generic (`Widget<H: UiHost>`): `crates/fret-ui/src/primitives/*`.
-- [x] Keep any remaining legacy UI-kit-shaped widgets explicitly gated: `crates/fret-ui/src/legacy_widgets/*` (behind the `legacy-widgets` feature).
+- [x] Keep widget authoring host-generic (`Widget<H: UiHost>`): `crates/fret-ui/src/widget.rs` and `crates/fret-ui/src/declarative/host_widget/*`.
+- [x] Keep retained-compat helpers explicitly feature-gated: `crates/fret-ui/src/retained_bridge.rs` (feature: `unstable-retained-bridge`).
 - [x] Remove the `fret-ui -> fret-app` dependency.
 - [x] Provide an integrated-app bridge crate (`crates/fret-ui-app`) for demo/editor ergonomics.
 - [ ] Inventory remaining coupling inside `UiHost` and consider splitting into smaller service traits.

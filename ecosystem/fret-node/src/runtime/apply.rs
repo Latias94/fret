@@ -65,6 +65,22 @@ pub fn apply_node_changes(graph: &mut Graph, changes: &[NodeChange]) -> ApplyCha
                 node.pos = *position;
                 report.applied += 1;
             }
+            NodeChange::Kind { id, kind } => {
+                let Some(node) = graph.nodes.get_mut(id) else {
+                    report.ignored += 1;
+                    continue;
+                };
+                node.kind = kind.clone();
+                report.applied += 1;
+            }
+            NodeChange::KindVersion { id, kind_version } => {
+                let Some(node) = graph.nodes.get_mut(id) else {
+                    report.ignored += 1;
+                    continue;
+                };
+                node.kind_version = *kind_version;
+                report.applied += 1;
+            }
             NodeChange::Size { id, size } => {
                 let Some(node) = graph.nodes.get_mut(id) else {
                     report.ignored += 1;
