@@ -2,10 +2,8 @@ use super::super::ElementHostWidget;
 use crate::declarative::frame::layout_style_for_node;
 use crate::declarative::layout_helpers::clamp_to_constraints;
 use crate::declarative::prelude::*;
-use crate::declarative::taffy_layout::*;
 use crate::layout_constraints::LayoutConstraints;
 use crate::layout_constraints::{AvailableSpace as RuntimeAvailableSpace, LayoutSize};
-use crate::layout_engine::{ParentLayoutKind, layout_children_from_engine_if_solved};
 use crate::widget::MeasureCx;
 
 impl ElementHostWidget {
@@ -50,8 +48,25 @@ impl ElementHostWidget {
             return self.measure_impl(&mut measure_cx);
         }
 
-        if let Some(size) = layout_children_from_engine_if_solved(cx) {
-            return size;
+        if cx.children.is_empty() {
+            return clamp_to_constraints(cx.available, props.layout, cx.available);
+        }
+
+        let needs_engine_solve = cx.children.iter().copied().any(|child| {
+            cx.tree
+                .layout_engine_child_local_rect(cx.node, child)
+                .is_none()
+        });
+        if needs_engine_solve {
+            // Prefer a window-scoped solve, but fall back to a barrier-style solve for this root
+            // when the subtree is not already covered by an outer viewport/root compute.
+            cx.tree.solve_barrier_flow_root(
+                cx.app,
+                cx.services,
+                cx.node,
+                cx.bounds,
+                cx.scale_factor,
+            );
         }
 
         let pad_left = props.padding.left.0.max(0.0);
@@ -60,102 +75,25 @@ impl ElementHostWidget {
         let pad_bottom = props.padding.bottom.0.max(0.0);
         let pad_w = pad_left + pad_right;
         let pad_h = pad_top + pad_bottom;
-        let inner_origin = fret_core::Point::new(
-            Px(cx.bounds.origin.x.0 + pad_left),
-            Px(cx.bounds.origin.y.0 + pad_top),
+        let inner_size = Size::new(
+            Px((cx.available.width.0 - pad_w).max(0.0)),
+            Px((cx.available.height.0 - pad_h).max(0.0)),
         );
-        let outer_avail_w = match props.layout.size.width {
-            Length::Px(px) => Px(px.0.min(cx.available.width.0.max(0.0))),
-            Length::Fill | Length::Auto => cx.available.width,
-        };
-        let outer_avail_h = match props.layout.size.height {
-            Length::Px(px) => Px(px.0.min(cx.available.height.0.max(0.0))),
-            Length::Fill | Length::Auto => cx.available.height,
-        };
+        let auto_margin_inner_size = inner_size;
 
-        let inner_avail = Size::new(
-            Px((outer_avail_w.0 - pad_w).max(0.0)),
-            Px((outer_avail_h.0 - pad_h).max(0.0)),
-        );
-
-        let sf = if cx.scale_factor.is_finite() && cx.scale_factor > 0.0 {
-            cx.scale_factor
-        } else {
-            1.0
-        };
-
-        let root_style = TaffyStyle {
-            display: Display::Flex,
-            flex_direction: match props.direction {
-                fret_core::Axis::Horizontal => FlexDirection::Row,
-                fret_core::Axis::Vertical => FlexDirection::Column,
-            },
-            flex_wrap: if props.wrap {
-                FlexWrap::Wrap
-            } else {
-                FlexWrap::NoWrap
-            },
-            justify_content: Some(taffy_justify(props.justify)),
-            align_items: Some(taffy_align_items(props.align)),
-            gap: TaffySize {
-                width: LengthPercentage::length(props.gap.0.max(0.0) * sf),
-                height: LengthPercentage::length(props.gap.0.max(0.0) * sf),
-            },
-            size: TaffySize {
-                width: match props.layout.size.width {
-                    Length::Px(px) => Dimension::length((px.0 - pad_w).max(0.0) * sf),
-                    Length::Fill => Dimension::length(inner_avail.width.0.max(0.0) * sf),
-                    Length::Auto => Dimension::auto(),
-                },
-                height: match props.layout.size.height {
-                    Length::Px(px) => Dimension::length((px.0 - pad_h).max(0.0) * sf),
-                    Length::Fill => Dimension::length(inner_avail.height.0.max(0.0) * sf),
-                    Length::Auto => Dimension::auto(),
-                },
-            },
-            ..Default::default()
-        };
-
-        let available = LayoutSize::new(
-            RuntimeAvailableSpace::Definite(inner_avail.width),
-            RuntimeAvailableSpace::Definite(inner_avail.height),
-        );
-
-        let (root_layout, child_layouts) = cx.tree.solve_flow_root_with_root_style(
-            cx.app,
-            cx.services,
-            window,
-            cx.node,
-            root_style,
-            cx.children,
-            ParentLayoutKind::Flex {
-                direction: props.direction,
-            },
-            available,
-            sf,
-        );
-
-        let container_inner_size = Size::new(
-            Px(root_layout.size.width.0.max(0.0)),
-            Px(root_layout.size.height.0.max(0.0)),
-        );
-        let auto_margin_inner_size = Size::new(
-            match props.layout.size.width {
-                Length::Fill => inner_avail.width,
-                _ => container_inner_size.width,
-            },
-            match props.layout.size.height {
-                Length::Fill => inner_avail.height,
-                _ => container_inner_size.height,
-            },
-        );
-
-        for (child, layout) in child_layouts {
+        for &child in cx.children {
+            let Some(layout) = cx.tree.layout_engine_child_local_rect(cx.node, child) else {
+                continue;
+            };
             let child_style = layout_style_for_node(cx.app, window, child);
             let single_child = cx.children.len() == 1;
 
-            let mut x = layout.origin.x.0;
-            let mut y = layout.origin.y.0;
+            // The layout engine reports child rects in the parent's local coordinate space.
+            // The auto-margin adjustment logic below is expressed relative to the parent's inner
+            // content origin (after padding), so subtract the padding offset before applying the
+            // centering rules.
+            let mut x = layout.origin.x.0 - pad_left;
+            let mut y = layout.origin.y.0 - pad_top;
 
             let margin_left_auto =
                 matches!(child_style.margin.left, crate::element::MarginEdge::Auto);
@@ -264,18 +202,19 @@ impl ElementHostWidget {
                 }
             }
 
+            let local_x = x + pad_left;
+            let local_y = y + pad_top;
             let rect = Rect::new(
-                fret_core::Point::new(Px(inner_origin.x.0 + x), Px(inner_origin.y.0 + y)),
+                fret_core::Point::new(
+                    Px(cx.bounds.origin.x.0 + local_x),
+                    Px(cx.bounds.origin.y.0 + local_y),
+                ),
                 layout.size,
             );
 
             let _ = cx.layout_in(child, rect);
         }
 
-        let desired = Size::new(
-            Px((container_inner_size.width.0 + pad_w).max(0.0)),
-            Px((container_inner_size.height.0 + pad_h).max(0.0)),
-        );
-        clamp_to_constraints(desired, props.layout, cx.available)
+        clamp_to_constraints(cx.available, props.layout, cx.available)
     }
 }
