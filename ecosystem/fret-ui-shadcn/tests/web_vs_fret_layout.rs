@@ -958,9 +958,13 @@ fn web_vs_fret_layout_slider_demo_geometry() {
         )]
     });
 
-    let slider = find_semantics(&snap, SemanticsRole::Slider, Some("Slider"))
+    let thumb = find_semantics(&snap, SemanticsRole::Slider, Some("Slider"))
         .or_else(|| find_semantics(&snap, SemanticsRole::Slider, None))
-        .expect("fret slider semantics");
+        .expect("fret slider thumb semantics");
+    let slider = thumb
+        .parent
+        .and_then(|parent| snap.nodes.iter().find(|n| n.id == parent))
+        .unwrap_or(thumb);
 
     assert_close_px(
         "slider layout width",
