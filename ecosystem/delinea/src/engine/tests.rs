@@ -3085,6 +3085,336 @@ fn axis_pointer_tooltip_respects_y_empty_mask_for_line_series() {
 }
 
 #[test]
+fn axis_pointer_tooltip_respects_y_empty_mask_for_scatter_series() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_a = crate::ids::SeriesId::new(1);
+    let series_b = crate::ids::SeriesId::new(2);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_a_field = crate::ids::FieldId::new(2);
+    let y_b_field = crate::ids::FieldId::new(3);
+
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(400.0), Px(240.0)),
+    );
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(viewport),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_a_field,
+                    column: 1,
+                },
+                FieldSpec {
+                    id: y_b_field,
+                    column: 2,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        data_zoom_y: vec![DataZoomYSpec {
+            id: crate::ids::DataZoomId::new(1),
+            axis: y_axis,
+            filter_mode: FilterMode::Empty,
+            min_value_span: None,
+            max_value_span: None,
+        }],
+        tooltip: None,
+        axis_pointer: Some(AxisPointerSpec {
+            enabled: true,
+            trigger: crate::spec::AxisPointerTrigger::Axis,
+            pointer_type: AxisPointerType::Line,
+            label: Default::default(),
+            snap: false,
+            trigger_distance_px: 10_000.0,
+            throttle_px: 0.0,
+        }),
+        visual_maps: vec![],
+        series: vec![
+            SeriesSpec {
+                id: series_a,
+                name: None,
+                kind: SeriesKind::Scatter,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_a_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+            },
+            SeriesSpec {
+                id: series_b,
+                name: None,
+                kind: SeriesKind::Scatter,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_b_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+            },
+        ],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(vec![0.0, 1.0, 2.0]));
+    table.push_column(Column::F64(vec![5.0, 5.0, 5.0]));
+    table.push_column(Column::F64(vec![100.0, 100.0, 100.0]));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    engine.apply_action(Action::SetDataWindowY {
+        axis: y_axis,
+        window: Some(DataWindow {
+            min: 0.0,
+            max: 10.0,
+        }),
+    });
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    engine.apply_action(Action::HoverAt {
+        point: Point::new(Px(200.0), Px(120.0)),
+    });
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(32_768, 0, 16))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let axis_pointer = engine.output().axis_pointer.as_ref().unwrap();
+    let crate::TooltipOutput::Axis(axis) = &axis_pointer.tooltip else {
+        panic!("expected axis-trigger tooltip payload");
+    };
+
+    let entry_a = axis
+        .series
+        .iter()
+        .find(|e| e.series == series_a)
+        .expect("missing series A tooltip entry");
+    let entry_b = axis
+        .series
+        .iter()
+        .find(|e| e.series == series_b)
+        .expect("missing series B tooltip entry");
+
+    assert!(!matches!(entry_a.value, crate::TooltipSeriesValue::Missing));
+    assert!(matches!(entry_b.value, crate::TooltipSeriesValue::Missing));
+}
+
+#[test]
+fn axis_pointer_tooltip_respects_y_empty_mask_for_bar_series() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_a = crate::ids::SeriesId::new(1);
+    let series_b = crate::ids::SeriesId::new(2);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_a_field = crate::ids::FieldId::new(2);
+    let y_b_field = crate::ids::FieldId::new(3);
+
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(400.0), Px(240.0)),
+    );
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(viewport),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_a_field,
+                    column: 1,
+                },
+                FieldSpec {
+                    id: y_b_field,
+                    column: 2,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: crate::scale::AxisScale::Category(crate::scale::CategoryAxisScale {
+                    categories: vec!["A".into(), "B".into(), "C".into()],
+                }),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        data_zoom_y: vec![DataZoomYSpec {
+            id: crate::ids::DataZoomId::new(1),
+            axis: y_axis,
+            filter_mode: FilterMode::Empty,
+            min_value_span: None,
+            max_value_span: None,
+        }],
+        tooltip: None,
+        axis_pointer: Some(AxisPointerSpec {
+            enabled: true,
+            trigger: crate::spec::AxisPointerTrigger::Axis,
+            pointer_type: AxisPointerType::Line,
+            label: Default::default(),
+            snap: false,
+            trigger_distance_px: 10_000.0,
+            throttle_px: 0.0,
+        }),
+        visual_maps: vec![],
+        series: vec![
+            SeriesSpec {
+                id: series_a,
+                name: None,
+                kind: SeriesKind::Bar,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_a_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+            },
+            SeriesSpec {
+                id: series_b,
+                name: None,
+                kind: SeriesKind::Bar,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_b_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+            },
+        ],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(vec![0.0, 1.0, 2.0]));
+    table.push_column(Column::F64(vec![5.0, 5.0, 5.0]));
+    table.push_column(Column::F64(vec![100.0, 100.0, 100.0]));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    engine.apply_action(Action::SetDataWindowY {
+        axis: y_axis,
+        window: Some(DataWindow {
+            min: 0.0,
+            max: 10.0,
+        }),
+    });
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    engine.apply_action(Action::HoverAt {
+        point: Point::new(Px(200.0), Px(120.0)),
+    });
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(32_768, 0, 16))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let axis_pointer = engine.output().axis_pointer.as_ref().unwrap();
+    let crate::TooltipOutput::Axis(axis) = &axis_pointer.tooltip else {
+        panic!("expected axis-trigger tooltip payload");
+    };
+
+    let entry_a = axis
+        .series
+        .iter()
+        .find(|e| e.series == series_a)
+        .expect("missing series A tooltip entry");
+    let entry_b = axis
+        .series
+        .iter()
+        .find(|e| e.series == series_b)
+        .expect("missing series B tooltip entry");
+
+    assert!(!matches!(entry_a.value, crate::TooltipSeriesValue::Missing));
+    assert!(matches!(entry_b.value, crate::TooltipSeriesValue::Missing));
+}
+
+#[test]
 fn axis_fixed_overrides_data_window_for_marks() {
     let dataset_id = crate::ids::DatasetId::new(1);
     let grid_id = crate::ids::GridId::new(1);

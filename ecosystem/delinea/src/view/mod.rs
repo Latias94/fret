@@ -97,7 +97,14 @@ impl SeriesView {
         let y_active = self.y_filter_mode == FilterMode::Empty
             && !stacked
             && (self.y_filter.min.is_some() || self.y_filter.max.is_some())
-            && matches!(kind, SeriesKind::Line | SeriesKind::Area | SeriesKind::Band);
+            && matches!(
+                kind,
+                SeriesKind::Line
+                    | SeriesKind::Area
+                    | SeriesKind::Band
+                    | SeriesKind::Scatter
+                    | SeriesKind::Bar
+            );
 
         SeriesEmptyMask {
             x_active,
