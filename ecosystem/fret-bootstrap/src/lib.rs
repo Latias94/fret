@@ -313,6 +313,22 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         self
     }
 
+    /// Install the Lucide icon pack into the global `IconRegistry`.
+    ///
+    /// Requires enabling the `fret-bootstrap/icons-lucide` feature.
+    #[cfg(feature = "icons-lucide")]
+    pub fn with_lucide_icons(self) -> Self {
+        self.install_app(fret_icons_lucide::install_app)
+    }
+
+    /// Install the Radix icon pack into the global `IconRegistry`.
+    ///
+    /// Requires enabling the `fret-bootstrap/icons-radix` feature.
+    #[cfg(feature = "icons-radix")]
+    pub fn with_radix_icons(self) -> Self {
+        self.install_app(fret_icons_radix::install_app)
+    }
+
     /// Pre-register all SVG icons from the global `IconRegistry` during `on_gpu_ready`.
     #[cfg(feature = "preload-icon-svgs")]
     pub fn preload_icon_svgs_on_gpu_ready(mut self) -> Self {
