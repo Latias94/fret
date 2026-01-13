@@ -109,6 +109,7 @@ fn kind_flex_grow(kind: &ElementKind) -> Option<f32> {
         ElementKind::TextInput(props) => Some(props.layout.flex.grow),
         ElementKind::TextArea(props) => Some(props.layout.flex.grow),
         ElementKind::Image(props) => Some(props.layout.flex.grow),
+        ElementKind::Canvas(props) => Some(props.layout.flex.grow),
         ElementKind::SvgIcon(props) => Some(props.layout.flex.grow),
         ElementKind::Spinner(props) => Some(props.layout.flex.grow),
         ElementKind::Scroll(props) => Some(props.layout.flex.grow),
