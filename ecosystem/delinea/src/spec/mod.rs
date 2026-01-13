@@ -204,6 +204,11 @@ impl Default for DataZoomXSpec {
 pub struct DataZoomYSpec {
     pub id: DataZoomId,
     pub axis: AxisId,
+    /// Row filtering mode for Y dataZoom.
+    ///
+    /// v1 default is `None` (mapping-only; ADR 1136). When enabled, the view/transform pipeline
+    /// may materialize sparse selections (ECharts-like) which can be more expensive on large data.
+    pub filter_mode: FilterMode,
     /// Minimum allowed span (in data value space) for interaction-derived zoom updates.
     pub min_value_span: Option<f64>,
     /// Maximum allowed span (in data value space) for interaction-derived zoom updates.
@@ -215,6 +220,7 @@ impl Default for DataZoomYSpec {
         Self {
             id: DataZoomId::new(0),
             axis: AxisId::new(0),
+            filter_mode: FilterMode::None,
             min_value_span: None,
             max_value_span: None,
         }

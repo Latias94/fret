@@ -232,6 +232,7 @@ fn data_zoom_y_rejects_non_y_axis_binding() {
     spec.data_zoom_y.push(DataZoomYSpec {
         id: crate::ids::DataZoomId::new(1),
         axis: crate::ids::AxisId::new(1),
+        filter_mode: FilterMode::None,
         min_value_span: None,
         max_value_span: None,
     });
@@ -247,12 +248,14 @@ fn data_zoom_y_rejects_multiple_specs_for_same_axis() {
     spec.data_zoom_y.push(DataZoomYSpec {
         id: crate::ids::DataZoomId::new(1),
         axis: y_axis,
+        filter_mode: FilterMode::None,
         min_value_span: None,
         max_value_span: None,
     });
     spec.data_zoom_y.push(DataZoomYSpec {
         id: crate::ids::DataZoomId::new(2),
         axis: y_axis,
+        filter_mode: FilterMode::None,
         min_value_span: None,
         max_value_span: None,
     });
@@ -268,6 +271,7 @@ fn data_zoom_y_is_accepted_for_y_axes() {
     spec.data_zoom_y.push(DataZoomYSpec {
         id: crate::ids::DataZoomId::new(1),
         axis: y_axis,
+        filter_mode: FilterMode::None,
         min_value_span: Some(10.0),
         max_value_span: Some(100.0),
     });

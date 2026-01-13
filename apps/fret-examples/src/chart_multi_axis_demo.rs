@@ -179,12 +179,14 @@ impl ChartMultiAxisDemoDriver {
                 DataZoomYSpec {
                     id: delinea::ids::DataZoomId::new(10),
                     axis: y_left,
+                    filter_mode: FilterMode::None,
                     min_value_span: Some(2.0),
                     max_value_span: Some(40.0),
                 },
                 DataZoomYSpec {
                     id: delinea::ids::DataZoomId::new(11),
                     axis: y_right,
+                    filter_mode: FilterMode::None,
                     min_value_span: Some(50.0),
                     max_value_span: Some(2000.0),
                 },

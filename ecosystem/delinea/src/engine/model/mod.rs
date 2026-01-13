@@ -253,6 +253,7 @@ impl ChartModel {
                 DataZoomYModel {
                     id: zoom.id,
                     axis: zoom.axis,
+                    filter_mode: zoom.filter_mode,
                     min_value_span,
                     max_value_span,
                 },
@@ -683,6 +684,7 @@ pub struct DataZoomXModel {
 pub struct DataZoomYModel {
     pub id: DataZoomId,
     pub axis: AxisId,
+    pub filter_mode: FilterMode,
     pub min_value_span: Option<f64>,
     pub max_value_span: Option<f64>,
 }

@@ -2,7 +2,8 @@ use crate::data::{DataTable, DatasetStore};
 use crate::engine::ChartState;
 use crate::engine::model::ChartModel;
 use crate::ids::{AxisId, DatasetId, Revision, SeriesId};
-use crate::transform::{RowRange, RowSelection, SeriesXPolicy, data_zoom_x_node};
+use crate::spec::FilterMode;
+use crate::transform::{RowRange, RowSelection, SeriesXPolicy, data_zoom_x_node, data_zoom_y_node};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -121,13 +122,45 @@ impl ViewState {
             let x_window =
                 data_zoom_x_node(model, state, series.x_axis, x_axis_range).apply(x, base_range);
 
+            let mut selection = x_window.selection;
+            if series.kind == crate::spec::SeriesKind::Scatter
+                && series.stack.is_none()
+                && matches!(
+                    selection,
+                    RowSelection::All | RowSelection::Range(_) | RowSelection::Indices(_)
+                )
+            {
+                let y_filter_mode = model
+                    .data_zoom_y_by_axis
+                    .get(&series.y_axis)
+                    .and_then(|id| model.data_zoom_y.get(id))
+                    .map(|z| z.filter_mode)
+                    .unwrap_or(FilterMode::None);
+                if y_filter_mode != FilterMode::None {
+                    if let Some(y_col) = dataset.fields.get(&series.encode.y).copied()
+                        && let Some(y) = table.column_f64(y_col)
+                    {
+                        let y_axis_range = model
+                            .axes
+                            .get(&series.y_axis)
+                            .map(|a| a.range)
+                            .unwrap_or_default();
+                        let node = data_zoom_y_node(model, state, series.y_axis, y_axis_range);
+                        const MAX_VIEW_LEN: usize = 200_000;
+                        if let Some(next) = node.apply_scatter_filter(y, &selection, MAX_VIEW_LEN) {
+                            selection = next;
+                        }
+                    }
+                }
+            }
+
             self.series.push(SeriesView {
                 series: *series_id,
                 dataset: series.dataset,
                 x_axis: series.x_axis,
                 revision: self.revision,
                 data_revision: table.revision,
-                selection: x_window.selection,
+                selection,
                 x_policy: x_window.x_policy,
             });
         }

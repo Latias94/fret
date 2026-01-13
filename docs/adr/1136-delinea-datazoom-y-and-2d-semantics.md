@@ -136,6 +136,12 @@ P1:
 - Add span constraints (`minSpan/maxSpan` or `minValueSpan/maxValueSpan`) as a durable policy key,
   and define how they compose with `AxisRange` and locks.
 
+## Amendments
+
+- 2026-01-13 (ECharts replica workstream): `DataZoomYSpec` gained an opt-in `filter_mode` to explore
+  ECharts-style multi-dimensional filtering. The default remains mapping-only (`filter_mode=None`),
+  and the initial implementation materializes sparse selections only for non-stacked scatter series.
+
 ## Evidence
 
 - Action surface: `ecosystem/delinea/src/action/mod.rs` (`ZoomDataWindowYFromBase`, `PanDataWindowYFromBase`, `SetViewWindow2DFromZoom`)

@@ -1758,6 +1758,7 @@ fn min_value_span_clamps_interactive_zoom_in_y() {
     spec.data_zoom_y.push(DataZoomYSpec {
         id: crate::ids::DataZoomId::new(1),
         axis: y_axis,
+        filter_mode: FilterMode::None,
         min_value_span: Some(2.0),
         max_value_span: None,
     });
@@ -1798,6 +1799,7 @@ fn max_value_span_clamps_interactive_zoom_out_y() {
     spec.data_zoom_y.push(DataZoomYSpec {
         id: crate::ids::DataZoomId::new(1),
         axis: y_axis,
+        filter_mode: FilterMode::None,
         min_value_span: None,
         max_value_span: Some(50.0),
     });
@@ -1838,6 +1840,7 @@ fn min_value_span_clamps_slider_handle_update_y() {
     spec.data_zoom_y.push(DataZoomYSpec {
         id: crate::ids::DataZoomId::new(1),
         axis: y_axis,
+        filter_mode: FilterMode::None,
         min_value_span: Some(5.0),
         max_value_span: None,
     });
@@ -1887,6 +1890,7 @@ fn min_value_span_is_applied_for_box_zoom_y_writes() {
     spec.data_zoom_y.push(DataZoomYSpec {
         id: crate::ids::DataZoomId::new(1),
         axis: y_axis,
+        filter_mode: FilterMode::None,
         min_value_span: Some(5.0),
         max_value_span: None,
     });
@@ -1938,6 +1942,7 @@ fn min_value_span_does_not_expand_box_zoom_y_when_base_is_below_min() {
     spec.data_zoom_y.push(DataZoomYSpec {
         id: crate::ids::DataZoomId::new(1),
         axis: y_axis,
+        filter_mode: FilterMode::None,
         min_value_span: Some(10.0),
         max_value_span: None,
     });
@@ -1975,6 +1980,65 @@ fn min_value_span_does_not_expand_box_zoom_y_when_base_is_below_min() {
         .copied()
         .expect("expected y window");
     assert_eq!(y, base_y);
+}
+
+#[test]
+fn data_zoom_y_filter_mode_filters_scatter_selection_by_y_window_after_x_selection() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let series_id = crate::ids::SeriesId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+
+    let mut spec = basic_spec();
+    spec.viewport = Some(Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(200.0)),
+    ));
+    spec.series[0].kind = SeriesKind::Scatter;
+    spec.series[0].stack = None;
+    spec.data_zoom_x.push(DataZoomXSpec {
+        id: crate::ids::DataZoomId::new(1),
+        axis: x_axis,
+        filter_mode: FilterMode::Filter,
+        min_value_span: None,
+        max_value_span: None,
+    });
+    spec.data_zoom_y.push(DataZoomYSpec {
+        id: crate::ids::DataZoomId::new(2),
+        axis: y_axis,
+        filter_mode: FilterMode::Filter,
+        min_value_span: None,
+        max_value_span: None,
+    });
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let mut table = DataTable::default();
+    table.push_column(Column::F64((0..=9).map(|v| v as f64).collect()));
+    table.push_column(Column::F64((-5..=4).map(|v| v as f64).collect()));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x_axis,
+        window: Some(DataWindow { min: 2.0, max: 8.0 }),
+    });
+    engine.apply_action(Action::SetDataWindowY {
+        axis: y_axis,
+        window: Some(DataWindow { min: 0.0, max: 2.0 }),
+    });
+
+    let mut measurer = NullTextMeasurer::default();
+    let _step = engine
+        .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+        .unwrap();
+
+    let Some(view) = engine.view().series_view(series_id) else {
+        panic!("expected series view");
+    };
+    let RowSelection::Indices(indices) = &view.selection else {
+        panic!("expected RowSelection::Indices for y-filtered scatter selection");
+    };
+    assert_eq!(&indices[..], &[5, 6, 7]);
 }
 
 #[test]
