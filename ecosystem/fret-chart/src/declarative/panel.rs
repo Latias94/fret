@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -22,8 +23,10 @@ use fret_ui_kit::recipes::canvas_tool_router::{
 
 use crate::input_map::{ChartInputMap, ModifierKey};
 use crate::retained::ChartStyle;
+use crate::{DefaultTooltipFormatter, TooltipFormatter, TooltipTextLine};
 
 use super::legend_overlay::{LegendOverlayState, LegendSeriesEntry, legend_overlay_tool};
+use super::tooltip_overlay::{TooltipOverlayState, tooltip_overlay_tool};
 
 #[derive(Debug, Default)]
 struct NullTextMeasurer;
@@ -119,6 +122,8 @@ fn ensure_engine_model<H: UiHost>(
         return model;
     }
 
+    let mut spec = spec;
+    spec.axis_pointer.get_or_insert_with(Default::default);
     let engine = ChartEngine::new(spec).expect("chart spec should be valid");
     let model = cx.app.models_mut().insert(engine);
     cx.with_state(EngineState::default, |st| st.model = Some(model.clone()));
@@ -206,6 +211,10 @@ pub fn chart_canvas_panel<H: UiHost>(
         || Arc::new(Mutex::new(LegendOverlayState::default())),
         |st| st.clone(),
     );
+    let tooltip_state: Arc<Mutex<TooltipOverlayState>> = cx.with_state(
+        || Arc::new(Mutex::new(TooltipOverlayState::default())),
+        |st| st.clone(),
+    );
 
     // Step the engine during declarative render and cache the current marks snapshot.
     let bounds = cx.bounds;
@@ -213,6 +222,9 @@ pub fn chart_canvas_panel<H: UiHost>(
     let mut marks_rev = delinea::ids::Revision::default();
     let mut output_marks: Arc<MarkTree> = Arc::new(MarkTree::default());
     let mut legend_series: Vec<LegendSeriesEntry> = Vec::new();
+    let mut series_rank_by_id: BTreeMap<delinea::SeriesId, usize> = BTreeMap::default();
+    let mut axis_pointer: Option<delinea::engine::AxisPointerOutput> = None;
+    let mut tooltip_lines: Vec<TooltipTextLine> = Vec::new();
 
     let _ = engine.update(cx.app, |engine, _cx| {
         if engine.model().viewport != Some(bounds) {
@@ -248,6 +260,7 @@ pub fn chart_canvas_panel<H: UiHost>(
         output_marks = Arc::new(engine.output().marks.clone());
 
         let model = engine.model();
+        series_rank_by_id.clear();
         legend_series = model
             .series_in_order()
             .enumerate()
@@ -262,10 +275,26 @@ pub fn chart_canvas_panel<H: UiHost>(
                 visible: s.visible,
             })
             .collect();
+        for s in &legend_series {
+            series_rank_by_id.insert(s.id, s.order);
+        }
+
+        axis_pointer = engine.output().axis_pointer.clone();
+        tooltip_lines.clear();
+        if let Some(axis_pointer) = axis_pointer.as_ref() {
+            let formatter = DefaultTooltipFormatter::default();
+            tooltip_lines =
+                formatter.format_axis_pointer(engine, &engine.output().axis_windows, axis_pointer);
+        }
     });
 
     if let Ok(mut st) = legend_state.lock() {
         st.sync_series(legend_series);
+    }
+    if let Ok(mut st) = tooltip_state.lock() {
+        st.axis_pointer = axis_pointer;
+        st.lines = tooltip_lines;
+        st.series_rank_by_id = series_rank_by_id;
     }
 
     let cache = cx.with_state(MarksCache::default, |cache| {
@@ -449,9 +478,11 @@ pub fn chart_canvas_panel<H: UiHost>(
     });
 
     let legend_tool = legend_overlay_tool(engine.clone(), legend_state.clone(), style);
+    let tooltip_tool = tooltip_overlay_tool(tooltip_state.clone(), style);
 
     let tools = vec![
         legend_tool,
+        tooltip_tool,
         CanvasToolEntry {
             id: CanvasToolId::new(1),
             priority: 100,

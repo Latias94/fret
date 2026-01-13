@@ -5,5 +5,6 @@
 
 mod legend_overlay;
 mod panel;
+mod tooltip_overlay;
 
 pub use panel::*;

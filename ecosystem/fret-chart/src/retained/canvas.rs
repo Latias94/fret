@@ -4791,7 +4791,9 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             let mut total_h = 0.0f32;
 
             for line in &tooltip_lines {
-                if let Some((left, right)) = split_tooltip_text_for_columns(&line.text) {
+                if let Some((left, right)) =
+                    crate::tooltip_layout::split_tooltip_text_for_columns(&line.text)
+                {
                     let left_prepared =
                         self.tooltip_text
                             .prepare(cx.services, left, &text_style, constraints);
@@ -5021,14 +5023,6 @@ fn rect_from_points_clamped(bounds: Rect, a: Point, b: Point) -> Rect {
     )
 }
 
-fn split_tooltip_text_for_columns(text: &str) -> Option<(&str, &str)> {
-    let (left, right) = text.split_once(": ")?;
-    if left.is_empty() || right.is_empty() {
-        return None;
-    }
-    Some((left, right))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -5037,14 +5031,6 @@ mod tests {
         AxisKind, AxisPosition, AxisRange, AxisScale, ChartSpec, DatasetSpec, FieldSpec, GridSpec,
         SeriesEncode, SeriesKind, SeriesSpec, VisualMapSpec,
     };
-
-    #[test]
-    fn tooltip_column_splitter_requires_non_empty_columns() {
-        assert_eq!(split_tooltip_text_for_columns("x: 1"), Some(("x", "1")));
-        assert_eq!(split_tooltip_text_for_columns("x: "), None);
-        assert_eq!(split_tooltip_text_for_columns(": 1"), None);
-        assert_eq!(split_tooltip_text_for_columns("no delimiter"), None);
-    }
 
     #[test]
     fn legend_double_click_isolates_and_restores_all_series() {

@@ -9,6 +9,7 @@ pub mod input_map;
 pub mod retained;
 
 mod legend_logic;
+mod tooltip_layout;
 
 pub use declarative::*;
 pub use input_map::*;
