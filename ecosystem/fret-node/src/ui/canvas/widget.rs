@@ -10427,8 +10427,7 @@ mod tests {
     impl fret_core::TextService for NullServices {
         fn prepare(
             &mut self,
-            _text: &str,
-            _style: &fret_core::TextStyle,
+            _input: fret_core::TextInput<'_>,
             _constraints: fret_core::TextConstraints,
         ) -> (TextBlobId, fret_core::TextMetrics) {
             (

@@ -4,38 +4,10 @@ use std::collections::hash_map::Entry;
 impl fret_core::TextService for Renderer {
     fn prepare(
         &mut self,
-        text: &str,
-        style: &fret_core::TextStyle,
+        input: fret_core::TextInput<'_>,
         constraints: fret_core::TextConstraints,
     ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
-        self.text_system.prepare(text, style, constraints)
-    }
-
-    fn prepare_rich(
-        &mut self,
-        rich: &fret_core::RichText,
-        base_style: &fret_core::TextStyle,
-        constraints: fret_core::TextConstraints,
-    ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
-        self.text_system.prepare_rich(rich, base_style, constraints)
-    }
-
-    fn measure(
-        &mut self,
-        text: &str,
-        style: &fret_core::TextStyle,
-        constraints: fret_core::TextConstraints,
-    ) -> fret_core::TextMetrics {
-        self.text_system.measure(text, style, constraints)
-    }
-
-    fn measure_rich(
-        &mut self,
-        rich: &fret_core::RichText,
-        base_style: &fret_core::TextStyle,
-        constraints: fret_core::TextConstraints,
-    ) -> fret_core::TextMetrics {
-        self.text_system.measure_rich(rich, base_style, constraints)
+        self.text_system.prepare_input(input, constraints)
     }
 
     fn caret_x(&mut self, blob: fret_core::TextBlobId, index: usize) -> fret_core::Px {

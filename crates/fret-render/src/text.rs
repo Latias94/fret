@@ -4,8 +4,8 @@ use cosmic_text::{
     Shaping, Style as CosmicStyle, SwashCache, Weight,
 };
 use fret_core::{
-    CaretAffinity, HitTestResult, Point, Rect, RichText, Size, TextBlobId, TextConstraints,
-    TextMetrics, TextOverflow, TextRun, TextSlant, TextStyle, TextWrap, geometry::Px,
+    AttributedText, CaretAffinity, HitTestResult, Point, Rect, Size, TextBlobId, TextConstraints,
+    TextInput, TextMetrics, TextOverflow, TextSlant, TextSpan, TextStyle, TextWrap, geometry::Px,
 };
 use slotmap::SlotMap;
 use std::{
@@ -242,7 +242,7 @@ pub struct TextLine {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct TextBlobKey {
     text: Arc<str>,
-    runs_key: u64,
+    spans_key: u64,
     font: fret_core::FontId,
     font_stack_key: u64,
     size_bits: u32,
@@ -266,7 +266,7 @@ impl TextBlobKey {
         let max_width_bits = constraints.max_width.map(|w| w.0.to_bits());
         Self {
             text: Arc::<str>::from(text),
-            runs_key: 0,
+            spans_key: 0,
             font: style.font.clone(),
             font_stack_key,
             size_bits: style.size.0.to_bits(),
@@ -285,14 +285,14 @@ impl TextBlobKey {
         }
     }
 
-    fn new_rich(
-        rich: &RichText,
+    fn new_attributed(
+        rich: &AttributedText,
         base_style: &TextStyle,
         constraints: TextConstraints,
         font_stack_key: u64,
     ) -> Self {
         let mut out = Self::new(rich.text.as_ref(), base_style, constraints, font_stack_key);
-        out.runs_key = runs_fingerprint(&rich.runs);
+        out.spans_key = spans_fingerprint(&rich.spans);
         out
     }
 }
@@ -477,9 +477,9 @@ impl TextMeasureKey {
 #[derive(Debug, Clone)]
 struct TextMeasureEntry {
     text_hash: u64,
-    runs_hash: u64,
+    spans_hash: u64,
     text: Arc<str>,
-    runs: Option<Arc<[TextRun]>>,
+    spans: Option<Arc<[TextSpan]>>,
     metrics: TextMetrics,
 }
 
@@ -489,12 +489,12 @@ fn hash_text(text: &str) -> u64 {
     hasher.finish()
 }
 
-fn runs_fingerprint(runs: &[TextRun]) -> u64 {
+fn spans_fingerprint(spans: &[TextSpan]) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    "fret.text.runs.v0".hash(&mut hasher);
-    for r in runs {
-        r.len.hash(&mut hasher);
-        match r.color {
+    "fret.text.spans.v0".hash(&mut hasher);
+    for s in spans {
+        s.len.hash(&mut hasher);
+        match s.paint.fg {
             None => 0u8.hash(&mut hasher),
             Some(c) => {
                 1u8.hash(&mut hasher);
@@ -504,8 +504,13 @@ fn runs_fingerprint(runs: &[TextRun]) -> u64 {
                 c.a.to_bits().hash(&mut hasher);
             }
         }
-        r.weight.hash(&mut hasher);
-        r.slant.hash(&mut hasher);
+        s.shaping.font.hash(&mut hasher);
+        s.shaping.weight.hash(&mut hasher);
+        s.shaping.slant.hash(&mut hasher);
+        s.shaping
+            .letter_spacing_em
+            .map(|v| v.to_bits())
+            .hash(&mut hasher);
     }
     hasher.finish()
 }
@@ -889,6 +894,21 @@ impl TextSystem {
         self.blobs.get(id)
     }
 
+    pub fn prepare_input(
+        &mut self,
+        input: TextInput<'_>,
+        constraints: TextConstraints,
+    ) -> (TextBlobId, TextMetrics) {
+        match input {
+            TextInput::Plain { text, style } => self.prepare(text, style, constraints),
+            TextInput::Attributed { text, base, spans } => {
+                let rich =
+                    AttributedText::new(Arc::<str>::from(text), Arc::<[TextSpan]>::from(spans));
+                self.prepare_attributed(&rich, base, constraints)
+            }
+        }
+    }
+
     pub fn prepare(
         &mut self,
         text: &str,
@@ -899,21 +919,21 @@ impl TextSystem {
         self.prepare_with_key(key, style, None, constraints)
     }
 
-    pub fn prepare_rich(
+    pub fn prepare_attributed(
         &mut self,
-        rich: &RichText,
+        rich: &AttributedText,
         base_style: &TextStyle,
         constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics) {
-        let key = TextBlobKey::new_rich(rich, base_style, constraints, self.font_stack_key);
-        self.prepare_with_key(key, base_style, Some(&rich.runs), constraints)
+        let key = TextBlobKey::new_attributed(rich, base_style, constraints, self.font_stack_key);
+        self.prepare_with_key(key, base_style, Some(rich.spans.as_ref()), constraints)
     }
 
     fn prepare_with_key(
         &mut self,
         key: TextBlobKey,
         style: &TextStyle,
-        runs: Option<&[TextRun]>,
+        spans: Option<&[TextSpan]>,
         constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics) {
         let text = key.text.clone();
@@ -954,7 +974,7 @@ impl TextSystem {
             &mut self.scratch,
             text.as_ref(),
             &attrs,
-            runs,
+            spans,
             font_size_px,
             constraints,
             scale,
@@ -1139,7 +1159,7 @@ impl TextSystem {
         if let Some(bucket) = self.measure_cache.get_mut(&key)
             && let Some(hit) = bucket
                 .iter()
-                .find(|e| e.text_hash == text_hash && e.runs_hash == 0 && e.text.as_ref() == text)
+                .find(|e| e.text_hash == text_hash && e.spans_hash == 0 && e.text.as_ref() == text)
         {
             return hit.metrics;
         }
@@ -1182,9 +1202,9 @@ impl TextSystem {
         let bucket = self.measure_cache.entry(key).or_default();
         bucket.push_back(TextMeasureEntry {
             text_hash,
-            runs_hash: 0,
+            spans_hash: 0,
             text: Arc::<str>::from(text),
-            runs: None,
+            spans: None,
             metrics,
         });
         while bucket.len() > MEASURE_CACHE_PER_BUCKET_LIMIT {
@@ -1194,9 +1214,9 @@ impl TextSystem {
         metrics
     }
 
-    pub fn measure_rich(
+    pub fn measure_attributed(
         &mut self,
-        rich: &RichText,
+        rich: &AttributedText,
         base_style: &TextStyle,
         constraints: TextConstraints,
     ) -> TextMetrics {
@@ -1204,15 +1224,15 @@ impl TextSystem {
 
         let key = TextMeasureKey::new(base_style, constraints, self.font_stack_key);
         let text_hash = hash_text(rich.text.as_ref());
-        let runs_hash = runs_fingerprint(rich.runs.as_ref());
+        let spans_hash = spans_fingerprint(rich.spans.as_ref());
 
         if let Some(bucket) = self.measure_cache.get_mut(&key)
             && let Some(hit) = bucket.iter().find(|e| {
                 e.text_hash == text_hash
-                    && e.runs_hash == runs_hash
+                    && e.spans_hash == spans_hash
                     && e.text.as_ref() == rich.text.as_ref()
-                    && e.runs.as_ref().is_some_and(|r| {
-                        Arc::ptr_eq(r, &rich.runs) || r.as_ref() == rich.runs.as_ref()
+                    && e.spans.as_ref().is_some_and(|s| {
+                        Arc::ptr_eq(s, &rich.spans) || s.as_ref() == rich.spans.as_ref()
                     })
             })
         {
@@ -1247,7 +1267,7 @@ impl TextSystem {
             &mut self.scratch,
             rich.text.as_ref(),
             &attrs,
-            Some(rich.runs.as_ref()),
+            Some(rich.spans.as_ref()),
             font_size_px,
             constraints,
             scale,
@@ -1258,9 +1278,9 @@ impl TextSystem {
         let bucket = self.measure_cache.entry(key).or_default();
         bucket.push_back(TextMeasureEntry {
             text_hash,
-            runs_hash,
+            spans_hash,
             text: rich.text.clone(),
-            runs: Some(rich.runs.clone()),
+            spans: Some(rich.spans.clone()),
             metrics,
         });
         while bucket.len() > MEASURE_CACHE_PER_BUCKET_LIMIT {
@@ -1388,7 +1408,7 @@ fn layout_text(
     scratch: &mut ShapeBuffer,
     text: &str,
     attrs: &Attrs,
-    runs: Option<&[TextRun]>,
+    spans: Option<&[TextSpan]>,
     font_size_px: f32,
     constraints: TextConstraints,
     scale: f32,
@@ -1415,36 +1435,40 @@ fn layout_text(
     let mut first_ascent_px: Option<f32> = None;
 
     #[derive(Clone, Debug)]
-    struct ResolvedRun {
+    struct ResolvedSpan {
         start: usize,
         end: usize,
-        color: Option<fret_core::Color>,
+        fg: Option<fret_core::Color>,
+        font: Option<fret_core::FontId>,
         weight: Option<fret_core::FontWeight>,
         slant: Option<TextSlant>,
+        letter_spacing_em: Option<f32>,
     }
 
-    let resolved_runs: Option<Vec<ResolvedRun>> = runs.and_then(|runs| {
-        if runs.is_empty() {
+    let resolved_spans: Option<Vec<ResolvedSpan>> = spans.and_then(|spans| {
+        if spans.is_empty() {
             return None;
         }
 
-        let mut out: Vec<ResolvedRun> = Vec::with_capacity(runs.len());
+        let mut out: Vec<ResolvedSpan> = Vec::with_capacity(spans.len());
         let mut offset: usize = 0;
-        for run in runs {
-            let end = offset.saturating_add(run.len);
+        for span in spans {
+            let end = offset.saturating_add(span.len);
             if end > text.len() {
                 return None;
             }
             if !text.is_char_boundary(offset) || !text.is_char_boundary(end) {
                 return None;
             }
-            if run.len != 0 {
-                out.push(ResolvedRun {
+            if span.len != 0 {
+                out.push(ResolvedSpan {
                     start: offset,
                     end,
-                    color: run.color,
-                    weight: run.weight,
-                    slant: run.slant,
+                    fg: span.paint.fg,
+                    font: span.shaping.font.clone(),
+                    weight: span.shaping.weight,
+                    slant: span.shaping.slant,
+                    letter_spacing_em: span.shaping.letter_spacing_em,
                 });
             }
             offset = end;
@@ -1459,31 +1483,40 @@ fn layout_text(
         let mut attrs_list = AttrsList::new(attrs);
         attrs_list.add_span(0..slice.len(), attrs);
 
-        if let Some(runs) = resolved_runs.as_ref() {
-            for run in runs {
-                if run.end <= base_offset || run.start >= paragraph_end {
+        if let Some(spans) = resolved_spans.as_ref() {
+            for span in spans {
+                if span.end <= base_offset || span.start >= paragraph_end {
                     continue;
                 }
 
-                let start = run.start.max(base_offset) - base_offset;
-                let end = run.end.min(paragraph_end) - base_offset;
+                let start = span.start.max(base_offset) - base_offset;
+                let end = span.end.min(paragraph_end) - base_offset;
                 if start >= end || end > slice.len() {
                     continue;
                 }
 
                 let mut span_attrs = attrs.clone();
-                if let Some(weight) = run.weight {
+                if let Some(font) = span.font.as_ref() {
+                    span_attrs = span_attrs.family(family_for_font_id(font));
+                }
+                if let Some(weight) = span.weight {
                     span_attrs = span_attrs.weight(Weight(weight.0));
                 }
-                if let Some(slant) = run.slant {
+                if let Some(slant) = span.slant {
                     span_attrs = match slant {
                         TextSlant::Normal => span_attrs.style(CosmicStyle::Normal),
                         TextSlant::Italic => span_attrs.style(CosmicStyle::Italic),
                         TextSlant::Oblique => span_attrs.style(CosmicStyle::Oblique),
                     };
                 }
-                if let Some(color) = run.color {
-                    span_attrs = span_attrs.color(fret_color_to_cosmic(color));
+                if let Some(letter_spacing_em) = span.letter_spacing_em
+                    && letter_spacing_em != 0.0
+                    && letter_spacing_em.is_finite()
+                {
+                    span_attrs = span_attrs.letter_spacing(letter_spacing_em);
+                }
+                if let Some(fg) = span.fg {
+                    span_attrs = span_attrs.color(fret_color_to_cosmic(fg));
                 }
                 attrs_list.add_span(start..end, &span_attrs);
             }

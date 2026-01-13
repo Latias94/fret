@@ -657,7 +657,10 @@ impl ElementHostWidget {
                 let metrics = if can_reuse_metrics {
                     self.text_cache.metrics.expect("cached metrics")
                 } else {
-                    let metrics = cx.services.text().measure(&props.text, &style, constraints);
+                    let metrics = cx.services.text().measure(
+                        fret_core::TextInput::plain(props.text.as_ref(), &style),
+                        constraints,
+                    );
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.measured_scale_factor_bits = Some(scale_bits);
                     self.text_cache.last_text = Some(props.text.clone());
@@ -725,10 +728,14 @@ impl ElementHostWidget {
                 let metrics = if can_reuse_metrics {
                     self.text_cache.metrics.expect("cached metrics")
                 } else {
-                    let metrics = cx
-                        .services
-                        .text()
-                        .measure_rich(&props.rich, &style, constraints);
+                    let metrics = cx.services.text().measure(
+                        fret_core::TextInput::attributed(
+                            props.rich.text.as_ref(),
+                            &style,
+                            props.rich.spans.as_ref(),
+                        ),
+                        constraints,
+                    );
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.measured_scale_factor_bits = Some(scale_bits);
                     self.text_cache.last_text = None;
@@ -795,10 +802,14 @@ impl ElementHostWidget {
                 let metrics = if can_reuse_metrics {
                     self.text_cache.metrics.expect("cached metrics")
                 } else {
-                    let metrics = cx
-                        .services
-                        .text()
-                        .measure_rich(&props.rich, &style, constraints);
+                    let metrics = cx.services.text().measure(
+                        fret_core::TextInput::attributed(
+                            props.rich.text.as_ref(),
+                            &style,
+                            props.rich.spans.as_ref(),
+                        ),
+                        constraints,
+                    );
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.measured_scale_factor_bits = Some(scale_bits);
                     self.text_cache.last_text = None;

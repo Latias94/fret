@@ -23,7 +23,7 @@ struct TextCache {
     prepared_scale_factor_bits: Option<u32>,
     measured_scale_factor_bits: Option<u32>,
     last_text: Option<std::sync::Arc<str>>,
-    last_rich: Option<fret_core::RichText>,
+    last_rich: Option<fret_core::AttributedText>,
     last_style: Option<TextStyle>,
     last_wrap: Option<fret_core::TextWrap>,
     last_overflow: Option<TextOverflow>,

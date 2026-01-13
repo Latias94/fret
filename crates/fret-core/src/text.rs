@@ -27,7 +27,8 @@ pub struct TextFontFamilyConfig {
     pub ui_mono: Vec<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct FontWeight(pub u16);
 
 impl FontWeight {
@@ -91,7 +92,8 @@ pub struct TextStyle {
     pub letter_spacing_em: Option<f32>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum TextSlant {
     #[default]
     Normal,
@@ -130,68 +132,130 @@ pub struct HitTestResult {
     pub affinity: CaretAffinity,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct TextRun {
-    /// Run length in UTF-8 bytes.
-    pub len: usize,
-    /// Optional per-run paint color override.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DecorationLineStyle {
+    #[default]
+    Solid,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UnderlineStyle {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<Color>,
-    /// Optional per-run weight override (shaping-affecting).
+    #[serde(default)]
+    pub style: DecorationLineStyle,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StrikethroughStyle {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<Color>,
+    #[serde(default)]
+    pub style: DecorationLineStyle,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct TextShapingStyle {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font: Option<FontId>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub weight: Option<FontWeight>,
-    /// Optional per-run slant override (shaping-affecting).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub slant: Option<TextSlant>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub letter_spacing_em: Option<f32>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct TextPaintStyle {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fg: Option<Color>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bg: Option<Color>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub underline: Option<UnderlineStyle>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub strikethrough: Option<StrikethroughStyle>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct TextSpan {
+    /// Span length in UTF-8 bytes.
+    pub len: usize,
+    #[serde(default)]
+    pub shaping: TextShapingStyle,
+    #[serde(default)]
+    pub paint: TextPaintStyle,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct RichText {
+pub struct AttributedText {
     pub text: Arc<str>,
-    pub runs: Arc<[TextRun]>,
+    pub spans: Arc<[TextSpan]>,
 }
 
-impl RichText {
-    pub fn new(text: impl Into<Arc<str>>, runs: impl Into<Arc<[TextRun]>>) -> Self {
-        Self {
-            text: text.into(),
-            runs: runs.into(),
+fn spans_are_valid(text: &str, spans: &[TextSpan]) -> bool {
+    let mut offset = 0usize;
+    for span in spans {
+        let end = offset.saturating_add(span.len);
+        if end > text.len() {
+            return false;
         }
+        if !text.is_char_boundary(offset) || !text.is_char_boundary(end) {
+            return false;
+        }
+        offset = end;
+    }
+    offset == text.len()
+}
+
+impl AttributedText {
+    pub fn new(text: impl Into<Arc<str>>, spans: impl Into<Arc<[TextSpan]>>) -> Self {
+        let text: Arc<str> = text.into();
+        let spans: Arc<[TextSpan]> = spans.into();
+        debug_assert!(spans_are_valid(text.as_ref(), spans.as_ref()));
+        Self { text, spans }
+    }
+
+    pub fn is_valid(&self) -> bool {
+        spans_are_valid(self.text.as_ref(), self.spans.as_ref())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum TextInput<'a> {
+    Plain {
+        text: &'a str,
+        style: &'a TextStyle,
+    },
+    Attributed {
+        text: &'a str,
+        base: &'a TextStyle,
+        spans: &'a [TextSpan],
+    },
+}
+
+impl<'a> TextInput<'a> {
+    pub fn plain(text: &'a str, style: &'a TextStyle) -> Self {
+        Self::Plain { text, style }
+    }
+
+    pub fn attributed(text: &'a str, base: &'a TextStyle, spans: &'a [TextSpan]) -> Self {
+        debug_assert!(spans_are_valid(text, spans));
+        Self::Attributed { text, base, spans }
     }
 }
 
 pub trait TextService {
     fn prepare(
         &mut self,
-        text: &str,
-        style: &TextStyle,
+        input: TextInput<'_>,
         constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics);
 
-    fn prepare_rich(
-        &mut self,
-        rich: &RichText,
-        base_style: &TextStyle,
-        constraints: TextConstraints,
-    ) -> (TextBlobId, TextMetrics) {
-        self.prepare(rich.text.as_ref(), base_style, constraints)
-    }
-
-    fn measure(
-        &mut self,
-        text: &str,
-        style: &TextStyle,
-        constraints: TextConstraints,
-    ) -> TextMetrics {
-        let (blob, metrics) = self.prepare(text, style, constraints);
-        self.release(blob);
-        metrics
-    }
-
-    fn measure_rich(
-        &mut self,
-        rich: &RichText,
-        base_style: &TextStyle,
-        constraints: TextConstraints,
-    ) -> TextMetrics {
-        let (blob, metrics) = self.prepare_rich(rich, base_style, constraints);
+    fn measure(&mut self, input: TextInput<'_>, constraints: TextConstraints) -> TextMetrics {
+        let (blob, metrics) = self.prepare(input, constraints);
         self.release(blob);
         metrics
     }

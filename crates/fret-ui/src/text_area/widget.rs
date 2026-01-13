@@ -517,17 +517,17 @@ impl<H: UiHost> Widget<H> for TextArea {
             overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
-        let mut metrics = cx
-            .services
-            .text()
-            .measure(layout_text, &self.text_style, constraints);
+        let mut metrics = cx.services.text().measure(
+            fret_core::TextInput::plain(layout_text, &self.text_style),
+            constraints,
+        );
         let show_scrollbar = metrics.size.height.0 > inner.size.height.0;
         if show_scrollbar {
             constraints.max_width = Some(Px((inner.size.width.0 - scrollbar_w.0).max(0.0)));
-            metrics = cx
-                .services
-                .text()
-                .measure(layout_text, &self.text_style, constraints);
+            metrics = cx.services.text().measure(
+                fret_core::TextInput::plain(layout_text, &self.text_style),
+                constraints,
+            );
         }
 
         self.metrics = Some(metrics);
@@ -589,10 +589,10 @@ impl<H: UiHost> Widget<H> for TextArea {
                 Some(s) => std::borrow::Cow::Owned(s),
                 None => std::borrow::Cow::Borrowed(self.text.as_str()),
             };
-            let (blob, metrics) =
-                cx.services
-                    .text()
-                    .prepare(layout_text.as_ref(), &self.text_style, constraints);
+            let (blob, metrics) = cx.services.text().prepare(
+                fret_core::TextInput::plain(layout_text.as_ref(), &self.text_style),
+                constraints,
+            );
             self.blob = Some(blob);
             self.metrics = Some(metrics);
             self.prepared_key = Some(key);

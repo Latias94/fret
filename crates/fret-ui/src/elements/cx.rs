@@ -1271,7 +1271,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn styled_text(&mut self, rich: fret_core::RichText) -> AnyElement {
+    pub fn styled_text(&mut self, rich: fret_core::AttributedText) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
             AnyElement::new(
@@ -1291,7 +1291,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn selectable_text(&mut self, rich: fret_core::RichText) -> AnyElement {
+    pub fn selectable_text(&mut self, rich: fret_core::AttributedText) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
             AnyElement::new(

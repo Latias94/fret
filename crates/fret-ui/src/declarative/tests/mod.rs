@@ -11,7 +11,7 @@ use crate::widget::Invalidation;
 use crate::widget::{LayoutCx, PaintCx, Widget};
 use fret_core::{
     AppWindowId, Color, Modifiers, MouseButton, MouseButtons, NodeId, Point, Px, Rect, Scene,
-    SceneOp, Size, TextConstraints, TextMetrics, TextService, TextStyle, Transform2D,
+    SceneOp, Size, TextConstraints, TextMetrics, TextService, Transform2D,
 };
 use fret_runtime::{CommandId, Effect};
 
@@ -21,8 +21,7 @@ struct FakeTextService {}
 impl TextService for FakeTextService {
     fn prepare(
         &mut self,
-        _text: &str,
-        _style: &TextStyle,
+        _input: fret_core::TextInput<'_>,
         _constraints: TextConstraints,
     ) -> (fret_core::TextBlobId, TextMetrics) {
         (

@@ -1,4 +1,4 @@
-use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextStyle, UiServices};
+use fret_core::{TextBlobId, TextConstraints, TextInput, TextMetrics, TextStyle, UiServices};
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::hash::{Hash, Hasher};
@@ -51,7 +51,9 @@ impl TextCache {
         match self.entries.entry(key) {
             Entry::Occupied(e) => *e.get(),
             Entry::Vacant(e) => {
-                let (blob, metrics) = services.text().prepare(text, style, constraints);
+                let (blob, metrics) = services
+                    .text()
+                    .prepare(TextInput::plain(text, style), constraints);
                 let prepared = PreparedText { blob, metrics, key };
                 e.insert(prepared);
                 prepared

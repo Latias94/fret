@@ -697,8 +697,7 @@ mod tests {
     impl TextService for FakeServices {
         fn prepare(
             &mut self,
-            _text: &str,
-            _style: &CoreTextStyle,
+            _input: fret_core::TextInput<'_>,
             _constraints: TextConstraints,
         ) -> (TextBlobId, TextMetrics) {
             (
@@ -1495,9 +1494,12 @@ mod tests {
                         },
                     );
 
-                    let rich = fret_core::RichText::new(
-                        "hello world",
-                        Arc::<[fret_core::TextRun]>::from([]),
+                    let rich = fret_core::AttributedText::new(
+                        Arc::<str>::from("hello world"),
+                        [fret_core::TextSpan {
+                            len: "hello world".len(),
+                            ..Default::default()
+                        }],
                     );
 
                     let content = cx.semantics(

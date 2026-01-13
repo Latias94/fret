@@ -233,8 +233,7 @@ struct FakeServices;
 impl fret_core::TextService for FakeServices {
     fn prepare(
         &mut self,
-        _text: &str,
-        _style: &fret_core::TextStyle,
+        _input: fret_core::TextInput<'_>,
         _constraints: fret_core::TextConstraints,
     ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
         (
@@ -281,10 +280,13 @@ struct StyleAwareServices;
 impl fret_core::TextService for StyleAwareServices {
     fn prepare(
         &mut self,
-        text: &str,
-        style: &fret_core::TextStyle,
+        input: fret_core::TextInput<'_>,
         constraints: fret_core::TextConstraints,
     ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+        let (text, style) = match input {
+            fret_core::TextInput::Plain { text, style } => (text, style),
+            fret_core::TextInput::Attributed { text, base, .. } => (text, base),
+        };
         let line_height = style
             .line_height
             .unwrap_or(Px((style.size.0 * 1.4).max(0.0)));

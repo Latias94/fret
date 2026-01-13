@@ -205,10 +205,13 @@ struct FakeServices;
 impl fret_core::TextService for FakeServices {
     fn prepare(
         &mut self,
-        text: &str,
-        style: &fret_core::TextStyle,
+        input: fret_core::TextInput<'_>,
         constraints: fret_core::TextConstraints,
     ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+        let (text, style) = match input {
+            fret_core::TextInput::Plain { text, style } => (text, style),
+            fret_core::TextInput::Attributed { text, base, .. } => (text, base),
+        };
         let mut advance_em: f32 = 0.0;
         let mut char_count: usize = 0;
         for ch in text.chars() {

@@ -3,6 +3,7 @@ use crate::{
     geometry::{Corners, Edges, Point, Rect, Transform2D},
     ids::{ImageId, PathId, RenderTargetId, SvgId, TextBlobId},
 };
+use serde::{Deserialize, Serialize};
 use slotmap::Key;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -11,7 +12,7 @@ pub struct DrawOrder(pub u32);
 // `DrawOrder` is intentionally non-semantic for compositing. Scene operation order is authoritative.
 // See `docs/adr/0082-draworder-is-non-semantic.md`.
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Color {
     pub r: f32,
     pub g: f32,

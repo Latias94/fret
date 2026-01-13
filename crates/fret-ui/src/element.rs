@@ -2,9 +2,9 @@ use crate::UiHost;
 use crate::elements::{ElementContext, GlobalElementId};
 use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions, Side};
 use fret_core::{
-    CaretAffinity, Color, Corners, Edges, EffectChain, EffectMode, EffectQuality, ImageId, NodeId,
-    Px, RenderTargetId, RichText, SemanticsRole, SvgFit, TextOverflow, TextStyle, TextWrap, UvRect,
-    ViewportFit,
+    AttributedText, CaretAffinity, Color, Corners, Edges, EffectChain, EffectMode, EffectQuality,
+    ImageId, NodeId, Px, RenderTargetId, SemanticsRole, SvgFit, TextOverflow, TextStyle, TextWrap,
+    UvRect, ViewportFit,
 };
 use fret_runtime::{CommandId, Model};
 use std::sync::Arc;
@@ -725,7 +725,7 @@ pub struct TextProps {
 #[derive(Debug, Clone)]
 pub struct StyledTextProps {
     pub layout: LayoutStyle,
-    pub rich: RichText,
+    pub rich: AttributedText,
     pub style: Option<TextStyle>,
     /// Base color for glyphs without a per-run override.
     pub color: Option<Color>,
@@ -736,7 +736,7 @@ pub struct StyledTextProps {
 #[derive(Debug, Clone)]
 pub struct SelectableTextProps {
     pub layout: LayoutStyle,
-    pub rich: RichText,
+    pub rich: AttributedText,
     pub style: Option<TextStyle>,
     /// Base color for glyphs without a per-run override.
     pub color: Option<Color>,
@@ -1028,7 +1028,7 @@ impl TextProps {
 }
 
 impl StyledTextProps {
-    pub fn new(rich: RichText) -> Self {
+    pub fn new(rich: AttributedText) -> Self {
         Self {
             layout: LayoutStyle::default(),
             rich,
@@ -1041,7 +1041,7 @@ impl StyledTextProps {
 }
 
 impl SelectableTextProps {
-    pub fn new(rich: RichText) -> Self {
+    pub fn new(rich: AttributedText) -> Self {
         Self {
             layout: LayoutStyle::default(),
             rich,

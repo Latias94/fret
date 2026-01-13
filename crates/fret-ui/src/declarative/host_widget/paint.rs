@@ -264,8 +264,10 @@ impl ElementHostWidget {
                     if let Some(blob) = self.text_cache.blob.take() {
                         cx.services.text().release(blob);
                     }
-                    let (blob, metrics) =
-                        cx.services.text().prepare(&props.text, &style, constraints);
+                    let (blob, metrics) = cx.services.text().prepare(
+                        fret_core::TextInput::plain(props.text.as_ref(), &style),
+                        constraints,
+                    );
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
@@ -344,10 +346,14 @@ impl ElementHostWidget {
                     if let Some(blob) = self.text_cache.blob.take() {
                         cx.services.text().release(blob);
                     }
-                    let (blob, metrics) =
-                        cx.services
-                            .text()
-                            .prepare_rich(&props.rich, &style, constraints);
+                    let (blob, metrics) = cx.services.text().prepare(
+                        fret_core::TextInput::attributed(
+                            props.rich.text.as_ref(),
+                            &style,
+                            props.rich.spans.as_ref(),
+                        ),
+                        constraints,
+                    );
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
@@ -427,10 +433,14 @@ impl ElementHostWidget {
                     if let Some(blob) = self.text_cache.blob.take() {
                         cx.services.text().release(blob);
                     }
-                    let (blob, metrics) =
-                        cx.services
-                            .text()
-                            .prepare_rich(&props.rich, &style, constraints);
+                    let (blob, metrics) = cx.services.text().prepare(
+                        fret_core::TextInput::attributed(
+                            props.rich.text.as_ref(),
+                            &style,
+                            props.rich.spans.as_ref(),
+                        ),
+                        constraints,
+                    );
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
