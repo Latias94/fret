@@ -609,16 +609,13 @@ fn node_drag_pointer_up_emits_node_drag_end_committed() {
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone()).with_callbacks(recorder);
     let snapshot = canvas.sync_view_state(&mut host);
 
-    let _ = graph.update(&mut host, |g, _cx| {
-        if let Some(n) = g.nodes.get_mut(&a) {
-            n.pos.x += 10.0;
-        }
-    });
-
     canvas.interaction.node_drag = Some(NodeDrag {
         primary: a,
         node_ids: vec![a],
         nodes: vec![(a, start_pos)],
+        current_nodes: vec![(a, start_pos)],
+        current_groups: Vec::new(),
+        preview_rev: 0,
         grab_offset: Point::new(Px(0.0), Px(0.0)),
         start_pos: Point::new(Px(100.0), Px(100.0)),
     });
@@ -626,6 +623,15 @@ fn node_drag_pointer_up_emits_node_drag_end_committed() {
     let bounds = make_bounds();
     let mut services = NullServices::default();
     let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    assert!(super::super::node_drag::handle_node_drag_move(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        Point::new(Px(110.0), Px(110.0)),
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
 
     assert!(super::super::pointer_up::handle_pointer_up(
         &mut canvas,
@@ -664,6 +670,9 @@ fn node_drag_move_emits_on_node_drag() {
         primary: a,
         node_ids: vec![a],
         nodes: vec![(a, start_pos)],
+        current_nodes: vec![(a, start_pos)],
+        current_groups: Vec::new(),
+        preview_rev: 0,
         grab_offset: Point::new(Px(0.0), Px(0.0)),
         start_pos: Point::new(Px(0.0), Px(0.0)),
     });

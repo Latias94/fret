@@ -205,6 +205,8 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 
 **Use it when:** you need transform gizmos, pick policies, and viewport-space tool math (unit-explicit via the viewport input contract).
 
+**Start here:** `docs/gizmo-viewport-integration.md` (end-to-end reference: `apps/fret-examples/src/gizmo3d_demo.rs`).
+
 ### `fret-markdown` / `fret-code-view` / `fret-syntax`
 
 - `fret-markdown`: Markdown renderer components (optional MathJax SVG).

@@ -28,8 +28,7 @@ struct FakeTextService {
 impl TextService for FakeTextService {
     fn prepare(
         &mut self,
-        _text: &str,
-        _style: &TextStyle,
+        _input: &fret_core::TextInput,
         _constraints: TextConstraints,
     ) -> (fret_core::TextBlobId, TextMetrics) {
         self.prepare_calls += 1;

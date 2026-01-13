@@ -243,6 +243,8 @@ impl Renderer {
             text_pipeline: None,
             text_color_pipeline_format: None,
             text_color_pipeline: None,
+            text_subpixel_pipeline_format: None,
+            text_subpixel_pipeline: None,
             mask_pipeline_format: None,
             mask_pipeline: None,
             text_vertex_buffers,

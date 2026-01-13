@@ -5,7 +5,6 @@ use crate::test_host::TestHost;
 use crate::widget::Widget;
 use fret_core::{
     AppWindowId, Event, ImeEvent, Point, Px, Rect, Size, TextConstraints, TextMetrics, TextService,
-    TextStyle,
 };
 use fret_runtime::{Effect, PlatformCapabilities};
 use std::sync::Arc;
@@ -18,10 +17,10 @@ struct FakeTextService {
 impl TextService for FakeTextService {
     fn prepare(
         &mut self,
-        text: &str,
-        _style: &TextStyle,
+        input: &fret_core::TextInput,
         _constraints: TextConstraints,
     ) -> (fret_core::TextBlobId, TextMetrics) {
+        let text = input.text();
         self.prepared.push(text.to_string());
         (
             fret_core::TextBlobId::default(),
@@ -213,10 +212,10 @@ struct ImeTextService {}
 impl TextService for ImeTextService {
     fn prepare(
         &mut self,
-        text: &str,
-        _style: &TextStyle,
+        input: &fret_core::TextInput,
         _constraints: TextConstraints,
     ) -> (fret_core::TextBlobId, TextMetrics) {
+        let text = input.text();
         (
             fret_core::TextBlobId::default(),
             TextMetrics {

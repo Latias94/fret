@@ -52,9 +52,9 @@ impl GizmoHandedness {
             return None;
         }
 
-        let z = projection.z_axis;
-        let w = z.w;
-        let z = z.z;
+        let z_axis = projection.z_axis;
+        let w = z_axis.w;
+        let z = z_axis.z;
 
         if !w.is_finite() || !z.is_finite() {
             return None;

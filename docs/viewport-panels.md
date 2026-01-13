@@ -36,6 +36,8 @@ Tier A is the recommended choice for:
   - `apps/fret-examples/src/plot3d_demo.rs`
 - More complex integration + overlays:
   - `apps/fret-examples/src/gizmo3d_demo.rs`
+- Gizmo + viewport integration guide:
+  - `docs/gizmo-viewport-integration.md`
 - Engine hook + submission coordination:
   - `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`
   - `crates/fret-launch/src/runner/common.rs` (`WinitAppDriver`, `EngineFrameUpdate`)

@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Edges, FontId, FontWeight, Px, RichText, TextOverflow, TextRun, TextStyle, TextWrap,
+    AttributedText, Edges, FontId, FontWeight, Px, TextOverflow, TextPaintStyle, TextSpan,
+    TextStyle, TextWrap,
 };
 use fret_ui::element::{
     AnyElement, ContainerProps, HoverRegionProps, InsetStyle, LayoutStyle, Length, Overflow,
@@ -730,7 +731,7 @@ fn render_code_block_text<H: UiHost>(
     scrollbar_x_right_inset: Px,
 ) -> AnyElement {
     let mut text = String::new();
-    let mut runs: Vec<TextRun> = Vec::new();
+    let mut spans: Vec<TextSpan> = Vec::new();
     for (line_i, line) in prepared.lines.iter().enumerate() {
         for seg in &line.segments {
             if seg.text.is_empty() {
@@ -738,25 +739,25 @@ fn render_code_block_text<H: UiHost>(
             }
             let color = seg.highlight.and_then(|h| syntax_color(theme, h));
             text.push_str(seg.text.as_ref());
-            runs.push(TextRun {
+            spans.push(TextSpan {
                 len: seg.text.len(),
-                color,
-                weight: None,
-                slant: None,
+                shaping: Default::default(),
+                paint: TextPaintStyle {
+                    fg: color,
+                    ..Default::default()
+                },
             });
         }
         if line_i + 1 < prepared.lines.len() {
             text.push('\n');
-            runs.push(TextRun {
+            spans.push(TextSpan {
                 len: 1,
-                color: None,
-                weight: None,
-                slant: None,
+                ..Default::default()
             });
         }
     }
 
-    let rich = RichText::new(Arc::<str>::from(text), runs);
+    let rich = AttributedText::new(Arc::<str>::from(text), spans);
 
     let text_style = TextStyle {
         font: FontId::monospace(),

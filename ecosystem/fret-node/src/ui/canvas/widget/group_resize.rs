@@ -13,7 +13,7 @@ pub(super) fn handle_group_resize_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     modifiers: Modifiers,
     _zoom: f32,
 ) -> bool {
-    let Some(resize) = canvas.interaction.group_resize.clone() else {
+    let Some(mut resize) = canvas.interaction.group_resize.clone() else {
         return false;
     };
 
@@ -90,12 +90,11 @@ pub(super) fn handle_group_resize_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
         new_rect.size.height = new_rect.size.height.max(min_h_children);
     }
 
-    let _ = canvas.graph.update(cx.app, |g, _cx| {
-        let Some(group) = g.groups.get_mut(&resize.group) else {
-            return;
-        };
-        group.rect = new_rect;
-    });
+    if resize.current_rect != new_rect {
+        resize.current_rect = new_rect;
+        resize.preview_rev = resize.preview_rev.wrapping_add(1);
+    }
+    canvas.interaction.group_resize = Some(resize);
 
     if auto_pan_delta.x != 0.0 || auto_pan_delta.y != 0.0 {
         canvas.update_view_state(cx.app, |s| {
@@ -104,7 +103,6 @@ pub(super) fn handle_group_resize_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
         });
     }
 
-    canvas.geometry.key = None;
     cx.request_redraw();
     cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
     true

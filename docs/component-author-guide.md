@@ -126,6 +126,10 @@ Baseline rules:
 If your crate crosses the viewport/tooling boundary, expose unit-explicit APIs and carry enough
 context to avoid ad-hoc conversions (see the viewport explicit-units contract).
 
+Concrete reference:
+
+- Gizmo + viewport integration (Tier A tooling boundary): `docs/gizmo-viewport-integration.md`
+
 ## 6) Settings: namespaced, layered, and optional
 
 If you support config:

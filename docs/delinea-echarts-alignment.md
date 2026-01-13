@@ -151,7 +151,7 @@ single “at a glance” view of:
 
 - ECharts reference: tooltip formatter + axisPointer sampling behavior (series order, missing values, snapping rules)
 - ADR(s): `docs/adr/1133-delinea-interaction-and-hit-testing-contract.md`, `docs/adr/1148-delinea-tooltip-formatting-contract.md`
-- Evidence: `ecosystem/delinea/src/tooltip.rs`, `ecosystem/fret-chart/src/retained/tooltip.rs`, `ecosystem/delinea/src/engine/hit_test/mod.rs`
+- Evidence: `ecosystem/delinea/src/tooltip.rs`, `ecosystem/delinea/src/engine/hit_test/mod.rs`, `ecosystem/fret-chart/src/retained/tooltip.rs`, `ecosystem/fret-chart/src/declarative/tooltip_overlay.rs`
 - Validation (desktop): `cargo run -p fret-demo --bin fret-demo -- chart_demo`
 - Validation (wasm): `cargo run -p fretboard -- dev web --demo chart_demo`
 - Notes:
@@ -169,7 +169,8 @@ single “at a glance” view of:
 - What exists in v1:
   - `ChartSpec.tooltip: Option<TooltipSpecV1>` supports templates + decimals, including per-series overrides (adapter-side).
   - Tooltip marker swatches are rendered from the series palette (UI-side).
-  - Tooltip lines support a two-column `label: value` layout (UI-side; current heuristic split on `": "`).
+  - Tooltip lines support a two-column `label: value` layout (UI-side; shared helper `ecosystem/fret-chart/src/tooltip_layout.rs`).
+  - Declarative overlay: axisPointer shadow/crosshair + snap marker + tooltip bubble is rendered by `ecosystem/fret-chart/src/declarative/tooltip_overlay.rs` (state is snapshotted during render; paint reads only the snapshot).
   - Delinea: `AxisPointerSpec.pointer_type=Shadow` (ECharts: `axisPointer.type="shadow"`) highlights the active category band (`AxisPointerOutput.shadow_rect_px`).
   - Delinea: `AxisPointerSpec.label.show=true` (ECharts: `axisPointer.label.show=true`) draws an axis value label on the trigger axis band (adapter-side; default is `false`). v1 supports a string template formatter via `AxisPointerSpec.label.template` (`{value}`, `{axis_name}`).
   - Axis-trigger sampling reads from the current view selection (DataZoom/filter/selection) and is allocation-aware:
@@ -179,9 +180,10 @@ single “at a glance” view of:
       The stage supports append-only resume and prefix reuse when the request end grows.
 - Missing vs ECharts:
   - ECharts formatter parity (callback-style formatting, rich text/HTML markers, per-series overrides),
-  - richer tooltip layout (structural columns, rich text/HTML) and additional snapping policies.
+  - richer tooltip layout (structural columns, rich text/HTML) and additional snapping policies,
+  - formatter-hook parity for the declarative chart panel (retained `ChartCanvas` supports `set_tooltip_formatter`).
 
-**S6 - Legend semantics (series visibility) + UI parity** (`[~]`)
+**S6 - Legend semantics (series visibility) + UI parity** (`[x]`)
 
 - ECharts reference: legend selection model + event semantics
 - ADR(s): (engine-level visibility is part of the core model contract; UI parity is adapter work)
@@ -199,13 +201,15 @@ single “at a glance” view of:
   - `Ctrl+I` (when the pointer is in the legend panel): invert selection.
   - Hidden series do not participate in axisPointer primary selection and are excluded from axis-trigger tooltip rows.
 - What exists in v1:
-  - A built-in legend overlay in `fret-chart` (panel + swatch + hover highlight).
+  - A built-in legend overlay in `fret-chart` (panel + swatch + hover highlight) for retained and declarative charts.
   - Visibility is wired through `delinea::Action::SetSeriesVisible` (headless model is authoritative).
   - Basic overflow handling: the legend panel height is clamped to the plot height, and the wheel scrolls the legend.
   - Selector affordance: `All` / `None` / `Invert` selector buttons at the top of the legend panel.
+  - Shared legend selection logic is factored into `ecosystem/fret-chart/src/legend_logic.rs` to keep retained and declarative behavior aligned.
 - Missing vs ECharts:
   - multi-legend layout and full selector schema parity (ECharts `legend.selector` options + styling),
-  - conformance scenarios for legend <-> tooltip/axisPointer interactions.
+  - conformance scenarios for legend <-> tooltip/axisPointer interactions,
+  - keyboard shortcut parity for the declarative legend overlay (retained canvas supports `Ctrl+A` / `Ctrl+I` / etc when the pointer is in the legend).
 
 **S7 - VisualMap (continuous + piecewise) multi-channel baseline** (`[~]`)
 
@@ -414,8 +418,8 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 ### Components: tooltip / axisPointer / legend / dataZoom
 
 - `[x]` Axis pointer (ECharts-like `trigger=item/axis`) (ADR 1133).
-- `[~]` Tooltip content parity (series ordering, formatting hooks, value snapping) (in progress).
-- `[~]` Legend semantics (series visibility) (engine supports `SetSeriesVisible`; UI parity TBD).
+- `[~]` Tooltip content parity (series ordering, formatting hooks, value snapping) (overlay UX implemented; formatter parity still pending).
+- `[x]` Legend semantics (series visibility) + baseline UI parity (selector + isolate + range toggle).
 - `[x]` X dataZoom inside (wheel/drag zoom/pan) (ADR 1129).
 - Evidence: `ecosystem/fret-chart/src/retained/canvas.rs` (axis-band pan, plot modifiers, and window writes).
 - Demo: `apps/fret-examples/src/chart_multi_axis_demo.rs` (multi-axis interaction conformance harness; desktop + wasm).
@@ -453,8 +457,7 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 
 ## Known Gaps vs ECharts (High Value)
 
-- Legend UI parity + selection UX (S6).
-- Tooltip snapping + axisPointer sampling policies (ordering, formatting hooks, stable values away from points) (S5).
+- Tooltip formatter parity (formatter hooks, rich layout/markers, stable axis-trigger semantics across adapters) (S5).
 - DataZoom Y parity + multi-dimensional filtering semantics (ordering rules; sparse selection carriers) (S2).
 - Category axis indexing under zoom for non-bar series (S4).
 - VisualMap: multiple maps per series and per-item attribute pipelines (S7).
@@ -463,10 +466,9 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 
 ## Recommended Next Steps (P0 -> P1)
 
-1. P0: Legend widget + selection model UX (single/multi select, invert, reset) (S6).
-2. P0: Tooltip snapping policies and axis-trigger tooltip UX (crosshair + stable rows away from points) (S5).
-3. P0/P1: DataZoom Y filtering semantics + ordering rules (and the “sparse selection” carrier boundary) (S2).
-4. P0/P1: VisualMap: multiple maps per series and a plan for per-item attributes/instancing (S7).
-5. P1: Category axis indexing under zoom for non-bar series (lock ordinal invariants with a dedicated demo) (S4).
-6. P1: LOD / downsampling policies + conformance harness (S8).
-7. P1: Append/update semantics (ECharts `appendData`) (S9).
+1. P0: Tooltip formatter parity + declarative formatter hook surface (S5 / ADR 1148).
+2. P0/P1: DataZoom Y filtering semantics + ordering rules (and the “sparse selection” carrier boundary) (S2).
+3. P0/P1: VisualMap: multiple maps per series and a plan for per-item attributes/instancing (S7).
+4. P1: Category axis indexing under zoom for non-bar series (lock ordinal invariants with a dedicated demo) (S4).
+5. P1: LOD / downsampling policies + conformance harness (S8).
+6. P1: Append/update semantics (ECharts `appendData`) (S9).
