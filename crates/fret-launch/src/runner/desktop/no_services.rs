@@ -5,7 +5,7 @@ pub(super) struct NoUiServices;
 impl fret_core::TextService for NoUiServices {
     fn prepare(
         &mut self,
-        _input: fret_core::TextInput<'_>,
+        _input: &fret_core::TextInput,
         _constraints: fret_core::TextConstraints,
     ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
         (

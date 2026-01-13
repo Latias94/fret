@@ -179,9 +179,7 @@ impl ViewGizmoLabelCache {
                 if blob.is_some() && metrics.is_some() {
                     return;
                 }
-                let (b, m) = services
-                    .text()
-                    .prepare(fret_core::TextInput::plain(text, &style), constraints);
+                let (b, m) = services.text().prepare_str(text, &style, constraints);
                 *blob = Some(b);
                 *metrics = Some(m);
             };
@@ -4069,10 +4067,10 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     scale_factor,
                 };
 
-                let (blob, metrics) = services.text().prepare(
-                    fret_core::TextInput::plain(overlay_text.as_str(), &style),
-                    constraints,
-                );
+                let (blob, metrics) =
+                    services
+                        .text()
+                        .prepare_str(overlay_text.as_str(), &style, constraints);
                 state.overlay.last_text = overlay_text;
                 state.overlay.last_scale_bits = scale_bits;
                 state.overlay.blob = Some(blob);
@@ -4249,10 +4247,10 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     scale_factor,
                 };
 
-                let (blob, metrics) = services.text().prepare(
-                    fret_core::TextInput::plain(text.as_str(), &style),
-                    constraints,
-                );
+                let (blob, metrics) =
+                    services
+                        .text()
+                        .prepare_str(text.as_str(), &style, constraints);
                 state.hud.last_text = text;
                 state.hud.last_scale_bits = scale_bits;
                 state.hud.blob = Some(blob);

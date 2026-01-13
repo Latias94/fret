@@ -303,10 +303,10 @@ impl ElementHostWidget {
             overflow: props.overflow,
             scale_factor: cx.scale_factor,
         };
-        let metrics = cx.services.text().measure(
-            fret_core::TextInput::plain(props.text.as_ref(), &style),
-            constraints,
-        );
+        let metrics = cx
+            .services
+            .text()
+            .measure_str(props.text.as_ref(), &style, constraints);
         clamp_to_constraints_in_measure(metrics.size, props.layout, cx.constraints)
     }
 
@@ -384,10 +384,10 @@ impl ElementHostWidget {
             overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
-        let metrics = cx.services.text().measure(
-            fret_core::TextInput::plain("M", &props.text_style),
-            constraints,
-        );
+        let metrics = cx
+            .services
+            .text()
+            .measure_str("M", &props.text_style, constraints);
         let border_h = props.chrome.border.top.0.max(0.0) + props.chrome.border.bottom.0.max(0.0);
         let pad_h = props.chrome.padding.top.0.max(0.0) + props.chrome.padding.bottom.0.max(0.0);
         let h = Px((metrics.size.height.0 + pad_h + border_h).max(0.0));
@@ -417,10 +417,10 @@ impl ElementHostWidget {
             overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
-        let metrics = cx.services.text().measure(
-            fret_core::TextInput::plain("M", &props.text_style),
-            constraints,
-        );
+        let metrics = cx
+            .services
+            .text()
+            .measure_str("M", &props.text_style, constraints);
         let border_h = props.chrome.border.top.0.max(0.0) + props.chrome.border.bottom.0.max(0.0);
         let pad_h = props.chrome.padding_y.0.max(0.0) * 2.0;
         let min_h = props.min_height.0.max(0.0);

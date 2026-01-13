@@ -295,8 +295,9 @@ impl DockSpace {
             scale_factor,
         };
 
-        let (close_blob, close_metrics) = services.text().prepare(
-            fret_core::TextInput::plain("×", &self.tab_close_style),
+        let (close_blob, close_metrics) = services.text().prepare_str(
+            "×",
+            &self.tab_close_style,
             TextConstraints {
                 max_width: None,
                 wrap: TextWrap::None,
@@ -316,10 +317,10 @@ impl DockSpace {
                 .map(|p| p.title.as_str())
                 .unwrap_or(panel.kind.0.as_str());
             let title_hash = hash_title(title);
-            let (blob, metrics) = services.text().prepare(
-                fret_core::TextInput::plain(title, &self.tab_text_style),
-                constraints,
-            );
+            let (blob, metrics) =
+                services
+                    .text()
+                    .prepare_str(title, &self.tab_text_style, constraints);
             self.tab_titles.insert(
                 panel,
                 PreparedTabTitle {
@@ -408,11 +409,9 @@ impl DockSpace {
             overflow: TextOverflow::Clip,
             scale_factor,
         };
-        let (blob, metrics) = services.text().prepare(
-            fret_core::TextInput::plain(
-                "No panels in this window.\nUse File → Layout → Reset Layout.",
-                &self.empty_state_style,
-            ),
+        let (blob, metrics) = services.text().prepare_str(
+            "No panels in this window.\nUse File → Layout → Reset Layout.",
+            &self.empty_state_style,
             constraints,
         );
         self.empty_state = Some(PreparedTabTitle {
@@ -1343,8 +1342,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     let dx = position.x.0 - drag.start.x.0;
                                     let dy = position.y.0 - drag.start.y.0;
                                     let dist2 = dx * dx + dy * dy;
-                                    // Match ImGui's default drag threshold (~6px).
-                                    if !dragging && dist2 > 36.0 {
+                                    // Match ImGui's default drag threshold (~6 screen px).
+                                    const DOCK_PANEL_DRAG_THRESHOLD_PX: Px = Px(6.0);
+                                    let threshold_sq = DOCK_PANEL_DRAG_THRESHOLD_PX.0
+                                        * DOCK_PANEL_DRAG_THRESHOLD_PX.0;
+                                    if !dragging && dist2 > threshold_sq {
                                         dragging = true;
                                     }
                                 } else if !dragging {

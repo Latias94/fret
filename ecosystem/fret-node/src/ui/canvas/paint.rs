@@ -515,10 +515,9 @@ impl CanvasPaintCache {
             return (entry.id, entry.metrics);
         }
 
-        let (id, metrics) = services.text().prepare(
-            fret_core::TextInput::plain(text.as_ref(), style),
-            constraints,
-        );
+        let (id, metrics) = services
+            .text()
+            .prepare_str(text.as_ref(), style, constraints);
         self.text_blobs.insert(
             key,
             TextBlobEntry {
@@ -577,10 +576,9 @@ impl CanvasPaintCache {
             return entry.metrics;
         }
 
-        let metrics = services.text().measure(
-            fret_core::TextInput::plain(text.as_ref(), style),
-            constraints,
-        );
+        let metrics = services
+            .text()
+            .measure_str(text.as_ref(), style, constraints);
         self.text_metrics.insert(
             key,
             TextMetricsEntry {

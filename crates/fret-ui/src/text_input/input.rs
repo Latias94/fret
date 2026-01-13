@@ -318,10 +318,10 @@ impl TextInput {
                 overflow: TextOverflow::Clip,
                 scale_factor: cx.scale_factor,
             };
-            let pre_metrics = cx.services.text().measure(
-                fret_core::TextInput::plain(&self.preedit[..cursor], &self.style),
-                constraints,
-            );
+            let pre_metrics =
+                cx.services
+                    .text()
+                    .measure_str(&self.preedit[..cursor], &self.style, constraints);
             x = x + pre_metrics.size.width;
         }
 

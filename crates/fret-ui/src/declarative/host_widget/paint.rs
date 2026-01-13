@@ -264,10 +264,10 @@ impl ElementHostWidget {
                     if let Some(blob) = self.text_cache.blob.take() {
                         cx.services.text().release(blob);
                     }
-                    let (blob, metrics) = cx.services.text().prepare(
-                        fret_core::TextInput::plain(props.text.as_ref(), &style),
-                        constraints,
-                    );
+                    let (blob, metrics) =
+                        cx.services
+                            .text()
+                            .prepare_str(props.text.as_ref(), &style, constraints);
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.prepared_scale_factor_bits = Some(scale_bits);

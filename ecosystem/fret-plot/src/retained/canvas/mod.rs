@@ -5037,8 +5037,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         self.heatmap_colorbar_text_key = Some(key);
 
                         for s in [&max_label, &min_label] {
-                            let (blob, metrics) = cx.services.text().prepare(
-                                fret_core::TextInput::plain(s.as_str(), &text_style),
+                            let (blob, metrics) = cx.services.text().prepare_str(
+                                s.as_str(),
+                                &text_style,
                                 text_constraints,
                             );
                             self.heatmap_colorbar_text
@@ -6627,10 +6628,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     if let Some(t) = self.debug_overlay_text.take() {
                         cx.services.text().release(t.blob);
                     }
-                    let (blob, metrics) = cx.services.text().prepare(
-                        fret_core::TextInput::plain(label.as_str(), &text_style),
-                        constraints,
-                    );
+                    let (blob, metrics) =
+                        cx.services
+                            .text()
+                            .prepare_str(&label, &text_style, constraints);
                     self.debug_overlay_text = Some(PreparedText { blob, metrics, key });
                 }
 
@@ -7057,8 +7058,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     if let Some(prev) = cache.take() {
                         cx.services.text().release(prev.blob);
                     }
-                    let (blob, metrics) = cx.services.text().prepare(
-                        fret_core::TextInput::plain(token, &indicator_style),
+                    let (blob, metrics) = cx.services.text().prepare_str(
+                        token,
+                        &indicator_style,
                         indicator_constraints,
                     );
                     *cache = Some(PreparedText { blob, metrics, key });

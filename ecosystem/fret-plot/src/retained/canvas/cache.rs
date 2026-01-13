@@ -208,9 +208,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         state = Self::hash_u64(state, hash_value(&constraints.wrap));
         state = Self::hash_u64(state, hash_value(&constraints.overflow));
 
-        let (blob, metrics) = services
-            .text()
-            .prepare(fret_core::TextInput::plain(text, style), constraints);
+        let (blob, metrics) = services.text().prepare_str(text, style, constraints);
         PreparedText {
             blob,
             metrics,

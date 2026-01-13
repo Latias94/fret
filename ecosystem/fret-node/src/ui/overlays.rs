@@ -513,7 +513,7 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
             let (id, metrics) = cx
                 .services
                 .text()
-                .prepare(fret_core::TextInput::plain(label, &text_style), constraints);
+                .prepare_str(label, &text_style, constraints);
             self.text_blobs.push(id);
 
             let tx = rect.origin.x.0 + 0.5 * (rect.size.width.0 - metrics.size.width.0);
