@@ -3361,10 +3361,87 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 groups_sorted.sort();
                 for group_id in groups_sorted {
                     let base = per_group_delta.get(&group_id).copied().unwrap_or_default();
-                    let delta = CanvasPoint {
+                    let mut delta = CanvasPoint {
                         x: base.x + shift.x,
                         y: base.y + shift.y,
                     };
+
+                    if !aligns
+                        && (delta.x.abs() > 1.0e-9 || delta.y.abs() > 1.0e-9)
+                        && let Some(extent) = snapshot.interaction.node_extent
+                    {
+                        let mut min_x: f32 = f32::INFINITY;
+                        let mut min_y: f32 = f32::INFINITY;
+                        let mut max_x: f32 = f32::NEG_INFINITY;
+                        let mut max_y: f32 = f32::NEG_INFINITY;
+                        let mut any = false;
+
+                        for (&node_id, node) in &g.nodes {
+                            if node.parent != Some(group_id) {
+                                continue;
+                            }
+                            let Some(node_geom) = geom.nodes.get(&node_id) else {
+                                continue;
+                            };
+                            let x0 = node_geom.rect.origin.x.0;
+                            let y0 = node_geom.rect.origin.y.0;
+                            let w = node_geom.rect.size.width.0.max(0.0);
+                            let h = node_geom.rect.size.height.0.max(0.0);
+                            if !x0.is_finite()
+                                || !y0.is_finite()
+                                || !w.is_finite()
+                                || !h.is_finite()
+                            {
+                                continue;
+                            }
+
+                            any = true;
+                            min_x = min_x.min(x0);
+                            min_y = min_y.min(y0);
+                            max_x = max_x.max(x0 + w);
+                            max_y = max_y.max(y0 + h);
+                        }
+
+                        if any
+                            && min_x.is_finite()
+                            && min_y.is_finite()
+                            && max_x.is_finite()
+                            && max_y.is_finite()
+                        {
+                            let bbox_w = (max_x - min_x).max(0.0);
+                            let bbox_h = (max_y - min_y).max(0.0);
+                            let extent_w = extent.size.width.max(0.0);
+                            let extent_h = extent.size.height.max(0.0);
+
+                            if min_x.is_finite()
+                                && bbox_w.is_finite()
+                                && extent.origin.x.is_finite()
+                                && extent_w.is_finite()
+                            {
+                                let min_dx = extent.origin.x - min_x;
+                                let mut max_dx =
+                                    extent.origin.x + (extent_w - bbox_w).max(0.0) - min_x;
+                                if !max_dx.is_finite() || max_dx < min_dx {
+                                    max_dx = min_dx;
+                                }
+                                delta.x = delta.x.clamp(min_dx, max_dx);
+                            }
+
+                            if min_y.is_finite()
+                                && bbox_h.is_finite()
+                                && extent.origin.y.is_finite()
+                                && extent_h.is_finite()
+                            {
+                                let min_dy = extent.origin.y - min_y;
+                                let mut max_dy =
+                                    extent.origin.y + (extent_h - bbox_h).max(0.0) - min_y;
+                                if !max_dy.is_finite() || max_dy < min_dy {
+                                    max_dy = min_dy;
+                                }
+                                delta.y = delta.y.clamp(min_dy, max_dy);
+                            }
+                        }
+                    }
                     let Some(group) = g.groups.get(&group_id) else {
                         continue;
                     };
@@ -3418,6 +3495,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         x: base.x + shift.x,
                         y: base.y + shift.y,
                     };
+                    let moved = delta.x.abs() > 1.0e-9 || delta.y.abs() > 1.0e-9;
                     let Some(node) = g.nodes.get(&node_id) else {
                         continue;
                     };
@@ -3432,7 +3510,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         let node_w = node_geom.rect.size.width.0;
                         let node_h = node_geom.rect.size.height.0;
 
-                        if !skip_node_extent_clamp
+                        if moved
+                            && !skip_node_extent_clamp
                             && let Some(extent) = snapshot.interaction.node_extent
                         {
                             let min_x = extent.origin.x;
@@ -12649,6 +12728,143 @@ mod tests {
         // Desired position would be x=25, but node extent clamps to max_x=20 for a 80px-wide node.
         assert_eq!(read_node_pos(&mut host, &graph, c).x, 20.0);
         assert_eq!(read_node_pos(&mut host, &graph, d).x, 90.0);
+    }
+
+    #[test]
+    fn distribute_x_clamps_selected_group_children_to_node_extent_rect_like_xyflow() {
+        let mut host = TestUiHostImpl::default();
+
+        let mut graph_value = Graph::new(GraphId::new());
+        let kind = NodeKindKey::new("test.node");
+
+        let left = NodeId::new();
+        let right = NodeId::new();
+        let child = NodeId::new();
+
+        let group_id = GroupId::new();
+        graph_value.groups.insert(
+            group_id,
+            Group {
+                title: "G".to_string(),
+                rect: CanvasRect {
+                    origin: CanvasPoint { x: 10.0, y: 0.0 },
+                    size: CanvasSize {
+                        width: 20.0,
+                        height: 20.0,
+                    },
+                },
+                color: None,
+            },
+        );
+
+        graph_value.nodes.insert(
+            left,
+            Node {
+                kind: kind.clone(),
+                kind_version: 1,
+                pos: CanvasPoint { x: 0.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: Some(CanvasSize {
+                    width: 10.0,
+                    height: 20.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+        graph_value.nodes.insert(
+            right,
+            Node {
+                kind: kind.clone(),
+                kind_version: 1,
+                pos: CanvasPoint { x: 90.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: Some(CanvasSize {
+                    width: 10.0,
+                    height: 20.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+
+        graph_value.nodes.insert(
+            child,
+            Node {
+                kind,
+                kind_version: 1,
+                pos: CanvasPoint { x: 50.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: Some(group_id),
+                extent: None,
+                expand_parent: None,
+                size: Some(CanvasSize {
+                    width: 40.0,
+                    height: 20.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+        canvas.sync_view_state(&mut host);
+
+        view.update(&mut host, |s, _cx| {
+            s.selected_nodes = vec![left, right];
+            s.selected_groups = vec![group_id];
+            s.interaction.node_extent = Some(CanvasRect {
+                origin: CanvasPoint { x: 0.0, y: 0.0 },
+                size: CanvasSize {
+                    width: 100.0,
+                    height: 100.0,
+                },
+            });
+        })
+        .unwrap();
+
+        let mut services = NullServices::default();
+        let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
+        let mut cx = command_cx(&mut host, &mut services, &mut tree);
+
+        assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_DISTRIBUTE_X)));
+        assert_eq!(canvas.history.undo_len(), 1);
+
+        // Left/right are the endpoints and remain fixed; the group is the interior element.
+        assert_eq!(read_node_pos(&mut host, &graph, left).x, 0.0);
+        assert_eq!(read_node_pos(&mut host, &graph, right).x, 90.0);
+
+        // The group's desired shift would move the child to x=80. Node extent clamps to max_x=60.
+        assert_eq!(read_node_pos(&mut host, &graph, child).x, 60.0);
+        let group_origin_x = graph
+            .read_ref(&mut host, |g| {
+                g.groups.get(&group_id).map(|gr| gr.rect.origin.x)
+            })
+            .ok()
+            .flatten()
+            .unwrap_or_default();
+        assert_eq!(group_origin_x, 20.0);
     }
 
     #[test]
