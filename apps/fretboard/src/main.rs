@@ -20,6 +20,7 @@ fn run() -> Result<(), String> {
     match cmd.as_str() {
         "help" | "-h" | "--help" => help(),
         "init" => init_cmd(args.collect()),
+        "new" => new_cmd(args.collect()),
         "hotpatch" => hotpatch_cmd(args.collect()),
         "list" => match args.next().as_deref() {
             Some("native-demos") => list_native_demos(),
@@ -43,8 +44,9 @@ fn help() -> Result<(), String> {
 
 Usage:
   fretboard help
-  fretboard init todo [--path <path>] [--name <name>] [--ui-assets]
-  fretboard init hello [--path <path>] [--name <name>]
+  fretboard new todo [--path <path>] [--name <name>] [--ui-assets]
+  fretboard new hello [--path <path>] [--name <name>]
+  fretboard init <template> [...]    # alias for `new` (compat)
   fretboard hotpatch poke [--path <path>]
   fretboard hotpatch path [--path <path>]
   fretboard hotpatch watch [--path <path>...] [--trigger-path <path>] [--poll-ms <ms>] [--debounce-ms <ms>]
@@ -56,8 +58,8 @@ Usage:
   fretboard dev web [--port <port>] [--demo <demo> | --choose]
 
 Examples:
-  fretboard init todo --name my-todo
-  fretboard init hello --name hello-world
+  fretboard new todo --name my-todo
+  fretboard new hello --name hello-world
   fretboard dev native --bin components_gallery
   fretboard dev native --bin todo_demo
   fretboard dev native --bin assets_demo
@@ -86,15 +88,23 @@ fn workspace_root() -> Result<PathBuf, String> {
 }
 
 fn init_cmd(args: Vec<String>) -> Result<(), String> {
+    new_template_cmd("init", args)
+}
+
+fn new_cmd(args: Vec<String>) -> Result<(), String> {
+    new_template_cmd("new", args)
+}
+
+fn new_template_cmd(invoked_as: &str, args: Vec<String>) -> Result<(), String> {
     let mut it = args.into_iter();
     let Some(template) = it.next() else {
-        return Err("missing init template (try: init todo)".to_string());
+        return Err(format!("missing template (try: {invoked_as} todo)"));
     };
 
     match template.as_str() {
         "todo" => init_todo(it.collect()),
         "hello" | "hello-world" => init_hello(it.collect()),
-        other => Err(format!("unknown init template: {other}")),
+        other => Err(format!("unknown template for {invoked_as}: {other}")),
     }
 }
 
