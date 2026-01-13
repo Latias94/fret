@@ -3,7 +3,7 @@ use std::sync::Arc;
 use fret_canvas::view::PanZoom2D;
 use fret_core::{Modifiers, MouseButton, Point, Px};
 use fret_runtime::Model;
-use fret_ui::action::{OnPointerDown, OnPointerMove, OnPointerUp, OnWheel};
+use fret_ui::action::{OnPinchGesture, OnPointerDown, OnPointerMove, OnPointerUp, OnWheel};
 use fret_ui::canvas::CanvasPainter;
 use fret_ui::element::{AnyElement, CanvasProps, Length, PointerRegionProps};
 use fret_ui::{ElementContext, UiHost};
@@ -73,6 +73,7 @@ pub struct PanZoomCanvasSurfacePanelProps {
     pub min_zoom: f32,
     pub max_zoom: f32,
     pub wheel_zoom: PanZoomWheelZoomConfig,
+    pub pinch_zoom_speed: f32,
     pub pan_button: MouseButton,
 
     /// Optional extra handlers invoked when the pan/zoom policy does not consume the event.
@@ -80,6 +81,7 @@ pub struct PanZoomCanvasSurfacePanelProps {
     pub on_pointer_move: Option<OnPointerMove>,
     pub on_pointer_up: Option<OnPointerUp>,
     pub on_wheel: Option<OnWheel>,
+    pub on_pinch_gesture: Option<OnPinchGesture>,
 }
 
 impl Default for PanZoomCanvasSurfacePanelProps {
@@ -97,11 +99,13 @@ impl Default for PanZoomCanvasSurfacePanelProps {
             min_zoom: 0.05,
             max_zoom: 64.0,
             wheel_zoom: PanZoomWheelZoomConfig::default(),
+            pinch_zoom_speed: 1.0,
             pan_button: MouseButton::Middle,
             on_pointer_down: None,
             on_pointer_move: None,
             on_pointer_up: None,
             on_wheel: None,
+            on_pinch_gesture: None,
         }
     }
 }
@@ -152,11 +156,13 @@ pub fn pan_zoom_canvas_surface_panel<H: UiHost>(
         min_zoom,
         max_zoom,
         wheel_zoom,
+        pinch_zoom_speed,
         pan_button,
         on_pointer_down,
         on_pointer_move,
         on_pointer_up,
         on_wheel,
+        on_pinch_gesture,
     } = props;
 
     let view = use_controllable_model(cx, view, || default_view).model();
@@ -267,6 +273,39 @@ pub fn pan_zoom_canvas_surface_panel<H: UiHost>(
         },
     );
 
+    let view_c = view.clone();
+    let on_pinch_zoom: OnPinchGesture = Arc::new(
+        move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+              action_cx: fret_ui::action::ActionCx,
+              pinch: fret_ui::action::PinchGestureCx| {
+            if !pinch.delta.is_finite() {
+                return false;
+            }
+
+            let speed = if pinch_zoom_speed.is_finite() {
+                pinch_zoom_speed.max(0.0)
+            } else {
+                1.0
+            };
+
+            // Match existing ecosystem behavior (e.g. node graph): factor = 1 + delta*speed.
+            let delta = pinch.delta.clamp(-0.95, 10.0);
+            let factor = (1.0 + delta * speed).max(0.01);
+
+            let bounds = host.bounds();
+            let _ = host.models_mut().update(&view_c, |view| {
+                let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0);
+                let mut tmp = *view;
+                let new_zoom = (zoom * factor).clamp(min_zoom, max_zoom);
+                tmp.zoom_about_screen_point(bounds, pinch.position, new_zoom);
+                *view = tmp;
+            });
+
+            host.request_redraw(action_cx.window);
+            true
+        },
+    );
+
     let paint_view = view_value;
     let paint = move |painter: &mut CanvasPainter<'_>| {
         let raster_scale_factor =
@@ -290,6 +329,7 @@ pub fn pan_zoom_canvas_surface_panel<H: UiHost>(
     surface.on_pointer_move = Some(on_pointer_move_pan);
     surface.on_pointer_up = Some(on_pointer_up_pan);
     surface.on_wheel = Some(on_wheel_zoom);
+    surface.on_pinch_gesture = Some(on_pinch_zoom);
 
     // Forward any extra handlers as a fallback when pan/zoom does not consume.
     //
@@ -299,6 +339,7 @@ pub fn pan_zoom_canvas_surface_panel<H: UiHost>(
         || on_pointer_move.is_some()
         || on_pointer_up.is_some()
         || on_wheel.is_some()
+        || on_pinch_gesture.is_some()
     {
         let mut next = surface;
 
@@ -339,6 +380,16 @@ pub fn pan_zoom_canvas_surface_panel<H: UiHost>(
                     return true;
                 }
                 maybe_wheel.as_ref().is_some_and(|h| h(host, cx, wheel))
+            }));
+        }
+
+        let maybe_pinch = on_pinch_gesture.clone();
+        if let Some(existing) = next.on_pinch_gesture.take() {
+            next.on_pinch_gesture = Some(Arc::new(move |host, cx, pinch| {
+                if existing(host, cx, pinch) {
+                    return true;
+                }
+                maybe_pinch.as_ref().is_some_and(|h| h(host, cx, pinch))
             }));
         }
 

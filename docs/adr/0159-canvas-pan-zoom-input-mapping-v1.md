@@ -107,9 +107,9 @@ curve:
 
 ## Future work (non-goals of v1)
 
-- Trackpad pinch/magnify support in declarative pointer hooks:
-  - `fret-core` already has `PointerEvent::PinchGesture`, but `PointerRegion` does not expose a
-    dedicated action hook for it yet.
+- Touchpad pinch/magnify nuances:
+  - `PointerEvent::PinchGesture` is supported, but platform backends differ in delta units and
+    update frequency; we may need additional policy knobs once real apps adopt the recipe.
 - Touch-first gesture semantics:
   - single-finger drag is tool-specific (selection vs pan) and should be recipe-configurable.
 - Space-to-pan and other chords that require key state during pointer hooks:
@@ -121,4 +121,3 @@ curve:
 - The default mapping does not break embedding inside scroll containers.
 - Editor/CAD crates can choose the more aggressive mapping explicitly without compromising the
   framework default.
-

@@ -284,6 +284,69 @@ fn declarative_pointer_region_can_handle_wheel() {
 }
 
 #[test]
+fn declarative_pointer_region_can_handle_pinch_gesture() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let counter = app.models_mut().insert(0u32);
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pointer-region-pinch",
+        |cx| {
+            let counter_pinch = counter.clone();
+            let on_pinch = Arc::new(
+                move |host: &mut dyn crate::action::UiPointerActionHost,
+                      cx: crate::action::ActionCx,
+                      _pinch: crate::action::PinchGestureCx| {
+                    let _ = host
+                        .models_mut()
+                        .update(&counter_pinch, |v: &mut u32| *v = v.saturating_add(1));
+                    host.request_redraw(cx.window);
+                    true
+                },
+            );
+
+            let mut props = crate::element::PointerRegionProps::default();
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+            vec![cx.pointer_region(props, |cx| {
+                cx.pointer_region_on_pinch_gesture(on_pinch);
+                Vec::new()
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let inside = Point::new(Px(10.0), Px(10.0));
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::PinchGesture {
+            position: inside,
+            delta: 0.5,
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let v = app.models_mut().read(&counter, |v| *v).unwrap_or_default();
+    assert_eq!(v, 1);
+}
+
+#[test]
 fn selectable_text_drag_autoscrolls_scroll_container() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

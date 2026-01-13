@@ -7,7 +7,7 @@
 //! Policy-heavy behaviors like pan/zoom, tool modes, selection, and snapping should be layered
 //! above this helper (e.g. in `crate::recipes`), not embedded here.
 
-use fret_ui::action::{OnPointerDown, OnPointerMove, OnPointerUp, OnWheel};
+use fret_ui::action::{OnPinchGesture, OnPointerDown, OnPointerMove, OnPointerUp, OnWheel};
 use fret_ui::canvas::CanvasPainter;
 use fret_ui::element::{AnyElement, CanvasProps, Length, PointerRegionProps};
 use fret_ui::{ElementContext, UiHost};
@@ -24,6 +24,7 @@ pub struct CanvasSurfacePanelProps {
     pub on_pointer_move: Option<OnPointerMove>,
     pub on_pointer_up: Option<OnPointerUp>,
     pub on_wheel: Option<OnWheel>,
+    pub on_pinch_gesture: Option<OnPinchGesture>,
 }
 
 impl Default for CanvasSurfacePanelProps {
@@ -39,6 +40,7 @@ impl Default for CanvasSurfacePanelProps {
             on_pointer_move: None,
             on_pointer_up: None,
             on_wheel: None,
+            on_pinch_gesture: None,
         }
     }
 }
@@ -56,6 +58,7 @@ pub fn canvas_surface_panel<H: UiHost>(
         on_pointer_move,
         on_pointer_up,
         on_wheel,
+        on_pinch_gesture,
     } = props;
 
     cx.pointer_region(pointer_region, move |cx| {
@@ -70,6 +73,9 @@ pub fn canvas_surface_panel<H: UiHost>(
         }
         if let Some(on_wheel) = on_wheel {
             cx.pointer_region_on_wheel(on_wheel);
+        }
+        if let Some(on_pinch_gesture) = on_pinch_gesture {
+            cx.pointer_region_on_pinch_gesture(on_pinch_gesture);
         }
 
         vec![cx.canvas(canvas, paint)]

@@ -263,6 +263,56 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 cx.stop_propagation();
             }
         }
+        Event::Pointer(fret_core::PointerEvent::PinchGesture {
+            position,
+            delta,
+            modifiers,
+            pointer_type,
+        }) => {
+            let hook = crate::elements::with_element_state(
+                &mut *cx.app,
+                window,
+                this.element,
+                crate::action::PointerActionHooks::default,
+                |hooks| hooks.on_pinch_gesture.clone(),
+            );
+
+            let Some(h) = hook else {
+                return;
+            };
+
+            let pinch = action::PinchGestureCx {
+                position: *position,
+                pixels_per_point,
+                delta: *delta,
+                modifiers: *modifiers,
+                pointer_type: *pointer_type,
+            };
+
+            let mut host = PointerHookHost {
+                app: &mut *cx.app,
+                window,
+                element: this.element,
+                node: cx.node,
+                bounds: cx.bounds,
+                input_ctx: &cx.input_ctx,
+                requested_focus: &mut cx.requested_focus,
+                requested_capture: &mut cx.requested_capture,
+                requested_cursor: &mut cx.requested_cursor,
+            };
+            let handled = h(
+                &mut host,
+                action::ActionCx {
+                    window,
+                    target: this.element,
+                },
+                pinch,
+            );
+
+            if handled {
+                cx.stop_propagation();
+            }
+        }
         Event::Pointer(fret_core::PointerEvent::Up {
             position,
             button,

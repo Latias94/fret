@@ -9,7 +9,7 @@ use fret_runtime::{Effect, FrameId, Model, ModelId, ModelUpdateError};
 use crate::action::OnHoverChange;
 use crate::action::{
     DismissibleActionHooks, KeyActionHooks, OnActivate, OnDismissRequest, OnDismissiblePointerMove,
-    OnKeyDown, OnPointerDown, OnPointerMove, OnPointerUp, OnPressablePointerDown,
+    OnKeyDown, OnPinchGesture, OnPointerDown, OnPointerMove, OnPointerUp, OnPressablePointerDown,
     OnRovingActiveChange, OnRovingNavigate, OnRovingTypeahead, OnTimer, OnWheel,
     PointerActionHooks, PressableActionHooks, PressableHoverActionHooks, RovingActionHooks,
     TimerActionHooks,
@@ -871,6 +871,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             cx.pointer_region_clear_on_pointer_down();
             cx.pointer_region_clear_on_pointer_move();
             cx.pointer_region_clear_on_pointer_up();
+            cx.pointer_region_clear_on_wheel();
+            cx.pointer_region_clear_on_pinch_gesture();
             let children = f(cx);
             AnyElement::new(id, ElementKind::PointerRegion(props), children)
         })
@@ -952,6 +954,12 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn pointer_region_on_pinch_gesture(&mut self, handler: OnPinchGesture) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_pinch_gesture = Some(handler);
+        });
+    }
+
     pub fn pointer_region_add_on_pointer_up(&mut self, handler: OnPointerUp) {
         self.with_state(PointerActionHooks::default, |hooks| {
             hooks.on_pointer_up = match hooks.on_pointer_up.clone() {
@@ -980,6 +988,20 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn pointer_region_add_on_pinch_gesture(&mut self, handler: OnPinchGesture) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_pinch_gesture = match hooks.on_pinch_gesture.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, pinch| {
+                        prev(host, cx, pinch) || next(host, cx, pinch)
+                    }))
+                }
+            };
+        });
+    }
+
     pub fn pointer_region_clear_on_pointer_up(&mut self) {
         self.with_state(PointerActionHooks::default, |hooks| {
             hooks.on_pointer_up = None;
@@ -989,6 +1011,12 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn pointer_region_clear_on_wheel(&mut self) {
         self.with_state(PointerActionHooks::default, |hooks| {
             hooks.on_wheel = None;
+        });
+    }
+
+    pub fn pointer_region_clear_on_pinch_gesture(&mut self) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_pinch_gesture = None;
         });
     }
 
