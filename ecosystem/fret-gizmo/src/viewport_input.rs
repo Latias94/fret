@@ -1,17 +1,5 @@
-use fret_core::{Point, Rect, ViewportInputEvent};
+use fret_core::ViewportInputEvent;
 use glam::Vec2;
-
-fn rect_size(rect: Rect) -> Vec2 {
-    Vec2::new(rect.size.width.0.max(0.0), rect.size.height.0.max(0.0))
-}
-
-fn rect_origin(rect: Rect) -> Vec2 {
-    Vec2::new(rect.origin.x.0, rect.origin.y.0)
-}
-
-fn point_xy(p: Point) -> Vec2 {
-    Vec2::new(p.x.0, p.y.0)
-}
 
 /// Computes the scale factor from screen-space logical pixels to render-target pixels.
 ///
@@ -31,31 +19,14 @@ pub fn viewport_input_target_px_per_screen_px(event: &ViewportInputEvent) -> Opt
 /// the raw cursor position (unclamped), unlike `event.uv`/`event.target_px` which may be clamped
 /// when pointer capture is active.
 pub fn viewport_input_cursor_target_px(event: &ViewportInputEvent) -> Option<Vec2> {
-    let (tw, th) = event.geometry.target_px_size;
-    let tw = tw.max(1) as f32;
-    let th = th.max(1) as f32;
-
-    let rect = event.geometry.draw_rect_px;
-    let size = rect_size(rect);
-    if size.x <= 0.0 || size.y <= 0.0 || !size.is_finite() {
-        return None;
-    }
-
-    let uv = (point_xy(event.cursor_px) - rect_origin(rect)) / size;
-    Some(Vec2::new(uv.x * tw, uv.y * th))
+    event.cursor_target_px_f32().map(|(x, y)| Vec2::new(x, y))
 }
 
 /// Like [`viewport_input_cursor_target_px`], but clamps the resulting coordinates to the render
 /// target bounds.
 pub fn viewport_input_cursor_target_px_clamped(event: &ViewportInputEvent) -> Vec2 {
-    let (tw, th) = event.geometry.target_px_size;
-    let tw = tw.max(1) as f32;
-    let th = th.max(1) as f32;
-
-    let Some(p) = viewport_input_cursor_target_px(event) else {
-        return Vec2::new(event.target_px.0 as f32, event.target_px.1 as f32);
-    };
-    Vec2::new(p.x.clamp(0.0, tw), p.y.clamp(0.0, th))
+    let (x, y) = event.cursor_target_px_f32_clamped();
+    Vec2::new(x, y)
 }
 
 #[cfg(test)]

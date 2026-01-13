@@ -393,6 +393,46 @@ impl ViewportInputEvent {
         (s.is_finite() && s > 0.0).then_some(s)
     }
 
+    /// Computes the cursor position in the viewport render target's pixel space (float).
+    ///
+    /// - Input `self.cursor_px` is in window-local logical pixels (ADR 0017).
+    /// - The mapping uses `self.geometry.draw_rect_px` (logical pixels) as the area that maps to
+    ///   the full render target.
+    /// - Output is expressed in physical target pixels (`self.geometry.target_px_size`).
+    ///
+    /// This is useful for editor tooling that operates directly on render-target pixel buffers.
+    /// Prefer this over reconstructing target coordinates from `uv * target_px_size` because `uv`
+    /// and `target_px` may be clamped when pointer capture is active.
+    pub fn cursor_target_px_f32(&self) -> Option<(f32, f32)> {
+        let (tw, th) = self.geometry.target_px_size;
+        let tw = tw.max(1) as f32;
+        let th = th.max(1) as f32;
+
+        let rect = self.geometry.draw_rect_px;
+        let dw = rect.size.width.0.max(0.0);
+        let dh = rect.size.height.0.max(0.0);
+        if dw <= 0.0 || dh <= 0.0 || !dw.is_finite() || !dh.is_finite() {
+            return None;
+        }
+
+        let uv_x = (self.cursor_px.x.0 - rect.origin.x.0) / dw;
+        let uv_y = (self.cursor_px.y.0 - rect.origin.y.0) / dh;
+        Some((uv_x * tw, uv_y * th))
+    }
+
+    /// Like [`Self::cursor_target_px_f32`], but clamps the resulting coordinates to the render
+    /// target bounds.
+    pub fn cursor_target_px_f32_clamped(&self) -> (f32, f32) {
+        let (tw, th) = self.geometry.target_px_size;
+        let tw = tw.max(1) as f32;
+        let th = th.max(1) as f32;
+
+        let Some((x, y)) = self.cursor_target_px_f32() else {
+            return (self.target_px.0 as f32, self.target_px.1 as f32);
+        };
+        (x.clamp(0.0, tw), y.clamp(0.0, th))
+    }
+
     pub fn from_mapping_window_point(
         window: AppWindowId,
         target: RenderTargetId,
@@ -455,7 +495,7 @@ mod viewport_input_event_tests {
     use super::*;
     use crate::geometry::{Point, Px, Rect, Size};
 
-    fn dummy_event() -> ViewportInputEvent {
+    fn dummy_event(cursor: Point) -> ViewportInputEvent {
         ViewportInputEvent {
             window: AppWindowId::default(),
             target: RenderTargetId::default(),
@@ -472,7 +512,7 @@ mod viewport_input_event_tests {
                 fit: ViewportFit::Contain,
                 pixels_per_point: 2.0,
             },
-            cursor_px: Point::new(Px(0.0), Px(0.0)),
+            cursor_px: cursor,
             uv: (0.0, 0.0),
             target_px: (0, 0),
             kind: ViewportInputKind::PointerMove {
@@ -484,9 +524,30 @@ mod viewport_input_event_tests {
 
     #[test]
     fn target_px_per_screen_px_matches_draw_rect_mapping() {
-        let event = dummy_event();
+        let event = dummy_event(Point::new(Px(0.0), Px(0.0)));
         let scale = event.target_px_per_screen_px().unwrap();
         assert!((scale - 10.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn cursor_target_px_maps_draw_rect_origin_to_zero() {
+        let event = dummy_event(Point::new(Px(50.0), Px(25.0)));
+        let (x, y) = event.cursor_target_px_f32().unwrap();
+        assert!(((x - 0.0).powi(2) + (y - 0.0).powi(2)).sqrt() < 1e-3);
+    }
+
+    #[test]
+    fn cursor_target_px_maps_draw_rect_max_to_target_size() {
+        let event = dummy_event(Point::new(Px(150.0), Px(75.0)));
+        let (x, y) = event.cursor_target_px_f32().unwrap();
+        assert!(((x - 1000.0).powi(2) + (y - 500.0).powi(2)).sqrt() < 1e-3);
+    }
+
+    #[test]
+    fn cursor_target_px_clamped_caps_outside_values() {
+        let event = dummy_event(Point::new(Px(200.0), Px(125.0)));
+        let (x, y) = event.cursor_target_px_f32_clamped();
+        assert_eq!((x, y), (1000.0, 500.0));
     }
 }
 

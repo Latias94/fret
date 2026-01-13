@@ -13,7 +13,7 @@ use fret_gizmo::{
     GizmoTargetId, GizmoVisualPreset, Grid3d, HandleId, LightRadiusGizmoPlugin,
     RingScaleGizmoPlugin, Transform3d, TransformGizmoPlugin, ViewGizmo, ViewGizmoAnchor,
     ViewGizmoConfig, ViewGizmoInput, ViewGizmoProjection, ViewGizmoUpdate, ViewGizmoVisualPreset,
-    ViewportRect, viewport_input_cursor_target_px,
+    ViewportRect,
 };
 use fret_launch::{
     EngineFrameUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService,
@@ -3041,11 +3041,14 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 return PendingUndoRecords::default();
             }
 
-            let cursor_target_px = viewport_input_cursor_target_px(&event).unwrap_or_else(|| {
-                // Fallback: use UV instead of integer target pixels to avoid quantization.
-                let (tw, th) = event.geometry.target_px_size;
-                Vec2::new(event.uv.0 * tw as f32, event.uv.1 * th as f32)
-            });
+            let cursor_target_px = event
+                .cursor_target_px_f32()
+                .map(|(x, y)| Vec2::new(x, y))
+                .unwrap_or_else(|| {
+                    // Fallback: use UV instead of integer target pixels to avoid quantization.
+                    let (tw, th) = event.geometry.target_px_size;
+                    Vec2::new(event.uv.0 * tw as f32, event.uv.1 * th as f32)
+                });
             let cursor_screen_px = Vec2::new(event.cursor_px.x.0, event.cursor_px.y.0);
 
             let mut pending = PendingUndoRecords::default();
