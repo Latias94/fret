@@ -221,3 +221,65 @@ fn canvas_hosts_svg_and_releases_on_cleanup() {
         "canvas should release hosted svg resources on cleanup"
     );
 }
+
+#[test]
+fn canvas_scoped_ops_keep_scene_stacks_balanced() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let paint = |p: &mut crate::canvas::CanvasPainter<'_>| {
+        p.with_transform(
+            fret_core::Transform2D::translation(Point::new(Px(5.0), Px(6.0))),
+            |p| {
+                p.with_clip_rrect(
+                    Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(50.0))),
+                    fret_core::Corners::all(Px(4.0)),
+                    |p| {
+                        p.with_opacity(0.5, |p| {
+                            p.scene().push(SceneOp::Quad {
+                                order: fret_core::DrawOrder(0),
+                                rect: Rect::new(
+                                    Point::new(Px(1.0), Px(2.0)),
+                                    Size::new(Px(10.0), Px(10.0)),
+                                ),
+                                background: Color {
+                                    r: 1.0,
+                                    g: 0.0,
+                                    b: 0.0,
+                                    a: 1.0,
+                                },
+                                border: fret_core::Edges::all(Px(0.0)),
+                                border_color: Color::TRANSPARENT,
+                                corner_radii: fret_core::Corners::default(),
+                            });
+                        });
+                    },
+                );
+            },
+        );
+    };
+
+    let node = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "canvas-scoped-ops",
+        |cx| vec![cx.canvas(crate::element::CanvasProps::default(), paint)],
+    );
+    ui.set_root(node);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    scene.validate().expect("scene should validate");
+}

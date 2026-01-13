@@ -2,10 +2,10 @@ use std::any::TypeId;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use fret_core::SvgFit;
 use fret_core::{
-    Color, DrawOrder, Point, Px, Rect, RichText, Scene, SceneOp, TextConstraints, TextMetrics,
-    TextOverflow, TextStyle, TextWrap,
+    Color, Corners, DrawOrder, EffectChain, EffectMode, EffectQuality, Point, Px, Rect, RichText,
+    Scene, SceneOp, SvgFit, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
+    Transform2D,
 };
 use fret_core::{PathCommand, PathConstraints, PathMetrics, PathStyle};
 use fret_runtime::ModelId;
@@ -139,6 +139,117 @@ impl<'a> CanvasPainter<'a> {
 
     pub fn scene(&mut self) -> &mut Scene {
         self.host.scene()
+    }
+
+    pub fn with_clip_rect<R>(&mut self, rect: Rect, f: impl FnOnce(&mut Self) -> R) -> R {
+        {
+            let scene = self.host.scene();
+            scene.push(SceneOp::PushClipRect { rect });
+        }
+        let out = f(self);
+        {
+            let scene = self.host.scene();
+            scene.push(SceneOp::PopClip);
+        }
+        out
+    }
+
+    pub fn with_clip_rrect<R>(
+        &mut self,
+        rect: Rect,
+        corner_radii: Corners,
+        f: impl FnOnce(&mut Self) -> R,
+    ) -> R {
+        {
+            let scene = self.host.scene();
+            scene.push(SceneOp::PushClipRRect { rect, corner_radii });
+        }
+        let out = f(self);
+        {
+            let scene = self.host.scene();
+            scene.push(SceneOp::PopClip);
+        }
+        out
+    }
+
+    pub fn with_transform<R>(
+        &mut self,
+        transform: Transform2D,
+        f: impl FnOnce(&mut Self) -> R,
+    ) -> R {
+        let is_finite = transform.a.is_finite()
+            && transform.b.is_finite()
+            && transform.c.is_finite()
+            && transform.d.is_finite()
+            && transform.tx.is_finite()
+            && transform.ty.is_finite();
+
+        if !is_finite || transform == Transform2D::IDENTITY {
+            return f(self);
+        }
+
+        {
+            let scene = self.host.scene();
+            scene.push(SceneOp::PushTransform { transform });
+        }
+        let out = f(self);
+        {
+            let scene = self.host.scene();
+            scene.push(SceneOp::PopTransform);
+        }
+        out
+    }
+
+    pub fn with_opacity<R>(&mut self, opacity: f32, f: impl FnOnce(&mut Self) -> R) -> R {
+        let opacity = if opacity.is_finite() {
+            opacity.clamp(0.0, 1.0)
+        } else {
+            1.0
+        };
+
+        if opacity >= 1.0 {
+            return f(self);
+        }
+
+        {
+            let scene = self.host.scene();
+            scene.push(SceneOp::PushOpacity { opacity });
+        }
+        let out = f(self);
+        {
+            let scene = self.host.scene();
+            scene.push(SceneOp::PopOpacity);
+        }
+        out
+    }
+
+    pub fn with_effect<R>(
+        &mut self,
+        bounds: Rect,
+        mode: EffectMode,
+        chain: EffectChain,
+        quality: EffectQuality,
+        f: impl FnOnce(&mut Self) -> R,
+    ) -> R {
+        if chain.is_empty() {
+            return f(self);
+        }
+
+        {
+            let scene = self.host.scene();
+            scene.push(SceneOp::PushEffect {
+                bounds,
+                mode,
+                chain,
+                quality,
+            });
+        }
+        let out = f(self);
+        {
+            let scene = self.host.scene();
+            scene.push(SceneOp::PopEffect);
+        }
+        out
     }
 
     /// Draw a cached text blob prepared at `raster_scale_factor`.
