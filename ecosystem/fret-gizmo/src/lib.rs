@@ -19,7 +19,6 @@ mod ring_scale_plugin;
 mod style;
 mod transform_plugin;
 mod view_gizmo;
-mod viewport_input;
 
 pub use gizmo::{
     Aabb3, BUILTIN_HANDLE_GROUP_ROTATE, BUILTIN_HANDLE_GROUP_SCALE, BUILTIN_HANDLE_GROUP_TRANSLATE,
@@ -53,8 +52,4 @@ pub use transform_plugin::TransformGizmoPlugin;
 pub use view_gizmo::{
     ViewGizmo, ViewGizmoAnchor, ViewGizmoConfig, ViewGizmoFace, ViewGizmoInput, ViewGizmoLabel,
     ViewGizmoProjection, ViewGizmoSnap, ViewGizmoState, ViewGizmoUpdate,
-};
-pub use viewport_input::{
-    viewport_input_cursor_target_px, viewport_input_cursor_target_px_clamped,
-    viewport_input_target_px_per_screen_px,
 };

@@ -38,9 +38,9 @@ Key surfaces:
 Note: `repo-ref/transform-gizmo` is not guaranteed to be present in all workspaces (see `docs/repo-ref.md`).
 If it is missing locally, clone the upstream into `repo-ref/transform-gizmo` before following the file path anchors below.
 
-- Crate overview: transform-gizmo `src/lib.rs`
-- Configuration and mode taxonomy: transform-gizmo `src/config.rs`
-- Core update/draw: transform-gizmo `src/gizmo.rs`
+- Crate overview: `repo-ref/transform-gizmo/crates/transform-gizmo/src/lib.rs`
+- Configuration and mode taxonomy: `repo-ref/transform-gizmo/crates/transform-gizmo/src/config.rs`
+- Core update/draw: `repo-ref/transform-gizmo/crates/transform-gizmo/src/gizmo.rs`
 
 Key surfaces:
 
@@ -114,7 +114,7 @@ Fret's current contract:
 | --- | --- | --- | --- | --- |
 | Target representation | 4x4 matrix | TRS (`Transform`) | **Aligned (by intent)** | Fret uses TRS (`Transform3d`) to avoid decomposing matrices. `ecosystem/fret-gizmo/src/gizmo.rs` (`Transform3d`). |
 | Decompose/recompose helpers | Yes (`DecomposeMatrixToComponents`, `Recompose...`) | N/A | **Aligned (basic)** | `Transform3d::try_from_mat4_trs` and `Transform3d::to_mat4` provide TRS round-tripping (`ecosystem/fret-gizmo/src/gizmo/types.rs`). |
-| "Delta matrix" output | Yes (`deltaMatrix`) | No (returns result + updated transforms) | **Partially aligned** | `delta_matrix_trs(start,end)` computes `delta * start = end` for TRS transforms (`ecosystem/fret-gizmo/src/gizmo/types.rs`). |
+| "Delta matrix" output | Yes (`deltaMatrix`) | No (returns result + updated transforms) | **Aligned (TRS-only)** | `GizmoUpdate::delta_matrix_for(start)` computes an ImGuizmo-style `deltaMatrix` for TRS transforms (`ecosystem/fret-gizmo/src/gizmo/runtime.rs`, `ecosystem/fret-gizmo/src/gizmo/types.rs`). |
 | Semantic delta output | Partial | Yes (`GizmoResult`) | **Aligned** | `GizmoResult::{Translation,Rotation,Scale}` includes `delta` + `total`. |
 | Multi-target update in one call | External | Yes | **Aligned** | `GizmoUpdate.updated_targets: Vec<GizmoTarget3d>`. |
 | Begin/update/commit/cancel phases | No | Partial (implicit) | **Aligned (Fret-specific)** | `GizmoPhase` enables clean undo grouping; host decides persistence. |
