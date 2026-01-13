@@ -3,7 +3,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use fret_canvas::scale::effective_scale_factor;
+use fret_canvas::scale::{canvas_units_from_screen_px, effective_scale_factor};
 use fret_canvas::view::PanZoom2D;
 use fret_core::{
     AppWindowId, Color, Corners, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp,
@@ -2954,7 +2954,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         && Self::port_is_connectable_end(graph, &snapshot.interaction, candidate))
                     .then_some(candidate);
                 }
-                let r = radius_screen / zoom;
+                let r = canvas_units_from_screen_px(radius_screen, zoom);
                 let r2 = r * r;
                 let eps = (1.0e-3 / zoom.max(1.0e-6)).max(1.0e-6);
 
@@ -3013,8 +3013,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         zoom: f32,
         scratch: &mut Vec<EdgeId>,
     ) -> Option<EdgeId> {
-        let hit_w =
-            (snapshot.interaction.edge_interaction_width / zoom).max(self.style.wire_width / zoom);
+        let hit_w = canvas_units_from_screen_px(snapshot.interaction.edge_interaction_width, zoom)
+            .max(self.style.wire_width / zoom);
         let threshold2 = hit_w * hit_w;
 
         index.query_edges(pos, hit_w, scratch);
@@ -4787,7 +4787,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         };
 
         if reconnect_radius_screen.is_finite() && reconnect_radius_screen > 0.0 {
-            let r = reconnect_radius_screen / zoom;
+            let r = canvas_units_from_screen_px(reconnect_radius_screen, zoom);
             let r2 = r * r;
             let min_d2 = d2_from.min(d2_to);
             if min_d2 > r2 {
@@ -7346,7 +7346,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                     && let Some(pending) = self.interaction.pending_right_click
                 {
                     let click_distance = snapshot.interaction.pane_click_distance.max(0.0);
-                    let threshold = click_distance / zoom;
+                    let threshold = canvas_units_from_screen_px(click_distance, zoom);
                     let dx = position.x.0 - pending.start_pos.x.0;
                     let dy = position.y.0 - pending.start_pos.y.0;
                     if click_distance == 0.0 || (dx * dx + dy * dy) > threshold * threshold {
@@ -7499,7 +7499,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                     && let Some(pending) = self.interaction.pending_right_click.take()
                 {
                     let click_distance = snapshot.interaction.pane_click_distance.max(0.0);
-                    let threshold = click_distance / zoom;
+                    let threshold = canvas_units_from_screen_px(click_distance, zoom);
                     let dx = position.x.0 - pending.start_pos.x.0;
                     let dy = position.y.0 - pending.start_pos.y.0;
                     let is_click =

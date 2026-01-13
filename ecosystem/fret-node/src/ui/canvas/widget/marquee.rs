@@ -1,5 +1,6 @@
 use std::collections::BTreeSet;
 
+use fret_canvas::scale::canvas_units_from_screen_px;
 use fret_core::{Modifiers, MouseButton, Point};
 use fret_ui::UiHost;
 
@@ -99,7 +100,7 @@ pub(super) fn handle_marquee_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
             } else {
                 snapshot.interaction.pane_click_distance.max(0.0)
             };
-            let threshold_graph = threshold_screen / zoom;
+            let threshold_graph = canvas_units_from_screen_px(threshold_screen, zoom);
             let dx = position.x.0 - pending.start_pos.x.0;
             let dy = position.y.0 - pending.start_pos.y.0;
             if threshold_graph <= 0.0 || dx * dx + dy * dy >= threshold_graph * threshold_graph {

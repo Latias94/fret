@@ -54,7 +54,8 @@ pub(super) fn group_header_hit(
     zoom: f32,
     position: Point,
 ) -> bool {
-    let header_h = (header_height_screen / zoom).max(0.0);
+    let header_h =
+        fret_canvas::scale::canvas_units_from_screen_px(header_height_screen, zoom).max(0.0);
     let x0 = rect.origin.x;
     let y0 = rect.origin.y;
     let x1 = rect.origin.x + rect.size.width;

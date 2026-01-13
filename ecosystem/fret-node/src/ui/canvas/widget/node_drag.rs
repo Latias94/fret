@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use fret_canvas::scale::canvas_units_from_screen_px;
 use fret_core::{Modifiers, Point, Px, Rect};
 use fret_ui::UiHost;
 
@@ -103,12 +104,7 @@ pub(super) fn handle_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     }
 
     if snaplines {
-        let threshold_canvas =
-            if snaplines_threshold_screen.is_finite() && snaplines_threshold_screen > 0.0 {
-                snaplines_threshold_screen / zoom
-            } else {
-                0.0
-            };
+        let threshold_canvas = canvas_units_from_screen_px(snaplines_threshold_screen, zoom);
 
         let geom = canvas.canvas_geometry(&*cx.app, snapshot);
         let drag_nodes: HashSet<GraphNodeId> = drag.nodes.iter().map(|(id, _)| *id).collect();
