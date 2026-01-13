@@ -9,9 +9,9 @@ use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
-    PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis, ScrollProps, SizeStyle,
-    TextProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
+    Overflow, PositionStyle, PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis,
+    ScrollProps, SizeStyle, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -773,7 +773,7 @@ impl DropdownMenu {
             align: DropdownMenuAlign::default(),
             side: DropdownMenuSide::default(),
             side_offset: Px(4.0),
-            window_margin: Px(8.0),
+            window_margin: Px(0.0),
             typeahead_timeout_ticks: 30,
             min_width: Px(128.0),
             arrow: false,
@@ -1054,12 +1054,26 @@ impl DropdownMenu {
                     let submenu_for_content = submenu.clone();
                     let submenu_for_panel = submenu.clone();
 
-                    let content_layout = {
-                        let mut layout = LayoutStyle::default();
-                        layout.size.width = Length::Fill;
-                        layout.size.height = Length::Fill;
-                        layout
+                    // Match Radix: `role=menu` is on the content panel element (not a fullscreen
+                    // wrapper). We keep the popper wrapper for arrow hit-test expansion, but
+                    // position it locally inside the menu semantics node.
+                    let content_layout = LayoutStyle {
+                        position: PositionStyle::Absolute,
+                        inset: InsetStyle {
+                            left: Some(placed.origin.x),
+                            top: Some(placed.origin.y),
+                            ..Default::default()
+                        },
+                        size: SizeStyle {
+                            width: Length::Px(placed.size.width),
+                            height: Length::Px(placed.size.height),
+                            ..Default::default()
+                        },
+                        overflow: Overflow::Visible,
+                        ..Default::default()
                     };
+
+                    let placed_local = Rect::new(Point::new(Px(0.0), Px(0.0)), placed.size);
 
                     let (_content_id, content) = menu::content_panel::menu_content_semantics_with_id(
                         cx,
@@ -1067,7 +1081,7 @@ impl DropdownMenu {
                         move |cx| {
                             vec![popper_content::popper_wrapper_at(
                                 cx,
-                                placed,
+                                placed_local,
                                 wrapper_insets,
                                 move |cx| {
                                     let arrow_el = arrow
