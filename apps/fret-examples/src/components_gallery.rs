@@ -1,6 +1,6 @@
 #[cfg(not(target_arch = "wasm32"))]
 use anyhow::Context as _;
-use fret_app::{App, CommandId, Effect, Model, WindowRequest};
+use fret_app::{App, CommandId, CommandMeta, Effect, Model, WhenExpr, WindowRequest};
 #[cfg(not(target_arch = "wasm32"))]
 use fret_bootstrap::BootstrapBuilder;
 use fret_core::{
@@ -1142,56 +1142,10 @@ impl ComponentsGalleryDriver {
                                             },
                                         );
 
-                                        cx.observe_model(&cmdk_query, Invalidation::Layout);
-                                        let query = cx
-                                            .app
-                                            .models()
-                                            .get_cloned(&cmdk_query)
-                                            .unwrap_or_default();
-                                        let query = query.trim().to_ascii_lowercase();
-
-                                        let mut cmdk_entries: Vec<(&str, &str, bool, f32)> = [
-                                            ("Open", "open", false),
-                                            ("Save", "save", false),
-                                            ("Close", "close", false),
-                                            ("Settings", "settings", false),
-                                            ("Disabled", "disabled", true),
-                                        ]
-                                        .into_iter()
-                                        .map(|(label, id, disabled)| {
-                                            let score = if query.is_empty() {
-                                                1.0
-                                            } else {
-                                                fret_ui_kit::headless::cmdk_score::command_score(
-                                                    label,
-                                                    query.as_str(),
-                                                    &[id],
-                                                )
-                                            };
-                                            (label, id, disabled, score)
-                                        })
-                                        .filter(|(_, _, _, score)| query.is_empty() || *score > 0.0)
-                                        .collect();
-
-                                        if !query.is_empty() {
-                                            cmdk_entries.sort_by(|a, b| b.3.total_cmp(&a.3));
-                                        }
-
-                                        let cmdk_items: Vec<shadcn::CommandItem> = cmdk_entries
-                                            .into_iter()
-                                            .map(|(label, id, disabled, _score)| {
-                                            shadcn::CommandItem::new(label)
-                                                .disabled(disabled)
-                                                .on_select(CommandId::new(format!(
-                                                    "gallery.cmdk.select.{id}"
-                                                )))
-                                        })
-                                        .collect();
-
-                                        let cmdk = shadcn::CommandDialog::new(
+                                        let cmdk = shadcn::CommandDialog::new_with_host_commands(
+                                            cx,
                                             cmdk_open.clone(),
                                             cmdk_query.clone(),
-                                            cmdk_items,
                                         )
                                         .a11y_label("Command palette")
                                         .into_element(cx, |cx| {
@@ -1519,8 +1473,7 @@ impl WinitAppDriver for ComponentsGalleryDriver {
         if let Some(item) = command.as_str().strip_prefix("gallery.cmdk.select.") {
             let msg: Arc<str> = Arc::from(format!("cmdk.select.{item}").into_boxed_str());
             let _ = app.models_mut().update(&state.last_action, |v| *v = msg);
-            let _ = app.models_mut().update(&state.cmdk_open, |v| *v = false);
-            app.request_redraw(window);
+            return;
         }
 
         if command.as_str() == "gallery.context_menu.action" {
@@ -1866,6 +1819,39 @@ pub fn build_app() -> App {
         &mut app,
         shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
         shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+    );
+
+    // Demo: register a minimal command surface for the command palette to discover.
+    app.commands_mut().register(
+        CommandId::new("gallery.cmdk.select.open"),
+        CommandMeta::new("Open")
+            .with_category("File")
+            .with_keywords(["open", "file"]),
+    );
+    app.commands_mut().register(
+        CommandId::new("gallery.cmdk.select.save"),
+        CommandMeta::new("Save")
+            .with_category("File")
+            .with_keywords(["save", "file"]),
+    );
+    app.commands_mut().register(
+        CommandId::new("gallery.cmdk.select.close"),
+        CommandMeta::new("Close")
+            .with_category("File")
+            .with_keywords(["close", "file"]),
+    );
+    app.commands_mut().register(
+        CommandId::new("gallery.cmdk.select.settings"),
+        CommandMeta::new("Settings")
+            .with_category("View")
+            .with_keywords(["settings", "preferences", "prefs"]),
+    );
+    app.commands_mut().register(
+        CommandId::new("gallery.cmdk.select.disabled"),
+        CommandMeta::new("Disabled")
+            .with_category("Gallery")
+            .with_keywords(["disabled"])
+            .with_when(WhenExpr::parse("false").expect("valid when expression")),
     );
     app
 }
