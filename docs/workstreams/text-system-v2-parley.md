@@ -157,7 +157,7 @@ Legend:
 **B7 — Unified glyph key + subpixel policy (ADR 0160)**
 - [x] Introduce renderer-owned `GlyphKey` and remove backend-specific glyph keys.
 - [ ] Introduce a stable `FontFaceKey` registry (decouple from Parley fontique IDs; reserve variable font support).
-- [ ] Add `GlyphKind::Subpixel` (atlas + shader) and lock `SUBPIXEL_VARIANTS_X/Y` as a platform policy.
+- [x] Add `GlyphKind::Subpixel` (atlas + shader) and lock `SUBPIXEL_VARIANTS_X/Y` as a platform policy.
 - [x] Converge shaping/layout to Parley-only and remove the legacy shaping backend gate.
 
 ### C) `fret-ui` integration surface
@@ -201,3 +201,4 @@ Legend:
 - 2026-01-13: B6: decouple text layout from glyph atlas residency + add `prepare_for_scene` and atlas revision cache key (commit `4885937`).
 - 2026-01-13: ADR 0160 added: unify glyph identity (`GlyphKey`) + subpixel rendering policy (commit `d56a8be`).
 - 2026-01-13: B7.1: unify glyph key and switch `prepare` to Parley-only (commit `797fe93`).
+- 2026-01-13: B7.2: add subpixel atlas + shader/pipeline and platform subpixel policy (commit `8282cf1`).
