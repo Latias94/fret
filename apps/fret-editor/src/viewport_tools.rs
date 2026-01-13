@@ -1,8 +1,14 @@
-use fret_core::geometry::{Point, Px};
+use fret_core::geometry::{Point, Px, Rect};
 use fret_core::{
     AppWindowId, Modifiers, MouseButton, MouseButtons, RenderTargetId, ViewportInputEvent,
     ViewportInputKind,
 };
+
+const DEFAULT_GIZMO_CENTER_UV: (f32, f32) = (0.5, 0.5);
+const DEFAULT_TRANSLATE_AXIS_LEN_PX: Px = Px(72.0);
+const DEFAULT_ROTATE_RADIUS_PX: Px = Px(64.0);
+const DEFAULT_GIZMO_PICK_TOLERANCE_PX: Px = Px(6.0);
+const DEFAULT_GIZMO_HANDLE_SIZE_PX: Px = Px(10.0);
 
 /// Default drag threshold for viewport tools (screen-space logical pixels).
 ///
@@ -45,6 +51,7 @@ pub struct ViewportToolManager {
     pub active: ViewportToolMode,
     pub interaction: Option<ViewportInteraction>,
     pub hover_rotate: Option<(AppWindowId, RenderTargetId)>,
+    pub hover_translate: Option<crate::viewport_overlays::ViewportGizmoPart>,
 }
 
 #[allow(dead_code)]
@@ -233,6 +240,24 @@ impl ViewportToolManager {
             marker: None,
         };
 
+        match self.active {
+            ViewportToolMode::Select => {}
+            ViewportToolMode::Move => {
+                overlay.gizmo = Some(crate::viewport_overlays::ViewportGizmo {
+                    center_uv: DEFAULT_GIZMO_CENTER_UV,
+                    axis_len_px: DEFAULT_TRANSLATE_AXIS_LEN_PX,
+                    highlight: self.hover_translate,
+                });
+            }
+            ViewportToolMode::Rotate => {
+                overlay.rotate_gizmo = Some(crate::viewport_overlays::ViewportRotateGizmo {
+                    center_uv: DEFAULT_GIZMO_CENTER_UV,
+                    radius_px: DEFAULT_ROTATE_RADIUS_PX,
+                    highlight: self.hover_rotate.is_some(),
+                });
+            }
+        }
+
         let Some(interaction) = self.interaction.as_ref() else {
             return overlay;
         };
@@ -248,7 +273,62 @@ impl ViewportToolManager {
             }
             ViewportInteraction::PanOrbit(_)
             | ViewportInteraction::TranslateGizmo(_)
-            | ViewportInteraction::RotateGizmo(_) => {}
+            | ViewportInteraction::RotateGizmo(_) => {
+                let (window, target) = interaction.window_target();
+                let _ = (window, target);
+            }
+        }
+
+        match interaction {
+            ViewportInteraction::TranslateGizmo(m) => {
+                if m.dragging {
+                    overlay.drag_line = Some(crate::viewport_overlays::ViewportDragLine {
+                        a_uv: m.start_uv,
+                        b_uv: m.current_uv,
+                        color: fret_core::Color {
+                            r: 1.0,
+                            g: 1.0,
+                            b: 1.0,
+                            a: 0.85,
+                        },
+                    });
+                }
+                overlay.gizmo = Some(crate::viewport_overlays::ViewportGizmo {
+                    center_uv: DEFAULT_GIZMO_CENTER_UV,
+                    axis_len_px: DEFAULT_TRANSLATE_AXIS_LEN_PX,
+                    highlight: match m.constraint {
+                        TranslateAxisConstraint::Free => {
+                            Some(crate::viewport_overlays::ViewportGizmoPart::Handle)
+                        }
+                        TranslateAxisConstraint::X => {
+                            Some(crate::viewport_overlays::ViewportGizmoPart::X)
+                        }
+                        TranslateAxisConstraint::Y => {
+                            Some(crate::viewport_overlays::ViewportGizmoPart::Y)
+                        }
+                    },
+                });
+            }
+            ViewportInteraction::RotateGizmo(m) => {
+                overlay.rotate_gizmo = Some(crate::viewport_overlays::ViewportRotateGizmo {
+                    center_uv: m.center_uv,
+                    radius_px: DEFAULT_ROTATE_RADIUS_PX,
+                    highlight: true,
+                });
+                if m.dragging {
+                    overlay.drag_line = Some(crate::viewport_overlays::ViewportDragLine {
+                        a_uv: m.center_uv,
+                        b_uv: m.current_uv,
+                        color: fret_core::Color {
+                            r: 1.0,
+                            g: 1.0,
+                            b: 1.0,
+                            a: 0.85,
+                        },
+                    });
+                }
+            }
+            _ => {}
         }
 
         overlay
@@ -282,7 +362,84 @@ impl ViewportToolManager {
                     ));
                     true
                 }
-                ViewportToolMode::Move | ViewportToolMode::Rotate => false,
+                ViewportToolMode::Move => {
+                    let Some(part) = self.hover_translate else {
+                        return false;
+                    };
+                    let constraint = match part {
+                        crate::viewport_overlays::ViewportGizmoPart::X => {
+                            TranslateAxisConstraint::X
+                        }
+                        crate::viewport_overlays::ViewportGizmoPart::Y => {
+                            TranslateAxisConstraint::Y
+                        }
+                        crate::viewport_overlays::ViewportGizmoPart::Handle => {
+                            TranslateAxisConstraint::Free
+                        }
+                    };
+                    self.interaction = Some(ViewportInteraction::TranslateGizmo(
+                        TranslateGizmoInteraction {
+                            window: event.window,
+                            target: event.target,
+                            start_modifiers: modifiers,
+                            start_cursor_px: event.cursor_px,
+                            current_cursor_px: event.cursor_px,
+                            start_uv: event.uv,
+                            current_uv: event.uv,
+                            start_target_px: event.target_px,
+                            current_target_px: event.target_px,
+                            dragging: false,
+                            constraint,
+                            targets: Vec::new(),
+                            start_positions: Vec::new(),
+                        },
+                    ));
+                    true
+                }
+                ViewportToolMode::Rotate => {
+                    if self.hover_rotate.is_none() {
+                        return false;
+                    }
+
+                    let (tw, th) = event.geometry.target_px_size;
+                    let (u, v) = DEFAULT_GIZMO_CENTER_UV;
+                    let center_target_px = (u * tw.max(1) as f32, v * th.max(1) as f32);
+                    let center_screen_px =
+                        Self::screen_point_from_uv(event.geometry.draw_rect_px, (u, v));
+                    let (use_target_px, start_angle_rad) =
+                        if let Some((x, y)) = event.cursor_target_px_f32() {
+                            (true, Self::angle_rad((x, y), center_target_px))
+                        } else {
+                            (
+                                false,
+                                Self::angle_rad(
+                                    (event.cursor_px.x.0, event.cursor_px.y.0),
+                                    (center_screen_px.x.0, center_screen_px.y.0),
+                                ),
+                            )
+                        };
+
+                    self.interaction =
+                        Some(ViewportInteraction::RotateGizmo(RotateGizmoInteraction {
+                            window: event.window,
+                            target: event.target,
+                            start_modifiers: modifiers,
+                            start_cursor_px: event.cursor_px,
+                            current_cursor_px: event.cursor_px,
+                            center_uv: DEFAULT_GIZMO_CENTER_UV,
+                            start_uv: event.uv,
+                            current_uv: event.uv,
+                            start_target_px: event.target_px,
+                            current_target_px: event.target_px,
+                            center_target_px,
+                            start_angle_rad,
+                            use_target_px,
+                            dragging: false,
+                            targets: Vec::new(),
+                            start_rotations: Vec::new(),
+                        }));
+                    true
+                }
             },
             MouseButton::Right | MouseButton::Middle => {
                 let kind = if button == MouseButton::Middle {
@@ -319,8 +476,29 @@ impl ViewportToolManager {
         buttons: MouseButtons,
         _modifiers: Modifiers,
     ) -> bool {
-        let Some(interaction) = self.interaction.as_mut() else {
+        if self.interaction.is_none() {
+            let prev_translate = self.hover_translate;
+            let prev_rotate = self.hover_rotate;
+
+            self.hover_translate = None;
+            self.hover_rotate = None;
+            match self.active {
+                ViewportToolMode::Select => {}
+                ViewportToolMode::Move => {
+                    self.hover_translate = Self::hit_test_translate_gizmo(event);
+                }
+                ViewportToolMode::Rotate => {
+                    if Self::hit_test_rotate_gizmo(event) {
+                        self.hover_rotate = Some((event.window, event.target));
+                    }
+                }
+            }
+
             let _ = buttons;
+            return self.hover_translate != prev_translate || self.hover_rotate != prev_rotate;
+        }
+
+        let Some(interaction) = self.interaction.as_mut() else {
             return false;
         };
 
@@ -346,7 +524,32 @@ impl ViewportToolManager {
                 m.update_dragging_flag();
                 true
             }
-            ViewportInteraction::TranslateGizmo(_) | ViewportInteraction::RotateGizmo(_) => false,
+            ViewportInteraction::TranslateGizmo(m) => {
+                m.current_cursor_px = event.cursor_px;
+                m.current_uv = event.uv;
+                m.current_target_px = event.target_px;
+                if !m.dragging {
+                    m.dragging = crossed_screen_drag_threshold(
+                        m.start_cursor_px,
+                        m.current_cursor_px,
+                        VIEWPORT_TOOL_DRAG_THRESHOLD_PX,
+                    );
+                }
+                true
+            }
+            ViewportInteraction::RotateGizmo(m) => {
+                m.current_cursor_px = event.cursor_px;
+                m.current_uv = event.uv;
+                m.current_target_px = event.target_px;
+                if !m.dragging {
+                    m.dragging = crossed_screen_drag_threshold(
+                        m.start_cursor_px,
+                        m.current_cursor_px,
+                        VIEWPORT_TOOL_DRAG_THRESHOLD_PX,
+                    );
+                }
+                true
+            }
         }
     }
 
@@ -376,5 +579,69 @@ impl ViewportToolManager {
 
         self.interaction = None;
         true
+    }
+
+    fn screen_point_from_uv(draw_rect: Rect, uv: (f32, f32)) -> Point {
+        let (u, v) = uv;
+        let x = draw_rect.origin.x.0 + draw_rect.size.width.0 * u;
+        let y = draw_rect.origin.y.0 + draw_rect.size.height.0 * v;
+        Point::new(Px(x), Px(y))
+    }
+
+    fn angle_rad(cursor: (f32, f32), center: (f32, f32)) -> f32 {
+        let dx = cursor.0 - center.0;
+        let dy = cursor.1 - center.1;
+        dy.atan2(dx)
+    }
+
+    fn hit_test_translate_gizmo(
+        event: &ViewportInputEvent,
+    ) -> Option<crate::viewport_overlays::ViewportGizmoPart> {
+        let draw_rect = event.geometry.draw_rect_px;
+        if draw_rect.size.width.0 <= 0.0 || draw_rect.size.height.0 <= 0.0 {
+            return None;
+        }
+
+        let center = Self::screen_point_from_uv(draw_rect, DEFAULT_GIZMO_CENTER_UV);
+        let cursor = event.cursor_px;
+        let dx = cursor.x.0 - center.x.0;
+        let dy = cursor.y.0 - center.y.0;
+
+        let t = DEFAULT_GIZMO_PICK_TOLERANCE_PX.0.max(0.0);
+        let half_handle = DEFAULT_GIZMO_HANDLE_SIZE_PX.0 * 0.5 + t;
+        if dx.abs() <= half_handle && dy.abs() <= half_handle {
+            return Some(crate::viewport_overlays::ViewportGizmoPart::Handle);
+        }
+
+        let axis_len = DEFAULT_TRANSLATE_AXIS_LEN_PX.0.max(0.0);
+        let axis_half_thickness = DEFAULT_GIZMO_PICK_TOLERANCE_PX.0.max(1.0);
+
+        // X axis: to the right.
+        if dx >= 0.0 && dx <= axis_len && dy.abs() <= axis_half_thickness {
+            return Some(crate::viewport_overlays::ViewportGizmoPart::X);
+        }
+        // Y axis: up.
+        if dy <= 0.0 && dy.abs() <= axis_len && dx.abs() <= axis_half_thickness {
+            return Some(crate::viewport_overlays::ViewportGizmoPart::Y);
+        }
+
+        None
+    }
+
+    fn hit_test_rotate_gizmo(event: &ViewportInputEvent) -> bool {
+        let draw_rect = event.geometry.draw_rect_px;
+        if draw_rect.size.width.0 <= 0.0 || draw_rect.size.height.0 <= 0.0 {
+            return false;
+        }
+
+        let center = Self::screen_point_from_uv(draw_rect, DEFAULT_GIZMO_CENTER_UV);
+        let cursor = event.cursor_px;
+        let dx = cursor.x.0 - center.x.0;
+        let dy = cursor.y.0 - center.y.0;
+        let dist = (dx * dx + dy * dy).sqrt();
+
+        let r = DEFAULT_ROTATE_RADIUS_PX.0.max(0.0);
+        let tol = DEFAULT_GIZMO_PICK_TOLERANCE_PX.0.max(0.0);
+        dist.is_finite() && (dist - r).abs() <= tol
     }
 }
