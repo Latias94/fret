@@ -37,6 +37,10 @@ For each component page, the exporter writes a JSON file with:
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts button-default tabs-demo --baseUrl=http://localhost:4020`
 
+Extract both closed + open overlay states (writes `*.open.json` alongside the base file):
+
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts popover-demo dropdown-menu-demo select-scrollable --open --update --baseUrl=http://localhost:4020`
+
 Extract *all* routable new-york-v4 pages (defaults match `/view/[style]/[name]`: block+component+example):
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts --all --update --baseUrl=http://localhost:4020`
