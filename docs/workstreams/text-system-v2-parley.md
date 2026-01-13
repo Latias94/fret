@@ -32,6 +32,10 @@ Exit criteria:
 - `TextService` has a single entry point for `TextInput`.
 - `fret-ui` compiles with the new API (adaptation layer allowed, but no shaping leaks).
 
+Status:
+
+- Done in `feat/text-system-v2-parley` (`3bb0fc8`).
+
 ### M1 — Renderer text system v2 (Parley + wrapper + atlas)
 
 Exit criteria:
@@ -97,15 +101,15 @@ Legend:
 
 ### A) `fret-core` contract changes
 
-- [ ] Replace `RichText`/`TextRun` with `TextInput`/`TextSpan` (or define a compatibility alias and migrate call sites).
-- [ ] Define `TextShapingStyle` vs `TextPaintStyle` types and serialization strategy (settings persistence).
-- [ ] Enforce span invariants:
+- [x] Replace `RichText`/`TextRun` with `TextInput`/`TextSpan` (migrate call sites).
+- [x] Define `TextShapingStyle` vs `TextPaintStyle` types and serialization strategy (settings persistence).
+- [x] Enforce span invariants:
   - sum(len) == text.len()
   - boundaries are UTF-8 char boundaries
-- [ ] Update `TextService` to:
-  - `prepare(&TextInput, TextConstraints) -> (TextBlobId, TextMetrics)`
-  - `measure(&TextInput, TextConstraints) -> TextMetrics`
-- [ ] Update ADR 0006 references if signatures change (keep the boundary semantics stable).
+- [x] Update `TextService` to:
+  - `prepare(TextInput<'_>, TextConstraints) -> (TextBlobId, TextMetrics)`
+  - `measure(TextInput<'_>, TextConstraints) -> TextMetrics`
+- [x] Update ADR 0006 references if signatures change (keep the boundary semantics stable).
 
 ### B) `fret-render` text system v2 implementation
 
@@ -114,7 +118,7 @@ Legend:
 - [ ] Implement family overrides (`TextFontFamilyConfig`) in the new system.
 
 **B2 — Shaper (Parley)**
-- [ ] Integrate Parley shaping for a single line/chunk with attributed spans.
+- [~] Integrate Parley shaping for a single line/chunk with attributed spans.
 - [ ] Produce glyph/cluster mapping sufficient for:
   - caret stops
   - hit-testing
@@ -166,3 +170,5 @@ Legend:
 ## Progress Log (append-only)
 
 - 2026-01-13: ADR 0157 added (design locked), worktree created.
+- 2026-01-13: M0 contract landed (commit `3bb0fc8`).
+- 2026-01-13: M1 started: add Parley dependency + single-line shaper prototype in `crates/fret-render/src/text_v2/mod.rs`.
