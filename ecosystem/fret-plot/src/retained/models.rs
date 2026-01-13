@@ -652,10 +652,10 @@ pub struct ErrorBarsSeries {
     ///
     /// The slice is indexed by point index and is expected to match `data.len()`.
     pub y_errors: Option<Arc<[ErrorBar]>>,
-    /// Error bar cap half-length in plot pixels.
+    /// Error bar cap half-length in plot-local logical pixels.
     pub cap_size: Px,
     pub show_caps: bool,
-    /// Cross marker radius in plot pixels.
+    /// Cross marker radius in plot-local logical pixels.
     pub marker_radius: Px,
     pub show_markers: bool,
     pub marker_shape: MarkerShape,
