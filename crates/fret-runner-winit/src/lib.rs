@@ -416,46 +416,41 @@ impl WinitWindowState {
     }
 
     pub fn prepare_frame(&mut self, window: &dyn Window) {
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let pending_cursor_area = self.pending.ime_cursor_area.take();
-            if let Some(rect) = pending_cursor_area {
-                #[cfg(windows)]
-                {
-                    windows_ime::set_ime_cursor_area(window, rect);
-                }
-
-                #[cfg(not(windows))]
-                {
-                    let request_data = winit::window::ImeRequestData::default().with_cursor_area(
-                        winit::dpi::LogicalPosition::new(rect.origin.x.0, rect.origin.y.0).into(),
-                        winit::dpi::LogicalSize::new(rect.size.width.0, rect.size.height.0).into(),
-                    );
-                    let _ =
-                        window.request_ime_update(winit::window::ImeRequest::Update(request_data));
-                }
+        let pending_cursor_area = self.pending.ime_cursor_area.take();
+        if let Some(rect) = pending_cursor_area {
+            #[cfg(windows)]
+            {
+                windows_ime::set_ime_cursor_area(window, rect);
             }
 
-            if let Some(enabled) = self.pending.ime_allowed.take() {
-                if enabled {
-                    let rect = self.ime_cursor_area.unwrap_or_else(|| Rect {
-                        origin: fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
-                        size: fret_core::Size::new(fret_core::Px(1.0), fret_core::Px(1.0)),
-                    });
+            #[cfg(not(windows))]
+            {
+                let request_data = winit::window::ImeRequestData::default().with_cursor_area(
+                    winit::dpi::LogicalPosition::new(rect.origin.x.0, rect.origin.y.0).into(),
+                    winit::dpi::LogicalSize::new(rect.size.width.0, rect.size.height.0).into(),
+                );
+                let _ = window.request_ime_update(winit::window::ImeRequest::Update(request_data));
+            }
+        }
 
-                    let request_data = winit::window::ImeRequestData::default().with_cursor_area(
-                        winit::dpi::LogicalPosition::new(rect.origin.x.0, rect.origin.y.0).into(),
-                        winit::dpi::LogicalSize::new(rect.size.width.0, rect.size.height.0).into(),
-                    );
+        if let Some(enabled) = self.pending.ime_allowed.take() {
+            if enabled {
+                let rect = self.ime_cursor_area.unwrap_or_else(|| Rect {
+                    origin: fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+                    size: fret_core::Size::new(fret_core::Px(1.0), fret_core::Px(1.0)),
+                });
 
-                    let caps = winit::window::ImeCapabilities::new().with_cursor_area();
-                    if let Some(enable) = winit::window::ImeEnableRequest::new(caps, request_data) {
-                        let _ =
-                            window.request_ime_update(winit::window::ImeRequest::Enable(enable));
-                    }
-                } else {
-                    let _ = window.request_ime_update(winit::window::ImeRequest::Disable);
+                let request_data = winit::window::ImeRequestData::default().with_cursor_area(
+                    winit::dpi::LogicalPosition::new(rect.origin.x.0, rect.origin.y.0).into(),
+                    winit::dpi::LogicalSize::new(rect.size.width.0, rect.size.height.0).into(),
+                );
+
+                let caps = winit::window::ImeCapabilities::new().with_cursor_area();
+                if let Some(enable) = winit::window::ImeEnableRequest::new(caps, request_data) {
+                    let _ = window.request_ime_update(winit::window::ImeRequest::Enable(enable));
                 }
+            } else {
+                let _ = window.request_ime_update(winit::window::ImeRequest::Disable);
             }
         }
 

@@ -25,6 +25,7 @@ fret-render = { path = "../fret-render" }
 fret-runner-winit = { path = "../fret-runner-winit" }
 bytemuck.workspace = true
 thiserror.workspace = true
+tracing.workspace = true
 wgpu.workspace = true
 winit.workspace = true
 
@@ -33,7 +34,6 @@ fret-platform = { path = "../fret-platform" }
 fret-platform-native = { path = "../fret-platform-native" }
 pollster.workspace = true
 slotmap.workspace = true
-tracing.workspace = true
 renderdog.workspace = true
 serde_json = { workspace = true, optional = true }
 subsecond = { version = "0.7.2", optional = true }

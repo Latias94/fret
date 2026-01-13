@@ -982,6 +982,30 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     };
                     window.set_cursor(Cursor::Icon(cursor));
                 }
+                Effect::ImeAllow {
+                    window: target,
+                    enabled,
+                } => {
+                    if target != self.app_window {
+                        continue;
+                    }
+                    let dirty = self.platform.set_ime_allowed(enabled);
+                    if dirty {
+                        self.platform.prepare_frame(window);
+                    }
+                }
+                Effect::ImeSetCursorArea {
+                    window: target,
+                    rect,
+                } => {
+                    if target != self.app_window {
+                        continue;
+                    }
+                    let dirty = self.platform.set_ime_cursor_area(rect);
+                    if dirty {
+                        self.platform.prepare_frame(window);
+                    }
+                }
                 Effect::ImageRegisterRgba8 {
                     window: target_window,
                     token,
