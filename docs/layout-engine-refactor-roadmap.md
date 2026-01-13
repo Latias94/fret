@@ -16,7 +16,7 @@ Related constraints and boundaries:
 
 - Hybrid layout boundary + explicit barriers: `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`
 - Declarative Flex semantics and defaults: `docs/adr/0057-declarative-layout-style-and-flex-semantics.md`
-- Container-owned persistent Taffy trees (current perf hardening): `docs/adr/0076-declarative-layout-performance-hardening.md`
+- Container-owned persistent Taffy trees (historical; superseded by the window-scoped engine): `docs/adr/0076-declarative-layout-performance-hardening.md`
 - Virtualization boundary: `docs/adr/0042-virtualization-and-large-lists.md`
 - Viewport surfaces (RenderTargetId): `docs/adr/0007-viewport-surfaces.md`
 

@@ -141,18 +141,6 @@ impl ElementHostWidget {
             return Size::new(Px(0.0), Px(0.0));
         };
 
-        let is_flex = matches!(
-            &instance,
-            ElementInstance::Flex(_) | ElementInstance::RovingFlex(_)
-        );
-        let is_grid = matches!(&instance, ElementInstance::Grid(_));
-        if !is_flex {
-            self.flex_cache = None;
-        }
-        if !is_grid {
-            self.grid_cache = None;
-        }
-
         match instance {
             ElementInstance::InteractivityGate(props) if !props.present => {
                 Size::new(Px(0.0), Px(0.0))
@@ -586,11 +574,11 @@ impl ElementHostWidget {
             }
         };
 
-        let cache = self
-            .flex_cache
-            .get_or_insert_with(super::super::taffy_layout::TaffyContainerCache::default);
-        cache.sync_root_style(root_style);
-        cache.sync_children(cx.children, |child| {
+        let mut taffy: TaffyTree<Option<NodeId>> = TaffyTree::new();
+        let root = taffy.new_leaf(root_style).expect("taffy root");
+
+        let mut child_nodes = Vec::with_capacity(cx.children.len());
+        for &child in cx.children {
             let layout_style = layout_style_for_node(cx.app, window, child);
 
             let spacer_min = element_record_for_node(cx.app, window, child).and_then(|r| {
@@ -614,7 +602,7 @@ impl ElementHostWidget {
                 }
             }
 
-            TaffyStyle {
+            let style = TaffyStyle {
                 display: Display::Block,
                 position: super::super::taffy_layout::taffy_position(layout_style.position),
                 inset: super::super::taffy_layout::taffy_rect_lpa_from_inset(
@@ -657,65 +645,61 @@ impl ElementHostWidget {
                     .align_self
                     .map(super::super::taffy_layout::taffy_align_self),
                 ..Default::default()
-            }
-        });
-
-        cache
-            .taffy
-            .mark_dirty(cache.root)
-            .expect("taffy mark dirty");
-
-        cache.measure_cache.clear();
-        cache
-            .measure_cache
-            .reserve(cache.children.len().saturating_mul(4));
-        let root = cache.root;
-
-        {
-            let measure_cache = &mut cache.measure_cache;
-            let taffy = &mut cache.taffy;
-            let available = taffy::geometry::Size {
-                width: available_space_to_taffy(inner_available.width),
-                height: available_space_to_taffy(inner_available.height),
             };
-            taffy
-                .compute_layout_with_measure(root, available, |known, avail, _id, ctx, _style| {
-                    let Some(child) = ctx.and_then(|c| *c) else {
-                        return taffy::geometry::Size::default();
-                    };
 
-                    let key = super::super::taffy_layout::TaffyMeasureKey {
-                        child,
-                        known_w: known.width.map(|v| v.to_bits()),
-                        known_h: known.height.map(|v| v.to_bits()),
-                        avail_w: super::super::taffy_layout::taffy_available_space_key(avail.width),
-                        avail_h: super::super::taffy_layout::taffy_available_space_key(
-                            avail.height,
-                        ),
-                    };
-                    if let Some(size) = measure_cache.get(&key) {
-                        return *size;
-                    }
-
-                    let constraints = LayoutConstraints::new(
-                        LayoutSize::new(known.width.map(Px), known.height.map(Px)),
-                        LayoutSize::new(
-                            taffy_available_space_to_runtime(avail.width),
-                            taffy_available_space_to_runtime(avail.height),
-                        ),
-                    );
-                    let s = cx.measure_in(child, constraints);
-                    let out = taffy::geometry::Size {
-                        width: s.width.0,
-                        height: s.height.0,
-                    };
-                    measure_cache.insert(key, out);
-                    out
-                })
-                .expect("taffy compute");
+            let node = taffy
+                .new_leaf_with_context(style, Some(child))
+                .expect("taffy child");
+            child_nodes.push(node);
         }
+        taffy
+            .set_children(root, &child_nodes)
+            .expect("taffy children");
 
-        let taffy = &cache.taffy;
+        let mut measure_cache: std::collections::HashMap<
+            super::super::taffy_layout::TaffyMeasureKey,
+            taffy::geometry::Size<f32>,
+        > = std::collections::HashMap::new();
+        measure_cache.reserve(cx.children.len().saturating_mul(4));
+
+        let available = taffy::geometry::Size {
+            width: available_space_to_taffy(inner_available.width),
+            height: available_space_to_taffy(inner_available.height),
+        };
+        taffy
+            .compute_layout_with_measure(root, available, |known, avail, _id, ctx, _style| {
+                let Some(child) = ctx.and_then(|c| *c) else {
+                    return taffy::geometry::Size::default();
+                };
+
+                let key = super::super::taffy_layout::TaffyMeasureKey {
+                    child,
+                    known_w: known.width.map(|v| v.to_bits()),
+                    known_h: known.height.map(|v| v.to_bits()),
+                    avail_w: super::super::taffy_layout::taffy_available_space_key(avail.width),
+                    avail_h: super::super::taffy_layout::taffy_available_space_key(avail.height),
+                };
+                if let Some(size) = measure_cache.get(&key) {
+                    return *size;
+                }
+
+                let constraints = LayoutConstraints::new(
+                    LayoutSize::new(known.width.map(Px), known.height.map(Px)),
+                    LayoutSize::new(
+                        taffy_available_space_to_runtime(avail.width),
+                        taffy_available_space_to_runtime(avail.height),
+                    ),
+                );
+                let s = cx.measure_in(child, constraints);
+                let out = taffy::geometry::Size {
+                    width: s.width.0,
+                    height: s.height.0,
+                };
+                measure_cache.insert(key, out);
+                out
+            })
+            .expect("taffy compute");
+
         let root_layout = taffy.layout(root).expect("taffy root layout");
         let inner_size = Size::new(
             Px(root_layout.size.width.max(0.0)),
@@ -794,14 +778,13 @@ impl ElementHostWidget {
             ..Default::default()
         };
 
-        let cache = self
-            .grid_cache
-            .get_or_insert_with(super::super::taffy_layout::TaffyContainerCache::default);
+        let mut taffy: TaffyTree<Option<NodeId>> = TaffyTree::new();
+        let root = taffy.new_leaf(root_style).expect("taffy root");
 
-        cache.sync_root_style(root_style);
-        cache.sync_children(cx.children, |child| {
+        let mut child_nodes = Vec::with_capacity(cx.children.len());
+        for &child in cx.children {
             let layout_style = layout_style_for_node(cx.app, window, child);
-            TaffyStyle {
+            let style = TaffyStyle {
                 display: Display::Block,
                 position: super::super::taffy_layout::taffy_position(layout_style.position),
                 inset: super::super::taffy_layout::taffy_rect_lpa_from_inset(
@@ -843,65 +826,60 @@ impl ElementHostWidget {
                 grid_column: super::super::taffy_layout::taffy_grid_line(layout_style.grid.column),
                 grid_row: super::super::taffy_layout::taffy_grid_line(layout_style.grid.row),
                 ..Default::default()
-            }
-        });
-
-        cache
-            .taffy
-            .mark_dirty(cache.root)
-            .expect("taffy mark dirty");
-
-        cache.measure_cache.clear();
-        cache
-            .measure_cache
-            .reserve(cache.children.len().saturating_mul(4));
-        let root = cache.root;
-
-        {
-            let measure_cache = &mut cache.measure_cache;
-            let taffy = &mut cache.taffy;
-            let available = taffy::geometry::Size {
-                width: available_space_to_taffy(inner_available.width),
-                height: available_space_to_taffy(inner_available.height),
             };
-            taffy
-                .compute_layout_with_measure(root, available, |known, avail, _id, ctx, _style| {
-                    let Some(child) = ctx.and_then(|c| *c) else {
-                        return taffy::geometry::Size::default();
-                    };
-
-                    let key = super::super::taffy_layout::TaffyMeasureKey {
-                        child,
-                        known_w: known.width.map(|v| v.to_bits()),
-                        known_h: known.height.map(|v| v.to_bits()),
-                        avail_w: super::super::taffy_layout::taffy_available_space_key(avail.width),
-                        avail_h: super::super::taffy_layout::taffy_available_space_key(
-                            avail.height,
-                        ),
-                    };
-                    if let Some(size) = measure_cache.get(&key) {
-                        return *size;
-                    }
-
-                    let constraints = LayoutConstraints::new(
-                        LayoutSize::new(known.width.map(Px), known.height.map(Px)),
-                        LayoutSize::new(
-                            taffy_available_space_to_runtime(avail.width),
-                            taffy_available_space_to_runtime(avail.height),
-                        ),
-                    );
-                    let s = cx.measure_in(child, constraints);
-                    let out = taffy::geometry::Size {
-                        width: s.width.0,
-                        height: s.height.0,
-                    };
-                    measure_cache.insert(key, out);
-                    out
-                })
-                .expect("taffy compute");
+            let node = taffy
+                .new_leaf_with_context(style, Some(child))
+                .expect("taffy child");
+            child_nodes.push(node);
         }
+        taffy
+            .set_children(root, &child_nodes)
+            .expect("taffy children");
 
-        let taffy = &cache.taffy;
+        let mut measure_cache: std::collections::HashMap<
+            super::super::taffy_layout::TaffyMeasureKey,
+            taffy::geometry::Size<f32>,
+        > = std::collections::HashMap::new();
+        measure_cache.reserve(cx.children.len().saturating_mul(4));
+
+        let available = taffy::geometry::Size {
+            width: available_space_to_taffy(inner_available.width),
+            height: available_space_to_taffy(inner_available.height),
+        };
+        taffy
+            .compute_layout_with_measure(root, available, |known, avail, _id, ctx, _style| {
+                let Some(child) = ctx.and_then(|c| *c) else {
+                    return taffy::geometry::Size::default();
+                };
+
+                let key = super::super::taffy_layout::TaffyMeasureKey {
+                    child,
+                    known_w: known.width.map(|v| v.to_bits()),
+                    known_h: known.height.map(|v| v.to_bits()),
+                    avail_w: super::super::taffy_layout::taffy_available_space_key(avail.width),
+                    avail_h: super::super::taffy_layout::taffy_available_space_key(avail.height),
+                };
+                if let Some(size) = measure_cache.get(&key) {
+                    return *size;
+                }
+
+                let constraints = LayoutConstraints::new(
+                    LayoutSize::new(known.width.map(Px), known.height.map(Px)),
+                    LayoutSize::new(
+                        taffy_available_space_to_runtime(avail.width),
+                        taffy_available_space_to_runtime(avail.height),
+                    ),
+                );
+                let s = cx.measure_in(child, constraints);
+                let out = taffy::geometry::Size {
+                    width: s.width.0,
+                    height: s.height.0,
+                };
+                measure_cache.insert(key, out);
+                out
+            })
+            .expect("taffy compute");
+
         let root_layout = taffy.layout(root).expect("taffy root layout");
         let inner_size = Size::new(
             Px(root_layout.size.width.max(0.0)),

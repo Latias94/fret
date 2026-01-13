@@ -151,16 +151,6 @@ impl ElementHostWidget {
             _ => None,
         };
 
-        let is_flex = matches!(&instance, ElementInstance::Flex(_));
-        let is_roving_flex = matches!(&instance, ElementInstance::RovingFlex(_));
-        let is_grid = matches!(&instance, ElementInstance::Grid(_));
-        if !is_flex && !is_roving_flex {
-            self.flex_cache = None;
-        }
-        if !is_grid {
-            self.grid_cache = None;
-        }
-
         match instance {
             ElementInstance::Container(props) => {
                 let pad_left = props.padding.left.0.max(0.0);
