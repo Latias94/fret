@@ -227,7 +227,9 @@ internals, plots should expose:
 `fret-plot3d` provides:
 
 - `Plot3dCanvas` that emits `SceneOp::ViewportSurface { target, ... }`,
-- a small data-only `Plot3dInput` -> `ViewportInputEvent` mapping helper,
+- viewport input forwarding helpers built on `ViewportMapping` -> `ViewportInputEvent` (ADR 0147):
+  - retained: `crates/fret-ui/src/retained_bridge.rs` (`viewport_surface::handle_viewport_surface_input`)
+  - declarative: `ecosystem/fret-ui-kit/src/declarative/viewport_surface.rs` (`viewport_surface_panel`)
 - optional overlay primitives (axes gizmo, HUD text) implemented as regular `SceneOp::Text/Path/Quad`
   above the surface.
 
