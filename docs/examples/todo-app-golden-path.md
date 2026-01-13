@@ -63,7 +63,7 @@ edition = "2024"
 anyhow = "1"
 fret-app = { path = "../../crates/fret-app" }
 fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver", "preload-icon-svgs", "icons-lucide"] }
-fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
+fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn", features = ["app-integration"] }
 ```
 
 If you want images/SVG caches out-of-the-box, enable `fret-bootstrap/ui-assets`:
@@ -76,7 +76,6 @@ fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["ui-app-
 
 ```rust,ignore
 use fret_app::App;
-use fret_ui_shadcn::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme};
 
 fn main() -> anyhow::Result<()> {
     fret_bootstrap::ui_app_with_hooks("todo", init_window, view, |d| d.on_command(on_command))
@@ -86,11 +85,8 @@ fn main() -> anyhow::Result<()> {
         // .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
         .init_app(|app| {
             // Optional: apply a built-in shadcn theme preset for a “new-york-v4” look.
-            fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
-                app,
-                ShadcnBaseColor::Slate,
-                ShadcnColorScheme::Light,
-            );
+            // Requires enabling `fret-ui-shadcn/app-integration`.
+            fret_ui_shadcn::install_app(app);
         })
         // Requires enabling `fret-bootstrap/icons-lucide`.
         .with_lucide_icons()

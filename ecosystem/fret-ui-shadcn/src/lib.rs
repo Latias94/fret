@@ -68,6 +68,9 @@ pub mod toggle;
 pub mod toggle_group;
 pub mod tooltip;
 
+#[cfg(feature = "app-integration")]
+pub mod app_integration;
+
 pub use accordion::{
     Accordion, AccordionContent, AccordionItem, AccordionKind, AccordionTrigger,
     accordion_multiple, accordion_multiple_uncontrolled, accordion_single,
@@ -201,6 +204,9 @@ pub use tooltip::{
     Tooltip, TooltipAlign, TooltipAnchor, TooltipContent, TooltipProvider, TooltipSide,
     TooltipTrigger,
 };
+
+#[cfg(feature = "app-integration")]
+pub use app_integration::{install, install_app, install_app_with, install_app_with_theme};
 
 pub use fret_ui_kit::declarative::style as decl_style;
 /// Re-exported “authoring glue” for app/component code.

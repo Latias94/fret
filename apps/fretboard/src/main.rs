@@ -210,7 +210,7 @@ edition = "2024"
 anyhow = "1"
 fret-app = {{ path = "../../crates/fret-app" }}
 fret-bootstrap = {{ path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver", "preload-icon-svgs", "icons-lucide", "diagnostics"{ui_assets_features}] }}
-fret-ui-shadcn = {{ path = "../../ecosystem/fret-ui-shadcn" }}
+fret-ui-shadcn = {{ path = "../../ecosystem/fret-ui-shadcn", features = ["app-integration"] }}
 [workspace]
 "#
     )
@@ -252,11 +252,7 @@ fn main() -> anyhow::Result<()> {
         .with_default_config_files()?__UI_ASSETS_BUILDER__
         .with_main_window("todo", (560.0, 520.0))
         .init_app(|app| {
-            shadcn::shadcn_themes::apply_shadcn_new_york_v4(
-                app,
-                shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-                shadcn::shadcn_themes::ShadcnColorScheme::Light,
-            );
+            shadcn::install_app(app);
         })
         .with_lucide_icons()
         .preload_icon_svgs_on_gpu_ready()

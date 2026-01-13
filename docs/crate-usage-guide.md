@@ -134,6 +134,11 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 
 **Use it when:** you want a ready-to-use design-system surface (buttons, inputs, popovers, command palette, etc).
 
+**Theme integration:**
+
+- Call `fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(...)` for an explicit preset, or
+- Enable `fret-ui-shadcn/app-integration` and call `fret_ui_shadcn::install_app(...)` for the golden-path default.
+
 ### `fret-icons` + icon packs
 
 - `fret-icons`: renderer-agnostic icon IDs + registry.
