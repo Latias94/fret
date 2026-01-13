@@ -139,12 +139,6 @@ fn web_find_by_tag_and_text<'a>(root: &'a WebNode, tag: &str, text: &str) -> Opt
     find_first(root, &|n| n.tag == tag && contains_text(n, text))
 }
 
-fn web_find_by_class_contains<'a>(root: &'a WebNode, needle: &str) -> Option<&'a WebNode> {
-    find_first(root, &|n| {
-        n.class_name.as_deref().is_some_and(|c| c.contains(needle))
-    })
-}
-
 fn class_has_token(node: &WebNode, token: &str) -> bool {
     node.class_name
         .as_deref()

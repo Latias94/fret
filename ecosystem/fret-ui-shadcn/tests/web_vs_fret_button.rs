@@ -122,6 +122,12 @@ fn css_get(style: &BTreeMap<String, String>, key: &str) -> Option<String> {
     style.get(key).cloned()
 }
 
+fn parse_px(s: &str) -> Option<f32> {
+    let s = s.trim();
+    let v = s.strip_suffix("px").unwrap_or(s);
+    v.parse::<f32>().ok()
+}
+
 fn parse_rgb(s: &str) -> Option<Rgba> {
     let s = s.trim();
     let inner = if let Some(v) = s.strip_prefix("rgba(").and_then(|v| v.strip_suffix(')')) {
@@ -360,6 +366,42 @@ fn web_vs_fret_button_default_pipeline_smoke() {
     let web = read_web_golden("button-default");
     let web_style = extract_web_button_style(&web);
     let fret_style = extract_fret_button_style();
+
+    // Catch “dev server / missing Tailwind” goldens early: these are stable invariants of the
+    // shadcn v4 button recipe and are used by downstream comparisons.
+    assert_eq!(
+        web_style.display.as_deref(),
+        Some("inline-flex"),
+        "unexpected web button display"
+    );
+    assert_eq!(
+        web_style.padding_left.as_deref(),
+        Some("16px"),
+        "unexpected web button paddingLeft"
+    );
+    assert_eq!(
+        web_style.padding_top.as_deref(),
+        Some("8px"),
+        "unexpected web button paddingTop"
+    );
+
+    if let Some(px) = web_style.border_top_width.as_deref().and_then(parse_px) {
+        for (idx, edge) in fret_style.border.iter().enumerate() {
+            assert!(
+                (*edge - px).abs() <= 0.5,
+                "border[{idx}]: expected≈{px} got={edge}"
+            );
+        }
+    }
+
+    if let Some(px) = web_style.border_radius.as_deref().and_then(parse_px) {
+        for (idx, corner) in fret_style.corner_radii.iter().enumerate() {
+            assert!(
+                (*corner - px).abs() <= 1.0,
+                "corner_radii[{idx}]: expected≈{px} got={corner}"
+            );
+        }
+    }
 
     // Minimal sanity: ensure we can parse at least the core color fields from the web golden.
     if let Some(bg) = web_style.background_color.as_deref() {
