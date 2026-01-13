@@ -3415,6 +3415,65 @@ fn universal_translate_tip_intent_works_with_wide_fov() {
 }
 
 #[test]
+fn universal_translate_tip_intent_works_with_close_camera_near_plane() {
+    let mut gizmo = base_gizmo(GizmoMode::Universal);
+    assert!(gizmo.config.universal_includes_scale);
+
+    // When the camera is very close to the gizmo origin, tiny projection changes can make
+    // overlap windows narrower. Increase pick radius so this test exercises the overlap
+    // resolution rather than "did we happen to land on the ring polyline".
+    gizmo.config.pick_radius_px = 48.0;
+
+    let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+    // Eye is close to origin, but still in front of the near plane used by `test_view_projection_fov`.
+    let view_proj = test_view_projection_fov((800.0, 600.0), 75.0, Vec3::new(0.0, 0.0, 0.20));
+    let origin = Vec3::ZERO;
+    let axes = gizmo.axis_dirs(&Transform3d::default());
+
+    let length_world = axis_length_world(
+        view_proj,
+        vp,
+        origin,
+        gizmo.config.depth_range,
+        gizmo.config.size_px,
+    )
+    .unwrap();
+
+    let tip_world = origin + axes[0] * (length_world * Gizmo::UNIVERSAL_TRANSLATE_TIP_SCALE);
+    let tip = project_point(view_proj, vp, tip_world, gizmo.config.depth_range).unwrap();
+
+    assert!(
+        gizmo
+            .pick_rotate_axis(view_proj, vp, origin, tip.screen, axes, length_world)
+            .is_some(),
+        "expected rotate rings to remain pickable near the translate tip with a close camera"
+    );
+
+    // At very close camera distances, projected planes can overlap axis tips. Universal is
+    // expected to keep translate planes "protected" over rotate rings in these cases.
+    let translate = gizmo
+        .pick_translate_handle(
+            view_proj,
+            vp,
+            origin,
+            tip.screen,
+            axes,
+            length_world,
+            true,
+            true,
+            true,
+            false,
+        )
+        .expect("expected some translate handle at this cursor position");
+
+    let (hit, kind) = gizmo
+        .pick_universal_handle(view_proj, vp, origin, tip.screen, axes, length_world)
+        .unwrap();
+    assert_eq!(kind, GizmoMode::Translate);
+    assert_eq!(hit.handle, translate.handle);
+}
+
+#[test]
 fn universal_can_pick_translate_plane_xy_inside() {
     let gizmo = base_gizmo(GizmoMode::Universal);
 
