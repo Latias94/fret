@@ -3545,6 +3545,19 @@ fn universal_translate_tip_intent_works_in_orthographic_with_close_camera() {
     )
     .unwrap();
 
+    // Ensure the rotate ring sampling encounters near-plane / behind-camera clipping in this
+    // orthographic + close camera setup (i.e. not all ring points are inside the clip volume).
+    let sample = project_point(
+        view_proj,
+        vp,
+        origin + Vec3::Z * length_world,
+        gizmo.config.depth_range,
+    );
+    assert!(
+        sample.is_none() || !sample.unwrap().inside_clip,
+        "expected some rotate ring points to be clipped near the camera in this setup"
+    );
+
     let tip_world = origin + axes[0] * (length_world * Gizmo::UNIVERSAL_TRANSLATE_TIP_SCALE);
     let tip = project_point(view_proj, vp, tip_world, gizmo.config.depth_range).unwrap();
 
@@ -3612,6 +3625,70 @@ fn universal_translate_tip_intent_protects_against_view_ring_overlap() {
             .handle,
         RotateHandle::View.id(),
         "expected view ring to overlap the translate arrow tip in this configuration"
+    );
+
+    let translate = gizmo
+        .pick_translate_handle(
+            view_proj,
+            vp,
+            origin,
+            tip.screen,
+            axes,
+            length_world,
+            true,
+            true,
+            true,
+            false,
+        )
+        .expect("expected some translate handle at this cursor position");
+
+    let (hit, kind) = gizmo
+        .pick_universal_handle(view_proj, vp, origin, tip.screen, axes, length_world)
+        .unwrap();
+    assert_eq!(kind, GizmoMode::Translate);
+    assert_eq!(hit.handle, translate.handle);
+}
+
+#[test]
+fn universal_translate_tip_intent_protects_against_view_ring_overlap_in_orthographic() {
+    let mut gizmo = base_gizmo(GizmoMode::Universal);
+    assert!(gizmo.config.universal_includes_scale);
+
+    // Disable axis rings so rotate picking deterministically returns the view ring hit.
+    gizmo.config.rotate_ring_fade_dot = (1.10, 1.20);
+    gizmo.config.universal_includes_rotate_view_ring = true;
+    gizmo.config.universal_includes_arcball = false;
+
+    // Axis-aligned orthographic view so the view ring basis aligns with world X/Y.
+    let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+    let view_proj = test_view_projection_ortho((800.0, 600.0), Vec3::new(0.0, 0.0, 0.20));
+    let origin = Vec3::ZERO;
+    let axes = gizmo.axis_dirs(&Transform3d::default());
+
+    // Force the view ring to pass through the translate arrow tip position so picking overlaps.
+    let mut pv = gizmo.part_visuals();
+    pv.rotate_view_ring_radius_scale = Gizmo::UNIVERSAL_TRANSLATE_TIP_SCALE;
+    gizmo.set_part_visuals(pv);
+
+    let length_world = axis_length_world(
+        view_proj,
+        vp,
+        origin,
+        gizmo.config.depth_range,
+        gizmo.config.size_px,
+    )
+    .unwrap();
+
+    let tip_world = origin + axes[0] * (length_world * Gizmo::UNIVERSAL_TRANSLATE_TIP_SCALE);
+    let tip = project_point(view_proj, vp, tip_world, gizmo.config.depth_range).unwrap();
+
+    assert_eq!(
+        gizmo
+            .pick_rotate_axis(view_proj, vp, origin, tip.screen, axes, length_world)
+            .unwrap()
+            .handle,
+        RotateHandle::View.id(),
+        "expected view ring to overlap the translate arrow tip in this orthographic projection"
     );
 
     let translate = gizmo
