@@ -36,6 +36,7 @@ pub(in super::super) fn encode_text(
         let kind = match g.kind() {
             GlyphQuadKind::Mask => TextDrawKind::Mask,
             GlyphQuadKind::Color => TextDrawKind::Color,
+            GlyphQuadKind::Subpixel => TextDrawKind::Subpixel,
         };
 
         let Some((atlas_page, uv)) = renderer.text_system.glyph_uv_for_instance(g) else {
@@ -74,6 +75,7 @@ pub(in super::super) fn encode_text(
         let vertex_color = match kind {
             TextDrawKind::Mask => premul,
             TextDrawKind::Color => [1.0, 1.0, 1.0, premul[3]],
+            TextDrawKind::Subpixel => premul,
         };
 
         let lx0 = base_x + g.rect[0] * state.scale_factor;

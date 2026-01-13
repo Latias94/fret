@@ -127,6 +127,7 @@ pub struct RenderPerfSnapshot {
     pub pipeline_switches_mask: u64,
     pub pipeline_switches_text_mask: u64,
     pub pipeline_switches_text_color: u64,
+    pub pipeline_switches_text_subpixel: u64,
     pub pipeline_switches_path: u64,
     pub pipeline_switches_path_msaa: u64,
     pub pipeline_switches_composite: u64,
@@ -169,6 +170,7 @@ pub(super) struct RenderPerfStats {
     pub(super) pipeline_switches_mask: u64,
     pub(super) pipeline_switches_text_mask: u64,
     pub(super) pipeline_switches_text_color: u64,
+    pub(super) pipeline_switches_text_subpixel: u64,
     pub(super) pipeline_switches_path: u64,
     pub(super) pipeline_switches_path_msaa: u64,
     pub(super) pipeline_switches_composite: u64,
@@ -355,6 +357,7 @@ pub(super) struct TextDraw {
 pub(super) enum TextDrawKind {
     Mask,
     Color,
+    Subpixel,
 }
 
 #[derive(Clone, Copy)]
