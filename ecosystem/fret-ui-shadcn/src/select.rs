@@ -49,6 +49,7 @@ fn select_scroll_with_buttons<H: UiHost>(
     item_step: Px,
     initial_scroll_to_y: Option<Px>,
     viewport_id_out: &Cell<Option<GlobalElementId>>,
+    active_element_id_out: &Cell<Option<GlobalElementId>>,
     content: impl FnOnce(&mut ElementContext<'_, H>, &Cell<Option<GlobalElementId>>) -> Vec<AnyElement>,
 ) -> AnyElement {
     cx.flex(
@@ -83,7 +84,7 @@ fn select_scroll_with_buttons<H: UiHost>(
             // appear when content visually fits.
             let scroll_epsilon = Px(0.5);
             let has_scroll = max.y.0 > scroll_epsilon.0;
-            let show_up = has_scroll && offset.y.0 > 0.0;
+            let show_up = has_scroll && offset.y.0 > scroll_epsilon.0;
             // Match Radix Select's `Math.ceil(scrollTop) < maxScroll` guard for zoomed UIs.
             let show_down = has_scroll && offset.y.0.ceil() < max.y.0;
 
@@ -204,8 +205,8 @@ fn select_scroll_with_buttons<H: UiHost>(
                     },
                 },
                 move |cx| {
-                    let active_element = Cell::new(None::<GlobalElementId>);
-                    let active_element_ref = &active_element;
+                    active_element_id_out.set(None);
+                    let active_element_ref = active_element_id_out;
 
                     let mut scroll_layout = LayoutStyle::default();
                     scroll_layout.size.width = Length::Fill;
@@ -235,7 +236,7 @@ fn select_scroll_with_buttons<H: UiHost>(
                     );
                     viewport_id_out.set(Some(scroll.id));
 
-                    if let Some(active_element) = active_element.get() {
+                    if let Some(active_element) = active_element_ref.get() {
                         let _ = active_desc::scroll_active_element_into_view_y(
                             cx,
                             &handle_for_stack,
@@ -387,8 +388,8 @@ impl From<SelectSeparator> for SelectEntry {
 /// Matches Radix Select `position`: item-aligned (default upstream) vs popper.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SelectPosition {
-    ItemAligned,
     #[default]
+    ItemAligned,
     Popper,
 }
 
@@ -967,6 +968,10 @@ fn select_impl<H: UiHost>(
             props.a11y.controls_element = Some(listbox_id_for_trigger.0);
 
             if motion.present && enabled {
+                let debug_item_aligned = std::env::var("FRET_DEBUG_SELECT_ITEM_ALIGNED")
+                    .ok()
+                    .is_some_and(|v| v == "1");
+
                 // Anchor bounds are derived from the previous layout pass. When `open=true` before
                 // the first layout (or immediately after a large tree change), the anchor may be
                 // missing for a frame. We still install the modal barrier layer to preserve Radix
@@ -975,7 +980,7 @@ fn select_impl<H: UiHost>(
                     let dismiss_on_overlay_press = true;
                     let window_margin = theme
                         .metric_by_key("component.select.window_margin")
-                        .unwrap_or(Px(8.0));
+                        .unwrap_or(Px(0.0));
                     let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
 
                     let item_h = theme
@@ -1017,6 +1022,18 @@ fn select_impl<H: UiHost>(
                             selected_item,
                             selected_item_text,
                         ) {
+                            if debug_item_aligned {
+                                let dbg = |label: &str, id: GlobalElementId| {
+                                    let b = overlay::anchor_bounds_for_element(cx, id);
+                                    eprintln!("select item-aligned {label}: id={id:?} bounds={b:?}");
+                                };
+                                dbg("value_node", value_node);
+                                dbg("viewport", viewport);
+                                dbg("listbox", listbox);
+                                dbg("content_panel", content_panel);
+                                dbg("selected_item", selected_item);
+                                dbg("selected_item_text", selected_item_text);
+                            }
                             Some((
                                 radix_select::SelectItemAlignedElementInputs {
                                     direction,
@@ -1096,9 +1113,11 @@ fn select_impl<H: UiHost>(
                         arrow.then_some(arrow_size),
                         item_aligned_inputs,
                     );
+                    let has_selected_value = cx.watch_model(&model).cloned().unwrap_or_default().is_some();
                     if let Some(layout) = resolved.item_aligned_layout
                         && let Some(scroll_to) = layout.outputs.scroll_to_y
                         && !did_scroll
+                        && has_selected_value
                     {
                         let mut state =
                             trigger_state.lock().unwrap_or_else(|e| e.into_inner());
@@ -1128,6 +1147,8 @@ fn select_impl<H: UiHost>(
                     let trigger_state_for_overlay = trigger_state.clone();
                     let viewport_id_out_cell = Cell::new(None::<GlobalElementId>);
                     let viewport_id_out = &viewport_id_out_cell;
+                    let active_element_id_out_cell = Cell::new(None::<GlobalElementId>);
+                    let active_element_id_out = &active_element_id_out_cell;
                     let listbox_id_out_cell = Cell::new(None::<GlobalElementId>);
                     let listbox_id_out = &listbox_id_out_cell;
                     let content_panel_id_out_cell = Cell::new(None::<GlobalElementId>);
@@ -1251,70 +1272,63 @@ fn select_impl<H: UiHost>(
                                     )
                                 });
 
-                                let panel = cx.container(
-                                    ContainerProps {
-                                        layout: popper_content::popper_panel_layout(
-                                            placed,
-                                            wrapper_insets,
-                                            Overflow::Clip,
-                                        ),
-                                        padding: Edges::all(Px(0.0)),
-                                        background: Some(theme_for_overlay.colors.panel_background),
-                                        shadow: Some(shadow),
-                                    border: Edges::all(border_width),
-                                    border_color: Some(border),
-                                    corner_radii: Corners::all(radius),
-                                },
-                                |cx| {
-                                    vec![select_scroll_with_buttons(
-                                        cx,
-                                        theme_for_overlay.clone(),
-                                        item_h,
-                                        initial_scroll_to_y,
-                                        viewport_id_out,
-                                        move |cx, active_element| {
-                                            let disabled_for_key: Arc<[bool]> =
-                                                Arc::from(disabled.clone().into_boxed_slice());
-                                            let labels_for_key = labels_arc.clone();
-                                            let values_by_row: Arc<[Option<Arc<str>>]> = Arc::from(
-                                                rows.iter()
-                                                    .map(|row| match row {
-                                                        SelectRow::Item(item) => Some(item.value.clone()),
-                                                        SelectRow::Label(_) | SelectRow::Separator => None,
-                                                    })
-                                                    .collect::<Vec<_>>()
-                                                    .into_boxed_slice(),
-                                            );
+                                let panel = radix_select::select_listbox_pressable_with_id_props(
+                                    cx,
+                                    move |cx, _st, listbox_id| {
+                                        content_panel_id_out.set(Some(listbox_id));
 
-                                            let state_for_key =
-                                                trigger_state_for_overlay_in_content.clone();
-                                            let open_for_key = open_for_content.clone();
-                                            let model_for_key = model.clone();
-                                            let loop_navigation_for_key = loop_navigation;
+                                        let disabled_for_key: Arc<[bool]> =
+                                            Arc::from(disabled.clone().into_boxed_slice());
+                                        let labels_for_key = labels_arc.clone();
+                                        let values_by_row: Arc<[Option<Arc<str>>]> = Arc::from(
+                                            rows.iter()
+                                                .map(|row| match row {
+                                                    SelectRow::Item(item) => {
+                                                        Some(item.value.clone())
+                                                    }
+                                                    SelectRow::Label(_) | SelectRow::Separator => {
+                                                        None
+                                                    }
+                                                })
+                                                .collect::<Vec<_>>()
+                                                .into_boxed_slice(),
+                                        );
 
-                                            vec![radix_select::select_listbox_pressable_with_id_props(cx, move |cx, _st, listbox_id| {
-                                                listbox_id_out.set(Some(listbox_id));
-                                                cx.key_on_key_down_for(
-                                                    listbox_id,
-                                                    Arc::new(move |host, action_cx, it| {
-                                                        let mut state = state_for_key
-                                                            .lock()
-                                                            .unwrap_or_else(|e| e.into_inner());
-                                                        state.content.handle_key_down_when_open(
-                                                            host,
-                                                            action_cx.window,
-                                                            &open_for_key,
-                                                            &model_for_key,
-                                                            values_by_row.as_ref(),
-                                                            labels_for_key.as_ref(),
-                                                            disabled_for_key.as_ref(),
-                                                            it.key,
-                                                            it.repeat,
-                                                            loop_navigation_for_key,
-                                                        )
-                                                    }),
-                                                );
+                                        let state_for_key =
+                                            trigger_state_for_overlay_in_content.clone();
+                                        let open_for_key = open_for_content.clone();
+                                        let model_for_key = model.clone();
+                                        let loop_navigation_for_key = loop_navigation;
 
+                                        cx.key_on_key_down_for(
+                                            listbox_id,
+                                            Arc::new(move |host, action_cx, it| {
+                                                let mut state = state_for_key
+                                                    .lock()
+                                                    .unwrap_or_else(|e| e.into_inner());
+                                                state.content.handle_key_down_when_open(
+                                                    host,
+                                                    action_cx.window,
+                                                    &open_for_key,
+                                                    &model_for_key,
+                                                    values_by_row.as_ref(),
+                                                    labels_for_key.as_ref(),
+                                                    disabled_for_key.as_ref(),
+                                                    it.key,
+                                                    it.repeat,
+                                                    loop_navigation_for_key,
+                                                )
+                                            }),
+                                        );
+
+                                        let scroll = select_scroll_with_buttons(
+                                            cx,
+                                            theme_for_overlay.clone(),
+                                            item_h,
+                                            initial_scroll_to_y,
+                                            viewport_id_out,
+                                            active_element_id_out,
+                                            move |cx, active_element| {
                                                                 let mut out = Vec::with_capacity(rows.len());
                                                                 let mut item_ordinal: usize = 0;
 
@@ -1700,48 +1714,70 @@ fn select_impl<H: UiHost>(
                                                                     }
                                                                 }
 
-                                                                let active_descendant = active_element
-                                                                    .get()
-                                                                    .and_then(|id| cx.node_for_element(id));
-
-                                                                (
-                                                                    PressableProps {
-                                                                        layout: {
-                                                                            let mut layout = LayoutStyle::default();
-                                                                            layout.size.width = Length::Fill;
-                                                                            layout
-                                                                        },
-                                                                        enabled: true,
-                                                                        focusable: true,
-                                                                        focus_ring: None,
-                                                                        a11y: PressableA11y {
-                                                                            role: Some(SemanticsRole::ListBox),
-                                                                            active_descendant,
-                                                                            labelled_by_element: Some(trigger_id.0),
-                                                                            ..Default::default()
-                                                                        },
-                                                                        ..Default::default()
+                                                                let listbox_content = cx.flex(
+                                                                    FlexProps {
+                                                                        layout: LayoutStyle::default(),
+                                                                        direction: fret_core::Axis::Vertical,
+                                                                        gap: Px(0.0),
+                                                                        padding: Edges::all(Px(4.0)),
+                                                                        justify: MainAlign::Start,
+                                                                        align: CrossAlign::Stretch,
+                                                                        wrap: false,
                                                                     },
-                                                                    vec![cx.flex(
-                                                                        FlexProps {
-                                                                            layout: LayoutStyle::default(),
-                                                                            direction: fret_core::Axis::Vertical,
-                                                                            gap: Px(0.0),
-                                                                            padding: Edges::all(Px(4.0)),
-                                                                            justify: MainAlign::Start,
-                                                                            align: CrossAlign::Stretch,
-                                                                            wrap: false,
-                                                                        },
-                                                                        |_cx| out,
-                                                                    )],
-                                                                )
-                                                            })]
-                                        },
-                                    )]
-                                },
-                            );
+                                                                    |_cx| out,
+                                                                );
+                                                                listbox_id_out.set(Some(listbox_content.id));
+                                                                vec![listbox_content]
+                                            },
+                                        );
 
-                                content_panel_id_out.set(Some(panel.id));
+                                        let active_descendant = active_element_id_out
+                                            .get()
+                                            .and_then(|id| cx.node_for_element(id));
+
+                                        let inner = cx.container(
+                                            ContainerProps {
+                                                layout: {
+                                                    let mut layout = LayoutStyle::default();
+                                                    layout.size.width = Length::Fill;
+                                                    layout.size.height = Length::Fill;
+                                                    layout.overflow = Overflow::Clip;
+                                                    layout
+                                                },
+                                                padding: Edges::all(Px(0.0)),
+                                                background: Some(
+                                                    theme_for_overlay.colors.panel_background,
+                                                ),
+                                                shadow: Some(shadow),
+                                                border: Edges::all(border_width),
+                                                border_color: Some(border),
+                                                corner_radii: Corners::all(radius),
+                                            },
+                                            move |_cx| vec![scroll],
+                                        );
+
+                                        (
+                                            PressableProps {
+                                                layout: popper_content::popper_panel_layout(
+                                                    placed,
+                                                    wrapper_insets,
+                                                    Overflow::Clip,
+                                                ),
+                                                enabled: true,
+                                                focusable: true,
+                                                focus_ring: None,
+                                                a11y: PressableA11y {
+                                                    role: Some(SemanticsRole::ListBox),
+                                                    active_descendant,
+                                                    labelled_by_element: Some(trigger_id.0),
+                                                    ..Default::default()
+                                                },
+                                                ..Default::default()
+                                            },
+                                            vec![inner],
+                                        )
+                                    },
+                                );
 
                                 if let Some(arrow_el) = arrow_el {
                                     vec![arrow_el, panel]

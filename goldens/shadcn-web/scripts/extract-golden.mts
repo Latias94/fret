@@ -6,22 +6,32 @@ import { createRequire } from "module"
 import { fileURLToPath, pathToFileURL } from "url"
 
 type Theme = "light" | "dark"
+type Mode = "closed" | "open"
+type OpenAction = "click" | "hover" | "contextmenu" | "keys"
+
+type OpenPoint = { abs: { x: number; y: number }; rel: { x: number; y: number } }
+type OpenMeta = { action: OpenAction; selector: string; point: { x: number; y: number } }
 
 type GoldenOptions = {
   baseUrl: string
   style: string
   themes: Theme[]
+  modes: Mode[]
   names: string[]
   types: string[]
   outDir: string
   update: boolean
   timeoutMs: number
+  openSelector?: string
+  openAction?: OpenAction
+  mergeThemes?: boolean
 }
 
 type GoldenFile = {
   version: number
   style: string
   name: string
+  mode?: Mode
   themes: Record<string, unknown>
 }
 
@@ -66,77 +76,8 @@ function resolveBrowserExecutablePath(): string | undefined {
     return envPath
   }
 
-  // Puppeteer browser cache (common in CI/dev): ~/.cache/puppeteer/chrome/**/chrome.exe
-  // We don't rely on a specific revision; any working Chrome is fine for layout/style extraction.
-  try {
-    const cacheRoot = path.join(os.homedir(), ".cache", "puppeteer", "chrome")
-    if (fs.existsSync(cacheRoot)) {
-      const dirs = fs
-        .readdirSync(cacheRoot, { withFileTypes: true })
-        .filter((d) => d.isDirectory())
-        .map((d) => d.name)
-        .sort()
-        .reverse()
-
-      for (const dir of dirs) {
-        const candidate = path.join(cacheRoot, dir, "chrome-win64", "chrome.exe")
-        if (fs.existsSync(candidate)) {
-          return candidate
-        }
-      }
-    }
-  } catch {
-    // ignore
-  }
-
-  const candidates: string[] = []
-  const programFiles = process.env.ProgramFiles
-  const programFilesX86 = process.env["ProgramFiles(x86)"]
-  const localAppData = process.env.LOCALAPPDATA
-
-  if (programFiles) {
-    candidates.push(
-      path.join(programFiles, "Google", "Chrome", "Application", "chrome.exe")
-    )
-    candidates.push(
-      path.join(programFiles, "Microsoft", "Edge", "Application", "msedge.exe")
-    )
-  }
-  if (programFilesX86) {
-    candidates.push(
-      path.join(
-        programFilesX86,
-        "Google",
-        "Chrome",
-        "Application",
-        "chrome.exe"
-      )
-    )
-    candidates.push(
-      path.join(
-        programFilesX86,
-        "Microsoft",
-        "Edge",
-        "Application",
-        "msedge.exe"
-      )
-    )
-  }
-  if (localAppData) {
-    candidates.push(
-      path.join(localAppData, "Google", "Chrome", "Application", "chrome.exe")
-    )
-    candidates.push(
-      path.join(localAppData, "Microsoft", "Edge", "Application", "msedge.exe")
-    )
-  }
-
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) {
-      return candidate
-    }
-  }
-
+  // Prefer Puppeteer's managed browser by default for protocol compatibility.
+  // If you want to force a system browser, set PUPPETEER_EXECUTABLE_PATH explicitly.
   return undefined
 }
 
@@ -254,7 +195,7 @@ async function extractOne(page: puppeteer.Page) {
         const v = el.getAttribute(key);
         if (v != null) out[key] = v;
       }
-      // Keep `id` and `class` as dedicated fields for easier selectors, but we also preserve them in attrs.
+      // Keep id and class as dedicated fields for easier selectors, but we also preserve them in attrs.
       return out;
     };
 
@@ -305,15 +246,322 @@ async function extractOne(page: puppeteer.Page) {
       return out;
     }
 
+    const portalCandidates = Array.from(
+      document.querySelectorAll(
+        "[data-state='open'],[data-state='delayed-open'],[data-state='instant-open']"
+      )
+    ).filter((el) => !root.contains(el));
+
+    // Prefer the most specific (leaf-most) open-state nodes so we capture the actual Radix content
+    // element rather than wrappers/portals.
+    const portalRoots = portalCandidates.filter(
+      (el) => !portalCandidates.some((other) => other !== el && el.contains(other))
+    );
+
+    // For placement/geometry alignment we often need the positioned wrapper (Popper sets transform/top/left
+    // on [data-radix-popper-content-wrapper]). Some Radix primitives (e.g. Select) render the actual content
+    // element as position: relative inside the wrapper, so its rect is not suitable for placement checks.
+    const rectContains = (outer, inner) => {
+      const eps = 0.01;
+      return (
+        inner.x + eps >= outer.x &&
+        inner.y + eps >= outer.y &&
+        inner.x + inner.width <= outer.x + outer.width + eps &&
+        inner.y + inner.height <= outer.y + outer.height + eps
+      );
+    };
+
+    const portalWrapperRoots = portalRoots.map((el) => {
+      const byAttr = el.closest("[data-radix-popper-content-wrapper]");
+      if (byAttr && !root.contains(byAttr)) return byAttr;
+
+      const leafRect = el.getBoundingClientRect();
+      let best = null;
+      let bestArea = Infinity;
+
+      let cur = el;
+      while (cur && cur instanceof Element && cur !== document.body) {
+        if (root.contains(cur)) break;
+
+        const cs = getComputedStyle(cur);
+        const positioned =
+          cs.position === "fixed" ||
+          cs.position === "absolute" ||
+          (cs.transform && cs.transform !== "none") ||
+          (cs.translate && cs.translate !== "none");
+
+        if (positioned) {
+          const r = cur.getBoundingClientRect();
+          if (rectContains(r, leafRect)) {
+            const area = r.width * r.height;
+            if (area < bestArea) {
+              bestArea = area;
+              best = cur;
+            }
+          }
+        }
+
+        cur = cur.parentElement;
+      }
+
+      return best || el;
+    });
+
+    const portals = portalRoots.map((el, idx) =>
+      traverse(el, "portal." + idx)
+    );
+
+    const portalWrappers = portalWrapperRoots.map((el, idx) =>
+      traverse(el, "portalWrapper." + idx)
+    );
+
     return {
       url: location.href,
       devicePixelRatio: window.devicePixelRatio,
       viewport: { w: window.innerWidth, h: window.innerHeight },
       root: traverse(root, ""),
+      portals,
+      portalWrappers,
     };
   })()`
 
   return await page.evaluate(expr)
+}
+
+async function openOverlay(
+  page: puppeteer.Page,
+  name: string,
+  timeoutMs: number,
+  openSelector: string | undefined,
+  openAction: OpenAction
+) {
+  const rootSel = "[data-fret-golden-target]"
+  const debug = process.env.DEBUG_GOLDENS === "1"
+
+  async function resolveOpenPoint(sel: string): Promise<OpenPoint | null> {
+    const expr = `(() => {
+      const rootSel = ${JSON.stringify(rootSel)};
+      const sel = ${JSON.stringify(sel)};
+
+      const root = document.querySelector(rootSel) || document.body;
+      const el = document.querySelector(sel);
+      if (!el || !(el instanceof Element)) return null;
+
+      el.scrollIntoView({ block: "center", inline: "center" });
+      const rootRect = root.getBoundingClientRect();
+      const r = el.getBoundingClientRect();
+      const x = r.x + r.width / 2;
+      const y = r.y + r.height / 2;
+
+      return {
+        abs: { x, y },
+        rel: { x: x - rootRect.x, y: y - rootRect.y },
+      };
+    })()`
+    return (await page.evaluate(expr)) as OpenPoint | null
+  }
+
+  const selectorCandidates: string[] = []
+  if (openSelector) {
+    selectorCandidates.push(openSelector)
+    if (!openSelector.includes("[data-fret-golden-target]")) {
+      selectorCandidates.push(`${rootSel} ${openSelector}`)
+    }
+  }
+
+  if (openAction === "contextmenu") {
+    selectorCandidates.push(
+      `${rootSel} [data-slot='context-menu-trigger']`,
+      `${rootSel} [data-slot='context-menu'] [data-slot$='trigger']`,
+      `${rootSel} [data-slot$='trigger']`,
+      `${rootSel}`
+    )
+  } else if (openAction === "hover") {
+    selectorCandidates.push(
+      `${rootSel} [data-slot='tooltip-trigger']`,
+      `${rootSel} [data-slot='hover-card-trigger']`,
+      `${rootSel} [data-slot$='trigger']`,
+      `${rootSel} button`,
+      `${rootSel}`
+    )
+  } else {
+    selectorCandidates.push(
+      `${rootSel} [role='combobox'][aria-expanded='false']`,
+      `${rootSel} [aria-haspopup='menu'][data-state='closed']`,
+      `${rootSel} [aria-haspopup='menu']`,
+      `${rootSel} [data-state='closed'][aria-haspopup]`,
+      `${rootSel} button[data-state='closed']`,
+      `${rootSel} button`
+    )
+  }
+
+  const waitExpr = `(() => {
+    const root = document.querySelector("${rootSel}") || document.body;
+    const outside = (sel) =>
+      Array.from(document.querySelectorAll(sel)).filter((el) => !root.contains(el));
+
+    if (outside("[data-state='open']").length > 0) return true;
+    if (outside("[data-radix-popper-content-wrapper]").length > 0) return true;
+    if (outside("[role='menu']").length > 0) return true;
+    if (outside("[role='listbox']").length > 0) return true;
+    if (outside("[role='dialog']").length > 0) return true;
+    return false;
+  })()`
+
+  async function tryCloseOverlays() {
+    try {
+      await page.keyboard.press("Escape")
+    } catch {
+      // ignore
+    }
+  }
+
+  // Use Puppeteer's input (trusted pointer events). Many Radix triggers listen on pointerdown;
+  // calling `element.click()` from within `page.evaluate(...)` is not sufficient.
+  let opened = false
+  let lastError: unknown = null
+  let openedSelector: string | null = null
+  let openedPoint: OpenPoint | null = null
+
+  const openBudgetMs = Math.min(timeoutMs, 2500)
+  for (const sel of selectorCandidates) {
+    try {
+      const point = await resolveOpenPoint(sel)
+      if (!point) {
+        continue
+      }
+
+      if (debug) {
+        console.log(
+          `- openOverlay: ${name} try ${openAction} on ${sel} (abs=${point.abs.x.toFixed(
+            1
+          )},${point.abs.y.toFixed(1)})`
+        )
+      }
+
+      if (openAction === "hover") {
+        await page.mouse.move(point.abs.x, point.abs.y, { steps: 4 })
+      } else if (openAction === "contextmenu") {
+        await page.mouse.click(point.abs.x, point.abs.y, {
+          button: "right",
+          delay: 10,
+        })
+      } else if (openAction === "keys") {
+        await page.focus(sel)
+        // Prefer the cross-platform "Shift+F10" policy for context menus, otherwise try Enter.
+        await page.keyboard.down("Shift")
+        await page.keyboard.press("F10")
+        await page.keyboard.up("Shift")
+      } else {
+        await page.mouse.click(point.abs.x, point.abs.y, {
+          button: "left",
+          delay: 10,
+        })
+      }
+
+      await waitForExpr(page, waitExpr, openBudgetMs)
+
+      opened = true
+      openedSelector = sel
+      openedPoint = point
+      break
+    } catch (err) {
+      lastError = err
+      await tryCloseOverlays()
+    }
+  }
+
+  if (!opened || !openedSelector || !openedPoint) {
+    throw new Error(
+      `failed to open overlay for ${name}: no trigger worked (lastError=${String(
+        lastError
+      )})`
+    )
+  }
+
+  if (debug) {
+    console.log(`- openOverlay: ${name} opened (${openAction}) via ${openedSelector}`)
+  }
+
+  // Let open-state layout settle (portal mount + popper positioning).
+  await waitForFonts(page, Math.min(2000, timeoutMs))
+  await waitForExpr(page, waitExpr, timeoutMs)
+
+  return {
+    action: openAction,
+    selector: openedSelector,
+    point: { x: openedPoint.rel.x, y: openedPoint.rel.y },
+  } satisfies OpenMeta
+}
+
+function inferOpenAction(name: string): OpenAction {
+  if (name === "context-menu-demo") return "contextmenu"
+  if (name === "tooltip-demo" || name === "hover-card-demo") return "hover"
+  return "click"
+}
+
+async function disableMotion(page: puppeteer.Page) {
+  const expr = `(() => {
+    const id = "fret-disable-motion";
+    if (document.getElementById(id)) return true;
+
+    const style = document.createElement("style");
+    style.id = id;
+    style.textContent = [
+      "* {",
+      "  animation: none !important;",
+      "  transition: none !important;",
+      "  scroll-behavior: auto !important;",
+      "}",
+      "*::before, *::after {",
+      "  animation: none !important;",
+      "  transition: none !important;",
+      "}",
+    ].join("\\n");
+
+    document.head.appendChild(style);
+    return true;
+  })()`
+
+  await page.evaluate(expr)
+}
+
+async function waitForExpr(
+  page: puppeteer.Page,
+  expr: string,
+  timeoutMs: number,
+  intervalMs = 50
+) {
+  const debug = process.env.DEBUG_GOLDENS === "1"
+  if (debug) {
+    console.log(`- waitForExpr: enter (timeoutMs=${timeoutMs})`)
+  }
+  const deadline = Date.now() + timeoutMs
+  let tries = 0
+  while (Date.now() < deadline) {
+    tries++
+    // Same `__name(...)` caveat as `extractOne`: pass an expression string instead of a function.
+    const evalBudget = Math.max(1, Math.min(2000, deadline - Date.now()))
+    let ok = false
+    try {
+      ok = (await Promise.race([
+        page.evaluate(expr) as Promise<boolean>,
+        new Promise<boolean>((_, reject) =>
+          setTimeout(() => reject(new Error("eval timeout")), evalBudget)
+        ),
+      ])) as boolean
+    } catch (error) {
+      if (debug && tries === 1) {
+        console.log(`- waitForExpr: first eval failed: ${String(error)}`)
+      }
+    }
+
+    if (ok) return
+    await new Promise((r) => setTimeout(r, intervalMs))
+  }
+  throw new Error(
+    `timeout waiting for page expression after ${timeoutMs}ms (tries=${tries})`
+  )
 }
 
 async function waitForFonts(page: puppeteer.Page, timeoutMs: number) {
@@ -336,7 +584,7 @@ async function ensureGoldenTarget(page: puppeteer.Page) {
     const existing = document.querySelector("[data-fret-golden-target]");
     if (existing) return true;
 
-    // The /view/[style]/[name] route wraps the rendered registry component in a `bg-background` div.
+    // The /view/[style]/[name] route wraps the rendered registry component in a bg-background div.
     // If upstream changes and this selector breaks, regenerate goldens after updating this heuristic.
     const root = document.querySelector(".bg-background");
     if (!root) return false;
@@ -383,6 +631,10 @@ async function injectCssLinks(page: puppeteer.Page, urls: string[]) {
 }
 
 async function waitForShadcnStyles(page: puppeteer.Page, timeoutMs: number) {
+  const debug = process.env.DEBUG_GOLDENS === "1"
+  if (debug) {
+    console.log(`- waitForShadcnStyles: enter (timeoutMs=${timeoutMs})`)
+  }
   // Same `__name(...)` caveat as `extractOne`: pass an expression string instead of a function.
   //
   // We intentionally use a *global* Tailwind sentinel (body classes from `app/layout.tsx`) instead
@@ -402,7 +654,7 @@ async function waitForShadcnStyles(page: puppeteer.Page, timeoutMs: number) {
     return overscrollOk || smoothOk;
   })()`
 
-  await page.waitForFunction(expr, { timeout: timeoutMs })
+  await waitForExpr(page, expr, timeoutMs)
 }
 
 async function setThemeBeforeLoad(page: puppeteer.Page, theme: Theme) {
@@ -421,10 +673,25 @@ const repoRoot = repoRootFromScript()
 
 async function loadPuppeteer(): Promise<typeof import("puppeteer")> {
   const require = createRequire(import.meta.url)
-  const entry = require.resolve("puppeteer", {
-    paths: [path.join(repoRoot, "repo-ref", "ui")],
-  })
-  const mod = await import(pathToFileURL(entry).href)
+
+  const candidates = [
+    path.join(repoRoot, "repo-ref", "ui"),
+    repoRoot,
+    process.cwd(),
+  ]
+
+  for (const candidate of candidates) {
+    try {
+      const entry = require.resolve("puppeteer", { paths: [candidate] })
+      const mod = await import(pathToFileURL(entry).href)
+      return ((mod as any).default ?? mod) as typeof import("puppeteer")
+    } catch {
+      // keep searching
+    }
+  }
+
+  // Fall back to normal Node resolution (e.g. if the caller installed puppeteer globally or in CWD).
+  const mod = await import("puppeteer")
   return ((mod as any).default ?? mod) as typeof import("puppeteer")
 }
 
@@ -503,6 +770,7 @@ async function resolveCssInjectionUrls(style: string, baseUrl: string) {
 
 async function run(options: GoldenOptions): Promise<string[]> {
   ensureDir(options.outDir)
+  const debug = process.env.DEBUG_GOLDENS === "1"
 
   // Fail fast if the server isn't reachable.
   {
@@ -556,8 +824,13 @@ async function run(options: GoldenOptions): Promise<string[]> {
       console.error("! Detected a Next.js dev server response.")
       console.error("  Golden extraction requires production assets (CSS chunks) to be reachable.")
       console.error("  Recommended flow:")
-      console.error("    1) pnpm -C repo-ref/ui/apps/v4 build")
-      console.error("    2) pnpm -C repo-ref/ui/apps/v4 exec next start -p 4020")
+      console.error("    1) pnpm -C repo-ref/ui --filter shadcn build")
+      console.error(
+        "    2) NEXT_PUBLIC_APP_URL=http://localhost:4020 pnpm -C repo-ref/ui/apps/v4 exec next build --webpack"
+      )
+      console.error(
+        "    3) NEXT_PUBLIC_APP_URL=http://localhost:4020 pnpm -C repo-ref/ui/apps/v4 exec next start -p 4020"
+      )
       console.error(
         `  Then rerun with:\n    --baseUrl=http://localhost:4020`
       )
@@ -573,6 +846,8 @@ async function run(options: GoldenOptions): Promise<string[]> {
   try {
     browser = await puppeteer.launch({
       ...(executablePath ? { executablePath } : {}),
+      headless: "new",
+      protocolTimeout: Math.max(180_000, options.timeoutMs + 30_000),
       defaultViewport: {
         width: 1440,
         height: 900,
@@ -607,12 +882,13 @@ async function run(options: GoldenOptions): Promise<string[]> {
     if (options.names.includes("button-default")) {
       const page = await browser.newPage()
       page.setDefaultTimeout(options.timeoutMs)
+      page.setDefaultNavigationTimeout(options.timeoutMs)
       await page.emulateMediaFeatures([
         { name: "prefers-reduced-motion", value: "reduce" },
       ])
       await setThemeBeforeLoad(page, options.themes[0] ?? "light")
       const url = `${options.baseUrl}/view/${options.style}/button-default`
-      await page.goto(url, { waitUntil: "networkidle2" })
+      await page.goto(url, { waitUntil: "networkidle2", timeout: options.timeoutMs })
       await page.waitForSelector("body", { timeout: 30000 })
       await ensureGoldenTarget(page)
       await page.waitForSelector("[data-fret-golden-target]", { timeout: 30000 })
@@ -638,6 +914,7 @@ async function run(options: GoldenOptions): Promise<string[]> {
     for (const theme of options.themes) {
       const page = await browser.newPage()
       page.setDefaultTimeout(options.timeoutMs)
+      page.setDefaultNavigationTimeout(options.timeoutMs)
       await page.emulateMediaFeatures([
         { name: "prefers-reduced-motion", value: "reduce" },
       ])
@@ -646,74 +923,122 @@ async function run(options: GoldenOptions): Promise<string[]> {
     }
 
     for (const name of options.names) {
-      const outPath = path.join(options.outDir, `${name}.json`)
-      if (!options.update && fs.existsSync(outPath)) {
-        continue
-      }
-
-      const out: GoldenFile = {
-        version: 1,
-        style: options.style,
-        name,
-        themes: {},
-      }
-
-      let ok = true
-      for (const theme of options.themes) {
-        const url = `${options.baseUrl}/view/${options.style}/${name}`
-        try {
-          const page = pagesByTheme[theme]
-
-          await page.goto(url, { waitUntil: "networkidle2" })
-          await page.waitForSelector("body", { timeout: 30000 })
-          await ensureGoldenTarget(page)
-          await page.waitForSelector("[data-fret-golden-target]", { timeout: 30000 })
-          await injectCssLinks(page, cssInjectionUrls)
-
-          await page.evaluate(() => {
-            const indicator = document.querySelector("[data-tailwind-indicator]")
-            if (indicator) indicator.remove()
-          })
-
-          await waitForFonts(page, Math.min(2000, options.timeoutMs))
-          await waitForShadcnStyles(page, Math.min(30000, options.timeoutMs))
-
-          const extracted = await extractOne(page)
-          // Normalize a few floats that may slip through as high precision.
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ;(extracted as any).devicePixelRatio = round3(
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (extracted as any).devicePixelRatio
-          )
-
-          ;(out.themes as Record<string, unknown>)[theme] = extracted
-        } catch (error) {
-          ok = false
-          const msg = `${name} (${theme}): ${String(error)}`
-          failures.push(msg)
-          console.error(`! failed ${name} (${theme})`)
-          console.error(`  url: ${url}`)
-          console.error(`  error: ${String(error)}`)
-
-          // Try to recover by recreating the page for this theme so later iterations can continue.
-          try {
-            await pagesByTheme[theme].close()
-          } catch {
-            // ignore
-          }
-          const page = await browser.newPage()
-          page.setDefaultTimeout(options.timeoutMs)
-          await page.emulateMediaFeatures([
-            { name: "prefers-reduced-motion", value: "reduce" },
-          ])
-          await setThemeBeforeLoad(page, theme as Theme)
-          pagesByTheme[theme] = page
+      for (const mode of options.modes) {
+        const suffix = mode === "closed" ? "" : `.${mode}`
+        const outPath = path.join(options.outDir, `${name}${suffix}.json`)
+        if (!options.update && fs.existsSync(outPath)) {
+          continue
         }
-      }
 
-      if (ok) {
-        writeIfChanged(outPath, out, options.update)
-        console.log(`- wrote ${path.relative(process.cwd(), outPath)}`)
+        const out: GoldenFile = (() => {
+          if (options.mergeThemes && fs.existsSync(outPath)) {
+            const existing = JSON.parse(fs.readFileSync(outPath, "utf8")) as GoldenFile
+            const existingMode = existing.mode ?? "closed"
+            if (
+              existing.version !== 1 ||
+              existing.style !== options.style ||
+              existing.name !== name ||
+              existingMode !== mode
+            ) {
+              throw new Error(
+                `refusing to merge themes into ${outPath} (mismatched header)`
+              )
+            }
+            return existing
+          }
+
+          return {
+            version: 1,
+            style: options.style,
+            name,
+            mode,
+            themes: {},
+          }
+        })()
+
+        let ok = true
+        for (const theme of options.themes) {
+          const url = `${options.baseUrl}/view/${options.style}/${name}`
+          try {
+            const page = pagesByTheme[theme]
+
+            if (debug) console.log(`- goto: ${name}${suffix} (${theme})`)
+            await page.goto(url, {
+              waitUntil: "networkidle2",
+              timeout: options.timeoutMs,
+            })
+            await page.waitForSelector("body", { timeout: 30000 })
+            if (debug) console.log(`- ensureGoldenTarget: ${name}${suffix} (${theme})`)
+            await ensureGoldenTarget(page)
+            await page.waitForSelector("[data-fret-golden-target]", { timeout: 30000 })
+            if (debug) console.log(`- injectCssLinks: ${name}${suffix} (${theme})`)
+            await injectCssLinks(page, cssInjectionUrls)
+
+            // Ensure stable geometry: shadcn overlays use enter/exit animations that can affect
+            // `getBoundingClientRect()` if captured mid-transition.
+            await disableMotion(page)
+
+            await page.evaluate(`(() => {
+              const indicator = document.querySelector("[data-tailwind-indicator]");
+              if (indicator) indicator.remove();
+            })()`)
+
+            await waitForFonts(page, Math.min(2000, options.timeoutMs))
+            if (debug) console.log(`- waitForShadcnStyles: ${name}${suffix} (${theme})`)
+            await waitForShadcnStyles(page, Math.min(30000, options.timeoutMs))
+
+            let openMeta: OpenMeta | null = null
+            if (mode === "open") {
+              const action = options.openAction ?? inferOpenAction(name)
+              openMeta = await openOverlay(
+                page,
+                name,
+                options.timeoutMs,
+                options.openSelector,
+                action
+              )
+            }
+
+            if (debug) console.log(`- extractOne: ${name}${suffix} (${theme})`)
+            const extracted = await extractOne(page)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ;(extracted as any).open = openMeta
+            // Normalize a few floats that may slip through as high precision.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ;(extracted as any).devicePixelRatio = round3(
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (extracted as any).devicePixelRatio
+            )
+
+            ;(out.themes as Record<string, unknown>)[theme] = extracted
+          } catch (error) {
+            ok = false
+            const msg = `${name}${suffix} (${theme}): ${String(error)}`
+            failures.push(msg)
+            console.error(`! failed ${name}${suffix} (${theme})`)
+            console.error(`  url: ${url}`)
+            console.error(`  error: ${String(error)}`)
+
+            // Try to recover by recreating the page for this theme so later iterations can continue.
+            try {
+              await pagesByTheme[theme].close()
+            } catch {
+              // ignore
+            }
+            const page = await browser.newPage()
+            page.setDefaultTimeout(options.timeoutMs)
+            await page.emulateMediaFeatures([
+              { name: "prefers-reduced-motion", value: "reduce" },
+            ])
+            await setThemeBeforeLoad(page, theme as Theme)
+            pagesByTheme[theme] = page
+          }
+        }
+
+        if (ok) {
+          writeIfChanged(outPath, out, options.update)
+          console.log(`- wrote ${path.relative(process.cwd(), outPath)}`)
+        }
       }
     }
 
@@ -775,6 +1100,38 @@ const timeoutMs =
 
 const update = flags.update === true || process.env.UPDATE_GOLDENS === "1"
 
+const modesRaw =
+  (typeof flags.modes === "string" ? flags.modes : undefined) ??
+  process.env.MODES ??
+  (flags.open === true ? "closed,open" : "closed")
+
+const modes = modesRaw
+  .split(",")
+  .map((m) => m.trim())
+  .filter(Boolean)
+  .filter((m): m is Mode => m === "closed" || m === "open")
+
+const openSelector =
+  (typeof flags.openSelector === "string" ? flags.openSelector : undefined) ??
+  process.env.OPEN_SELECTOR ??
+  undefined
+
+const openActionRaw =
+  (typeof flags.openAction === "string" ? flags.openAction : undefined) ??
+  process.env.OPEN_ACTION ??
+  undefined
+
+const openAction = (() => {
+  if (!openActionRaw) return undefined
+  const v = openActionRaw.trim()
+  if (v === "click" || v === "hover" || v === "contextmenu" || v === "keys") {
+    return v
+  }
+  throw new Error(
+    `invalid --openAction=${openActionRaw} (expected click|hover|contextmenu|keys)`
+  )
+})()
+
 const defaultNames = ["button-default", "tabs-demo"]
 const all = flags.all === true || process.env.ALL_GOLDENS === "1"
 
@@ -783,9 +1140,24 @@ async function resolveNames(): Promise<string[]> {
     return names.length > 0 ? names : defaultNames
   }
 
+  const indexPath = path.join(
+    repoRoot,
+    "repo-ref",
+    "ui",
+    "apps",
+    "v4",
+    "registry",
+    "__index__.tsx"
+  )
+  if (!fs.existsSync(indexPath)) {
+    throw new Error(
+      `missing shadcn registry index at ${indexPath}; either provide explicit names or install repo-ref/ui`
+    )
+  }
+
   const mod = await import(
     pathToFileURL(
-      path.join(repoRoot, "repo-ref", "ui", "apps", "v4", "registry", "__index__.tsx")
+      indexPath
     ).href
   )
   const index = (mod as any).Index?.[style] as Record<string, any> | undefined
@@ -803,6 +1175,7 @@ try {
   console.log(`- baseUrl: ${baseUrl}`)
   console.log(`- style: ${style}`)
   console.log(`- themes: ${themes.join(", ")}`)
+  console.log(`- modes: ${modes.join(", ")}`)
   console.log(`- types: ${types.join(", ")}`)
   console.log(`- outDir: ${outDir}`)
   console.log(`- timeoutMs: ${timeoutMs}`)
@@ -816,11 +1189,15 @@ try {
     baseUrl,
     style,
     themes: themes.length > 0 ? themes : ["light", "dark"],
+    modes: modes.length > 0 ? modes : ["closed"],
     names: finalNames,
     types,
     outDir,
     update,
     timeoutMs,
+    openSelector,
+    openAction,
+    mergeThemes: flags.mergeThemes === true || process.env.MERGE_THEMES === "1",
   })
 
   if (failures.length > 0) {

@@ -12,22 +12,28 @@ For each component page, the exporter writes a JSON file with:
 - per-node `getBoundingClientRect()` relative to the root,
 - a whitelist of `window.getComputedStyle(...)` fields (layout + a few visuals),
 - selected accessibility-related attrs (`role`, `aria-*`, `data-state`, ...).
+- `portals[]` and `portalWrappers[]` snapshots for Radix portal content (wrapper geometry is used for placement checks).
 
 ## Prerequisites
 
 - `pnpm`
-- `repo-ref/ui/apps/v4` dependencies installed
-- a shadcn v4 **production** server (`next start`) running locally
+- `repo-ref/ui` dependencies installed
+- a shadcn v4 **production** server (`next start`) running locally (recommended)
 
 ## Run
 
 1) Install deps:
 
-`pnpm -C repo-ref/ui/apps/v4 install`
+`pnpm -C repo-ref/ui install`
 
-2) Build the app (Terminal A):
+2) Build the app (Terminal A).
 
-`pnpm -C repo-ref/ui/apps/v4 build`
+Important: `pnpm -C repo-ref/ui/apps/v4 build` currently defaults to Turbopack and fails to resolve some transitive Radix deps under pnpm on Windows.
+Force webpack instead, and provide the required `NEXT_PUBLIC_*` env vars at build time:
+
+`pnpm -C repo-ref/ui --filter shadcn build`
+
+`cd repo-ref/ui/apps/v4; $env:NEXT_PUBLIC_APP_URL='http://localhost:4020'; $env:NEXT_PUBLIC_V0_URL='https://v0.dev'; pnpm exec next build --webpack`
 
 3) Start a production server (Terminal A):
 
@@ -36,6 +42,14 @@ For each component page, the exporter writes a JSON file with:
 4) Extract goldens (Terminal B):
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts button-default tabs-demo --baseUrl=http://localhost:4020`
+
+Extract both closed + open overlay states (writes `*.open.json` alongside the base file):
+
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts popover-demo dropdown-menu-demo select-scrollable --modes=open --update --baseUrl=http://localhost:4020`
+
+Extract open overlay states that require non-click input (the script infers the right open action per page):
+
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts context-menu-demo tooltip-demo hover-card-demo --modes=open --update --baseUrl=http://localhost:4020`
 
 Extract *all* routable new-york-v4 pages (defaults match `/view/[style]/[name]`: block+component+example):
 
@@ -47,7 +61,7 @@ If the extracted `computedStyle` looks like browser defaults (e.g. `<button>` ha
 inline-block`, `borderTopWidth: 2px`), your dev server is likely not producing Tailwind utilities.
 In that case, prefer a production build:
 
-`pnpm -C repo-ref/ui/apps/v4 build; pnpm -C repo-ref/ui/apps/v4 exec next start -p 4020`
+`pnpm -C repo-ref/ui --filter shadcn build; cd repo-ref/ui/apps/v4; $env:NEXT_PUBLIC_APP_URL='http://localhost:4020'; $env:NEXT_PUBLIC_V0_URL='https://v0.dev'; pnpm exec next build --webpack; pnpm exec next start -p 4020`
 
 Note: the extractor intentionally refuses to run against a dev server (it detects `hmr-client`),
 because turbopack dev output does not expose stable asset URLs (and computed styles become unreliable).
@@ -83,6 +97,10 @@ pixel diffs. See: `docs/audits/shadcn-web-layout-conformance.md`.
 
 - `--style=new-york-v4`
 - `--themes=light,dark` (default)
+- `--modes=closed,open` (default: `closed`)
+- `--open` (shorthand for `--modes=closed,open`)
+- `--openSelector=<css>` (optional override for the "open overlay" trigger)
+- `--openAction=click|hover|contextmenu|keys` (optional override for the "open overlay" action; default is inferred per page)
 - `--baseUrl=http://localhost:4000`
 - `--all` (env: `ALL_GOLDENS=1`)
 - `--types=registry:block,registry:component,registry:example` (env: `TYPES=...`)

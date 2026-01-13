@@ -35,6 +35,21 @@ pub fn slider_use_values_model<H: UiHost>(
 
 /// Semantics wrapper props for a slider root.
 pub fn slider_root_semantics(
+    _label: Option<Arc<str>>,
+    _value: f32,
+    disabled: bool,
+) -> SemanticsProps {
+    SemanticsProps {
+        role: SemanticsRole::Generic,
+        label: None,
+        value: None,
+        disabled,
+        ..Default::default()
+    }
+}
+
+/// Semantics wrapper props for an interactive slider thumb (Radix `role="slider"`).
+pub fn slider_thumb_semantics(
     label: Option<Arc<str>>,
     value: f32,
     disabled: bool,

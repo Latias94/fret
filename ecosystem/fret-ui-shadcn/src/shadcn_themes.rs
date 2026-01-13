@@ -118,6 +118,12 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
     metrics
         .entry("metric.padding.md".to_string())
         .or_insert(10.0);
+
+    // Component-specific overrides in the upstream registry.
+    // - Checkbox uses `rounded-[4px]` (not `rounded-sm`, which would be `radius - 4px`).
+    metrics
+        .entry("component.checkbox.radius".to_string())
+        .or_insert(4.0);
     metrics
         .entry("metric.font.size".to_string())
         .or_insert(14.0);
