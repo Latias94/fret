@@ -7,8 +7,8 @@ use crate::demos::{
     validate_web_demo, web_demos_as_vec,
 };
 use crate::hotpatch::{
-    ensure_hotpatch_trigger_file_initialized, generate_hotpatch_build_id, parse_hotpatch_build_id,
-    resolve_workspace_relative, HotpatchBuildIdArg,
+    HotpatchBuildIdArg, ensure_hotpatch_trigger_file_initialized, generate_hotpatch_build_id,
+    parse_hotpatch_build_id, resolve_workspace_relative,
 };
 
 pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
@@ -91,7 +91,12 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
             validate_native_demo(&demos, name)?;
             name.to_string()
         }
-        (None, true) => prompt_choose_demo(&demos)?,
+        (None, true) => prompt_choose_demo(
+            "Select a native demo",
+            &demos,
+            Some("components_gallery"),
+            |name| validate_native_demo(&demos, name),
+        )?,
         (None, false) => "todo_demo".to_string(),
     };
 
@@ -216,7 +221,16 @@ pub(crate) fn dev_web(args: Vec<String>) -> Result<(), String> {
             validate_web_demo(name)?;
             Some(name.to_string())
         }
-        (None, true) => Some(prompt_choose_demo(&web_demos_as_vec())?),
+        (None, true) => {
+            let demos = web_demos_as_vec();
+            let default = demos.first().map(|d| d.as_str());
+            Some(prompt_choose_demo(
+                "Select a web demo",
+                &demos,
+                default,
+                validate_web_demo,
+            )?)
+        }
         (None, false) => None,
     };
     if let Some(demo) = demo.as_deref() {

@@ -105,16 +105,26 @@ pub(crate) fn validate_native_demo(demos: &[String], name: &str) -> Result<(), S
     ))
 }
 
-pub(crate) fn prompt_choose_demo(demos: &[String]) -> Result<String, String> {
+pub(crate) fn prompt_choose_demo(
+    label: &str,
+    demos: &[String],
+    default: Option<&str>,
+    validate: impl Fn(&str) -> Result<(), String>,
+) -> Result<String, String> {
     if demos.is_empty() {
-        return Err("no native demos found".to_string());
+        return Err(format!("no {label} found"));
     }
 
-    eprintln!("Select a demo:");
+    eprintln!("{label}:");
     for (i, demo) in demos.iter().enumerate() {
         eprintln!("  {:>2}) {demo}", i + 1);
     }
-    eprint!("Enter number or name: ");
+
+    if let Some(default) = default {
+        eprint!("Enter number or name (blank = {default}): ");
+    } else {
+        eprint!("Enter number or name: ");
+    }
 
     use std::io::Write as _;
     std::io::stdout().flush().map_err(|e| e.to_string())?;
@@ -125,7 +135,9 @@ pub(crate) fn prompt_choose_demo(demos: &[String]) -> Result<String, String> {
         .map_err(|e| e.to_string())?;
     let input = input.trim();
     if input.is_empty() {
-        return Ok("components_gallery".to_string());
+        return default
+            .map(|d| d.to_string())
+            .ok_or_else(|| "selection cannot be empty".to_string());
     }
 
     if let Ok(n) = input.parse::<usize>() {
@@ -135,6 +147,6 @@ pub(crate) fn prompt_choose_demo(demos: &[String]) -> Result<String, String> {
         return Ok(demos[n - 1].clone());
     }
 
-    validate_native_demo(demos, input)?;
+    validate(input)?;
     Ok(input.to_string())
 }
