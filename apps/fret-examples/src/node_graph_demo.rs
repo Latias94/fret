@@ -33,7 +33,9 @@ use fret_node::io::NodeGraphViewStateFileV1;
 use fret_node::ops::{GraphOp, GraphTransaction};
 use fret_node::profile::{DataflowProfile, apply_transaction_with_profile};
 use fret_node::runtime::store::NodeGraphStore;
-use fret_node::schema::{NodeRegistry, NodeSchema, PortDecl};
+use fret_node::schema::{
+    NodeKindMigrateError, NodeKindMigrator, NodeRegistry, NodeSchema, PortDecl,
+};
 use fret_node::ui::canvas::RejectNonFiniteTx;
 use fret_node::ui::presenter::{
     EdgeMarker, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate, NodeGraphContextMenuItem,
@@ -310,13 +312,54 @@ impl NodeGraphPresenter for DemoPresenter {
     }
 }
 
+#[derive(Debug)]
+struct DemoFloatMigrator;
+
+impl NodeKindMigrator for DemoFloatMigrator {
+    fn migrate(
+        &self,
+        from_version: u32,
+        to_version: u32,
+        data: &Value,
+    ) -> Result<Value, NodeKindMigrateError> {
+        if from_version == to_version {
+            return Ok(data.clone());
+        }
+        if from_version != 0 || to_version != 1 {
+            return Err(NodeKindMigrateError::message(format!(
+                "unsupported float migration: {from_version} -> {to_version}"
+            )));
+        }
+
+        let mut obj = match data {
+            Value::Object(map) => map.clone(),
+            Value::Number(n) => {
+                let mut map = serde_json::Map::new();
+                map.insert("val".to_string(), Value::Number(n.clone()));
+                map
+            }
+            _ => serde_json::Map::new(),
+        };
+
+        let value = obj
+            .get("value")
+            .and_then(|v| v.as_f64())
+            .or_else(|| obj.get("val").and_then(|v| v.as_f64()))
+            .unwrap_or(0.0);
+
+        obj.insert("value".to_string(), Value::from(value));
+        obj.remove("val");
+        Ok(Value::Object(obj))
+    }
+}
+
 fn build_demo_registry() -> NodeRegistry {
     let mut reg = NodeRegistry::new();
 
     reg.register(NodeSchema {
         kind: NodeKindKey::new("demo.float"),
         latest_kind_version: 1,
-        kind_aliases: Vec::new(),
+        kind_aliases: vec![NodeKindKey::new("demo.float.v0")],
         title: "Float".to_string(),
         category: vec!["Demo".to_string()],
         keywords: vec!["number".to_string(), "float".to_string()],
@@ -330,6 +373,7 @@ fn build_demo_registry() -> NodeRegistry {
         }],
         default_data: serde_json::Value::Null,
     });
+    reg.register_migrator(NodeKindKey::new("demo.float"), Arc::new(DemoFloatMigrator));
 
     reg.register(NodeSchema {
         kind: NodeKindKey::new("fret.variadic_merge"),
@@ -482,8 +526,8 @@ fn build_demo_graph(graph_id: GraphId) -> Graph {
     graph.nodes.insert(
         node_value_a,
         Node {
-            kind: NodeKindKey::new("demo.float"),
-            kind_version: 1,
+            kind: NodeKindKey::new("demo.float.v0"),
+            kind_version: 0,
             pos: CanvasPoint { x: 40.0, y: 60.0 },
             selectable: None,
             draggable: None,
@@ -495,7 +539,7 @@ fn build_demo_graph(graph_id: GraphId) -> Graph {
             size: None,
             collapsed: false,
             ports: vec![port_value_a_out],
-            data: serde_json::json!({ "value": 0.25 }),
+            data: serde_json::json!({ "val": 0.25 }),
         },
     );
     graph.nodes.insert(
