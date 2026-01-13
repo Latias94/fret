@@ -370,17 +370,27 @@ impl GizmoConfig {
         }
     }
 
-    /// Scales pixel-based knobs when the host's cursor/viewport units are logical "points".
+    /// Scales pixel-based knobs to match the cursor's coordinate units.
     ///
-    /// Pass the platform scale factor (e.g. pixels-per-point / device pixel ratio) so gizmo
-    /// visuals and picking remain consistent across DPI settings.
-    pub fn scale_for_pixels_per_point(mut self, pixels_per_point: f32) -> Self {
-        let s = pixels_per_point.clamp(0.1, 16.0);
+    /// The gizmo config stores many values in "pixels" (hit radii, thickness, drag thresholds).
+    /// Those pixels are expected to match the units of `GizmoInput.cursor_px` provided by the host.
+    ///
+    /// - If the host feeds window-local logical pixels ("screen px"), pass `1.0`.
+    /// - If the host feeds physical pixels, pass the platform scale factor (pixels-per-point / DPR).
+    /// - If the host feeds viewport render-target pixels (typical for `ViewportSurface`), pass the
+    ///   target-pixels-per-screen-pixel scale derived from the viewport mapping.
+    pub fn scale_for_cursor_units_per_screen_px(mut self, cursor_units_per_screen_px: f32) -> Self {
+        let s = cursor_units_per_screen_px.clamp(0.1, 16.0);
         self.size_px *= s;
         self.pick_radius_px *= s;
         self.line_thickness_px *= s;
         self.drag_start_threshold_px *= s;
         self.bounds_handle_size_px *= s;
         self
+    }
+
+    /// Backwards-compatible alias for [`Self::scale_for_cursor_units_per_screen_px`].
+    pub fn scale_for_pixels_per_point(self, pixels_per_point: f32) -> Self {
+        self.scale_for_cursor_units_per_screen_px(pixels_per_point)
     }
 }

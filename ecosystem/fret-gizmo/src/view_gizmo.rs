@@ -233,12 +233,17 @@ impl Default for ViewGizmoConfig {
 }
 
 impl ViewGizmoConfig {
-    /// Scales pixel-based knobs when the host's cursor/viewport units are physical pixels.
+    /// Scales pixel-based knobs to match the cursor's coordinate units.
     ///
-    /// Pass the platform scale factor (pixels-per-point / device pixel ratio) so the view gizmo
-    /// remains consistent across DPI settings.
-    pub fn scale_for_pixels_per_point(mut self, pixels_per_point: f32) -> Self {
-        let s = pixels_per_point.clamp(0.1, 16.0);
+    /// The view gizmo uses screen-space pixels for layout and hit testing. Those pixels are
+    /// expected to match the units of `ViewGizmoInput.cursor_px` provided by the host.
+    ///
+    /// - If the host feeds window-local logical pixels ("screen px"), pass `1.0`.
+    /// - If the host feeds physical pixels, pass the platform scale factor (pixels-per-point / DPR).
+    /// - If the host feeds viewport render-target pixels, pass the target-pixels-per-screen-pixel
+    ///   scale derived from the viewport mapping.
+    pub fn scale_for_cursor_units_per_screen_px(mut self, cursor_units_per_screen_px: f32) -> Self {
+        let s = cursor_units_per_screen_px.clamp(0.1, 16.0);
         self.margin_px *= s;
         self.size_px *= s;
         self.pick_padding_px *= s;
@@ -246,6 +251,11 @@ impl ViewGizmoConfig {
         self.center_button_radius_px *= s;
         self.orbit_sensitivity_radians_per_px /= s;
         self
+    }
+
+    /// Backwards-compatible alias for [`Self::scale_for_cursor_units_per_screen_px`].
+    pub fn scale_for_pixels_per_point(self, pixels_per_point: f32) -> Self {
+        self.scale_for_cursor_units_per_screen_px(pixels_per_point)
     }
 }
 
@@ -1063,5 +1073,25 @@ mod tests {
 
         let edge = snap_from_local(Vec3::new(1.0, 0.9, 0.2), threshold).unwrap();
         assert_eq!(edge.view_dir, [-1, -1, 0]);
+    }
+
+    #[test]
+    fn scale_for_cursor_units_matches_pixels_per_point_alias() {
+        let base = ViewGizmoConfig {
+            margin_px: Vec2::new(3.0, 5.0),
+            size_px: 10.0,
+            pick_padding_px: 2.0,
+            drag_threshold_px: 4.0,
+            orbit_sensitivity_radians_per_px: 0.5,
+            center_button_radius_px: 6.0,
+            ..ViewGizmoConfig::default()
+        };
+
+        let scaled = base.scale_for_cursor_units_per_screen_px(2.0);
+        assert_eq!(scaled.margin_px, Vec2::new(6.0, 10.0));
+        assert!((scaled.orbit_sensitivity_radians_per_px - 0.25).abs() < 1e-6);
+
+        let alias = base.scale_for_pixels_per_point(2.0);
+        assert_eq!(scaled, alias);
     }
 }

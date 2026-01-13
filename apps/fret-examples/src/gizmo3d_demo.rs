@@ -544,14 +544,17 @@ fn transform_gizmo_kind_for_handle(handle: HandleId) -> Option<GizmoMode> {
     }
 }
 
-fn apply_pixels_per_point(model: &mut Gizmo3dDemoModel, pixels_per_point: f32) {
-    let next = if pixels_per_point.is_finite() {
-        pixels_per_point.clamp(0.1, 16.0)
+fn apply_gizmo_cursor_units_per_screen_px(
+    model: &mut Gizmo3dDemoModel,
+    cursor_units_per_screen_px: f32,
+) {
+    let next = if cursor_units_per_screen_px.is_finite() {
+        cursor_units_per_screen_px.clamp(0.1, 16.0)
     } else {
         1.0
     };
-    let prev = if model.pixels_per_point.is_finite() {
-        model.pixels_per_point.clamp(0.1, 16.0)
+    let prev = if model.gizmo_cursor_units_per_screen_px.is_finite() {
+        model.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0)
     } else {
         1.0
     };
@@ -560,10 +563,16 @@ fn apply_pixels_per_point(model: &mut Gizmo3dDemoModel, pixels_per_point: f32) {
     }
 
     let ratio = (next / prev).clamp(0.1, 16.0);
-    model.pixels_per_point = next;
-    let next_gizmo_cfg = model.gizmo().config.scale_for_pixels_per_point(ratio);
+    model.gizmo_cursor_units_per_screen_px = next;
+    let next_gizmo_cfg = model
+        .gizmo()
+        .config
+        .scale_for_cursor_units_per_screen_px(ratio);
     model.gizmo_mut().config = next_gizmo_cfg;
-    model.view_gizmo.config = model.view_gizmo.config.scale_for_pixels_per_point(ratio);
+    model.view_gizmo.config = model
+        .view_gizmo
+        .config
+        .scale_for_cursor_units_per_screen_px(ratio);
 }
 
 fn apply_click_selection_op(
@@ -941,7 +950,7 @@ struct PendingUndoRecords {
 struct Gizmo3dDemoModel {
     viewport_target: RenderTargetId,
     viewport_px: (u32, u32),
-    pixels_per_point: f32,
+    gizmo_cursor_units_per_screen_px: f32,
     gizmo_mgr: GizmoPluginManager,
     view_gizmo: ViewGizmo,
     gizmo_visual_preset_index: usize,
@@ -1287,7 +1296,7 @@ impl Default for Gizmo3dDemoModel {
         Self {
             viewport_target: RenderTargetId::default(),
             viewport_px: (960, 540),
-            pixels_per_point: 1.0,
+            gizmo_cursor_units_per_screen_px: 1.0,
             gizmo_mgr: {
                 let mut mgr = GizmoPluginManager::new(GizmoPluginManagerConfig::default());
                 let mut plugin = TransformGizmoPlugin::new(Gizmo::new(gizmo_cfg));
@@ -2599,19 +2608,18 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                             % ViewGizmoVisualPreset::ALL.len();
                         ViewGizmoVisualPreset::ALL[m.view_gizmo_visual_preset_index]
                             .apply_to_config(&mut m.view_gizmo.config);
-                        m.view_gizmo.config = m
-                            .view_gizmo
-                            .config
-                            .scale_for_pixels_per_point(m.pixels_per_point);
+                        m.view_gizmo.config =
+                            m.view_gizmo.config.scale_for_cursor_units_per_screen_px(
+                                m.gizmo_cursor_units_per_screen_px,
+                            );
                     } else {
                         m.gizmo_visual_preset_index =
                             (m.gizmo_visual_preset_index + 1) % GizmoVisualPreset::ALL.len();
                         GizmoVisualPreset::ALL[m.gizmo_visual_preset_index]
                             .apply_to_gizmo(m.gizmo_mut());
-                        let cfg = m
-                            .gizmo()
-                            .config
-                            .scale_for_pixels_per_point(m.pixels_per_point);
+                        let cfg = m.gizmo().config.scale_for_cursor_units_per_screen_px(
+                            m.gizmo_cursor_units_per_screen_px,
+                        );
                         m.gizmo_mut().config = cfg;
                     }
                 });
@@ -3006,9 +3014,9 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
 
         let did_change = model
             .update(context.app, |m, _cx| {
-                let before = m.pixels_per_point;
-                apply_pixels_per_point(m, pixels_per_point);
-                (m.pixels_per_point - before).abs() > 1e-3
+                let before = m.gizmo_cursor_units_per_screen_px;
+                apply_gizmo_cursor_units_per_screen_px(m, pixels_per_point);
+                (m.gizmo_cursor_units_per_screen_px - before).abs() > 1e-3
             })
             .unwrap_or(false);
         if did_change {
@@ -3025,7 +3033,10 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         };
 
         let pending_undo = model.update(app, |m, _cx| {
-            apply_pixels_per_point(m, event.geometry.pixels_per_point);
+            let target_px_per_screen_px =
+                fret_gizmo::viewport_input_target_px_per_screen_px(&event)
+                    .unwrap_or(event.geometry.pixels_per_point.max(1.0e-6));
+            apply_gizmo_cursor_units_per_screen_px(m, target_px_per_screen_px);
             if m.viewport_target != event.target {
                 return PendingUndoRecords::default();
             }
@@ -3411,9 +3422,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     }
                     ViewportInputKind::PointerMove { buttons, modifiers } => {
                         const MARQUEE_THRESHOLD_PX: f32 = 4.0;
-                        let threshold_target_px = MARQUEE_THRESHOLD_PX
-                            * fret_gizmo::viewport_input_target_px_per_screen_px(&event)
-                                .unwrap_or(event.geometry.pixels_per_point.max(1.0e-6));
+                        let threshold_target_px = MARQUEE_THRESHOLD_PX * target_px_per_screen_px;
                         let threshold_sq = threshold_target_px * threshold_target_px;
 
                         if buttons.left {

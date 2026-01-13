@@ -367,6 +367,32 @@ pub struct ViewportInputEvent {
 }
 
 impl ViewportInputEvent {
+    /// Returns the scale from window-local logical pixels ("screen px") to render-target pixels.
+    ///
+    /// This is derived from `self.geometry.draw_rect_px` (logical pixels) and the backing render
+    /// target size `self.geometry.target_px_size` (physical pixels).
+    ///
+    /// For `ViewportFit::Contain`/`Cover` this is uniform; for `ViewportFit::Stretch` the mapping
+    /// is non-uniform, so this returns the smaller axis scale as a conservative approximation for
+    /// isotropic thresholds (hit radii, click distances).
+    pub fn target_px_per_screen_px(&self) -> Option<f32> {
+        let (tw, th) = self.geometry.target_px_size;
+        let tw = tw.max(1) as f32;
+        let th = th.max(1) as f32;
+
+        let rect = self.geometry.draw_rect_px;
+        let dw = rect.size.width.0.max(0.0);
+        let dh = rect.size.height.0.max(0.0);
+        if dw <= 0.0 || dh <= 0.0 || !dw.is_finite() || !dh.is_finite() {
+            return None;
+        }
+
+        let sx = tw / dw;
+        let sy = th / dh;
+        let s = sx.min(sy);
+        (s.is_finite() && s > 0.0).then_some(s)
+    }
+
     pub fn from_mapping_window_point(
         window: AppWindowId,
         target: RenderTargetId,
@@ -421,6 +447,46 @@ impl ViewportInputEvent {
             target_px,
             kind,
         }
+    }
+}
+
+#[cfg(test)]
+mod viewport_input_event_tests {
+    use super::*;
+    use crate::geometry::{Point, Px, Rect, Size};
+
+    fn dummy_event() -> ViewportInputEvent {
+        ViewportInputEvent {
+            window: AppWindowId::default(),
+            target: RenderTargetId::default(),
+            geometry: ViewportInputGeometry {
+                content_rect_px: Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(200.0), Px(100.0)),
+                ),
+                draw_rect_px: Rect::new(
+                    Point::new(Px(50.0), Px(25.0)),
+                    Size::new(Px(100.0), Px(50.0)),
+                ),
+                target_px_size: (1000, 500),
+                fit: ViewportFit::Contain,
+                pixels_per_point: 2.0,
+            },
+            cursor_px: Point::new(Px(0.0), Px(0.0)),
+            uv: (0.0, 0.0),
+            target_px: (0, 0),
+            kind: ViewportInputKind::PointerMove {
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+            },
+        }
+    }
+
+    #[test]
+    fn target_px_per_screen_px_matches_draw_rect_mapping() {
+        let event = dummy_event();
+        let scale = event.target_px_per_screen_px().unwrap();
+        assert!((scale - 10.0).abs() < 1e-3);
     }
 }
 

@@ -15,25 +15,9 @@ fn point_xy(p: Point) -> Vec2 {
 
 /// Computes the scale factor from screen-space logical pixels to render-target pixels.
 ///
-/// This is derived from `event.geometry.draw_rect_px` (logical pixels) and the backing render
-/// target size `event.geometry.target_px_size` (physical pixels). It is useful when converting
-/// screen-space interaction thresholds (e.g. click/drag distances) into the render target's pixel
-/// space.
+/// Prefer `ViewportInputEvent::target_px_per_screen_px()` from `fret-core`.
 pub fn viewport_input_target_px_per_screen_px(event: &ViewportInputEvent) -> Option<f32> {
-    let (tw, th) = event.geometry.target_px_size;
-    let tw = tw.max(1) as f32;
-    let th = th.max(1) as f32;
-
-    let rect = event.geometry.draw_rect_px;
-    let size = rect_size(rect);
-    if size.x <= 0.0 || size.y <= 0.0 || !size.is_finite() {
-        return None;
-    }
-
-    let sx = tw / size.x;
-    let sy = th / size.y;
-    let s = sx.min(sy);
-    (s.is_finite() && s > 0.0).then_some(s)
+    event.target_px_per_screen_px()
 }
 
 /// Computes the cursor position in the viewport render target's pixel space.
