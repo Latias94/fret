@@ -240,6 +240,7 @@ impl ElementHostWidget {
         }
         offset = clamped;
 
+        let mut child_rects: Vec<(NodeId, Rect)> = Vec::with_capacity(measured_updates.len());
         for (child, idx, measured_extent) in &measured_updates {
             let start = metrics.offset_for_index(*idx);
             let origin = match axis {
@@ -260,10 +261,15 @@ impl ElementHostWidget {
                     Rect::new(origin, Size::new(*measured_extent, size.height))
                 }
             };
+            child_rects.push((*child, child_bounds));
+        }
 
-            cx.solve_barrier_child_root_if_needed(*child, child_bounds);
+        if !is_probe_layout {
+            cx.solve_barrier_child_roots_if_needed(&child_rects);
+        }
 
-            let _ = cx.layout_in(*child, child_bounds);
+        for (child, child_bounds) in &child_rects {
+            let _ = cx.layout_in(*child, *child_bounds);
         }
 
         crate::elements::with_element_state(
@@ -395,9 +401,8 @@ impl ElementHostWidget {
         );
 
         if !is_probe_layout {
-            for &child in cx.children {
-                cx.solve_barrier_child_root_if_needed(child, shifted);
-            }
+            let roots: Vec<(NodeId, Rect)> = cx.children.iter().map(|&c| (c, shifted)).collect();
+            cx.solve_barrier_child_roots_if_needed(&roots);
         }
 
         for &child in cx.children {

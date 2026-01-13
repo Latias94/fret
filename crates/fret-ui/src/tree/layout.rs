@@ -588,6 +588,82 @@ impl<H: UiHost> UiTree<H> {
         self.solve_barrier_flow_root(app, services, root, root_bounds, scale_factor);
     }
 
+    /// Internal barrier bridge: batch variant of `solve_barrier_flow_root_if_needed`.
+    ///
+    /// This exists to reduce `take_layout_engine()` / `put_layout_engine()` churn when a barrier
+    /// needs to solve many child roots (e.g. virtualized lists).
+    pub(crate) fn solve_barrier_flow_roots_if_needed(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        roots: &[(NodeId, Rect)],
+        scale_factor: f32,
+    ) {
+        let Some(window) = self.window else {
+            return;
+        };
+        if roots.is_empty() {
+            return;
+        }
+
+        let mut batch: Vec<(NodeId, Rect)> = Vec::new();
+        batch.reserve(roots.len());
+        for &(root, root_bounds) in roots {
+            let Some(node) = self.nodes.get(root) else {
+                continue;
+            };
+
+            let needs_layout = node.invalidation.layout || node.bounds != root_bounds;
+            if !needs_layout {
+                continue;
+            }
+
+            let is_translation_only = !node.invalidation.layout
+                && node.bounds.size == root_bounds.size
+                && node.bounds.origin != root_bounds.origin
+                && node.measured_size != Size::default();
+            if is_translation_only {
+                continue;
+            }
+
+            batch.push((root, root_bounds));
+        }
+
+        if batch.is_empty() {
+            return;
+        }
+
+        let mut engine = self.take_layout_engine();
+        for &(root, root_bounds) in &batch {
+            crate::layout_engine::build_viewport_flow_subtree(
+                &mut engine,
+                app,
+                &*self,
+                window,
+                scale_factor,
+                root,
+                root_bounds.size,
+            );
+        }
+
+        let sf = scale_factor;
+        for &(root, root_bounds) in &batch {
+            let available = LayoutSize::new(
+                AvailableSpace::Definite(root_bounds.size.width),
+                AvailableSpace::Definite(root_bounds.size.height),
+            );
+
+            let _ =
+                engine.compute_root_for_node_with_measure_if_needed(root, available, sf, |n, c| {
+                    self.measure_in(app, services, n, c, sf)
+                });
+
+            self.maybe_dump_taffy_subtree(app, window, &engine, root, root_bounds, sf);
+        }
+
+        self.put_layout_engine(engine);
+    }
+
     pub(crate) fn solve_flow_root_with_root_style(
         &mut self,
         app: &mut H,

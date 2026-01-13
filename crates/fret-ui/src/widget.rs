@@ -276,6 +276,18 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
             self.scale_factor,
         );
     }
+
+    pub fn solve_barrier_child_roots_if_needed(&mut self, roots: &[(NodeId, Rect)]) {
+        if self.pass_kind != LayoutPassKind::Final {
+            return;
+        }
+        self.tree.solve_barrier_flow_roots_if_needed(
+            self.app,
+            self.services,
+            roots,
+            self.scale_factor,
+        );
+    }
     pub fn measure_in(&mut self, child: NodeId, constraints: LayoutConstraints) -> Size {
         self.tree.measure_in(
             self.app,
