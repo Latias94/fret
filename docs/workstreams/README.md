@@ -8,3 +8,7 @@ milestones, use:
 - `docs/roadmap.md`
 - `docs/shadcn-declarative-progress.md`
 
+Active workstreams:
+
+- `docs/workstreams/text-system-v2-parley.md`
+
