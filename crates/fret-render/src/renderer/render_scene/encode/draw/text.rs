@@ -33,7 +33,7 @@ pub(in super::super) fn encode_text(
     let mut group_first_vertex = state.text_vertices.len() as u32;
 
     for g in blob.shape.glyphs.as_ref() {
-        let kind = match g.kind {
+        let kind = match g.kind() {
             GlyphQuadKind::Mask => TextDrawKind::Mask,
             GlyphQuadKind::Color => TextDrawKind::Color,
         };
