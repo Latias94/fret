@@ -13,7 +13,7 @@ documentation.workspace = true
 default = []
 # Enable `preload_icon_svgs_on_gpu_ready`, which depends on `fret-ui-kit`.
 preload-icon-svgs = ["dep:fret-ui-kit", "fret-ui-kit/icons"]
-ui-assets = ["dep:fret-ui-assets"]
+ui-assets = ["dep:fret-ui-assets", "fret-ui-assets/app-integration"]
 hotpatch-subsecond = ["fret-launch/hotpatch-subsecond", "dep:subsecond"]
 ui-app-driver = ["dep:fret-ui", "dep:fret-ui-app", "dep:fret-ui-kit"]
 ui-app-command-palette = ["ui-app-driver", "dep:fret-ui-shadcn"]

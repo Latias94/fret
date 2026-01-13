@@ -196,19 +196,14 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         svg_budget_bytes: u64,
         svg_max_ready_entries: usize,
     ) -> Self {
+        let budgets = fret_ui_assets::UiAssetsBudgets {
+            image_budget_bytes,
+            image_max_ready_entries,
+            svg_budget_bytes,
+            svg_max_ready_entries,
+        };
         self.inner = self.inner.init_app(move |app| {
-            use fret_ui_assets::image_asset_cache::ImageAssetCache;
-            use fret_ui_assets::svg_asset_cache::SvgAssetCache;
-
-            app.with_global_mut(ImageAssetCache::default, |cache, _app| {
-                cache.set_budget_bytes(image_budget_bytes);
-                cache.set_max_ready_entries(image_max_ready_entries);
-            });
-
-            app.with_global_mut(SvgAssetCache::default, |cache, _app| {
-                cache.set_budget_bytes(svg_budget_bytes);
-                cache.set_max_ready_entries(svg_max_ready_entries);
-            });
+            fret_ui_assets::install_app_with_budgets(app, budgets);
         });
 
         self
