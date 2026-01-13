@@ -407,6 +407,50 @@ impl NodeGraphLookups {
                 }
                 false
             }
+            GraphOp::SetNodeKind { id, to, .. } => {
+                if let Some(n) = self.node_lookup.get_mut(id) {
+                    n.kind = to.clone();
+                    return true;
+                }
+                if let Some(node) = graph.nodes.get(id) {
+                    self.node_lookup.insert(
+                        *id,
+                        NodeLookupEntry {
+                            kind: node.kind.clone(),
+                            kind_version: node.kind_version,
+                            pos: node.pos,
+                            parent: node.parent,
+                            size: node.size,
+                            collapsed: node.collapsed,
+                            ports: node.ports.clone(),
+                        },
+                    );
+                    return true;
+                }
+                false
+            }
+            GraphOp::SetNodeKindVersion { id, to, .. } => {
+                if let Some(n) = self.node_lookup.get_mut(id) {
+                    n.kind_version = *to;
+                    return true;
+                }
+                if let Some(node) = graph.nodes.get(id) {
+                    self.node_lookup.insert(
+                        *id,
+                        NodeLookupEntry {
+                            kind: node.kind.clone(),
+                            kind_version: node.kind_version,
+                            pos: node.pos,
+                            parent: node.parent,
+                            size: node.size,
+                            collapsed: node.collapsed,
+                            ports: node.ports.clone(),
+                        },
+                    );
+                    return true;
+                }
+                false
+            }
             GraphOp::SetNodeParent { id, to, .. } => {
                 if let Some(n) = self.node_lookup.get_mut(id) {
                     n.parent = *to;

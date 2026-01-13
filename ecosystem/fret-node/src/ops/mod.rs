@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::core::{
     CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Group, GroupId, Node, NodeId,
-    Port, PortId, StickyNote, StickyNoteId, Symbol, SymbolId,
+    NodeKindKey, Port, PortId, StickyNote, StickyNoteId, Symbol, SymbolId,
 };
 
 pub use apply::{ApplyError, apply_op, apply_transaction};
@@ -52,6 +52,14 @@ pub enum GraphOp {
         from: CanvasPoint,
         to: CanvasPoint,
     },
+    /// Sets a node kind identifier.
+    SetNodeKind {
+        id: NodeId,
+        from: NodeKindKey,
+        to: NodeKindKey,
+    },
+    /// Sets a node kind version (for per-kind migrations).
+    SetNodeKindVersion { id: NodeId, from: u32, to: u32 },
     /// Sets a node parent container (group frame).
     SetNodeParent {
         id: NodeId,

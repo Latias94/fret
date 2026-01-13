@@ -3,6 +3,7 @@
 //! These are convenience configurations layered on top of the stable substrate. They are intended
 //! as starting points (one-liners) for building a graph editor with familiar behavior.
 
+use crate::core::CanvasSize;
 use crate::io::{NodeGraphConnectionMode, NodeGraphInteractionState, NodeGraphPanOnDragButtons};
 
 /// High-level editor interaction preset (mechanism remains the same).
@@ -24,7 +25,22 @@ impl NodeGraphInteractionPreset {
 
         match self {
             Self::XyFlow => {
-                // Keep substrate defaults aligned with XyFlow expectations.
+                // Match ReactFlow/XyFlow defaults (as seen in upstream `initialState.ts` and
+                // `ZoomPane` props).
+                s.connect_on_click = true;
+                s.pan_on_scroll = false;
+                s.pan_on_scroll_speed = 0.5;
+                s.connection_radius = 20.0;
+                s.connection_drag_threshold = 1.0;
+                s.snap_grid = CanvasSize {
+                    width: 15.0,
+                    height: 15.0,
+                };
+                s.pan_on_drag = NodeGraphPanOnDragButtons {
+                    left: true,
+                    middle: false,
+                    right: false,
+                };
             }
             Self::ShaderGraph => {
                 // Panning: middle-mouse drag is the primary affordance.
@@ -75,6 +91,21 @@ impl NodeGraphInteractionPreset {
 #[cfg(test)]
 mod tests {
     use super::NodeGraphInteractionPreset;
+
+    #[test]
+    fn xyflow_preset_matches_upstream_defaults() {
+        let s = NodeGraphInteractionPreset::XyFlow.interaction_state();
+        assert!(s.connect_on_click);
+        assert!(!s.pan_on_scroll);
+        assert_eq!(s.pan_on_scroll_speed, 0.5);
+        assert_eq!(s.connection_radius, 20.0);
+        assert_eq!(s.connection_drag_threshold, 1.0);
+        assert_eq!(s.snap_grid.width, 15.0);
+        assert_eq!(s.snap_grid.height, 15.0);
+        assert!(s.pan_on_drag.left);
+        assert!(!s.pan_on_drag.middle);
+        assert!(!s.pan_on_drag.right);
+    }
 
     #[test]
     fn shadergraph_preset_enables_reroute_double_click_and_middle_mouse_pan() {
