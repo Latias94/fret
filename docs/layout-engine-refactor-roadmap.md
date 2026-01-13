@@ -142,7 +142,11 @@ To keep solve counts stable and avoid accidental re-introduction of re-entrant l
 code should follow these rules:
 
 1. Treat barrier solves as an escape hatch: do not call them from normal wrappers/flow containers.
-   Only explicit barriers may call `LayoutCx::solve_barrier_child_root_if_needed(...)`:
+   Only explicit barriers may call `LayoutCx::solve_barrier_child_root_if_needed(...)`.
+   Direct calls into `UiTree::solve_barrier_flow_root(_if_needed)` are considered internal-only
+   plumbing (useful for tests), and should not be used by general-purpose wrappers/flow containers.
+
+   Allowed call sites:
    - Scroll / VirtualList: `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`
    - ResizableSplit: `crates/fret-ui/src/resizable_split/widget.rs`
    The `_if_needed` helper skips work when the subtree is clean, and avoids engine solves for translation-only changes

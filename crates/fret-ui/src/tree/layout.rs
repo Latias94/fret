@@ -516,6 +516,10 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    /// Internal barrier bridge: prefer calling via `LayoutCx::solve_barrier_child_root(...)`.
+    ///
+    /// Only explicit layout barriers (scroll, virtualization, resizable splits, etc.) should solve
+    /// child roots "out of band" like this, and only during `LayoutPassKind::Final`.
     pub(crate) fn solve_barrier_flow_root(
         &mut self,
         app: &mut H,
@@ -555,6 +559,7 @@ impl<H: UiHost> UiTree<H> {
         self.put_layout_engine(engine);
     }
 
+    /// Internal barrier bridge: prefer calling via `LayoutCx::solve_barrier_child_root_if_needed(...)`.
     pub(crate) fn solve_barrier_flow_root_if_needed(
         &mut self,
         app: &mut H,

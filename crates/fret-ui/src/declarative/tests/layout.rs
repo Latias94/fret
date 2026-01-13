@@ -807,14 +807,9 @@ fn solve_barrier_flow_root_reuses_solved_root_even_after_other_solves() {
 
     impl<H: UiHost> Widget<H> for PrecomputesSameRootTwice {
         fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
-            let sf = cx.scale_factor;
-            let app = &mut *cx.app;
-            let services = &mut *cx.services;
-            let tree = &mut *cx.tree;
-
-            tree.solve_barrier_flow_root(app, services, self.a, self.rect, sf);
-            tree.solve_barrier_flow_root(app, services, self.b, self.rect, sf);
-            tree.solve_barrier_flow_root(app, services, self.a, self.rect, sf);
+            cx.solve_barrier_child_root(self.a, self.rect);
+            cx.solve_barrier_child_root(self.b, self.rect);
+            cx.solve_barrier_child_root(self.a, self.rect);
 
             cx.available
         }
@@ -880,16 +875,11 @@ fn solve_barrier_flow_root_if_needed_skips_translation_only_bounds_changes() {
 
     impl<H: UiHost> Widget<H> for PrecomputeThenTranslate {
         fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
-            let sf = cx.scale_factor;
-            let app = &mut *cx.app;
-            let services = &mut *cx.services;
-            let tree = &mut *cx.tree;
-
             let rect = if self.calls == 0 {
-                tree.solve_barrier_flow_root(app, services, self.child, self.rect_a, sf);
+                cx.solve_barrier_child_root(self.child, self.rect_a);
                 self.rect_a
             } else {
-                tree.solve_barrier_flow_root_if_needed(app, services, self.child, self.rect_b, sf);
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
                 self.rect_b
             };
             self.calls = self.calls.saturating_add(1);
