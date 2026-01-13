@@ -250,6 +250,32 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
         self.tree.register_viewport_root(child, bounds);
         bounds.size
     }
+
+    pub fn solve_barrier_child_root(&mut self, child: NodeId, bounds: Rect) {
+        if self.pass_kind != LayoutPassKind::Final {
+            return;
+        }
+        self.tree.solve_barrier_flow_root(
+            self.app,
+            self.services,
+            child,
+            bounds,
+            self.scale_factor,
+        );
+    }
+
+    pub fn solve_barrier_child_root_if_needed(&mut self, child: NodeId, bounds: Rect) {
+        if self.pass_kind != LayoutPassKind::Final {
+            return;
+        }
+        self.tree.solve_barrier_flow_root_if_needed(
+            self.app,
+            self.services,
+            child,
+            bounds,
+            self.scale_factor,
+        );
+    }
     pub fn measure_in(&mut self, child: NodeId, constraints: LayoutConstraints) -> Size {
         self.tree.measure_in(
             self.app,

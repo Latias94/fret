@@ -141,10 +141,12 @@ Acceptance:
 To keep solve counts stable and avoid accidental re-introduction of re-entrant layout patterns, v2
 code should follow these rules:
 
-1. Treat barrier precompute as an escape hatch: do not call it from normal wrappers/flow containers.
-   Only explicit barriers (e.g. Scroll/VirtualList/ResizableSplit) may call
-   `solve_barrier_flow_root_if_needed(...)`. The `_if_needed` helper skips work when the
-   subtree is clean, and avoids engine solves for translation-only changes (size stable, origin shifts).
+1. Treat barrier solves as an escape hatch: do not call them from normal wrappers/flow containers.
+   Only explicit barriers may call `LayoutCx::solve_barrier_child_root_if_needed(...)`:
+   - Scroll / VirtualList: `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`
+   - ResizableSplit: `crates/fret-ui/src/resizable_split/widget.rs`
+   The `_if_needed` helper skips work when the subtree is clean, and avoids engine solves for translation-only changes
+   (size stable, origin shifts).
 2. Keep solve stats per-call and use them to detect regressions.
 3. Translation-only bounds shifts must still keep existing engine nodes "alive" for stable identity
    and incremental updates (do not let `end_frame` prune large subtrees during scrolling/panning).

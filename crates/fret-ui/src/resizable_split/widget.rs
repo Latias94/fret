@@ -297,16 +297,11 @@ impl<H: UiHost> Widget<H> for ResizableSplit {
         self.last_handle_rect = handle_rect;
 
         if cx.pass_kind == crate::layout_pass::LayoutPassKind::Final {
-            let sf = cx.scale_factor;
-            let app = &mut *cx.app;
-            let services = &mut *cx.services;
-            let tree = &mut *cx.tree;
-
             if !cx.children.is_empty() {
-                tree.solve_barrier_flow_root_if_needed(app, services, cx.children[0], rect_a, sf);
+                cx.solve_barrier_child_root_if_needed(cx.children[0], rect_a);
             }
             if cx.children.len() >= 2 {
-                tree.solve_barrier_flow_root_if_needed(app, services, cx.children[1], rect_b, sf);
+                cx.solve_barrier_child_root_if_needed(cx.children[1], rect_b);
             }
         }
 
