@@ -5,8 +5,8 @@ use crate::engine::ChartState;
 use crate::engine::lod::{
     BoundsAccum, BoundsCursor, DataBounds, LodScratch, MinMaxPerPixelCursor,
     compute_bounds_step_selection, compute_bounds_step_selection_with, finalize_bounds,
-    minmax_per_pixel_finalize, minmax_per_pixel_step_segmented_with, minmax_per_pixel_step_selection,
-    minmax_per_pixel_step_selection_with,
+    minmax_per_pixel_finalize, minmax_per_pixel_step_segmented_with,
+    minmax_per_pixel_step_selection, minmax_per_pixel_step_selection_with,
 };
 use crate::engine::model::ChartModel;
 use crate::engine::window::{DataWindow, DataWindowX, DataWindowY};
@@ -1707,7 +1707,10 @@ impl MarksStage {
                 }
 
                 let row_range = selection.as_range(table.row_count);
-                let row_end = row_range.end.min(x.len().min(y0.len()));
+                let mut row_end = row_range.end.min(x.len()).min(y0.len());
+                if let Some(y1) = y1 {
+                    row_end = row_end.min(y1.len());
+                }
                 let row_range = row_range.start.min(row_end)..row_end;
 
                 let stroke = Some((crate::ids::PaintId(0), StrokeStyleV2::default()));
@@ -1833,8 +1836,18 @@ impl MarksStage {
                         marks.arena.points.reserve(indices.len());
                         marks.arena.data_indices.reserve(indices.len());
 
-                        let x_span = (bounds.x_max - bounds.x_min).max(f64::MIN_POSITIVE);
-                        let y_span = (bounds.y_max - bounds.y_min).max(f64::MIN_POSITIVE);
+                        let x_span = bounds.x_max - bounds.x_min;
+                        let y_span = bounds.y_max - bounds.y_min;
+                        let x_span = if x_span.is_finite() && x_span > 0.0 {
+                            x_span
+                        } else {
+                            1.0
+                        };
+                        let y_span = if y_span.is_finite() && y_span > 0.0 {
+                            y_span
+                        } else {
+                            1.0
+                        };
 
                         for &i in indices.iter() {
                             let xi = x.get(i).copied().unwrap_or(f64::NAN);
@@ -1845,10 +1858,9 @@ impl MarksStage {
                             let yi = yi.clamp(bounds.y_min, bounds.y_max);
                             let tx = ((xi - bounds.x_min) / x_span).clamp(0.0, 1.0);
                             let ty = ((yi - bounds.y_min) / y_span).clamp(0.0, 1.0);
-                            let px_x =
-                                viewport.origin.x.0 + (tx as f32) * viewport.size.width.0;
-                            let px_y = viewport.origin.y.0
-                                + (1.0 - (ty as f32)) * viewport.size.height.0;
+                            let px_x = viewport.origin.x.0 + (tx as f32) * viewport.size.width.0;
+                            let px_y =
+                                viewport.origin.y.0 + (1.0 - (ty as f32)) * viewport.size.height.0;
                             marks.arena.points.push(Point::new(Px(px_x), Px(px_y)));
                             marks.arena.data_indices.push(i as u32);
                         }
@@ -1950,8 +1962,18 @@ impl MarksStage {
                         marks.arena.points.reserve(indices.len());
                         marks.arena.data_indices.reserve(indices.len());
 
-                        let x_span = (bounds.x_max - bounds.x_min).max(f64::MIN_POSITIVE);
-                        let y_span = (bounds.y_max - bounds.y_min).max(f64::MIN_POSITIVE);
+                        let x_span = bounds.x_max - bounds.x_min;
+                        let y_span = bounds.y_max - bounds.y_min;
+                        let x_span = if x_span.is_finite() && x_span > 0.0 {
+                            x_span
+                        } else {
+                            1.0
+                        };
+                        let y_span = if y_span.is_finite() && y_span > 0.0 {
+                            y_span
+                        } else {
+                            1.0
+                        };
 
                         for &i in indices.iter() {
                             let xi = x.get(i).copied().unwrap_or(f64::NAN);
@@ -1962,10 +1984,9 @@ impl MarksStage {
                             let yi = yi.clamp(bounds.y_min, bounds.y_max);
                             let tx = ((xi - bounds.x_min) / x_span).clamp(0.0, 1.0);
                             let ty = ((yi - bounds.y_min) / y_span).clamp(0.0, 1.0);
-                            let px_x =
-                                viewport.origin.x.0 + (tx as f32) * viewport.size.width.0;
-                            let px_y = viewport.origin.y.0
-                                + (1.0 - (ty as f32)) * viewport.size.height.0;
+                            let px_x = viewport.origin.x.0 + (tx as f32) * viewport.size.width.0;
+                            let px_y =
+                                viewport.origin.y.0 + (1.0 - (ty as f32)) * viewport.size.height.0;
                             marks.arena.points.push(Point::new(Px(px_x), Px(px_y)));
                             marks.arena.data_indices.push(i as u32);
                         }

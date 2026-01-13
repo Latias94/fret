@@ -350,7 +350,11 @@ pub fn minmax_per_pixel_step_segmented_with(
 
         let xi = x.get(i).copied().unwrap_or(f64::NAN);
         let yi = y_at(i);
-        let valid = xi.is_finite() && yi.is_finite() && is_valid(i, xi, yi);
+        let valid = xi.is_finite()
+            && yi.is_finite()
+            && xi >= bounds.x_min
+            && xi <= bounds.x_max
+            && is_valid(i, xi, yi);
 
         if !valid {
             if cursor.in_segment && cursor.segment_points_seen > 0 {

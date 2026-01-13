@@ -1,6 +1,7 @@
 #![allow(clippy::all)]
 
 use std::collections::BTreeMap;
+use std::ops::Range;
 
 use crate::action::Action;
 use crate::data::{Column, DataTable};
@@ -3749,6 +3750,285 @@ fn data_zoom_x_filter_mode_weakfilter_matches_filter_for_monotonic_x() {
     );
     assert_eq!(view.x_policy.filter.min, Some(20.0));
     assert_eq!(view.x_policy.filter.max, Some(40.0));
+}
+
+#[test]
+fn data_zoom_x_filter_mode_empty_breaks_line_into_segments_for_interleaved_out_of_window_points() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let zoom_id = crate::ids::DataZoomId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(160.0)),
+        )),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![DataZoomXSpec {
+            id: zoom_id,
+            axis: x_axis,
+            filter_mode: FilterMode::Empty,
+            min_value_span: None,
+            max_value_span: None,
+        }],
+        data_zoom_y: vec![],
+        tooltip: None,
+        axis_pointer: None,
+        visual_maps: vec![],
+        series: vec![SeriesSpec {
+            id: series_id,
+            name: None,
+            kind: SeriesKind::Line,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
+            bar_layout: Default::default(),
+            area_baseline: None,
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(vec![
+        1.0, 2.0, 100.0, 3.0, 4.0, 200.0, 5.0, 6.0,
+    ]));
+    table.push_column(Column::F64(vec![1.0, 2.0, 1.0, 3.0, 4.0, 1.0, 5.0, 6.0]));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x_axis,
+        window: Some(DataWindow {
+            min: 0.0,
+            max: 10.0,
+        }),
+    });
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let marks = &engine.output().marks;
+    let mut segments: BTreeMap<u64, Range<usize>> = BTreeMap::new();
+    for node in &marks.nodes {
+        if node.kind != crate::marks::MarkKind::Polyline || node.source_series != Some(series_id) {
+            continue;
+        }
+        let MarkPayloadRef::Polyline(poly) = &node.payload else {
+            continue;
+        };
+        segments.insert(crate::ids::mark_variant(node.id), poly.points.clone());
+    }
+
+    assert_eq!(segments.len(), 3, "expected three polyline segments");
+    let expected = [
+        (0u64, vec![0u32, 1u32]),
+        (1u64, vec![3u32, 4u32]),
+        (2u64, vec![6u32, 7u32]),
+    ];
+    for (variant, indices) in expected {
+        let range = segments.get(&variant).expect("missing segment variant");
+        let actual = &marks.arena.data_indices[range.clone()];
+        assert_eq!(actual, &indices[..]);
+    }
+}
+
+#[test]
+fn data_zoom_x_filter_mode_empty_breaks_band_into_segments_for_interleaved_out_of_window_points() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let zoom_id = crate::ids::DataZoomId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y0_field = crate::ids::FieldId::new(2);
+    let y1_field = crate::ids::FieldId::new(3);
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(160.0)),
+        )),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y0_field,
+                    column: 1,
+                },
+                FieldSpec {
+                    id: y1_field,
+                    column: 2,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![DataZoomXSpec {
+            id: zoom_id,
+            axis: x_axis,
+            filter_mode: FilterMode::Empty,
+            min_value_span: None,
+            max_value_span: None,
+        }],
+        data_zoom_y: vec![],
+        tooltip: None,
+        axis_pointer: None,
+        visual_maps: vec![],
+        series: vec![SeriesSpec {
+            id: series_id,
+            name: None,
+            kind: SeriesKind::Band,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y0_field,
+                y2: Some(y1_field),
+            },
+            x_axis,
+            y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
+            bar_layout: Default::default(),
+            area_baseline: None,
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(vec![
+        1.0, 2.0, 100.0, 3.0, 4.0, 200.0, 5.0, 6.0,
+    ]));
+    table.push_column(Column::F64(vec![1.0, 2.0, 1.0, 3.0, 4.0, 1.0, 5.0, 6.0]));
+    table.push_column(Column::F64(vec![2.0, 3.0, 2.0, 4.0, 5.0, 2.0, 6.0, 7.0]));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x_axis,
+        window: Some(DataWindow {
+            min: 0.0,
+            max: 10.0,
+        }),
+    });
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let marks = &engine.output().marks;
+    let mut variants: Vec<u64> = Vec::new();
+    let mut lower: BTreeMap<u64, Range<usize>> = BTreeMap::new();
+    let mut upper: BTreeMap<u64, Range<usize>> = BTreeMap::new();
+
+    for node in &marks.nodes {
+        if node.kind != crate::marks::MarkKind::Polyline || node.source_series != Some(series_id) {
+            continue;
+        }
+        let MarkPayloadRef::Polyline(poly) = &node.payload else {
+            continue;
+        };
+        let v = crate::ids::mark_variant(node.id);
+        variants.push(v);
+        if v % 2 == 1 {
+            lower.insert(v, poly.points.clone());
+        } else {
+            upper.insert(v, poly.points.clone());
+        }
+    }
+
+    variants.sort_unstable();
+    assert_eq!(variants, vec![1, 2, 3, 4, 5, 6]);
+
+    let expected = [
+        (1u64, vec![0u32, 1u32]),
+        (3u64, vec![3u32, 4u32]),
+        (5u64, vec![6u32, 7u32]),
+    ];
+    for (variant, indices) in expected {
+        let range = lower.get(&variant).expect("missing lower segment variant");
+        let actual = &marks.arena.data_indices[range.clone()];
+        assert_eq!(actual, &indices[..]);
+
+        let range = upper
+            .get(&(variant + 1))
+            .expect("missing upper segment variant");
+        let actual = &marks.arena.data_indices[range.clone()];
+        assert_eq!(actual, &indices[..]);
+    }
 }
 
 #[test]
