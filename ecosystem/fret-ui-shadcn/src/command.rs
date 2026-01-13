@@ -2507,6 +2507,215 @@ mod tests {
         });
     }
 
+    fn click(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        at: Point,
+    ) {
+        ui.dispatch_event(
+            app,
+            services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: at,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            app,
+            services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: at,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+    }
+
+    fn rect_center(r: Rect) -> Point {
+        Point::new(
+            Px(r.origin.x.0 + r.size.width.0 * 0.5),
+            Px(r.origin.y.0 + r.size.height.0 * 0.5),
+        )
+    }
+
+    fn render_dialog_frame(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        query: Model<String>,
+        items: Vec<CommandItem>,
+        close_on_select: bool,
+    ) -> fret_core::NodeId {
+        let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        fret_ui_kit::OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "cmdk-dialog",
+            |cx| {
+                vec![
+                    CommandDialog::new(open, query, items)
+                        .close_on_select(close_on_select)
+                        .into_element(cx, |cx| crate::Button::new("Open").into_element(cx)),
+                ]
+            },
+        );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    #[test]
+    fn command_dialog_close_on_select_closes_and_clears_query() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let query = app.models_mut().insert(String::from("al"));
+        let selected = app.models_mut().insert(false);
+
+        let on_select: fret_ui::action::OnActivate = Arc::new({
+            let selected = selected.clone();
+            move |host, action_cx, _reason| {
+                let _ = host.models_mut().update(&selected, |v| *v = true);
+                host.request_redraw(action_cx.window);
+            }
+        });
+
+        let items = vec![CommandItem::new("Alpha").on_select_action(on_select)];
+
+        let bounds = bounds();
+        let mut services = FakeServices::default();
+
+        let _root = render_dialog_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            query.clone(),
+            items.clone(),
+            true,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let alpha = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Alpha"))
+            .map(|n| n.bounds)
+            .expect("Alpha option bounds");
+
+        click(&mut ui, &mut app, &mut services, rect_center(alpha));
+
+        let _ = render_dialog_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            query.clone(),
+            items,
+            true,
+        );
+
+        assert!(!open.read_ref(&app, |v| *v).expect("read open"));
+        assert_eq!(query.read_ref(&app, |v| v.clone()).expect("read query"), "");
+        assert!(selected.read_ref(&app, |v| *v).expect("read selected"));
+    }
+
+    #[test]
+    fn command_dialog_close_on_select_false_does_not_close_or_clear_query() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let query = app.models_mut().insert(String::from("al"));
+        let selected = app.models_mut().insert(false);
+
+        let on_select: fret_ui::action::OnActivate = Arc::new({
+            let selected = selected.clone();
+            move |host, action_cx, _reason| {
+                let _ = host.models_mut().update(&selected, |v| *v = true);
+                host.request_redraw(action_cx.window);
+            }
+        });
+
+        let items = vec![CommandItem::new("Alpha").on_select_action(on_select)];
+
+        let bounds = bounds();
+        let mut services = FakeServices::default();
+
+        let _root = render_dialog_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            query.clone(),
+            items.clone(),
+            false,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let alpha = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Alpha"))
+            .map(|n| n.bounds)
+            .expect("Alpha option bounds");
+
+        click(&mut ui, &mut app, &mut services, rect_center(alpha));
+
+        let _ = render_dialog_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            query.clone(),
+            items,
+            false,
+        );
+
+        assert!(open.read_ref(&app, |v| *v).expect("read open"));
+        assert_eq!(
+            query.read_ref(&app, |v| v.clone()).expect("read query"),
+            "al"
+        );
+        assert!(selected.read_ref(&app, |v| *v).expect("read selected"));
+    }
+
     fn render_frame(
         ui: &mut UiTree<App>,
         app: &mut App,
