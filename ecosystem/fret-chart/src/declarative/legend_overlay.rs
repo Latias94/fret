@@ -34,6 +34,7 @@ enum LegendSelectorAction {
 pub(crate) struct LegendOverlayState {
     pub series: Vec<LegendSeriesEntry>,
     panel_rect: Option<Rect>,
+    last_pointer_pos: Option<Point>,
     item_rects: Vec<(delinea::SeriesId, Rect)>,
     selector_rects: Vec<(LegendSelectorAction, Rect)>,
     hover_series: Option<delinea::SeriesId>,
@@ -45,6 +46,13 @@ pub(crate) struct LegendOverlayState {
 }
 
 impl LegendOverlayState {
+    pub(crate) fn is_pointer_in_panel(&self) -> bool {
+        let in_panel = self
+            .panel_rect
+            .is_some_and(|r| self.last_pointer_pos.is_some_and(|pos| r.contains(pos)));
+        in_panel || self.hover_series.is_some() || self.hover_selector.is_some()
+    }
+
     fn series_at(&self, pos: Point) -> Option<delinea::SeriesId> {
         self.item_rects
             .iter()
@@ -99,9 +107,10 @@ pub(crate) fn legend_overlay_tool(
     let engine_down = engine.clone();
     let on_pointer_down: OnCanvasToolPointerDown =
         Arc::new(move |host, action_cx, _tool_cx, down| {
-            let Ok(st) = legend_state_down.lock() else {
+            let Ok(mut st) = legend_state_down.lock() else {
                 return CanvasToolDownResult::unhandled();
             };
+            st.last_pointer_pos = Some(down.position);
             let selector = st.selector_at(down.position);
             let series = st.series_at(down.position);
             let in_panel = st.panel_rect.is_some_and(|r| r.contains(down.position));
@@ -204,6 +213,7 @@ pub(crate) fn legend_overlay_tool(
             let Ok(mut st) = legend_state_move.lock() else {
                 return false;
             };
+            st.last_pointer_pos = Some(mv.position);
 
             let in_panel = st.panel_rect.is_some_and(|r| r.contains(mv.position));
             if !in_panel {

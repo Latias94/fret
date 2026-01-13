@@ -7,12 +7,13 @@ use delinea::engine::window::DataWindow;
 use delinea::marks::{MarkKind, MarkPayloadRef, MarkTree};
 use delinea::{Action, ChartEngine, WorkBudget};
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, MouseButton, PathCommand, PathStyle, Point, Px, Rect, Size,
-    StrokeStyle,
+    Color, Corners, DrawOrder, Edges, KeyCode, MouseButton, PathCommand, PathStyle, Point, Px,
+    Rect, Size, StrokeStyle,
 };
 use fret_runtime::Model;
+use fret_ui::action::OnKeyDown;
 use fret_ui::canvas::CanvasPainter;
-use fret_ui::element::{AnyElement, CanvasProps, Length, PointerRegionProps};
+use fret_ui::element::{AnyElement, CanvasProps, FocusScopeProps, Length, PointerRegionProps};
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::recipes::canvas_pan_zoom::{PanZoomCanvasPaintCx, PanZoomCanvasSurfacePanelProps};
 use fret_ui_kit::recipes::canvas_tool_router::{
@@ -154,6 +155,11 @@ pub struct ChartCanvasPanelProps {
     pub engine: Option<Model<ChartEngine>>,
     pub spec: delinea::ChartSpec,
 
+    /// Optional formatter hook for axis-trigger tooltips (ADR 1148).
+    ///
+    /// When `None`, `DefaultTooltipFormatter` is used.
+    pub tooltip_formatter: Option<Arc<dyn TooltipFormatter>>,
+
     /// Chart interaction mapping (ImPlot-aligned). Defaults to a "safe" wheel mapping
     /// (zoom requires Ctrl), because charts are often embedded inside scroll containers.
     pub input_map: ChartInputMap,
@@ -168,6 +174,7 @@ impl ChartCanvasPanelProps {
             canvas: CanvasProps::default(),
             engine: None,
             spec,
+            tooltip_formatter: None,
             input_map: default_chart_input_map_safe(),
             style: ChartStyle::default(),
         }
@@ -216,6 +223,15 @@ pub fn chart_canvas_panel<H: UiHost>(
         |st| st.clone(),
     );
 
+    let default_tooltip_formatter: Arc<dyn TooltipFormatter> = cx.with_state(
+        || Arc::new(DefaultTooltipFormatter::default()) as Arc<dyn TooltipFormatter>,
+        |st| st.clone(),
+    );
+    let tooltip_formatter: Arc<dyn TooltipFormatter> = props
+        .tooltip_formatter
+        .clone()
+        .unwrap_or(default_tooltip_formatter);
+
     // Step the engine during declarative render and cache the current marks snapshot.
     let bounds = cx.bounds;
     let mut unfinished = false;
@@ -226,6 +242,7 @@ pub fn chart_canvas_panel<H: UiHost>(
     let mut axis_pointer: Option<delinea::engine::AxisPointerOutput> = None;
     let mut tooltip_lines: Vec<TooltipTextLine> = Vec::new();
 
+    let tooltip_formatter_c = tooltip_formatter.clone();
     let _ = engine.update(cx.app, |engine, _cx| {
         if engine.model().viewport != Some(bounds) {
             let _ = engine.apply_patch(
@@ -282,9 +299,11 @@ pub fn chart_canvas_panel<H: UiHost>(
         axis_pointer = engine.output().axis_pointer.clone();
         tooltip_lines.clear();
         if let Some(axis_pointer) = axis_pointer.as_ref() {
-            let formatter = DefaultTooltipFormatter::default();
-            tooltip_lines =
-                formatter.format_axis_pointer(engine, &engine.output().axis_windows, axis_pointer);
+            tooltip_lines = tooltip_formatter_c.format_axis_pointer(
+                engine,
+                &engine.output().axis_windows,
+                axis_pointer,
+            );
         }
     });
 
@@ -694,5 +713,60 @@ pub fn chart_canvas_panel<H: UiHost>(
         });
     };
 
-    canvas_tool_router_panel(cx, router_props, tools, paint)
+    let engine_k = engine.clone();
+    let legend_state_k = legend_state.clone();
+    let on_key_down: OnKeyDown = Arc::new(move |host, action_cx, down| {
+        let modifiers = down.modifiers;
+        let legend_mods_ok =
+            modifiers.ctrl && !modifiers.alt && !modifiers.alt_gr && !modifiers.meta;
+        if !legend_mods_ok {
+            return false;
+        }
+
+        let in_legend = legend_state_k
+            .lock()
+            .ok()
+            .is_some_and(|st| st.is_pointer_in_panel());
+        if !in_legend {
+            return false;
+        }
+
+        let changed = host
+            .models_mut()
+            .update(&engine_k, |engine| {
+                let model = engine.model();
+                let updates = match down.key {
+                    KeyCode::KeyA if modifiers.shift => {
+                        crate::legend_logic::legend_select_none_updates(model)
+                    }
+                    KeyCode::KeyA => crate::legend_logic::legend_select_all_updates(model),
+                    KeyCode::KeyI if !modifiers.shift => {
+                        crate::legend_logic::legend_invert_updates(model)
+                    }
+                    _ => return false,
+                };
+                if updates.is_empty() {
+                    return false;
+                }
+                engine.apply_action(Action::SetSeriesVisibility { updates });
+                true
+            })
+            .ok()
+            .unwrap_or(false);
+
+        if !changed {
+            return false;
+        }
+        if let Ok(mut st) = legend_state_k.lock() {
+            st.anchor = None;
+        }
+        host.request_redraw(action_cx.window);
+        true
+    });
+
+    let focus_props = FocusScopeProps::default();
+    cx.focus_scope_with_id(focus_props, move |cx, focus_id| {
+        cx.key_add_on_key_down_for(focus_id, on_key_down);
+        vec![canvas_tool_router_panel(cx, router_props, tools, paint)]
+    })
 }
