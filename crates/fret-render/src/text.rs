@@ -226,10 +226,28 @@ pub enum GlyphQuadKind {
     Color,
 }
 
+fn atlas_pages_for_shape(glyphs: &[GlyphQuad]) -> (u32, u32) {
+    let mut mask = 0u32;
+    let mut color = 0u32;
+    for g in glyphs {
+        let shift = u32::from(g.atlas_page);
+        if shift >= 32 {
+            continue;
+        }
+        match g.kind {
+            GlyphQuadKind::Mask => mask |= 1u32 << shift,
+            GlyphQuadKind::Color => color |= 1u32 << shift,
+        }
+    }
+    (mask, color)
+}
+
 #[derive(Debug, Clone)]
 pub struct TextBlob {
     pub shape: Arc<TextShape>,
     pub paint_palette: Option<Arc<[Option<fret_core::Color>]>>,
+    mask_pages: u32,
+    color_pages: u32,
     ref_count: u32,
 }
 
@@ -436,6 +454,8 @@ struct PendingUpload {
 struct GlyphAtlasPage {
     allocator: etagere::BucketedAtlasAllocator,
     pending: Vec<PendingUpload>,
+    live_refs: u32,
+    last_used_epoch: u64,
     bind_group: wgpu::BindGroup,
     _texture: wgpu::Texture,
 }
@@ -506,6 +526,8 @@ impl GlyphAtlas {
                     height as i32,
                 )),
                 pending: Vec::new(),
+                live_refs: 0,
+                last_used_epoch: 0,
                 bind_group,
                 _texture: texture,
             });
@@ -528,12 +550,77 @@ impl GlyphAtlas {
                 self.height as i32,
             ));
             page.pending.clear();
+            page.live_refs = 0;
+            page.last_used_epoch = 0;
         }
     }
 
     fn bind_group(&self, page: u16) -> &wgpu::BindGroup {
         let idx = (page as usize).min(self.pages.len().saturating_sub(1));
         &self.pages[idx].bind_group
+    }
+
+    fn touch_pages(&mut self, pages: u32, epoch: u64) {
+        for (idx, page) in self.pages.iter_mut().enumerate() {
+            if pages & (1u32 << idx) != 0 {
+                page.last_used_epoch = epoch;
+            }
+        }
+    }
+
+    fn add_live_blob_refs(&mut self, pages: u32) {
+        for (idx, page) in self.pages.iter_mut().enumerate() {
+            if pages & (1u32 << idx) != 0 {
+                page.live_refs = page.live_refs.saturating_add(1);
+            }
+        }
+    }
+
+    fn remove_live_blob_refs(&mut self, pages: u32) {
+        for (idx, page) in self.pages.iter_mut().enumerate() {
+            if pages & (1u32 << idx) != 0 && page.live_refs > 0 {
+                page.live_refs -= 1;
+            }
+        }
+    }
+
+    fn evict_lru_unreferenced_page(&mut self) -> bool {
+        let mut victim: Option<usize> = None;
+        for (idx, page) in self.pages.iter().enumerate() {
+            if page.live_refs > 0 {
+                continue;
+            }
+            let pick = match victim {
+                None => true,
+                Some(prev) => page.last_used_epoch < self.pages[prev].last_used_epoch,
+            };
+            if pick {
+                victim = Some(idx);
+            }
+        }
+
+        let Some(victim) = victim else {
+            return false;
+        };
+
+        self.pages[victim].allocator = etagere::BucketedAtlasAllocator::new(etagere::Size::new(
+            self.width as i32,
+            self.height as i32,
+        ));
+        self.pages[victim].pending.clear();
+        self.pages[victim].last_used_epoch = 0;
+
+        let victim_page = victim as u16;
+        let keys_to_remove: Vec<GlyphRasterKey> = self
+            .glyphs
+            .iter()
+            .filter_map(|(k, e)| (e.page == victim_page).then_some(*k))
+            .collect();
+        for k in keys_to_remove {
+            self.glyphs.remove(&k);
+        }
+
+        true
     }
 
     fn flush_uploads(&mut self, queue: &wgpu::Queue) {
@@ -611,8 +698,11 @@ impl GlyphAtlas {
         h: u32,
         bytes_per_pixel: u32,
         data: Vec<u8>,
+        epoch: u64,
     ) -> Result<GlyphAtlasEntry, GlyphAtlasInsertError> {
         if let Some(hit) = self.glyphs.get(&key).copied() {
+            let idx = (hit.page as usize).min(self.pages.len().saturating_sub(1));
+            self.pages[idx].last_used_epoch = epoch;
             return Ok(hit);
         }
 
@@ -626,41 +716,48 @@ impl GlyphAtlas {
 
         let size = etagere::Size::new(w_pad as i32, h_pad as i32);
 
-        for (page_index, page) in self.pages.iter_mut().enumerate() {
-            let Some(allocation) = page.allocator.allocate(size) else {
-                continue;
-            };
+        for _ in 0..=self.pages.len() {
+            for (page_index, page) in self.pages.iter_mut().enumerate() {
+                let Some(allocation) = page.allocator.allocate(size) else {
+                    continue;
+                };
 
-            let Ok(base_x) = u32::try_from(allocation.rectangle.min.x) else {
-                page.allocator.deallocate(allocation.id);
-                continue;
-            };
-            let Ok(base_y) = u32::try_from(allocation.rectangle.min.y) else {
-                page.allocator.deallocate(allocation.id);
-                continue;
-            };
+                let Ok(base_x) = u32::try_from(allocation.rectangle.min.x) else {
+                    page.allocator.deallocate(allocation.id);
+                    continue;
+                };
+                let Ok(base_y) = u32::try_from(allocation.rectangle.min.y) else {
+                    page.allocator.deallocate(allocation.id);
+                    continue;
+                };
 
-            let x = base_x.saturating_add(pad);
-            let y = base_y.saturating_add(pad);
+                let x = base_x.saturating_add(pad);
+                let y = base_y.saturating_add(pad);
 
-            page.pending.push(PendingUpload {
-                x,
-                y,
-                w,
-                h,
-                bytes_per_pixel,
-                data,
-            });
+                page.pending.push(PendingUpload {
+                    x,
+                    y,
+                    w,
+                    h,
+                    bytes_per_pixel,
+                    data,
+                });
+                page.last_used_epoch = epoch;
 
-            let entry = GlyphAtlasEntry {
-                page: page_index as u16,
-                x,
-                y,
-                w,
-                h,
-            };
-            self.glyphs.insert(key, entry);
-            return Ok(entry);
+                let entry = GlyphAtlasEntry {
+                    page: page_index as u16,
+                    x,
+                    y,
+                    w,
+                    h,
+                };
+                self.glyphs.insert(key, entry);
+                return Ok(entry);
+            }
+
+            if !self.evict_lru_unreferenced_page() {
+                return Err(GlyphAtlasInsertError::OutOfSpace);
+            }
         }
 
         Err(GlyphAtlasInsertError::OutOfSpace)
@@ -799,6 +896,7 @@ pub struct TextSystem {
     scratch: ShapeBuffer,
     font_stack_key: u64,
     font_db_revision: u64,
+    text_atlas_epoch: u64,
 
     blobs: SlotMap<TextBlobId, TextBlob>,
     blob_cache: HashMap<TextBlobKey, TextBlobId>,
@@ -969,6 +1067,7 @@ impl TextSystem {
             scratch: ShapeBuffer::default(),
             font_stack_key,
             font_db_revision,
+            text_atlas_epoch: 0,
 
             blobs: SlotMap::with_key(),
             blob_cache: HashMap::new(),
@@ -980,6 +1079,11 @@ impl TextSystem {
             color_atlas,
             atlas_bind_group_layout,
         }
+    }
+
+    fn bump_text_atlas_epoch(&mut self) -> u64 {
+        self.text_atlas_epoch = self.text_atlas_epoch.saturating_add(1);
+        self.text_atlas_epoch
     }
 
     pub fn set_font_families(&mut self, config: &TextFontFamilyConfig) -> bool {
@@ -1131,6 +1235,7 @@ impl TextSystem {
         constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics) {
         let text = key.text.clone();
+        let epoch = self.bump_text_atlas_epoch();
 
         let prefer_parley = constraints.max_width.is_some()
             && (matches!(constraints.wrap, TextWrap::Word)
@@ -1141,6 +1246,8 @@ impl TextSystem {
         if let Some(id) = self.blob_cache.get(&key).copied() {
             if let Some(blob) = self.blobs.get_mut(id) {
                 blob.ref_count = blob.ref_count.saturating_add(1);
+                self.mask_atlas.touch_pages(blob.mask_pages, epoch);
+                self.color_atlas.touch_pages(blob.color_pages, epoch);
                 return (id, blob.shape.metrics);
             }
             // Stale cache entry (shouldn't happen, but keep it robust).
@@ -1162,8 +1269,7 @@ impl TextSystem {
             if key.backend == 1 {
                 let scale = constraints.scale_factor.max(1.0);
 
-                let mut did_retry_atlas = false;
-                let shape = loop {
+                let shape = {
                     let input = match spans {
                         Some(spans) => TextInput::Attributed {
                             text: text.as_ref(),
@@ -1207,10 +1313,9 @@ impl TextSystem {
                     let mut lines: Vec<TextLine> = Vec::with_capacity(wrapped.lines.len().max(1));
                     let mut first_line_caret_stops: Vec<(usize, Px)> = Vec::new();
 
-                    let mut atlas_overflowed = false;
                     let mut line_top_px = 0.0_f32;
 
-                    'build: for (i, (range, line)) in wrapped
+                    for (i, (range, line)) in wrapped
                         .line_ranges
                         .iter()
                         .cloned()
@@ -1318,13 +1423,11 @@ impl TextSystem {
                                         image.placement.height,
                                         bytes_per_pixel,
                                         data,
+                                        epoch,
                                     ) {
                                         Ok(e) => e,
                                         Err(GlyphAtlasInsertError::TooLarge) => continue,
-                                        Err(GlyphAtlasInsertError::OutOfSpace) => {
-                                            atlas_overflowed = true;
-                                            break 'build;
-                                        }
+                                        Err(GlyphAtlasInsertError::OutOfSpace) => continue,
                                     };
                                     (
                                         atlas_w, atlas_h, entry.x, entry.y, entry.w, entry.h,
@@ -1342,13 +1445,11 @@ impl TextSystem {
                                         image.placement.height,
                                         bytes_per_pixel,
                                         data,
+                                        epoch,
                                     ) {
                                         Ok(e) => e,
                                         Err(GlyphAtlasInsertError::TooLarge) => continue,
-                                        Err(GlyphAtlasInsertError::OutOfSpace) => {
-                                            atlas_overflowed = true;
-                                            break 'build;
-                                        }
+                                        Err(GlyphAtlasInsertError::OutOfSpace) => continue,
                                     };
                                     (
                                         atlas_w, atlas_h, entry.x, entry.y, entry.w, entry.h,
@@ -1385,24 +1486,12 @@ impl TextSystem {
                         line_top_px += line_height_px;
                     }
 
-                    if atlas_overflowed && !did_retry_atlas {
-                        self.blobs.clear();
-                        self.blob_cache.clear();
-                        self.blob_key_by_id.clear();
-                        self.shape_cache.clear();
-                        self.measure_cache.clear();
-                        self.mask_atlas.reset();
-                        self.color_atlas.reset();
-                        did_retry_atlas = true;
-                        continue;
-                    }
-
-                    break Arc::new(TextShape {
+                    Arc::new(TextShape {
                         glyphs: Arc::from(glyphs),
                         metrics,
                         lines: Arc::from(lines),
                         caret_stops: Arc::from(first_line_caret_stops),
-                    });
+                    })
                 };
 
                 self.shape_cache.insert(shape_key.clone(), shape.clone());
@@ -1431,8 +1520,7 @@ impl TextSystem {
                     }
                 }
 
-                let mut did_retry_atlas = false;
-                let shape = loop {
+                let shape = {
                     let (layout, line_starts) = layout_text(
                         &mut self.font_system,
                         &mut self.scratch,
@@ -1449,9 +1537,7 @@ impl TextSystem {
 
                     let mut glyphs: Vec<GlyphQuad> = Vec::new();
                     let mut lines: Vec<TextLine> = Vec::with_capacity(layout.lines.len().max(1));
-                    let mut atlas_overflowed = false;
-
-                    'build: for (i, l) in layout.lines.iter().enumerate() {
+                    for (i, l) in layout.lines.iter().enumerate() {
                         let base_offset = line_starts[i];
 
                         let line_height_px = l
@@ -1556,13 +1642,11 @@ impl TextSystem {
                                         image.placement.height,
                                         bytes_per_pixel,
                                         data,
+                                        epoch,
                                     ) {
                                         Ok(e) => e,
                                         Err(GlyphAtlasInsertError::TooLarge) => continue,
-                                        Err(GlyphAtlasInsertError::OutOfSpace) => {
-                                            atlas_overflowed = true;
-                                            break 'build;
-                                        }
+                                        Err(GlyphAtlasInsertError::OutOfSpace) => continue,
                                     };
                                     (atlas_w, atlas_h, e.x, e.y, e.w, e.h, e.page)
                                 }
@@ -1577,13 +1661,11 @@ impl TextSystem {
                                         image.placement.height,
                                         bytes_per_pixel,
                                         data,
+                                        epoch,
                                     ) {
                                         Ok(e) => e,
                                         Err(GlyphAtlasInsertError::TooLarge) => continue,
-                                        Err(GlyphAtlasInsertError::OutOfSpace) => {
-                                            atlas_overflowed = true;
-                                            break 'build;
-                                        }
+                                        Err(GlyphAtlasInsertError::OutOfSpace) => continue,
                                     };
                                     (atlas_w, atlas_h, e.x, e.y, e.w, e.h, e.page)
                                 }
@@ -1613,29 +1695,17 @@ impl TextSystem {
                         }
                     }
 
-                    if atlas_overflowed && !did_retry_atlas {
-                        self.blobs.clear();
-                        self.blob_cache.clear();
-                        self.blob_key_by_id.clear();
-                        self.shape_cache.clear();
-                        self.measure_cache.clear();
-                        self.mask_atlas.reset();
-                        self.color_atlas.reset();
-                        did_retry_atlas = true;
-                        continue;
-                    }
-
                     let caret_stops = lines
                         .first()
                         .map(|l| l.caret_stops.clone())
                         .unwrap_or_else(|| vec![(0, Px(0.0))]);
 
-                    break Arc::new(TextShape {
+                    Arc::new(TextShape {
                         glyphs: Arc::from(glyphs),
                         metrics,
                         lines: Arc::from(lines),
                         caret_stops: Arc::from(caret_stops),
-                    });
+                    })
                 };
 
                 self.shape_cache.insert(shape_key.clone(), shape.clone());
@@ -1644,11 +1714,18 @@ impl TextSystem {
         };
 
         let metrics = shape.metrics;
+        let (mask_pages, color_pages) = atlas_pages_for_shape(shape.glyphs.as_ref());
         let id = self.blobs.insert(TextBlob {
             shape,
             paint_palette,
+            mask_pages,
+            color_pages,
             ref_count: 1,
         });
+        self.mask_atlas.add_live_blob_refs(mask_pages);
+        self.color_atlas.add_live_blob_refs(color_pages);
+        self.mask_atlas.touch_pages(mask_pages, epoch);
+        self.color_atlas.touch_pages(color_pages, epoch);
         self.blob_cache.insert(key.clone(), id);
         self.blob_key_by_id.insert(id, key);
         (id, metrics)
@@ -1878,14 +1955,15 @@ impl TextSystem {
     }
 
     pub fn release(&mut self, blob: TextBlobId) {
-        let (should_remove, remove_shape) = match self.blobs.get_mut(blob) {
+        let (should_remove, remove_shape, mask_pages, color_pages) = match self.blobs.get_mut(blob)
+        {
             Some(b) => {
                 if b.ref_count > 1 {
                     b.ref_count = b.ref_count.saturating_sub(1);
-                    (false, false)
+                    (false, false, 0, 0)
                 } else {
                     let remove_shape = Arc::strong_count(&b.shape) == 2;
-                    (true, remove_shape)
+                    (true, remove_shape, b.mask_pages, b.color_pages)
                 }
             }
             None => return,
@@ -1894,6 +1972,9 @@ impl TextSystem {
         if !should_remove {
             return;
         }
+
+        self.mask_atlas.remove_live_blob_refs(mask_pages);
+        self.color_atlas.remove_live_blob_refs(color_pages);
 
         if let Some(key) = self.blob_key_by_id.remove(&blob) {
             self.blob_cache.remove(&key);
