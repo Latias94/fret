@@ -130,7 +130,7 @@ As of the initial audit:
 - [x] Implement `DataTable` composition in `ecosystem/fret-ui-shadcn`.
 - [x] Remove the `datagrid` feature gate (no heavy deps).
 - [x] Add `DataTableTanstack` (ungated).
-- [ ] Add a demo page in `apps/fret-examples` to validate interaction outcomes.
+- [x] Add a demo page in `apps/fret-examples` to validate interaction outcomes (`apps/fret-examples/src/tanstack_datatable_demo.rs`).
 
 ### M3 — Forms (headless + shadcn wrappers)
 
@@ -215,7 +215,9 @@ Baseline observations (what we already have):
   - `fret-ui` provides `VirtualList` with fixed-measure support and visible-only key caching.
   - `fret-ui-kit`’s `declarative::table` configures fixed row height (`VirtualListMeasureMode::Fixed`) and uses `VirtualListKeyCacheMode::VisibleOnly`.
 - A TanStack-aligned headless engine already exists (`fret-ui-kit/headless::table`) and is memoized/unit-testable.
-- `fret-ui-shadcn`’s `DataGrid` prototype already performs 2D virtualization (rows + columns), but it nests a horizontal `VirtualList` inside each visible row.
+- `fret-ui-shadcn`’s `DataGrid` prototype performs 2D virtualization (rows + columns) by computing
+  visible ranges once per frame (via `fret-ui-kit/headless::grid_viewport`) and only instantiating
+  visible cells (no per-row nested `VirtualList`).
 
 What Glide Data Grid suggests (when pushing to “spreadsheet scale”):
 
@@ -224,9 +226,8 @@ What Glide Data Grid suggests (when pushing to “spreadsheet scale”):
 
 Likely next optimizations (if we need “million-row spreadsheet” class performance):
 
-- Avoid per-row nested horizontal virtualization:
-  - compute the visible column range once per frame and reuse it across visible rows,
-  - or introduce a dedicated 2D virtualization helper (headless algorithm) that yields `(row_range, col_range)` plus offsets.
+- Generalize the 2D range computation + absolute-position pattern into a reusable “virtual grid” primitive,
+  so higher-level grids (tables, calendars, inspectors) do not need to re-implement the loop plumbing.
 - Consider a “canvas-backed grid” mode:
   - render cell backgrounds/text via a single `Canvas`/paint pass for the dense region,
   - keep interactive editing/selection as lightweight overlay layers (selection rects, caret, editor popover).
@@ -241,4 +242,6 @@ Likely next optimizations (if we need “million-row spreadsheet” class perfor
 - 2026-01-13: Completed initial audit of existing table/datagrid/forms/calendar surfaces (see “Current Code Surfaces”).
 - 2026-01-13: Removed `fret-ui-shadcn` `datagrid` feature gate and validated with `cargo check -p fret-ui-shadcn` and `cargo nextest run -p fret-ui-shadcn`.
 - 2026-01-13: Hardened `DataTable`/`DataGrid` vertical virtualization options for fixed row height (`VirtualListMeasureMode::Fixed` + `VirtualListKeyCacheMode::VisibleOnly`).
-- 2026-01-13: Hardened `DataGrid` horizontal virtualization options for fixed column widths (`VirtualListMeasureMode::Fixed` + `VirtualListKeyCacheMode::VisibleOnly`).
+- 2026-01-13: Added `DataTableTanstack` native demo (`apps/fret-examples/src/tanstack_datatable_demo.rs`).
+- 2026-01-13: Extended `headless::grid_viewport` to support “count + key_fn” axes (no need to allocate a `Vec<K>` for fixed/identity-key axes).
+- 2026-01-13: Refactored `fret-ui-shadcn` `DataGrid` prototype to use `Scroll` + `headless::grid_viewport` (single range computation per frame; absolute-positioned visible cells).
