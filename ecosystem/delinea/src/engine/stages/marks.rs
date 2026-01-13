@@ -264,6 +264,7 @@ impl MarksStage {
                         crate::spec::SeriesKind::Scatter
                             | crate::spec::SeriesKind::Line
                             | crate::spec::SeriesKind::Area
+                            | crate::spec::SeriesKind::Band
                     )
                 {
                     let Some(series_view) = view.series_view(*series_id) else {
@@ -303,9 +304,20 @@ impl MarksStage {
                             crate::spec::FilterMode::WeakFilter,
                         );
 
-                        let _ = data_view.request_xy_weak_filter_for_series(
-                            model, datasets, view, *series_id, base_range, x_filter, y_filter,
-                        );
+                        match series.kind {
+                            crate::spec::SeriesKind::Band => {
+                                let _ = data_view.request_xy_weak_filter_band_for_series(
+                                    model, datasets, view, *series_id, base_range, x_filter,
+                                    y_filter,
+                                );
+                            }
+                            _ => {
+                                let _ = data_view.request_xy_weak_filter_for_series(
+                                    model, datasets, view, *series_id, base_range, x_filter,
+                                    y_filter,
+                                );
+                            }
+                        }
                     }
                 }
             }

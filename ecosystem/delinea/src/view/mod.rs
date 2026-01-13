@@ -133,17 +133,31 @@ impl ViewState {
                 .unwrap_or(FilterMode::None);
 
             const MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN: usize = 200_000;
+            let band_y1_ready = if series.kind == crate::spec::SeriesKind::Band {
+                if let Some(y1_field) = series.encode.y2
+                    && let Some(y1_col) = dataset.fields.get(&y1_field).copied()
+                {
+                    table.column_f64(y1_col).is_some()
+                } else {
+                    false
+                }
+            } else {
+                true
+            };
+
             let xy_weak_filter_active = series.stack.is_none()
                 && matches!(
                     series.kind,
                     crate::spec::SeriesKind::Scatter
                         | crate::spec::SeriesKind::Line
                         | crate::spec::SeriesKind::Area
+                        | crate::spec::SeriesKind::Band
                 )
                 && x_filter_mode == FilterMode::WeakFilter
                 && y_filter_mode == FilterMode::WeakFilter
                 && x_node.window().is_some()
                 && state.data_window_y.get(&series.y_axis).is_some()
+                && band_y1_ready
                 && base_range.end.saturating_sub(base_range.start)
                     <= MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN;
 

@@ -1012,6 +1012,7 @@ impl ChartEngine {
                 crate::spec::SeriesKind::Scatter
                     | crate::spec::SeriesKind::Line
                     | crate::spec::SeriesKind::Area
+                    | crate::spec::SeriesKind::Band
             ) {
                 continue;
             }
@@ -1061,8 +1062,19 @@ impl ChartEngine {
             let Some(x_col) = dataset.fields.get(&series.encode.x).copied() else {
                 continue;
             };
-            let Some(y_col) = dataset.fields.get(&series.encode.y).copied() else {
+            let Some(y0_col) = dataset.fields.get(&series.encode.y).copied() else {
                 continue;
+            };
+            let y1_col = if series.kind == crate::spec::SeriesKind::Band {
+                let Some(y1_field) = series.encode.y2 else {
+                    continue;
+                };
+                let Some(y1_col) = dataset.fields.get(&y1_field).copied() else {
+                    continue;
+                };
+                Some(y1_col)
+            } else {
+                None
             };
 
             let base_range = self
@@ -1107,15 +1119,27 @@ impl ChartEngine {
                 continue;
             }
 
-            let sel = self.data_view_stage.selection_for_xy_weak_filter(
-                series.dataset,
-                x_col,
-                y_col,
-                base_range,
-                x_filter,
-                y_filter,
-                table.revision,
-            );
+            let sel = match y1_col {
+                Some(y1_col) => self.data_view_stage.selection_for_xy_weak_filter_band(
+                    series.dataset,
+                    x_col,
+                    y0_col,
+                    y1_col,
+                    base_range,
+                    x_filter,
+                    y_filter,
+                    table.revision,
+                ),
+                None => self.data_view_stage.selection_for_xy_weak_filter(
+                    series.dataset,
+                    x_col,
+                    y0_col,
+                    base_range,
+                    x_filter,
+                    y_filter,
+                    table.revision,
+                ),
+            };
 
             if let Some(sel) = sel {
                 let series_view = &mut self.view.series[series_view_index];
