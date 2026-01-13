@@ -1341,8 +1341,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     let dx = position.x.0 - drag.start.x.0;
                                     let dy = position.y.0 - drag.start.y.0;
                                     let dist2 = dx * dx + dy * dy;
-                                    // Match ImGui's default drag threshold (~6px).
-                                    if !dragging && dist2 > 36.0 {
+                                    // Match ImGui's default drag threshold (~6 screen px).
+                                    const DOCK_PANEL_DRAG_THRESHOLD_PX: Px = Px(6.0);
+                                    let threshold_sq = DOCK_PANEL_DRAG_THRESHOLD_PX.0
+                                        * DOCK_PANEL_DRAG_THRESHOLD_PX.0;
+                                    if !dragging && dist2 > threshold_sq {
                                         dragging = true;
                                     }
                                 } else if !dragging {
