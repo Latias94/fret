@@ -226,28 +226,12 @@ pub enum GlyphQuadKind {
     Color,
 }
 
-fn atlas_pages_for_shape(glyphs: &[GlyphQuad]) -> (u32, u32) {
-    let mut mask = 0u32;
-    let mut color = 0u32;
-    for g in glyphs {
-        let shift = u32::from(g.atlas_page);
-        if shift >= 32 {
-            continue;
-        }
-        match g.kind {
-            GlyphQuadKind::Mask => mask |= 1u32 << shift,
-            GlyphQuadKind::Color => color |= 1u32 << shift,
-        }
-    }
-    (mask, color)
-}
-
 #[derive(Debug, Clone)]
 pub struct TextBlob {
     pub shape: Arc<TextShape>,
     pub paint_palette: Option<Arc<[Option<fret_core::Color>]>>,
-    mask_pages: u32,
-    color_pages: u32,
+    mask_keys: Arc<[GlyphRasterKey]>,
+    color_keys: Arc<[GlyphRasterKey]>,
     ref_count: u32,
 }
 
@@ -435,10 +419,13 @@ const TEXT_ATLAS_MAX_PAGES: usize = 2;
 #[derive(Debug, Clone, Copy)]
 struct GlyphAtlasEntry {
     page: u16,
+    alloc_id: etagere::AllocId,
     x: u32,
     y: u32,
     w: u32,
     h: u32,
+    live_refs: u32,
+    last_used_epoch: u64,
 }
 
 #[derive(Debug)]
@@ -454,7 +441,7 @@ struct PendingUpload {
 struct GlyphAtlasPage {
     allocator: etagere::BucketedAtlasAllocator,
     pending: Vec<PendingUpload>,
-    live_refs: u32,
+    live_glyph_refs: u32,
     last_used_epoch: u64,
     bind_group: wgpu::BindGroup,
     _texture: wgpu::Texture,
@@ -526,7 +513,7 @@ impl GlyphAtlas {
                     height as i32,
                 )),
                 pending: Vec::new(),
-                live_refs: 0,
+                live_glyph_refs: 0,
                 last_used_epoch: 0,
                 bind_group,
                 _texture: texture,
@@ -550,7 +537,7 @@ impl GlyphAtlas {
                 self.height as i32,
             ));
             page.pending.clear();
-            page.live_refs = 0;
+            page.live_glyph_refs = 0;
             page.last_used_epoch = 0;
         }
     }
@@ -560,34 +547,76 @@ impl GlyphAtlas {
         &self.pages[idx].bind_group
     }
 
-    fn touch_pages(&mut self, pages: u32, epoch: u64) {
-        for (idx, page) in self.pages.iter_mut().enumerate() {
-            if pages & (1u32 << idx) != 0 {
-                page.last_used_epoch = epoch;
+    fn inc_live_ref(&mut self, key: GlyphRasterKey) {
+        let Some(entry) = self.glyphs.get_mut(&key) else {
+            return;
+        };
+        if entry.live_refs == 0 {
+            let idx = (entry.page as usize).min(self.pages.len().saturating_sub(1));
+            self.pages[idx].live_glyph_refs = self.pages[idx].live_glyph_refs.saturating_add(1);
+        }
+        entry.live_refs = entry.live_refs.saturating_add(1);
+    }
+
+    fn dec_live_ref(&mut self, key: GlyphRasterKey) {
+        let Some(entry) = self.glyphs.get_mut(&key) else {
+            return;
+        };
+        if entry.live_refs == 0 {
+            return;
+        }
+        entry.live_refs -= 1;
+        if entry.live_refs == 0 {
+            let idx = (entry.page as usize).min(self.pages.len().saturating_sub(1));
+            if self.pages[idx].live_glyph_refs > 0 {
+                self.pages[idx].live_glyph_refs -= 1;
             }
         }
     }
 
-    fn add_live_blob_refs(&mut self, pages: u32) {
-        for (idx, page) in self.pages.iter_mut().enumerate() {
-            if pages & (1u32 << idx) != 0 {
-                page.live_refs = page.live_refs.saturating_add(1);
-            }
+    fn inc_live_refs(&mut self, keys: &[GlyphRasterKey]) {
+        for &k in keys {
+            self.inc_live_ref(k);
         }
     }
 
-    fn remove_live_blob_refs(&mut self, pages: u32) {
-        for (idx, page) in self.pages.iter_mut().enumerate() {
-            if pages & (1u32 << idx) != 0 && page.live_refs > 0 {
-                page.live_refs -= 1;
+    fn dec_live_refs(&mut self, keys: &[GlyphRasterKey]) {
+        for &k in keys {
+            self.dec_live_ref(k);
+        }
+    }
+
+    fn evict_lru_unreferenced_glyph(&mut self) -> bool {
+        let mut victim: Option<(GlyphRasterKey, GlyphAtlasEntry)> = None;
+        for (&k, &e) in &self.glyphs {
+            if e.live_refs > 0 {
+                continue;
+            }
+            let pick = match victim {
+                None => true,
+                Some((_, prev)) => e.last_used_epoch < prev.last_used_epoch,
+            };
+            if pick {
+                victim = Some((k, e));
             }
         }
+
+        let Some((victim_key, victim_entry)) = victim else {
+            return false;
+        };
+
+        let page_idx = (victim_entry.page as usize).min(self.pages.len().saturating_sub(1));
+        self.pages[page_idx]
+            .allocator
+            .deallocate(victim_entry.alloc_id);
+        self.glyphs.remove(&victim_key);
+        true
     }
 
     fn evict_lru_unreferenced_page(&mut self) -> bool {
         let mut victim: Option<usize> = None;
         for (idx, page) in self.pages.iter().enumerate() {
-            if page.live_refs > 0 {
+            if page.live_glyph_refs > 0 {
                 continue;
             }
             let pick = match victim {
@@ -609,6 +638,7 @@ impl GlyphAtlas {
         ));
         self.pages[victim].pending.clear();
         self.pages[victim].last_used_epoch = 0;
+        self.pages[victim].live_glyph_refs = 0;
 
         let victim_page = victim as u16;
         let keys_to_remove: Vec<GlyphRasterKey> = self
@@ -700,10 +730,11 @@ impl GlyphAtlas {
         data: Vec<u8>,
         epoch: u64,
     ) -> Result<GlyphAtlasEntry, GlyphAtlasInsertError> {
-        if let Some(hit) = self.glyphs.get(&key).copied() {
+        if let Some(hit) = self.glyphs.get_mut(&key) {
+            hit.last_used_epoch = epoch;
             let idx = (hit.page as usize).min(self.pages.len().saturating_sub(1));
             self.pages[idx].last_used_epoch = epoch;
-            return Ok(hit);
+            return Ok(*hit);
         }
 
         let pad = self.padding_px;
@@ -746,18 +777,25 @@ impl GlyphAtlas {
 
                 let entry = GlyphAtlasEntry {
                     page: page_index as u16,
+                    alloc_id: allocation.id,
                     x,
                     y,
                     w,
                     h,
+                    live_refs: 0,
+                    last_used_epoch: epoch,
                 };
                 self.glyphs.insert(key, entry);
                 return Ok(entry);
             }
 
-            if !self.evict_lru_unreferenced_page() {
-                return Err(GlyphAtlasInsertError::OutOfSpace);
+            if self.evict_lru_unreferenced_glyph() {
+                continue;
             }
+            if self.evict_lru_unreferenced_page() {
+                continue;
+            }
+            return Err(GlyphAtlasInsertError::OutOfSpace);
         }
 
         Err(GlyphAtlasInsertError::OutOfSpace)
@@ -847,6 +885,12 @@ struct TextMeasureEntry {
     metrics: TextMetrics,
 }
 
+#[derive(Clone, Debug)]
+struct ShapeGlyphKeys {
+    mask: Arc<[GlyphRasterKey]>,
+    color: Arc<[GlyphRasterKey]>,
+}
+
 fn hash_text(text: &str) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     text.hash(&mut hasher);
@@ -902,6 +946,7 @@ pub struct TextSystem {
     blob_cache: HashMap<TextBlobKey, TextBlobId>,
     blob_key_by_id: HashMap<TextBlobId, TextBlobKey>,
     shape_cache: HashMap<TextShapeKey, Arc<TextShape>>,
+    shape_glyph_keys: HashMap<TextShapeKey, ShapeGlyphKeys>,
     measure_cache: HashMap<TextMeasureKey, VecDeque<TextMeasureEntry>>,
 
     mask_atlas: GlyphAtlas,
@@ -958,6 +1003,7 @@ impl TextSystem {
             self.blob_cache.clear();
             self.blob_key_by_id.clear();
             self.shape_cache.clear();
+            self.shape_glyph_keys.clear();
             self.measure_cache.clear();
             self.mask_atlas.reset();
             self.color_atlas.reset();
@@ -1073,6 +1119,7 @@ impl TextSystem {
             blob_cache: HashMap::new(),
             blob_key_by_id: HashMap::new(),
             shape_cache: HashMap::new(),
+            shape_glyph_keys: HashMap::new(),
             measure_cache: HashMap::new(),
 
             mask_atlas,
@@ -1165,6 +1212,7 @@ impl TextSystem {
         self.blob_cache.clear();
         self.blob_key_by_id.clear();
         self.shape_cache.clear();
+        self.shape_glyph_keys.clear();
         self.measure_cache.clear();
         self.mask_atlas.reset();
         self.color_atlas.reset();
@@ -1246,8 +1294,6 @@ impl TextSystem {
         if let Some(id) = self.blob_cache.get(&key).copied() {
             if let Some(blob) = self.blobs.get_mut(id) {
                 blob.ref_count = blob.ref_count.saturating_add(1);
-                self.mask_atlas.touch_pages(blob.mask_pages, epoch);
-                self.color_atlas.touch_pages(blob.color_pages, epoch);
                 return (id, blob.shape.metrics);
             }
             // Stale cache entry (shouldn't happen, but keep it robust).
@@ -1263,12 +1309,15 @@ impl TextSystem {
         });
 
         let shape_key = TextShapeKey::from_blob_key(&key);
+        let mut new_shape_keys: Option<ShapeGlyphKeys> = None;
         let shape = if let Some(shape) = self.shape_cache.get(&shape_key) {
             shape.clone()
         } else {
             if key.backend == 1 {
                 let scale = constraints.scale_factor.max(1.0);
 
+                let mut mask_keys: HashSet<GlyphRasterKey> = HashSet::new();
+                let mut color_keys: HashSet<GlyphRasterKey> = HashSet::new();
                 let shape = {
                     let input = match spans {
                         Some(spans) => TextInput::Attributed {
@@ -1429,6 +1478,9 @@ impl TextSystem {
                                         Err(GlyphAtlasInsertError::TooLarge) => continue,
                                         Err(GlyphAtlasInsertError::OutOfSpace) => continue,
                                     };
+                                    if mask_keys.insert(raster_key) {
+                                        self.mask_atlas.inc_live_ref(raster_key);
+                                    }
                                     (
                                         atlas_w, atlas_h, entry.x, entry.y, entry.w, entry.h,
                                         entry.page,
@@ -1451,6 +1503,9 @@ impl TextSystem {
                                         Err(GlyphAtlasInsertError::TooLarge) => continue,
                                         Err(GlyphAtlasInsertError::OutOfSpace) => continue,
                                     };
+                                    if color_keys.insert(raster_key) {
+                                        self.color_atlas.inc_live_ref(raster_key);
+                                    }
                                     (
                                         atlas_w, atlas_h, entry.x, entry.y, entry.w, entry.h,
                                         entry.page,
@@ -1494,6 +1549,13 @@ impl TextSystem {
                     })
                 };
 
+                let shape_keys = ShapeGlyphKeys {
+                    mask: Arc::from(mask_keys.into_iter().collect::<Vec<_>>()),
+                    color: Arc::from(color_keys.into_iter().collect::<Vec<_>>()),
+                };
+                self.shape_glyph_keys
+                    .insert(shape_key.clone(), shape_keys.clone());
+                new_shape_keys = Some(shape_keys);
                 self.shape_cache.insert(shape_key.clone(), shape.clone());
                 shape
             } else {
@@ -1520,6 +1582,8 @@ impl TextSystem {
                     }
                 }
 
+                let mut mask_keys: HashSet<GlyphRasterKey> = HashSet::new();
+                let mut color_keys: HashSet<GlyphRasterKey> = HashSet::new();
                 let shape = {
                     let (layout, line_starts) = layout_text(
                         &mut self.font_system,
@@ -1648,6 +1712,9 @@ impl TextSystem {
                                         Err(GlyphAtlasInsertError::TooLarge) => continue,
                                         Err(GlyphAtlasInsertError::OutOfSpace) => continue,
                                     };
+                                    if mask_keys.insert(raster_key) {
+                                        self.mask_atlas.inc_live_ref(raster_key);
+                                    }
                                     (atlas_w, atlas_h, e.x, e.y, e.w, e.h, e.page)
                                 }
                                 GlyphQuadKind::Color => {
@@ -1667,6 +1734,9 @@ impl TextSystem {
                                         Err(GlyphAtlasInsertError::TooLarge) => continue,
                                         Err(GlyphAtlasInsertError::OutOfSpace) => continue,
                                     };
+                                    if color_keys.insert(raster_key) {
+                                        self.color_atlas.inc_live_ref(raster_key);
+                                    }
                                     (atlas_w, atlas_h, e.x, e.y, e.w, e.h, e.page)
                                 }
                             };
@@ -1708,24 +1778,38 @@ impl TextSystem {
                     })
                 };
 
+                let shape_keys = ShapeGlyphKeys {
+                    mask: Arc::from(mask_keys.into_iter().collect::<Vec<_>>()),
+                    color: Arc::from(color_keys.into_iter().collect::<Vec<_>>()),
+                };
+                self.shape_glyph_keys
+                    .insert(shape_key.clone(), shape_keys.clone());
+                new_shape_keys = Some(shape_keys);
                 self.shape_cache.insert(shape_key.clone(), shape.clone());
                 shape
             }
         };
 
+        let shape_keys = new_shape_keys
+            .clone()
+            .or_else(|| self.shape_glyph_keys.get(&shape_key).cloned())
+            .unwrap_or_else(|| ShapeGlyphKeys {
+                mask: Arc::from(Vec::<GlyphRasterKey>::new()),
+                color: Arc::from(Vec::<GlyphRasterKey>::new()),
+            });
+        if new_shape_keys.is_none() {
+            self.mask_atlas.inc_live_refs(shape_keys.mask.as_ref());
+            self.color_atlas.inc_live_refs(shape_keys.color.as_ref());
+        }
+
         let metrics = shape.metrics;
-        let (mask_pages, color_pages) = atlas_pages_for_shape(shape.glyphs.as_ref());
         let id = self.blobs.insert(TextBlob {
             shape,
             paint_palette,
-            mask_pages,
-            color_pages,
+            mask_keys: shape_keys.mask,
+            color_keys: shape_keys.color,
             ref_count: 1,
         });
-        self.mask_atlas.add_live_blob_refs(mask_pages);
-        self.color_atlas.add_live_blob_refs(color_pages);
-        self.mask_atlas.touch_pages(mask_pages, epoch);
-        self.color_atlas.touch_pages(color_pages, epoch);
         self.blob_cache.insert(key.clone(), id);
         self.blob_key_by_id.insert(id, key);
         (id, metrics)
@@ -1955,15 +2039,19 @@ impl TextSystem {
     }
 
     pub fn release(&mut self, blob: TextBlobId) {
-        let (should_remove, remove_shape, mask_pages, color_pages) = match self.blobs.get_mut(blob)
-        {
+        let (should_remove, remove_shape, mask_keys, color_keys) = match self.blobs.get_mut(blob) {
             Some(b) => {
                 if b.ref_count > 1 {
                     b.ref_count = b.ref_count.saturating_sub(1);
-                    (false, false, 0, 0)
+                    (false, false, None, None)
                 } else {
                     let remove_shape = Arc::strong_count(&b.shape) == 2;
-                    (true, remove_shape, b.mask_pages, b.color_pages)
+                    (
+                        true,
+                        remove_shape,
+                        Some(b.mask_keys.clone()),
+                        Some(b.color_keys.clone()),
+                    )
                 }
             }
             None => return,
@@ -1973,14 +2061,19 @@ impl TextSystem {
             return;
         }
 
-        self.mask_atlas.remove_live_blob_refs(mask_pages);
-        self.color_atlas.remove_live_blob_refs(color_pages);
+        if let Some(mask_keys) = mask_keys {
+            self.mask_atlas.dec_live_refs(mask_keys.as_ref());
+        }
+        if let Some(color_keys) = color_keys {
+            self.color_atlas.dec_live_refs(color_keys.as_ref());
+        }
 
         if let Some(key) = self.blob_key_by_id.remove(&blob) {
             self.blob_cache.remove(&key);
             if remove_shape {
                 let shape_key = TextShapeKey::from_blob_key(&key);
                 self.shape_cache.remove(&shape_key);
+                self.shape_glyph_keys.remove(&shape_key);
             }
         }
         let _ = self.blobs.remove(blob);
