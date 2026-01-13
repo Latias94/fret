@@ -119,6 +119,6 @@ We will implement these modes without materializing new columns:
 ## Follow-ups
 
 - Validate `FilterMode::{WeakFilter,Empty}` semantics across both X and Y dataZoom, including view-size cap behavior.
-- Extend `Empty` parity to point-like series kinds (scatter/bar) and define the row/index stability contract for each.
+- Extend `Empty` parity to stacked series (and define the row/index stability contract for stacked value sampling).
 - Define a single “filter processor” stage that owns ordering-sensitive composition (X-before-Y) and outputs a unified
   participation contract (selection + masks) consumable by marks, hit-test, tooltip, and brush export.

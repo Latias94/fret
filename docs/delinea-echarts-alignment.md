@@ -125,7 +125,7 @@ single “at a glance” view of:
 - Missing vs ECharts (high value):
   - Y-driven filtering semantics (and ordering rules when multiple dims are filtered),
   - full ECharts-class `weakFilter` behavior across arbitrary dimension sets and axis types (beyond cartesian XY),
-  - ECharts-style `empty` masking parity across all series kinds (scatter/bar) and across all consumers (marks + axisPointer/tooltip + brush/hit-test),
+  - ECharts-style `empty` masking parity for stacked series and downstream outputs (brush export, transform ordering), beyond the current cartesian v1 subset.
   - 2D zoom interactions that can materialize sparse selections when needed.
 
 **S3 - 2D box zoom writes an atomic paired window action** (`[x]`)
