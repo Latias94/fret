@@ -8,6 +8,7 @@ mod runtime;
 pub use access::{take_element_state, with_element_state};
 pub use cx::ElementContext;
 pub use hash::global_root;
+pub(crate) use hash::stable_hash;
 pub use id::GlobalElementId;
 pub use queries::{
     bounds_for_element, node_for_element, root_bounds_for_element, visual_bounds_for_element,

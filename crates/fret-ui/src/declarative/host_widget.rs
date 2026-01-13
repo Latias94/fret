@@ -29,13 +29,13 @@ struct TextCache {
     last_overflow: Option<TextOverflow>,
     last_width: Option<Px>,
     last_measure_width: Option<Px>,
-    last_theme_revision: Option<u64>,
     last_font_stack_key: Option<u64>,
 }
 
 pub(super) struct ElementHostWidget {
     element: GlobalElementId,
     text_cache: TextCache,
+    canvas_cache: crate::canvas::CanvasCache,
     render_transform: Option<fret_core::Transform2D>,
     hit_testable: bool,
     hit_test_children: bool,
@@ -59,6 +59,7 @@ impl ElementHostWidget {
         Self {
             element,
             text_cache: TextCache::default(),
+            canvas_cache: crate::canvas::CanvasCache::default(),
             render_transform: None,
             hit_testable: true,
             hit_test_children: true,
@@ -617,6 +618,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         self.text_cache.metrics = None;
         self.text_cache.last_text = None;
         self.text_cache.last_rich = None;
+        self.canvas_cache.cleanup_resources(services);
         if let Some(input) = self.text_input.as_mut() {
             input.cleanup_resources(services);
         }

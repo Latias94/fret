@@ -16,7 +16,10 @@ use fret_core::{
 use fret_runtime::{CommandId, Effect};
 
 #[derive(Default)]
-struct FakeTextService {}
+struct FakeTextService {
+    prepare_calls: usize,
+    release_calls: usize,
+}
 
 impl TextService for FakeTextService {
     fn prepare(
@@ -25,6 +28,7 @@ impl TextService for FakeTextService {
         _style: &TextStyle,
         _constraints: TextConstraints,
     ) -> (fret_core::TextBlobId, TextMetrics) {
+        self.prepare_calls += 1;
         (
             fret_core::TextBlobId::default(),
             TextMetrics {
@@ -34,7 +38,9 @@ impl TextService for FakeTextService {
         )
     }
 
-    fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    fn release(&mut self, _blob: fret_core::TextBlobId) {
+        self.release_calls += 1;
+    }
 }
 
 impl fret_core::PathService for FakeTextService {
@@ -97,6 +103,7 @@ fn build_keyed_rows(
 }
 
 mod anchored;
+mod canvas;
 mod core;
 mod interactions;
 mod layout;

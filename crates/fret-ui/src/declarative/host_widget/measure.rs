@@ -213,6 +213,11 @@ impl ElementHostWidget {
                 props.layout,
                 cx.constraints,
             ),
+            ElementInstance::Canvas(props) => clamp_to_constraints_in_measure(
+                available_px_or_zero(cx.constraints),
+                props.layout,
+                cx.constraints,
+            ),
             ElementInstance::ViewportSurface(props) => clamp_to_constraints_in_measure(
                 Size::new(Px(0.0), Px(0.0)),
                 props.layout,
@@ -303,7 +308,10 @@ impl ElementHostWidget {
             overflow: props.overflow,
             scale_factor: cx.scale_factor,
         };
-        let metrics = cx.services.text().measure(&props.text, &style, constraints);
+        let metrics = cx
+            .services
+            .text()
+            .measure(props.text.as_ref(), &style, constraints);
         clamp_to_constraints_in_measure(metrics.size, props.layout, cx.constraints)
     }
 

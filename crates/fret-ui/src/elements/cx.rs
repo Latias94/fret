@@ -14,9 +14,10 @@ use crate::action::{
     PointerActionHooks, PressableActionHooks, PressableHoverActionHooks, RovingActionHooks,
     TimerActionHooks,
 };
+use crate::canvas::{CanvasPaintHooks, CanvasPainter, OnCanvasPaint};
 use crate::element::{
-    AnyElement, ColumnProps, ContainerProps, EffectLayerProps, ElementKind, FlexProps, GridProps,
-    HoverRegionProps, ImageProps, InteractivityGateProps, LayoutStyle, OpacityProps,
+    AnyElement, CanvasProps, ColumnProps, ContainerProps, EffectLayerProps, ElementKind, FlexProps,
+    GridProps, HoverRegionProps, ImageProps, InteractivityGateProps, LayoutStyle, OpacityProps,
     PointerRegionProps, PressableProps, PressableState, ResizablePanelGroupProps, RowProps,
     ScrollProps, ScrollbarProps, SelectableTextProps, SpacerProps, SpinnerProps, StackProps,
     StyledTextProps, SvgIconProps, TextAreaProps, TextInputProps, TextProps, ViewportSurfaceProps,
@@ -1352,6 +1353,22 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             AnyElement::new(id, ElementKind::Image(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn canvas(
+        &mut self,
+        props: CanvasProps,
+        paint: impl for<'p> Fn(&mut CanvasPainter<'p>) + 'static,
+    ) -> AnyElement {
+        let on_paint: OnCanvasPaint = Arc::new(paint);
+        self.scope(|cx| {
+            let id = cx.root_id();
+            cx.with_state_for(id, CanvasPaintHooks::default, |hooks| {
+                hooks.on_paint = Some(on_paint.clone());
+            });
+            AnyElement::new(id, ElementKind::Canvas(props), Vec::new())
         })
     }
 

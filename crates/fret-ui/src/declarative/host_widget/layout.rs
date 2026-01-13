@@ -127,6 +127,7 @@ impl ElementHostWidget {
             | ElementInstance::WheelRegion(_)
             | ElementInstance::Scrollbar(_)
             | ElementInstance::Image(_)
+            | ElementInstance::Canvas(_)
             | ElementInstance::ViewportSurface(_)
             | ElementInstance::SvgIcon(_)
             | ElementInstance::Spinner(_)
@@ -607,7 +608,6 @@ impl ElementHostWidget {
                 clamp_to_constraints(Size::new(Px(0.0), Px(0.0)), props.layout, cx.available)
             }
             ElementInstance::Text(props) => {
-                let theme_revision = cx.theme().revision();
                 cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
                 let font_stack_key = cx
                     .app
@@ -651,7 +651,6 @@ impl ElementHostWidget {
                     && self.text_cache.last_overflow == Some(props.overflow)
                     && self.text_cache.last_measure_width == Some(measure_width)
                     && self.text_cache.measured_scale_factor_bits == Some(scale_bits)
-                    && self.text_cache.last_theme_revision == Some(theme_revision)
                     && self.text_cache.last_font_stack_key == Some(font_stack_key);
 
                 let metrics = if can_reuse_metrics {
@@ -665,17 +664,13 @@ impl ElementHostWidget {
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
                     self.text_cache.last_measure_width = Some(measure_width);
-                    self.text_cache.last_theme_revision = Some(theme_revision);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
                     metrics
                 };
 
-                let _ = theme_revision;
-
                 clamp_to_constraints(metrics.size, props.layout, cx.available)
             }
             ElementInstance::StyledText(props) => {
-                let theme_revision = cx.theme().revision();
                 cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
                 let font_stack_key = cx
                     .app
@@ -719,7 +714,6 @@ impl ElementHostWidget {
                     && self.text_cache.last_overflow == Some(props.overflow)
                     && self.text_cache.last_measure_width == Some(measure_width)
                     && self.text_cache.measured_scale_factor_bits == Some(scale_bits)
-                    && self.text_cache.last_theme_revision == Some(theme_revision)
                     && self.text_cache.last_font_stack_key == Some(font_stack_key);
 
                 let metrics = if can_reuse_metrics {
@@ -737,7 +731,6 @@ impl ElementHostWidget {
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
                     self.text_cache.last_measure_width = Some(measure_width);
-                    self.text_cache.last_theme_revision = Some(theme_revision);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
                     metrics
                 };
@@ -745,7 +738,6 @@ impl ElementHostWidget {
                 clamp_to_constraints(metrics.size, props.layout, cx.available)
             }
             ElementInstance::SelectableText(props) => {
-                let theme_revision = cx.theme().revision();
                 cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
                 let font_stack_key = cx
                     .app
@@ -789,7 +781,6 @@ impl ElementHostWidget {
                     && self.text_cache.last_overflow == Some(props.overflow)
                     && self.text_cache.last_measure_width == Some(measure_width)
                     && self.text_cache.measured_scale_factor_bits == Some(scale_bits)
-                    && self.text_cache.last_theme_revision == Some(theme_revision)
                     && self.text_cache.last_font_stack_key == Some(font_stack_key);
 
                 let metrics = if can_reuse_metrics {
@@ -807,7 +798,6 @@ impl ElementHostWidget {
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
                     self.text_cache.last_measure_width = Some(measure_width);
-                    self.text_cache.last_theme_revision = Some(theme_revision);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
                     metrics
                 };
@@ -880,6 +870,9 @@ impl ElementHostWidget {
             ElementInstance::RovingFlex(props) => self.layout_flex_impl(cx, window, props.flex),
             ElementInstance::Grid(props) => self.layout_grid_impl(cx, window, props),
             ElementInstance::Image(props) => {
+                clamp_to_constraints(cx.available, props.layout, cx.available)
+            }
+            ElementInstance::Canvas(props) => {
                 clamp_to_constraints(cx.available, props.layout, cx.available)
             }
             ElementInstance::ViewportSurface(props) => {
