@@ -2,17 +2,17 @@
   "keymap_version": 2,
   "bindings": [
     {
-      "command": "command_palette.toggle",
+      "command": "app.command_palette",
       "platform": "macos",
       "keys": { "mods": ["meta"], "key": "KeyP" }
     },
     {
-      "command": "command_palette.toggle",
+      "command": "app.command_palette",
       "platform": "windows",
       "keys": { "mods": ["ctrl"], "key": "KeyP" }
     },
     {
-      "command": "command_palette.toggle",
+      "command": "app.command_palette",
       "platform": "linux",
       "keys": { "mods": ["ctrl"], "key": "KeyP" }
     },

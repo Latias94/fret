@@ -1149,7 +1149,7 @@ impl ComponentsGalleryDriver {
                                         )
                                         .a11y_label("Command palette")
                                         .into_element(cx, |cx| {
-                                            shadcn::Button::new("CommandDialog (Ctrl/Cmd+K)")
+                                            shadcn::Button::new("CommandDialog (Ctrl/Cmd+P)")
                                                 .variant(shadcn::ButtonVariant::Outline)
                                                 .toggle_model(cmdk_open.clone())
                                                 .into_element(cx)
@@ -1165,7 +1165,7 @@ impl ComponentsGalleryDriver {
                                                     .unwrap_or("<none>")
                                             )),
                                             cx.text(
-                                                "cmdk: Ctrl/Cmd+K opens, arrows/hover highlight, Enter selects",
+                                                "cmdk: Ctrl/Cmd+P opens, arrows/hover highlight, Enter selects",
                                             ),
                                             cmdk,
                                         ]

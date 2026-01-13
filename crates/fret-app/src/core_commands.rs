@@ -1,7 +1,7 @@
 use fret_core::{KeyCode, Modifiers};
 use fret_runtime::{
     CommandId, CommandMeta, CommandRegistry, CommandScope, DefaultKeybinding, KeyChord,
-    PlatformFilter, WhenExpr,
+    PlatformFilter,
 };
 
 pub const COMMAND_PALETTE: &str = "app.command_palette";
@@ -16,8 +16,6 @@ pub fn register_core_commands(registry: &mut CommandRegistry) {
 }
 
 pub fn register_command_palette(registry: &mut CommandRegistry) {
-    let when = WhenExpr::parse("!focus.is_text_input").expect("valid when expression");
-
     let mut ctrl_mods = Modifiers::default();
     ctrl_mods.ctrl = true;
     let mut meta_mods = Modifiers::default();
@@ -29,26 +27,20 @@ pub fn register_command_palette(registry: &mut CommandRegistry) {
         .with_default_keybindings([
             DefaultKeybinding {
                 platform: PlatformFilter::Windows,
-                chord: KeyChord::new(KeyCode::KeyK, ctrl_mods),
-                when: Some(when.clone()),
+                chord: KeyChord::new(KeyCode::KeyP, ctrl_mods),
+                when: None,
             },
             DefaultKeybinding {
                 platform: PlatformFilter::Linux,
-                chord: KeyChord::new(KeyCode::KeyK, ctrl_mods),
-                when: Some(when.clone()),
-            },
-            DefaultKeybinding {
-                platform: PlatformFilter::Web,
-                chord: KeyChord::new(KeyCode::KeyK, ctrl_mods),
-                when: Some(when.clone()),
+                chord: KeyChord::new(KeyCode::KeyP, ctrl_mods),
+                when: None,
             },
             DefaultKeybinding {
                 platform: PlatformFilter::Macos,
-                chord: KeyChord::new(KeyCode::KeyK, meta_mods),
-                when: Some(when),
+                chord: KeyChord::new(KeyCode::KeyP, meta_mods),
+                when: None,
             },
-        ])
-        .hidden();
+        ]);
 
     registry.register(CommandId::new(COMMAND_PALETTE), meta);
 }
