@@ -437,4 +437,5 @@ pub(super) struct SceneEncodingCacheKey {
     pub(super) scene_ops_len: usize,
     pub(super) render_targets_generation: u64,
     pub(super) images_generation: u64,
+    pub(super) text_atlas_revision: u64,
 }

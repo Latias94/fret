@@ -38,7 +38,11 @@ pub(in super::super) fn encode_text(
             GlyphQuadKind::Color => TextDrawKind::Color,
         };
 
-        if active_kind != Some(kind) || (active_kind.is_some() && active_page != g.atlas_page) {
+        let Some((atlas_page, uv)) = renderer.text_system.glyph_uv_for_instance(g) else {
+            continue;
+        };
+
+        if active_kind != Some(kind) || (active_kind.is_some() && active_page != atlas_page) {
             if let Some(prev) = active_kind {
                 let vertex_count =
                     (state.text_vertices.len() as u32).saturating_sub(group_first_vertex);
@@ -54,7 +58,7 @@ pub(in super::super) fn encode_text(
                 }
             }
             active_kind = Some(kind);
-            active_page = g.atlas_page;
+            active_page = atlas_page;
             group_first_vertex = state.text_vertices.len() as u32;
         }
 
@@ -83,7 +87,7 @@ pub(in super::super) fn encode_text(
             apply_transform_px(t_px, lx0, ly1),
         ];
 
-        let (u0, v0, u1, v1) = (g.uv[0], g.uv[1], g.uv[2], g.uv[3]);
+        let (u0, v0, u1, v1) = (uv[0], uv[1], uv[2], uv[3]);
 
         state.text_vertices.extend_from_slice(&[
             TextVertex {

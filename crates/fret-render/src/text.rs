@@ -3,6 +3,7 @@ use cosmic_text::{
     Attrs, AttrsList, CacheKey, Family, FontSystem, Hinting, Metrics, ShapeBuffer, ShapeLine,
     Shaping, Style as CosmicStyle, SwashCache, Weight,
 };
+use fret_core::scene::{Scene, SceneOp};
 use fret_core::{
     AttributedText, CaretAffinity, HitTestResult, Point, Rect, Size, TextBlobId, TextConstraints,
     TextInput, TextMetrics, TextOverflow, TextSlant, TextSpan, TextStyle, TextWrap, geometry::Px,
@@ -206,18 +207,12 @@ fn font_stack_cache_key(locale: &str, db: &cosmic_text::fontdb::Database, db_rev
 }
 
 #[derive(Debug, Clone)]
-pub struct GlyphQuad {
+pub struct GlyphInstance {
     /// Logical-space rect relative to the text baseline origin.
     pub rect: [f32; 4],
-    /// Normalized UV rect in the atlas: (u0, v0, u1, v1).
-    pub uv: [f32; 4],
     pub kind: GlyphQuadKind,
-    pub atlas_page: u16,
-    /// Index into `TextBlob::paint_palette` for per-span overrides (when present).
-    ///
-    /// This intentionally carries no actual paint data so theme/color changes do not invalidate
-    /// shaping/layout caches.
     pub paint_span: Option<u16>,
+    key: GlyphRasterKey,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -230,14 +225,12 @@ pub enum GlyphQuadKind {
 pub struct TextBlob {
     pub shape: Arc<TextShape>,
     pub paint_palette: Option<Arc<[Option<fret_core::Color>]>>,
-    mask_keys: Arc<[GlyphRasterKey]>,
-    color_keys: Arc<[GlyphRasterKey]>,
     ref_count: u32,
 }
 
 #[derive(Debug, Clone)]
 pub struct TextShape {
-    pub glyphs: Arc<[GlyphQuad]>,
+    pub glyphs: Arc<[GlyphInstance]>,
     pub metrics: TextMetrics,
     pub lines: Arc<[TextLine]>,
     pub caret_stops: Arc<[(usize, Px)]>,
@@ -459,6 +452,7 @@ struct GlyphAtlas {
     padding_px: u32,
     pages: Vec<GlyphAtlasPage>,
     glyphs: HashMap<GlyphRasterKey, GlyphAtlasEntry>,
+    revision: u64,
 }
 
 impl GlyphAtlas {
@@ -526,10 +520,12 @@ impl GlyphAtlas {
             padding_px,
             pages,
             glyphs: HashMap::new(),
+            revision: 0,
         }
     }
 
     fn reset(&mut self) {
+        self.revision = self.revision.saturating_add(1);
         self.glyphs.clear();
         for page in &mut self.pages {
             page.allocator = etagere::BucketedAtlasAllocator::new(etagere::Size::new(
@@ -545,6 +541,22 @@ impl GlyphAtlas {
     fn bind_group(&self, page: u16) -> &wgpu::BindGroup {
         let idx = (page as usize).min(self.pages.len().saturating_sub(1));
         &self.pages[idx].bind_group
+    }
+
+    fn revision(&self) -> u64 {
+        self.revision
+    }
+
+    fn entry(&self, key: GlyphRasterKey) -> Option<GlyphAtlasEntry> {
+        self.glyphs.get(&key).copied()
+    }
+
+    fn get(&mut self, key: GlyphRasterKey, epoch: u64) -> Option<GlyphAtlasEntry> {
+        let hit = self.glyphs.get_mut(&key)?;
+        hit.last_used_epoch = epoch;
+        let idx = (hit.page as usize).min(self.pages.len().saturating_sub(1));
+        self.pages[idx].last_used_epoch = epoch;
+        Some(*hit)
     }
 
     fn inc_live_ref(&mut self, key: GlyphRasterKey) {
@@ -610,6 +622,7 @@ impl GlyphAtlas {
             .allocator
             .deallocate(victim_entry.alloc_id);
         self.glyphs.remove(&victim_key);
+        self.revision = self.revision.saturating_add(1);
         true
     }
 
@@ -650,6 +663,7 @@ impl GlyphAtlas {
             self.glyphs.remove(&k);
         }
 
+        self.revision = self.revision.saturating_add(1);
         true
     }
 
@@ -786,6 +800,7 @@ impl GlyphAtlas {
                     last_used_epoch: epoch,
                 };
                 self.glyphs.insert(key, entry);
+                self.revision = self.revision.saturating_add(1);
                 return Ok(entry);
             }
 
@@ -885,12 +900,6 @@ struct TextMeasureEntry {
     metrics: TextMetrics,
 }
 
-#[derive(Clone, Debug)]
-struct ShapeGlyphKeys {
-    mask: Arc<[GlyphRasterKey]>,
-    color: Arc<[GlyphRasterKey]>,
-}
-
 fn hash_text(text: &str) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     text.hash(&mut hasher);
@@ -940,18 +949,20 @@ pub struct TextSystem {
     scratch: ShapeBuffer,
     font_stack_key: u64,
     font_db_revision: u64,
-    text_atlas_epoch: u64,
 
     blobs: SlotMap<TextBlobId, TextBlob>,
     blob_cache: HashMap<TextBlobKey, TextBlobId>,
     blob_key_by_id: HashMap<TextBlobId, TextBlobKey>,
     shape_cache: HashMap<TextShapeKey, Arc<TextShape>>,
-    shape_glyph_keys: HashMap<TextShapeKey, ShapeGlyphKeys>,
     measure_cache: HashMap<TextMeasureKey, VecDeque<TextMeasureEntry>>,
 
     mask_atlas: GlyphAtlas,
     color_atlas: GlyphAtlas,
     atlas_bind_group_layout: wgpu::BindGroupLayout,
+
+    text_pin_mask: Vec<Vec<GlyphRasterKey>>,
+    text_pin_color: Vec<Vec<GlyphRasterKey>>,
+    parley_font_bytes_by_id: HashMap<u64, Arc<[u8]>>,
 }
 
 fn family_for_font_id(font: &fret_core::FontId) -> Family<'_> {
@@ -1003,10 +1014,12 @@ impl TextSystem {
             self.blob_cache.clear();
             self.blob_key_by_id.clear();
             self.shape_cache.clear();
-            self.shape_glyph_keys.clear();
             self.measure_cache.clear();
             self.mask_atlas.reset();
             self.color_atlas.reset();
+            self.text_pin_mask.iter_mut().for_each(|v| v.clear());
+            self.text_pin_color.iter_mut().for_each(|v| v.clear());
+            self.parley_font_bytes_by_id.clear();
         }
 
         added
@@ -1113,24 +1126,21 @@ impl TextSystem {
             scratch: ShapeBuffer::default(),
             font_stack_key,
             font_db_revision,
-            text_atlas_epoch: 0,
 
             blobs: SlotMap::with_key(),
             blob_cache: HashMap::new(),
             blob_key_by_id: HashMap::new(),
             shape_cache: HashMap::new(),
-            shape_glyph_keys: HashMap::new(),
             measure_cache: HashMap::new(),
 
             mask_atlas,
             color_atlas,
             atlas_bind_group_layout,
-        }
-    }
 
-    fn bump_text_atlas_epoch(&mut self) -> u64 {
-        self.text_atlas_epoch = self.text_atlas_epoch.saturating_add(1);
-        self.text_atlas_epoch
+            text_pin_mask: vec![Vec::new(); 3],
+            text_pin_color: vec![Vec::new(); 3],
+            parley_font_bytes_by_id: HashMap::new(),
+        }
     }
 
     pub fn set_font_families(&mut self, config: &TextFontFamilyConfig) -> bool {
@@ -1212,10 +1222,12 @@ impl TextSystem {
         self.blob_cache.clear();
         self.blob_key_by_id.clear();
         self.shape_cache.clear();
-        self.shape_glyph_keys.clear();
         self.measure_cache.clear();
         self.mask_atlas.reset();
         self.color_atlas.reset();
+        self.text_pin_mask.iter_mut().for_each(|v| v.clear());
+        self.text_pin_color.iter_mut().for_each(|v| v.clear());
+        self.parley_font_bytes_by_id.clear();
         true
     }
 
@@ -1234,6 +1246,237 @@ impl TextSystem {
     pub fn flush_uploads(&mut self, queue: &wgpu::Queue) {
         self.mask_atlas.flush_uploads(queue);
         self.color_atlas.flush_uploads(queue);
+    }
+
+    pub(crate) fn atlas_revision(&self) -> u64 {
+        self.mask_atlas
+            .revision()
+            .wrapping_mul(0x9E37_79B9_7F4A_7C15)
+            ^ self.color_atlas.revision().rotate_left(1)
+    }
+
+    pub(crate) fn glyph_uv_for_instance(&self, glyph: &GlyphInstance) -> Option<(u16, [f32; 4])> {
+        let (atlas, w, h) = match glyph.kind {
+            GlyphQuadKind::Mask => (
+                &self.mask_atlas,
+                self.mask_atlas.width as f32,
+                self.mask_atlas.height as f32,
+            ),
+            GlyphQuadKind::Color => (
+                &self.color_atlas,
+                self.color_atlas.width as f32,
+                self.color_atlas.height as f32,
+            ),
+        };
+
+        let entry = atlas.entry(glyph.key)?;
+        if w <= 0.0 || h <= 0.0 {
+            return None;
+        }
+        let u0 = entry.x as f32 / w;
+        let v0 = entry.y as f32 / h;
+        let u1 = (entry.x.saturating_add(entry.w) as f32) / w;
+        let v1 = (entry.y.saturating_add(entry.h) as f32) / h;
+        Some((entry.page, [u0, v0, u1, v1]))
+    }
+
+    pub fn prepare_for_scene(&mut self, scene: &Scene, frame_index: u64) {
+        let ring_len = self.text_pin_mask.len().min(self.text_pin_color.len());
+        if ring_len == 0 {
+            return;
+        }
+        let bucket = (frame_index as usize) % ring_len;
+
+        let old_mask = std::mem::take(&mut self.text_pin_mask[bucket]);
+        let old_color = std::mem::take(&mut self.text_pin_color[bucket]);
+        self.mask_atlas.dec_live_refs(&old_mask);
+        self.color_atlas.dec_live_refs(&old_color);
+
+        let mut mask_keys: HashSet<GlyphRasterKey> = HashSet::new();
+        let mut color_keys: HashSet<GlyphRasterKey> = HashSet::new();
+
+        for op in scene.ops() {
+            let SceneOp::Text { text, .. } = *op else {
+                continue;
+            };
+            let Some(blob) = self.blobs.get(text) else {
+                continue;
+            };
+            for glyph in blob.shape.glyphs.as_ref() {
+                match glyph.kind {
+                    GlyphQuadKind::Mask => {
+                        mask_keys.insert(glyph.key);
+                    }
+                    GlyphQuadKind::Color => {
+                        color_keys.insert(glyph.key);
+                    }
+                }
+            }
+        }
+
+        let epoch = frame_index;
+        let mut new_mask: Vec<GlyphRasterKey> = mask_keys.into_iter().collect();
+        let mut new_color: Vec<GlyphRasterKey> = color_keys.into_iter().collect();
+
+        for &key in &new_mask {
+            self.ensure_glyph_in_atlas(GlyphQuadKind::Mask, key, epoch);
+        }
+        for &key in &new_color {
+            self.ensure_glyph_in_atlas(GlyphQuadKind::Color, key, epoch);
+        }
+
+        self.mask_atlas.inc_live_refs(&new_mask);
+        self.color_atlas.inc_live_refs(&new_color);
+
+        self.text_pin_mask[bucket].append(&mut new_mask);
+        self.text_pin_color[bucket].append(&mut new_color);
+    }
+
+    fn ensure_glyph_in_atlas(&mut self, kind: GlyphQuadKind, key: GlyphRasterKey, epoch: u64) {
+        let already_present = match kind {
+            GlyphQuadKind::Mask => self.mask_atlas.get(key, epoch).is_some(),
+            GlyphQuadKind::Color => self.color_atlas.get(key, epoch).is_some(),
+        };
+        if already_present {
+            return;
+        }
+
+        match key {
+            GlyphRasterKey::Cosmic(cache_key) => self.ensure_cosmic_glyph(kind, cache_key, epoch),
+            GlyphRasterKey::Parley(parley_key) => self.ensure_parley_glyph(kind, parley_key, epoch),
+        }
+    }
+
+    fn ensure_cosmic_glyph(&mut self, kind: GlyphQuadKind, cache_key: CacheKey, epoch: u64) {
+        let Some(image) = self
+            .swash_cache
+            .get_image(&mut self.font_system, cache_key)
+            .clone()
+        else {
+            return;
+        };
+        if image.placement.width == 0 || image.placement.height == 0 {
+            return;
+        }
+
+        let (image_kind, bytes_per_pixel) = match image.content {
+            SwashContent::Mask => (GlyphQuadKind::Mask, 1),
+            SwashContent::Color => (GlyphQuadKind::Color, 4),
+            SwashContent::SubpixelMask => (GlyphQuadKind::Mask, 1),
+        };
+        if image_kind != kind {
+            return;
+        }
+
+        let mut data = image.data;
+        if matches!(image.content, SwashContent::SubpixelMask) {
+            data = subpixel_mask_to_alpha(&data);
+        }
+
+        let raster_key = GlyphRasterKey::Cosmic(cache_key);
+        match kind {
+            GlyphQuadKind::Mask => {
+                let _ = self.mask_atlas.get_or_insert(
+                    raster_key,
+                    image.placement.width,
+                    image.placement.height,
+                    bytes_per_pixel,
+                    data,
+                    epoch,
+                );
+            }
+            GlyphQuadKind::Color => {
+                let _ = self.color_atlas.get_or_insert(
+                    raster_key,
+                    image.placement.width,
+                    image.placement.height,
+                    bytes_per_pixel,
+                    data,
+                    epoch,
+                );
+            }
+        }
+    }
+
+    fn ensure_parley_glyph(&mut self, kind: GlyphQuadKind, key: ParleyGlyphKey, epoch: u64) {
+        let Some(font_bytes) = self.parley_font_bytes_by_id.get(&key.font_blob_id) else {
+            return;
+        };
+
+        let Some(font_ref) =
+            parley::swash::FontRef::from_index(font_bytes.as_ref(), key.font_index as usize)
+        else {
+            return;
+        };
+        let Ok(glyph_id) = u16::try_from(key.glyph_id) else {
+            return;
+        };
+
+        let font_size = f32::from_bits(key.size_bits).max(1.0);
+        let mut scaler = self
+            .parley_scale
+            .builder(font_ref)
+            .size(font_size)
+            .hint(false)
+            .build();
+
+        let offset_px = parley::swash::zeno::Vector::new(
+            subpixel_bin_as_float(key.x_bin),
+            subpixel_bin_as_float(key.y_bin),
+        );
+        let Some(image) = parley::swash::scale::Render::new(&[
+            parley::swash::scale::Source::ColorOutline(0),
+            parley::swash::scale::Source::ColorBitmap(parley::swash::scale::StrikeWith::BestFit),
+            parley::swash::scale::Source::Outline,
+        ])
+        .offset(offset_px)
+        .render(&mut scaler, glyph_id) else {
+            return;
+        };
+        if image.placement.width == 0 || image.placement.height == 0 {
+            return;
+        }
+
+        let (image_kind, bytes_per_pixel) = match image.content {
+            parley::swash::scale::image::Content::Mask => (GlyphQuadKind::Mask, 1),
+            parley::swash::scale::image::Content::Color => (GlyphQuadKind::Color, 4),
+            parley::swash::scale::image::Content::SubpixelMask => (GlyphQuadKind::Mask, 1),
+        };
+        if image_kind != kind {
+            return;
+        }
+
+        let mut data = image.data;
+        if matches!(
+            image.content,
+            parley::swash::scale::image::Content::SubpixelMask
+        ) {
+            data = subpixel_mask_to_alpha(&data);
+        }
+
+        let raster_key = GlyphRasterKey::Parley(key);
+        match kind {
+            GlyphQuadKind::Mask => {
+                let _ = self.mask_atlas.get_or_insert(
+                    raster_key,
+                    image.placement.width,
+                    image.placement.height,
+                    bytes_per_pixel,
+                    data,
+                    epoch,
+                );
+            }
+            GlyphQuadKind::Color => {
+                let _ = self.color_atlas.get_or_insert(
+                    raster_key,
+                    image.placement.width,
+                    image.placement.height,
+                    bytes_per_pixel,
+                    data,
+                    epoch,
+                );
+            }
+        }
     }
 
     pub fn blob(&self, id: TextBlobId) -> Option<&TextBlob> {
@@ -1283,7 +1526,6 @@ impl TextSystem {
         constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics) {
         let text = key.text.clone();
-        let epoch = self.bump_text_atlas_epoch();
 
         let prefer_parley = constraints.max_width.is_some()
             && (matches!(constraints.wrap, TextWrap::Word)
@@ -1309,15 +1551,11 @@ impl TextSystem {
         });
 
         let shape_key = TextShapeKey::from_blob_key(&key);
-        let mut new_shape_keys: Option<ShapeGlyphKeys> = None;
         let shape = if let Some(shape) = self.shape_cache.get(&shape_key) {
             shape.clone()
         } else {
             if key.backend == 1 {
                 let scale = constraints.scale_factor.max(1.0);
-
-                let mut mask_keys: HashSet<GlyphRasterKey> = HashSet::new();
-                let mut color_keys: HashSet<GlyphRasterKey> = HashSet::new();
                 let shape = {
                     let input = match spans {
                         Some(spans) => TextInput::Attributed {
@@ -1358,7 +1596,7 @@ impl TextSystem {
                         baseline: Px((first_baseline_px / scale).max(0.0)),
                     };
 
-                    let mut glyphs: Vec<GlyphQuad> = Vec::new();
+                    let mut glyphs: Vec<GlyphInstance> = Vec::new();
                     let mut lines: Vec<TextLine> = Vec::with_capacity(wrapped.lines.len().max(1));
                     let mut first_line_caret_stops: Vec<(usize, Px)> = Vec::new();
 
@@ -1401,6 +1639,9 @@ impl TextSystem {
                             let Ok(glyph_id) = u16::try_from(g.id) else {
                                 continue;
                             };
+                            self.parley_font_bytes_by_id
+                                .entry(g.font.data.id())
+                                .or_insert_with(|| Arc::from(g.font.data.data().to_vec()));
                             let Some(font_ref) = parley::swash::FontRef::from_index(
                                 g.font.data.data(),
                                 g.font.index as usize,
@@ -1439,15 +1680,11 @@ impl TextSystem {
                                 continue;
                             }
 
-                            let (kind, bytes_per_pixel, data) = match image.content {
-                                parley::swash::scale::image::Content::Mask => {
-                                    (GlyphQuadKind::Mask, 1, image.data)
-                                }
-                                parley::swash::scale::image::Content::Color => {
-                                    (GlyphQuadKind::Color, 4, image.data)
-                                }
+                            let kind = match image.content {
+                                parley::swash::scale::image::Content::Mask => GlyphQuadKind::Mask,
+                                parley::swash::scale::image::Content::Color => GlyphQuadKind::Color,
                                 parley::swash::scale::image::Content::SubpixelMask => {
-                                    (GlyphQuadKind::Mask, 1, subpixel_mask_to_alpha(&image.data))
+                                    GlyphQuadKind::Mask
                                 }
                             };
 
@@ -1460,68 +1697,10 @@ impl TextSystem {
                                 y_bin,
                             });
 
-                            let (atlas_w, atlas_h, ex, ey, ew, eh, atlas_page) = match kind {
-                                GlyphQuadKind::Mask => {
-                                    let (atlas_w, atlas_h) = (
-                                        self.mask_atlas.width as f32,
-                                        self.mask_atlas.height as f32,
-                                    );
-                                    let entry = match self.mask_atlas.get_or_insert(
-                                        raster_key,
-                                        image.placement.width,
-                                        image.placement.height,
-                                        bytes_per_pixel,
-                                        data,
-                                        epoch,
-                                    ) {
-                                        Ok(e) => e,
-                                        Err(GlyphAtlasInsertError::TooLarge) => continue,
-                                        Err(GlyphAtlasInsertError::OutOfSpace) => continue,
-                                    };
-                                    if mask_keys.insert(raster_key) {
-                                        self.mask_atlas.inc_live_ref(raster_key);
-                                    }
-                                    (
-                                        atlas_w, atlas_h, entry.x, entry.y, entry.w, entry.h,
-                                        entry.page,
-                                    )
-                                }
-                                GlyphQuadKind::Color => {
-                                    let (atlas_w, atlas_h) = (
-                                        self.color_atlas.width as f32,
-                                        self.color_atlas.height as f32,
-                                    );
-                                    let entry = match self.color_atlas.get_or_insert(
-                                        raster_key,
-                                        image.placement.width,
-                                        image.placement.height,
-                                        bytes_per_pixel,
-                                        data,
-                                        epoch,
-                                    ) {
-                                        Ok(e) => e,
-                                        Err(GlyphAtlasInsertError::TooLarge) => continue,
-                                        Err(GlyphAtlasInsertError::OutOfSpace) => continue,
-                                    };
-                                    if color_keys.insert(raster_key) {
-                                        self.color_atlas.inc_live_ref(raster_key);
-                                    }
-                                    (
-                                        atlas_w, atlas_h, entry.x, entry.y, entry.w, entry.h,
-                                        entry.page,
-                                    )
-                                }
-                            };
-
                             let x0_px = x as f32 + image.placement.left as f32;
                             let y0_px = y as f32 - image.placement.top as f32;
                             let w_px = image.placement.width as f32;
                             let h_px = image.placement.height as f32;
-
-                            let u0 = ex as f32 / atlas_w;
-                            let v0 = ey as f32 / atlas_h;
-                            let u1 = (ex + ew) as f32 / atlas_w;
-                            let v1 = (ey + eh) as f32 / atlas_h;
 
                             let text_range = (range.start + g.text_range.start)
                                 ..(range.start + g.text_range.end);
@@ -1529,12 +1708,11 @@ impl TextSystem {
                                 .as_deref()
                                 .and_then(|spans| paint_span_for_text_range(spans, &text_range));
 
-                            glyphs.push(GlyphQuad {
+                            glyphs.push(GlyphInstance {
                                 rect: [x0_px / scale, y0_px / scale, w_px / scale, h_px / scale],
-                                uv: [u0, v0, u1, v1],
                                 kind,
-                                atlas_page,
                                 paint_span,
+                                key: raster_key,
                             });
                         }
 
@@ -1548,14 +1726,6 @@ impl TextSystem {
                         caret_stops: Arc::from(first_line_caret_stops),
                     })
                 };
-
-                let shape_keys = ShapeGlyphKeys {
-                    mask: Arc::from(mask_keys.into_iter().collect::<Vec<_>>()),
-                    color: Arc::from(color_keys.into_iter().collect::<Vec<_>>()),
-                };
-                self.shape_glyph_keys
-                    .insert(shape_key.clone(), shape_keys.clone());
-                new_shape_keys = Some(shape_keys);
                 self.shape_cache.insert(shape_key.clone(), shape.clone());
                 shape
             } else {
@@ -1581,9 +1751,6 @@ impl TextSystem {
                         attrs = attrs.metrics(Metrics::new(font_size_px, line_height_px));
                     }
                 }
-
-                let mut mask_keys: HashSet<GlyphRasterKey> = HashSet::new();
-                let mut color_keys: HashSet<GlyphRasterKey> = HashSet::new();
                 let shape = {
                     let (layout, line_starts) = layout_text(
                         &mut self.font_system,
@@ -1599,7 +1766,7 @@ impl TextSystem {
                     let metrics = layout.metrics;
                     let first_ascent_px = metrics.baseline.0 * scale;
 
-                    let mut glyphs: Vec<GlyphQuad> = Vec::new();
+                    let mut glyphs: Vec<GlyphInstance> = Vec::new();
                     let mut lines: Vec<TextLine> = Vec::with_capacity(layout.lines.len().max(1));
                     for (i, l) in layout.lines.iter().enumerate() {
                         let base_offset = line_starts[i];
@@ -1685,82 +1852,28 @@ impl TextSystem {
                                 continue;
                             }
 
-                            let (kind, bytes_per_pixel, data) = match image.content {
-                                SwashContent::Mask => (GlyphQuadKind::Mask, 1, image.data),
-                                SwashContent::Color => (GlyphQuadKind::Color, 4, image.data),
-                                SwashContent::SubpixelMask => {
-                                    (GlyphQuadKind::Mask, 1, subpixel_mask_to_alpha(&image.data))
-                                }
+                            let kind = match image.content {
+                                SwashContent::Mask => GlyphQuadKind::Mask,
+                                SwashContent::Color => GlyphQuadKind::Color,
+                                SwashContent::SubpixelMask => GlyphQuadKind::Mask,
                             };
 
                             let raster_key = GlyphRasterKey::Cosmic(cache_key);
-                            let (atlas_w, atlas_h, ex, ey, ew, eh, atlas_page) = match kind {
-                                GlyphQuadKind::Mask => {
-                                    let (atlas_w, atlas_h) = (
-                                        self.mask_atlas.width as f32,
-                                        self.mask_atlas.height as f32,
-                                    );
-                                    let e = match self.mask_atlas.get_or_insert(
-                                        raster_key,
-                                        image.placement.width,
-                                        image.placement.height,
-                                        bytes_per_pixel,
-                                        data,
-                                        epoch,
-                                    ) {
-                                        Ok(e) => e,
-                                        Err(GlyphAtlasInsertError::TooLarge) => continue,
-                                        Err(GlyphAtlasInsertError::OutOfSpace) => continue,
-                                    };
-                                    if mask_keys.insert(raster_key) {
-                                        self.mask_atlas.inc_live_ref(raster_key);
-                                    }
-                                    (atlas_w, atlas_h, e.x, e.y, e.w, e.h, e.page)
-                                }
-                                GlyphQuadKind::Color => {
-                                    let (atlas_w, atlas_h) = (
-                                        self.color_atlas.width as f32,
-                                        self.color_atlas.height as f32,
-                                    );
-                                    let e = match self.color_atlas.get_or_insert(
-                                        raster_key,
-                                        image.placement.width,
-                                        image.placement.height,
-                                        bytes_per_pixel,
-                                        data,
-                                        epoch,
-                                    ) {
-                                        Ok(e) => e,
-                                        Err(GlyphAtlasInsertError::TooLarge) => continue,
-                                        Err(GlyphAtlasInsertError::OutOfSpace) => continue,
-                                    };
-                                    if color_keys.insert(raster_key) {
-                                        self.color_atlas.inc_live_ref(raster_key);
-                                    }
-                                    (atlas_w, atlas_h, e.x, e.y, e.w, e.h, e.page)
-                                }
-                            };
 
                             let x0_px = x as f32 + image.placement.left as f32;
                             let y0_px = y as f32 - image.placement.top as f32;
                             let w_px = image.placement.width as f32;
                             let h_px = image.placement.height as f32;
 
-                            let u0 = ex as f32 / atlas_w;
-                            let v0 = ey as f32 / atlas_h;
-                            let u1 = (ex + ew) as f32 / atlas_w;
-                            let v1 = (ey + eh) as f32 / atlas_h;
-
                             let paint_span = resolved_spans
                                 .as_deref()
                                 .and_then(|spans| paint_span_for_glyph(spans, base_offset, g));
 
-                            glyphs.push(GlyphQuad {
+                            glyphs.push(GlyphInstance {
                                 rect: [x0_px / scale, y0_px / scale, w_px / scale, h_px / scale],
-                                uv: [u0, v0, u1, v1],
                                 kind,
-                                atlas_page,
                                 paint_span,
+                                key: raster_key,
                             });
                         }
                     }
@@ -1777,37 +1890,15 @@ impl TextSystem {
                         caret_stops: Arc::from(caret_stops),
                     })
                 };
-
-                let shape_keys = ShapeGlyphKeys {
-                    mask: Arc::from(mask_keys.into_iter().collect::<Vec<_>>()),
-                    color: Arc::from(color_keys.into_iter().collect::<Vec<_>>()),
-                };
-                self.shape_glyph_keys
-                    .insert(shape_key.clone(), shape_keys.clone());
-                new_shape_keys = Some(shape_keys);
                 self.shape_cache.insert(shape_key.clone(), shape.clone());
                 shape
             }
         };
 
-        let shape_keys = new_shape_keys
-            .clone()
-            .or_else(|| self.shape_glyph_keys.get(&shape_key).cloned())
-            .unwrap_or_else(|| ShapeGlyphKeys {
-                mask: Arc::from(Vec::<GlyphRasterKey>::new()),
-                color: Arc::from(Vec::<GlyphRasterKey>::new()),
-            });
-        if new_shape_keys.is_none() {
-            self.mask_atlas.inc_live_refs(shape_keys.mask.as_ref());
-            self.color_atlas.inc_live_refs(shape_keys.color.as_ref());
-        }
-
         let metrics = shape.metrics;
         let id = self.blobs.insert(TextBlob {
             shape,
             paint_palette,
-            mask_keys: shape_keys.mask,
-            color_keys: shape_keys.color,
             ref_count: 1,
         });
         self.blob_cache.insert(key.clone(), id);
@@ -2039,19 +2130,14 @@ impl TextSystem {
     }
 
     pub fn release(&mut self, blob: TextBlobId) {
-        let (should_remove, remove_shape, mask_keys, color_keys) = match self.blobs.get_mut(blob) {
+        let (should_remove, remove_shape) = match self.blobs.get_mut(blob) {
             Some(b) => {
                 if b.ref_count > 1 {
                     b.ref_count = b.ref_count.saturating_sub(1);
-                    (false, false, None, None)
+                    (false, false)
                 } else {
                     let remove_shape = Arc::strong_count(&b.shape) == 2;
-                    (
-                        true,
-                        remove_shape,
-                        Some(b.mask_keys.clone()),
-                        Some(b.color_keys.clone()),
-                    )
+                    (true, remove_shape)
                 }
             }
             None => return,
@@ -2061,19 +2147,11 @@ impl TextSystem {
             return;
         }
 
-        if let Some(mask_keys) = mask_keys {
-            self.mask_atlas.dec_live_refs(mask_keys.as_ref());
-        }
-        if let Some(color_keys) = color_keys {
-            self.color_atlas.dec_live_refs(color_keys.as_ref());
-        }
-
         if let Some(key) = self.blob_key_by_id.remove(&blob) {
             self.blob_cache.remove(&key);
             if remove_shape {
                 let shape_key = TextShapeKey::from_blob_key(&key);
                 self.shape_cache.remove(&shape_key);
-                self.shape_glyph_keys.remove(&shape_key);
             }
         }
         let _ = self.blobs.remove(blob);

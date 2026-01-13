@@ -46,6 +46,7 @@ impl Renderer {
         }
 
         let text_prepare_start = perf_enabled.then(Instant::now);
+        self.text_system.prepare_for_scene(scene, frame_index);
         self.text_system.flush_uploads(queue);
         if let Some(text_prepare_start) = text_prepare_start {
             frame_perf.prepare_text += text_prepare_start.elapsed();
@@ -75,6 +76,7 @@ impl Renderer {
             scene_ops_len: scene.ops_len(),
             render_targets_generation: self.render_targets_generation,
             images_generation: self.images_generation,
+            text_atlas_revision: self.text_system.atlas_revision(),
         };
 
         let cache_hit = self.scene_encoding_cache_key == Some(key);
