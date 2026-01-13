@@ -1030,11 +1030,12 @@ impl DropdownMenu {
 
                     let border = theme.color_required("border");
                     let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
+                    let radius_md = MetricRef::radius(Radius::Md).resolve(&theme);
                     // new-york-v4:
                     // - `DropdownMenuContent`: `shadow-md`
                     // - `DropdownMenuSubContent`: `shadow-lg`
-                    let shadow = decl_style::shadow_md(&theme, radius_sm);
-                    let shadow_submenu = decl_style::shadow_lg(&theme, radius_sm);
+                    let shadow = decl_style::shadow_md(&theme, radius_md);
+                    let shadow_submenu = decl_style::shadow_lg(&theme, radius_md);
                     let ring = decl_style::focus_ring(&theme, radius_sm);
                     // new-york-v4: item rows use `px-2`.
                     let pad_x = MetricRef::space(Space::N2).resolve(&theme);
@@ -1095,7 +1096,7 @@ impl DropdownMenu {
                                             shadow: Some(shadow),
                                             border: Edges::all(Px(1.0)),
                                             border_color: Some(border),
-                                            corner_radii: fret_core::Corners::all(radius_sm),
+                                            corner_radii: fret_core::Corners::all(radius_md),
                                         },
                                         move |cx| {
                                     let scroll_layout = LayoutStyle {
