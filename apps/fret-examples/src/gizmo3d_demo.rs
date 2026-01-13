@@ -1089,7 +1089,7 @@ impl Gizmo3dDemoModel {
         };
     }
 
-    fn cancel_in_progress_interaction(&mut self) -> bool {
+    fn cancel_in_progress_interaction(&mut self, viewport_px: (u32, u32)) -> bool {
         let is_gizmo_dragging = self.input.dragging || self.gizmo_mgr.state.active.is_some();
         let is_selecting = self.pending_selection.is_some() || self.marquee.is_some();
 
@@ -1110,7 +1110,7 @@ impl Gizmo3dDemoModel {
             return true;
         }
 
-        let viewport_px = (self.viewport_px.0.max(1), self.viewport_px.1.max(1));
+        let viewport_px = (viewport_px.0.max(1), viewport_px.1.max(1));
         let view_projection = camera_view_projection(viewport_px, self.camera);
         let viewport = ViewportToolInput::from_target_px_viewport(
             viewport_px,
@@ -2054,9 +2054,13 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
         let mut did_apply = false;
 
         // Always cancel in-progress viewport interactions before applying undo/redo.
+        let viewport_px = state
+            .plot
+            .read(app, |_app, m| m.viewport.target_px_size)
+            .unwrap_or((960, 540));
         let did_cancel = state
             .demo
-            .update(app, |m, _cx| m.cancel_in_progress_interaction())
+            .update(app, |m, _cx| m.cancel_in_progress_interaction(viewport_px))
             .unwrap_or(false);
 
         let mut applied_transform = false;
@@ -2412,9 +2416,13 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 key: fret_core::KeyCode::Escape,
                 ..
             } => {
+                let viewport_px = state
+                    .plot
+                    .read(app, |_app, m| m.viewport.target_px_size)
+                    .unwrap_or((960, 540));
                 let did_cancel = state
                     .demo
-                    .update(app, |m, _cx| m.cancel_in_progress_interaction())
+                    .update(app, |m, _cx| m.cancel_in_progress_interaction(viewport_px))
                     .unwrap_or(false);
 
                 if did_cancel {
