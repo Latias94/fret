@@ -453,19 +453,20 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 
 ## Known Gaps vs ECharts (High Value)
 
-- DataZoom Y + 2D zoom UX parity (inside + box zoom + reset behaviors) (S2).
-- Category axis indexing under zoom for non-bar series (S4).
-- Tooltip snapping + axisPointer sampling policies (S5).
 - Legend UI parity + selection UX (S6).
+- Tooltip snapping + axisPointer sampling policies (ordering, formatting hooks, stable values away from points) (S5).
+- DataZoom Y parity + multi-dimensional filtering semantics (ordering rules; sparse selection carriers) (S2).
+- Category axis indexing under zoom for non-bar series (S4).
 - VisualMap: multiple maps per series and per-item attribute pipelines (S7).
-- Series-specific LOD / downsampling policies + harness (S8).
+- Series-specific LOD / downsampling policies + conformance harness (S8).
 - Append/update semantics (ECharts `appendData`) (S9).
 
 ## Recommended Next Steps (P0 -> P1)
 
 1. P0: Legend widget + selection model UX (single/multi select, invert, reset) (S6).
 2. P0: Tooltip snapping policies and axis-trigger tooltip UX (crosshair + stable rows away from points) (S5).
-3. P0: VisualMap: multiple maps per series and a plan for per-item attributes/instancing (S7).
-4. P1: Category axis indexing under zoom for non-bar series (lock ordinal invariants with a dedicated demo) (S4).
-5. P1: LOD / downsampling policies + conformance harness (S8).
-6. P1: Append/update semantics (ECharts `appendData`) (S9).
+3. P0/P1: DataZoom Y filtering semantics + ordering rules (and the “sparse selection” carrier boundary) (S2).
+4. P0/P1: VisualMap: multiple maps per series and a plan for per-item attributes/instancing (S7).
+5. P1: Category axis indexing under zoom for non-bar series (lock ordinal invariants with a dedicated demo) (S4).
+6. P1: LOD / downsampling policies + conformance harness (S8).
+7. P1: Append/update semantics (ECharts `appendData`) (S9).
