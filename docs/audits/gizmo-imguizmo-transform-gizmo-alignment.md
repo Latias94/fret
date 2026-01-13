@@ -240,9 +240,10 @@ This is a suggested sequence for reaching "mature editor" parity without over-de
      requests redraw on viewport input and while camera frame animations are active.
    - Remaining: ensure other viewport demos follow the same "interaction-driven redraw" rule (especially web/wasm paths).
 2. **Universal mode surface + policy**
-   - We now support depth/dolly in Universal behind a toggle (`universal_includes_translate_depth`), but the policy surface is still evolving.
-   - Suggested work: expose all Universal inclusions as explicit toggles (translate depth, axis scale, optional rotate view ring, arcball),
-     and add more overlap regression tests (ortho + very wide FOV + tight proximity to the origin).
+   - Status: **Aligned (basic)** — Universal has explicit inclusion toggles:
+     `universal_includes_translate_depth`, `universal_includes_scale`,
+     `universal_includes_rotate_view_ring`, `universal_includes_arcball`.
+   - Remaining: add more overlap regression tests (near-plane + extremely close camera) and keep the demo’s default policies conservative.
 3. **Precision controls**
    - Implemented: `GizmoInput.precision` scales drag deltas without hard-binding to a specific input system.
    - Remaining: align demo/editor modifier mapping with the host's input conventions and ensure it composes well with snapping + camera navigation.
