@@ -1071,6 +1071,24 @@ impl Gizmo3dDemoModel {
         }
     }
 
+    fn clear_other_interactions(&mut self, cursor_px: Vec2, snap: bool, precision: f32) {
+        self.gizmo_mgr.state.hovered = None;
+        self.pending_selection = None;
+        self.marquee = None;
+        self.marquee_preview.clear();
+        self.selection_before_select = None;
+        self.active_before_select = None;
+        self.input = GizmoInput {
+            cursor_px,
+            hovered: false,
+            drag_started: false,
+            dragging: false,
+            snap,
+            cancel: false,
+            precision,
+        };
+    }
+
     fn cancel_in_progress_interaction(&mut self) -> bool {
         let is_gizmo_dragging = self.input.dragging || self.gizmo_mgr.state.active.is_some();
         let is_selecting = self.pending_selection.is_some() || self.marquee.is_some();
@@ -3196,28 +3214,10 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 m.view_gizmo
                     .update(view_projection, viewport, view_gizmo_input);
 
-            let clear_other_interactions = |m: &mut Gizmo3dDemoModel| {
-                m.gizmo_mgr.state.hovered = None;
-                m.pending_selection = None;
-                m.marquee = None;
-                m.marquee_preview.clear();
-                m.selection_before_select = None;
-                m.active_before_select = None;
-                m.input = GizmoInput {
-                    cursor_px: cursor_target_px,
-                    hovered: false,
-                    drag_started: false,
-                    dragging: false,
-                    snap,
-                    cancel: false,
-                    precision,
-                };
-            };
-
             // If the left press starts on the view gizmo, consume the interaction so it doesn't
             // become a selection click or a transform gizmo drag.
             if view_gizmo_drag_started && m.view_gizmo.state.drag_active && !m.is_busy() {
-                clear_other_interactions(m);
+                m.clear_other_interactions(cursor_target_px, snap, precision);
                 return pending;
             }
 
@@ -3227,7 +3227,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         delta_yaw_radians,
                         delta_pitch_radians,
                     }) => {
-                        clear_other_interactions(m);
+                        m.clear_other_interactions(cursor_target_px, snap, precision);
                         m.camera.frame_anim = None;
                         m.camera.yaw_radians += delta_yaw_radians;
                         m.camera.pitch_radians =
@@ -3235,7 +3235,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         return pending;
                     }
                     Some(ViewGizmoUpdate::ToggleProjection) => {
-                        clear_other_interactions(m);
+                        m.clear_other_interactions(cursor_target_px, snap, precision);
                         let target = m.camera.target;
                         let yaw_radians = m.camera.yaw_radians;
                         let pitch_radians = m.camera.pitch_radians;
@@ -3286,7 +3286,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         view_dir,
                         up: _,
                     }) => {
-                        clear_other_interactions(m);
+                        m.clear_other_interactions(cursor_target_px, snap, precision);
                         let pivot = if m.selection.is_empty() {
                             m.camera.target
                         } else {
