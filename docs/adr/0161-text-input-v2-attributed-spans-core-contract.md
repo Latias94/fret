@@ -1,4 +1,4 @@
-# ADR 0161: TextInput v2 (Attributed Spans) — Core Contract & RichText Deprecation
+# ADR 0161: TextInput v2 (Attributed Spans) - Core Contract & RichText Deprecation
 
 - Status: Proposed
 - Date: 2026-01-13

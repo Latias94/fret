@@ -162,7 +162,7 @@ Examples:
 
 ## References
 
-- Component ecosystem conventions: `docs/adr/0158-component-ecosystem-authoring-conventions-v1.md`
+- Component ecosystem conventions: `docs/adr/0163-component-ecosystem-authoring-conventions-v1.md`
 - Component authoring contracts (mechanism surface): `docs/component-authoring-contracts.md`
 - Crate map (what to depend on): `docs/crate-usage-guide.md`
 - Ecosystem integration guidance: `docs/adr/0113-ecosystem-integration-contracts.md`

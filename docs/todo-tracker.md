@@ -38,18 +38,24 @@ It complements (but does not replace) ADRs:
 
 - **Make the default font semantic (system UI font alias)**
   - Problem: relying on `FontId::default()` without a defined font family causes platform-dependent tofu and IME provisional-state breakage.
-  - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0006-text-system.md`
+  - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0006-text-system.md`, `docs/adr/0162-font-stack-bootstrap-and-textfontstackkey-v1.md`
   - Code: `crates/fret-ui/src/theme.rs`, `crates/fret-render/src/text.rs`
-  - Current: `crates/fret-render/src/text.rs` configures `cosmic-text`'s `fontdb` generic families at startup (preferring platform UI font families when present), so `Family::SansSerif` is no longer an implicit "Open Sans" placeholder.
-  - Current: `TextStyle.font` now maps to `cosmic-text` generic families (`FontId::default()` -> sans, `FontId::serif()` -> serif, `FontId::monospace()` -> mono).
-  - TODO: expose the default font stack at the theme/settings layer (and decide how user font loading maps to stable `FontId` values).
+  - Current: `crates/fret-render/src/text.rs` configures both `cosmic-text` fontdb generics and Parley/fontique generic families (keep backend behavior aligned as we converge the font source of truth).
+  - Current: `TextStyle.font` is a semantic `FontId` (`Ui/Serif/Monospace/Family(name)`) and maps to generic stacks (`sans-serif`/`serif`/`monospace`) for shaping.
+  - TODO: expose a curated default font stack at the theme/settings layer (and decide how user font loading maps to stable `FontId` values).
+
+- **Web/WASM bootstrap fonts are insufficient**
+  - Problem: `fret-fonts` currently bundles a mono subset only; general UI text needs a UI sans baseline (and eventually emoji).
+  - ADRs: `docs/adr/0162-font-stack-bootstrap-and-textfontstackkey-v1.md`
+  - Code: `crates/fret-fonts/src/lib.rs`, `crates/fret-launch/src/runner/web.rs`
+  - TODO: bundle at least one UI sans font (or subset) and update the web runner bootstrap to use it as the default UI mapping.
 
 - **Fallback list participates in `TextBlobId` caching / invalidation**
   - Problem: changing configured fallbacks or font DB state must invalidate cached shaping/rasterization results.
-  - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
+  - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0162-font-stack-bootstrap-and-textfontstackkey-v1.md`
   - Code: `crates/fret-render/src/text.rs`
   - Current: `crates/fret-render/src/text.rs` includes a `font_stack_key` (derived from locale + configured generic families + fallback policy) in the `TextBlobKey` cache key.
-  - TODO: when runtime font configuration becomes user-editable, add an explicit invalidation path that bumps the `font_stack_key` and clears cached blobs.
+  - TODO: standardize runner update plumbing so any font/config mutation bumps `TextFontStackKey` and cannot reuse stale layout/raster caches.
 
 - **Emoji / variation selectors policy**
   - Goal: define baseline behavior for emoji fonts and variation selectors, and add a smoke test string that exercises it.
