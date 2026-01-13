@@ -469,6 +469,28 @@ fn ui_app_handle_event<S>(
         state,
     } = context;
 
+    if let Event::Timer { token } = event
+        && let Some(tick) = fret_app::handle_config_files_watcher_timer(app, window, *token)
+    {
+        if tick.reloaded_settings
+            || tick.reloaded_keymap
+            || tick.settings_error.is_some()
+            || tick.keymap_error.is_some()
+            || tick.actionable_keymap_conflicts > 0
+        {
+            hotpatch_trace_log(&format!(
+                "config_watcher: window={window:?} settings_reload={} keymap_reload={} settings_err={:?} keymap_err={:?} conflicts={} samples={:?}",
+                tick.reloaded_settings,
+                tick.reloaded_keymap,
+                tick.settings_error,
+                tick.keymap_error,
+                tick.actionable_keymap_conflicts,
+                tick.keymap_conflict_samples,
+            ));
+        }
+        return;
+    }
+
     state.ui.dispatch_event(app, services, event);
 
     #[cfg(feature = "ui-assets")]

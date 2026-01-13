@@ -97,3 +97,36 @@ pub fn install_command_default_keybindings_into_keymap(app: &mut App) {
         }
     });
 }
+
+#[derive(Debug, Default)]
+struct LayeredKeymapState {
+    baseline: Option<Keymap>,
+    layered: Keymap,
+}
+
+/// Applies a "disk layered" keymap on top of the app's baseline keymap.
+///
+/// This preserves the baseline keymap (defaults + plugin keybindings) and makes it possible to
+/// re-apply user/project overrides without accumulating duplicate bindings.
+pub fn apply_layered_keymap(app: &mut App, layered: Keymap) {
+    let current = app
+        .global::<crate::KeymapService>()
+        .map(|svc| svc.keymap.clone())
+        .unwrap_or_default();
+
+    let (baseline, layered) = app.with_global_mut(LayeredKeymapState::default, |state, _app| {
+        if state.baseline.is_none() {
+            state.baseline = Some(current);
+        }
+        state.layered = layered;
+        (
+            state.baseline.clone().unwrap_or_default(),
+            state.layered.clone(),
+        )
+    });
+
+    app.with_global_mut(crate::KeymapService::default, |svc, _app| {
+        svc.keymap = baseline;
+        svc.keymap.extend(layered);
+    });
+}

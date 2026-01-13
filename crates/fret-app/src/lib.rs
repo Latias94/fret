@@ -1,5 +1,6 @@
 pub mod app;
 pub mod config_files;
+pub mod config_watcher;
 pub mod core_commands;
 pub mod dock_layout_file;
 pub mod drag;
@@ -25,6 +26,7 @@ pub use fret_runtime::{
 
 pub use keymap::KeymapError;
 pub use keymap::KeymapFileError;
+pub use keymap::apply_layered_keymap;
 pub use keymap::install_command_default_keybindings_into_keymap;
 pub use keymap::{BindingV1, KeySpecV1, KeymapFileV1};
 
@@ -41,4 +43,8 @@ pub use config_files::{
     KEYMAP_JSON, LayeredConfigPaths, LayeredKeymapReport, LayeredSettingsReport,
     PROJECT_CONFIG_DIR, SETTINGS_JSON, default_user_config_dir, load_layered_keymap,
     load_layered_settings,
+};
+
+pub use config_watcher::{
+    ConfigFilesWatcher, ConfigFilesWatcherTick, handle_config_files_watcher_timer,
 };

@@ -38,9 +38,10 @@
 //! ```
 
 use std::path::Path;
+use std::time::Duration;
 
 use fret_app::config_files::LayeredConfigPaths;
-use fret_app::{App, KeymapFileError, KeymapService, SettingsError, SettingsFileV1};
+use fret_app::{App, KeymapFileError, SettingsError, SettingsFileV1};
 use fret_icons::IconRegistry;
 
 #[derive(Debug, thiserror::Error)]
@@ -71,6 +72,9 @@ pub fn apply_settings(
 #[cfg(not(target_arch = "wasm32"))]
 pub struct BootstrapBuilder<D: fret_launch::WinitAppDriver> {
     inner: fret_launch::WinitAppBuilder<D>,
+    on_gpu_ready_hooks: Vec<
+        Box<dyn FnOnce(&mut App, &fret_render::WgpuContext, &mut fret_render::Renderer) + 'static>,
+    >,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -78,6 +82,7 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
     pub fn new(app: App, driver: D) -> Self {
         Self {
             inner: fret_launch::WinitAppBuilder::new(app, driver),
+            on_gpu_ready_hooks: Vec::new(),
         }
     }
 
@@ -132,9 +137,7 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         let (layered, _report) = fret_app::load_layered_keymap(&paths)?;
 
         self.inner = self.inner.init_app(move |app| {
-            app.with_global_mut(KeymapService::default, |svc, _app| {
-                svc.keymap.extend(layered.clone());
-            });
+            fret_app::apply_layered_keymap(app, layered.clone());
         });
 
         Ok(self)
@@ -169,6 +172,17 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
             .with_layered_settings(".")?
             .with_command_default_keybindings()
             .with_layered_keymap(".")?)
+    }
+
+    /// Enables polling-based hot reload for layered `settings.json` / `keymap.json` files.
+    ///
+    /// This uses a repeating `Effect::SetTimer` and checks file metadata (mtime/len) on each tick.
+    /// It is intended for local dev workflows and stays portable (no platform-specific watcher deps).
+    pub fn with_config_files_watcher(mut self, poll_interval: Duration) -> Self {
+        self.inner = self.inner.init_app(move |app| {
+            fret_app::ConfigFilesWatcher::install(app, poll_interval, ".");
+        });
+        self
     }
 
     /// Configure budgets for UI render asset caches (`ImageAssetCache` / `SvgAssetCache`).
@@ -307,10 +321,11 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
     /// Pre-register all SVG icons from the global `IconRegistry` during `on_gpu_ready`.
     #[cfg(feature = "preload-icon-svgs")]
     pub fn preload_icon_svgs_on_gpu_ready(mut self) -> Self {
-        self.inner = self.inner.on_gpu_ready(|app, _context, renderer| {
-            let services = renderer as &mut dyn fret_core::UiServices;
-            fret_ui_kit::declarative::icon::preload_icon_svgs(app, services);
-        });
+        self.on_gpu_ready_hooks
+            .push(Box::new(|app, _context, renderer| {
+                let services = renderer as &mut dyn fret_core::UiServices;
+                fret_ui_kit::declarative::icon::preload_icon_svgs(app, services);
+            }));
         self
     }
 
@@ -355,6 +370,27 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         self
     }
 
+    /// Install an ecosystem crate that only needs access to the app state.
+    ///
+    /// This runs during early initialization (before GPU services exist), which is important for
+    /// correct keymap layering semantics (user/project keymaps should remain last-wins).
+    pub fn install_app(mut self, install: fn(&mut App)) -> Self {
+        self.inner = self.inner.init_app(install);
+        self
+    }
+
+    /// Install an ecosystem crate at the UI services boundary.
+    ///
+    /// This runs during `on_gpu_ready`, with `services` backed by the renderer.
+    pub fn install(mut self, install: fn(&mut App, &mut dyn fret_core::UiServices)) -> Self {
+        self.on_gpu_ready_hooks
+            .push(Box::new(move |app, _context, renderer| {
+                let services = renderer as &mut dyn fret_core::UiServices;
+                install(app, services);
+            }));
+        self
+    }
+
     pub fn on_main_window_created(
         mut self,
         f: impl FnOnce(&mut App, fret_core::AppWindowId) + 'static,
@@ -367,16 +403,31 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         mut self,
         f: impl FnOnce(&mut App, &fret_render::WgpuContext, &mut fret_render::Renderer) + 'static,
     ) -> Self {
-        self.inner = self.inner.on_gpu_ready(f);
+        self.on_gpu_ready_hooks.push(Box::new(f));
         self
     }
 
     pub fn run(self) -> Result<(), fret_launch::RunnerError> {
-        self.inner.run()
+        self.into_inner().run()
     }
 
     pub fn into_inner(self) -> fret_launch::WinitAppBuilder<D> {
-        self.inner
+        let BootstrapBuilder {
+            mut inner,
+            on_gpu_ready_hooks,
+        } = self;
+
+        if on_gpu_ready_hooks.is_empty() {
+            return inner;
+        }
+
+        inner = inner.on_gpu_ready(move |app, context, renderer| {
+            for hook in on_gpu_ready_hooks {
+                hook(app, context, renderer);
+            }
+        });
+
+        inner
     }
 }
 
@@ -385,7 +436,10 @@ impl<D: fret_launch::WinitAppDriver + 'static> From<fret_launch::WinitAppBuilder
     for BootstrapBuilder<D>
 {
     fn from(inner: fret_launch::WinitAppBuilder<D>) -> Self {
-        Self { inner }
+        Self {
+            inner,
+            on_gpu_ready_hooks: Vec::new(),
+        }
     }
 }
 

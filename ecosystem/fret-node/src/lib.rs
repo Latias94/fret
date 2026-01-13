@@ -41,3 +41,5 @@ pub use types::{TypeDesc, TypeVarId};
 mod app_integration;
 #[cfg(feature = "app-integration")]
 pub use app_integration::install;
+#[cfg(feature = "app-integration")]
+pub use app_integration::install_app;
