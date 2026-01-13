@@ -614,6 +614,47 @@ impl WinitAppDriver for DockingArbitrationDriver {
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
             return;
         }
+
+        if let Event::KeyDown {
+            key: fret_core::KeyCode::KeyQ | fret_core::KeyCode::KeyW | fret_core::KeyCode::KeyE,
+            repeat: false,
+            ..
+        } = event
+        {
+            let mode = match event {
+                Event::KeyDown {
+                    key: fret_core::KeyCode::KeyQ,
+                    ..
+                } => fret_editor::ViewportToolMode::Select,
+                Event::KeyDown {
+                    key: fret_core::KeyCode::KeyW,
+                    ..
+                } => fret_editor::ViewportToolMode::Move,
+                Event::KeyDown {
+                    key: fret_core::KeyCode::KeyE,
+                    ..
+                } => fret_editor::ViewportToolMode::Rotate,
+                _ => return,
+            };
+
+            if let Ok(mut tools) = self.viewport_tools.lock() {
+                let mut did_change = false;
+                for ((w, _target), mgr) in tools.tools.iter_mut() {
+                    if *w != window {
+                        continue;
+                    }
+                    if mgr.active != mode {
+                        mgr.active = mode;
+                        mgr.interaction = None;
+                        did_change = true;
+                    }
+                }
+                if did_change {
+                    app.request_redraw(window);
+                }
+            }
+        }
+
         state.ui.dispatch_event(app, services, event);
     }
 
