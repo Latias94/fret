@@ -117,7 +117,7 @@ impl ElementHostWidget {
             RuntimeAvailableSpace::Definite(inner_avail.height),
         );
 
-        let (root_layout, child_layouts) = cx.tree.solve_flow_island_with_root_style(
+        let (root_layout, child_layouts) = cx.tree.solve_flow_root_with_root_style(
             cx.app,
             cx.services,
             window,

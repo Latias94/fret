@@ -303,22 +303,10 @@ impl<H: UiHost> Widget<H> for ResizableSplit {
             let tree = &mut *cx.tree;
 
             if !cx.children.is_empty() {
-                tree.precompute_barrier_flow_root_island_if_needed(
-                    app,
-                    services,
-                    cx.children[0],
-                    rect_a,
-                    sf,
-                );
+                tree.solve_barrier_flow_root_if_needed(app, services, cx.children[0], rect_a, sf);
             }
             if cx.children.len() >= 2 {
-                tree.precompute_barrier_flow_root_island_if_needed(
-                    app,
-                    services,
-                    cx.children[1],
-                    rect_b,
-                    sf,
-                );
+                tree.solve_barrier_flow_root_if_needed(app, services, cx.children[1], rect_b, sf);
             }
         }
 

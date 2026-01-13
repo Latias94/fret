@@ -516,7 +516,7 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    pub(crate) fn precompute_barrier_flow_root_island(
+    pub(crate) fn solve_barrier_flow_root(
         &mut self,
         app: &mut H,
         services: &mut dyn UiServices,
@@ -555,7 +555,7 @@ impl<H: UiHost> UiTree<H> {
         self.put_layout_engine(engine);
     }
 
-    pub(crate) fn precompute_barrier_flow_root_island_if_needed(
+    pub(crate) fn solve_barrier_flow_root_if_needed(
         &mut self,
         app: &mut H,
         services: &mut dyn UiServices,
@@ -580,10 +580,10 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
-        self.precompute_barrier_flow_root_island(app, services, root, root_bounds, scale_factor);
+        self.solve_barrier_flow_root(app, services, root, root_bounds, scale_factor);
     }
 
-    pub(crate) fn solve_flow_island_with_root_style(
+    pub(crate) fn solve_flow_root_with_root_style(
         &mut self,
         app: &mut H,
         services: &mut dyn UiServices,

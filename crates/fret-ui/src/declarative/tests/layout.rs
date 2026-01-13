@@ -798,7 +798,7 @@ fn viewport_root_request_build_keeps_engine_nodes_alive_when_skipped() {
 
 #[cfg(feature = "layout-engine-v2")]
 #[test]
-fn precompute_flow_root_island_reuses_solved_root_even_after_other_solves() {
+fn solve_barrier_flow_root_reuses_solved_root_even_after_other_solves() {
     struct PrecomputesSameRootTwice {
         a: NodeId,
         b: NodeId,
@@ -812,9 +812,9 @@ fn precompute_flow_root_island_reuses_solved_root_even_after_other_solves() {
             let services = &mut *cx.services;
             let tree = &mut *cx.tree;
 
-            tree.precompute_barrier_flow_root_island(app, services, self.a, self.rect, sf);
-            tree.precompute_barrier_flow_root_island(app, services, self.b, self.rect, sf);
-            tree.precompute_barrier_flow_root_island(app, services, self.a, self.rect, sf);
+            tree.solve_barrier_flow_root(app, services, self.a, self.rect, sf);
+            tree.solve_barrier_flow_root(app, services, self.b, self.rect, sf);
+            tree.solve_barrier_flow_root(app, services, self.a, self.rect, sf);
 
             cx.available
         }
@@ -870,7 +870,7 @@ fn precompute_flow_root_island_reuses_solved_root_even_after_other_solves() {
 
 #[cfg(feature = "layout-engine-v2")]
 #[test]
-fn precompute_flow_root_island_if_needed_skips_translation_only_bounds_changes() {
+fn solve_barrier_flow_root_if_needed_skips_translation_only_bounds_changes() {
     struct PrecomputeThenTranslate {
         child: NodeId,
         rect_a: Rect,
@@ -886,22 +886,10 @@ fn precompute_flow_root_island_if_needed_skips_translation_only_bounds_changes()
             let tree = &mut *cx.tree;
 
             let rect = if self.calls == 0 {
-                tree.precompute_barrier_flow_root_island(
-                    app,
-                    services,
-                    self.child,
-                    self.rect_a,
-                    sf,
-                );
+                tree.solve_barrier_flow_root(app, services, self.child, self.rect_a, sf);
                 self.rect_a
             } else {
-                tree.precompute_barrier_flow_root_island_if_needed(
-                    app,
-                    services,
-                    self.child,
-                    self.rect_b,
-                    sf,
-                );
+                tree.solve_barrier_flow_root_if_needed(app, services, self.child, self.rect_b, sf);
                 self.rect_b
             };
             self.calls = self.calls.saturating_add(1);

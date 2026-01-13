@@ -143,7 +143,7 @@ code should follow these rules:
 
 1. Treat barrier precompute as an escape hatch: do not call it from normal wrappers/flow containers.
    Only explicit barriers (e.g. Scroll/VirtualList/ResizableSplit) may call
-   `precompute_barrier_flow_root_island_if_needed(...)`. The `_if_needed` helper skips work when the
+   `solve_barrier_flow_root_if_needed(...)`. The `_if_needed` helper skips work when the
    subtree is clean, and avoids engine solves for translation-only changes (size stable, origin shifts).
 2. Keep solve stats per-call and use them to detect regressions.
 3. Translation-only bounds shifts must still keep existing engine nodes "alive" for stable identity
@@ -153,4 +153,4 @@ Regression tests that lock these behaviors:
 
 - Scroll translation does not trigger engine solves: `declarative::tests::layout::scroll_translation_does_not_force_layout_engine_solves`.
 - Viewport root flush only lays out invalidated roots: `declarative::tests::layout::viewport_root_flush_only_lays_out_invalidated_roots`.
-- Translation-only precompute gating: `declarative::tests::layout::precompute_flow_root_island_if_needed_skips_translation_only_bounds_changes`.
+- Translation-only precompute gating: `declarative::tests::layout::solve_barrier_flow_root_if_needed_skips_translation_only_bounds_changes`.
