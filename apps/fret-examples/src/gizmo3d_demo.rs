@@ -2054,9 +2054,10 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
         let mut did_apply = false;
 
         // Always cancel in-progress viewport interactions before applying undo/redo.
-        let _ = state.demo.update(app, |m, _cx| {
-            let _ = m.cancel_in_progress_interaction();
-        });
+        let did_cancel = state
+            .demo
+            .update(app, |m, _cx| m.cancel_in_progress_interaction())
+            .unwrap_or(false);
 
         let mut applied_transform = false;
         let _ = app.with_global_mut(
@@ -2134,7 +2135,7 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
             );
         }
 
-        if did_apply {
+        if did_apply || did_cancel {
             app.request_redraw(window);
         }
         did_apply
