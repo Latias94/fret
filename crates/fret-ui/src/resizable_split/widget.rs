@@ -296,7 +296,6 @@ impl<H: UiHost> Widget<H> for ResizableSplit {
         let (rect_a, rect_b, handle_rect, _center) = self.compute_layout(cx.bounds, fraction);
         self.last_handle_rect = handle_rect;
 
-        #[cfg(feature = "layout-engine-v2")]
         if cx.pass_kind == crate::layout_pass::LayoutPassKind::Final {
             let sf = cx.scale_factor;
             let app = &mut *cx.app;

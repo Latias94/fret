@@ -261,7 +261,6 @@ impl ElementHostWidget {
                 }
             };
 
-            #[cfg(feature = "layout-engine-v2")]
             if !is_probe_layout {
                 let sf = cx.scale_factor;
                 let app = &mut *cx.app;
@@ -407,7 +406,6 @@ impl ElementHostWidget {
             Size::new(content_w, content_h),
         );
 
-        #[cfg(feature = "layout-engine-v2")]
         if !is_probe_layout {
             let sf = cx.scale_factor;
             let app = &mut *cx.app;

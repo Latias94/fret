@@ -406,10 +406,7 @@ pub struct UiTree<H: UiHost> {
     observed_globals_in_paint: GlobalObservationIndex,
     measure_stack: Vec<MeasureStackKey>,
     measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics,
-
-    #[cfg(feature = "layout-engine-v2")]
     layout_engine: crate::layout_engine::TaffyLayoutEngine,
-    #[cfg(feature = "layout-engine-v2")]
     viewport_roots: Vec<(NodeId, Rect)>,
 
     debug_enabled: bool,
@@ -448,9 +445,7 @@ impl<H: UiHost> Default for UiTree<H> {
             observed_globals_in_paint: GlobalObservationIndex::default(),
             measure_stack: Vec::new(),
             measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics::default(),
-            #[cfg(feature = "layout-engine-v2")]
             layout_engine: crate::layout_engine::TaffyLayoutEngine::default(),
-            #[cfg(feature = "layout-engine-v2")]
             viewport_roots: Vec::new(),
             debug_enabled: false,
             debug_stats: UiDebugFrameStats::default(),
@@ -512,22 +507,18 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    #[cfg(feature = "layout-engine-v2")]
     pub(crate) fn take_layout_engine(&mut self) -> crate::layout_engine::TaffyLayoutEngine {
         std::mem::take(&mut self.layout_engine)
     }
 
-    #[cfg(feature = "layout-engine-v2")]
     pub(crate) fn put_layout_engine(&mut self, engine: crate::layout_engine::TaffyLayoutEngine) {
         self.layout_engine = engine;
     }
 
-    #[cfg(feature = "layout-engine-v2")]
     pub(crate) fn register_viewport_root(&mut self, root: NodeId, bounds: Rect) {
         self.viewport_roots.push((root, bounds));
     }
 
-    #[cfg(feature = "layout-engine-v2")]
     #[allow(dead_code)]
     pub(crate) fn viewport_roots(&self) -> &[(NodeId, Rect)] {
         &self.viewport_roots
@@ -672,7 +663,6 @@ impl<H: UiHost> UiTree<H> {
         Some(rect_aabb_transformed(bounds, transform))
     }
 
-    #[cfg(feature = "layout-engine-v2")]
     pub(crate) fn layout_engine_child_local_rect(
         &self,
         parent: NodeId,
@@ -682,7 +672,6 @@ impl<H: UiHost> UiTree<H> {
             .child_layout_rect_if_solved(parent, child)
     }
 
-    #[cfg(feature = "layout-engine-v2")]
     #[allow(dead_code)]
     pub(crate) fn flow_subtree_is_engine_backed(&self, root: NodeId) -> bool {
         let Some(&child) = self.children(root).first() else {
@@ -691,7 +680,7 @@ impl<H: UiHost> UiTree<H> {
         self.layout_engine_child_local_rect(root, child).is_some()
     }
 
-    #[cfg(all(feature = "layout-engine-v2", test))]
+    #[cfg(test)]
     pub(crate) fn layout_engine_has_node(&self, node: NodeId) -> bool {
         self.layout_engine.layout_id_for_node(node).is_some()
     }

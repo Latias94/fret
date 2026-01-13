@@ -79,7 +79,7 @@ the separation between "build/request" and "compute/apply".
 
 Deliverables:
 
-- Feature flag: `fret-ui/layout-engine-v2` (default off).
+- Feature flag: `fret-ui/layout-engine-v2` (default on in-repo; retained for compatibility).
 - One engine instance per window, persistent across frames.
 - Stable `NodeId -> LayoutId` mapping and incremental updates (`mark_dirty` on invalidation).
 - APIs:
