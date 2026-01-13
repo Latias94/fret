@@ -15,6 +15,8 @@ use std::{
     sync::Arc,
 };
 
+use parley::fontique::GenericFamily as ParleyGenericFamily;
+
 struct FretFallback;
 
 impl cosmic_text::Fallback for FretFallback {
@@ -362,8 +364,51 @@ struct ParleyGlyphKey {
     font_index: u32,
     glyph_id: u32,
     size_bits: u32,
-    x_q4: i8,
-    y_q4: i8,
+    x_bin: u8,
+    y_bin: u8,
+}
+
+fn subpixel_bin_q4(pos: f32) -> (i32, u8) {
+    // Keep behavior aligned with cosmic-text's `SubpixelBin::new`.
+    let trunc = pos as i32;
+    let fract = pos - trunc as f32;
+
+    if pos.is_sign_negative() {
+        if fract > -0.125 {
+            (trunc, 0)
+        } else if fract > -0.375 {
+            (trunc - 1, 3)
+        } else if fract > -0.625 {
+            (trunc - 1, 2)
+        } else if fract > -0.875 {
+            (trunc - 1, 1)
+        } else {
+            (trunc - 1, 0)
+        }
+    } else {
+        #[allow(clippy::collapsible_else_if)]
+        if fract < 0.125 {
+            (trunc, 0)
+        } else if fract < 0.375 {
+            (trunc, 1)
+        } else if fract < 0.625 {
+            (trunc, 2)
+        } else if fract < 0.875 {
+            (trunc, 3)
+        } else {
+            (trunc + 1, 0)
+        }
+    }
+}
+
+fn subpixel_bin_as_float(bin: u8) -> f32 {
+    match bin {
+        0 => 0.0,
+        1 => 0.25,
+        2 => 0.5,
+        3 => 0.75,
+        _ => 0.0,
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -645,14 +690,17 @@ impl TextSystem {
     /// Returns the number of newly loaded faces. When this returns non-zero, all cached text blobs
     /// and atlas entries are cleared to avoid reusing stale shaping/rasterization results.
     pub fn add_fonts(&mut self, fonts: impl IntoIterator<Item = Vec<u8>>) -> usize {
+        let fonts: Vec<Vec<u8>> = fonts.into_iter().collect();
+
         let before_faces = self.font_system.db().faces().count();
-        for data in fonts {
+        for data in fonts.iter().cloned() {
             self.font_system.db_mut().load_font_data(data);
         }
         let after_faces = self.font_system.db().faces().count();
         let added = after_faces.saturating_sub(before_faces);
+        let parley_added = self.parley_shaper.add_fonts(fonts.into_iter());
 
-        if added > 0 {
+        if added > 0 || parley_added > 0 {
             self.font_db_revision = self.font_db_revision.saturating_add(1);
             self.font_stack_key = font_stack_cache_key(
                 self.font_system.locale(),
@@ -776,13 +824,16 @@ impl TextSystem {
         let (locale, mut db) = FontSystem::new().into_locale_and_db();
         let installed = build_installed_family_set(&db);
 
-        if let Some(sans) = first_installed_family(&installed, default_sans_candidates()) {
+        let sans = first_installed_family(&installed, default_sans_candidates());
+        if let Some(sans) = sans {
             db.set_sans_serif_family(sans);
         }
-        if let Some(serif) = first_installed_family(&installed, default_serif_candidates()) {
+        let serif = first_installed_family(&installed, default_serif_candidates());
+        if let Some(serif) = serif {
             db.set_serif_family(serif);
         }
-        if let Some(mono) = first_installed_family(&installed, default_monospace_candidates()) {
+        let mono = first_installed_family(&installed, default_monospace_candidates());
+        if let Some(mono) = mono {
             db.set_monospace_family(mono);
         }
 
@@ -790,10 +841,25 @@ impl TextSystem {
         let font_stack_key = font_stack_cache_key(&locale, &db, font_db_revision);
         let font_system = FontSystem::new_with_locale_and_db_and_fallback(locale, db, FretFallback);
 
+        let mut parley_shaper = crate::text_v2::parley_shaper::ParleyShaper::new();
+        if let Some(sans) = sans {
+            let _ = parley_shaper.set_generic_family_name(ParleyGenericFamily::SansSerif, sans);
+            let _ = parley_shaper.set_generic_family_name(ParleyGenericFamily::SystemUi, sans);
+            let _ = parley_shaper.set_generic_family_name(ParleyGenericFamily::UiSansSerif, sans);
+        }
+        if let Some(serif) = serif {
+            let _ = parley_shaper.set_generic_family_name(ParleyGenericFamily::Serif, serif);
+            let _ = parley_shaper.set_generic_family_name(ParleyGenericFamily::UiSerif, serif);
+        }
+        if let Some(mono) = mono {
+            let _ = parley_shaper.set_generic_family_name(ParleyGenericFamily::Monospace, mono);
+            let _ = parley_shaper.set_generic_family_name(ParleyGenericFamily::UiMonospace, mono);
+        }
+
         Self {
             font_system,
             swash_cache: SwashCache::new(),
-            parley_shaper: crate::text_v2::parley_shaper::ParleyShaper::new(),
+            parley_shaper,
             parley_scale: parley::swash::scale::ScaleContext::new(),
             scratch: ShapeBuffer::default(),
             font_stack_key,
@@ -818,6 +884,7 @@ impl TextSystem {
     pub fn set_font_families(&mut self, config: &TextFontFamilyConfig) -> bool {
         let installed = build_installed_family_set(self.font_system.db());
         let old_key = self.font_stack_key;
+        let mut parley_changed = false;
 
         let pick =
             |overrides: &[String], defaults: &'static [&'static str]| -> Option<Cow<'_, str>> {
@@ -839,20 +906,51 @@ impl TextSystem {
 
             if let Some(sans) = pick(&config.ui_sans, default_sans_candidates()) {
                 db.set_sans_serif_family(sans.as_ref());
+                parley_changed |= self
+                    .parley_shaper
+                    .set_generic_family_name(ParleyGenericFamily::SansSerif, sans.as_ref());
+                parley_changed |= self
+                    .parley_shaper
+                    .set_generic_family_name(ParleyGenericFamily::SystemUi, sans.as_ref());
+                parley_changed |= self
+                    .parley_shaper
+                    .set_generic_family_name(ParleyGenericFamily::UiSansSerif, sans.as_ref());
             }
             if let Some(serif) = pick(&config.ui_serif, default_serif_candidates()) {
                 db.set_serif_family(serif.as_ref());
+                parley_changed |= self
+                    .parley_shaper
+                    .set_generic_family_name(ParleyGenericFamily::Serif, serif.as_ref());
+                parley_changed |= self
+                    .parley_shaper
+                    .set_generic_family_name(ParleyGenericFamily::UiSerif, serif.as_ref());
             }
             if let Some(mono) = pick(&config.ui_mono, default_monospace_candidates()) {
                 db.set_monospace_family(mono.as_ref());
+                parley_changed |= self
+                    .parley_shaper
+                    .set_generic_family_name(ParleyGenericFamily::Monospace, mono.as_ref());
+                parley_changed |= self
+                    .parley_shaper
+                    .set_generic_family_name(ParleyGenericFamily::UiMonospace, mono.as_ref());
             }
         }
 
-        let new_key = font_stack_cache_key(
+        let mut new_key = font_stack_cache_key(
             self.font_system.locale(),
             self.font_system.db(),
             self.font_db_revision,
         );
+        if new_key == old_key && parley_changed {
+            // Fontique generic family changes do not participate in the cosmic-text key, so we
+            // bump the revision to ensure caches cannot reuse stale Parley shaping results.
+            self.font_db_revision = self.font_db_revision.saturating_add(1);
+            new_key = font_stack_cache_key(
+                self.font_system.locale(),
+                self.font_system.db(),
+                self.font_db_revision,
+            );
+        }
         if new_key == old_key {
             return false;
         }
@@ -1006,10 +1104,11 @@ impl TextSystem {
     ) -> (TextBlobId, TextMetrics) {
         let text = key.text.clone();
 
-        let prefer_parley = matches!(constraints.wrap, TextWrap::None)
-            && matches!(constraints.overflow, TextOverflow::Ellipsis)
+        let prefer_parley = !text.as_ref().contains('\n')
             && constraints.max_width.is_some()
-            && !text.as_ref().contains('\n');
+            && (matches!(constraints.wrap, TextWrap::Word)
+                || (matches!(constraints.wrap, TextWrap::None)
+                    && matches!(constraints.overflow, TextOverflow::Ellipsis)));
         key.backend = if prefer_parley { 1 } else { 0 };
 
         if let Some(id) = self.blob_cache.get(&key).copied() {
@@ -1047,162 +1146,200 @@ impl TextSystem {
                     },
                 };
 
-                let wrapped = crate::text_v2::wrapper::wrap_single_line_with_constraints(
+                let wrapped = crate::text_v2::wrapper::wrap_with_constraints(
                     &mut self.parley_shaper,
                     input,
                     constraints,
                 );
-                let line = wrapped.line;
                 let kept_end = wrapped.kept_end;
+
+                let first_baseline_px = wrapped
+                    .lines
+                    .first()
+                    .map(|l| l.baseline.max(0.0))
+                    .unwrap_or(0.0);
+
+                let mut max_w_px = 0.0_f32;
+                let mut total_h_px = 0.0_f32;
+                for line in &wrapped.lines {
+                    max_w_px = max_w_px.max(line.width.max(0.0));
+                    total_h_px += line.line_height.max(0.0);
+                }
 
                 let metrics = TextMetrics {
                     size: Size::new(
-                        Px((line.width / scale).max(0.0)),
-                        Px((line.line_height / scale).max(0.0)),
+                        Px((max_w_px / scale).max(0.0)),
+                        Px((total_h_px / scale).max(0.0)),
                     ),
-                    baseline: Px((line.baseline / scale).max(0.0)),
+                    baseline: Px((first_baseline_px / scale).max(0.0)),
                 };
 
                 let mut glyphs: Vec<GlyphQuad> = Vec::new();
-                for g in line.glyphs {
-                    let Ok(glyph_id) = u16::try_from(g.id) else {
-                        continue;
-                    };
-                    let Some(font_ref) = parley::swash::FontRef::from_index(
-                        g.font.data.data(),
-                        g.font.index as usize,
-                    ) else {
-                        continue;
-                    };
+                let mut lines: Vec<TextLine> = Vec::with_capacity(wrapped.lines.len().max(1));
+                let mut first_line_caret_stops: Vec<(usize, Px)> = Vec::new();
 
-                    let mut scaler = self
-                        .parley_scale
-                        .builder(font_ref)
-                        .size(g.font_size.max(1.0))
-                        .hint(false)
-                        .build();
+                let mut line_top_px = 0.0_f32;
+                for (i, (range, line)) in wrapped
+                    .line_ranges
+                    .iter()
+                    .cloned()
+                    .zip(wrapped.lines.into_iter())
+                    .enumerate()
+                {
+                    let line_height_px = line.line_height.max(0.0);
+                    let line_baseline_px = line.baseline.max(0.0);
+                    let line_offset_px = (line_top_px + line_baseline_px) - first_baseline_px;
 
-                    let Some(image) = parley::swash::scale::Render::new(&[
-                        parley::swash::scale::Source::ColorOutline(0),
-                        parley::swash::scale::Source::ColorBitmap(
-                            parley::swash::scale::StrikeWith::BestFit,
-                        ),
-                        parley::swash::scale::Source::Outline,
-                    ])
-                    .render(&mut scaler, glyph_id) else {
-                        continue;
-                    };
-
-                    if image.placement.width == 0 || image.placement.height == 0 {
-                        continue;
+                    let slice = &text[range.clone()];
+                    let caret_stops = caret_stops_for_slice(
+                        slice,
+                        range.start,
+                        &line.clusters,
+                        line.width.max(0.0),
+                        scale,
+                        kept_end,
+                    );
+                    if i == 0 {
+                        first_line_caret_stops = caret_stops.clone();
                     }
 
-                    let (kind, bytes_per_pixel, data) = match image.content {
-                        parley::swash::scale::image::Content::Mask => {
-                            (GlyphQuadKind::Mask, 1, image.data)
-                        }
-                        parley::swash::scale::image::Content::Color => {
-                            (GlyphQuadKind::Color, 4, image.data)
-                        }
-                        parley::swash::scale::image::Content::SubpixelMask => {
-                            (GlyphQuadKind::Mask, 1, subpixel_mask_to_alpha(&image.data))
-                        }
-                    };
-
-                    let raster_key = GlyphRasterKey::Parley(ParleyGlyphKey {
-                        font_blob_id: g.font.data.id(),
-                        font_index: g.font.index,
-                        glyph_id: g.id,
-                        size_bits: g.font_size.to_bits(),
-                        x_q4: 0,
-                        y_q4: 0,
+                    lines.push(TextLine {
+                        start: range.start,
+                        end: range.end.min(kept_end),
+                        width: Px((line.width / scale).max(0.0)),
+                        y_top: Px((line_top_px / scale).max(0.0)),
+                        height: Px((line_height_px / scale).max(0.0)),
+                        caret_stops,
                     });
 
-                    let (atlas_w, atlas_h, ex, ey, ew, eh) = match kind {
-                        GlyphQuadKind::Mask => {
-                            let (atlas_w, atlas_h) =
-                                (self.mask_atlas.width as f32, self.mask_atlas.height as f32);
-                            let Some(e) = self.mask_atlas.get_or_insert(
-                                raster_key,
-                                image.placement.width,
-                                image.placement.height,
-                                bytes_per_pixel,
-                                data,
-                            ) else {
-                                continue;
-                            };
-                            (atlas_w, atlas_h, e.x, e.y, e.w, e.h)
+                    for g in line.glyphs {
+                        let Ok(glyph_id) = u16::try_from(g.id) else {
+                            continue;
+                        };
+                        let Some(font_ref) = parley::swash::FontRef::from_index(
+                            g.font.data.data(),
+                            g.font.index as usize,
+                        ) else {
+                            continue;
+                        };
+
+                        let mut scaler = self
+                            .parley_scale
+                            .builder(font_ref)
+                            .size(g.font_size.max(1.0))
+                            .hint(false)
+                            .build();
+
+                        let pos_y = g.y + line_offset_px;
+                        let (x, x_bin) = subpixel_bin_q4(g.x);
+                        let (y, y_bin) = subpixel_bin_q4(pos_y);
+                        let offset_px = parley::swash::zeno::Vector::new(
+                            subpixel_bin_as_float(x_bin),
+                            subpixel_bin_as_float(y_bin),
+                        );
+
+                        let Some(image) = parley::swash::scale::Render::new(&[
+                            parley::swash::scale::Source::ColorOutline(0),
+                            parley::swash::scale::Source::ColorBitmap(
+                                parley::swash::scale::StrikeWith::BestFit,
+                            ),
+                            parley::swash::scale::Source::Outline,
+                        ])
+                        .offset(offset_px)
+                        .render(&mut scaler, glyph_id) else {
+                            continue;
+                        };
+
+                        if image.placement.width == 0 || image.placement.height == 0 {
+                            continue;
                         }
-                        GlyphQuadKind::Color => {
-                            let (atlas_w, atlas_h) = (
-                                self.color_atlas.width as f32,
-                                self.color_atlas.height as f32,
-                            );
-                            let Some(e) = self.color_atlas.get_or_insert(
-                                raster_key,
-                                image.placement.width,
-                                image.placement.height,
-                                bytes_per_pixel,
-                                data,
-                            ) else {
-                                continue;
-                            };
-                            (atlas_w, atlas_h, e.x, e.y, e.w, e.h)
-                        }
-                    };
 
-                    let pos_x = g.x.trunc();
-                    let pos_y = g.y.trunc();
-                    let x0_px = pos_x + image.placement.left as f32;
-                    let y0_px = pos_y - image.placement.top as f32;
-                    let w_px = image.placement.width as f32;
-                    let h_px = image.placement.height as f32;
+                        let (kind, bytes_per_pixel, data) = match image.content {
+                            parley::swash::scale::image::Content::Mask => {
+                                (GlyphQuadKind::Mask, 1, image.data)
+                            }
+                            parley::swash::scale::image::Content::Color => {
+                                (GlyphQuadKind::Color, 4, image.data)
+                            }
+                            parley::swash::scale::image::Content::SubpixelMask => {
+                                (GlyphQuadKind::Mask, 1, subpixel_mask_to_alpha(&image.data))
+                            }
+                        };
 
-                    let u0 = ex as f32 / atlas_w;
-                    let v0 = ey as f32 / atlas_h;
-                    let u1 = (ex + ew) as f32 / atlas_w;
-                    let v1 = (ey + eh) as f32 / atlas_h;
+                        let raster_key = GlyphRasterKey::Parley(ParleyGlyphKey {
+                            font_blob_id: g.font.data.id(),
+                            font_index: g.font.index,
+                            glyph_id: g.id,
+                            size_bits: g.font_size.to_bits(),
+                            x_bin,
+                            y_bin,
+                        });
 
-                    let paint_span = resolved_spans
-                        .as_deref()
-                        .and_then(|spans| paint_span_for_text_range(spans, &g.text_range));
+                        let (atlas_w, atlas_h, ex, ey, ew, eh) = match kind {
+                            GlyphQuadKind::Mask => {
+                                let (atlas_w, atlas_h) =
+                                    (self.mask_atlas.width as f32, self.mask_atlas.height as f32);
+                                let Some(e) = self.mask_atlas.get_or_insert(
+                                    raster_key,
+                                    image.placement.width,
+                                    image.placement.height,
+                                    bytes_per_pixel,
+                                    data,
+                                ) else {
+                                    continue;
+                                };
+                                (atlas_w, atlas_h, e.x, e.y, e.w, e.h)
+                            }
+                            GlyphQuadKind::Color => {
+                                let (atlas_w, atlas_h) = (
+                                    self.color_atlas.width as f32,
+                                    self.color_atlas.height as f32,
+                                );
+                                let Some(e) = self.color_atlas.get_or_insert(
+                                    raster_key,
+                                    image.placement.width,
+                                    image.placement.height,
+                                    bytes_per_pixel,
+                                    data,
+                                ) else {
+                                    continue;
+                                };
+                                (atlas_w, atlas_h, e.x, e.y, e.w, e.h)
+                            }
+                        };
 
-                    glyphs.push(GlyphQuad {
-                        rect: [x0_px / scale, y0_px / scale, w_px / scale, h_px / scale],
-                        uv: [u0, v0, u1, v1],
-                        kind,
-                        paint_span,
-                    });
-                }
+                        let x0_px = x as f32 + image.placement.left as f32;
+                        let y0_px = y as f32 - image.placement.top as f32;
+                        let w_px = image.placement.width as f32;
+                        let h_px = image.placement.height as f32;
 
-                let mut caret_stops: Vec<(usize, Px)> = Vec::new();
-                for c in &line.clusters {
-                    if c.text_range.start > kept_end || c.text_range.end > kept_end {
-                        continue;
+                        let u0 = ex as f32 / atlas_w;
+                        let v0 = ey as f32 / atlas_h;
+                        let u1 = (ex + ew) as f32 / atlas_w;
+                        let v1 = (ey + eh) as f32 / atlas_h;
+
+                        let text_range =
+                            (range.start + g.text_range.start)..(range.start + g.text_range.end);
+                        let paint_span = resolved_spans
+                            .as_deref()
+                            .and_then(|spans| paint_span_for_text_range(spans, &text_range));
+
+                        glyphs.push(GlyphQuad {
+                            rect: [x0_px / scale, y0_px / scale, w_px / scale, h_px / scale],
+                            uv: [u0, v0, u1, v1],
+                            kind,
+                            paint_span,
+                        });
                     }
-                    caret_stops.push((c.text_range.start, Px(c.x0 / scale)));
-                    caret_stops.push((c.text_range.end, Px(c.x1 / scale)));
-                }
-                caret_stops.push((0, Px(0.0)));
-                caret_stops.push((kept_end, Px(line.width / scale)));
-                caret_stops.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.0.total_cmp(&b.1.0)));
-                caret_stops.dedup_by(|a, b| a.0 == b.0);
 
-                let line_height = Px((line.line_height / scale).max(0.0));
-                let text_line = TextLine {
-                    start: 0,
-                    end: kept_end,
-                    width: Px((line.width / scale).max(0.0)),
-                    y_top: Px(0.0),
-                    height: line_height,
-                    caret_stops: caret_stops.clone(),
-                };
+                    line_top_px += line_height_px;
+                }
 
                 let shape = Arc::new(TextShape {
                     glyphs: Arc::from(glyphs),
                     metrics,
-                    lines: Arc::from(vec![text_line]),
-                    caret_stops: Arc::from(caret_stops),
+                    lines: Arc::from(lines),
+                    caret_stops: Arc::from(first_line_caret_stops),
                 });
                 self.shape_cache.insert(shape_key.clone(), shape.clone());
                 shape
@@ -2026,6 +2163,84 @@ fn utf8_char_boundaries(text: &str) -> Vec<usize> {
     out
 }
 
+fn caret_stops_for_slice(
+    slice: &str,
+    base_offset: usize,
+    clusters: &[crate::text_v2::parley_shaper::ShapedCluster],
+    line_width_px: f32,
+    scale: f32,
+    kept_end: usize,
+) -> Vec<(usize, Px)> {
+    let mut out: Vec<(usize, Px)> = Vec::new();
+    let boundaries = utf8_char_boundaries(slice);
+
+    if boundaries.is_empty() {
+        return vec![(base_offset, Px(0.0))];
+    }
+
+    if clusters.is_empty() {
+        for &b in &boundaries {
+            let idx = base_offset + b;
+            if idx > kept_end {
+                continue;
+            }
+            let x = if b >= slice.len() {
+                (line_width_px / scale).max(0.0)
+            } else {
+                0.0
+            };
+            out.push((idx, Px(x)));
+        }
+        out.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.0.total_cmp(&b.1.0)));
+        out.dedup_by(|a, b| a.0 == b.0);
+        return out;
+    }
+
+    let mut cluster_i = 0usize;
+    for &b in &boundaries {
+        let idx = base_offset + b;
+        if idx > kept_end {
+            continue;
+        }
+
+        while cluster_i + 1 < clusters.len() && clusters[cluster_i].text_range.end < b {
+            cluster_i = cluster_i.saturating_add(1);
+        }
+
+        let x = if b <= clusters[0].text_range.start {
+            0.0
+        } else if cluster_i >= clusters.len() {
+            line_width_px.max(0.0)
+        } else {
+            let c = &clusters[cluster_i];
+            let start = c.text_range.start.min(slice.len());
+            let end = c.text_range.end.min(slice.len());
+
+            if start == end {
+                c.x0.max(0.0)
+            } else if b <= start {
+                c.x0.max(0.0)
+            } else if b >= end {
+                c.x1.max(0.0)
+            } else {
+                let denom = (end - start) as f32;
+                let mut t = ((b - start) as f32 / denom).clamp(0.0, 1.0);
+                if c.is_rtl {
+                    t = 1.0 - t;
+                }
+                let w = (c.x1 - c.x0).max(0.0);
+                (c.x0 + w * t).max(0.0)
+            }
+        };
+
+        out.push((idx, Px((x / scale).max(0.0))));
+    }
+
+    out.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.0.total_cmp(&b.1.0)));
+    out.dedup_by(|a, b| a.0 == b.0);
+    out
+}
+
 fn build_line_caret_stops(
     base_offset: usize,
     boundaries_local: &[usize],
@@ -2212,6 +2427,44 @@ mod tests {
             1u8, 200u8, 2u8, 0u8,
         ];
         assert_eq!(subpixel_mask_to_alpha(&data), vec![10u8, 200u8]);
+    }
+
+    #[test]
+    fn caret_stops_for_slice_interpolates_within_cluster_ltr() {
+        let clusters = vec![crate::text_v2::parley_shaper::ShapedCluster {
+            text_range: 0..4,
+            x0: 0.0,
+            x1: 40.0,
+            is_rtl: false,
+        }];
+
+        let stops = super::caret_stops_for_slice("abcd", 0, &clusters, 40.0, 1.0, 4);
+        let x_at = |i: usize| stops.iter().find(|(idx, _)| *idx == i).unwrap().1.0;
+
+        assert_eq!(x_at(0), 0.0);
+        assert_eq!(x_at(1), 10.0);
+        assert_eq!(x_at(2), 20.0);
+        assert_eq!(x_at(3), 30.0);
+        assert_eq!(x_at(4), 40.0);
+    }
+
+    #[test]
+    fn caret_stops_for_slice_interpolates_within_cluster_rtl() {
+        let clusters = vec![crate::text_v2::parley_shaper::ShapedCluster {
+            text_range: 0..4,
+            x0: 0.0,
+            x1: 40.0,
+            is_rtl: true,
+        }];
+
+        let stops = super::caret_stops_for_slice("abcd", 0, &clusters, 40.0, 1.0, 4);
+        let x_at = |i: usize| stops.iter().find(|(idx, _)| *idx == i).unwrap().1.0;
+
+        assert_eq!(x_at(0), 0.0);
+        assert_eq!(x_at(1), 30.0);
+        assert_eq!(x_at(2), 20.0);
+        assert_eq!(x_at(3), 10.0);
+        assert_eq!(x_at(4), 40.0);
     }
 
     #[test]

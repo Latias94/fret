@@ -51,6 +51,36 @@ impl ParleyShaper {
         Self::default()
     }
 
+    pub fn add_fonts(&mut self, fonts: impl IntoIterator<Item = Vec<u8>>) -> usize {
+        let mut added = 0usize;
+        for data in fonts {
+            let blob = parley::fontique::Blob::<u8>::from(data);
+            let families = self.fcx.collection.register_fonts(blob, None);
+            added = added.saturating_add(families.iter().map(|(_, fonts)| fonts.len()).sum());
+        }
+        added
+    }
+
+    pub fn set_generic_family_name(
+        &mut self,
+        generic: parley::fontique::GenericFamily,
+        family_name: &str,
+    ) -> bool {
+        let Some(id) = self.fcx.collection.family_id(family_name) else {
+            return false;
+        };
+
+        let before = self.fcx.collection.generic_families(generic).next();
+        if before == Some(id) {
+            return false;
+        }
+
+        self.fcx
+            .collection
+            .set_generic_families(generic, std::iter::once(id));
+        true
+    }
+
     pub fn shape_single_line(&mut self, input: TextInput<'_>, scale: f32) -> ShapedLineLayout {
         let (text, base_style, spans) = match input {
             TextInput::Plain { text, style } => (text, style, &[][..]),
