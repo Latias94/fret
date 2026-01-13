@@ -46,10 +46,11 @@ fn help() -> Result<(), String> {
 
 Usage:
   fretboard help
-  fretboard new [template] [--path <path>] [--name <name>] [--ui-assets]
+  fretboard new [template] [--path <path>] [--name <name>] [--ui-assets] [--icons <lucide|radix|none>] [--command-palette]
   fretboard new             # interactive wizard
   fretboard new todo        # non-interactive (template shortcut)
   fretboard new hello       # non-interactive (template shortcut)
+  fretboard new empty       # minimal Cargo-like project
   fretboard init <template> [...]    # alias for `new` (compat)
   fretboard hotpatch poke [--path <path>]
   fretboard hotpatch path [--path <path>]
@@ -64,6 +65,9 @@ Usage:
 Examples:
   fretboard new todo --name my-todo
   fretboard new hello --name hello-world
+  fretboard new hello --name hello-world --command-palette
+  fretboard new todo --name my-todo --icons none
+  fretboard new empty --name my-app
   fretboard dev native --bin components_gallery
   fretboard dev native --bin todo_demo
   fretboard dev native --bin assets_demo
@@ -129,6 +133,41 @@ enum NewTemplate {
     Todo,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum IconPack {
+    None,
+    Lucide,
+    Radix,
+}
+
+impl IconPack {
+    fn parse(raw: &str) -> Result<Self, String> {
+        match raw.trim().to_ascii_lowercase().as_str() {
+            "none" | "no" | "off" | "false" => Ok(Self::None),
+            "lucide" => Ok(Self::Lucide),
+            "radix" => Ok(Self::Radix),
+            other => Err(format!(
+                "unknown icon pack: {other} (expected: lucide|radix|none)"
+            )),
+        }
+    }
+
+    fn as_str(self) -> &'static str {
+        match self {
+            IconPack::None => "none",
+            IconPack::Lucide => "lucide",
+            IconPack::Radix => "radix",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ScaffoldOptions {
+    icon_pack: IconPack,
+    command_palette: bool,
+    ui_assets: bool,
+}
+
 fn new_wizard() -> Result<(), String> {
     if !std::io::stdin().is_terminal() {
         return Err(
@@ -168,9 +207,33 @@ fn new_wizard() -> Result<(), String> {
     )?;
     let out_dir = PathBuf::from(out_raw);
 
+    let icon_pack = match template {
+        NewTemplate::Empty => IconPack::None,
+        _ => prompt_choice(
+            "Icons",
+            &[
+                ("lucide", IconPack::Lucide),
+                ("radix", IconPack::Radix),
+                ("none", IconPack::None),
+            ],
+            0,
+        )?,
+    };
+
+    let command_palette = match template {
+        NewTemplate::Empty => false,
+        _ => prompt_yes_no("Enable command palette? (--command-palette)", false)?,
+    };
+
     let ui_assets = match template {
         NewTemplate::Todo => prompt_yes_no("Enable UI assets cache? (--ui-assets)", false)?,
         _ => false,
+    };
+
+    let opts = ScaffoldOptions {
+        icon_pack,
+        command_palette,
+        ui_assets,
     };
 
     println!();
@@ -178,8 +241,12 @@ fn new_wizard() -> Result<(), String> {
     println!("  template: {:?}", template);
     println!("  name:     {package_name}");
     println!("  path:     {}", out_dir.display());
+    if !matches!(template, NewTemplate::Empty) {
+        println!("  icons:    {}", opts.icon_pack.as_str());
+        println!("  palette:  {}", opts.command_palette);
+    }
     if matches!(template, NewTemplate::Todo) {
-        println!("  ui-assets: {ui_assets}");
+        println!("  ui-assets: {}", opts.ui_assets);
     }
     println!();
 
@@ -189,8 +256,8 @@ fn new_wizard() -> Result<(), String> {
 
     match template {
         NewTemplate::Empty => init_empty_at(&out_dir, &package_name),
-        NewTemplate::Hello => init_hello_at(&out_dir, &package_name),
-        NewTemplate::Todo => init_todo_at(&out_dir, &package_name, ui_assets),
+        NewTemplate::Hello => init_hello_at(&out_dir, &package_name, opts),
+        NewTemplate::Todo => init_todo_at(&out_dir, &package_name, opts),
     }
 }
 
@@ -232,6 +299,8 @@ fn init_todo(args: Vec<String>) -> Result<(), String> {
     let mut out_path: Option<PathBuf> = None;
     let mut name: Option<String> = None;
     let mut ui_assets = false;
+    let mut icon_pack = IconPack::Lucide;
+    let mut command_palette = false;
 
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
@@ -249,6 +318,14 @@ fn init_todo(args: Vec<String>) -> Result<(), String> {
                 );
             }
             "--ui-assets" => ui_assets = true,
+            "--icons" => {
+                let raw = it
+                    .next()
+                    .ok_or_else(|| "--icons requires a value".to_string())?;
+                icon_pack = IconPack::parse(&raw)?;
+            }
+            "--no-icons" => icon_pack = IconPack::None,
+            "--command-palette" => command_palette = true,
             "--help" | "-h" => return help(),
             other => return Err(format!("unknown argument for init todo: {other}")),
         }
@@ -257,24 +334,32 @@ fn init_todo(args: Vec<String>) -> Result<(), String> {
     let package_name = sanitize_package_name(name.as_deref().unwrap_or("todo-app"))?;
 
     let out_dir = out_path.unwrap_or_else(|| root.join("local").join(&package_name));
-    init_todo_at(&out_dir, &package_name, ui_assets)
+    init_todo_at(
+        &out_dir,
+        &package_name,
+        ScaffoldOptions {
+            icon_pack,
+            command_palette,
+            ui_assets,
+        },
+    )
 }
 
-fn init_todo_at(out_dir: &Path, package_name: &str, ui_assets: bool) -> Result<(), String> {
+fn init_todo_at(out_dir: &Path, package_name: &str, opts: ScaffoldOptions) -> Result<(), String> {
     ensure_dir_is_new_or_empty(out_dir)?;
 
-    let cargo_toml = todo_template_cargo_toml(&package_name, ui_assets);
+    let cargo_toml = todo_template_cargo_toml(package_name, opts);
     write_new_file(&out_dir.join("Cargo.toml"), &cargo_toml)?;
 
     let src_dir = out_dir.join("src");
     std::fs::create_dir_all(&src_dir).map_err(|e| e.to_string())?;
     write_new_file(
         &src_dir.join("main.rs"),
-        &todo_template_main_rs(&package_name, ui_assets),
+        &todo_template_main_rs(package_name, opts),
     )?;
     write_new_file(
         &out_dir.join("README.md"),
-        &todo_template_readme_md(&package_name, ui_assets),
+        &todo_template_readme_md(package_name, opts),
     )?;
 
     println!("Initialized todo template at: {}", out_dir.display());
@@ -291,6 +376,8 @@ fn init_hello(args: Vec<String>) -> Result<(), String> {
 
     let mut out_path: Option<PathBuf> = None;
     let mut name: Option<String> = None;
+    let mut icon_pack = IconPack::Lucide;
+    let mut command_palette = false;
 
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
@@ -307,6 +394,14 @@ fn init_hello(args: Vec<String>) -> Result<(), String> {
                         .ok_or_else(|| "--name requires a value".to_string())?,
                 );
             }
+            "--icons" => {
+                let raw = it
+                    .next()
+                    .ok_or_else(|| "--icons requires a value".to_string())?;
+                icon_pack = IconPack::parse(&raw)?;
+            }
+            "--no-icons" => icon_pack = IconPack::None,
+            "--command-palette" => command_palette = true,
             "--help" | "-h" => return help(),
             other => return Err(format!("unknown argument for init hello: {other}")),
         }
@@ -315,24 +410,32 @@ fn init_hello(args: Vec<String>) -> Result<(), String> {
     let package_name = sanitize_package_name(name.as_deref().unwrap_or("hello-world"))?;
 
     let out_dir = out_path.unwrap_or_else(|| root.join("local").join(&package_name));
-    init_hello_at(&out_dir, &package_name)
+    init_hello_at(
+        &out_dir,
+        &package_name,
+        ScaffoldOptions {
+            icon_pack,
+            command_palette,
+            ui_assets: false,
+        },
+    )
 }
 
-fn init_hello_at(out_dir: &Path, package_name: &str) -> Result<(), String> {
+fn init_hello_at(out_dir: &Path, package_name: &str, opts: ScaffoldOptions) -> Result<(), String> {
     ensure_dir_is_new_or_empty(out_dir)?;
 
-    let cargo_toml = hello_template_cargo_toml(package_name);
+    let cargo_toml = hello_template_cargo_toml(package_name, opts);
     write_new_file(&out_dir.join("Cargo.toml"), &cargo_toml)?;
 
     let src_dir = out_dir.join("src");
     std::fs::create_dir_all(&src_dir).map_err(|e| e.to_string())?;
     write_new_file(
         &src_dir.join("main.rs"),
-        &hello_template_main_rs(package_name),
+        &hello_template_main_rs(package_name, opts),
     )?;
     write_new_file(
         &out_dir.join("README.md"),
-        &hello_template_readme_md(package_name),
+        &hello_template_readme_md(package_name, opts),
     )?;
 
     println!("Initialized hello template at: {}", out_dir.display());
@@ -413,8 +516,31 @@ fn write_new_file(path: &Path, contents: &str) -> Result<(), String> {
     std::fs::write(path, contents).map_err(|e| e.to_string())
 }
 
-fn todo_template_cargo_toml(package_name: &str, ui_assets: bool) -> String {
-    let ui_assets_features = if ui_assets { ", \"ui-assets\"" } else { "" };
+fn todo_template_cargo_toml(package_name: &str, opts: ScaffoldOptions) -> String {
+    let mut bootstrap_features: Vec<&str> = vec!["ui-app-driver", "diagnostics"];
+    if opts.command_palette {
+        bootstrap_features.push("ui-app-command-palette");
+    }
+    if opts.ui_assets {
+        bootstrap_features.push("ui-assets");
+    }
+    match opts.icon_pack {
+        IconPack::Lucide => {
+            bootstrap_features.push("icons-lucide");
+            bootstrap_features.push("preload-icon-svgs");
+        }
+        IconPack::Radix => {
+            bootstrap_features.push("icons-radix");
+            bootstrap_features.push("preload-icon-svgs");
+        }
+        IconPack::None => {}
+    }
+
+    let bootstrap_features = bootstrap_features
+        .into_iter()
+        .map(|f| format!("\"{f}\""))
+        .collect::<Vec<_>>()
+        .join(", ");
 
     format!(
         r#"[package]
@@ -425,7 +551,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1"
 fret-app = {{ path = "../../crates/fret-app" }}
-fret-bootstrap = {{ path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver", "preload-icon-svgs", "icons-lucide", "diagnostics"{ui_assets_features}] }}
+fret-bootstrap = {{ path = "../../ecosystem/fret-bootstrap", features = [{bootstrap_features}] }}
 fret-ui-shadcn = {{ path = "../../ecosystem/fret-ui-shadcn", features = ["app-integration"] }}
 [workspace]
 "#
@@ -447,7 +573,23 @@ anyhow = "1"
     )
 }
 
-fn hello_template_cargo_toml(package_name: &str) -> String {
+fn hello_template_cargo_toml(package_name: &str, opts: ScaffoldOptions) -> String {
+    let mut bootstrap_features: Vec<&str> = vec!["ui-app-driver", "diagnostics"];
+    if opts.command_palette {
+        bootstrap_features.push("ui-app-command-palette");
+    }
+    match opts.icon_pack {
+        IconPack::Lucide => bootstrap_features.push("icons-lucide"),
+        IconPack::Radix => bootstrap_features.push("icons-radix"),
+        IconPack::None => {}
+    }
+
+    let bootstrap_features = bootstrap_features
+        .into_iter()
+        .map(|f| format!("\"{f}\""))
+        .collect::<Vec<_>>()
+        .join(", ");
+
     format!(
         r#"[package]
 name = "{package_name}"
@@ -457,7 +599,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1"
 fret-app = {{ path = "../../crates/fret-app" }}
-fret-bootstrap = {{ path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver", "diagnostics"] }}
+fret-bootstrap = {{ path = "../../ecosystem/fret-bootstrap", features = [{bootstrap_features}] }}
 fret-ui-shadcn = {{ path = "../../ecosystem/fret-ui-shadcn", features = ["app-integration"] }}
 
 [workspace]
@@ -465,11 +607,57 @@ fret-ui-shadcn = {{ path = "../../ecosystem/fret-ui-shadcn", features = ["app-in
     )
 }
 
-fn todo_template_main_rs(_package_name: &str, ui_assets: bool) -> String {
-    let ui_assets_builder = if ui_assets {
+fn todo_template_main_rs(_package_name: &str, opts: ScaffoldOptions) -> String {
+    let ui_assets_builder = if opts.ui_assets {
         "\n        .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)"
     } else {
         ""
+    };
+
+    let icons_builder = match opts.icon_pack {
+        IconPack::Lucide => {
+            "\n        .with_lucide_icons()\n        .preload_icon_svgs_on_gpu_ready()"
+        }
+        IconPack::Radix => {
+            "\n        .with_radix_icons()\n        .preload_icon_svgs_on_gpu_ready()"
+        }
+        IconPack::None => "",
+    };
+
+    // Radix doesn't currently ship plus/trash icons in our curated set; keep the todo template
+    // functional by falling back to text buttons when Lucide isn't selected.
+    let has_action_icons = matches!(opts.icon_pack, IconPack::Lucide);
+
+    let add_btn_def = if has_action_icons {
+        r#"    let add_btn = shadcn::Button::new("")
+        .size(shadcn::ButtonSize::Icon)
+        .disabled(!add_enabled)
+        .on_click(CMD_ADD)
+        .children(vec![icon::icon(cx, IconId::new("lucide.plus"))])
+        .into_element(cx);
+"#
+    } else {
+        r#"    let add_btn = shadcn::Button::new("Add")
+        .disabled(!add_enabled)
+        .on_click(CMD_ADD)
+        .into_element(cx);
+"#
+    };
+
+    let remove_btn_def = if has_action_icons {
+        r#"    let remove_btn = shadcn::Button::new("")
+        .size(shadcn::ButtonSize::Icon)
+        .variant(shadcn::ButtonVariant::Ghost)
+        .on_click(remove_cmd)
+        .children(vec![icon::icon(cx, IconId::new("lucide.trash"))])
+        .into_element(cx);
+"#
+    } else {
+        r#"    let remove_btn = shadcn::Button::new("Remove")
+        .variant(shadcn::ButtonVariant::Ghost)
+        .on_click(remove_cmd)
+        .into_element(cx);
+"#
     };
 
     const TEMPLATE: &str = r#"use std::sync::Arc;
@@ -502,9 +690,7 @@ fn main() -> anyhow::Result<()> {
         .with_main_window("todo", (560.0, 520.0))
         .init_app(|app| {
             shadcn::install_app(app);
-        })
-        .with_lucide_icons()
-        .preload_icon_svgs_on_gpu_ready()
+        })__ICONS_BUILDER__
         .run()
         .map_err(anyhow::Error::from)
 }
@@ -545,12 +731,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
         .unwrap_or_default();
 
     let add_enabled = !draft_value.trim().is_empty();
-    let add_btn = shadcn::Button::new("")
-        .size(shadcn::ButtonSize::Icon)
-        .disabled(!add_enabled)
-        .on_click(CMD_ADD)
-        .children(vec![icon::icon(cx, IconId::new("lucide.plus"))])
-        .into_element(cx);
+__ADD_BTN_DEF__
 
     let input = shadcn::Input::new(st.draft.clone())
         .placeholder("Add a task…")
@@ -647,12 +828,7 @@ fn todo_row(cx: &mut ElementContext<'_, App>, theme: &Theme, item: &TodoItem) ->
 
     let checkbox = shadcn::Checkbox::new(item.done.clone()).into_element(cx);
     let remove_cmd = CommandId::new(format!("{}{}", CMD_REMOVE_PREFIX, item.id));
-    let remove_btn = shadcn::Button::new("")
-        .size(shadcn::ButtonSize::Icon)
-        .variant(shadcn::ButtonVariant::Ghost)
-        .on_click(remove_cmd)
-        .children(vec![icon::icon(cx, IconId::new("lucide.trash-2"))])
-        .into_element(cx);
+__REMOVE_BTN_DEF__
 
     let props = decl_style::container_props(
         theme,
@@ -769,10 +945,29 @@ fn on_command(
 }
 "#;
 
-    TEMPLATE.replace("__UI_ASSETS_BUILDER__", ui_assets_builder)
+    TEMPLATE
+        .replace("__UI_ASSETS_BUILDER__", ui_assets_builder)
+        .replace("__ICONS_BUILDER__", icons_builder)
+        .replace("__ADD_BTN_DEF__", add_btn_def)
+        .replace("__REMOVE_BTN_DEF__", remove_btn_def)
 }
 
-fn hello_template_main_rs(package_name: &str) -> String {
+fn hello_template_main_rs(package_name: &str, opts: ScaffoldOptions) -> String {
+    let icons_builder = match opts.icon_pack {
+        IconPack::Lucide => "\n        .with_lucide_icons()",
+        IconPack::Radix => "\n        .with_radix_icons()",
+        IconPack::None => "",
+    };
+
+    let palette_button = if opts.command_palette {
+        r#"
+                shadcn::Button::new("Command palette")
+                    .on_click("app.command_palette")
+                    .into_element(cx),"#
+    } else {
+        ""
+    };
+
     format!(
         r#"use fret_app::{{App, CommandId}};
 use fret_bootstrap::ui_app_with_hooks;
@@ -787,7 +982,7 @@ fn main() -> anyhow::Result<()> {{
         .with_main_window("{package_name}", (560.0, 360.0))
         .init_app(|app| {{
             shadcn::install_app(app);
-        }})
+        }})__ICONS_BUILDER__
         .run()
         .map_err(anyhow::Error::from)
 }}
@@ -808,6 +1003,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> Vec<AnyElement> {{
                 shadcn::Button::new("Click me")
                     .on_click(CMD_CLICK)
                     .into_element(cx),
+__PALETTE_BUTTON__
             ]
         }},
     )]
@@ -827,6 +1023,8 @@ fn on_command(
 }}
 "#
     )
+    .replace("__ICONS_BUILDER__", icons_builder)
+    .replace("__PALETTE_BUTTON__", palette_button)
 }
 
 fn empty_template_main_rs() -> &'static str {
@@ -837,17 +1035,29 @@ fn empty_template_main_rs() -> &'static str {
 "#
 }
 
-fn todo_template_readme_md(package_name: &str, ui_assets: bool) -> String {
-    let ui_assets_line = if ui_assets {
+fn todo_template_readme_md(package_name: &str, opts: ScaffoldOptions) -> String {
+    let ui_assets_line = if opts.ui_assets {
         "- UI assets: enabled (`fret-bootstrap/ui-assets`)\n"
     } else {
-        "- UI assets: disabled (use `fretboard init todo --ui-assets` if you need images/SVG caches)\n"
+        "- UI assets: disabled (use `fretboard new todo --ui-assets` if you need images/SVG caches)\n"
+    };
+
+    let icons_line = match opts.icon_pack {
+        IconPack::Lucide => "- Icons: Lucide (`fret-bootstrap/icons-lucide`)\n",
+        IconPack::Radix => "- Icons: Radix (`fret-bootstrap/icons-radix`)\n",
+        IconPack::None => "- Icons: disabled\n",
+    };
+
+    let palette_line = if opts.command_palette {
+        "- Command palette: enabled (Cmd/Ctrl+Shift+P)\n"
+    } else {
+        "- Command palette: disabled\n"
     };
 
     format!(
         r#"# {package_name}
 
-Generated by `fretboard init todo`.
+Generated by `fretboard new todo`.
 
 ## Run
 
@@ -858,7 +1068,7 @@ cargo run
 ## Notes
 
 - Theme: shadcn new-york-v4 (Slate / Light)
-- Icons: Lucide (`fret-bootstrap/icons-lucide`)
+{icons_line}{palette_line}
 {ui_assets_line}
 ## Next steps
 
@@ -883,11 +1093,23 @@ cargo run
     )
 }
 
-fn hello_template_readme_md(package_name: &str) -> String {
+fn hello_template_readme_md(package_name: &str, opts: ScaffoldOptions) -> String {
+    let icons_line = match opts.icon_pack {
+        IconPack::Lucide => "- Icons: Lucide (`fret-bootstrap/icons-lucide`)\n",
+        IconPack::Radix => "- Icons: Radix (`fret-bootstrap/icons-radix`)\n",
+        IconPack::None => "- Icons: disabled\n",
+    };
+
+    let palette_line = if opts.command_palette {
+        "- Command palette: enabled (Cmd/Ctrl+Shift+P)\n"
+    } else {
+        "- Command palette: disabled\n"
+    };
+
     format!(
         r#"# {package_name}
 
-Generated by `fretboard init hello`.
+Generated by `fretboard new hello`.
 
 ## Run
 
@@ -898,6 +1120,7 @@ cargo run
 ## Notes
 
 - Theme: shadcn new-york-v4 (default via `fret-ui-shadcn/app-integration`)
+{icons_line}{palette_line}
 - Next: edit `src/main.rs` and replace the view tree
 "#
     )
