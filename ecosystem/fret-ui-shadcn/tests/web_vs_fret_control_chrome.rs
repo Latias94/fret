@@ -255,6 +255,98 @@ fn assert_close(label: &str, actual: f32, expected: f32, tol: f32) {
 }
 
 #[test]
+fn web_vs_fret_input_demo_control_chrome_matches() {
+    let web = read_web_golden("input-demo");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_input = find_first(&theme.root, &|n| {
+        n.tag == "input" && (n.rect.h - 36.0).abs() <= 0.1
+    })
+    .expect("web input node");
+
+    let web_border = web_border_width_px(web_input).expect("web borderTopWidth px");
+    let web_radius = web_corner_radius_effective_px(web_input).expect("web radius px");
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
+        vec![
+            fret_ui_shadcn::Input::new(model)
+                .a11y_label("Input")
+                .into_element(cx),
+        ]
+    });
+
+    let input = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::TextField && n.label.as_deref() == Some("Input"))
+        .or_else(|| {
+            snap.nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::TextField)
+        })
+        .expect("fret input semantics node");
+
+    let quad = find_best_quad(&scene, input.bounds).expect("painted quad for input");
+    for (idx, edge) in quad.border.iter().enumerate() {
+        assert_close(&format!("input border[{idx}]"), *edge, web_border, 0.6);
+    }
+    for (idx, corner) in quad.corners.iter().enumerate() {
+        assert_close(&format!("input radius[{idx}]"), *corner, web_radius, 1.0);
+    }
+}
+
+#[test]
+fn web_vs_fret_textarea_demo_control_chrome_matches() {
+    let web = read_web_golden("textarea-demo");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_textarea = find_first(&theme.root, &|n| {
+        n.tag == "textarea" && (n.rect.h - 64.0).abs() <= 0.1
+    })
+    .expect("web textarea node");
+
+    let web_border = web_border_width_px(web_textarea).expect("web borderTopWidth px");
+    let web_radius = web_corner_radius_effective_px(web_textarea).expect("web radius px");
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
+        vec![
+            fret_ui_shadcn::Textarea::new(model)
+                .a11y_label("Textarea")
+                .into_element(cx),
+        ]
+    });
+
+    let textarea = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::TextField && n.label.as_deref() == Some("Textarea"))
+        .or_else(|| {
+            snap.nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::TextField)
+        })
+        .expect("fret textarea semantics node");
+
+    let quad = find_best_quad(&scene, textarea.bounds).expect("painted quad for textarea");
+    for (idx, edge) in quad.border.iter().enumerate() {
+        assert_close(&format!("textarea border[{idx}]"), *edge, web_border, 0.6);
+    }
+    for (idx, corner) in quad.corners.iter().enumerate() {
+        assert_close(&format!("textarea radius[{idx}]"), *corner, web_radius, 1.0);
+    }
+}
+
+#[test]
 fn web_vs_fret_switch_demo_track_chrome_matches() {
     let web = read_web_golden("switch-demo");
     let theme = web
