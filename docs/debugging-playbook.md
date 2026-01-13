@@ -199,6 +199,29 @@ Notes:
   - Set `FRET_TAFFY_DUMP_ROOT_LABEL="Golden:..."` to dump the first matching node’s subtree,
     without chasing unstable `NodeId(...)` values across runs.
 
+### 2.1.1 Detect widget-local layout engine fallback solves
+
+Layout engine v2 is designed around a window-scoped pipeline (request/build → solve → apply). If a
+widget can’t consume already-solved engine child rects, it may trigger a “widget-local” fallback
+solve to keep the UI functional. This is useful as a compatibility escape hatch, but it is also a
+signal that the layout tree is drifting from the intended contracts.
+
+To surface these issues:
+
+```powershell
+# Panic on the first fallback solve (useful for CI and tightening invariants).
+$env:FRET_LAYOUT_FORBID_WIDGET_FALLBACK_SOLVES=1
+
+# Or: keep running but log each fallback solve with node + element labels.
+$env:FRET_LAYOUT_TRACE_WIDGET_FALLBACK_SOLVES=1
+
+# Run tests (example):
+cargo nextest run -p fret-ui -p fret-docking
+```
+
+In debug builds with `UiTree::set_debug_enabled(true)`, the frame stats include a counter:
+`UiDebugFrameStats.layout_engine_widget_fallback_solves`.
+
 Example (todo demo):
 
 ```powershell
