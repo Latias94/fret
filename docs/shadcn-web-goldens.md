@@ -12,6 +12,7 @@ For each component page, the exporter writes a JSON file with:
 - per-node `getBoundingClientRect()` relative to the root,
 - a whitelist of `window.getComputedStyle(...)` fields (layout + a few visuals),
 - selected accessibility-related attrs (`role`, `aria-*`, `data-state`, ...).
+- `portals[]` and `portalWrappers[]` snapshots for Radix portal content (wrapper geometry is used for placement checks).
 
 ## Prerequisites
 
@@ -44,7 +45,7 @@ Force webpack instead, and provide the required `NEXT_PUBLIC_*` env vars at buil
 
 Extract both closed + open overlay states (writes `*.open.json` alongside the base file):
 
-`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts popover-demo dropdown-menu-demo select-scrollable --open --update --baseUrl=http://localhost:4020`
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts popover-demo dropdown-menu-demo select-scrollable --modes=open --update --baseUrl=http://localhost:4020`
 
 Extract *all* routable new-york-v4 pages (defaults match `/view/[style]/[name]`: block+component+example):
 
@@ -93,7 +94,6 @@ pixel diffs. See: `docs/audits/shadcn-web-layout-conformance.md`.
 - `--style=new-york-v4`
 - `--themes=light,dark` (default)
 - `--modes=closed,open` (default: `closed`)
-- `--open` (shorthand for `--modes=closed,open`)
 - `--openSelector=<css>` (optional override for the "open overlay" trigger)
 - `--baseUrl=http://localhost:4000`
 - `--all` (env: `ALL_GOLDENS=1`)

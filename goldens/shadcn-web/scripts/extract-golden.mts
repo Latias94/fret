@@ -251,8 +251,61 @@ async function extractOne(page: puppeteer.Page) {
       (el) => !portalCandidates.some((other) => other !== el && el.contains(other))
     );
 
+    // For placement/geometry alignment we often need the positioned wrapper (Popper sets transform/top/left
+    // on [data-radix-popper-content-wrapper]). Some Radix primitives (e.g. Select) render the actual content
+    // element as position: relative inside the wrapper, so its rect is not suitable for placement checks.
+    const rectContains = (outer, inner) => {
+      const eps = 0.01;
+      return (
+        inner.x + eps >= outer.x &&
+        inner.y + eps >= outer.y &&
+        inner.x + inner.width <= outer.x + outer.width + eps &&
+        inner.y + inner.height <= outer.y + outer.height + eps
+      );
+    };
+
+    const portalWrapperRoots = portalRoots.map((el) => {
+      const byAttr = el.closest("[data-radix-popper-content-wrapper]");
+      if (byAttr && !root.contains(byAttr)) return byAttr;
+
+      const leafRect = el.getBoundingClientRect();
+      let best = null;
+      let bestArea = Infinity;
+
+      let cur = el;
+      while (cur && cur instanceof Element && cur !== document.body) {
+        if (root.contains(cur)) break;
+
+        const cs = getComputedStyle(cur);
+        const positioned =
+          cs.position === "fixed" ||
+          cs.position === "absolute" ||
+          (cs.transform && cs.transform !== "none") ||
+          (cs.translate && cs.translate !== "none");
+
+        if (positioned) {
+          const r = cur.getBoundingClientRect();
+          if (rectContains(r, leafRect)) {
+            const area = r.width * r.height;
+            if (area < bestArea) {
+              bestArea = area;
+              best = cur;
+            }
+          }
+        }
+
+        cur = cur.parentElement;
+      }
+
+      return best || el;
+    });
+
     const portals = portalRoots.map((el, idx) =>
       traverse(el, "portal." + idx)
+    );
+
+    const portalWrappers = portalWrapperRoots.map((el, idx) =>
+      traverse(el, "portalWrapper." + idx)
     );
 
     return {
@@ -261,6 +314,7 @@ async function extractOne(page: puppeteer.Page) {
       viewport: { w: window.innerWidth, h: window.innerHeight },
       root: traverse(root, ""),
       portals,
+      portalWrappers,
     };
   })()`
 
@@ -341,6 +395,32 @@ async function openOverlay(
   if (debug) {
     console.log(`- openOverlay: ${name} portal ready`)
   }
+}
+
+async function disableMotion(page: puppeteer.Page) {
+  const expr = `(() => {
+    const id = "fret-disable-motion";
+    if (document.getElementById(id)) return true;
+
+    const style = document.createElement("style");
+    style.id = id;
+    style.textContent = [
+      "* {",
+      "  animation: none !important;",
+      "  transition: none !important;",
+      "  scroll-behavior: auto !important;",
+      "}",
+      "*::before, *::after {",
+      "  animation: none !important;",
+      "  transition: none !important;",
+      "}",
+    ].join("\\n");
+
+    document.head.appendChild(style);
+    return true;
+  })()`
+
+  await page.evaluate(expr)
 }
 
 async function waitForExpr(
@@ -790,6 +870,10 @@ async function run(options: GoldenOptions): Promise<string[]> {
             await page.waitForSelector("[data-fret-golden-target]", { timeout: 30000 })
             if (debug) console.log(`- injectCssLinks: ${name}${suffix} (${theme})`)
             await injectCssLinks(page, cssInjectionUrls)
+
+            // Ensure stable geometry: shadcn overlays use enter/exit animations that can affect
+            // `getBoundingClientRect()` if captured mid-transition.
+            await disableMotion(page)
 
             await page.evaluate(`(() => {
               const indicator = document.querySelector("[data-tailwind-indicator]");
