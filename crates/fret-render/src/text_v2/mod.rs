@@ -1,2 +1,2 @@
-mod parley_shaper;
-mod wrapper;
+pub(crate) mod parley_shaper;
+pub(crate) mod wrapper;

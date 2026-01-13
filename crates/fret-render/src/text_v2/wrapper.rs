@@ -1,18 +1,21 @@
-use super::parley_shaper::{ParleyShaper, ShapedCluster, ShapedLineLayout};
+use super::parley_shaper::{ParleyGlyph, ParleyShaper, ShapedCluster, ShapedLineLayout};
 use fret_core::{CaretAffinity, TextConstraints, TextInput, TextOverflow, TextSpan, TextWrap};
+use std::ops::Range;
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct WrappedSingleLine {
-    pub display_text: String,
-    pub display: ShapedLineLayout,
+    pub text_len: usize,
     pub kept_end: usize,
+    pub line: ShapedLineLayout,
 }
 
 impl WrappedSingleLine {
-    pub fn hit_test_x_source(&self, x: f32) -> (usize, CaretAffinity) {
-        let (display_index, affinity) =
-            hit_test_x(&self.display.clusters, x, self.display_text.len());
-        (display_index.min(self.kept_end), affinity)
+    pub fn hit_test_x(&self, x: f32) -> (usize, CaretAffinity) {
+        let (mut idx, affinity) = hit_test_x(&self.line.clusters, x, self.text_len);
+        if idx > self.kept_end {
+            idx = self.kept_end;
+        }
+        (idx, affinity)
     }
 }
 
@@ -22,6 +25,10 @@ pub(crate) fn wrap_single_line_with_constraints(
     constraints: TextConstraints,
 ) -> WrappedSingleLine {
     let scale = constraints.scale_factor.max(1.0);
+    let text_len = match input {
+        TextInput::Plain { text, .. } => text.len(),
+        TextInput::Attributed { text, .. } => text.len(),
+    };
 
     match constraints {
         TextConstraints {
@@ -29,27 +36,19 @@ pub(crate) fn wrap_single_line_with_constraints(
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,
             ..
-        } => wrap_none_ellipsis(shaper, input, max_width.0 * scale, scale),
-        _ => shape_as_is(shaper, input, scale),
-    }
-}
-
-fn shape_as_is(shaper: &mut ParleyShaper, input: TextInput<'_>, scale: f32) -> WrappedSingleLine {
-    let text = match input {
-        TextInput::Plain { text, .. } => text,
-        TextInput::Attributed { text, .. } => text,
-    };
-
-    WrappedSingleLine {
-        display_text: text.to_string(),
-        display: shaper.shape_single_line(input, scale),
-        kept_end: text.len(),
+        } => wrap_none_ellipsis(shaper, input, text_len, max_width.0 * scale, scale),
+        _ => WrappedSingleLine {
+            text_len,
+            kept_end: text_len,
+            line: shaper.shape_single_line(input, scale),
+        },
     }
 }
 
 fn wrap_none_ellipsis(
     shaper: &mut ParleyShaper,
     input: TextInput<'_>,
+    text_len: usize,
     max_width_px: f32,
     scale: f32,
 ) -> WrappedSingleLine {
@@ -61,9 +60,9 @@ fn wrap_none_ellipsis(
     let full = shaper.shape_single_line(input, scale);
     if full.width <= max_width_px + 0.5 {
         return WrappedSingleLine {
-            display_text: text.to_string(),
-            display: full,
-            kept_end: text.len(),
+            text_len,
+            kept_end: text_len,
+            line: full,
         };
     }
 
@@ -71,56 +70,78 @@ fn wrap_none_ellipsis(
     let ellipsis_w = ellipsis.width.max(0.0);
     let available = (max_width_px - ellipsis_w).max(0.0);
 
-    let mut cut_end = 0usize;
-    for c in &full.clusters {
-        if c.x1 <= available + 0.5 {
-            cut_end = cut_end.max(c.text_range.end.min(text.len()));
+    let mut cut_end = cut_end_for_available(text, &full.clusters, available);
+    if cut_end < text_len && cut_end > 0 {
+        cut_end = trim_trailing_whitespace(text, cut_end);
+        cut_end = clamp_to_char_boundary(text, cut_end);
+    }
+
+    // Shape the kept prefix so truncation doesn't depend on the discarded suffix (important for
+    // contextual shaping scripts).
+    let mut kept = shape_prefix(shaper, text, base, spans, cut_end, scale);
+
+    if kept.width > available + 0.5 {
+        let cut2 = cut_end_for_available(&text[..cut_end], &kept.clusters, available);
+        if cut2 < cut_end {
+            cut_end = clamp_to_char_boundary(text, trim_trailing_whitespace(text, cut2));
+            kept = shape_prefix(shaper, text, base, spans, cut_end, scale);
         }
     }
 
-    while cut_end > 0
-        && text
-            .as_bytes()
-            .get(cut_end.saturating_sub(1))
-            .is_some_and(|b| b.is_ascii_whitespace())
-    {
-        cut_end = cut_end.saturating_sub(1);
-    }
-    while cut_end > 0 && !text.is_char_boundary(cut_end) {
-        cut_end = cut_end.saturating_sub(1);
-    }
+    let ellipsis_start_x = (max_width_px - ellipsis_w).max(0.0);
 
-    let mut display_text = String::from(&text[..cut_end]);
-    display_text.push('…');
+    let mut glyphs: Vec<ParleyGlyph> = kept.glyphs;
+    glyphs.extend(ellipsis.glyphs.into_iter().map(|mut g| {
+        g.x += ellipsis_start_x;
+        g.text_range = empty_range_at(cut_end);
+        g
+    }));
 
-    let display = if let Some(src_spans) = spans {
-        let mut out = truncate_spans(src_spans, cut_end);
-        out.push(TextSpan {
-            len: '…'.len_utf8(),
-            shaping: Default::default(),
-            paint: Default::default(),
-        });
-        shaper.shape_single_line(
-            TextInput::Attributed {
-                text: &display_text,
-                base,
-                spans: &out,
-            },
-            scale,
-        )
-    } else {
-        shaper.shape_single_line(
-            TextInput::Plain {
-                text: &display_text,
-                style: base,
-            },
-            scale,
-        )
-    };
+    let mut clusters: Vec<ShapedCluster> = kept.clusters;
+    clusters.push(ShapedCluster {
+        text_range: empty_range_at(cut_end),
+        x0: ellipsis_start_x,
+        x1: ellipsis_start_x + ellipsis_w,
+        is_rtl: false,
+    });
+
     WrappedSingleLine {
-        display_text,
-        display,
+        text_len,
         kept_end: cut_end,
+        line: ShapedLineLayout {
+            width: max_width_px,
+            ascent: kept.ascent.max(ellipsis.ascent),
+            descent: kept.descent.max(ellipsis.descent),
+            baseline: kept.baseline.max(ellipsis.baseline),
+            line_height: kept.line_height.max(ellipsis.line_height),
+            glyphs,
+            clusters,
+        },
+    }
+}
+
+fn shape_prefix(
+    shaper: &mut ParleyShaper,
+    text: &str,
+    base: &fret_core::TextStyle,
+    spans: Option<&[TextSpan]>,
+    end: usize,
+    scale: f32,
+) -> ShapedLineLayout {
+    let slice = &text[..end.min(text.len())];
+    match spans {
+        Some(spans) => {
+            let out = truncate_spans(spans, slice.len());
+            shaper.shape_single_line(
+                TextInput::Attributed {
+                    text: slice,
+                    base,
+                    spans: &out,
+                },
+                scale,
+            )
+        }
+        None => shaper.shape_single_line(TextInput::plain(slice, base), scale),
     }
 }
 
@@ -145,6 +166,39 @@ fn truncate_spans(spans: &[TextSpan], end: usize) -> Vec<TextSpan> {
     out
 }
 
+fn cut_end_for_available(text: &str, clusters: &[ShapedCluster], available: f32) -> usize {
+    let mut cut_end = 0usize;
+    for c in clusters {
+        if c.x1 <= available + 0.5 {
+            cut_end = cut_end.max(c.text_range.end.min(text.len()));
+        }
+    }
+    cut_end
+}
+
+fn trim_trailing_whitespace(text: &str, mut end: usize) -> usize {
+    while end > 0
+        && text
+            .as_bytes()
+            .get(end.saturating_sub(1))
+            .is_some_and(|b| b.is_ascii_whitespace())
+    {
+        end = end.saturating_sub(1);
+    }
+    end
+}
+
+fn clamp_to_char_boundary(text: &str, mut end: usize) -> usize {
+    while end > 0 && !text.is_char_boundary(end) {
+        end = end.saturating_sub(1);
+    }
+    end
+}
+
+fn empty_range_at(idx: usize) -> Range<usize> {
+    idx..idx
+}
+
 fn hit_test_x(clusters: &[ShapedCluster], x: f32, text_len: usize) -> (usize, CaretAffinity) {
     if clusters.is_empty() {
         return (0, CaretAffinity::Downstream);
@@ -157,6 +211,9 @@ fn hit_test_x(clusters: &[ShapedCluster], x: f32, text_len: usize) -> (usize, Ca
     for c in clusters {
         if x > c.x1 {
             continue;
+        }
+        if c.text_range.start == c.text_range.end {
+            return (c.text_range.start, CaretAffinity::Downstream);
         }
         let mid = c.x0 + (c.x1 - c.x0) * 0.5;
         let left_half = x <= mid;
@@ -181,7 +238,7 @@ mod tests {
     use fret_core::{FontId, Px, TextPaintStyle, TextShapingStyle, TextStyle};
 
     #[test]
-    fn none_ellipsis_hits_inside_ellipsis_maps_to_cut_end() {
+    fn none_ellipsis_adds_zero_len_cluster_at_cut_end() {
         let mut shaper = ParleyShaper::new();
         let base = TextStyle {
             font: FontId::default(),
@@ -214,9 +271,16 @@ mod tests {
         );
 
         assert!(wrapped.kept_end < text.len());
-        assert!(wrapped.display_text.ends_with('…'));
+        assert!(
+            wrapped
+                .line
+                .clusters
+                .iter()
+                .any(|c| c.text_range == (wrapped.kept_end..wrapped.kept_end)),
+            "expected a synthetic zero-length cluster for ellipsis mapping"
+        );
 
-        let (hit, _affinity) = wrapped.hit_test_x_source(79.0);
+        let (hit, _affinity) = wrapped.hit_test_x(79.0);
         assert_eq!(hit, wrapped.kept_end);
     }
 
@@ -253,7 +317,6 @@ mod tests {
             constraints,
         );
 
-        assert_eq!(wrapped.display_text, text);
         assert_eq!(wrapped.kept_end, text.len());
     }
 }

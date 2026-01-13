@@ -1,21 +1,23 @@
 use fret_core::{FontId, TextInput, TextShapingStyle, TextSlant, TextSpan, TextStyle};
 use parley::FontContext;
+use parley::FontData;
 use parley::Layout;
 use parley::LayoutContext;
-use parley::layout::PositionedLayoutItem;
 use parley::style::{
     FontStyle, FontWeight as ParleyFontWeight, StyleProperty, TextStyle as ParleyTextStyle,
 };
 use std::borrow::Cow;
 use std::ops::Range;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct ParleyGlyph {
     pub id: u32,
     pub x: f32,
     pub y: f32,
     pub advance: f32,
-    pub style_index: usize,
+    pub font: FontData,
+    pub font_size: f32,
+    pub text_range: Range<usize>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -32,6 +34,7 @@ pub(crate) struct ShapedLineLayout {
     pub ascent: f32,
     pub descent: f32,
     pub baseline: f32,
+    pub line_height: f32,
     pub glyphs: Vec<ParleyGlyph>,
     pub clusters: Vec<ShapedCluster>,
 }
@@ -86,6 +89,7 @@ impl ParleyShaper {
                 ascent: 0.0,
                 descent: 0.0,
                 baseline: 0.0,
+                line_height: 0.0,
                 glyphs: Vec::new(),
                 clusters: Vec::new(),
             };
@@ -94,32 +98,40 @@ impl ParleyShaper {
         let metrics = *line.metrics();
 
         let mut glyphs: Vec<ParleyGlyph> = Vec::new();
-        for item in line.items() {
-            let PositionedLayoutItem::GlyphRun(run) = item else {
-                continue;
-            };
-            for g in run.positioned_glyphs() {
-                glyphs.push(ParleyGlyph {
-                    id: g.id,
-                    x: g.x,
-                    y: g.y,
-                    advance: g.advance,
-                    style_index: g.style_index(),
-                });
-            }
-        }
+        let mut clusters: Vec<ShapedCluster> = Vec::new();
 
         // Note: This ignores inline boxes; our current text surface doesn't emit them.
-        let mut clusters: Vec<ShapedCluster> = Vec::new();
-        let mut x = metrics.offset;
+        let mut run_x = metrics.offset;
         for run in line.runs() {
+            let font = run.font();
+            let font_data = font.clone();
+            let font_size = run.font_size();
+
             for cluster in run.visual_clusters() {
-                let x0 = x;
-                x += cluster.advance();
+                let cluster_range = cluster.text_range();
+                let cluster_x0 = run_x;
+
+                let mut glyph_x = cluster_x0;
+                for mut g in cluster.glyphs() {
+                    g.x += glyph_x;
+                    glyph_x += g.advance;
+
+                    glyphs.push(ParleyGlyph {
+                        id: g.id,
+                        x: g.x,
+                        y: g.y,
+                        advance: g.advance,
+                        font: font_data.clone(),
+                        font_size,
+                        text_range: cluster_range.clone(),
+                    });
+                }
+
+                run_x = cluster_x0 + cluster.advance();
                 clusters.push(ShapedCluster {
-                    text_range: cluster.text_range(),
-                    x0,
-                    x1: x,
+                    text_range: cluster_range,
+                    x0: cluster_x0,
+                    x1: run_x,
                     is_rtl: cluster.is_rtl(),
                 });
             }
@@ -130,6 +142,7 @@ impl ParleyShaper {
             ascent: metrics.ascent,
             descent: metrics.descent,
             baseline: metrics.baseline,
+            line_height: metrics.line_height,
             glyphs,
             clusters,
         }

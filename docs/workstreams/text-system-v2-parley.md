@@ -129,8 +129,8 @@ Legend:
   - span-aware paint assignment
 
 **B3 — Wrapper (wrap + truncation)**
-- [~] Implement `wrap=None` using a wrapper layer that drives shaping on slices (unit-tested, not yet wired into the renderer path).
-- [~] Implement `TextOverflow::Ellipsis` per ADR 0059 (single-line prototype):
+- [~] Implement `wrap=None` using a wrapper layer that drives shaping on slices.
+- [~] Implement `TextOverflow::Ellipsis` per ADR 0059 (single-line, wired for `TextWrap::None` + `Ellipsis`):
   - stable ellipsis glyph sequence
   - caret/selection mapping rules at truncation boundary
 - [ ] Implement `wrap=Word` using the wrapper layer (multi-line slicing + caret mapping).
@@ -179,3 +179,4 @@ Legend:
 - 2026-01-13: M1 started: add Parley dependency + single-line shaper prototype in `crates/fret-render/src/text_v2/mod.rs`.
 - 2026-01-13: M1.1: split shaping/paint caches in the current text backend (`TextShapeKey` + per-span palette; theme-only changes no longer force reshaping).
 - 2026-01-13: M1.2: add `text_v2` wrapper prototype for `wrap=None + Ellipsis` with cluster-based hit-test mapping (unit tests only; not integrated yet).
+- 2026-01-13: M1.3: wire Parley `wrap=None + Ellipsis` through `TextSystem::prepare_*` (renders via swash into the existing atlases; still missing fractional positioning + font config integration).
