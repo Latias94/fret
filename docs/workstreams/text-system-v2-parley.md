@@ -122,31 +122,37 @@ Legend:
 - [ ] Implement family overrides (`TextFontFamilyConfig`) in the new system.
 
 **B2 — Shaper (Parley)**
-- [~] Integrate Parley shaping for a single line/chunk with attributed spans.
+- [x] Integrate Parley shaping for a single line/chunk with attributed spans.
 - [ ] Produce glyph/cluster mapping sufficient for:
   - caret stops
   - hit-testing
   - span-aware paint assignment
 
 **B3 — Wrapper (wrap + truncation)**
-- [~] Implement `wrap=None` using a wrapper layer that drives shaping on slices.
-- [~] Implement `TextOverflow::Ellipsis` per ADR 0059 (single-line, wired for `TextWrap::None` + `Ellipsis`):
+- [x] Implement `wrap=None` using a wrapper layer that drives shaping on slices.
+- [x] Implement `TextOverflow::Ellipsis` per ADR 0059 (single-line, wired for `TextWrap::None` + `Ellipsis`):
   - stable ellipsis glyph sequence
   - caret/selection mapping rules at truncation boundary
-- [ ] Implement `wrap=Word` using the wrapper layer (multi-line slicing + caret mapping).
+- [x] Implement `wrap=Word` using the wrapper layer (multi-line slicing + caret mapping).
 
 **B4 — Raster + atlas**
-- [ ] Replace append-only “pen” atlas packing with multi-page free-rect packing (e.g. `etagere`).
-- [ ] Split atlas by texture kind:
+- [x] Replace append-only “pen” atlas packing with multi-page free-rect packing (e.g. `etagere`).
+- [x] Split atlas by texture kind:
   - monochrome (coverage)
   - polychrome (emoji / color glyphs)
   - optional: subpixel (if multi-channel is adopted)
-- [ ] Add eviction policy + explicit rebuild knob for debugging.
+- [x] Add eviction policy + explicit rebuild knob for debugging.
 
 **B5 — Quality baseline**
 - [ ] Implement `SUBPIXEL_VARIANTS_X = 4`, `Y = 1/4` (platform policy).
 - [ ] Add shader gamma/contrast correction uniforms (GPUI-aligned).
 - [ ] Ensure quality knobs participate in cache keys (layout/raster).
+
+**B6 — Cache boundary refactor (ADR 0158)**
+- [ ] Split “layout cache” from “glyph residency cache” (no UVs embedded in `TextShape`).
+- [ ] Add a frame-driven `TextSystem::prepare_for_scene(...)` that runs even when scene encoding is cached.
+- [ ] Move atlas allocation/uploads out of `prepare(...)` and into the scene-driven ensure step.
+- [ ] Define eviction semantics based on “last used frame” and document in-flight safety constraints.
 
 ### C) `fret-ui` integration surface
 
@@ -175,9 +181,14 @@ Legend:
 ## Progress Log (append-only)
 
 - 2026-01-13: ADR 0157 added (design locked), worktree created.
+- 2026-01-13: ADR 0158 added (layout cache boundary + glyph residency direction).
 - 2026-01-13: M0 contract landed (commit `3bb0fc8`).
 - 2026-01-13: M1 started: add Parley dependency + single-line shaper prototype in `crates/fret-render/src/text_v2/mod.rs`.
 - 2026-01-13: M1.1: split shaping/paint caches in the current text backend (`TextShapeKey` + per-span palette; theme-only changes no longer force reshaping).
 - 2026-01-13: M1.2: add `text_v2` wrapper prototype for `wrap=None + Ellipsis` with cluster-based hit-test mapping (unit tests only; not integrated yet).
 - 2026-01-13: M1.3: wire Parley `wrap=None + Ellipsis` through `TextSystem::prepare_*` (renders via swash into the existing atlases; still missing fractional positioning + font config integration).
 - 2026-01-13: M1.4: align Parley rasterization with cosmic-text subpixel binning + wire `add_fonts` and `set_font_families` into Parley fontique generics (reduces drift across backends).
+- 2026-01-13: M1.5: add Parley word wrap + multiline layout (commit `12e0aa2`), then extend wrapping across newlines (commit `63a00be`).
+- 2026-01-13: M1.6: add multipage glyph atlas budget + plumb atlas page through draws (commit `c29a866`).
+- 2026-01-13: M1.7: evict unreferenced glyph atlas pages (commit `eac5619`).
+- 2026-01-13: M1.8: evict unused glyphs from the atlas via per-glyph live refs (commit `2983e98`).
