@@ -18,11 +18,11 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 - ADR count (numbered): 161
 
 - Aligned: 79
-- Aligned (with known gaps): 35
+- Aligned (with known gaps): 36
 - N/A (superseded): 1
 - Not audited: 22
 - Not implemented: 2
-- Partially aligned: 22
+- Partially aligned: 21
 
 ## Matrix
 

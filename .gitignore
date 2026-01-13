@@ -10,6 +10,7 @@
 /.fastembed_cache
 /.codannaignore
 .codex_tmp/
+.codex_tmp_metadata.json
 .idea/
 tools/_clippy*.txt
 /apps/fret-demo-web/dist/
