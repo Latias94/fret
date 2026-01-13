@@ -2,7 +2,9 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
+use crate::KeymapFileError;
 use crate::{SettingsError, SettingsFileV1};
+use fret_runtime::Keymap;
 
 pub const PROJECT_CONFIG_DIR: &str = ".fret";
 pub const SETTINGS_JSON: &str = "settings.json";
@@ -45,6 +47,12 @@ pub struct LayeredSettingsReport {
     pub project: Option<PathBuf>,
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct LayeredKeymapReport {
+    pub user: Option<PathBuf>,
+    pub project: Option<PathBuf>,
+}
+
 pub fn load_layered_settings(
     paths: &LayeredConfigPaths,
 ) -> Result<(SettingsFileV1, LayeredSettingsReport), SettingsError> {
@@ -73,6 +81,28 @@ pub fn load_layered_settings(
         })?;
 
     Ok((out, report))
+}
+
+pub fn load_layered_keymap(
+    paths: &LayeredConfigPaths,
+) -> Result<(Keymap, LayeredKeymapReport), KeymapFileError> {
+    let mut keymap = Keymap::default();
+    let mut report = LayeredKeymapReport::default();
+
+    if let Some(path) = paths.user_keymap_json() {
+        if let Some(layer) = crate::keymap::keymap_from_file_if_exists(&path)? {
+            keymap.extend(layer);
+            report.user = Some(path);
+        }
+    }
+
+    let project_path = paths.project_keymap_json();
+    if let Some(layer) = crate::keymap::keymap_from_file_if_exists(&project_path)? {
+        keymap.extend(layer);
+        report.project = Some(project_path);
+    }
+
+    Ok((keymap, report))
 }
 
 fn merge_json(base: &mut Value, overlay: Value) {

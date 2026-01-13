@@ -129,21 +129,11 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         project_root: impl AsRef<Path>,
     ) -> Result<Self, BootstrapError> {
         let paths = LayeredConfigPaths::for_project_root(project_root);
-        let user = if let Some(path) = paths.user_keymap_json() {
-            fret_app::keymap::keymap_from_file_if_exists(path)?
-        } else {
-            None
-        };
-        let project = fret_app::keymap::keymap_from_file_if_exists(paths.project_keymap_json())?;
+        let (layered, _report) = fret_app::load_layered_keymap(&paths)?;
 
         self.inner = self.inner.init_app(move |app| {
             app.with_global_mut(KeymapService::default, |svc, _app| {
-                if let Some(user) = user.clone() {
-                    svc.keymap.extend(user);
-                }
-                if let Some(project) = project.clone() {
-                    svc.keymap.extend(project);
-                }
+                svc.keymap.extend(layered.clone());
             });
         });
 

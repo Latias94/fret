@@ -33,6 +33,7 @@ pub use settings::{
 pub use dock_layout_file::{DockLayoutError, DockLayoutFileV1};
 
 pub use config_files::{
-    KEYMAP_JSON, LayeredConfigPaths, LayeredSettingsReport, PROJECT_CONFIG_DIR, SETTINGS_JSON,
-    default_user_config_dir, load_layered_settings,
+    KEYMAP_JSON, LayeredConfigPaths, LayeredKeymapReport, LayeredSettingsReport,
+    PROJECT_CONFIG_DIR, SETTINGS_JSON, default_user_config_dir, load_layered_keymap,
+    load_layered_settings,
 };

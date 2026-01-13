@@ -203,5 +203,5 @@ Resolution rule:
 ## Implementation Notes (Current Prototype)
 
 - Keymap format + parser are implemented in `crates/fret-runtime` (`KeymapFileV1`, `Keymap`, `WhenExpr`).
-- Demo keymap loading from disk is not currently wired; the demo harness uses defaults via `KeymapService` (see `crates/fret-app/src/app.rs`).
+- Layered keymap loading from disk (user + project) is implemented in `crates/fret-app/src/config_files.rs` (`load_layered_keymap`) and used by the bootstrap golden path (`ecosystem/fret-bootstrap/src/lib.rs`).
 - Sample file: `docs/examples/keymap.json`
