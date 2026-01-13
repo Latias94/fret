@@ -16,6 +16,8 @@ fret-ui = { path = "../../crates/fret-ui" }
 fret-canvas = { path = "../fret-canvas", optional = true }
 fret-icons = { path = "../fret-icons", optional = true }
 tracing.workspace = true
+time.workspace = true
+virtualizer.workspace = true
 
 [features]
 # Default to a minimal, third-party-friendly foundation surface.

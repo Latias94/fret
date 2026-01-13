@@ -1383,7 +1383,9 @@ dependencies = [
  "fret-ui",
  "serde",
  "serde_json",
+ "time",
  "tracing",
+ "virtualizer",
 ]
 
 [[package]]
