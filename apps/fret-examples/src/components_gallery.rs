@@ -1880,7 +1880,7 @@ pub fn run() -> anyhow::Result<()> {
         })
         .with_default_config_files()
         .context("load layered config files (settings/keymap)")?
-        .register_icon_pack(fret_icons_lucide::register_icons)
+        .with_lucide_icons()
         .preload_icon_svgs_on_gpu_ready();
 
     builder.run().map_err(anyhow::Error::from)

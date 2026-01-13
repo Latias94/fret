@@ -46,7 +46,7 @@ pub fn run() -> anyhow::Result<()> {
                 shadcn::shadcn_themes::ShadcnColorScheme::Light,
             );
         })
-        .register_icon_pack(fret_icons_lucide::register_icons)
+        .with_lucide_icons()
         .preload_icon_svgs_on_gpu_ready()
         .run()
         .map_err(anyhow::Error::from)

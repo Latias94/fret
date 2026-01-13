@@ -209,9 +209,8 @@ edition = "2024"
 [dependencies]
 anyhow = "1"
 fret-app = {{ path = "../../crates/fret-app" }}
-fret-bootstrap = {{ path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver", "preload-icon-svgs", "diagnostics"{ui_assets_features}] }}
+fret-bootstrap = {{ path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver", "preload-icon-svgs", "icons-lucide", "diagnostics"{ui_assets_features}] }}
 fret-ui-shadcn = {{ path = "../../ecosystem/fret-ui-shadcn" }}
-fret-icons-lucide = {{ path = "../../ecosystem/fret-icons-lucide" }}
 [workspace]
 "#
     )
@@ -259,7 +258,7 @@ fn main() -> anyhow::Result<()> {
                 shadcn::shadcn_themes::ShadcnColorScheme::Light,
             );
         })
-        .register_icon_pack(fret_icons_lucide::register_icons)
+        .with_lucide_icons()
         .preload_icon_svgs_on_gpu_ready()
         .run()
         .map_err(anyhow::Error::from)
@@ -549,7 +548,7 @@ cargo run
 ## Notes
 
 - Theme: shadcn new-york-v4 (Slate / Light)
-- Icons: Lucide (`fret-icons-lucide`)
+- Icons: Lucide (`fret-bootstrap/icons-lucide`)
 {ui_assets_line}
 ## Next steps
 

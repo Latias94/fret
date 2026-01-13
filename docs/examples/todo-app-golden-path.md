@@ -21,8 +21,8 @@ Related ADRs:
 - `fret` (facade; portable core re-exports)
 - `fret-ui-shadcn` (components) or `fret-ui-kit` (lower-level building blocks)
 - `fret-bootstrap` (recommended; startup wiring, enable the `ui-app-driver` feature)
-- `fret-ui-assets` (optional): UI render asset caches (images / SVGs)
-- `fret-icons-lucide` (icon pack data)
+- `fret-ui-assets` (optional): UI render asset caches (images / SVGs), typically driven via `fret-bootstrap/ui-assets`
+- Lucide icons (optional): typically enabled via `fret-bootstrap/icons-lucide` (or register your own icon pack)
 
 ## Quick start (template)
 
@@ -44,6 +44,7 @@ Notes:
 - `fret-bootstrap` features:
   - `ui-app-driver`: enables `UiAppDriver`.
   - `ui-assets`: drives `fret-ui-assets` caches from the event pipeline (recommended if you load images/SVGs).
+  - `icons-lucide` / `icons-radix`: installs a built-in icon pack via `with_lucide_icons()` / `with_radix_icons()`.
   - `preload-icon-svgs`: enables `preload_icon_svgs_on_gpu_ready`.
   - `tracing`: enables `with_default_tracing` / `init_tracing` convenience.
   - `diagnostics`: enables `with_default_diagnostics` / `init_diagnostics` and installs a panic hook (set `RUST_BACKTRACE=1`).
@@ -61,9 +62,8 @@ edition = "2024"
 [dependencies]
 anyhow = "1"
 fret-app = { path = "../../crates/fret-app" }
-fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver", "preload-icon-svgs"] }
+fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver", "preload-icon-svgs", "icons-lucide"] }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
-fret-icons-lucide = { path = "../../ecosystem/fret-icons-lucide" }
 ```
 
 If you want images/SVG caches out-of-the-box, enable `fret-bootstrap/ui-assets`:
@@ -92,7 +92,8 @@ fn main() -> anyhow::Result<()> {
                 ShadcnColorScheme::Light,
             );
         })
-        .register_icon_pack(fret_icons_lucide::register_icons)
+        // Requires enabling `fret-bootstrap/icons-lucide`.
+        .with_lucide_icons()
         .preload_icon_svgs_on_gpu_ready()
         .run()?;
 
@@ -242,3 +243,12 @@ If you want UI render asset conveniences (not an editor/project asset pipeline):
   `fret-ui-assets` and enable its `app-integration` feature.
 
 See the runnable demo: `apps/fret-demo/src/bin/assets_demo.rs`.
+
+## Icon packs (Lucide / Radix / custom)
+
+Recommended for apps:
+
+- Enable `fret-bootstrap/icons-lucide` and call `.with_lucide_icons()`, or
+- Enable `fret-bootstrap/icons-radix` and call `.with_radix_icons()`.
+
+If you need a custom pack, call `.register_icon_pack(...)` with your own `fn(&mut IconRegistry)` implementation.

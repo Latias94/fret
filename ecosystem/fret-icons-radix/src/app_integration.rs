@@ -18,4 +18,3 @@ pub fn install(app: &mut fret_app::App, _services: &mut dyn UiServices) {
     let _ = _services;
     install_app(app);
 }
-

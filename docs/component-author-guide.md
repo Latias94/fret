@@ -61,6 +61,17 @@ default = []
 app-integration = ["dep:fret-app"]
 ```
 
+**D) Icons (semantic IDs, app-chosen packs)**
+
+If your components render icons, depend on the registry contract (`fret-icons`) and use semantic `IconId`s.
+Do **not** depend on a specific vendor pack (`fret-icons-lucide` / `fret-icons-radix`) unless your crate is
+explicitly a pack or a demo.
+
+```toml
+[dependencies]
+fret-icons = { path = "../ecosystem/fret-icons" }
+```
+
 ## 2) Provide a single, explicit integration entry point
 
 If your crate registers commands, tokens, settings, or asset helpers, expose:

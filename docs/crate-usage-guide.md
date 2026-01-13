@@ -141,11 +141,24 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 
 **Use them when:** you want semantic icon IDs in components without coupling to SVG rasterization or GPU caches.
 
+**Recommended integration:**
+
+- **Component crates:** depend on `fret-icons` (and use semantic `IconId`s). Avoid depending on a specific pack.
+- **Apps:** enable `fret-bootstrap/icons-lucide` or `fret-bootstrap/icons-radix` and call the corresponding builder helper
+  (`with_lucide_icons()` / `with_radix_icons()`). For custom packs, call `BootstrapBuilder::register_icon_pack(...)`.
+
 ### `fret-ui-assets` / `fret-asset-cache`
 
 **What they are:** UI render asset caches and upload helpers (images/SVG), aligned with the “resource handles + flush point” model.
 
 **Use them when:** your UI loads icons/images/SVG and you want key-based caching, budgeting, and ID-based rendering.
+
+**Recommended integration:**
+
+- **Apps:** enable `fret-bootstrap/ui-assets` so `UiAppDriver` drives the caches from the event pipeline; optionally override
+  budgets via `BootstrapBuilder::with_ui_assets_budgets(...)`.
+- **Component crates:** prefer receiving handles/IDs from the app; only depend on caches directly if you truly need cache APIs,
+  and gate it behind an explicit feature (e.g. `app-integration`).
 
 ### `fret-bootstrap`
 
@@ -154,7 +167,7 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 **Use it when:** you want:
 
 - layered settings/keymap loading,
-- icon pack registration,
+- icon pack registration (built-in packs or custom),
 - optional UI app driver wiring,
 - optional command palette integration,
 - optional dev hotpatch toggles.

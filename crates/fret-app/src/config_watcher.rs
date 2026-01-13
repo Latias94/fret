@@ -243,4 +243,3 @@ fn format_keymap_conflict(c: &fret_runtime::keymap::KeymapConflict) -> String {
         c.kind, c.signature.platform, when, seq, entries
     )
 }
-

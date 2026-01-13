@@ -23,8 +23,7 @@ anyhow.workspace = true
 fret-examples = { path = "../fret-examples" }
 fret-app = { path = "../../crates/fret-app" }
 fret-core = { path = "../../crates/fret-core" }
-fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver", "ui-app-command-palette"] }
-fret-icons-lucide = { path = "../../ecosystem/fret-icons-lucide" }
+fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver", "ui-app-command-palette", "icons-lucide"] }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }

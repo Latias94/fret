@@ -20,7 +20,7 @@ layout-engine-v2 = ["fret-ui/layout-engine-v2", "fret-docking/layout-engine-v2"]
 [dependencies]
 anyhow.workspace = true
 fret-icons = { path = "../../ecosystem/fret-icons" }
-fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["preload-icon-svgs", "ui-app-driver", "ui-app-command-palette", "ui-assets", "diagnostics"] }
+fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["preload-icon-svgs", "icons-lucide", "ui-app-driver", "ui-app-command-palette", "ui-assets", "diagnostics"] }
 fret-ui-assets = { path = "../../ecosystem/fret-ui-assets" }
 fret-docking = { path = "../../ecosystem/fret-docking" }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
@@ -31,7 +31,6 @@ fret-chart = { path = "../../ecosystem/fret-chart" }
 fret-gizmo = { path = "../../ecosystem/fret-gizmo" }
 fret-undo = { path = "../../ecosystem/fret-undo" }
 delinea = { path = "../../ecosystem/delinea" }
-fret-icons-lucide = { path = "../../ecosystem/fret-icons-lucide" }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-launch = { path = "../../crates/fret-launch" }
