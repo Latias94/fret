@@ -921,6 +921,8 @@ dependencies = [
  "fret-app",
  "fret-core",
  "fret-icons",
+ "fret-icons-lucide",
+ "fret-icons-radix",
  "fret-launch",
  "fret-render",
  "fret-ui",
@@ -951,6 +953,7 @@ dependencies = [
  "fret-core",
  "fret-runtime",
  "fret-ui",
+ "fret-ui-kit",
 ]
 
 [[package]]
@@ -983,7 +986,6 @@ dependencies = [
  "fret-bootstrap",
  "fret-core",
  "fret-examples",
- "fret-icons-lucide",
  "fret-runtime",
  "fret-ui",
  "fret-ui-kit",
@@ -1014,6 +1016,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-editor"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-ui",
+ "serde",
+ "serde_json",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "fret-examples"
 version = "0.1.0"
 dependencies = [
@@ -1026,9 +1040,9 @@ dependencies = [
  "fret-code-view",
  "fret-core",
  "fret-docking",
+ "fret-editor",
  "fret-gizmo",
  "fret-icons",
- "fret-icons-lucide",
  "fret-launch",
  "fret-markdown",
  "fret-node",
@@ -1072,6 +1086,8 @@ version = "0.1.0"
 name = "fret-icons-lucide"
 version = "0.1.0"
 dependencies = [
+ "fret-app",
+ "fret-core",
  "fret-icons",
  "rust-embed",
 ]
@@ -1080,6 +1096,8 @@ dependencies = [
 name = "fret-icons-radix"
 version = "0.1.0"
 dependencies = [
+ "fret-app",
+ "fret-core",
  "fret-icons",
  "rust-embed",
 ]
@@ -1134,6 +1152,7 @@ dependencies = [
 name = "fret-node"
 version = "0.1.0"
 dependencies = [
+ "fret-app",
  "fret-canvas",
  "fret-core",
  "fret-runtime",
@@ -1345,6 +1364,7 @@ dependencies = [
 name = "fret-ui-assets"
 version = "0.1.0"
 dependencies = [
+ "fret-app",
  "fret-asset-cache",
  "fret-core",
  "fret-runtime",
@@ -1356,6 +1376,7 @@ name = "fret-ui-kit"
 version = "0.1.0"
 dependencies = [
  "fret-app",
+ "fret-canvas",
  "fret-core",
  "fret-icons",
  "fret-runtime",
