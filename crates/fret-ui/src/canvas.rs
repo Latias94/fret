@@ -35,6 +35,11 @@ impl CanvasKey {
         Self(mix_u64(self.0, value))
     }
 
+    /// Combine a deterministic hash of `value` into this key.
+    pub fn combine_hash<T: Hash>(self, value: &T) -> Self {
+        self.combine(Self::from_hash(value).0)
+    }
+
     /// Compute a deterministic hash for `value`.
     ///
     /// This uses a fixed-seed FNV-1a hasher (unlike `DefaultHasher`, which is randomized).
@@ -181,6 +186,18 @@ impl<'a> CanvasPainter<'a> {
     /// Compute a deterministic `u64` key for `value`.
     pub fn key<T: Hash>(&self, value: &T) -> u64 {
         CanvasKey::from_hash(value).0
+    }
+
+    /// Create a deterministic base key for a logical key "namespace".
+    ///
+    /// Use this to avoid accidental key collisions across unrelated subsystems.
+    pub fn key_scope<T: Hash>(&self, scope: &T) -> CanvasKey {
+        CanvasKey::from_hash(scope)
+    }
+
+    /// Combine a child identifier into a scoped key.
+    pub fn child_key<T: Hash>(&self, parent: CanvasKey, child: &T) -> CanvasKey {
+        parent.combine_hash(child)
     }
 
     pub fn scene(&mut self) -> &mut Scene {
