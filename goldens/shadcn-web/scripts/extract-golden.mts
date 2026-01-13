@@ -6,22 +6,26 @@ import { createRequire } from "module"
 import { fileURLToPath, pathToFileURL } from "url"
 
 type Theme = "light" | "dark"
+type Mode = "closed" | "open"
 
 type GoldenOptions = {
   baseUrl: string
   style: string
   themes: Theme[]
+  modes: Mode[]
   names: string[]
   types: string[]
   outDir: string
   update: boolean
   timeoutMs: number
+  openSelector?: string
 }
 
 type GoldenFile = {
   version: number
   style: string
   name: string
+  mode?: Mode
   themes: Record<string, unknown>
 }
 
@@ -305,15 +309,98 @@ async function extractOne(page: puppeteer.Page) {
       return out;
     }
 
+    const portalCandidates = Array.from(
+      document.querySelectorAll("[data-state='open']")
+    ).filter((el) => !root.contains(el));
+
+    // Prefer the most specific (leaf-most) open-state nodes so we capture the actual Radix content
+    // element rather than wrappers/portals.
+    const portalRoots = portalCandidates.filter(
+      (el) => !portalCandidates.some((other) => other !== el && el.contains(other))
+    );
+
+    const portals = portalRoots.map((el, idx) =>
+      traverse(el, "portal." + idx)
+    );
+
     return {
       url: location.href,
       devicePixelRatio: window.devicePixelRatio,
       viewport: { w: window.innerWidth, h: window.innerHeight },
       root: traverse(root, ""),
+      portals,
     };
   })()`
 
   return await page.evaluate(expr)
+}
+
+async function openOverlay(
+  page: puppeteer.Page,
+  name: string,
+  timeoutMs: number,
+  openSelector?: string
+) {
+  const selectorLiteral = openSelector ? JSON.stringify(openSelector) : "null"
+  const expr = `(() => {
+    const root =
+      document.querySelector("[data-fret-golden-target]") ||
+      document.querySelector("[data-fret-golden-root]") ||
+      document.body;
+
+    const selector = ${selectorLiteral};
+    let trigger = null;
+
+    const queryInRoot = (sel) => {
+      if (!sel) return null;
+      return root?.querySelector(sel) || document.querySelector(sel);
+    };
+
+    if (selector) {
+      trigger = queryInRoot(selector);
+    }
+
+    if (!trigger && root) {
+      trigger = root.querySelector("[role='combobox'][aria-expanded='false']");
+    }
+    if (!trigger && root) {
+      trigger = root.querySelector("[aria-expanded='false']");
+    }
+    if (!trigger && root) {
+      trigger = root.querySelector("button");
+    }
+
+    if (!trigger) {
+      return { ok: false, reason: "no trigger found" };
+    }
+
+    trigger.click();
+    return {
+      ok: true,
+      tag: trigger.tagName.toLowerCase(),
+      text: (trigger.textContent || "").trim().slice(0, 120) || null,
+    };
+  })()`
+
+  const result = (await page.evaluate(expr)) as { ok: boolean; reason?: string }
+  if (!result.ok) {
+    throw new Error(
+      `failed to open overlay for ${name}: ${result.reason ?? "unknown"}`
+    )
+  }
+
+  const waitExpr = `(() => {
+    const root =
+      document.querySelector("[data-fret-golden-target]") ||
+      document.querySelector("[data-fret-golden-root]") ||
+      document.body;
+    const open = Array.from(document.querySelectorAll("[data-state='open']")).some(
+      (el) => !root.contains(el)
+    );
+    return open;
+  })()`
+
+  await page.waitForFunction(waitExpr, { timeout: timeoutMs })
 }
 
 async function waitForFonts(page: puppeteer.Page, timeoutMs: number) {
@@ -421,10 +508,25 @@ const repoRoot = repoRootFromScript()
 
 async function loadPuppeteer(): Promise<typeof import("puppeteer")> {
   const require = createRequire(import.meta.url)
-  const entry = require.resolve("puppeteer", {
-    paths: [path.join(repoRoot, "repo-ref", "ui")],
-  })
-  const mod = await import(pathToFileURL(entry).href)
+
+  const candidates = [
+    path.join(repoRoot, "repo-ref", "ui"),
+    repoRoot,
+    process.cwd(),
+  ]
+
+  for (const candidate of candidates) {
+    try {
+      const entry = require.resolve("puppeteer", { paths: [candidate] })
+      const mod = await import(pathToFileURL(entry).href)
+      return ((mod as any).default ?? mod) as typeof import("puppeteer")
+    } catch {
+      // keep searching
+    }
+  }
+
+  // Fall back to normal Node resolution (e.g. if the caller installed puppeteer globally or in CWD).
+  const mod = await import("puppeteer")
   return ((mod as any).default ?? mod) as typeof import("puppeteer")
 }
 
@@ -646,74 +748,84 @@ async function run(options: GoldenOptions): Promise<string[]> {
     }
 
     for (const name of options.names) {
-      const outPath = path.join(options.outDir, `${name}.json`)
-      if (!options.update && fs.existsSync(outPath)) {
-        continue
-      }
-
-      const out: GoldenFile = {
-        version: 1,
-        style: options.style,
-        name,
-        themes: {},
-      }
-
-      let ok = true
-      for (const theme of options.themes) {
-        const url = `${options.baseUrl}/view/${options.style}/${name}`
-        try {
-          const page = pagesByTheme[theme]
-
-          await page.goto(url, { waitUntil: "networkidle2" })
-          await page.waitForSelector("body", { timeout: 30000 })
-          await ensureGoldenTarget(page)
-          await page.waitForSelector("[data-fret-golden-target]", { timeout: 30000 })
-          await injectCssLinks(page, cssInjectionUrls)
-
-          await page.evaluate(() => {
-            const indicator = document.querySelector("[data-tailwind-indicator]")
-            if (indicator) indicator.remove()
-          })
-
-          await waitForFonts(page, Math.min(2000, options.timeoutMs))
-          await waitForShadcnStyles(page, Math.min(30000, options.timeoutMs))
-
-          const extracted = await extractOne(page)
-          // Normalize a few floats that may slip through as high precision.
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ;(extracted as any).devicePixelRatio = round3(
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (extracted as any).devicePixelRatio
-          )
-
-          ;(out.themes as Record<string, unknown>)[theme] = extracted
-        } catch (error) {
-          ok = false
-          const msg = `${name} (${theme}): ${String(error)}`
-          failures.push(msg)
-          console.error(`! failed ${name} (${theme})`)
-          console.error(`  url: ${url}`)
-          console.error(`  error: ${String(error)}`)
-
-          // Try to recover by recreating the page for this theme so later iterations can continue.
-          try {
-            await pagesByTheme[theme].close()
-          } catch {
-            // ignore
-          }
-          const page = await browser.newPage()
-          page.setDefaultTimeout(options.timeoutMs)
-          await page.emulateMediaFeatures([
-            { name: "prefers-reduced-motion", value: "reduce" },
-          ])
-          await setThemeBeforeLoad(page, theme as Theme)
-          pagesByTheme[theme] = page
+      for (const mode of options.modes) {
+        const suffix = mode === "closed" ? "" : `.${mode}`
+        const outPath = path.join(options.outDir, `${name}${suffix}.json`)
+        if (!options.update && fs.existsSync(outPath)) {
+          continue
         }
-      }
 
-      if (ok) {
-        writeIfChanged(outPath, out, options.update)
-        console.log(`- wrote ${path.relative(process.cwd(), outPath)}`)
+        const out: GoldenFile = {
+          version: 1,
+          style: options.style,
+          name,
+          mode,
+          themes: {},
+        }
+
+        let ok = true
+        for (const theme of options.themes) {
+          const url = `${options.baseUrl}/view/${options.style}/${name}`
+          try {
+            const page = pagesByTheme[theme]
+
+            await page.goto(url, { waitUntil: "networkidle2" })
+            await page.waitForSelector("body", { timeout: 30000 })
+            await ensureGoldenTarget(page)
+            await page.waitForSelector("[data-fret-golden-target]", { timeout: 30000 })
+            await injectCssLinks(page, cssInjectionUrls)
+
+            await page.evaluate(() => {
+              const indicator = document.querySelector("[data-tailwind-indicator]")
+              if (indicator) indicator.remove()
+            })
+
+            await waitForFonts(page, Math.min(2000, options.timeoutMs))
+            await waitForShadcnStyles(page, Math.min(30000, options.timeoutMs))
+
+            if (mode === "open") {
+              await openOverlay(page, name, options.timeoutMs, options.openSelector)
+              // Let open-state layout settle (portal mount + popper positioning).
+              await waitForFonts(page, Math.min(2000, options.timeoutMs))
+            }
+
+            const extracted = await extractOne(page)
+            // Normalize a few floats that may slip through as high precision.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ;(extracted as any).devicePixelRatio = round3(
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (extracted as any).devicePixelRatio
+            )
+
+            ;(out.themes as Record<string, unknown>)[theme] = extracted
+          } catch (error) {
+            ok = false
+            const msg = `${name}${suffix} (${theme}): ${String(error)}`
+            failures.push(msg)
+            console.error(`! failed ${name}${suffix} (${theme})`)
+            console.error(`  url: ${url}`)
+            console.error(`  error: ${String(error)}`)
+
+            // Try to recover by recreating the page for this theme so later iterations can continue.
+            try {
+              await pagesByTheme[theme].close()
+            } catch {
+              // ignore
+            }
+            const page = await browser.newPage()
+            page.setDefaultTimeout(options.timeoutMs)
+            await page.emulateMediaFeatures([
+              { name: "prefers-reduced-motion", value: "reduce" },
+            ])
+            await setThemeBeforeLoad(page, theme as Theme)
+            pagesByTheme[theme] = page
+          }
+        }
+
+        if (ok) {
+          writeIfChanged(outPath, out, options.update)
+          console.log(`- wrote ${path.relative(process.cwd(), outPath)}`)
+        }
       }
     }
 
@@ -775,6 +887,22 @@ const timeoutMs =
 
 const update = flags.update === true || process.env.UPDATE_GOLDENS === "1"
 
+const modesRaw =
+  (typeof flags.modes === "string" ? flags.modes : undefined) ??
+  process.env.MODES ??
+  (flags.open === true ? "closed,open" : "closed")
+
+const modes = modesRaw
+  .split(",")
+  .map((m) => m.trim())
+  .filter(Boolean)
+  .filter((m): m is Mode => m === "closed" || m === "open")
+
+const openSelector =
+  (typeof flags.openSelector === "string" ? flags.openSelector : undefined) ??
+  process.env.OPEN_SELECTOR ??
+  undefined
+
 const defaultNames = ["button-default", "tabs-demo"]
 const all = flags.all === true || process.env.ALL_GOLDENS === "1"
 
@@ -783,9 +911,24 @@ async function resolveNames(): Promise<string[]> {
     return names.length > 0 ? names : defaultNames
   }
 
+  const indexPath = path.join(
+    repoRoot,
+    "repo-ref",
+    "ui",
+    "apps",
+    "v4",
+    "registry",
+    "__index__.tsx"
+  )
+  if (!fs.existsSync(indexPath)) {
+    throw new Error(
+      `missing shadcn registry index at ${indexPath}; either provide explicit names or install repo-ref/ui`
+    )
+  }
+
   const mod = await import(
     pathToFileURL(
-      path.join(repoRoot, "repo-ref", "ui", "apps", "v4", "registry", "__index__.tsx")
+      indexPath
     ).href
   )
   const index = (mod as any).Index?.[style] as Record<string, any> | undefined
@@ -803,6 +946,7 @@ try {
   console.log(`- baseUrl: ${baseUrl}`)
   console.log(`- style: ${style}`)
   console.log(`- themes: ${themes.join(", ")}`)
+  console.log(`- modes: ${modes.join(", ")}`)
   console.log(`- types: ${types.join(", ")}`)
   console.log(`- outDir: ${outDir}`)
   console.log(`- timeoutMs: ${timeoutMs}`)
@@ -816,11 +960,13 @@ try {
     baseUrl,
     style,
     themes: themes.length > 0 ? themes : ["light", "dark"],
+    modes: modes.length > 0 ? modes : ["closed"],
     names: finalNames,
     types,
     outDir,
     update,
     timeoutMs,
+    openSelector,
   })
 
   if (failures.length > 0) {

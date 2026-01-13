@@ -83,6 +83,9 @@ pixel diffs. See: `docs/audits/shadcn-web-layout-conformance.md`.
 
 - `--style=new-york-v4`
 - `--themes=light,dark` (default)
+- `--modes=closed,open` (default: `closed`)
+- `--open` (shorthand for `--modes=closed,open`)
+- `--openSelector=<css>` (optional override for the "open overlay" trigger)
 - `--baseUrl=http://localhost:4000`
 - `--all` (env: `ALL_GOLDENS=1`)
 - `--types=registry:block,registry:component,registry:example` (env: `TYPES=...`)
