@@ -19,6 +19,7 @@ type GoldenOptions = {
   update: boolean
   timeoutMs: number
   openSelector?: string
+  mergeThemes?: boolean
 }
 
 type GoldenFile = {
@@ -70,77 +71,8 @@ function resolveBrowserExecutablePath(): string | undefined {
     return envPath
   }
 
-  // Puppeteer browser cache (common in CI/dev): ~/.cache/puppeteer/chrome/**/chrome.exe
-  // We don't rely on a specific revision; any working Chrome is fine for layout/style extraction.
-  try {
-    const cacheRoot = path.join(os.homedir(), ".cache", "puppeteer", "chrome")
-    if (fs.existsSync(cacheRoot)) {
-      const dirs = fs
-        .readdirSync(cacheRoot, { withFileTypes: true })
-        .filter((d) => d.isDirectory())
-        .map((d) => d.name)
-        .sort()
-        .reverse()
-
-      for (const dir of dirs) {
-        const candidate = path.join(cacheRoot, dir, "chrome-win64", "chrome.exe")
-        if (fs.existsSync(candidate)) {
-          return candidate
-        }
-      }
-    }
-  } catch {
-    // ignore
-  }
-
-  const candidates: string[] = []
-  const programFiles = process.env.ProgramFiles
-  const programFilesX86 = process.env["ProgramFiles(x86)"]
-  const localAppData = process.env.LOCALAPPDATA
-
-  if (programFiles) {
-    candidates.push(
-      path.join(programFiles, "Google", "Chrome", "Application", "chrome.exe")
-    )
-    candidates.push(
-      path.join(programFiles, "Microsoft", "Edge", "Application", "msedge.exe")
-    )
-  }
-  if (programFilesX86) {
-    candidates.push(
-      path.join(
-        programFilesX86,
-        "Google",
-        "Chrome",
-        "Application",
-        "chrome.exe"
-      )
-    )
-    candidates.push(
-      path.join(
-        programFilesX86,
-        "Microsoft",
-        "Edge",
-        "Application",
-        "msedge.exe"
-      )
-    )
-  }
-  if (localAppData) {
-    candidates.push(
-      path.join(localAppData, "Google", "Chrome", "Application", "chrome.exe")
-    )
-    candidates.push(
-      path.join(localAppData, "Microsoft", "Edge", "Application", "msedge.exe")
-    )
-  }
-
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) {
-      return candidate
-    }
-  }
-
+  // Prefer Puppeteer's managed browser by default for protocol compatibility.
+  // If you want to force a system browser, set PUPPETEER_EXECUTABLE_PATH explicitly.
   return undefined
 }
 
@@ -258,7 +190,7 @@ async function extractOne(page: puppeteer.Page) {
         const v = el.getAttribute(key);
         if (v != null) out[key] = v;
       }
-      // Keep `id` and `class` as dedicated fields for easier selectors, but we also preserve them in attrs.
+      // Keep id and class as dedicated fields for easier selectors, but we also preserve them in attrs.
       return out;
     };
 
@@ -341,66 +273,112 @@ async function openOverlay(
   timeoutMs: number,
   openSelector?: string
 ) {
-  const selectorLiteral = openSelector ? JSON.stringify(openSelector) : "null"
-  const expr = `(() => {
-    const root =
-      document.querySelector("[data-fret-golden-target]") ||
-      document.querySelector("[data-fret-golden-root]") ||
-      document.body;
+  const rootSel = "[data-fret-golden-target]"
+  const debug = process.env.DEBUG_GOLDENS === "1"
 
-    const selector = ${selectorLiteral};
-    let trigger = null;
-
-    const queryInRoot = (sel) => {
-      if (!sel) return null;
-      return root?.querySelector(sel) || document.querySelector(sel);
-    };
-
-    if (selector) {
-      trigger = queryInRoot(selector);
+  const selectorCandidates: string[] = []
+  if (openSelector) {
+    selectorCandidates.push(openSelector)
+    if (!openSelector.includes("[data-fret-golden-target]")) {
+      selectorCandidates.push(`${rootSel} ${openSelector}`)
     }
+  }
 
-    if (!trigger && root) {
-      trigger = root.querySelector("[role='combobox'][aria-expanded='false']");
-    }
-    if (!trigger && root) {
-      trigger = root.querySelector("[aria-expanded='false']");
-    }
-    if (!trigger && root) {
-      trigger = root.querySelector("button");
-    }
+  selectorCandidates.push(
+    `${rootSel} [role='combobox'][aria-expanded='false']`,
+    `${rootSel} [aria-haspopup='menu'][data-state='closed']`,
+    `${rootSel} [aria-haspopup='menu']`,
+    `${rootSel} [data-state='closed'][aria-haspopup]`,
+    `${rootSel} button[data-state='closed']`,
+    `${rootSel} button`
+  )
 
-    if (!trigger) {
-      return { ok: false, reason: "no trigger found" };
+  // Use Puppeteer's click (trusted pointer events). Radix triggers often listen on pointerdown;
+  // calling `element.click()` from within `page.evaluate(...)` is not sufficient.
+  let clicked = false
+  let lastError: unknown = null
+  let clickedSelector: string | null = null
+  for (const sel of selectorCandidates) {
+    try {
+      await page.click(sel, { delay: 10 })
+      clicked = true
+      clickedSelector = sel
+      break
+    } catch (err) {
+      lastError = err
     }
+  }
 
-    trigger.click();
-    return {
-      ok: true,
-      tag: trigger.tagName.toLowerCase(),
-      text: (trigger.textContent || "").trim().slice(0, 120) || null,
-    };
-  })()`
-
-  const result = (await page.evaluate(expr)) as { ok: boolean; reason?: string }
-  if (!result.ok) {
+  if (!clicked) {
     throw new Error(
-      `failed to open overlay for ${name}: ${result.reason ?? "unknown"}`
+      `failed to open overlay for ${name}: no trigger found (lastError=${String(
+        lastError
+      )})`
     )
   }
 
+  if (debug) {
+    console.log(`- openOverlay: ${name} clicked ${clickedSelector ?? "n/a"}`)
+  }
+
   const waitExpr = `(() => {
-    const root =
-      document.querySelector("[data-fret-golden-target]") ||
-      document.querySelector("[data-fret-golden-root]") ||
-      document.body;
-    const open = Array.from(document.querySelectorAll("[data-state='open']")).some(
-      (el) => !root.contains(el)
-    );
-    return open;
+    const root = document.querySelector("${rootSel}") || document.body;
+    const outside = (sel) =>
+      Array.from(document.querySelectorAll(sel)).filter((el) => !root.contains(el));
+
+    if (outside("[data-state='open']").length > 0) return true;
+    if (outside("[data-radix-popper-content-wrapper]").length > 0) return true;
+    if (outside("[role='menu']").length > 0) return true;
+    if (outside("[role='listbox']").length > 0) return true;
+    if (outside("[role='dialog']").length > 0) return true;
+    return false;
   })()`
 
-  await page.waitForFunction(waitExpr, { timeout: timeoutMs })
+  if (debug) {
+    console.log(`- openOverlay: ${name} waiting for portal`)
+  }
+  await waitForExpr(page, waitExpr, timeoutMs)
+  if (debug) {
+    console.log(`- openOverlay: ${name} portal ready`)
+  }
+}
+
+async function waitForExpr(
+  page: puppeteer.Page,
+  expr: string,
+  timeoutMs: number,
+  intervalMs = 50
+) {
+  const debug = process.env.DEBUG_GOLDENS === "1"
+  if (debug) {
+    console.log(`- waitForExpr: enter (timeoutMs=${timeoutMs})`)
+  }
+  const deadline = Date.now() + timeoutMs
+  let tries = 0
+  while (Date.now() < deadline) {
+    tries++
+    // Same `__name(...)` caveat as `extractOne`: pass an expression string instead of a function.
+    const evalBudget = Math.max(1, Math.min(2000, deadline - Date.now()))
+    let ok = false
+    try {
+      ok = (await Promise.race([
+        page.evaluate(expr) as Promise<boolean>,
+        new Promise<boolean>((_, reject) =>
+          setTimeout(() => reject(new Error("eval timeout")), evalBudget)
+        ),
+      ])) as boolean
+    } catch (error) {
+      if (debug && tries === 1) {
+        console.log(`- waitForExpr: first eval failed: ${String(error)}`)
+      }
+    }
+
+    if (ok) return
+    await new Promise((r) => setTimeout(r, intervalMs))
+  }
+  throw new Error(
+    `timeout waiting for page expression after ${timeoutMs}ms (tries=${tries})`
+  )
 }
 
 async function waitForFonts(page: puppeteer.Page, timeoutMs: number) {
@@ -423,7 +401,7 @@ async function ensureGoldenTarget(page: puppeteer.Page) {
     const existing = document.querySelector("[data-fret-golden-target]");
     if (existing) return true;
 
-    // The /view/[style]/[name] route wraps the rendered registry component in a `bg-background` div.
+    // The /view/[style]/[name] route wraps the rendered registry component in a bg-background div.
     // If upstream changes and this selector breaks, regenerate goldens after updating this heuristic.
     const root = document.querySelector(".bg-background");
     if (!root) return false;
@@ -470,6 +448,10 @@ async function injectCssLinks(page: puppeteer.Page, urls: string[]) {
 }
 
 async function waitForShadcnStyles(page: puppeteer.Page, timeoutMs: number) {
+  const debug = process.env.DEBUG_GOLDENS === "1"
+  if (debug) {
+    console.log(`- waitForShadcnStyles: enter (timeoutMs=${timeoutMs})`)
+  }
   // Same `__name(...)` caveat as `extractOne`: pass an expression string instead of a function.
   //
   // We intentionally use a *global* Tailwind sentinel (body classes from `app/layout.tsx`) instead
@@ -489,7 +471,7 @@ async function waitForShadcnStyles(page: puppeteer.Page, timeoutMs: number) {
     return overscrollOk || smoothOk;
   })()`
 
-  await page.waitForFunction(expr, { timeout: timeoutMs })
+  await waitForExpr(page, expr, timeoutMs)
 }
 
 async function setThemeBeforeLoad(page: puppeteer.Page, theme: Theme) {
@@ -605,6 +587,7 @@ async function resolveCssInjectionUrls(style: string, baseUrl: string) {
 
 async function run(options: GoldenOptions): Promise<string[]> {
   ensureDir(options.outDir)
+  const debug = process.env.DEBUG_GOLDENS === "1"
 
   // Fail fast if the server isn't reachable.
   {
@@ -658,8 +641,13 @@ async function run(options: GoldenOptions): Promise<string[]> {
       console.error("! Detected a Next.js dev server response.")
       console.error("  Golden extraction requires production assets (CSS chunks) to be reachable.")
       console.error("  Recommended flow:")
-      console.error("    1) pnpm -C repo-ref/ui/apps/v4 build")
-      console.error("    2) pnpm -C repo-ref/ui/apps/v4 exec next start -p 4020")
+      console.error("    1) pnpm -C repo-ref/ui --filter shadcn build")
+      console.error(
+        "    2) NEXT_PUBLIC_APP_URL=http://localhost:4020 pnpm -C repo-ref/ui/apps/v4 exec next build --webpack"
+      )
+      console.error(
+        "    3) NEXT_PUBLIC_APP_URL=http://localhost:4020 pnpm -C repo-ref/ui/apps/v4 exec next start -p 4020"
+      )
       console.error(
         `  Then rerun with:\n    --baseUrl=http://localhost:4020`
       )
@@ -675,6 +663,8 @@ async function run(options: GoldenOptions): Promise<string[]> {
   try {
     browser = await puppeteer.launch({
       ...(executablePath ? { executablePath } : {}),
+      headless: "new",
+      protocolTimeout: Math.max(180_000, options.timeoutMs + 30_000),
       defaultViewport: {
         width: 1440,
         height: 900,
@@ -709,12 +699,13 @@ async function run(options: GoldenOptions): Promise<string[]> {
     if (options.names.includes("button-default")) {
       const page = await browser.newPage()
       page.setDefaultTimeout(options.timeoutMs)
+      page.setDefaultNavigationTimeout(options.timeoutMs)
       await page.emulateMediaFeatures([
         { name: "prefers-reduced-motion", value: "reduce" },
       ])
       await setThemeBeforeLoad(page, options.themes[0] ?? "light")
       const url = `${options.baseUrl}/view/${options.style}/button-default`
-      await page.goto(url, { waitUntil: "networkidle2" })
+      await page.goto(url, { waitUntil: "networkidle2", timeout: options.timeoutMs })
       await page.waitForSelector("body", { timeout: 30000 })
       await ensureGoldenTarget(page)
       await page.waitForSelector("[data-fret-golden-target]", { timeout: 30000 })
@@ -740,6 +731,7 @@ async function run(options: GoldenOptions): Promise<string[]> {
     for (const theme of options.themes) {
       const page = await browser.newPage()
       page.setDefaultTimeout(options.timeoutMs)
+      page.setDefaultNavigationTimeout(options.timeoutMs)
       await page.emulateMediaFeatures([
         { name: "prefers-reduced-motion", value: "reduce" },
       ])
@@ -755,13 +747,31 @@ async function run(options: GoldenOptions): Promise<string[]> {
           continue
         }
 
-        const out: GoldenFile = {
-          version: 1,
-          style: options.style,
-          name,
-          mode,
-          themes: {},
-        }
+        const out: GoldenFile = (() => {
+          if (options.mergeThemes && fs.existsSync(outPath)) {
+            const existing = JSON.parse(fs.readFileSync(outPath, "utf8")) as GoldenFile
+            const existingMode = existing.mode ?? "closed"
+            if (
+              existing.version !== 1 ||
+              existing.style !== options.style ||
+              existing.name !== name ||
+              existingMode !== mode
+            ) {
+              throw new Error(
+                `refusing to merge themes into ${outPath} (mismatched header)`
+              )
+            }
+            return existing
+          }
+
+          return {
+            version: 1,
+            style: options.style,
+            name,
+            mode,
+            themes: {},
+          }
+        })()
 
         let ok = true
         for (const theme of options.themes) {
@@ -769,18 +779,25 @@ async function run(options: GoldenOptions): Promise<string[]> {
           try {
             const page = pagesByTheme[theme]
 
-            await page.goto(url, { waitUntil: "networkidle2" })
+            if (debug) console.log(`- goto: ${name}${suffix} (${theme})`)
+            await page.goto(url, {
+              waitUntil: "networkidle2",
+              timeout: options.timeoutMs,
+            })
             await page.waitForSelector("body", { timeout: 30000 })
+            if (debug) console.log(`- ensureGoldenTarget: ${name}${suffix} (${theme})`)
             await ensureGoldenTarget(page)
             await page.waitForSelector("[data-fret-golden-target]", { timeout: 30000 })
+            if (debug) console.log(`- injectCssLinks: ${name}${suffix} (${theme})`)
             await injectCssLinks(page, cssInjectionUrls)
 
-            await page.evaluate(() => {
-              const indicator = document.querySelector("[data-tailwind-indicator]")
-              if (indicator) indicator.remove()
-            })
+            await page.evaluate(`(() => {
+              const indicator = document.querySelector("[data-tailwind-indicator]");
+              if (indicator) indicator.remove();
+            })()`)
 
             await waitForFonts(page, Math.min(2000, options.timeoutMs))
+            if (debug) console.log(`- waitForShadcnStyles: ${name}${suffix} (${theme})`)
             await waitForShadcnStyles(page, Math.min(30000, options.timeoutMs))
 
             if (mode === "open") {
@@ -789,6 +806,7 @@ async function run(options: GoldenOptions): Promise<string[]> {
               await waitForFonts(page, Math.min(2000, options.timeoutMs))
             }
 
+            if (debug) console.log(`- extractOne: ${name}${suffix} (${theme})`)
             const extracted = await extractOne(page)
             // Normalize a few floats that may slip through as high precision.
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -967,6 +985,7 @@ try {
     update,
     timeoutMs,
     openSelector,
+    mergeThemes: flags.mergeThemes === true || process.env.MERGE_THEMES === "1",
   })
 
   if (failures.length > 0) {
