@@ -482,6 +482,163 @@ fn node_drag_respects_per_node_extent_rect() {
 }
 
 #[test]
+fn multi_node_drag_clamps_by_selection_bounds_in_node_extent_rect() {
+    let mut host = TestUiHostImpl::default();
+    let mut graph_value = Graph::new(GraphId::new());
+
+    let a = NodeId::new();
+    let b = NodeId::new();
+    graph_value.nodes.insert(
+        a,
+        Node {
+            kind: NodeKindKey::new("test.node"),
+            kind_version: 1,
+            pos: CanvasPoint { x: 0.0, y: 0.0 },
+            selectable: None,
+            draggable: None,
+            connectable: None,
+            deletable: None,
+            parent: None,
+            extent: None,
+            expand_parent: None,
+            size: Some(CanvasSize {
+                width: 20.0,
+                height: 20.0,
+            }),
+            collapsed: false,
+            ports: Vec::new(),
+            data: serde_json::Value::Null,
+        },
+    );
+    graph_value.nodes.insert(
+        b,
+        Node {
+            kind: NodeKindKey::new("test.node"),
+            kind_version: 1,
+            pos: CanvasPoint { x: 30.0, y: 0.0 },
+            selectable: None,
+            draggable: None,
+            connectable: None,
+            deletable: None,
+            parent: None,
+            extent: None,
+            expand_parent: None,
+            size: Some(CanvasSize {
+                width: 20.0,
+                height: 20.0,
+            }),
+            collapsed: false,
+            ports: Vec::new(),
+            data: serde_json::Value::Null,
+        },
+    );
+
+    let graph = host.models.insert(graph_value);
+    let extent = crate::core::CanvasRect {
+        origin: CanvasPoint { x: 0.0, y: 0.0 },
+        size: CanvasSize {
+            width: 100.0,
+            height: 100.0,
+        },
+    };
+    let mut view_state = NodeGraphViewState::default();
+    view_state.interaction.node_extent = Some(extent);
+    let view = host.models.insert(view_state);
+
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    canvas.interaction.node_drag = Some(NodeDrag {
+        primary: a,
+        node_ids: vec![a, b],
+        nodes: vec![
+            (a, CanvasPoint { x: 0.0, y: 0.0 }),
+            (b, CanvasPoint { x: 30.0, y: 0.0 }),
+        ],
+        current_nodes: vec![
+            (a, CanvasPoint { x: 0.0, y: 0.0 }),
+            (b, CanvasPoint { x: 30.0, y: 0.0 }),
+        ],
+        current_groups: Vec::new(),
+        preview_rev: 0,
+        grab_offset: Point::new(Px(0.0), Px(0.0)),
+        start_pos: Point::new(Px(0.0), Px(0.0)),
+    });
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    assert!(node_drag::handle_node_drag_move(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        Point::new(Px(80.0), Px(0.0)),
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    let (pos_a_after_move, pos_b_after_move) = graph
+        .read_ref(cx.app, |g| {
+            (
+                g.nodes.get(&a).map(|n| n.pos),
+                g.nodes.get(&b).map(|n| n.pos),
+            )
+        })
+        .unwrap();
+    assert_eq!(pos_a_after_move.unwrap().x, 0.0);
+    assert_eq!(pos_b_after_move.unwrap().x, 30.0);
+
+    let drag = canvas
+        .interaction
+        .node_drag
+        .as_ref()
+        .expect("node drag active");
+    let preview_a = drag
+        .current_nodes
+        .iter()
+        .find(|(id, _)| *id == a)
+        .map(|(_, p)| *p)
+        .unwrap();
+    let preview_b = drag
+        .current_nodes
+        .iter()
+        .find(|(id, _)| *id == b)
+        .map(|(_, p)| *p)
+        .unwrap();
+
+    // The selection bounds are 50px wide. Attempting dx=80 clamps to dx=50, preserving spacing.
+    assert_eq!(preview_a.x, 50.0);
+    assert_eq!(preview_b.x, 80.0);
+    assert_eq!(preview_b.x - preview_a.x, 30.0);
+
+    assert!(pointer_up::handle_pointer_up(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        Point::new(Px(80.0), Px(0.0)),
+        fret_core::MouseButton::Left,
+        1,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    let (pos_a_after_commit, pos_b_after_commit) = graph
+        .read_ref(cx.app, |g| {
+            (
+                g.nodes.get(&a).map(|n| n.pos),
+                g.nodes.get(&b).map(|n| n.pos),
+            )
+        })
+        .unwrap();
+    assert_eq!(pos_a_after_commit.unwrap().x, 50.0);
+    assert_eq!(pos_b_after_commit.unwrap().x, 80.0);
+}
+
+#[test]
 fn node_resize_expands_group_when_expand_parent_is_true() {
     let mut host = TestUiHostImpl::default();
     let mut graph_value = Graph::new(GraphId::new());

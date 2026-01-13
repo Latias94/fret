@@ -52,6 +52,101 @@ fn union_rect(a: CanvasRect, b: CanvasRect) -> CanvasRect {
     }
 }
 
+fn clamp_delta_for_extent_rect(
+    delta: CanvasPoint,
+    group_min: CanvasPoint,
+    group_size: CanvasSize,
+    extent: CanvasRect,
+) -> CanvasPoint {
+    let mut out = delta;
+
+    let group_w = group_size.width.max(0.0);
+    let group_h = group_size.height.max(0.0);
+    let extent_w = extent.size.width.max(0.0);
+    let extent_h = extent.size.height.max(0.0);
+
+    if group_min.x.is_finite()
+        && group_w.is_finite()
+        && extent.origin.x.is_finite()
+        && extent_w.is_finite()
+    {
+        let min_dx = extent.origin.x - group_min.x;
+        let mut max_dx = extent.origin.x + (extent_w - group_w) - group_min.x;
+        if min_dx.is_finite() {
+            if !max_dx.is_finite() || max_dx < min_dx {
+                max_dx = min_dx;
+            }
+            out.x = if out.x.is_finite() {
+                out.x.clamp(min_dx, max_dx)
+            } else {
+                min_dx
+            };
+        }
+    }
+
+    if group_min.y.is_finite()
+        && group_h.is_finite()
+        && extent.origin.y.is_finite()
+        && extent_h.is_finite()
+    {
+        let min_dy = extent.origin.y - group_min.y;
+        let mut max_dy = extent.origin.y + (extent_h - group_h) - group_min.y;
+        if min_dy.is_finite() {
+            if !max_dy.is_finite() || max_dy < min_dy {
+                max_dy = min_dy;
+            }
+            out.y = if out.y.is_finite() {
+                out.y.clamp(min_dy, max_dy)
+            } else {
+                min_dy
+            };
+        }
+    }
+
+    out
+}
+
+fn dragged_group_bounds(
+    geom: &super::super::geometry::CanvasGeometry,
+    nodes: &[(GraphNodeId, CanvasPoint)],
+) -> Option<(CanvasPoint, CanvasSize)> {
+    let mut min_x: f32 = f32::INFINITY;
+    let mut min_y: f32 = f32::INFINITY;
+    let mut max_x: f32 = f32::NEG_INFINITY;
+    let mut max_y: f32 = f32::NEG_INFINITY;
+    let mut any = false;
+
+    for (id, start) in nodes {
+        let Some(node_geom) = geom.nodes.get(id) else {
+            continue;
+        };
+        let w = node_geom.rect.size.width.0.max(0.0);
+        let h = node_geom.rect.size.height.0.max(0.0);
+        if !start.x.is_finite() || !start.y.is_finite() || !w.is_finite() || !h.is_finite() {
+            continue;
+        }
+
+        any = true;
+        min_x = min_x.min(start.x);
+        min_y = min_y.min(start.y);
+        max_x = max_x.max(start.x + w);
+        max_y = max_y.max(start.y + h);
+    }
+
+    if !any || !min_x.is_finite() || !min_y.is_finite() || !max_x.is_finite() || !max_y.is_finite()
+    {
+        return None;
+    }
+
+    Some((
+        CanvasPoint { x: min_x, y: min_y },
+        CanvasSize {
+            width: (max_x - min_x).max(0.0),
+            height: (max_y - min_y).max(0.0),
+        },
+    ))
+}
+
 pub(super) fn handle_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
@@ -63,6 +158,7 @@ pub(super) fn handle_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     let Some(mut drag) = canvas.interaction.node_drag.clone() else {
         return false;
     };
+    let multi_drag = drag.nodes.len() > 1;
 
     let auto_pan_delta = (snapshot.interaction.auto_pan.on_node_drag)
         .then(|| NodeGraphCanvasWith::<M>::auto_pan_delta(snapshot, position, cx.bounds))
@@ -159,6 +255,11 @@ pub(super) fn handle_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     }
 
     let geom_for_extent = canvas.canvas_geometry(&*cx.app, snapshot);
+    if multi_drag && let Some(extent) = snapshot.interaction.node_extent {
+        if let Some((group_min, group_size)) = dragged_group_bounds(&geom_for_extent, &drag.nodes) {
+            delta = clamp_delta_for_extent_rect(delta, group_min, group_size, extent);
+        }
+    }
     let (next_nodes, next_groups) = canvas
         .graph
         .read_ref(cx.app, |g| {
@@ -184,7 +285,7 @@ pub(super) fn handle_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
                     height: node_geom.rect.size.height.0,
                 };
 
-                if let Some(extent) = snapshot.interaction.node_extent {
+                if !multi_drag && let Some(extent) = snapshot.interaction.node_extent {
                     to = clamp_point_in_rect_with_size(to, node_size, extent);
                 }
 
