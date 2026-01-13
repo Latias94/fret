@@ -119,9 +119,11 @@ single “at a glance” view of:
   - Wheel on Y axis band zooms Y only; Y span limits (when configured) clamp interaction-derived writes.
   - 2D box zoom writes a paired window update (no sparse filtering materialization).
   - When `DataZoomYSpec.filter_mode=Filter` is enabled, non-stacked scatter and line-family series (Line/Area) may materialize a sparse `RowSelection::Indices` filtered by the effective Y window (current: guarded by a view-size cap and disabled for stacked series).
+  - When both X and Y `filterMode=weakFilter` are enabled (one `dataZoom` per axis), non-stacked scatter and line-family series (Line/Area) may materialize a sparse `RowSelection::Indices` implementing the ECharts `weakFilter` rule: filter only when **all** relevant dimensions are out-of-window on the **same** side (below/below or above/above). This is a v1 subset (cartesian XY only, size-capped, and currently view-level only).
 - Missing vs ECharts (high value):
   - Y-driven filtering semantics (and ordering rules when multiple dims are filtered),
-  - ECharts-style “weakFilter/empty” behaviors for sparse selections,
+  - full ECharts-class `weakFilter` behavior across arbitrary dimension sets and axis types (beyond cartesian XY),
+  - ECharts-style `empty` masking beyond mark-level segment breaks (typed validity/masking surfaces),
   - 2D zoom interactions that can materialize sparse selections when needed.
 
 **S3 - 2D box zoom writes an atomic paired window action** (`[x]`)
