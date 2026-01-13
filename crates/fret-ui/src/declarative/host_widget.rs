@@ -32,9 +32,22 @@ struct TextCache {
     last_font_stack_key: Option<u64>,
 }
 
+#[derive(Debug, Default, Clone)]
+struct SvgCache {
+    key: Option<SvgCacheKey>,
+    svg: Option<fret_core::SvgId>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SvgCacheKey {
+    Static { ptr: usize, len: usize },
+    Bytes { ptr: usize, len: usize },
+}
+
 pub(super) struct ElementHostWidget {
     element: GlobalElementId,
     text_cache: TextCache,
+    svg_cache: SvgCache,
     canvas_cache: crate::canvas::CanvasCache,
     render_transform: Option<fret_core::Transform2D>,
     hit_testable: bool,
@@ -59,6 +72,7 @@ impl ElementHostWidget {
         Self {
             element,
             text_cache: TextCache::default(),
+            svg_cache: SvgCache::default(),
             canvas_cache: crate::canvas::CanvasCache::default(),
             render_transform: None,
             hit_testable: true,
@@ -76,6 +90,52 @@ impl ElementHostWidget {
             resizable_panel_group: None,
             flex_cache: None,
             grid_cache: None,
+        }
+    }
+
+    fn resolve_svg_for_icon(
+        &mut self,
+        services: &mut dyn fret_core::UiServices,
+        source: &crate::SvgSource,
+    ) -> fret_core::SvgId {
+        match source {
+            crate::SvgSource::Id(id) => *id,
+            crate::SvgSource::Static(bytes) => {
+                let key = SvgCacheKey::Static {
+                    ptr: bytes.as_ptr() as usize,
+                    len: bytes.len(),
+                };
+                if self.svg_cache.key == Some(key)
+                    && let Some(svg) = self.svg_cache.svg
+                {
+                    return svg;
+                }
+
+                let svg = services.svg().register_svg(bytes);
+                if let Some(old) = self.svg_cache.svg.replace(svg) {
+                    let _ = services.svg().unregister_svg(old);
+                }
+                self.svg_cache.key = Some(key);
+                svg
+            }
+            crate::SvgSource::Bytes(bytes) => {
+                let key = SvgCacheKey::Bytes {
+                    ptr: bytes.as_ptr() as usize,
+                    len: bytes.len(),
+                };
+                if self.svg_cache.key == Some(key)
+                    && let Some(svg) = self.svg_cache.svg
+                {
+                    return svg;
+                }
+
+                let svg = services.svg().register_svg(bytes);
+                if let Some(old) = self.svg_cache.svg.replace(svg) {
+                    let _ = services.svg().unregister_svg(old);
+                }
+                self.svg_cache.key = Some(key);
+                svg
+            }
         }
     }
 
@@ -618,6 +678,10 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         self.text_cache.metrics = None;
         self.text_cache.last_text = None;
         self.text_cache.last_rich = None;
+        if let Some(svg) = self.svg_cache.svg.take() {
+            let _ = services.svg().unregister_svg(svg);
+        }
+        self.svg_cache.key = None;
         self.canvas_cache.cleanup_resources(services);
         if let Some(input) = self.text_input.as_mut() {
             input.cleanup_resources(services);

@@ -158,7 +158,7 @@ pub struct Renderer {
     path_cache_epoch: u64,
 
     svg_renderer: SvgRenderer,
-    svgs: SlotMap<fret_core::SvgId, Arc<[u8]>>,
+    svgs: SlotMap<fret_core::SvgId, SvgEntry>,
     svg_hash_index: HashMap<u64, Vec<fret_core::SvgId>>,
     svg_rasters: HashMap<SvgRasterKey, SvgRasterEntry>,
     svg_mask_atlas_pages: Vec<Option<SvgMaskAtlasPage>>,

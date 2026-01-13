@@ -807,7 +807,7 @@ impl ElementHostWidget {
                     return;
                 }
 
-                let svg = props.svg.resolve(cx.services);
+                let svg = self.resolve_svg_for_icon(cx.services, &props.svg);
                 cx.scene.push(SceneOp::SvgMaskIcon {
                     order: DrawOrder(0),
                     rect: cx.bounds,

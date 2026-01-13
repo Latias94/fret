@@ -1,5 +1,6 @@
 use bytemuck::{Pod, Zeroable};
 use fret_core::scene::UvRect;
+use std::sync::Arc;
 use std::time::Duration;
 
 #[repr(C)]
@@ -301,6 +302,12 @@ pub(super) struct SvgRasterEntry {
     pub(super) approx_bytes: u64,
     pub(super) last_used_epoch: u64,
     pub(super) storage: SvgRasterStorage,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct SvgEntry {
+    pub(super) bytes: Arc<[u8]>,
+    pub(super) refs: u32,
 }
 
 impl SvgMaskAtlasPage {

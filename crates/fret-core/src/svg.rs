@@ -21,6 +21,11 @@ pub trait SvgService {
     /// Implementations may deduplicate repeated registrations.
     fn register_svg(&mut self, bytes: &[u8]) -> SvgId;
 
-    /// Unregister a previously registered SVG.
+    /// Release a previously registered SVG.
+    ///
+    /// This is a ref-counted release: each successful `register_svg` increments a reference count
+    /// (including deduplicated registrations that return an existing `SvgId`), and
+    /// `unregister_svg` decrements it. Implementations should only drop the underlying bytes and
+    /// any cached rasterizations when the count reaches zero.
     fn unregister_svg(&mut self, svg: SvgId) -> bool;
 }
