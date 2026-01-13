@@ -10,7 +10,11 @@ use fret_core::{
     TextStyle, TextWrap,
 };
 use fret_icons::ids;
-use fret_runtime::{CommandId, Model};
+use fret_runtime::{
+    CommandId, InputContext, InputDispatchPhase, KeymapService, Platform, PlatformCapabilities,
+    format_sequence,
+};
+use fret_runtime::{CommandMeta, Model};
 use fret_ui::action::ActivateReason;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
@@ -34,6 +38,120 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radiu
 
 use crate::layout as shadcn_layout;
 use crate::{Dialog, DialogContent, ScrollArea};
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct CommandCatalogOptions {
+    /// When `true`, commands that fail their `when` gating are excluded from the palette instead of
+    /// being rendered as disabled rows.
+    pub hide_disabled: bool,
+}
+
+fn command_palette_input_context<H: UiHost>(app: &H) -> InputContext {
+    let caps = app
+        .global::<PlatformCapabilities>()
+        .cloned()
+        .unwrap_or_default();
+    InputContext {
+        platform: Platform::current(),
+        caps,
+        // Best-effort: the command palette itself is typically presented in a modal dialog.
+        ui_has_modal: true,
+        // Best-effort: treat the palette as a global discovery surface, not a text-editing scope.
+        focus_is_text_input: false,
+        dispatch_phase: InputDispatchPhase::Normal,
+    }
+}
+
+fn command_item_from_meta<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    input_ctx: &InputContext,
+    id: &CommandId,
+    meta: &CommandMeta,
+) -> CommandItem {
+    let mut keywords: Vec<Arc<str>> = meta.keywords.clone();
+    keywords.push(Arc::from(id.as_str()));
+    if let Some(category) = meta.category.as_ref() {
+        keywords.push(category.clone());
+    }
+    if let Some(description) = meta.description.as_ref() {
+        keywords.push(description.clone());
+    }
+
+    let shortcut: Option<Arc<str>> = cx
+        .app
+        .global::<KeymapService>()
+        .and_then(|svc| svc.keymap.shortcut_for_command_sequence(input_ctx, id))
+        .map(|seq| Arc::from(format_sequence(input_ctx.platform, &seq)));
+
+    let mut item = CommandItem::new(meta.title.clone())
+        .value(Arc::from(id.as_str()))
+        .keywords(keywords)
+        .disabled(meta.when.as_ref().is_some_and(|w| !w.eval(input_ctx)))
+        .on_select(id.clone());
+    if let Some(shortcut) = shortcut {
+        item = item.shortcut(shortcut);
+    }
+    item
+}
+
+pub fn command_entries_from_host_commands<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Vec<CommandEntry> {
+    command_entries_from_host_commands_with_options(cx, CommandCatalogOptions::default())
+}
+
+pub fn command_entries_from_host_commands_with_options<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    options: CommandCatalogOptions,
+) -> Vec<CommandEntry> {
+    let input_ctx = command_palette_input_context(&*cx.app);
+
+    let mut commands: Vec<(CommandId, CommandMeta)> = cx
+        .app
+        .commands()
+        .iter()
+        .filter_map(|(id, meta)| (!meta.hidden).then_some((id.clone(), meta.clone())))
+        .collect();
+
+    commands.sort_by(|(a_id, a_meta), (b_id, b_meta)| {
+        match (&a_meta.category, &b_meta.category) {
+            (None, Some(_)) => std::cmp::Ordering::Less,
+            (Some(_), None) => std::cmp::Ordering::Greater,
+            (Some(a), Some(b)) => a.as_ref().cmp(b.as_ref()),
+            (None, None) => std::cmp::Ordering::Equal,
+        }
+        .then_with(|| a_meta.title.as_ref().cmp(b_meta.title.as_ref()))
+        .then_with(|| a_id.as_str().cmp(b_id.as_str()))
+    });
+
+    let mut root_items: Vec<CommandItem> = Vec::new();
+    let mut groups: std::collections::BTreeMap<Arc<str>, Vec<CommandItem>> =
+        std::collections::BTreeMap::new();
+
+    for (id, meta) in &commands {
+        let disabled = meta.when.as_ref().is_some_and(|w| !w.eval(&input_ctx));
+        if disabled && options.hide_disabled {
+            continue;
+        }
+
+        let item = command_item_from_meta(cx, &input_ctx, id, meta);
+
+        if let Some(category) = meta.category.clone() {
+            groups.entry(category).or_default().push(item);
+        } else {
+            root_items.push(item);
+        }
+    }
+
+    let mut entries: Vec<CommandEntry> = Vec::new();
+    entries.extend(root_items.into_iter().map(CommandEntry::Item));
+    entries.extend(
+        groups.into_iter().map(|(category, items)| {
+            CommandEntry::Group(CommandGroup::new(items).heading(category))
+        }),
+    );
+    entries
+}
 
 fn border(theme: &Theme) -> Color {
     theme
@@ -2110,6 +2228,22 @@ impl CommandDialog {
             .open_model(cx);
         let query = controllable_state::use_controllable_model(cx, query, || default_query).model();
         Self::new(open, query, items)
+    }
+
+    pub fn new_with_host_commands<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: Model<bool>,
+        query: Model<String>,
+    ) -> Self {
+        Self {
+            open,
+            query,
+            entries: command_entries_from_host_commands(cx),
+            a11y_label: None,
+            disabled: false,
+            wrap: true,
+            empty_text: Arc::from("No results."),
+        }
     }
 
     pub fn entries(mut self, entries: Vec<CommandEntry>) -> Self {
