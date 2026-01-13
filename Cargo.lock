@@ -927,6 +927,7 @@ dependencies = [
  "fret-ui-app",
  "fret-ui-assets",
  "fret-ui-kit",
+ "fret-ui-shadcn",
  "subsecond",
  "thiserror 2.0.17",
  "tracing",
