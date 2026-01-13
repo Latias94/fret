@@ -88,19 +88,20 @@ v1 constraints:
 This does not remove the contiguous fast path. It makes “sparse views” an explicit, testable contract
 instead of an ad-hoc future rewrite.
 
-### 4) Selection does not model “empty” masking in v1
+### 4) Selection does not represent value masking (v1 keeps the concepts separate)
 
 ECharts `filterMode='empty'` keeps rows but turns out-of-window values into `NaN`, causing line breaks.
 
-We do **not** model this in v1 because it introduces a second concept:
+We avoid modeling value masking as a first-class transform output in v1 because it introduces a second concept:
 
 - **row participation** (selection), vs
 - **value validity/masking** (per-point visibility/break rules).
 
-In v1:
+In v1, `RowSelection` remains the participation contract, and “empty-style” masking is handled as a mark-level policy:
 
 - `FilterMode::Filter` removes out-of-window rows by selection (contiguous slice when possible).
 - `FilterMode::None` keeps the base range unchanged.
+- `FilterMode::Empty` preserves the base selection and culls values at consumption time (line-family marks emit segment breaks; ADR 1150).
 
 ### 5) When sparse behaviors are added, they must be budget-aware and cacheable
 
@@ -189,3 +190,11 @@ P1:
 - Add `FilterMode::{WeakFilter,Empty}` only after:
   - stacking/bar/categorical behaviors are locked,
   - masking semantics are defined and tested.
+
+## Amendments
+
+- 2026-01-13 (ECharts replica workstream): `DataZoomYSpec.filter_mode` can opt-in to materializing
+  sparse `RowSelection::Indices` for Y filtering on non-stacked scatter and line-family series (Line/Area).
+  Consumers that implement “empty-style” segment breaks (e.g. `FilterMode::Empty` line-family marks)
+  must treat selection as authoritative and iterate via `get_raw_index(...)` rather than expanding
+  to a contiguous bounding `RowRange` via `as_range(...)`.
