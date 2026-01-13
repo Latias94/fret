@@ -3059,32 +3059,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         if !changed.contains(&TypeId::of::<fret_core::WindowMetricsService>()) {
             return;
         }
-
-        let pixels_per_point = context
-            .app
-            .global::<fret_core::WindowMetricsService>()
-            .and_then(|svc| svc.scale_factor(context.window))
-            .unwrap_or(1.0);
-
-        let model = context
-            .app
-            .with_global_mut(Gizmo3dDemoService::default, |svc, _app| {
-                svc.per_window.get(&context.window).cloned()
-            });
-        let Some(model) = model else {
-            return;
-        };
-
-        let did_change = model
-            .update(context.app, |m, _cx| {
-                let before = m.gizmo_cursor_units_per_screen_px;
-                apply_gizmo_cursor_units_per_screen_px(m, pixels_per_point);
-                (m.gizmo_cursor_units_per_screen_px - before).abs() > 1e-3
-            })
-            .unwrap_or(false);
-        if did_change {
-            context.app.request_redraw(context.window);
-        }
+        context.app.request_redraw(context.window);
     }
 
     fn viewport_input(&mut self, app: &mut App, event: ViewportInputEvent) {
@@ -4203,29 +4178,29 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             .plot
             .read(app, |_app, m| m.viewport)
             .unwrap_or_default();
-        let (viewport_px, camera, view_gizmo, gizmo_cfg, hud_state) = state
-            .demo
-            .read(app, |_app, m| {
-                (
-                    m.viewport_px,
-                    m.camera,
-                    m.view_gizmo.clone(),
-                    m.gizmo().config,
-                    m.hud,
-                )
-            })
-            .unwrap_or((
-                (1, 1),
-                OrbitCamera::default(),
-                ViewGizmo::new(ViewGizmoConfig::default()),
-                GizmoConfig::default(),
-                GizmoHudState::default(),
-            ));
+        let viewport_px = viewport.target_px_size;
 
         let draw_rect = viewport.draw_rect(bounds);
         let scale_x = draw_rect.size.width.0 / (viewport_px.0.max(1) as f32);
         let scale_y = draw_rect.size.height.0 / (viewport_px.1.max(1) as f32);
         let scale = scale_x.min(scale_y).max(1e-6);
+        let target_px_per_screen_px = (1.0 / scale).clamp(0.1, 16.0);
+
+        let _ = state.demo.update(app, |m, _cx| {
+            apply_gizmo_cursor_units_per_screen_px(m, target_px_per_screen_px);
+        });
+
+        let (camera, view_gizmo, gizmo_cfg, hud_state) = state
+            .demo
+            .read(app, |_app, m| {
+                (m.camera, m.view_gizmo.clone(), m.gizmo().config, m.hud)
+            })
+            .unwrap_or((
+                OrbitCamera::default(),
+                ViewGizmo::new(ViewGizmoConfig::default()),
+                GizmoConfig::default(),
+                GizmoHudState::default(),
+            ));
 
         let view_proj = camera_view_projection(viewport_px, camera);
         let viewport_rect = ViewportRect::new(
