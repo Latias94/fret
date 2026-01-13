@@ -3245,6 +3245,13 @@ fn universal_picks_scale_on_end_box() {
     let end_world = origin + axes[0] * length_world;
     let end = project_point(view_proj, vp, end_world, gizmo.config.depth_range).unwrap();
 
+    assert!(
+        gizmo
+            .pick_rotate_axis(view_proj, vp, origin, end.screen, axes, length_world)
+            .is_some(),
+        "expected rotate rings to be pickable near the scale end box in this projection"
+    );
+
     let (hit, kind) = gizmo
         .pick_universal_handle(view_proj, vp, origin, end.screen, axes, length_world)
         .unwrap();
@@ -3451,6 +3458,58 @@ fn universal_translate_tip_intent_works_with_close_camera_near_plane() {
 
     // At very close camera distances, projected planes can overlap axis tips. Universal is
     // expected to keep translate planes "protected" over rotate rings in these cases.
+    let translate = gizmo
+        .pick_translate_handle(
+            view_proj,
+            vp,
+            origin,
+            tip.screen,
+            axes,
+            length_world,
+            true,
+            true,
+            true,
+            false,
+        )
+        .expect("expected some translate handle at this cursor position");
+
+    let (hit, kind) = gizmo
+        .pick_universal_handle(view_proj, vp, origin, tip.screen, axes, length_world)
+        .unwrap();
+    assert_eq!(kind, GizmoMode::Translate);
+    assert_eq!(hit.handle, translate.handle);
+}
+
+#[test]
+fn universal_translate_tip_intent_works_in_orthographic_with_close_camera() {
+    let mut gizmo = base_gizmo(GizmoMode::Universal);
+    assert!(gizmo.config.universal_includes_scale);
+    gizmo.config.pick_radius_px = 48.0;
+
+    let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+    let view_proj = test_view_projection_ortho((800.0, 600.0), Vec3::new(0.0, 0.0, 0.20));
+    let origin = Vec3::ZERO;
+    let axes = gizmo.axis_dirs(&Transform3d::default());
+
+    let length_world = axis_length_world(
+        view_proj,
+        vp,
+        origin,
+        gizmo.config.depth_range,
+        gizmo.config.size_px,
+    )
+    .unwrap();
+
+    let tip_world = origin + axes[0] * (length_world * Gizmo::UNIVERSAL_TRANSLATE_TIP_SCALE);
+    let tip = project_point(view_proj, vp, tip_world, gizmo.config.depth_range).unwrap();
+
+    assert!(
+        gizmo
+            .pick_rotate_axis(view_proj, vp, origin, tip.screen, axes, length_world)
+            .is_some(),
+        "expected rotate rings to remain pickable near the translate tip with a close orthographic camera"
+    );
+
     let translate = gizmo
         .pick_translate_handle(
             view_proj,
