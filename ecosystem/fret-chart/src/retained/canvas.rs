@@ -1550,93 +1550,38 @@ impl ChartCanvas {
     }
 
     fn apply_legend_select_all(&mut self) -> bool {
-        let model = self.engine.model();
-        let mut updates = Vec::new();
-        for s in model.series_in_order() {
-            if !s.visible {
-                updates.push((s.id, true));
-            }
-        }
-
+        let updates = crate::legend_logic::legend_select_all_updates(self.engine.model());
         if updates.is_empty() {
             return false;
         }
-
         self.engine
             .apply_action(Action::SetSeriesVisibility { updates });
         true
     }
 
     fn apply_legend_select_none(&mut self) -> bool {
-        let model = self.engine.model();
-        let mut updates = Vec::new();
-        for s in model.series_in_order() {
-            if s.visible {
-                updates.push((s.id, false));
-            }
-        }
-
+        let updates = crate::legend_logic::legend_select_none_updates(self.engine.model());
         if updates.is_empty() {
             return false;
         }
-
         self.engine
             .apply_action(Action::SetSeriesVisibility { updates });
         true
     }
 
     fn apply_legend_invert(&mut self) -> bool {
-        let model = self.engine.model();
-        if model.series_order.is_empty() {
-            return false;
-        }
-
-        let mut updates = Vec::new();
-        for s in model.series_in_order() {
-            updates.push((s.id, !s.visible));
-        }
-
+        let updates = crate::legend_logic::legend_invert_updates(self.engine.model());
         if updates.is_empty() {
             return false;
         }
-
         self.engine
             .apply_action(Action::SetSeriesVisibility { updates });
         true
     }
 
     fn apply_legend_double_click(&mut self, clicked: delinea::SeriesId) {
-        let model = self.engine.model();
-        if model.series_order.is_empty() {
-            return;
-        }
-
-        let clicked_visible = model
-            .series
-            .get(&clicked)
-            .map(|s| s.visible)
-            .unwrap_or(true);
-        let only_clicked_visible = clicked_visible
-            && model
-                .series_in_order()
-                .all(|s| s.id == clicked || !s.visible);
-
-        let mut updates = Vec::new();
-        if only_clicked_visible {
-            for s in model.series_in_order() {
-                if !s.visible {
-                    updates.push((s.id, true));
-                }
-            }
-        } else {
-            for s in model.series_in_order() {
-                let target = s.id == clicked;
-                if s.visible != target {
-                    updates.push((s.id, target));
-                }
-            }
-        }
-
+        let updates =
+            crate::legend_logic::legend_double_click_updates(self.engine.model(), clicked);
         if !updates.is_empty() {
             self.engine
                 .apply_action(Action::SetSeriesVisibility { updates });
@@ -1644,13 +1589,7 @@ impl ChartCanvas {
     }
 
     fn apply_legend_reset(&mut self) {
-        let model = self.engine.model();
-        let mut updates = Vec::new();
-        for s in model.series_in_order() {
-            if !s.visible {
-                updates.push((s.id, true));
-            }
-        }
+        let updates = crate::legend_logic::legend_reset_updates(self.engine.model());
         if !updates.is_empty() {
             self.engine
                 .apply_action(Action::SetSeriesVisibility { updates });
@@ -1662,36 +1601,11 @@ impl ChartCanvas {
         anchor: delinea::SeriesId,
         clicked: delinea::SeriesId,
     ) {
-        let model = self.engine.model();
-        let Some(anchor_idx) = model.series_order.iter().position(|id| *id == anchor) else {
-            return;
-        };
-        let Some(clicked_idx) = model.series_order.iter().position(|id| *id == clicked) else {
-            return;
-        };
-
-        let clicked_visible = model
-            .series
-            .get(&clicked)
-            .map(|s| s.visible)
-            .unwrap_or(true);
-        let target = !clicked_visible;
-
-        let (lo, hi) = if anchor_idx <= clicked_idx {
-            (anchor_idx, clicked_idx)
-        } else {
-            (clicked_idx, anchor_idx)
-        };
-
-        let mut updates = Vec::new();
-        for id in &model.series_order[lo..=hi] {
-            if let Some(s) = model.series.get(id)
-                && s.visible != target
-            {
-                updates.push((*id, target));
-            }
-        }
-
+        let updates = crate::legend_logic::legend_shift_range_toggle_updates(
+            self.engine.model(),
+            anchor,
+            clicked,
+        );
         if !updates.is_empty() {
             self.engine
                 .apply_action(Action::SetSeriesVisibility { updates });
@@ -3036,20 +2950,18 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     && self.box_zoom_drag.is_none()
                     && let Some(action) = self.legend_selector_at(*position)
                 {
-                    let changed = match action {
+                    let _changed = match action {
                         LegendSelectorAction::All => self.apply_legend_select_all(),
                         LegendSelectorAction::None => self.apply_legend_select_none(),
                         LegendSelectorAction::Invert => self.apply_legend_invert(),
                     };
-                    if changed {
-                        self.legend_anchor = None;
-                        self.legend_hover = None;
-                        self.legend_selector_hover = Some(action);
-                        cx.invalidate_self(Invalidation::Paint);
-                        cx.request_redraw();
-                        cx.stop_propagation();
-                        return;
-                    }
+                    self.legend_anchor = None;
+                    self.legend_hover = None;
+                    self.legend_selector_hover = Some(action);
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
                 }
 
                 if *button == MouseButton::Left

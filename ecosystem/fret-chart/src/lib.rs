@@ -8,6 +8,8 @@ pub mod declarative;
 pub mod input_map;
 pub mod retained;
 
+mod legend_logic;
+
 pub use declarative::*;
 pub use input_map::*;
 pub use retained::*;

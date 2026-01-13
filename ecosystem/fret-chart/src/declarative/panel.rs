@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use delinea::engine::model::{ChartPatch, PatchMode};
@@ -22,6 +22,8 @@ use fret_ui_kit::recipes::canvas_tool_router::{
 
 use crate::input_map::{ChartInputMap, ModifierKey};
 use crate::retained::ChartStyle;
+
+use super::legend_overlay::{LegendOverlayState, LegendSeriesEntry, legend_overlay_tool};
 
 #[derive(Debug, Default)]
 struct NullTextMeasurer;
@@ -200,11 +202,17 @@ pub fn chart_canvas_panel<H: UiHost>(
         }
     };
 
+    let legend_state: Arc<Mutex<LegendOverlayState>> = cx.with_state(
+        || Arc::new(Mutex::new(LegendOverlayState::default())),
+        |st| st.clone(),
+    );
+
     // Step the engine during declarative render and cache the current marks snapshot.
     let bounds = cx.bounds;
     let mut unfinished = false;
     let mut marks_rev = delinea::ids::Revision::default();
     let mut output_marks: Arc<MarkTree> = Arc::new(MarkTree::default());
+    let mut legend_series: Vec<LegendSeriesEntry> = Vec::new();
 
     let _ = engine.update(cx.app, |engine, _cx| {
         if engine.model().viewport != Some(bounds) {
@@ -238,7 +246,27 @@ pub fn chart_canvas_panel<H: UiHost>(
         unfinished = still_unfinished;
         marks_rev = engine.output().marks.revision;
         output_marks = Arc::new(engine.output().marks.clone());
+
+        let model = engine.model();
+        legend_series = model
+            .series_in_order()
+            .enumerate()
+            .map(|(order, s)| LegendSeriesEntry {
+                id: s.id,
+                order,
+                label: s
+                    .name
+                    .clone()
+                    .unwrap_or_else(|| format!("Series {}", s.id.0))
+                    .into(),
+                visible: s.visible,
+            })
+            .collect();
     });
+
+    if let Ok(mut st) = legend_state.lock() {
+        st.sync_series(legend_series);
+    }
 
     let cache = cx.with_state(MarksCache::default, |cache| {
         if cache.rev != marks_rev {
@@ -420,7 +448,10 @@ pub fn chart_canvas_panel<H: UiHost>(
         true
     });
 
+    let legend_tool = legend_overlay_tool(engine.clone(), legend_state.clone(), style);
+
     let tools = vec![
+        legend_tool,
         CanvasToolEntry {
             id: CanvasToolId::new(1),
             priority: 100,
