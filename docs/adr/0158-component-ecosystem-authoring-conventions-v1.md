@@ -138,7 +138,7 @@ This is especially important for future third-party component ecosystems.
 To keep small apps small and enable incremental adoption, ecosystem crates should:
 
 - keep heavyweight integrations behind features (icons/UI assets/command palette/dev hotpatch),
-- use predictable feature names across crates (e.g. `icons`, `ui-assets`, `app-integration`, `dev-tools`),
+- use predictable feature names across crates (e.g. `icons`, `ui-assets`, `app-integration`, `dev-tools`) when feasible,
 - avoid enabling large optional deps in `default` features unless the crate is explicitly a distribution crate.
 
 ## Implementation Plan (non-binding)
