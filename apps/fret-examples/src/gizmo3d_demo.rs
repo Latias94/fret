@@ -4180,11 +4180,14 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             .unwrap_or_default();
         let viewport_px = viewport.target_px_size;
 
-        let draw_rect = viewport.draw_rect(bounds);
+        let mapping = viewport.mapping(bounds);
+        let draw_rect = mapping.map().draw_rect;
         let scale_x = draw_rect.size.width.0 / (viewport_px.0.max(1) as f32);
         let scale_y = draw_rect.size.height.0 / (viewport_px.1.max(1) as f32);
         let scale = scale_x.min(scale_y).max(1e-6);
-        let target_px_per_screen_px = (1.0 / scale).clamp(0.1, 16.0);
+        let target_px_per_screen_px = mapping
+            .target_px_per_screen_px()
+            .unwrap_or_else(|| viewport_px.0.max(1) as f32 / draw_rect.size.width.0.max(1.0));
 
         let _ = state.demo.update(app, |m, _cx| {
             apply_gizmo_cursor_units_per_screen_px(m, target_px_per_screen_px);
