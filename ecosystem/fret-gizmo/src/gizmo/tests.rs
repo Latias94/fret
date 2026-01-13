@@ -2077,8 +2077,10 @@ fn rotate_view_ring_does_not_steal_axis_ring_when_both_hit() {
     config.show_arcball = false;
     // Force the view ring to coincide with the most camera-facing axis ring so we can
     // deterministically hit both at the same cursor point.
-    config.view_axis_ring_radius_scale = 1.0;
-    let gizmo = Gizmo::new(config);
+    let mut gizmo = Gizmo::new(config);
+    let mut pv = gizmo.part_visuals();
+    pv.rotate_view_ring_radius_scale = 1.0;
+    gizmo.set_part_visuals(pv);
 
     let mut axis_only_cfg = config;
     axis_only_cfg.show_view_axis_ring = false;
@@ -2086,7 +2088,10 @@ fn rotate_view_ring_does_not_steal_axis_ring_when_both_hit() {
 
     let mut view_only_cfg = config;
     view_only_cfg.axis_mask = [true; 3];
-    let view_only = Gizmo::new(view_only_cfg);
+    let mut view_only = Gizmo::new(view_only_cfg);
+    let mut pv = view_only.part_visuals();
+    pv.rotate_view_ring_radius_scale = 1.0;
+    view_only.set_part_visuals(pv);
 
     let axes = gizmo.axis_dirs(&Transform3d::default());
     let radius_world = axis_length_world(

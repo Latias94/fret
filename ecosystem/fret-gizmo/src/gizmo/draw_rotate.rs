@@ -128,7 +128,7 @@ impl Gizmo {
             if axis_dir.length_squared() > 0.0 {
                 let (u, v) = plane_basis(axis_dir);
                 let handle = RotateHandle::View.id();
-                let r = (radius_world * self.config.view_axis_ring_radius_scale).max(1e-6);
+                let r = (radius_world * pv.rotate_view_ring_radius_scale).max(1e-6);
                 let base = Color {
                     r: 0.9,
                     g: 0.9,
@@ -242,7 +242,7 @@ impl Gizmo {
 
         let base_radius_world = size_length_world.max(1e-6);
         let radius_world = if active == Self::ROTATE_VIEW_HANDLE {
-            (base_radius_world * self.config.view_axis_ring_radius_scale).max(1e-6)
+            (base_radius_world * pv.rotate_view_ring_radius_scale).max(1e-6)
         } else {
             base_radius_world
         };

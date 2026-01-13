@@ -1015,6 +1015,7 @@ impl Gizmo {
                 (true, view, arcball)
             };
 
+        let pv = self.state.part_visuals;
         let radius_world = size_length_world.max(0.0);
 
         let segments: usize = 64;
@@ -1092,7 +1093,7 @@ impl Gizmo {
                 if axis_dir.length_squared() > 0.0 {
                     let (u, v) = plane_basis(axis_dir);
                     let handle = RotateHandle::View.id();
-                    let r = (radius_world * self.config.view_axis_ring_radius_scale).max(1e-6);
+                    let r = (radius_world * pv.rotate_view_ring_radius_scale).max(1e-6);
 
                     let mut prev = match project_point(
                         view_projection,

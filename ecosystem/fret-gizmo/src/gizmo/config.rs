@@ -114,8 +114,6 @@ pub struct GizmoConfig {
     pub occluded_alpha: f32,
     /// When `true`, includes a view-axis rotation ring (camera-facing) in `GizmoMode::Rotate`.
     pub show_view_axis_ring: bool,
-    /// Radius multiplier for the view-axis ring (outer ring).
-    pub view_axis_ring_radius_scale: f32,
     /// Rotate ring visibility fade window in terms of `abs(dot(view_dir, axis_dir))`.
     ///
     /// - When `dot <= rotate_ring_fade_dot.0`, the axis ring is fully faded out (and not pickable).
@@ -211,7 +209,6 @@ impl Default for GizmoConfig {
             show_occluded: true,
             occluded_alpha: 0.25,
             show_view_axis_ring: true,
-            view_axis_ring_radius_scale: 1.2,
             rotate_ring_fade_dot: (0.10, 0.30),
             show_arcball: true,
             arcball_radius_scale: 0.85,
