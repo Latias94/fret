@@ -3950,6 +3950,134 @@ fn data_zoom_x_filter_mode_weakfilter_matches_filter_for_monotonic_x() {
 }
 
 #[test]
+fn data_zoom_xy_filter_mode_weakfilter_drops_only_same_side_outliers() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        )),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![DataZoomXSpec {
+            id: crate::ids::DataZoomId::new(1),
+            axis: x_axis,
+            filter_mode: FilterMode::WeakFilter,
+            min_value_span: None,
+            max_value_span: None,
+        }],
+        data_zoom_y: vec![DataZoomYSpec {
+            id: crate::ids::DataZoomId::new(2),
+            axis: y_axis,
+            filter_mode: FilterMode::WeakFilter,
+            min_value_span: None,
+            max_value_span: None,
+        }],
+        tooltip: None,
+        axis_pointer: None,
+        visual_maps: vec![],
+        series: vec![SeriesSpec {
+            id: series_id,
+            name: None,
+            kind: SeriesKind::Line,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
+            bar_layout: Default::default(),
+            area_baseline: None,
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let mut table = DataTable::default();
+
+    // X is monotonic and spans outside the window on both sides. Y also spans outside.
+    //
+    // Window: x in [0,10], y in [0,10]
+    // Points:
+    // - idx0: x below, y inside -> keep (weakFilter keeps mixed/outside points)
+    // - idx1: x below, y below  -> drop (same-side below)
+    // - idx2: x inside, y inside -> keep
+    // - idx3: x inside, y above  -> keep
+    // - idx4: x inside, y inside -> keep
+    // - idx5: x above, y above   -> drop (same-side above)
+    table.push_column(Column::F64(vec![-100.0, -50.0, 0.0, 5.0, 10.0, 20.0]));
+    table.push_column(Column::F64(vec![5.0, -100.0, 5.0, 20.0, 5.0, 20.0]));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x_axis,
+        window: Some(DataWindow { min: 0.0, max: 10.0 }),
+    });
+    engine.apply_action(Action::SetDataWindowY {
+        axis: y_axis,
+        window: Some(DataWindow { min: 0.0, max: 10.0 }),
+    });
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 32))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let view = engine
+        .view()
+        .series_view(series_id)
+        .expect("expected series view");
+    let RowSelection::Indices(indices) = &view.selection else {
+        panic!("expected indices selection for multi-dim weakFilter");
+    };
+    assert_eq!(indices.as_ref(), &[0, 2, 3, 4]);
+}
+
+#[test]
 fn data_zoom_x_filter_mode_empty_breaks_line_into_segments_for_interleaved_out_of_window_points() {
     let dataset_id = crate::ids::DatasetId::new(1);
     let zoom_id = crate::ids::DataZoomId::new(1);
