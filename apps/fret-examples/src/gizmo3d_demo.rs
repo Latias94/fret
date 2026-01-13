@@ -527,11 +527,7 @@ fn selection_op(modifiers: &fret_core::Modifiers) -> SelectionOp {
 }
 
 fn precision_multiplier(modifiers: &fret_core::Modifiers) -> f32 {
-    if modifiers.ctrl || modifiers.meta {
-        0.2
-    } else {
-        1.0
-    }
+    if modifiers.shift { 0.2 } else { 1.0 }
 }
 
 fn transform_gizmo_kind_for_handle(handle: HandleId) -> Option<GizmoMode> {
@@ -1174,6 +1170,7 @@ impl Gizmo3dDemoModel {
         out.push_str("  -/=: gizmo size   ,/.: thickness + pick radius (Shift: bigger step)\n");
         out.push_str("  H: toggle help\n");
         out.push_str("  Esc: cancel drag / selection\n");
+        out.push_str("  Drag: Ctrl/Cmd: snap   Shift: precision\n");
         out.push_str("  Ctrl+A: select all (Shift: clear)\n");
         out.push('\n');
 
@@ -3208,10 +3205,14 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             };
 
             let snap = match event.kind {
-                ViewportInputKind::PointerMove { modifiers, .. } => modifiers.shift,
-                ViewportInputKind::PointerDown { modifiers, .. } => modifiers.shift,
-                ViewportInputKind::PointerUp { modifiers, .. } => modifiers.shift,
-                ViewportInputKind::Wheel { modifiers, .. } => modifiers.shift,
+                ViewportInputKind::PointerMove { modifiers, .. } => {
+                    modifiers.ctrl || modifiers.meta
+                }
+                ViewportInputKind::PointerDown { modifiers, .. } => {
+                    modifiers.ctrl || modifiers.meta
+                }
+                ViewportInputKind::PointerUp { modifiers, .. } => modifiers.ctrl || modifiers.meta,
+                ViewportInputKind::Wheel { modifiers, .. } => modifiers.ctrl || modifiers.meta,
             };
 
             let precision = match event.kind {
@@ -3409,7 +3410,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 match event.kind {
                     ViewportInputKind::PointerDown {
                         button: fret_core::MouseButton::Left,
-                        modifiers,
+                        modifiers: _,
                         click_count,
                         ..
                     } => {
@@ -3425,7 +3426,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                             hovered: true,
                             drag_started: false,
                             dragging: false,
-                            snap: modifiers.shift,
+                            snap,
                             cancel: false,
                             precision,
                         };

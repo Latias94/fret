@@ -161,7 +161,7 @@ Fret's current contract:
 | Feature | ImGuizmo | transform-gizmo | Fret status | Evidence / notes |
 | --- | --- | --- | --- | --- |
 | Toggle snapping during drag | Yes | Yes | **Aligned** | `GizmoInput.snap` gates step snapping. |
-| Precision modifier (fine control) | External (editor convention) | External (editor convention) | **Aligned (Fret enhancement)** | `GizmoInput.precision` scales drag deltas without hard-coded keybindings (host-defined). Demo maps Ctrl/Meta to `0.2` (`apps/fret-examples/src/gizmo3d_demo.rs`). |
+| Precision modifier (fine control) | External (editor convention) | External (editor convention) | **Aligned (Fret enhancement)** | `GizmoInput.precision` scales drag deltas without hard-coded keybindings (host-defined). Demo maps Shift to `0.2` and Ctrl/Meta to snapping (`apps/fret-examples/src/gizmo3d_demo.rs`). |
 | Translation snap step | Yes | Yes | **Aligned** | `translate_snap_step: Option<f32>`. |
 | Rotation snap step | Yes (degrees) | Yes (radians) | **Aligned** | `rotate_snap_step_radians: Option<f32>`; note unit differences vs ImGuizmo. |
 | Scale snap step | Yes | Yes | **Aligned** | `scale_snap_step: Option<f32>`. |
@@ -236,14 +236,14 @@ This is a suggested sequence for reaching "mature editor" parity without over-de
 
 1. **Viewport redraw policy (first frame + interaction-driven redraw)**
    - Goal: demo/editor should not require any input to present the first frame; interaction should always feel responsive.
-   - Status: **Aligned (demo/runner)** — the winit runner requests an initial redraw on window creation, and the gizmo demo
+   - Status: **Aligned (demo/runner)** - the winit runner requests an initial redraw on window creation, and the gizmo demo
      requests redraw on viewport input and while camera frame animations are active.
    - Remaining: ensure other viewport demos follow the same "interaction-driven redraw" rule (especially web/wasm paths).
 2. **Universal mode surface + policy**
-   - Status: **Aligned (basic)** — Universal has explicit inclusion toggles:
+   - Status: **Aligned (basic)** - Universal has explicit inclusion toggles:
      `universal_includes_translate_depth`, `universal_includes_scale`,
      `universal_includes_rotate_view_ring`, `universal_includes_arcball`.
-   - Remaining: add more overlap regression tests (near-plane + extremely close camera) and keep the demo’s default policies conservative.
+   - Remaining: add more overlap regression tests (near-plane + extremely close camera) and keep the demo's default policies conservative.
 3. **Precision controls**
    - Implemented: `GizmoInput.precision` scales drag deltas without hard-binding to a specific input system.
    - Remaining: align demo/editor modifier mapping with the host's input conventions and ensure it composes well with snapping + camera navigation.
@@ -262,7 +262,7 @@ This is a suggested sequence for reaching "mature editor" parity without over-de
 2. **Custom gizmo extensibility**
    - Godot-style plugin surface: allow tools to contribute custom handles with explicit picking shapes (segments/capsules/triangles)
       in addition to draw geometry, so editor tools can build domain gizmos (lights, cameras, physics, nav, etc).
-   - Status: **Aligned (with known gaps)** — Fret now has:
+   - Status: **Aligned (with known gaps)** - Fret now has:
      - reusable pick-primitive layer (`PickCircle2d`, `PickSegmentCapsule2d`, `PickConvexQuad2d`) in `ecosystem/fret-gizmo/src/picking.rs`
      - an explicit plugin/handle namespace contract + manager (`GizmoPlugin`, `GizmoPluginManager`) in `ecosystem/fret-gizmo/src/plugin.rs` (see ADR 0155)
      - built-in transform gizmo routed through the manager (`TransformGizmoPlugin` in `ecosystem/fret-gizmo/src/transform_plugin.rs`)
