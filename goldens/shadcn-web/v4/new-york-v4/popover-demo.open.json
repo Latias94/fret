@@ -2813,7 +2813,15 @@
             }
           ]
         }
-      ]
+      ],
+      "open": {
+        "action": "click",
+        "selector": "[data-fret-golden-target] [data-state='closed'][aria-haspopup]",
+        "point": {
+          "x": 62.71354293823242,
+          "y": 18
+        }
+      }
     },
     "dark": {
       "url": "http://localhost:4020/view/new-york-v4/popover-demo",
@@ -5624,7 +5632,15 @@
             }
           ]
         }
-      ]
+      ],
+      "open": {
+        "action": "click",
+        "selector": "[data-fret-golden-target] [data-state='closed'][aria-haspopup]",
+        "point": {
+          "x": 62.71354293823242,
+          "y": 18
+        }
+      }
     }
   }
 }

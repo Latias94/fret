@@ -7,6 +7,10 @@ import { fileURLToPath, pathToFileURL } from "url"
 
 type Theme = "light" | "dark"
 type Mode = "closed" | "open"
+type OpenAction = "click" | "hover" | "contextmenu" | "keys"
+
+type OpenPoint = { abs: { x: number; y: number }; rel: { x: number; y: number } }
+type OpenMeta = { action: OpenAction; selector: string; point: { x: number; y: number } }
 
 type GoldenOptions = {
   baseUrl: string
@@ -19,6 +23,7 @@ type GoldenOptions = {
   update: boolean
   timeoutMs: number
   openSelector?: string
+  openAction?: OpenAction
   mergeThemes?: boolean
 }
 
@@ -242,7 +247,9 @@ async function extractOne(page: puppeteer.Page) {
     }
 
     const portalCandidates = Array.from(
-      document.querySelectorAll("[data-state='open']")
+      document.querySelectorAll(
+        "[data-state='open'],[data-state='delayed-open'],[data-state='instant-open']"
+      )
     ).filter((el) => !root.contains(el));
 
     // Prefer the most specific (leaf-most) open-state nodes so we capture the actual Radix content
@@ -325,10 +332,34 @@ async function openOverlay(
   page: puppeteer.Page,
   name: string,
   timeoutMs: number,
-  openSelector?: string
+  openSelector: string | undefined,
+  openAction: OpenAction
 ) {
   const rootSel = "[data-fret-golden-target]"
   const debug = process.env.DEBUG_GOLDENS === "1"
+
+  async function resolveOpenPoint(sel: string): Promise<OpenPoint | null> {
+    const expr = `(() => {
+      const rootSel = ${JSON.stringify(rootSel)};
+      const sel = ${JSON.stringify(sel)};
+
+      const root = document.querySelector(rootSel) || document.body;
+      const el = document.querySelector(sel);
+      if (!el || !(el instanceof Element)) return null;
+
+      el.scrollIntoView({ block: "center", inline: "center" });
+      const rootRect = root.getBoundingClientRect();
+      const r = el.getBoundingClientRect();
+      const x = r.x + r.width / 2;
+      const y = r.y + r.height / 2;
+
+      return {
+        abs: { x, y },
+        rel: { x: x - rootRect.x, y: y - rootRect.y },
+      };
+    })()`
+    return (await page.evaluate(expr)) as OpenPoint | null
+  }
 
   const selectorCandidates: string[] = []
   if (openSelector) {
@@ -338,41 +369,30 @@ async function openOverlay(
     }
   }
 
-  selectorCandidates.push(
-    `${rootSel} [role='combobox'][aria-expanded='false']`,
-    `${rootSel} [aria-haspopup='menu'][data-state='closed']`,
-    `${rootSel} [aria-haspopup='menu']`,
-    `${rootSel} [data-state='closed'][aria-haspopup]`,
-    `${rootSel} button[data-state='closed']`,
-    `${rootSel} button`
-  )
-
-  // Use Puppeteer's click (trusted pointer events). Radix triggers often listen on pointerdown;
-  // calling `element.click()` from within `page.evaluate(...)` is not sufficient.
-  let clicked = false
-  let lastError: unknown = null
-  let clickedSelector: string | null = null
-  for (const sel of selectorCandidates) {
-    try {
-      await page.click(sel, { delay: 10 })
-      clicked = true
-      clickedSelector = sel
-      break
-    } catch (err) {
-      lastError = err
-    }
-  }
-
-  if (!clicked) {
-    throw new Error(
-      `failed to open overlay for ${name}: no trigger found (lastError=${String(
-        lastError
-      )})`
+  if (openAction === "contextmenu") {
+    selectorCandidates.push(
+      `${rootSel} [data-slot='context-menu-trigger']`,
+      `${rootSel} [data-slot='context-menu'] [data-slot$='trigger']`,
+      `${rootSel} [data-slot$='trigger']`,
+      `${rootSel}`
     )
-  }
-
-  if (debug) {
-    console.log(`- openOverlay: ${name} clicked ${clickedSelector ?? "n/a"}`)
+  } else if (openAction === "hover") {
+    selectorCandidates.push(
+      `${rootSel} [data-slot='tooltip-trigger']`,
+      `${rootSel} [data-slot='hover-card-trigger']`,
+      `${rootSel} [data-slot$='trigger']`,
+      `${rootSel} button`,
+      `${rootSel}`
+    )
+  } else {
+    selectorCandidates.push(
+      `${rootSel} [role='combobox'][aria-expanded='false']`,
+      `${rootSel} [aria-haspopup='menu'][data-state='closed']`,
+      `${rootSel} [aria-haspopup='menu']`,
+      `${rootSel} [data-state='closed'][aria-haspopup]`,
+      `${rootSel} button[data-state='closed']`,
+      `${rootSel} button`
+    )
   }
 
   const waitExpr = `(() => {
@@ -388,13 +408,96 @@ async function openOverlay(
     return false;
   })()`
 
-  if (debug) {
-    console.log(`- openOverlay: ${name} waiting for portal`)
+  async function tryCloseOverlays() {
+    try {
+      await page.keyboard.press("Escape")
+    } catch {
+      // ignore
+    }
   }
+
+  // Use Puppeteer's input (trusted pointer events). Many Radix triggers listen on pointerdown;
+  // calling `element.click()` from within `page.evaluate(...)` is not sufficient.
+  let opened = false
+  let lastError: unknown = null
+  let openedSelector: string | null = null
+  let openedPoint: OpenPoint | null = null
+
+  const openBudgetMs = Math.min(timeoutMs, 2500)
+  for (const sel of selectorCandidates) {
+    try {
+      const point = await resolveOpenPoint(sel)
+      if (!point) {
+        continue
+      }
+
+      if (debug) {
+        console.log(
+          `- openOverlay: ${name} try ${openAction} on ${sel} (abs=${point.abs.x.toFixed(
+            1
+          )},${point.abs.y.toFixed(1)})`
+        )
+      }
+
+      if (openAction === "hover") {
+        await page.mouse.move(point.abs.x, point.abs.y, { steps: 4 })
+      } else if (openAction === "contextmenu") {
+        await page.mouse.click(point.abs.x, point.abs.y, {
+          button: "right",
+          delay: 10,
+        })
+      } else if (openAction === "keys") {
+        await page.focus(sel)
+        // Prefer the cross-platform "Shift+F10" policy for context menus, otherwise try Enter.
+        await page.keyboard.down("Shift")
+        await page.keyboard.press("F10")
+        await page.keyboard.up("Shift")
+      } else {
+        await page.mouse.click(point.abs.x, point.abs.y, {
+          button: "left",
+          delay: 10,
+        })
+      }
+
+      await waitForExpr(page, waitExpr, openBudgetMs)
+
+      opened = true
+      openedSelector = sel
+      openedPoint = point
+      break
+    } catch (err) {
+      lastError = err
+      await tryCloseOverlays()
+    }
+  }
+
+  if (!opened || !openedSelector || !openedPoint) {
+    throw new Error(
+      `failed to open overlay for ${name}: no trigger worked (lastError=${String(
+        lastError
+      )})`
+    )
+  }
+
+  if (debug) {
+    console.log(`- openOverlay: ${name} opened (${openAction}) via ${openedSelector}`)
+  }
+
+  // Let open-state layout settle (portal mount + popper positioning).
+  await waitForFonts(page, Math.min(2000, timeoutMs))
   await waitForExpr(page, waitExpr, timeoutMs)
-  if (debug) {
-    console.log(`- openOverlay: ${name} portal ready`)
-  }
+
+  return {
+    action: openAction,
+    selector: openedSelector,
+    point: { x: openedPoint.rel.x, y: openedPoint.rel.y },
+  } satisfies OpenMeta
+}
+
+function inferOpenAction(name: string): OpenAction {
+  if (name === "context-menu-demo") return "contextmenu"
+  if (name === "tooltip-demo" || name === "hover-card-demo") return "hover"
+  return "click"
 }
 
 async function disableMotion(page: puppeteer.Page) {
@@ -884,14 +987,22 @@ async function run(options: GoldenOptions): Promise<string[]> {
             if (debug) console.log(`- waitForShadcnStyles: ${name}${suffix} (${theme})`)
             await waitForShadcnStyles(page, Math.min(30000, options.timeoutMs))
 
+            let openMeta: OpenMeta | null = null
             if (mode === "open") {
-              await openOverlay(page, name, options.timeoutMs, options.openSelector)
-              // Let open-state layout settle (portal mount + popper positioning).
-              await waitForFonts(page, Math.min(2000, options.timeoutMs))
+              const action = options.openAction ?? inferOpenAction(name)
+              openMeta = await openOverlay(
+                page,
+                name,
+                options.timeoutMs,
+                options.openSelector,
+                action
+              )
             }
 
             if (debug) console.log(`- extractOne: ${name}${suffix} (${theme})`)
             const extracted = await extractOne(page)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ;(extracted as any).open = openMeta
             // Normalize a few floats that may slip through as high precision.
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             ;(extracted as any).devicePixelRatio = round3(
@@ -1005,6 +1116,22 @@ const openSelector =
   process.env.OPEN_SELECTOR ??
   undefined
 
+const openActionRaw =
+  (typeof flags.openAction === "string" ? flags.openAction : undefined) ??
+  process.env.OPEN_ACTION ??
+  undefined
+
+const openAction = (() => {
+  if (!openActionRaw) return undefined
+  const v = openActionRaw.trim()
+  if (v === "click" || v === "hover" || v === "contextmenu" || v === "keys") {
+    return v
+  }
+  throw new Error(
+    `invalid --openAction=${openActionRaw} (expected click|hover|contextmenu|keys)`
+  )
+})()
+
 const defaultNames = ["button-default", "tabs-demo"]
 const all = flags.all === true || process.env.ALL_GOLDENS === "1"
 
@@ -1069,6 +1196,7 @@ try {
     update,
     timeoutMs,
     openSelector,
+    openAction,
     mergeThemes: flags.mergeThemes === true || process.env.MERGE_THEMES === "1",
   })
 

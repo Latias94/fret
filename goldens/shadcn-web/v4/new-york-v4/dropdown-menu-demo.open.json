@@ -4074,7 +4074,15 @@
             }
           ]
         }
-      ]
+      ],
+      "open": {
+        "action": "click",
+        "selector": "[data-fret-golden-target] [aria-haspopup='menu'][data-state='closed']",
+        "point": {
+          "x": 34.21354293823242,
+          "y": 18
+        }
+      }
     },
     "dark": {
       "url": "http://localhost:4020/view/new-york-v4/dropdown-menu-demo",
@@ -8146,7 +8154,15 @@
             }
           ]
         }
-      ]
+      ],
+      "open": {
+        "action": "click",
+        "selector": "[data-fret-golden-target] [aria-haspopup='menu'][data-state='closed']",
+        "point": {
+          "x": 34.21354293823242,
+          "y": 18
+        }
+      }
     }
   }
 }

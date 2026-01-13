@@ -14965,7 +14965,15 @@
             }
           ]
         }
-      ]
+      ],
+      "open": {
+        "action": "click",
+        "selector": "[data-fret-golden-target] [role='combobox'][aria-expanded='false']",
+        "point": {
+          "x": 140,
+          "y": 18
+        }
+      }
     },
     "dark": {
       "url": "http://localhost:4020/view/new-york-v4/select-scrollable",
@@ -29928,7 +29936,15 @@
             }
           ]
         }
-      ]
+      ],
+      "open": {
+        "action": "click",
+        "selector": "[data-fret-golden-target] [role='combobox'][aria-expanded='false']",
+        "point": {
+          "x": 140,
+          "y": 18
+        }
+      }
     }
   }
 }

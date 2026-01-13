@@ -47,6 +47,10 @@ Extract both closed + open overlay states (writes `*.open.json` alongside the ba
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts popover-demo dropdown-menu-demo select-scrollable --modes=open --update --baseUrl=http://localhost:4020`
 
+Extract open overlay states that require non-click input (the script infers the right open action per page):
+
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts context-menu-demo tooltip-demo hover-card-demo --modes=open --update --baseUrl=http://localhost:4020`
+
 Extract *all* routable new-york-v4 pages (defaults match `/view/[style]/[name]`: block+component+example):
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts --all --update --baseUrl=http://localhost:4020`
@@ -94,7 +98,9 @@ pixel diffs. See: `docs/audits/shadcn-web-layout-conformance.md`.
 - `--style=new-york-v4`
 - `--themes=light,dark` (default)
 - `--modes=closed,open` (default: `closed`)
+- `--open` (shorthand for `--modes=closed,open`)
 - `--openSelector=<css>` (optional override for the "open overlay" trigger)
+- `--openAction=click|hover|contextmenu|keys` (optional override for the "open overlay" action; default is inferred per page)
 - `--baseUrl=http://localhost:4000`
 - `--all` (env: `ALL_GOLDENS=1`)
 - `--types=registry:block,registry:component,registry:example` (env: `TYPES=...`)
