@@ -3269,6 +3269,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     .chain(moved_by_group.iter().copied())
                     .collect();
                 let multi_move = moved_nodes.len() > 1;
+                let skip_node_extent_clamp = aligns && multi_move;
 
                 let mut shift = CanvasPoint::default();
                 let any_delta = !per_group_delta.is_empty() || !per_node_delta.is_empty();
@@ -3431,7 +3432,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         let node_w = node_geom.rect.size.width.0;
                         let node_h = node_geom.rect.size.height.0;
 
-                        if !multi_move && let Some(extent) = snapshot.interaction.node_extent {
+                        if !skip_node_extent_clamp
+                            && let Some(extent) = snapshot.interaction.node_extent
+                        {
                             let min_x = extent.origin.x;
                             let min_y = extent.origin.y;
                             let max_x = extent.origin.x + (extent.size.width - node_w).max(0.0);
@@ -11149,9 +11152,10 @@ mod tests {
     use crate::rules::EdgeEndpoint;
     use crate::ui::commands::{
         CMD_NODE_GRAPH_ACTIVATE, CMD_NODE_GRAPH_ALIGN_CENTER_X, CMD_NODE_GRAPH_ALIGN_LEFT,
-        CMD_NODE_GRAPH_DELETE_SELECTION, CMD_NODE_GRAPH_FOCUS_NEXT, CMD_NODE_GRAPH_FOCUS_NEXT_PORT,
-        CMD_NODE_GRAPH_FOCUS_PORT_LEFT, CMD_NODE_GRAPH_FOCUS_PORT_RIGHT, CMD_NODE_GRAPH_FOCUS_PREV,
-        CMD_NODE_GRAPH_FOCUS_PREV_PORT, CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_SELECT_ALL,
+        CMD_NODE_GRAPH_DELETE_SELECTION, CMD_NODE_GRAPH_DISTRIBUTE_X, CMD_NODE_GRAPH_FOCUS_NEXT,
+        CMD_NODE_GRAPH_FOCUS_NEXT_PORT, CMD_NODE_GRAPH_FOCUS_PORT_LEFT,
+        CMD_NODE_GRAPH_FOCUS_PORT_RIGHT, CMD_NODE_GRAPH_FOCUS_PREV, CMD_NODE_GRAPH_FOCUS_PREV_PORT,
+        CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_SELECT_ALL,
     };
 
     use super::super::state::{NodeDrag, ViewSnapshot, WireDrag, WireDragKind};
@@ -12511,6 +12515,140 @@ mod tests {
         let center_a = pos_a.x + 5.0;
         let center_b = pos_b.x + 20.0;
         assert!((center_a - center_b).abs() <= 1.0e-6);
+    }
+
+    #[test]
+    fn distribute_x_clamps_nodes_to_node_extent_rect_like_xyflow() {
+        let mut host = TestUiHostImpl::default();
+
+        let mut graph_value = Graph::new(GraphId::new());
+        let kind = NodeKindKey::new("test.node");
+
+        let a = NodeId::new();
+        let b = NodeId::new();
+        let c = NodeId::new();
+        let d = NodeId::new();
+
+        graph_value.nodes.insert(
+            a,
+            Node {
+                kind: kind.clone(),
+                kind_version: 1,
+                pos: CanvasPoint { x: 0.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: Some(CanvasSize {
+                    width: 10.0,
+                    height: 20.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+        graph_value.nodes.insert(
+            b,
+            Node {
+                kind: kind.clone(),
+                kind_version: 1,
+                pos: CanvasPoint { x: 10.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: Some(CanvasSize {
+                    width: 10.0,
+                    height: 20.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+        graph_value.nodes.insert(
+            c,
+            Node {
+                kind: kind.clone(),
+                kind_version: 1,
+                pos: CanvasPoint { x: 60.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: Some(CanvasSize {
+                    width: 80.0,
+                    height: 20.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+        graph_value.nodes.insert(
+            d,
+            Node {
+                kind,
+                kind_version: 1,
+                pos: CanvasPoint { x: 90.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: Some(CanvasSize {
+                    width: 10.0,
+                    height: 20.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+        canvas.sync_view_state(&mut host);
+
+        view.update(&mut host, |s, _cx| {
+            s.selected_nodes = vec![a, b, c, d];
+            s.interaction.node_extent = Some(CanvasRect {
+                origin: CanvasPoint { x: 0.0, y: 0.0 },
+                size: CanvasSize {
+                    width: 100.0,
+                    height: 100.0,
+                },
+            });
+        })
+        .unwrap();
+
+        let mut services = NullServices::default();
+        let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
+        let mut cx = command_cx(&mut host, &mut services, &mut tree);
+
+        assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_DISTRIBUTE_X)));
+        assert_eq!(canvas.history.undo_len(), 1);
+
+        assert_eq!(read_node_pos(&mut host, &graph, a).x, 0.0);
+        assert_eq!(read_node_pos(&mut host, &graph, b).x, 30.0);
+
+        // Desired position would be x=25, but node extent clamps to max_x=20 for a 80px-wide node.
+        assert_eq!(read_node_pos(&mut host, &graph, c).x, 20.0);
+        assert_eq!(read_node_pos(&mut host, &graph, d).x, 90.0);
     }
 
     #[test]
