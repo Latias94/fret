@@ -121,6 +121,13 @@ pub struct UiDebugFrameStats {
     pub layout_engine_solves: u64,
     /// Total time spent in layout engine solves during the current frame.
     pub layout_engine_solve_time: Duration,
+    /// Number of "widget-local" layout engine solves triggered as a fallback when a widget cannot
+    /// consume already-solved engine child rects.
+    ///
+    /// The goal for v2 is to keep this at `0` for normal UI trees by ensuring explicit layout
+    /// barriers (scroll/virtualization/splits/...) register viewport roots or explicitly solve
+    /// their child roots.
+    pub layout_engine_widget_fallback_solves: u64,
     pub focus: Option<NodeId>,
     pub captured: Option<NodeId>,
 }

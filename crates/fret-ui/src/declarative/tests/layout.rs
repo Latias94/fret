@@ -5212,6 +5212,81 @@ fn flex_child_negative_margin_shifts_layout() {
 }
 
 #[test]
+fn fixed_split_registers_viewport_roots_to_avoid_widget_fallback_solves() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let left = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "fixed-split-left",
+        |cx| {
+            vec![cx.flex(
+                crate::element::FlexProps {
+                    direction: fret_core::Axis::Horizontal,
+                    gap: Px(0.0),
+                    layout: {
+                        let mut l = crate::element::LayoutStyle::default();
+                        l.size.width = Length::Fill;
+                        l.size.height = Length::Fill;
+                        l
+                    },
+                    ..Default::default()
+                },
+                |cx| vec![cx.text("left")],
+            )]
+        },
+    );
+
+    let right = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "fixed-split-right",
+        |cx| {
+            vec![cx.grid(
+                crate::element::GridProps {
+                    cols: 1,
+                    layout: {
+                        let mut l = crate::element::LayoutStyle::default();
+                        l.size.width = Length::Fill;
+                        l.size.height = Length::Fill;
+                        l
+                    },
+                    ..Default::default()
+                },
+                |cx| vec![cx.text("right")],
+            )]
+        },
+    );
+
+    let split = crate::FixedSplit::create_node_with_children(
+        &mut ui,
+        crate::FixedSplit::horizontal(0.5),
+        left,
+        right,
+    );
+    ui.set_root(split);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(ui.debug_stats().layout_engine_widget_fallback_solves, 0);
+}
+
+#[test]
 fn container_absolute_inset_positions_child() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

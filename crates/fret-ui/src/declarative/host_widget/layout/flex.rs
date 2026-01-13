@@ -58,6 +58,19 @@ impl ElementHostWidget {
                 .is_none()
         });
         if needs_engine_solve {
+            let missing_child = cx.children.iter().copied().find(|&child| {
+                cx.tree
+                    .layout_engine_child_local_rect(cx.node, child)
+                    .is_none()
+            });
+            cx.tree.record_layout_engine_widget_fallback_solve(
+                cx.app,
+                window,
+                cx.node,
+                "flex",
+                missing_child,
+            );
+
             // Prefer a window-scoped solve, but fall back to a barrier-style solve for this root
             // when the subtree is not already covered by an outer viewport/root compute.
             cx.tree.solve_barrier_flow_root(

@@ -33,6 +33,7 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.layout_nodes_performed = 0;
             self.debug_stats.layout_engine_solves = 0;
             self.debug_stats.layout_engine_solve_time = Duration::default();
+            self.debug_stats.layout_engine_widget_fallback_solves = 0;
             self.debug_stats.focus = self.focus;
             self.debug_stats.captured = self.captured;
         }
@@ -531,6 +532,51 @@ impl<H: UiHost> UiTree<H> {
             }
 
             *viewport_cursor = batch_end;
+        }
+    }
+
+    pub(crate) fn record_layout_engine_widget_fallback_solve(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        node: NodeId,
+        widget_kind: &'static str,
+        missing_child: Option<NodeId>,
+    ) {
+        if self.debug_enabled {
+            self.debug_stats.layout_engine_widget_fallback_solves = self
+                .debug_stats
+                .layout_engine_widget_fallback_solves
+                .saturating_add(1);
+        }
+
+        if std::env::var_os("FRET_LAYOUT_FORBID_WIDGET_FALLBACK_SOLVES").is_some() {
+            let label = crate::declarative::frame::element_record_for_node(app, window, node)
+                .map(|r| format!("{:?}", r.instance))
+                .unwrap_or_default();
+            panic!(
+                "layout engine fallback solve ({widget_kind}) for {node:?} {label} missing_child={missing_child:?}"
+            );
+        }
+
+        if std::env::var_os("FRET_LAYOUT_TRACE_WIDGET_FALLBACK_SOLVES").is_some() {
+            let label = crate::declarative::frame::element_record_for_node(app, window, node)
+                .map(|r| r.instance);
+            let missing_label = missing_child.and_then(|child| {
+                crate::declarative::frame::element_record_for_node(app, window, child)
+                    .map(|r| r.instance)
+            });
+
+            tracing::warn!(
+                window = ?self.window,
+                node = ?node,
+                widget_kind,
+                label = ?label,
+                missing_child = ?missing_child,
+                missing_label = ?missing_label,
+                path = ?self.debug_node_path(node),
+                "layout engine child rects missing; falling back to widget-local solve"
+            );
         }
     }
 

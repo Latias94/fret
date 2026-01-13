@@ -53,6 +53,13 @@ impl ElementHostWidget {
         }
 
         if layout_children_from_engine_if_solved(cx).is_none() {
+            cx.tree.record_layout_engine_widget_fallback_solve(
+                cx.app,
+                _window,
+                cx.node,
+                "grid",
+                cx.children.first().copied(),
+            );
             cx.tree.solve_barrier_flow_root(
                 cx.app,
                 cx.services,
