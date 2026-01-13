@@ -1071,6 +1071,77 @@ impl Gizmo3dDemoModel {
         }
     }
 
+    fn cancel_in_progress_interaction(&mut self) -> bool {
+        let is_gizmo_dragging = self.input.dragging || self.gizmo_mgr.state.active.is_some();
+        let is_selecting = self.pending_selection.is_some() || self.marquee.is_some();
+
+        if !is_gizmo_dragging && !is_selecting {
+            return false;
+        }
+
+        if is_selecting {
+            self.pending_selection = None;
+            self.marquee = None;
+            self.marquee_preview.clear();
+            if let Some(sel) = self.selection_before_select.take() {
+                self.selection = sel;
+            }
+            if let Some(active) = self.active_before_select.take() {
+                self.active_target = active;
+            }
+            return true;
+        }
+
+        let viewport_px = (self.viewport_px.0.max(1), self.viewport_px.1.max(1));
+        let view_projection = camera_view_projection(viewport_px, self.camera);
+        let viewport = ViewportRect::new(
+            Vec2::ZERO,
+            Vec2::new(viewport_px.0 as f32, viewport_px.1 as f32),
+        );
+
+        let mut input = self.input;
+        input.hovered = false;
+        input.drag_started = false;
+        input.dragging = false;
+        input.cancel = true;
+
+        let selected: Vec<GizmoTarget3d> = self
+            .targets
+            .iter()
+            .copied()
+            .filter(|t| self.selection.contains(&t.id))
+            .collect();
+
+        self.sync_light_radius_plugin(&selected);
+        let update = self.gizmo_mgr.update(
+            view_projection,
+            viewport,
+            self.gizmo().config.depth_range,
+            input,
+            self.active_target,
+            &selected,
+        );
+
+        if matches!(update.as_ref().map(|u| u.phase), Some(GizmoPhase::Cancel)) {
+            if let Some(start) = self.drag_start_targets.take() {
+                for updated in start {
+                    if let Some(target) = self.targets.iter_mut().find(|t| t.id == updated.id) {
+                        target.transform = updated.transform;
+                    }
+                }
+            }
+            self.cancel_custom_scalar_drag();
+        }
+
+        self.drag_start_targets = None;
+        self.input.cancel = false;
+        self.input.dragging = false;
+        self.input.drag_started = false;
+        self.selection_before_select = None;
+        self.active_before_select = None;
+        true
+    }
+
     fn commit_custom_scalar_undo_record(
         &mut self,
         edits: &[GizmoCustomEdit],
@@ -1961,53 +2032,9 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
     ) -> bool {
         let mut did_apply = false;
 
-        // Always cancel any in-progress gizmo interaction before applying undo/redo.
+        // Always cancel in-progress viewport interactions before applying undo/redo.
         let _ = state.demo.update(app, |m, _cx| {
-            let is_dragging = m.input.dragging || m.gizmo_mgr.state.active.is_some();
-            if is_dragging {
-                let view_projection = camera_view_projection(m.viewport_px, m.camera);
-                let viewport = ViewportRect::new(
-                    Vec2::ZERO,
-                    Vec2::new(m.viewport_px.0 as f32, m.viewport_px.1 as f32),
-                );
-                let mut input = m.input;
-                input.drag_started = false;
-                input.dragging = false;
-                input.cancel = true;
-
-                let selected: Vec<GizmoTarget3d> = m
-                    .targets
-                    .iter()
-                    .copied()
-                    .filter(|t| m.selection.contains(&t.id))
-                    .collect();
-                m.sync_light_radius_plugin(&selected);
-                if let Some(update) = m.gizmo_mgr.update(
-                    view_projection,
-                    viewport,
-                    m.gizmo().config.depth_range,
-                    input,
-                    m.active_target,
-                    &selected,
-                ) {
-                    if update.phase == GizmoPhase::Cancel {
-                        if let Some(start) = m.drag_start_targets.take() {
-                            for updated in start {
-                                if let Some(target) =
-                                    m.targets.iter_mut().find(|t| t.id == updated.id)
-                                {
-                                    target.transform = updated.transform;
-                                }
-                            }
-                        }
-                        m.cancel_custom_scalar_drag();
-                    }
-                }
-                m.drag_start_targets = None;
-                m.input.cancel = false;
-                m.input.dragging = false;
-                m.input.drag_started = false;
-            }
+            let _ = m.cancel_in_progress_interaction();
         });
 
         let mut applied_transform = false;
@@ -2363,77 +2390,10 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 key: fret_core::KeyCode::Escape,
                 ..
             } => {
-                let mut did_cancel = false;
-                let _ = state.demo.update(app, |m, _cx| {
-                    let is_gizmo_dragging = m.input.dragging || m.gizmo_mgr.state.active.is_some();
-                    let is_selecting = m.pending_selection.is_some() || m.marquee.is_some();
-
-                    if !is_gizmo_dragging && !is_selecting {
-                        return;
-                    }
-
-                    if is_selecting {
-                        m.pending_selection = None;
-                        m.marquee = None;
-                        m.marquee_preview.clear();
-                        if let Some(sel) = m.selection_before_select.take() {
-                            m.selection = sel;
-                        }
-                        if let Some(active) = m.active_before_select.take() {
-                            m.active_target = active;
-                        }
-                        did_cancel = true;
-                        return;
-                    }
-
-                    let view_projection = camera_view_projection(m.viewport_px, m.camera);
-                    let viewport = ViewportRect::new(
-                        Vec2::ZERO,
-                        Vec2::new(m.viewport_px.0 as f32, m.viewport_px.1 as f32),
-                    );
-
-                    let mut input = m.input;
-                    input.drag_started = false;
-                    input.dragging = false;
-                    input.cancel = true;
-
-                    let selected: Vec<GizmoTarget3d> = m
-                        .targets
-                        .iter()
-                        .copied()
-                        .filter(|t| m.selection.contains(&t.id))
-                        .collect();
-
-                    m.sync_light_radius_plugin(&selected);
-                    if let Some(update) = m.gizmo_mgr.update(
-                        view_projection,
-                        viewport,
-                        m.gizmo().config.depth_range,
-                        input,
-                        m.active_target,
-                        &selected,
-                    ) {
-                        if update.phase == GizmoPhase::Cancel {
-                            if let Some(start) = m.drag_start_targets.take() {
-                                for updated in start {
-                                    if let Some(target) =
-                                        m.targets.iter_mut().find(|t| t.id == updated.id)
-                                    {
-                                        target.transform = updated.transform;
-                                    }
-                                }
-                            }
-                            m.cancel_custom_scalar_drag();
-                            did_cancel = true;
-                        }
-                    }
-
-                    m.input.cancel = false;
-                    m.input.dragging = false;
-                    m.input.drag_started = false;
-                    m.selection_before_select = None;
-                    m.active_before_select = None;
-                });
+                let did_cancel = state
+                    .demo
+                    .update(app, |m, _cx| m.cancel_in_progress_interaction())
+                    .unwrap_or(false);
 
                 if did_cancel {
                     app.request_redraw(window);
