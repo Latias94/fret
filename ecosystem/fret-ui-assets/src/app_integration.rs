@@ -1,0 +1,23 @@
+use fret_core::UiServices;
+
+use crate::{UiAssets, UiAssetsBudgets};
+
+/// Install `fret-ui-assets` into a `fret-app` application.
+///
+/// This is intentionally small:
+/// - ensures the global caches exist,
+/// - applies default budgets.
+///
+/// Driving the image cache state machine remains a responsibility of the app driver via
+/// `UiAssets::handle_event(...)`.
+pub fn install(app: &mut fret_app::App, _services: &mut dyn UiServices) {
+    install_with_budgets(app, _services, UiAssetsBudgets::default());
+}
+
+pub fn install_with_budgets(
+    app: &mut fret_app::App,
+    _services: &mut dyn UiServices,
+    budgets: UiAssetsBudgets,
+) {
+    UiAssets::configure(app, budgets);
+}

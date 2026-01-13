@@ -9,8 +9,14 @@ repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
 
+[features]
+default = []
+# Optional integration helpers that wire `UiAssets` into `fret-app`-based applications.
+app-integration = ["dep:fret-app"]
+
 [dependencies]
 fret-asset-cache = { path = "../fret-asset-cache" }
+fret-app = { path = "../../crates/fret-app", optional = true }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 

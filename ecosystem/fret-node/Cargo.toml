@@ -11,6 +11,7 @@ documentation.workspace = true
 
 [dependencies]
 fret-canvas = { path = "../fret-canvas", optional = true }
+fret-app = { path = "../../crates/fret-app", optional = true }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime", optional = true }
 fret-ui = { path = "../../crates/fret-ui", optional = true, features = ["unstable-retained-bridge"] }
@@ -30,6 +31,9 @@ fret-ui = ["dep:fret-ui", "dep:fret-runtime", "dep:fret-canvas"]
 #
 # This is headless-safe: it must not depend on `fret-ui`.
 kit = []
+
+# Optional integration helpers for `fret-app` applications (command registration + default keybindings).
+app-integration = ["dep:fret-app"]
 
 # Builds only the headless graph model + schema + rules (no `fret-ui` dependency).
 headless = []

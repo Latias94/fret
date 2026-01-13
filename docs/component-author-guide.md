@@ -66,7 +66,7 @@ app-integration = ["dep:fret-app"]
 If your crate registers commands, tokens, settings, or asset helpers, expose:
 
 ```rust
-pub fn install(app: &mut fret_app::App, services: &mut fret_app::AppServices)
+pub fn install(app: &mut fret_app::App, services: &mut dyn fret_core::UiServices)
 ```
 
 Rules:

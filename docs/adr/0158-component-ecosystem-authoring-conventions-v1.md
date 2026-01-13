@@ -53,7 +53,7 @@ Hard rule: `crates/*` must not depend on `ecosystem/*` (ADR 0093).
 Each ecosystem crate that expects app-level integration (commands/tokens/settings/assets) should
 provide at least one explicit entry point:
 
-- `pub fn install(app: &mut fret_app::App, services: &mut fret_app::AppServices)` *(preferred)*, or
+- `pub fn install(app: &mut fret_app::App, services: &mut dyn fret_core::UiServices)` *(preferred)*, or
 - `pub fn install_into(driver: &mut fret_bootstrap::UiAppBuilder)` *(if it is bootstrap-focused)*.
 
 Normative rules:
