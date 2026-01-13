@@ -3411,8 +3411,9 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     }
                     ViewportInputKind::PointerMove { buttons, modifiers } => {
                         const MARQUEE_THRESHOLD_PX: f32 = 4.0;
-                        let threshold_target_px =
-                            MARQUEE_THRESHOLD_PX * event.geometry.pixels_per_point;
+                        let threshold_target_px = MARQUEE_THRESHOLD_PX
+                            * fret_gizmo::viewport_input_target_px_per_screen_px(&event)
+                                .unwrap_or(event.geometry.pixels_per_point.max(1.0e-6));
                         let threshold_sq = threshold_target_px * threshold_target_px;
 
                         if buttons.left {

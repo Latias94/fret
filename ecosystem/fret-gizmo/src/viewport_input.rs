@@ -13,6 +13,29 @@ fn point_xy(p: Point) -> Vec2 {
     Vec2::new(p.x.0, p.y.0)
 }
 
+/// Computes the scale factor from screen-space logical pixels to render-target pixels.
+///
+/// This is derived from `event.geometry.draw_rect_px` (logical pixels) and the backing render
+/// target size `event.geometry.target_px_size` (physical pixels). It is useful when converting
+/// screen-space interaction thresholds (e.g. click/drag distances) into the render target's pixel
+/// space.
+pub fn viewport_input_target_px_per_screen_px(event: &ViewportInputEvent) -> Option<f32> {
+    let (tw, th) = event.geometry.target_px_size;
+    let tw = tw.max(1) as f32;
+    let th = th.max(1) as f32;
+
+    let rect = event.geometry.draw_rect_px;
+    let size = rect_size(rect);
+    if size.x <= 0.0 || size.y <= 0.0 || !size.is_finite() {
+        return None;
+    }
+
+    let sx = tw / size.x;
+    let sy = th / size.y;
+    let s = sx.min(sy);
+    (s.is_finite() && s > 0.0).then_some(s)
+}
+
 /// Computes the cursor position in the viewport render target's pixel space.
 ///
 /// - Input `event.cursor_px` is in window-local logical pixels (ADR 0017).
@@ -59,6 +82,7 @@ mod tests {
         ViewportInputKind,
     };
 
+    use super::viewport_input_target_px_per_screen_px;
     use super::{viewport_input_cursor_target_px, viewport_input_cursor_target_px_clamped};
 
     fn dummy_event(cursor: Point) -> ViewportInputEvent {
@@ -107,5 +131,14 @@ mod tests {
         let event = dummy_event(Point::new(Px(200.0), Px(125.0)));
         let p = viewport_input_cursor_target_px_clamped(&event);
         assert_eq!(p, glam::Vec2::new(1000.0, 500.0));
+    }
+
+    #[test]
+    fn target_px_per_screen_px_matches_draw_rect_mapping() {
+        let event = dummy_event(Point::new(Px(100.0), Px(50.0)));
+        let scale = viewport_input_target_px_per_screen_px(&event).unwrap();
+        // draw_rect is 100x50 logical px and target is 1000x500 physical px, so 10 target px per
+        // screen px.
+        assert!((scale - 10.0).abs() < 1e-3);
     }
 }
