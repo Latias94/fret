@@ -1,5 +1,6 @@
 use std::any::TypeId;
 use std::collections::{HashMap, HashSet};
+use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use fret_core::{
@@ -15,6 +16,46 @@ use crate::widget::Invalidation;
 use crate::{SvgSource, UiHost, widget::PaintCx};
 
 pub type OnCanvasPaint = Arc<dyn for<'a> Fn(&mut CanvasPainter<'a>) + 'static>;
+
+/// A stable, user-provided cache key for hosted canvas resources.
+///
+/// Callers should treat this as an identity key for a logical draw item that is stable across
+/// frames (e.g. "grid label #42"). The runtime mixes in scale-factor bits where needed, so the
+/// same key can be reused across DPI/zoom changes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct CanvasKey(pub u64);
+
+impl CanvasKey {
+    pub const fn new(value: u64) -> Self {
+        Self(value)
+    }
+
+    /// Combine a child identifier into this key.
+    pub fn combine(self, value: u64) -> Self {
+        Self(mix_u64(self.0, value))
+    }
+
+    /// Compute a deterministic hash for `value`.
+    ///
+    /// This uses a fixed-seed FNV-1a hasher (unlike `DefaultHasher`, which is randomized).
+    pub fn from_hash<T: Hash>(value: &T) -> Self {
+        let mut hasher = Fnv1a64::default();
+        value.hash(&mut hasher);
+        Self(hasher.finish())
+    }
+}
+
+impl From<CanvasKey> for u64 {
+    fn from(value: CanvasKey) -> Self {
+        value.0
+    }
+}
+
+impl From<u64> for CanvasKey {
+    fn from(value: u64) -> Self {
+        Self(value)
+    }
+}
 
 #[derive(Default)]
 pub(crate) struct CanvasPaintHooks {
@@ -135,6 +176,11 @@ impl<'a> CanvasPainter<'a> {
 
     pub fn observe_global<T: std::any::Any>(&mut self, invalidation: Invalidation) {
         self.host.observe_global(TypeId::of::<T>(), invalidation);
+    }
+
+    /// Compute a deterministic `u64` key for `value`.
+    pub fn key<T: Hash>(&self, value: &T) -> u64 {
+        CanvasKey::from_hash(value).0
     }
 
     pub fn scene(&mut self) -> &mut Scene {
@@ -854,5 +900,27 @@ impl SvgBytesKey {
                 len: bytes.len(),
             },
         }
+    }
+}
+
+#[derive(Default)]
+struct Fnv1a64(u64);
+
+impl Hasher for Fnv1a64 {
+    fn finish(&self) -> u64 {
+        self.0
+    }
+
+    fn write(&mut self, bytes: &[u8]) {
+        let mut hash = if self.0 == 0 {
+            0xcbf29ce484222325
+        } else {
+            self.0
+        };
+        for b in bytes {
+            hash ^= *b as u64;
+            hash = hash.wrapping_mul(0x100000001b3);
+        }
+        self.0 = hash;
     }
 }

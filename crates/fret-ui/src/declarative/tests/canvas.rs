@@ -16,8 +16,9 @@ fn canvas_hosts_text_and_releases_on_cleanup() {
     let mut services = FakeTextService::default();
 
     let paint = |p: &mut crate::canvas::CanvasPainter<'_>| {
+        let key = p.key(&("text", 1u64));
         p.text(
-            1,
+            key,
             fret_core::DrawOrder(0),
             Point::new(Px(10.0), Px(10.0)),
             "hello",
