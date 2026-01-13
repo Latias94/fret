@@ -16,18 +16,23 @@ For each component page, the exporter writes a JSON file with:
 ## Prerequisites
 
 - `pnpm`
-- `repo-ref/ui/apps/v4` dependencies installed
-- a shadcn v4 **production** server (`next start`) running locally
+- `repo-ref/ui` dependencies installed
+- a shadcn v4 **production** server (`next start`) running locally (recommended)
 
 ## Run
 
 1) Install deps:
 
-`pnpm -C repo-ref/ui/apps/v4 install`
+`pnpm -C repo-ref/ui install`
 
-2) Build the app (Terminal A):
+2) Build the app (Terminal A).
 
-`pnpm -C repo-ref/ui/apps/v4 build`
+Important: `pnpm -C repo-ref/ui/apps/v4 build` currently defaults to Turbopack and fails to resolve some transitive Radix deps under pnpm on Windows.
+Force webpack instead, and provide the required `NEXT_PUBLIC_*` env vars at build time:
+
+`pnpm -C repo-ref/ui --filter shadcn build`
+
+`cd repo-ref/ui/apps/v4; $env:NEXT_PUBLIC_APP_URL='http://localhost:4020'; $env:NEXT_PUBLIC_V0_URL='https://v0.dev'; pnpm exec next build --webpack`
 
 3) Start a production server (Terminal A):
 
@@ -51,7 +56,7 @@ If the extracted `computedStyle` looks like browser defaults (e.g. `<button>` ha
 inline-block`, `borderTopWidth: 2px`), your dev server is likely not producing Tailwind utilities.
 In that case, prefer a production build:
 
-`pnpm -C repo-ref/ui/apps/v4 build; pnpm -C repo-ref/ui/apps/v4 exec next start -p 4020`
+`pnpm -C repo-ref/ui --filter shadcn build; cd repo-ref/ui/apps/v4; $env:NEXT_PUBLIC_APP_URL='http://localhost:4020'; $env:NEXT_PUBLIC_V0_URL='https://v0.dev'; pnpm exec next build --webpack; pnpm exec next start -p 4020`
 
 Note: the extractor intentionally refuses to run against a dev server (it detects `hmr-client`),
 because turbopack dev output does not expose stable asset URLs (and computed styles become unreliable).
