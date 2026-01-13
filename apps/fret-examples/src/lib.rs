@@ -30,6 +30,8 @@ pub mod area_demo;
 pub mod assets_demo;
 pub mod bars_demo;
 pub mod candlestick_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod canvas_datagrid_stress_demo;
 pub mod category_line_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod chart_declarative_demo;
