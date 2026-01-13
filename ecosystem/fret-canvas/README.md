@@ -19,6 +19,19 @@ Design reference: `docs/adr/0137-canvas-widgets-and-interactive-surfaces.md`.
   - no domain models,
   - no gesture maps / tool rules / snapping policies.
 
+## Unit conventions
+
+Fret uses **window-local logical pixels** as its “screen px” unit (similar to CSS px).
+In code, this is typically represented as `fret_core::Px` (or plain `f32` values documented as
+screen-space pixels).
+
+When a canvas widget uses `Widget::render_transform` for pan/zoom (ADR 0083), pointer event
+positions are delivered in the widget's **local (untransformed) coordinate space**. In that case,
+any UX tuning expressed in screen pixels (hit slop, click distance, drag threshold, handle radius)
+should be converted to canvas units before comparison:
+
+- `fret_canvas::scale::canvas_units_from_screen_px(screen_px, zoom)` (typically `screen_px / zoom`)
+
 ## Modules
 
 - `fret_canvas::view`
@@ -39,4 +52,3 @@ Design reference: `docs/adr/0137-canvas-widgets-and-interactive-surfaces.md`.
 The `declarative` feature is reserved for a future declarative canvas element surface aligned with
 ADR 0137. The current crate intentionally focuses on substrate helpers that are useful both for
 retained widgets and for eventual declarative authoring.
-
