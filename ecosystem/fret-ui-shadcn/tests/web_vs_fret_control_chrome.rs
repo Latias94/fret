@@ -4,6 +4,7 @@ use fret_ui::tree::UiTree;
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Deserialize)]
 struct WebGolden {
@@ -343,6 +344,58 @@ fn web_vs_fret_textarea_demo_control_chrome_matches() {
     }
     for (idx, corner) in quad.corners.iter().enumerate() {
         assert_close(&format!("textarea radius[{idx}]"), *corner, web_radius, 1.0);
+    }
+}
+
+#[test]
+fn web_vs_fret_select_scrollable_trigger_chrome_matches() {
+    let web = read_web_golden("select-scrollable");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_trigger = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs.get("role").is_some_and(|v| v == "combobox")
+            && n.attrs.get("aria-expanded").is_some_and(|v| v == "false")
+            && (n.rect.h - 36.0).abs() <= 0.1
+    })
+    .expect("web select trigger node");
+
+    let web_border = web_border_width_px(web_trigger).expect("web borderTopWidth px");
+    let web_radius = web_corner_radius_effective_px(web_trigger).expect("web radius px");
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let model: fret_runtime::Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+        let open: fret_runtime::Model<bool> = cx.app.models_mut().insert(false);
+        vec![
+            fret_ui_shadcn::Select::new(model, open)
+                .a11y_label("Select")
+                .item(fret_ui_shadcn::SelectItem::new("one", "One"))
+                .item(fret_ui_shadcn::SelectItem::new("two", "Two"))
+                .into_element(cx),
+        ]
+    });
+
+    let select = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::ComboBox && n.label.as_deref() == Some("Select"))
+        .or_else(|| {
+            snap.nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::ComboBox)
+        })
+        .expect("fret select semantics node");
+
+    let quad = find_best_quad(&scene, select.bounds).expect("painted quad for select trigger");
+    for (idx, edge) in quad.border.iter().enumerate() {
+        assert_close(&format!("select border[{idx}]"), *edge, web_border, 0.6);
+    }
+    for (idx, corner) in quad.corners.iter().enumerate() {
+        assert_close(&format!("select radius[{idx}]"), *corner, web_radius, 1.0);
     }
 }
 
