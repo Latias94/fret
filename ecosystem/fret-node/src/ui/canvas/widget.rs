@@ -2795,6 +2795,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let ops = self
             .graph
             .read_ref(host, |g| {
+                let mut delta = delta;
                 let mut ops: Vec<GraphOp> = Vec::new();
 
                 let selected_groups_set: std::collections::HashSet<crate::core::GroupId> =
@@ -2814,6 +2815,65 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     selected_nodes.iter().copied().collect();
                 for id in &moved_by_group {
                     moved_nodes.insert(*id);
+                }
+
+                let multi_move = moved_nodes.len() > 1;
+                if multi_move && let Some(extent) = snapshot.interaction.node_extent {
+                    let mut min_x: f32 = f32::INFINITY;
+                    let mut min_y: f32 = f32::INFINITY;
+                    let mut max_x: f32 = f32::NEG_INFINITY;
+                    let mut max_y: f32 = f32::NEG_INFINITY;
+                    let mut any = false;
+
+                    for node_id in moved_nodes.iter().copied() {
+                        let Some(node_geom) = geom_for_extent.nodes.get(&node_id) else {
+                            continue;
+                        };
+                        let x0 = node_geom.rect.origin.x.0;
+                        let y0 = node_geom.rect.origin.y.0;
+                        let w = node_geom.rect.size.width.0.max(0.0);
+                        let h = node_geom.rect.size.height.0.max(0.0);
+                        if !x0.is_finite() || !y0.is_finite() || !w.is_finite() || !h.is_finite() {
+                            continue;
+                        }
+
+                        any = true;
+                        min_x = min_x.min(x0);
+                        min_y = min_y.min(y0);
+                        max_x = max_x.max(x0 + w);
+                        max_y = max_y.max(y0 + h);
+                    }
+
+                    if any
+                        && min_x.is_finite()
+                        && min_y.is_finite()
+                        && max_x.is_finite()
+                        && max_y.is_finite()
+                    {
+                        let group_min = CanvasPoint { x: min_x, y: min_y };
+                        let group_size = CanvasSize {
+                            width: (max_x - min_x).max(0.0),
+                            height: (max_y - min_y).max(0.0),
+                        };
+                        let group_w = group_size.width.max(0.0);
+                        let group_h = group_size.height.max(0.0);
+                        let extent_w = extent.size.width.max(0.0);
+                        let extent_h = extent.size.height.max(0.0);
+
+                        let min_dx = extent.origin.x - group_min.x;
+                        let mut max_dx = extent.origin.x + (extent_w - group_w) - group_min.x;
+                        if !max_dx.is_finite() || max_dx < min_dx {
+                            max_dx = min_dx;
+                        }
+                        delta.x = delta.x.clamp(min_dx, max_dx);
+
+                        let min_dy = extent.origin.y - group_min.y;
+                        let mut max_dy = extent.origin.y + (extent_h - group_h) - group_min.y;
+                        if !max_dy.is_finite() || max_dy < min_dy {
+                            max_dy = min_dy;
+                        }
+                        delta.y = delta.y.clamp(min_dy, max_dy);
+                    }
                 }
 
                 let mut groups_sorted = selected_groups.clone();
@@ -2856,7 +2916,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         let node_w = node_geom.rect.size.width.0;
                         let node_h = node_geom.rect.size.height.0;
 
-                        if let Some(extent) = snapshot.interaction.node_extent {
+                        if !multi_move && let Some(extent) = snapshot.interaction.node_extent {
                             let min_x = extent.origin.x;
                             let min_y = extent.origin.y;
                             let max_x = extent.origin.x + (extent.size.width - node_w).max(0.0);
@@ -11904,6 +11964,39 @@ mod tests {
             read_node_pos(&mut host, &graph, b),
             CanvasPoint { x: 10.0, y: 0.0 }
         );
+    }
+
+    #[test]
+    fn nudge_multi_selection_respects_node_extent_by_selection_bounds() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, a, b) = make_test_graph_two_nodes_with_size();
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+        canvas.sync_view_state(&mut host);
+
+        view.update(&mut host, |s, _cx| {
+            s.selected_nodes = vec![a, b];
+            s.interaction.node_extent = Some(CanvasRect {
+                origin: CanvasPoint { x: 0.0, y: 0.0 },
+                size: CanvasSize {
+                    width: 50.0,
+                    height: 100.0,
+                },
+            });
+        })
+        .unwrap();
+
+        let mut services = NullServices::default();
+        let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
+        let mut cx = command_cx(&mut host, &mut services, &mut tree);
+
+        assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_NUDGE_RIGHT)));
+        assert_eq!(canvas.history.undo_len(), 0);
+
+        assert_eq!(read_node_pos(&mut host, &graph, a).x, 0.0);
+        assert_eq!(read_node_pos(&mut host, &graph, b).x, 10.0);
     }
 
     #[test]
