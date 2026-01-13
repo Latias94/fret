@@ -393,7 +393,7 @@ impl VirtualListMetrics {
             return false;
         }
 
-        self.inner.measure(index, height_units);
+        self.inner.measure_unadjusted(index, height_units);
         true
     }
 

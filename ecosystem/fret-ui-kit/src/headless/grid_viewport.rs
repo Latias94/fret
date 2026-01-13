@@ -438,7 +438,7 @@ where
         if old_units == size_units {
             return;
         }
-        self.inner.measure(index, size_units);
+        self.inner.measure_unadjusted(index, size_units);
     }
 
     pub fn reset_measurements(&mut self) {
