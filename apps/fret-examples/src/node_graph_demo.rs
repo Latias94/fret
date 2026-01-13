@@ -20,8 +20,8 @@ use fret_ui::retained_bridge::{BoundTextInput, UiTreeRetainedExt as _};
 use fret_ui::{UiFrameCx, UiTree};
 use serde_json::Value;
 
-use crate::keymap_defaults::install_default_keybindings_into_keymap;
 use crate::node_graph_tuning_overlay::{NodeGraphTuningCommands, NodeGraphTuningOverlay};
+use fret_app::install_command_default_keybindings_into_keymap;
 
 use fret_node::Graph;
 use fret_node::GraphId;
@@ -1688,7 +1688,7 @@ pub fn run() -> anyhow::Result<()> {
     app.set_global(PlatformCapabilities::default());
     register_node_graph_commands(app.commands_mut());
     register_demo_commands(app.commands_mut());
-    install_default_keybindings_into_keymap(&mut app);
+    install_command_default_keybindings_into_keymap(&mut app);
 
     let graph_id = GraphId::from_u128(0x1350_0000_0000_0000_0000_0000_0000_00A1);
     let mut graph_value = build_demo_graph(graph_id);

@@ -40,7 +40,7 @@ use fret_ui::Theme;
 use fret_ui::retained_bridge::{BoundTextInput, UiTreeRetainedExt as _};
 use fret_ui::{UiFrameCx, UiTree};
 
-use crate::keymap_defaults::install_default_keybindings_into_keymap;
+use fret_app::install_command_default_keybindings_into_keymap;
 
 #[derive(Clone)]
 struct NodeGraphDemoModels {
@@ -1045,7 +1045,7 @@ pub fn run() -> anyhow::Result<()> {
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
     register_node_graph_commands(app.commands_mut());
-    install_default_keybindings_into_keymap(&mut app);
+    install_command_default_keybindings_into_keymap(&mut app);
 
     let graph_id = GraphId::from_u128(0x1350_0000_0000_0000_0000_0000_0000_00A2);
     let graph_value = build_demo_graph(graph_id);

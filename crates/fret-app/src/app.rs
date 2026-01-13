@@ -66,6 +66,9 @@ impl App {
 
         app.set_global(fret_runtime::DockingInteractionSettings::default());
 
+        crate::core_commands::register_core_commands(app.commands_mut());
+        crate::keymap::install_command_default_keybindings_into_keymap(&mut app);
+
         app
     }
 

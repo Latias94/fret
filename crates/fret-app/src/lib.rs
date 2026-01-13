@@ -1,10 +1,12 @@
 pub mod app;
 pub mod config_files;
+pub mod core_commands;
 pub mod dock_layout_file;
 pub mod drag;
 pub mod font_catalog_cache;
 pub mod keymap;
 pub mod menu;
+pub mod plugins;
 pub mod settings;
 pub mod ui_host;
 pub mod when_expr;
@@ -23,7 +25,10 @@ pub use fret_runtime::{
 
 pub use keymap::KeymapError;
 pub use keymap::KeymapFileError;
+pub use keymap::install_command_default_keybindings_into_keymap;
 pub use keymap::{BindingV1, KeySpecV1, KeymapFileV1};
+
+pub use plugins::{Plugin, PluginHost, PluginId, PluginRegistrar, install_plugins};
 
 pub use settings::{
     DockDragInversionModifierV1, DockDragInversionPolicyV1, DockDragInversionSettingsV1,

@@ -140,8 +140,35 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         Ok(self)
     }
 
+    /// Installs command-provided default keybindings into the app keymap.
+    ///
+    /// Ordering note: call this before `with_layered_keymap(...)` so user/project keymap files can
+    /// override defaults via last-wins resolution.
+    pub fn with_command_default_keybindings(mut self) -> Self {
+        self.inner = self.inner.init_app(move |app| {
+            fret_app::install_command_default_keybindings_into_keymap(app);
+        });
+        self
+    }
+
+    /// Installs a set of plugins into the app-owned registry (ADR 0016).
+    ///
+    /// Ordering note: for correct keymap layering (ADR 0021), prefer calling this before
+    /// `with_layered_keymap(...)` / `with_default_config_files()` so user/project overrides remain
+    /// last-wins.
+    pub fn with_plugins(mut self, plugins: &[&dyn fret_app::Plugin]) -> Self {
+        let plugins: Vec<&dyn fret_app::Plugin> = plugins.iter().copied().collect();
+        self.inner = self.inner.init_app(move |app| {
+            fret_app::install_plugins(app, plugins.iter().copied());
+        });
+        self
+    }
+
     pub fn with_default_config_files(self) -> Result<Self, BootstrapError> {
-        self.with_layered_settings(".")?.with_layered_keymap(".")
+        Ok(self
+            .with_layered_settings(".")?
+            .with_command_default_keybindings()
+            .with_layered_keymap(".")?)
     }
 
     /// Configure budgets for UI render asset caches (`ImageAssetCache` / `SvgAssetCache`).
