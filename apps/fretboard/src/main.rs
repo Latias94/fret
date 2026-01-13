@@ -199,11 +199,6 @@ fn write_new_file(path: &Path, contents: &str) -> Result<(), String> {
 
 fn todo_template_cargo_toml(package_name: &str, ui_assets: bool) -> String {
     let ui_assets_features = if ui_assets { ", \"ui-assets\"" } else { "" };
-    let ui_assets_deps = if ui_assets {
-        "\nfret-ui-assets = { path = \"../../ecosystem/fret-ui-assets\", features = [\"app-integration\"] }\n"
-    } else {
-        ""
-    };
 
     format!(
         r#"[package]
@@ -217,7 +212,6 @@ fret-app = {{ path = "../../crates/fret-app" }}
 fret-bootstrap = {{ path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver", "preload-icon-svgs", "diagnostics"{ui_assets_features}] }}
 fret-ui-shadcn = {{ path = "../../ecosystem/fret-ui-shadcn" }}
 fret-icons-lucide = {{ path = "../../ecosystem/fret-icons-lucide" }}
-{ui_assets_deps}
 [workspace]
 "#
     )
@@ -225,7 +219,7 @@ fret-icons-lucide = {{ path = "../../ecosystem/fret-icons-lucide" }}
 
 fn todo_template_main_rs(_package_name: &str, ui_assets: bool) -> String {
     let ui_assets_builder = if ui_assets {
-        "\n        .install_app(fret_ui_assets::install_app)"
+        "\n        .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)"
     } else {
         ""
     };
@@ -536,7 +530,7 @@ fn on_command(
 
 fn todo_template_readme_md(package_name: &str, ui_assets: bool) -> String {
     let ui_assets_line = if ui_assets {
-        "- UI assets: enabled (`fret-bootstrap/ui-assets` + `fret-ui-assets`)\n"
+        "- UI assets: enabled (`fret-bootstrap/ui-assets`)\n"
     } else {
         "- UI assets: disabled (use `fretboard init todo --ui-assets` if you need images/SVG caches)\n"
     };
