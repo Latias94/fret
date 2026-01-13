@@ -9,6 +9,11 @@ use fret_core::{
     geometry::{Point, Px, Rect, Size},
 };
 
+const VIEWPORT_GIZMO_AXIS_THICKNESS_PX: Px = Px(2.5);
+const VIEWPORT_GIZMO_AXIS_HIGHLIGHT_THICKNESS_PX: Px = Px(4.0);
+const VIEWPORT_DRAG_LINE_THICKNESS_PX: Px = Px(1.5);
+const VIEWPORT_DRAG_LINE_ENDPOINT_SIZE_PX: Px = Px(6.0);
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ViewportOverlay {
     pub marquee: Option<ViewportMarquee>,
@@ -146,14 +151,14 @@ fn paint_viewport_gizmo(
 
     let len = gizmo.axis_len_px;
     let highlight = gizmo.highlight;
-    let t = Px(2.5);
+    let t = VIEWPORT_GIZMO_AXIS_THICKNESS_PX;
     let x_t = if highlight == Some(ViewportGizmoPart::X) {
-        Px(4.0)
+        VIEWPORT_GIZMO_AXIS_HIGHLIGHT_THICKNESS_PX
     } else {
         t
     };
     let y_t = if highlight == Some(ViewportGizmoPart::Y) {
-        Px(4.0)
+        VIEWPORT_GIZMO_AXIS_HIGHLIGHT_THICKNESS_PX
     } else {
         t
     };
@@ -281,12 +286,18 @@ fn paint_viewport_selection_rect(content: Rect, rect: ViewportSelectionRect, sce
 
     let top_rect = Rect::new(inner.origin, Size::new(inner.size.width, t));
     let bottom_rect = Rect::new(
-        Point::new(inner.origin.x, Px(inner.origin.y.0 + inner.size.height.0 - t.0)),
+        Point::new(
+            inner.origin.x,
+            Px(inner.origin.y.0 + inner.size.height.0 - t.0),
+        ),
         Size::new(inner.size.width, t),
     );
     let left_rect = Rect::new(inner.origin, Size::new(t, inner.size.height));
     let right_rect = Rect::new(
-        Point::new(Px(inner.origin.x.0 + inner.size.width.0 - t.0), inner.origin.y),
+        Point::new(
+            Px(inner.origin.x.0 + inner.size.width.0 - t.0),
+            inner.origin.y,
+        ),
         Size::new(t, inner.size.height),
     );
     for r in [top_rect, bottom_rect, left_rect, right_rect] {
@@ -413,7 +424,10 @@ fn paint_viewport_marquee(
 
     let top_rect = Rect::new(rect.origin, Size::new(rect.size.width, t));
     let bottom_rect = Rect::new(
-        Point::new(rect.origin.x, Px(rect.origin.y.0 + rect.size.height.0 - t.0)),
+        Point::new(
+            rect.origin.x,
+            Px(rect.origin.y.0 + rect.size.height.0 - t.0),
+        ),
         Size::new(rect.size.width, t),
     );
     let left_rect = Rect::new(rect.origin, Size::new(t, rect.size.height));
@@ -443,7 +457,7 @@ fn paint_viewport_drag_line(content: Rect, line: ViewportDragLine, scene: &mut S
     let y1 = content.origin.y.0 + content.size.height.0 * bv;
 
     let color = line.color;
-    let t = Px(1.5);
+    let t = VIEWPORT_DRAG_LINE_THICKNESS_PX;
 
     let h = Rect::new(
         Point::new(Px(x0.min(x1)), Px(y0 - t.0 * 0.5)),
@@ -468,7 +482,7 @@ fn paint_viewport_drag_line(content: Rect, line: ViewportDragLine, scene: &mut S
         });
     }
 
-    let p = Px(6.0);
+    let p = VIEWPORT_DRAG_LINE_ENDPOINT_SIZE_PX;
     for (x, y) in [(x0, y0), (x1, y1)] {
         scene.push(SceneOp::Quad {
             order: DrawOrder(9),
