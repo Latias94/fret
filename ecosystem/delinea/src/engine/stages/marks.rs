@@ -428,20 +428,32 @@ impl MarksStage {
                 self.series_index += 1;
                 continue;
             };
-            let (base_selection, view_x_filter, view_x_mapping_window) =
-                if let Some(v) = view.series_view(series.id) {
-                    (
-                        v.selection.clone(),
-                        v.x_policy.filter,
-                        v.x_policy.mapping_window,
-                    )
-                } else {
-                    (
-                        RowSelection::All,
-                        crate::engine::window_policy::AxisFilter1D::default(),
-                        None,
-                    )
-                };
+            let (
+                base_selection,
+                view_x_filter,
+                view_x_mapping_window,
+                x_filter_mode,
+                y_filter_mode,
+                view_y_filter,
+            ) = if let Some(v) = view.series_view(series.id) {
+                (
+                    v.selection.clone(),
+                    v.x_policy.filter,
+                    v.x_policy.mapping_window,
+                    v.x_filter_mode,
+                    v.y_filter_mode,
+                    v.y_filter,
+                )
+            } else {
+                (
+                    RowSelection::All,
+                    crate::engine::window_policy::AxisFilter1D::default(),
+                    None,
+                    crate::spec::FilterMode::None,
+                    crate::spec::FilterMode::None,
+                    crate::engine::window_policy::AxisFilter1D::default(),
+                )
+            };
 
             let Some(dataset) = model.datasets.get(&series.dataset) else {
                 self.series_index += 1;
@@ -1765,22 +1777,16 @@ impl MarksStage {
                 continue;
             }
 
-            let x_filter_mode = state
-                .data_zoom_x
-                .get(&series.x_axis)
-                .map(|s| s.filter_mode)
-                .unwrap_or_default();
-            let y_filter_mode = model
-                .data_zoom_y_by_axis
-                .get(&series.y_axis)
-                .and_then(|id| model.data_zoom_y.get(id))
-                .map(|z| z.filter_mode)
-                .unwrap_or(crate::spec::FilterMode::None);
-
             // v1 policy: `Empty` masking is implemented via mark-level segmentation for line-family series.
             // For now, apply Y-empty only for non-stacked series (stacked empty semantics are TBD).
-            let y_empty_active =
-                y_filter_mode == crate::spec::FilterMode::Empty && series.stack.is_none();
+            let y_empty_active = y_filter_mode == crate::spec::FilterMode::Empty
+                && series.stack.is_none()
+                && matches!(
+                    series.kind,
+                    crate::spec::SeriesKind::Line
+                        | crate::spec::SeriesKind::Area
+                        | crate::spec::SeriesKind::Band
+                );
             let stack_arrays = series.stack.and_then(|stack| {
                 stack_dims.stack_arrays(stack, series.id, model.revs.marks, table.revision)
             });
@@ -1799,17 +1805,6 @@ impl MarksStage {
                     self.segmented_segment_index = 0;
                     scratch.reset_buckets();
                 }
-
-                let y_axis_range = model
-                    .axes
-                    .get(&series.y_axis)
-                    .map(|a| a.range)
-                    .unwrap_or_default();
-                let view_y_filter = crate::engine::window_policy::axis_filter_1d(
-                    y_axis_range,
-                    state.data_window_y.get(&series.y_axis).copied(),
-                    crate::spec::FilterMode::Empty,
-                );
 
                 let is_sparse = matches!(selection, RowSelection::Indices(_));
                 let row_range = if !is_sparse {

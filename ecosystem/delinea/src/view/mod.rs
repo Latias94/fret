@@ -1,6 +1,7 @@
 use crate::data::{DataTable, DatasetStore};
 use crate::engine::ChartState;
 use crate::engine::model::ChartModel;
+use crate::engine::window_policy::AxisFilter1D;
 use crate::ids::{AxisId, DatasetId, Revision, SeriesId};
 use crate::spec::FilterMode;
 use crate::transform::{RowRange, RowSelection, SeriesXPolicy, data_zoom_x_node, data_zoom_y_node};
@@ -27,6 +28,9 @@ pub struct SeriesView {
     pub data_revision: Revision,
     pub selection: RowSelection,
     pub x_policy: SeriesXPolicy,
+    pub x_filter_mode: FilterMode,
+    pub y_filter_mode: FilterMode,
+    pub y_filter: AxisFilter1D,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -132,6 +136,14 @@ impl ViewState {
                 .map(|z| z.filter_mode)
                 .unwrap_or(FilterMode::None);
 
+            let y_axis_range = model
+                .axes
+                .get(&series.y_axis)
+                .map(|a| a.range)
+                .unwrap_or_default();
+            let y_node = data_zoom_y_node(model, state, series.y_axis, y_axis_range);
+            let y_filter = y_node.y_filter();
+
             const MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN: usize = 200_000;
             let band_y1_ready = if series.kind == crate::spec::SeriesKind::Band {
                 if let Some(y1_field) = series.encode.y2
@@ -201,6 +213,9 @@ impl ViewState {
                 data_revision: table.revision,
                 selection,
                 x_policy: x_window.x_policy,
+                x_filter_mode,
+                y_filter_mode,
+                y_filter,
             });
         }
     }

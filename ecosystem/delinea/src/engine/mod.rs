@@ -1684,7 +1684,8 @@ fn compute_axis_axis_pointer_output(
             None
         };
 
-        let (selection_range, filter, base_selection) = match view.series_view(series.id) {
+        let series_view = view.series_view(series.id);
+        let (selection_range, filter, base_selection) = match series_view {
             Some(series_view) => {
                 let selection_range = series_view.selection.as_range(table.row_count);
                 let selection_range = RowRange {
@@ -1774,10 +1775,19 @@ fn compute_axis_axis_pointer_output(
                                 y1: None,
                             });
                         }
-                    } else if let (Some(y0), Some(_x)) = (y0, x) {
-                        sample = sample_at_raw_index(
-                            model, datasets, stack_dims, model_rev, table_rev, series.id,
-                            raw_index, y0, y1,
+                    } else if let (Some(y0), Some(x)) = (y0, x) {
+                        sample = sample_at_raw_index_with_empty_mask(
+                            series,
+                            series_view,
+                            model,
+                            datasets,
+                            stack_dims,
+                            model_rev,
+                            table_rev,
+                            raw_index,
+                            x,
+                            y0,
+                            y1,
                         );
                     }
                 }
@@ -1804,7 +1814,8 @@ fn compute_axis_axis_pointer_output(
                     stack_dims,
                     model_rev,
                     table_rev,
-                    series.id,
+                    series,
+                    series_view,
                     axis_value,
                     x,
                     y0,
@@ -1819,7 +1830,8 @@ fn compute_axis_axis_pointer_output(
                     stack_dims,
                     model_rev,
                     table_rev,
-                    series.id,
+                    series,
+                    series_view,
                     axis_value,
                     x,
                     y0,
@@ -1962,7 +1974,8 @@ fn snap_axis_pointer_x_to_series(
         .and_then(|y2_field| dataset.fields.get(&y2_field).copied())
         .and_then(|y2_col| table.column_f64(y2_col));
 
-    let (selection_range, filter, base_selection) = match view.series_view(primary.id) {
+    let series_view = view.series_view(primary.id);
+    let (selection_range, filter, base_selection) = match series_view {
         Some(series_view) => {
             let selection_range = series_view.selection.as_range(table.row_count);
             let selection_range = RowRange {
@@ -1998,14 +2011,16 @@ fn snap_axis_pointer_x_to_series(
     let nearest_index = nearest_x_indices.items_for(nearest_key, table_rev);
     let (raw_index, x_raw) =
         nearest_raw_index_at_x_view(axis_value, x, filter, &table_view, nearest_index)?;
-    let sampled = sample_at_raw_index(
+    let sampled = sample_at_raw_index_with_empty_mask(
+        primary,
+        series_view,
         model,
         datasets,
         stack_dims,
         model_rev,
         table_rev,
-        primary.id,
         raw_index,
+        x,
         y0,
         y1.as_deref(),
     )?;
@@ -2183,7 +2198,8 @@ fn snap_axis_pointer_y_to_series(
         .and_then(|y2_field| dataset.fields.get(&y2_field).copied())
         .and_then(|y2_col| table.column_f64(y2_col));
 
-    let (selection_range, filter, base_selection) = match view.series_view(primary.id) {
+    let series_view = view.series_view(primary.id);
+    let (selection_range, filter, base_selection) = match series_view {
         Some(series_view) => {
             let selection_range = series_view.selection.as_range(table.row_count);
             let selection_range = RowRange {
@@ -2239,14 +2255,16 @@ fn snap_axis_pointer_y_to_series(
             continue;
         }
 
-        let Some(sampled) = sample_at_raw_index(
+        let Some(sampled) = sample_at_raw_index_with_empty_mask(
+            primary,
+            series_view,
             model,
             datasets,
             stack_dims,
             model_rev,
             table_rev,
-            primary.id,
             raw_index,
+            x,
             y0,
             y1.as_deref(),
         ) else {
@@ -2297,6 +2315,82 @@ fn snap_axis_pointer_y_to_series(
 struct SampledSeriesValue {
     y0: f64,
     y1: Option<f64>,
+}
+
+fn raw_index_is_visible_under_empty_mask(
+    series: &crate::engine::model::SeriesModel,
+    series_view: Option<&crate::view::SeriesView>,
+    raw_index: usize,
+    x: &[f64],
+    y0: &[f64],
+    y1: Option<&[f64]>,
+) -> bool {
+    let Some(series_view) = series_view else {
+        return true;
+    };
+
+    if series_view.x_filter_mode == crate::spec::FilterMode::Empty
+        && (series_view.x_policy.filter.min.is_some() || series_view.x_policy.filter.max.is_some())
+    {
+        let x_raw = x.get(raw_index).copied().unwrap_or(f64::NAN);
+        if !x_raw.is_finite() || !series_view.x_policy.filter.contains(x_raw) {
+            return false;
+        }
+    }
+
+    if series_view.y_filter_mode == crate::spec::FilterMode::Empty
+        && series.stack.is_none()
+        && (series_view.y_filter.min.is_some() || series_view.y_filter.max.is_some())
+        && matches!(
+            series.kind,
+            crate::spec::SeriesKind::Line
+                | crate::spec::SeriesKind::Area
+                | crate::spec::SeriesKind::Band
+        )
+    {
+        if series.kind == crate::spec::SeriesKind::Band {
+            let Some(y1) = y1 else {
+                return false;
+            };
+            let y0_raw = y0.get(raw_index).copied().unwrap_or(f64::NAN);
+            let y1_raw = y1.get(raw_index).copied().unwrap_or(f64::NAN);
+            if !y0_raw.is_finite()
+                || !y1_raw.is_finite()
+                || !series_view.y_filter.intersects_interval(y0_raw, y1_raw)
+            {
+                return false;
+            }
+        } else {
+            let y_raw = y0.get(raw_index).copied().unwrap_or(f64::NAN);
+            if !y_raw.is_finite() || !series_view.y_filter.contains(y_raw) {
+                return false;
+            }
+        }
+    }
+
+    true
+}
+
+fn sample_at_raw_index_with_empty_mask(
+    series: &crate::engine::model::SeriesModel,
+    series_view: Option<&crate::view::SeriesView>,
+    model: &ChartModel,
+    datasets: &DatasetStore,
+    stack_dims: &StackDimsStage,
+    model_rev: Revision,
+    table_rev: Revision,
+    raw_index: usize,
+    x: &[f64],
+    y0: &[f64],
+    y1: Option<&[f64]>,
+) -> Option<SampledSeriesValue> {
+    if !raw_index_is_visible_under_empty_mask(series, series_view, raw_index, x, y0, y1) {
+        return None;
+    }
+
+    sample_at_raw_index(
+        model, datasets, stack_dims, model_rev, table_rev, series.id, raw_index, y0, y1,
+    )
 }
 
 fn ordinal_from_value(value: f64, len: usize) -> Option<u32> {
@@ -2443,7 +2537,8 @@ fn sample_nearest_at_x_view(
     stack_dims: &StackDimsStage,
     model_rev: Revision,
     table_rev: Revision,
-    series_id: crate::ids::SeriesId,
+    series: &crate::engine::model::SeriesModel,
+    series_view: Option<&crate::view::SeriesView>,
     x_value: f64,
     x: &[f64],
     y0: &[f64],
@@ -2457,9 +2552,22 @@ fn sample_nearest_at_x_view(
             crate::engine::stages::nearest_raw_index_in_sorted_x_index(index, x_value)
     {
         let x_raw = x.get(raw_index).copied().unwrap_or(f64::NAN);
-        if x_raw.is_finite() && x_filter.contains(x_raw) {
-            return sample_at_raw_index(
-                model, datasets, stack_dims, model_rev, table_rev, series_id, raw_index, y0, y1,
+        if x_raw.is_finite()
+            && x_filter.contains(x_raw)
+            && raw_index_is_visible_under_empty_mask(series, series_view, raw_index, x, y0, y1)
+        {
+            return sample_at_raw_index_with_empty_mask(
+                series,
+                series_view,
+                model,
+                datasets,
+                stack_dims,
+                model_rev,
+                table_rev,
+                raw_index,
+                x,
+                y0,
+                y1,
             );
         }
     }
@@ -2486,6 +2594,9 @@ fn sample_nearest_at_x_view(
         if !x_filter.contains(x_raw) {
             continue;
         }
+        if !raw_index_is_visible_under_empty_mask(series, series_view, raw_index, x, y0, y1) {
+            continue;
+        }
         let dist = (x_value - x_raw).abs();
         if dist < best_dist {
             best_dist = dist;
@@ -2494,24 +2605,19 @@ fn sample_nearest_at_x_view(
     }
 
     let raw_index = best_raw_index?;
-
-    let mut y = y0.get(raw_index).copied()?;
-    if !y.is_finite() {
-        return None;
-    }
-
-    if model
-        .series
-        .get(&series_id)
-        .is_some_and(|s| s.stack.is_some())
-    {
-        y += stack_base_cached(
-            model, datasets, stack_dims, model_rev, table_rev, series_id, raw_index, y,
-        );
-    }
-
-    let y1_out = y1.and_then(|s| s.get(raw_index).copied());
-    Some(SampledSeriesValue { y0: y, y1: y1_out })
+    sample_at_raw_index_with_empty_mask(
+        series,
+        series_view,
+        model,
+        datasets,
+        stack_dims,
+        model_rev,
+        table_rev,
+        raw_index,
+        x,
+        y0,
+        y1,
+    )
 }
 
 fn sample_scatter_at_x_view(
@@ -2520,7 +2626,8 @@ fn sample_scatter_at_x_view(
     stack_dims: &StackDimsStage,
     model_rev: Revision,
     table_rev: Revision,
-    series_id: crate::ids::SeriesId,
+    series: &crate::engine::model::SeriesModel,
+    series_view: Option<&crate::view::SeriesView>,
     x_value: f64,
     x: &[f64],
     y0: &[f64],
@@ -2575,11 +2682,11 @@ fn sample_scatter_at_x_view(
 
         let y = if model
             .series
-            .get(&series_id)
+            .get(&series.id)
             .is_some_and(|s| s.stack.is_some())
         {
             y + stack_base_cached(
-                model, datasets, stack_dims, model_rev, table_rev, series_id, i, y,
+                model, datasets, stack_dims, model_rev, table_rev, series.id, i, y,
             )
         } else {
             y
@@ -2594,7 +2701,8 @@ fn sample_scatter_at_x_view(
         stack_dims,
         model_rev,
         table_rev,
-        series_id,
+        series,
+        series_view,
         x_value,
         x,
         y0,
@@ -2611,7 +2719,8 @@ fn sample_series_at_x_view(
     stack_dims: &StackDimsStage,
     model_rev: Revision,
     table_rev: Revision,
-    series_id: crate::ids::SeriesId,
+    series: &crate::engine::model::SeriesModel,
+    series_view: Option<&crate::view::SeriesView>,
     x_value: f64,
     x: &[f64],
     y0: &[f64],
@@ -2640,9 +2749,13 @@ fn sample_series_at_x_view(
     {
         let xs = &x[start..end];
         if xs.len() == 1 {
+            let raw_index = start;
+            if !raw_index_is_visible_under_empty_mask(series, series_view, raw_index, x, y0, y1) {
+                return None;
+            }
             return Some(SampledSeriesValue {
-                y0: y0[start],
-                y1: y1.and_then(|s| s.get(start).copied()),
+                y0: y0[raw_index],
+                y1: y1.and_then(|s| s.get(raw_index).copied()),
             });
         }
 
@@ -2672,16 +2785,37 @@ fn sample_series_at_x_view(
             return None;
         }
 
+        if !raw_index_is_visible_under_empty_mask(series, series_view, i0, x, y0, y1)
+            || !raw_index_is_visible_under_empty_mask(series, series_view, i1, x, y0, y1)
+        {
+            return sample_nearest_at_x_view(
+                model,
+                datasets,
+                stack_dims,
+                model_rev,
+                table_rev,
+                series,
+                series_view,
+                x_value,
+                x,
+                y0,
+                y1,
+                x_filter,
+                table_view,
+                nearest_index,
+            );
+        }
+
         let y = if model
             .series
-            .get(&series_id)
+            .get(&series.id)
             .is_some_and(|s| s.stack.is_some())
         {
             let base0 = stack_base_cached(
-                model, datasets, stack_dims, model_rev, table_rev, series_id, i0, y0a,
+                model, datasets, stack_dims, model_rev, table_rev, series.id, i0, y0a,
             );
             let base1 = stack_base_cached(
-                model, datasets, stack_dims, model_rev, table_rev, series_id, i1, y0b,
+                model, datasets, stack_dims, model_rev, table_rev, series.id, i1, y0b,
             );
             let y_eff0 = y0a + base0;
             let y_eff1 = y0b + base1;
@@ -2710,7 +2844,8 @@ fn sample_series_at_x_view(
         stack_dims,
         model_rev,
         table_rev,
-        series_id,
+        series,
+        series_view,
         x_value,
         x,
         y0,

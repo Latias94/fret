@@ -1,7 +1,11 @@
 use crate::engine::window::DataWindow;
 use crate::spec::{AxisRange, FilterMode};
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AxisFilter1D {
     pub min: Option<f64>,
     pub max: Option<f64>,
@@ -16,6 +20,23 @@ impl AxisFilter1D {
         }
         if let Some(max) = self.max
             && v > max
+        {
+            return false;
+        }
+        true
+    }
+
+    pub fn intersects_interval(&self, a: f64, b: f64) -> bool {
+        let lo = a.min(b);
+        let hi = a.max(b);
+
+        if let Some(min) = self.min
+            && hi < min
+        {
+            return false;
+        }
+        if let Some(max) = self.max
+            && lo > max
         {
             return false;
         }
