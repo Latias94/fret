@@ -99,6 +99,29 @@ It complements (but does not replace) ADRs:
   - Current: `UiAppDriver` closes windows by default on `Event::WindowCloseRequested`, with an opt-out for "unsaved changes" prompts.
   - Current: documented in `docs/examples/todo-app-golden-path.md`.
 
+## P0 - Radix/shadcn Overlay Conformance (Goldens + Downshift)
+
+- **Downshift hover-overlay intent drivers into `fret-ui-kit::headless`**
+  - Problem: hover-driven overlays (Tooltip/HoverCard) currently contain substantial state/intent logic in shadcn recipes, which makes long-term 1:1 Radix matching harder (logic drift is easy when it is not shared/reused).
+  - ADRs: `docs/adr/0090-radix-aligned-headless-primitives-in-fret-components-ui.md`, `docs/adr/0074-component-owned-interaction-policy-and-runtime-action-hooks.md`
+  - Targets (examples to audit/move):
+    - `ecosystem/fret-ui-shadcn/src/hover_card.rs` (`HoverCardIntentDriverState`, frame-tick fallback, close suppression heuristics).
+    - `ecosystem/fret-ui-shadcn/src/tooltip.rs` (pointermove gating + suppress-after-pointerdown/focus heuristics).
+  - Approach:
+    - keep wiring in shadcn recipes, but move the deterministic state machine and timers into `ecosystem/fret-ui-kit/src/headless/*` (or extend existing headless primitives like `hover_intent`).
+    - add unit tests at the headless layer for the intent driver (open/close timing, suppression edges), then keep only "wiring smoke" in shadcn.
+
+- **Expand overlay goldens to cover submenu and non-click open paths**
+  - Goal: lock down the highest-drift overlay behaviors (submenu grace corridor, delayed opens, focus transfer) with upstream web goldens.
+  - Upstream references:
+    - `repo-ref/primitives/packages/react/menu/src/menu.tsx` (submenu pointer grace + focus transfer rules).
+  - Goldens to expand:
+    - `goldens/radix-web/v4/radix-vega/*` timelines: add submenu scenarios for `dropdown-menu`, `context-menu`, `menubar`.
+    - `goldens/shadcn-web/v4/new-york-v4/*.open.json`: add open snapshots for pages that require non-click input and/or submenu open states.
+  - Fret gates to add:
+    - behavior/semantics sequence parity: `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` (new scenarios).
+    - placement/chrome parity: extend `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_*` to cover submenu content and multi-layer placement.
+
 ## P0 - Docking / Overlays / Viewport Capture
 
 - **Dock host keep-alive and early submission**
