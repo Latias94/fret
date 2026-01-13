@@ -379,6 +379,8 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 `delinea` v1 intentionally diverges for performance:
 
 - X dataZoom can filter rows (`FilterMode::Filter`) and drive selection.
+- AxisPointer/tooltip sampling respects X filtering even for non-monotonic X (never samples out-of-window points).
+  - Evidence: `ecosystem/delinea/src/engine/mod.rs`, `ecosystem/delinea/src/engine/tests.rs`
 - Y dataZoom is mapping-only in v1 (no row filtering) (ADR 1136).
 - 2D zoom is expressed as a paired window write (`Action::SetViewWindow2DFromZoom`) without introducing
   sparse selections (ADR 1136).
@@ -391,7 +393,7 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 - `[x]` `encode`-style mapping (series `x/y/y2` fields) (ADR 1128).
 - `[x]` Row range gating (`SetDatasetRowRange`) for external virtualization (ADR 1137).
 - `[x]` X filtering via `FilterMode` (`Filter` / `None`) (ADR 1129).
-- `[~]` Multi-dimensional filtering with sparse selections (ECharts `weakFilter/empty`) (deferred; ADR 1137 follow-ups).
+- `[~]` `FilterMode::{WeakFilter,Empty}` surface + v1 subset semantics (ADR 1150); multi-dimensional parity still pending.
 
 ### Axes, scales, and grids
 

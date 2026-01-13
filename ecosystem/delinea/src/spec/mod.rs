@@ -82,6 +82,16 @@ impl AxisPosition {
 pub enum FilterMode {
     #[default]
     Filter,
+    /// ECharts-like `weakFilter`.
+    ///
+    /// v1 note: treated as equivalent to `Filter` until multi-dimensional filtering is introduced
+    /// (see ADR 1150).
+    WeakFilter,
+    /// ECharts-like `empty`.
+    ///
+    /// Out-of-window samples are treated as "missing" for mark emission while preserving a stable
+    /// row/index space (see ADR 1150).
+    Empty,
     None,
 }
 

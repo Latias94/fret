@@ -222,10 +222,33 @@ impl MarksStage {
         &self,
         model: &ChartModel,
         datasets: &DatasetStore,
+        state: &ChartState,
         view: &ViewState,
         data_view: &mut DataViewStage,
     ) {
         for series_id in &model.series_order {
+            let Some(series) = model.series.get(series_id) else {
+                continue;
+            };
+
+            let Some(zoom_state) = state.data_zoom_x.get(&series.x_axis) else {
+                continue;
+            };
+            if zoom_state.window.is_none() {
+                continue;
+            }
+            let filter_mode = zoom_state.filter_mode;
+
+            // ADR 1150:
+            // - `Filter` / `WeakFilter` may use indices views as an optimization carrier.
+            // - `Empty` must preserve a stable row/index space (avoid indices-backed selections).
+            if !matches!(
+                filter_mode,
+                crate::spec::FilterMode::Filter | crate::spec::FilterMode::WeakFilter
+            ) {
+                continue;
+            }
+
             data_view.request_x_filter_for_series(model, datasets, view, *series_id);
         }
     }
@@ -840,11 +863,13 @@ impl MarksStage {
                             if !xi.is_finite() || !yi.is_finite() {
                                 continue;
                             }
-                            if !view_x_filter.contains(xi) {
+                            if xi < x_window.min || xi > x_window.max {
+                                continue;
+                            }
+                            if yi < y_window.min || yi > y_window.max {
                                 continue;
                             }
 
-                            let yi = yi.clamp(y_window.min, y_window.max);
                             let tx = ((xi - x_window.min) / x_span).clamp(0.0, 1.0);
                             let ty = ((yi - y_window.min) / y_span).clamp(0.0, 1.0);
 
@@ -1042,11 +1067,13 @@ impl MarksStage {
                         if !xi.is_finite() || !yi.is_finite() {
                             continue;
                         }
-                        if !view_x_filter.contains(xi) {
+                        if xi < x_window.min || xi > x_window.max {
+                            continue;
+                        }
+                        if yi < y_window.min || yi > y_window.max {
                             continue;
                         }
 
-                        let yi = yi.clamp(y_window.min, y_window.max);
                         let tx = ((xi - x_window.min) / x_span).clamp(0.0, 1.0);
                         let ty = ((yi - y_window.min) / y_span).clamp(0.0, 1.0);
 
@@ -1253,6 +1280,9 @@ impl MarksStage {
                             }
 
                             let (cat_v, value_v0) = if is_vertical { (xi, yi) } else { (yi, xi) };
+                            if cat_v < category_window.min || cat_v > category_window.max {
+                                continue;
+                            }
 
                             let (value_top, value_base) = if let Some(arrays) = &stack_arrays {
                                 let base = arrays.base.get(i).copied().unwrap_or(f64::NAN);
@@ -1539,6 +1569,9 @@ impl MarksStage {
                         }
 
                         let (cat_v, value_v0) = if is_vertical { (xi, yi) } else { (yi, xi) };
+                        if cat_v < category_window.min || cat_v > category_window.max {
+                            continue;
+                        }
 
                         let (value_top, value_base) = if let Some(arrays) = &stack_arrays {
                             let base = arrays.base.get(i).copied().unwrap_or(f64::NAN);

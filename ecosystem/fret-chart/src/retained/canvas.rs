@@ -719,6 +719,10 @@ impl ChartCanvas {
 
         match current {
             FilterMode::Filter => self.set_data_window_x_filter_mode(axis, Some(FilterMode::None)),
+            FilterMode::WeakFilter => {
+                self.set_data_window_x_filter_mode(axis, Some(FilterMode::None))
+            }
+            FilterMode::Empty => self.set_data_window_x_filter_mode(axis, Some(FilterMode::None)),
             FilterMode::None => self.set_data_window_x_filter_mode(axis, None),
         }
     }

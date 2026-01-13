@@ -96,6 +96,9 @@ fn init_cmd(args: Vec<String>) -> Result<(), String> {
 }
 
 fn new_cmd(args: Vec<String>) -> Result<(), String> {
+    if args.len() == 1 && matches!(args[0].as_str(), "--help" | "-h") {
+        return help();
+    }
     if args.is_empty() {
         return new_wizard();
     }
@@ -107,6 +110,9 @@ fn new_template_cmd(invoked_as: &str, args: Vec<String>) -> Result<(), String> {
     let Some(template) = it.next() else {
         return Err(format!("missing template (try: {invoked_as} todo)"));
     };
+    if matches!(template.as_str(), "--help" | "-h") {
+        return help();
+    }
 
     match template.as_str() {
         "empty" => init_empty(it.collect()),

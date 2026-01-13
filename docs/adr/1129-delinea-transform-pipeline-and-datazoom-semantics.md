@@ -51,7 +51,7 @@ We adopt an ECharts-like separation:
 
 - **Source / dataset**: immutable columnar storage (`DataTable`) with a stable schema (`FieldId -> column`).
 - **Transforms**: pure-ish nodes that produce:
-  - `RowSelection` (range/sparse selection; P0 is range-only),
+  - `RowSelection` (range/sparse selection; P0 supports `Range` plus indices-backed X filters),
   - derived columns (P1+; e.g. stack bases, aggregates),
   - LOD views (bounded point sets).
 - **View**: per-series view inputs derived from transforms and axis windows.
@@ -92,22 +92,28 @@ ECharts supports several dataZoom filtering modes (`filter`, `weakFilter`, `empt
 In `delinea` v1 we standardize on a minimal subset:
 
 - `FilterMode::Filter` (ECharts-like `filter`):
-  - the current data window is used to slice rows (when monotonic-X heuristics allow),
-  - bounds/LOD are computed on the filtered selection,
+  - the current data window defines an X filter predicate that is applied consistently across stages
+    (bounds/LOD/marks/axisPointer sampling),
+  - when monotonic-X heuristics allow, the filtered view is represented as a continuous `RowRange`;
+    otherwise the filter predicate is applied per-point and may be cached as an indices-backed
+    selection (optimization carrier),
+  - bounds/LOD are computed on the filtered view,
   - Y auto-scales to visible X by default (good “plot” ergonomics and performance).
 - `FilterMode::None` (ECharts-like `none`):
   - no row slicing occurs for the data window,
-  - bounds/LOD remain global (can keep global Y scale while zooming X),
+  - bounds remain global (can keep global Y scale while zooming X),
+  - marks/LOD are still emitted against the current mapping window (out-of-window samples are culled),
   - this mode can be significantly more expensive on large datasets.
 
-We intentionally do **not** implement ECharts’ `weakFilter` / `empty` in v1 because their semantics depend on
-series types (stacking, category axes, multi-dimensional filtering) and can easily become inconsistent if
-introduced without a full component model.
+ECharts’ `weakFilter` / `empty` semantics are more subtle than `filter` / `none` because they depend on
+multi-dimensional filtering and missing-value behavior (line-family segment breaks, stacking stability, etc).
 
-We keep the design open to adding them later without reworking the model surface:
+We standardize their intent in ADR 1150 and adopt a v1-compatible subset:
 
-- by extending `FilterMode` with additional variants,
-- by implementing them as transform nodes (rather than special-casing in view/marks).
+- `FilterMode::WeakFilter`: treated as equivalent to `Filter` until we introduce multi-dimensional filtering.
+- `FilterMode::Empty`: preserves the base row selection but treats out-of-window samples as missing for marks/bounds.
+
+This keeps the model surface aligned with ECharts while leaving room for a full component/transform graph later.
 
 ### 5) Define ordering constraints for future multi-zoom and multi-axis filtering
 

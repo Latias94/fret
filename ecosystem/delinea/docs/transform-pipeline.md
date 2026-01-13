@@ -43,7 +43,20 @@ we derive a continuous `RowRange` (stored as `RowSelection::Range`) for the seri
   - `row_range_for_x_window(x_values, base_range, window)` → `RowRange`
 
 When the X column is probably monotonic, we use binary search (`partition_point`) for O(log n)
-slicing. Otherwise we fall back to a linear scan to find the first/last matching row.
+slicing.
+
+When the X column is not monotonic, v1 intentionally does **not** attempt to shrink the row range
+because a single continuous `RowRange` cannot represent a sparse selection correctly.
+
+Instead, v1 can build an indices-backed selection (`RowSelection::Indices`) via
+`engine/stages/data_view.rs` when:
+
+- `FilterMode::Filter` is active (so `x_policy.filter` is meaningful),
+- the selection range is large enough to justify building indices,
+- and monotonic slicing is not available.
+
+This keeps the P0 path allocation-light while still providing a correct filtering carrier for
+large, non-monotonic datasets.
 
 ### Filter mode (P0)
 
