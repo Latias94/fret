@@ -144,9 +144,7 @@ impl ViewState {
                 && y_filter_mode == FilterMode::WeakFilter
                 && x_node.window().is_some()
                 && state.data_window_y.get(&series.y_axis).is_some()
-                && base_range
-                    .end
-                    .saturating_sub(base_range.start)
+                && base_range.end.saturating_sub(base_range.start)
                     <= MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN;
 
             if xy_weak_filter_active {

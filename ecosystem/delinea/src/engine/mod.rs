@@ -1019,7 +1019,9 @@ impl ChartEngine {
             let Some(zoom_state) = self.state.data_zoom_x.get(&series.x_axis) else {
                 continue;
             };
-            if zoom_state.filter_mode != crate::spec::FilterMode::WeakFilter || zoom_state.window.is_none() {
+            if zoom_state.filter_mode != crate::spec::FilterMode::WeakFilter
+                || zoom_state.window.is_none()
+            {
                 continue;
             }
 
@@ -1038,7 +1040,9 @@ impl ChartEngine {
                 continue;
             };
 
-            let Some(series_view_index) = self.view.series.iter().position(|v| v.series == *series_id) else {
+            let Some(series_view_index) =
+                self.view.series.iter().position(|v| v.series == *series_id)
+            else {
                 continue;
             };
             if !matches!(

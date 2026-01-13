@@ -4054,11 +4054,17 @@ fn data_zoom_xy_filter_mode_weakfilter_drops_only_same_side_outliers() {
 
     engine.apply_action(Action::SetDataWindowX {
         axis: x_axis,
-        window: Some(DataWindow { min: 0.0, max: 10.0 }),
+        window: Some(DataWindow {
+            min: 0.0,
+            max: 10.0,
+        }),
     });
     engine.apply_action(Action::SetDataWindowY {
         axis: y_axis,
-        window: Some(DataWindow { min: 0.0, max: 10.0 }),
+        window: Some(DataWindow {
+            min: 0.0,
+            max: 10.0,
+        }),
     });
 
     let mut measurer = NullTextMeasurer::default();

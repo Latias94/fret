@@ -209,7 +209,9 @@ impl DataViewStage {
         }
         if !matches!(
             series.kind,
-            crate::spec::SeriesKind::Scatter | crate::spec::SeriesKind::Line | crate::spec::SeriesKind::Area
+            crate::spec::SeriesKind::Scatter
+                | crate::spec::SeriesKind::Line
+                | crate::spec::SeriesKind::Area
         ) {
             return false;
         }
@@ -217,7 +219,10 @@ impl DataViewStage {
         let Some(series_view) = view.series_view(series_id) else {
             return false;
         };
-        if !matches!(series_view.selection, RowSelection::All | RowSelection::Range(_)) {
+        if !matches!(
+            series_view.selection,
+            RowSelection::All | RowSelection::Range(_)
+        ) {
             return false;
         }
 
@@ -718,7 +723,8 @@ impl DataViewStage {
         y_filter: AxisFilter1D,
         table_rev: Revision,
     ) -> Option<RowSelection> {
-        let key = DataViewKey::xy_weak_filter(dataset, x_col, y_col, selection_range, x_filter, y_filter);
+        let key =
+            DataViewKey::xy_weak_filter(dataset, x_col, y_col, selection_range, x_filter, y_filter);
         match self.cache.get(&key) {
             Some(DataViewEntry::Ready {
                 data_rev, indices, ..
@@ -781,6 +787,36 @@ mod tests {
         stage
     }
 
+    fn build_stage_with_single_xy_key(
+        dataset_id: DatasetId,
+        x_col: usize,
+        y_col: usize,
+        range: RowRange,
+        x_filter: AxisFilter1D,
+        y_filter: AxisFilter1D,
+        data_rev: Revision,
+        row_count: usize,
+    ) -> DataViewStage {
+        let key = DataViewKey::xy_weak_filter(dataset_id, x_col, y_col, range, x_filter, y_filter);
+        let mut stage = DataViewStage::default();
+        stage.requested.push(key);
+        stage.requested_set.insert(key);
+        let DataViewKind::XYWeakFilter { start, end, .. } = key.kind else {
+            panic!("expected xy_weak_filter key");
+        };
+        stage.cache.insert(
+            key,
+            DataViewEntry::Building {
+                data_rev,
+                row_count,
+                next: start as usize,
+                end: end as usize,
+                indices: Vec::new(),
+            },
+        );
+        stage
+    }
+
     #[test]
     fn data_view_stage_builds_indices_incrementally_and_exposes_row_selection() {
         let dataset_id = DatasetId::new(1);
@@ -822,6 +858,69 @@ mod tests {
 
         // Values in [4,8] are 5.0 (idx 2) and 7.0 (idx 3).
         assert_eq!(&indices[..], &[2u32, 3u32]);
+    }
+
+    #[test]
+    fn data_view_stage_builds_xy_weakfilter_indices_incrementally_and_exposes_row_selection() {
+        let dataset_id = DatasetId::new(1);
+
+        let mut store = DatasetStore::default();
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(vec![-1.0, -1.0, 5.0, 12.0, 12.0]));
+        table.push_column(Column::F64(vec![5.0, -2.0, -2.0, 12.0, 5.0]));
+        store.insert(dataset_id, table.clone());
+
+        let x_filter = AxisFilter1D {
+            min: Some(0.0),
+            max: Some(10.0),
+        };
+        let y_filter = AxisFilter1D {
+            min: Some(0.0),
+            max: Some(10.0),
+        };
+
+        let range = RowRange { start: 0, end: 100 };
+
+        let mut stage = build_stage_with_single_xy_key(
+            dataset_id,
+            0,
+            1,
+            range,
+            x_filter,
+            y_filter,
+            table.revision,
+            table.row_count,
+        );
+
+        let mut budget = WorkBudget::new(1, 0, 0);
+        assert!(!stage.step(&store, &mut budget));
+
+        let mut budget = WorkBudget::new(4096, 0, 0);
+        assert!(stage.step(&store, &mut budget));
+
+        let sel = stage
+            .selection_for_xy_weak_filter(
+                dataset_id,
+                0,
+                1,
+                range,
+                x_filter,
+                y_filter,
+                table.revision,
+            )
+            .expect("selection should be ready");
+
+        let RowSelection::Indices(indices) = sel else {
+            panic!("expected indices selection");
+        };
+
+        // Filter only when both dims are out-of-window on the same side:
+        // - idx0: x below, y inside -> keep
+        // - idx1: x below, y below -> drop
+        // - idx2: x inside, y below -> keep
+        // - idx3: x above, y above -> drop
+        // - idx4: x above, y inside -> keep
+        assert_eq!(&indices[..], &[0u32, 2u32, 4u32]);
     }
 
     #[test]
@@ -886,6 +985,74 @@ mod tests {
     }
 
     #[test]
+    fn data_view_stage_invalidates_xy_weakfilter_indices_on_data_revision_change() {
+        let dataset_id = DatasetId::new(1);
+
+        let mut store = DatasetStore::default();
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(vec![-1.0, -1.0, 5.0, 12.0, 12.0]));
+        table.push_column(Column::F64(vec![5.0, -2.0, -2.0, 12.0, 5.0]));
+        store.insert(dataset_id, table);
+
+        let x_filter = AxisFilter1D {
+            min: Some(0.0),
+            max: Some(10.0),
+        };
+        let y_filter = AxisFilter1D {
+            min: Some(0.0),
+            max: Some(10.0),
+        };
+        let range = RowRange { start: 0, end: 100 };
+
+        let data_rev = store.dataset(dataset_id).unwrap().revision;
+        let mut stage = build_stage_with_single_xy_key(
+            dataset_id,
+            0,
+            1,
+            range,
+            x_filter,
+            y_filter,
+            data_rev,
+            store.dataset(dataset_id).unwrap().row_count,
+        );
+
+        let mut budget = WorkBudget::new(4096, 0, 0);
+        assert!(stage.step(&store, &mut budget));
+
+        let sel = stage
+            .selection_for_xy_weak_filter(dataset_id, 0, 1, range, x_filter, y_filter, data_rev)
+            .expect("selection should be ready");
+        assert!(matches!(sel, RowSelection::Indices(_)));
+
+        let old_rev = data_rev;
+        let table = store.dataset_mut(dataset_id).unwrap();
+        table.append_row_f64(&[12.0, 5.0]).unwrap();
+        let new_rev = table.revision;
+        assert_ne!(old_rev, new_rev);
+
+        // The cached selection should be considered stale when queried with the new data revision.
+        assert!(
+            stage
+                .selection_for_xy_weak_filter(dataset_id, 0, 1, range, x_filter, y_filter, new_rev)
+                .is_none()
+        );
+
+        // A step should rebuild the selection for the same key, now including the appended row.
+        stage.cursor = 0;
+        let mut budget = WorkBudget::new(1, 0, 0);
+        assert!(stage.step(&store, &mut budget));
+
+        let sel = stage
+            .selection_for_xy_weak_filter(dataset_id, 0, 1, range, x_filter, y_filter, new_rev)
+            .expect("selection should be rebuilt");
+        let RowSelection::Indices(indices) = sel else {
+            panic!("expected indices selection");
+        };
+
+        assert_eq!(&indices[..], &[0u32, 2u32, 4u32, 5u32]);
+    }
+
+    #[test]
     fn data_view_stage_resumes_scans_on_append_only_changes() {
         let dataset_id = DatasetId::new(1);
 
@@ -931,5 +1098,60 @@ mod tests {
             panic!("expected indices selection");
         };
         assert_eq!(&indices[..], &[2u32, 3u32, 5u32]);
+    }
+
+    #[test]
+    fn data_view_stage_resumes_xy_weakfilter_scans_on_append_only_changes() {
+        let dataset_id = DatasetId::new(1);
+
+        let mut store = DatasetStore::default();
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(vec![-1.0, -1.0, 5.0, 12.0, 12.0]));
+        table.push_column(Column::F64(vec![5.0, -2.0, -2.0, 12.0, 5.0]));
+        store.insert(dataset_id, table);
+
+        let x_filter = AxisFilter1D {
+            min: Some(0.0),
+            max: Some(10.0),
+        };
+        let y_filter = AxisFilter1D {
+            min: Some(0.0),
+            max: Some(10.0),
+        };
+        let range = RowRange { start: 0, end: 100 };
+
+        let rev0 = store.dataset(dataset_id).unwrap().revision;
+        let mut stage = build_stage_with_single_xy_key(
+            dataset_id,
+            0,
+            1,
+            range,
+            x_filter,
+            y_filter,
+            rev0,
+            store.dataset(dataset_id).unwrap().row_count,
+        );
+
+        let mut budget = WorkBudget::new(4096, 0, 0);
+        assert!(stage.step(&store, &mut budget));
+
+        let table = store.dataset_mut(dataset_id).unwrap();
+        table.append_row_f64(&[12.0, 5.0]).unwrap();
+        let rev1 = table.revision;
+
+        stage.cursor = 0;
+        let mut budget = WorkBudget::new(1, 0, 0);
+        assert!(
+            stage.step(&store, &mut budget),
+            "append-only should require scanning only the appended rows"
+        );
+
+        let sel = stage
+            .selection_for_xy_weak_filter(dataset_id, 0, 1, range, x_filter, y_filter, rev1)
+            .expect("selection should be updated for the new revision");
+        let RowSelection::Indices(indices) = sel else {
+            panic!("expected indices selection");
+        };
+        assert_eq!(&indices[..], &[0u32, 2u32, 4u32, 5u32]);
     }
 }

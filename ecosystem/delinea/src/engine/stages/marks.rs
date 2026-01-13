@@ -276,7 +276,10 @@ impl MarksStage {
                     let base_range = dataset_view.row_range;
                     let base_len = base_range.end.saturating_sub(base_range.start);
                     if base_len <= MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN
-                        && matches!(series_view.selection, RowSelection::All | RowSelection::Range(_))
+                        && matches!(
+                            series_view.selection,
+                            RowSelection::All | RowSelection::Range(_)
+                        )
                     {
                         let x_axis_range = model
                             .axes
@@ -301,13 +304,7 @@ impl MarksStage {
                         );
 
                         let _ = data_view.request_xy_weak_filter_for_series(
-                            model,
-                            datasets,
-                            view,
-                            *series_id,
-                            base_range,
-                            x_filter,
-                            y_filter,
+                            model, datasets, view, *series_id, base_range, x_filter, y_filter,
                         );
                     }
                 }
