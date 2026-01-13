@@ -1104,8 +1104,7 @@ impl TextSystem {
     ) -> (TextBlobId, TextMetrics) {
         let text = key.text.clone();
 
-        let prefer_parley = !text.as_ref().contains('\n')
-            && constraints.max_width.is_some()
+        let prefer_parley = constraints.max_width.is_some()
             && (matches!(constraints.wrap, TextWrap::Word)
                 || (matches!(constraints.wrap, TextWrap::None)
                     && matches!(constraints.overflow, TextOverflow::Ellipsis)));

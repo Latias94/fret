@@ -41,6 +41,14 @@ pub(crate) fn wrap_with_constraints(
         TextInput::Attributed { text, .. } => text.len(),
     };
 
+    let has_newlines = match input {
+        TextInput::Plain { text, .. } => text.contains('\n'),
+        TextInput::Attributed { text, .. } => text.contains('\n'),
+    };
+    if has_newlines {
+        return wrap_with_newlines(shaper, input, constraints, scale);
+    }
+
     match constraints {
         TextConstraints {
             max_width: Some(max_width),
@@ -67,6 +75,137 @@ pub(crate) fn wrap_with_constraints(
             line_ranges: vec![0..text_len],
             lines: vec![shaper.shape_single_line(input, scale)],
         },
+    }
+}
+
+fn wrap_with_newlines(
+    shaper: &mut ParleyShaper,
+    input: TextInput<'_>,
+    constraints: TextConstraints,
+    scale: f32,
+) -> WrappedLayout {
+    let (text, base, spans) = match input {
+        TextInput::Plain { text, style } => (text, style, None),
+        TextInput::Attributed { text, base, spans } => (text, base, Some(spans)),
+    };
+
+    let text_len = text.len();
+    let max_width_px = constraints.max_width.map(|w| w.0 * scale);
+
+    let mut line_ranges: Vec<Range<usize>> = Vec::new();
+    let mut lines: Vec<ShapedLineLayout> = Vec::new();
+
+    let mut p_start = 0usize;
+    for (i, ch) in text.char_indices() {
+        if ch != '\n' {
+            continue;
+        }
+        push_paragraph(
+            shaper,
+            text,
+            base,
+            spans,
+            p_start..i,
+            constraints,
+            max_width_px,
+            scale,
+            &mut line_ranges,
+            &mut lines,
+        );
+        p_start = i + 1;
+    }
+    push_paragraph(
+        shaper,
+        text,
+        base,
+        spans,
+        p_start..text_len,
+        constraints,
+        max_width_px,
+        scale,
+        &mut line_ranges,
+        &mut lines,
+    );
+
+    WrappedLayout {
+        text_len,
+        kept_end: text_len,
+        line_ranges,
+        lines,
+    }
+}
+
+fn push_paragraph(
+    shaper: &mut ParleyShaper,
+    text: &str,
+    base: &fret_core::TextStyle,
+    spans: Option<&[TextSpan]>,
+    range: Range<usize>,
+    constraints: TextConstraints,
+    max_width_px: Option<f32>,
+    scale: f32,
+    out_ranges: &mut Vec<Range<usize>>,
+    out_lines: &mut Vec<ShapedLineLayout>,
+) {
+    let start = range.start.min(text.len());
+    let end = range.end.min(text.len());
+    let paragraph_range = start..end;
+
+    match constraints {
+        TextConstraints {
+            max_width: Some(_),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            ..
+        } => {
+            let Some(max_w) = max_width_px else {
+                return;
+            };
+            let slice = &text[paragraph_range.clone()];
+            let spans =
+                spans.map(|spans| slice_spans(spans, paragraph_range.start, paragraph_range.end));
+            let shaped = match spans.as_ref() {
+                Some(s) => wrap_none_ellipsis(
+                    shaper,
+                    TextInput::Attributed {
+                        text: slice,
+                        base,
+                        spans: s.as_slice(),
+                    },
+                    slice.len(),
+                    max_w,
+                    scale,
+                ),
+                None => wrap_none_ellipsis(
+                    shaper,
+                    TextInput::plain(slice, base),
+                    slice.len(),
+                    max_w,
+                    scale,
+                ),
+            };
+
+            out_ranges.push(paragraph_range.start..(paragraph_range.start + shaped.kept_end));
+            out_lines.push(shaped.line);
+        }
+        TextConstraints {
+            max_width: Some(_),
+            wrap: TextWrap::Word,
+            ..
+        } => {
+            let Some(max_w) = max_width_px else {
+                return;
+            };
+            let (ranges, lines) =
+                wrap_word_range(shaper, text, base, spans, paragraph_range, max_w, scale);
+            out_ranges.extend(ranges);
+            out_lines.extend(lines);
+        }
+        _ => {
+            let line = shape_slice(shaper, text, base, spans, paragraph_range.clone(), scale);
+            out_ranges.push(paragraph_range);
+            out_lines.push(line);
+        }
     }
 }
 
@@ -161,17 +300,47 @@ fn wrap_word(
         TextInput::Attributed { text, base, spans } => (text, base, Some(spans)),
     };
 
+    let (line_ranges, lines) =
+        wrap_word_range(shaper, text, base, spans, 0..text_len, max_width_px, scale);
+
+    WrappedLayout {
+        text_len,
+        kept_end: text_len,
+        line_ranges,
+        lines,
+    }
+}
+
+fn wrap_word_range(
+    shaper: &mut ParleyShaper,
+    text: &str,
+    base: &fret_core::TextStyle,
+    spans: Option<&[TextSpan]>,
+    range: Range<usize>,
+    max_width_px: f32,
+    scale: f32,
+) -> (Vec<Range<usize>>, Vec<ShapedLineLayout>) {
+    let start = range.start.min(text.len());
+    let end = range.end.min(text.len());
+
+    if start >= end {
+        return (
+            vec![start..start],
+            vec![shape_slice(shaper, text, base, spans, start..start, scale)],
+        );
+    }
+
     let mut lines: Vec<ShapedLineLayout> = Vec::new();
     let mut line_ranges: Vec<Range<usize>> = Vec::new();
 
-    let mut offset = 0usize;
-    while offset < text_len {
-        let slice = &text[offset..];
-        let full = shape_slice(shaper, text, base, spans, offset..text_len, scale);
+    let mut offset = start;
+    while offset < end {
+        let slice = &text[offset..end];
+        let full = shape_slice(shaper, text, base, spans, offset..end, scale);
 
         if full.width <= max_width_px + 0.5 {
             lines.push(full);
-            line_ranges.push(offset..text_len);
+            line_ranges.push(offset..end);
             break;
         }
 
@@ -206,12 +375,7 @@ fn wrap_word(
         offset = offset.saturating_add(cut_end);
     }
 
-    WrappedLayout {
-        text_len,
-        kept_end: text_len,
-        line_ranges,
-        lines,
-    }
+    (line_ranges, lines)
 }
 
 fn shape_prefix(
@@ -572,5 +736,80 @@ mod tests {
         for w in wrapped.line_ranges.windows(2) {
             assert_eq!(w[0].end, w[1].start);
         }
+    }
+
+    #[test]
+    fn newlines_split_into_paragraphs_and_create_gaps_in_ranges() {
+        let mut shaper = ParleyShaper::new();
+        let base = TextStyle {
+            font: FontId::default(),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let text = "hello\nworld";
+        let spans = [TextSpan {
+            len: text.len(),
+            shaping: TextShapingStyle::default(),
+            paint: TextPaintStyle::default(),
+        }];
+
+        let constraints = TextConstraints {
+            max_width: Some(Px(40.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+
+        let wrapped = wrap_with_constraints(
+            &mut shaper,
+            TextInput::Attributed {
+                text,
+                base: &base,
+                spans: &spans,
+            },
+            constraints,
+        );
+
+        assert!(wrapped.lines.len() >= 2);
+        assert_eq!(wrapped.line_ranges.first().unwrap().start, 0);
+        assert_eq!(
+            wrapped.line_ranges.last().unwrap().end,
+            text.len(),
+            "last line should end at the full text length"
+        );
+
+        assert!(
+            wrapped
+                .line_ranges
+                .windows(2)
+                .any(|w| w[0].end + 1 == w[1].start),
+            "expected at least one paragraph boundary gap caused by a newline"
+        );
+    }
+
+    #[test]
+    fn empty_lines_produce_lines_for_consecutive_newlines() {
+        let mut shaper = ParleyShaper::new();
+        let base = TextStyle {
+            font: FontId::default(),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let text = "\n";
+        let constraints = TextConstraints {
+            max_width: Some(Px(40.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+
+        let wrapped =
+            wrap_with_constraints(&mut shaper, TextInput::plain(text, &base), constraints);
+        assert_eq!(wrapped.lines.len(), 2, "expected two empty paragraphs");
+        assert_eq!(wrapped.line_ranges.len(), 2);
+        assert_eq!(wrapped.line_ranges[0], 0..0);
+        assert_eq!(wrapped.line_ranges[1], 1..1);
     }
 }

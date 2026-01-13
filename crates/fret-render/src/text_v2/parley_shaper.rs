@@ -114,6 +114,18 @@ impl ParleyShaper {
         self.layout.break_all_lines(None);
 
         let Some(line) = self.layout.lines().next() else {
+            if text.is_empty() {
+                let fallback = self.shape_single_line(TextInput::plain(" ", base_style), scale);
+                return ShapedLineLayout {
+                    width: 0.0,
+                    ascent: fallback.ascent,
+                    descent: fallback.descent,
+                    baseline: fallback.baseline,
+                    line_height: fallback.line_height,
+                    glyphs: Vec::new(),
+                    clusters: Vec::new(),
+                };
+            }
             return ShapedLineLayout {
                 width: 0.0,
                 ascent: 0.0,
