@@ -17,12 +17,12 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 - Last updated: 2026-01-13
 - ADR count (numbered): 161
 
-- Aligned: 79
-- Aligned (with known gaps): 36
+- Aligned: 80
+- Aligned (with known gaps): 37
 - N/A (superseded): 1
 - Not audited: 22
 - Not implemented: 2
-- Partially aligned: 21
+- Partially aligned: 19
 
 ## Matrix
 
@@ -48,7 +48,7 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 | [`0018-key-codes-and-shortcuts.md`](0018-key-codes-and-shortcuts.md) | Accepted | Aligned | Physical key codes as `KeyCode` (aligned with `keyboard-types::Code`): `crates/fret-core/src/input.rs`; winit mapping uses physical keys: `crates/fret-runner-winit/src/lib.rs` (`map_physical_key`). |
 | [`0019-scene-state-stack-and-layers.md`](0019-scene-state-stack-and-layers.md) | Accepted | Aligned | Scene state ops + debug validation: `crates/fret-core/src/scene.rs` (`PushTransform/Opacity/Layer/Clip` + `validate`); renderer encodes stack into draw state: `crates/fret-render/src/renderer/render_scene/encode/ops.rs`. |
 | [`0020-focus-and-command-routing.md`](0020-focus-and-command-routing.md) | Accepted | Aligned | Shortcut→command as effects: `crates/fret-ui/src/tree/shortcuts.rs` (`Effect::Command`, repeatable gating via `CommandMeta`); widget-scope dispatch: `crates/fret-ui/src/tree/commands.rs`; runner drains and calls driver handlers: `crates/fret-launch/src/runner/desktop/mod.rs`. |
-| [`0021-keymap-file-format.md`](0021-keymap-file-format.md) | Accepted | Aligned (with known gaps) | Keymap parsing + platform/when + sequences support: `crates/fret-runtime/src/keymap.rs` (v1 + v2 sequences). Disk IO helpers live in `crates/fret-app/src/keymap.rs`, and standardized layered loading (user + project) lives in `crates/fret-app/src/config_files.rs` (`load_layered_keymap`) and is used by the bootstrap golden path (`ecosystem/fret-bootstrap/src/lib.rs`). Gap: “plugin default bindings” remain app-owned (command registration can provide defaults, but there is no standardized workspace-wide installer yet). |
+| [`0021-keymap-file-format.md`](0021-keymap-file-format.md) | Accepted | Aligned (with known gaps) | Keymap parsing + platform/when + sequences support: `crates/fret-runtime/src/keymap.rs` (v1 + v2 sequences). Disk IO helpers live in `crates/fret-app/src/keymap.rs` (`keymap_from_file_if_exists`). Layered path defaults (user config dir + `./.fret/`) live in `crates/fret-app/src/config_files.rs` (`LayeredConfigPaths::{user_keymap_json,project_keymap_json}`) and are used by the bootstrap golden path to layer user + project keymaps: `ecosystem/fret-bootstrap/src/lib.rs` (`with_layered_keymap`, `with_default_config_files`). Gaps: \"plugin default bindings\" remain app-owned, and there is no standardized conflict reporting/UI yet (ADR 0021 section 7). |
 | [`0022-when-expressions.md`](0022-when-expressions.md) | Accepted | Aligned | Parser/validator/evaluator: `crates/fret-runtime/src/when_expr.rs` (unknown identifiers evaluate false via `eval_ident_bool`). |
 | [`0023-command-metadata-menus-and-palette.md`](0023-command-metadata-menus-and-palette.md) | Accepted | Partially aligned | Command metadata + scopes: `crates/fret-runtime/src/commands.rs` (`CommandMeta`, `CommandScope`), stored on app: `crates/fret-app/src/app.rs`; menu model: `crates/fret-runtime/src/menu.rs`; command palette widget exists (`ecosystem/fret-ui-shadcn/src/command.rs`) but registry→palette wiring remains app-owned. |
 | [`0024-undo-redo-and-edit-transactions.md`](0024-undo-redo-and-edit-transactions.md) | Deferred | Partially aligned | Reusable app-owned undo substrate exists in `ecosystem/fret-undo` (`UndoService`, `UndoRecord`, `ValueTx`, `CoalesceKey`) and is exercised by viewport tool interactions (gizmo drag begin/update/commit/cancel + coalescing) in `apps/fret-examples/src/gizmo3d_demo.rs`. Domain-local, op-based undo/redo also exists for the node-graph editor (`GraphTransaction` + `GraphHistory`) in `ecosystem/fret-node/src/ops/{mod.rs,history.rs}`. Gaps: no standardized cross-domain `EditOp` schema, no multi-effect transaction bundling (e.g. selection + transform + dirty) as a single edit unit, and no persistence/serialization policy is implemented yet (consistent with ADR scope being editor-app). |
