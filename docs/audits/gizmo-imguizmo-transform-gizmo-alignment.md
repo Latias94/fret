@@ -231,6 +231,7 @@ This is a suggested sequence for reaching "mature editor" parity without over-de
 - Core transform set: translate (axis/plane/screen/dolly), rotate (axis/view/arcball), scale (axis/plane/uniform), bounds/box scaling.
 - Fine-grained operation selection: `GizmoConfig::operation_mask: Option<GizmoOps>` (ImGuizmo-like `OPERATION` / transform-gizmo `EnumSet`).
 - Editor-feel invariants are guarded by tests (return-to-zero stability, behind-camera culling, near-plane edge cases).
+- Universal overlap is guarded by tests across size policies (PixelsClampedBySelectionBounds/SelectionBounds), including view ring + arcball collisions (`ecosystem/fret-gizmo/src/gizmo/tests.rs`).
 
 ### Biggest remaining gaps vs. "mature editor feel" (P0)
 
