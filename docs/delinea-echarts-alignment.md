@@ -119,7 +119,7 @@ single “at a glance” view of:
   - Wheel on Y axis band zooms Y only; Y span limits (when configured) clamp interaction-derived writes.
   - 2D box zoom writes a paired window update (no sparse filtering materialization).
   - When `DataZoomYSpec.filter_mode=Filter` is enabled, non-stacked scatter and line-family series (Line/Area) may materialize a sparse `RowSelection::Indices` filtered by the effective Y window (current: guarded by a view-size cap and disabled for stacked series).
-  - When `DataZoomYSpec.filter_mode=Empty` is enabled, non-stacked line-family series (Line/Area/Band) may emit segment breaks for samples outside the Y window (mark-level masking; preserves base row selection).
+  - When `DataZoomYSpec.filter_mode=Empty` is enabled, non-stacked line-family series (Line/Area/Band) may emit segment breaks for samples outside the Y window (masking preserves base row selection; tooltip/axisPointer sampling treats masked samples as `Missing`).
   - When both X and Y `filterMode=weakFilter` are enabled (one `dataZoom` per axis), non-stacked scatter and line-family series (Line/Area/Band) may materialize a sparse `RowSelection::Indices` implementing the ECharts `weakFilter` rule: filter only when **all** relevant dimensions are out-of-window on the **same** side (below/below or above/above). This is a v1 subset (cartesian XY only, size-capped, and budgeted via `DataViewStage`; for `Band`, the Y dimension is treated as an interval).
   - When the view is above the multi-dim `weakFilter` size cap, `delinea` currently degrades to per-axis filtering (effectively `Filter` behavior), because it does not materialize the indices-backed selection needed to preserve ECharts `weakFilter` semantics.
 - Missing vs ECharts (high value):
