@@ -3241,12 +3241,128 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     }
                 }
 
+                let aligns = matches!(
+                    mode,
+                    AlignDistributeMode::AlignLeft
+                        | AlignDistributeMode::AlignRight
+                        | AlignDistributeMode::AlignTop
+                        | AlignDistributeMode::AlignBottom
+                        | AlignDistributeMode::AlignCenterX
+                        | AlignDistributeMode::AlignCenterY
+                );
+                let affects_x = matches!(
+                    mode,
+                    AlignDistributeMode::AlignLeft
+                        | AlignDistributeMode::AlignRight
+                        | AlignDistributeMode::AlignCenterX
+                );
+                let affects_y = matches!(
+                    mode,
+                    AlignDistributeMode::AlignTop
+                        | AlignDistributeMode::AlignBottom
+                        | AlignDistributeMode::AlignCenterY
+                );
+
+                let moved_nodes: std::collections::HashSet<GraphNodeId> = selected_nodes
+                    .iter()
+                    .copied()
+                    .chain(moved_by_group.iter().copied())
+                    .collect();
+                let multi_move = moved_nodes.len() > 1;
+
+                let mut shift = CanvasPoint::default();
+                let any_delta = !per_group_delta.is_empty() || !per_node_delta.is_empty();
+                if aligns
+                    && any_delta
+                    && multi_move
+                    && let Some(extent) = snapshot.interaction.node_extent
+                {
+                    let mut min_x: f32 = f32::INFINITY;
+                    let mut min_y: f32 = f32::INFINITY;
+                    let mut max_x: f32 = f32::NEG_INFINITY;
+                    let mut max_y: f32 = f32::NEG_INFINITY;
+                    let mut any = false;
+
+                    for node_id in moved_nodes.iter().copied() {
+                        let Some(node_geom) = geom.nodes.get(&node_id) else {
+                            continue;
+                        };
+                        let w = node_geom.rect.size.width.0.max(0.0);
+                        let h = node_geom.rect.size.height.0.max(0.0);
+                        if !w.is_finite() || !h.is_finite() {
+                            continue;
+                        }
+
+                        let base_delta = if moved_by_group.contains(&node_id) {
+                            g.nodes
+                                .get(&node_id)
+                                .and_then(|n| n.parent)
+                                .and_then(|p| per_group_delta.get(&p).copied())
+                                .unwrap_or_default()
+                        } else {
+                            per_node_delta.get(&node_id).copied().unwrap_or_default()
+                        };
+
+                        let x0 = node_geom.rect.origin.x.0 + base_delta.x;
+                        let y0 = node_geom.rect.origin.y.0 + base_delta.y;
+                        if !x0.is_finite() || !y0.is_finite() {
+                            continue;
+                        }
+
+                        any = true;
+                        min_x = min_x.min(x0);
+                        min_y = min_y.min(y0);
+                        max_x = max_x.max(x0 + w);
+                        max_y = max_y.max(y0 + h);
+                    }
+
+                    if any
+                        && min_x.is_finite()
+                        && min_y.is_finite()
+                        && max_x.is_finite()
+                        && max_y.is_finite()
+                    {
+                        let bbox_w = (max_x - min_x).max(0.0);
+                        let bbox_h = (max_y - min_y).max(0.0);
+                        let extent_w = extent.size.width.max(0.0);
+                        let extent_h = extent.size.height.max(0.0);
+
+                        if affects_x
+                            && extent.origin.x.is_finite()
+                            && extent_w.is_finite()
+                            && bbox_w.is_finite()
+                        {
+                            let min_dx = extent.origin.x - min_x;
+                            let mut max_dx = extent.origin.x + (extent_w - bbox_w).max(0.0) - min_x;
+                            if !max_dx.is_finite() || max_dx < min_dx {
+                                max_dx = min_dx;
+                            }
+                            shift.x = 0.0_f32.clamp(min_dx, max_dx);
+                        }
+
+                        if affects_y
+                            && extent.origin.y.is_finite()
+                            && extent_h.is_finite()
+                            && bbox_h.is_finite()
+                        {
+                            let min_dy = extent.origin.y - min_y;
+                            let mut max_dy = extent.origin.y + (extent_h - bbox_h).max(0.0) - min_y;
+                            if !max_dy.is_finite() || max_dy < min_dy {
+                                max_dy = min_dy;
+                            }
+                            shift.y = 0.0_f32.clamp(min_dy, max_dy);
+                        }
+                    }
+                }
+
                 // Apply group deltas first (and move their child nodes).
                 let mut groups_sorted = selected_groups.clone();
                 groups_sorted.sort();
                 for group_id in groups_sorted {
-                    let Some(delta) = per_group_delta.get(&group_id).copied() else {
-                        continue;
+                    let base = per_group_delta.get(&group_id).copied().unwrap_or_default();
+                    let delta = CanvasPoint {
+                        x: base.x + shift.x,
+                        y: base.y + shift.y,
                     };
                     let Some(group) = g.groups.get(&group_id) else {
                         continue;
@@ -3267,6 +3383,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         });
                     }
 
+                    if delta.x.abs() <= 1.0e-9 && delta.y.abs() <= 1.0e-9 {
+                        continue;
+                    }
                     for (&node_id, node) in &g.nodes {
                         if node.parent != Some(group_id) {
                             continue;
@@ -3293,8 +3412,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     if moved_by_group.contains(&node_id) {
                         continue;
                     }
-                    let Some(delta) = per_node_delta.get(&node_id).copied() else {
-                        continue;
+                    let base = per_node_delta.get(&node_id).copied().unwrap_or_default();
+                    let delta = CanvasPoint {
+                        x: base.x + shift.x,
+                        y: base.y + shift.y,
                     };
                     let Some(node) = g.nodes.get(&node_id) else {
                         continue;
@@ -3310,7 +3431,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         let node_w = node_geom.rect.size.width.0;
                         let node_h = node_geom.rect.size.height.0;
 
-                        if let Some(extent) = snapshot.interaction.node_extent {
+                        if !multi_move && let Some(extent) = snapshot.interaction.node_extent {
                             let min_x = extent.origin.x;
                             let min_y = extent.origin.y;
                             let max_x = extent.origin.x + (extent.size.width - node_w).max(0.0);
@@ -11027,10 +11148,10 @@ mod tests {
     }
     use crate::rules::EdgeEndpoint;
     use crate::ui::commands::{
-        CMD_NODE_GRAPH_ACTIVATE, CMD_NODE_GRAPH_ALIGN_LEFT, CMD_NODE_GRAPH_DELETE_SELECTION,
-        CMD_NODE_GRAPH_FOCUS_NEXT, CMD_NODE_GRAPH_FOCUS_NEXT_PORT, CMD_NODE_GRAPH_FOCUS_PORT_LEFT,
-        CMD_NODE_GRAPH_FOCUS_PORT_RIGHT, CMD_NODE_GRAPH_FOCUS_PREV, CMD_NODE_GRAPH_FOCUS_PREV_PORT,
-        CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_SELECT_ALL,
+        CMD_NODE_GRAPH_ACTIVATE, CMD_NODE_GRAPH_ALIGN_CENTER_X, CMD_NODE_GRAPH_ALIGN_LEFT,
+        CMD_NODE_GRAPH_DELETE_SELECTION, CMD_NODE_GRAPH_FOCUS_NEXT, CMD_NODE_GRAPH_FOCUS_NEXT_PORT,
+        CMD_NODE_GRAPH_FOCUS_PORT_LEFT, CMD_NODE_GRAPH_FOCUS_PORT_RIGHT, CMD_NODE_GRAPH_FOCUS_PREV,
+        CMD_NODE_GRAPH_FOCUS_PREV_PORT, CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_SELECT_ALL,
     };
 
     use super::super::state::{NodeDrag, ViewSnapshot, WireDrag, WireDragKind};
@@ -12301,6 +12422,95 @@ mod tests {
             read_node_pos(&mut host, &graph, b),
             CanvasPoint { x: 10.0, y: 5.0 }
         );
+    }
+
+    #[test]
+    fn align_center_x_preserves_alignment_under_node_extent_bounds() {
+        let mut host = TestUiHostImpl::default();
+
+        let mut graph_value = Graph::new(GraphId::new());
+        let kind = NodeKindKey::new("test.node");
+
+        let a = NodeId::new();
+        let b = NodeId::new();
+        graph_value.nodes.insert(
+            a,
+            Node {
+                kind: kind.clone(),
+                kind_version: 1,
+                pos: CanvasPoint { x: 90.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: Some(CanvasSize {
+                    width: 10.0,
+                    height: 20.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+        graph_value.nodes.insert(
+            b,
+            Node {
+                kind,
+                kind_version: 1,
+                pos: CanvasPoint { x: 150.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: Some(CanvasSize {
+                    width: 40.0,
+                    height: 20.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+        canvas.sync_view_state(&mut host);
+
+        view.update(&mut host, |s, _cx| {
+            s.selected_nodes = vec![a, b];
+            s.interaction.node_extent = Some(CanvasRect {
+                origin: CanvasPoint { x: 0.0, y: 0.0 },
+                size: CanvasSize {
+                    width: 100.0,
+                    height: 100.0,
+                },
+            });
+        })
+        .unwrap();
+
+        let mut services = NullServices::default();
+        let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
+        let mut cx = command_cx(&mut host, &mut services, &mut tree);
+
+        assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_ALIGN_CENTER_X)));
+        assert_eq!(canvas.history.undo_len(), 1);
+
+        let pos_a = read_node_pos(&mut host, &graph, a);
+        let pos_b = read_node_pos(&mut host, &graph, b);
+        assert_eq!(pos_a.x, 75.0);
+        assert_eq!(pos_b.x, 60.0);
+
+        let center_a = pos_a.x + 5.0;
+        let center_b = pos_b.x + 20.0;
+        assert!((center_a - center_b).abs() <= 1.0e-6);
     }
 
     #[test]
