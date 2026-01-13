@@ -468,7 +468,33 @@ impl ElementHostWidget {
             },
         );
         let content_extent = metrics.total_height();
-        let avail = available_px_or_zero(cx.constraints);
+
+        let estimate_extent = Px(props.estimate_row_height.0.max(0.0));
+        let available_w = cx
+            .constraints
+            .known
+            .width
+            .or_else(|| cx.constraints.available.width.definite())
+            .unwrap_or(Px(0.0));
+        let available_h = cx
+            .constraints
+            .known
+            .height
+            .or_else(|| cx.constraints.available.height.definite())
+            .unwrap_or(Px(0.0));
+        let measured_w = match cx.constraints.available.width {
+            AvailableSpace::Definite(px) => px,
+            AvailableSpace::MaxContent | AvailableSpace::MinContent => Px(0.0),
+        };
+        let measured_h = match cx.constraints.available.height {
+            AvailableSpace::Definite(px) => px,
+            AvailableSpace::MaxContent => content_extent,
+            AvailableSpace::MinContent => estimate_extent,
+        };
+        let avail = Size::new(
+            Px(available_w.0.max(measured_w.0)),
+            Px(available_h.0.max(measured_h.0)),
+        );
         let axis = props.axis;
 
         let desired_w = match props.layout.size.width {
