@@ -3371,6 +3371,84 @@ fn universal_translate_tip_intent_works_in_orthographic() {
 }
 
 #[test]
+fn universal_translate_tip_intent_works_with_wide_fov() {
+    let mut gizmo = base_gizmo(GizmoMode::Universal);
+    assert!(gizmo.config.universal_includes_scale);
+
+    // Keep the gizmo reasonably small so the overlap window between rotate rings and translate
+    // arrow tips stays within the default pick radius at very wide FOV.
+    gizmo.config.size_px = 48.0;
+    // Wide FOV projections can spread sub-handles in screen space. Inflate the pick radius so the
+    // rotate ring is still considered near the translate tip, ensuring the universal overlap
+    // policy is exercised in this projection.
+    gizmo.config.pick_radius_px = 64.0;
+
+    let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+    let view_proj = test_view_projection_fov((800.0, 600.0), 160.0, Vec3::new(0.8, 0.6, 1.2));
+    let origin = Vec3::ZERO;
+    let axes = gizmo.axis_dirs(&Transform3d::default());
+
+    let length_world = axis_length_world(
+        view_proj,
+        vp,
+        origin,
+        gizmo.config.depth_range,
+        gizmo.config.size_px,
+    )
+    .unwrap();
+
+    let tip_world = origin + axes[0] * (length_world * Gizmo::UNIVERSAL_TRANSLATE_TIP_SCALE);
+    let tip = project_point(view_proj, vp, tip_world, gizmo.config.depth_range).unwrap();
+
+    assert!(
+        gizmo
+            .pick_rotate_axis(view_proj, vp, origin, tip.screen, axes, length_world)
+            .is_some(),
+        "expected rotate rings to be considered near the translate tip at wide FOV"
+    );
+
+    let (hit, kind) = gizmo
+        .pick_universal_handle(view_proj, vp, origin, tip.screen, axes, length_world)
+        .unwrap();
+    assert_eq!(kind, GizmoMode::Translate);
+    assert_eq!(hit.handle, TranslateHandle::AxisX.id());
+}
+
+#[test]
+fn universal_can_pick_translate_plane_xy_inside() {
+    let gizmo = base_gizmo(GizmoMode::Universal);
+
+    let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+    let view_proj = test_view_projection((800.0, 600.0));
+    let origin = Vec3::ZERO;
+    let axes = gizmo.axis_dirs(&Transform3d::default());
+
+    let length_world = axis_length_world(
+        view_proj,
+        vp,
+        origin,
+        gizmo.config.depth_range,
+        gizmo.config.size_px,
+    )
+    .unwrap();
+
+    let pv = gizmo.part_visuals();
+    let off = length_world * pv.translate_plane_offset_fraction.max(0.0);
+    let size = length_world * pv.translate_plane_size_fraction.max(0.0);
+    let quad_world = translate_plane_quad_world(origin, axes[0], axes[1], off, size);
+    let quad = project_quad(view_proj, vp, quad_world, gizmo.config.depth_range).unwrap();
+
+    // Pick at the center of the plane quad.
+    let center = (quad[0] + quad[2]) * 0.5;
+
+    let (hit, kind) = gizmo
+        .pick_universal_handle(view_proj, vp, origin, center, axes, length_world)
+        .unwrap();
+    assert_eq!(kind, GizmoMode::Translate);
+    assert_eq!(hit.handle, TranslateHandle::PlaneXY.id());
+}
+
+#[test]
 fn universal_is_not_pickable_when_origin_is_behind_camera() {
     let gizmo = base_gizmo(GizmoMode::Universal);
     let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));

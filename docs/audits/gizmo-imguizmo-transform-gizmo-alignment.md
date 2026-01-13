@@ -236,7 +236,9 @@ This is a suggested sequence for reaching "mature editor" parity without over-de
 
 1. **Viewport redraw policy (first frame + interaction-driven redraw)**
    - Goal: demo/editor should not require any input to present the first frame; interaction should always feel responsive.
-   - Suggested work: ensure the host calls `request_redraw(...)` on startup, on camera/scene changes, and during active drags.
+   - Status: **Aligned (demo/runner)** — the winit runner requests an initial redraw on window creation, and the gizmo demo
+     requests redraw on viewport input and while camera frame animations are active.
+   - Remaining: ensure other viewport demos follow the same "interaction-driven redraw" rule (especially web/wasm paths).
 2. **Universal mode surface + policy**
    - We now support depth/dolly in Universal behind a toggle (`universal_includes_translate_depth`), but the policy surface is still evolving.
    - Suggested work: expose all Universal inclusions as explicit toggles (translate depth, axis scale, optional rotate view ring, arcball),
