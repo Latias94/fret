@@ -3,7 +3,7 @@ use crate::engine::ChartState;
 use crate::engine::model::ChartModel;
 use crate::engine::window_policy::AxisFilter1D;
 use crate::ids::{AxisId, DatasetId, Revision, SeriesId};
-use crate::spec::FilterMode;
+use crate::spec::{FilterMode, SeriesKind};
 use crate::transform::{RowRange, RowSelection, SeriesXPolicy, data_zoom_x_node, data_zoom_y_node};
 
 #[cfg(feature = "serde")]
@@ -31,6 +31,82 @@ pub struct SeriesView {
     pub x_filter_mode: FilterMode,
     pub y_filter_mode: FilterMode,
     pub y_filter: AxisFilter1D,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct SeriesEmptyMask {
+    pub x_active: bool,
+    pub x_filter: AxisFilter1D,
+    pub y_active: bool,
+    pub y_filter: AxisFilter1D,
+    pub y_is_interval: bool,
+}
+
+impl SeriesEmptyMask {
+    pub fn allows_axis_x_value(self, axis_x: f64) -> bool {
+        if !self.x_active {
+            return true;
+        }
+        axis_x.is_finite() && self.x_filter.contains(axis_x)
+    }
+
+    pub fn allows_raw_index(
+        self,
+        raw_index: usize,
+        x: &[f64],
+        y0: &[f64],
+        y1: Option<&[f64]>,
+    ) -> bool {
+        if self.x_active {
+            let x_raw = x.get(raw_index).copied().unwrap_or(f64::NAN);
+            if !x_raw.is_finite() || !self.x_filter.contains(x_raw) {
+                return false;
+            }
+        }
+
+        if self.y_active {
+            if self.y_is_interval {
+                let Some(y1) = y1 else {
+                    return false;
+                };
+                let y0_raw = y0.get(raw_index).copied().unwrap_or(f64::NAN);
+                let y1_raw = y1.get(raw_index).copied().unwrap_or(f64::NAN);
+                if !y0_raw.is_finite()
+                    || !y1_raw.is_finite()
+                    || !self.y_filter.intersects_interval(y0_raw, y1_raw)
+                {
+                    return false;
+                }
+            } else {
+                let y_raw = y0.get(raw_index).copied().unwrap_or(f64::NAN);
+                if !y_raw.is_finite() || !self.y_filter.contains(y_raw) {
+                    return false;
+                }
+            }
+        }
+
+        true
+    }
+}
+
+impl SeriesView {
+    pub fn empty_mask(&self, kind: SeriesKind, stacked: bool) -> SeriesEmptyMask {
+        let x_active = self.x_filter_mode == FilterMode::Empty
+            && (self.x_policy.filter.min.is_some() || self.x_policy.filter.max.is_some());
+        let y_active = self.y_filter_mode == FilterMode::Empty
+            && !stacked
+            && (self.y_filter.min.is_some() || self.y_filter.max.is_some())
+            && matches!(kind, SeriesKind::Line | SeriesKind::Area | SeriesKind::Band);
+
+        SeriesEmptyMask {
+            x_active,
+            x_filter: self.x_policy.filter,
+            y_active,
+            y_filter: self.y_filter,
+            y_is_interval: kind == SeriesKind::Band,
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone)]
