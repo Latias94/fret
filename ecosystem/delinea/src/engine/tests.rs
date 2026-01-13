@@ -5053,6 +5053,180 @@ fn axis_pointer_axis_trigger_samples_scatter_by_nearest_point() {
 }
 
 #[test]
+fn axis_pointer_axis_trigger_handles_indices_selection_from_y_filter() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_a = crate::ids::SeriesId::new(1);
+    let series_b = crate::ids::SeriesId::new(2);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_a_field = crate::ids::FieldId::new(2);
+    let y_b_field = crate::ids::FieldId::new(3);
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        )),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_a_field,
+                    column: 1,
+                },
+                FieldSpec {
+                    id: y_b_field,
+                    column: 2,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![DataZoomXSpec {
+            id: crate::ids::DataZoomId::new(1),
+            axis: x_axis,
+            filter_mode: FilterMode::Filter,
+            min_value_span: None,
+            max_value_span: None,
+        }],
+        data_zoom_y: vec![DataZoomYSpec {
+            id: crate::ids::DataZoomId::new(2),
+            axis: y_axis,
+            filter_mode: FilterMode::Filter,
+            min_value_span: None,
+            max_value_span: None,
+        }],
+        tooltip: None,
+        axis_pointer: Some(AxisPointerSpec {
+            enabled: true,
+            trigger: crate::spec::AxisPointerTrigger::Axis,
+            pointer_type: AxisPointerType::Line,
+            label: Default::default(),
+            snap: false,
+            trigger_distance_px: 0.0,
+            throttle_px: 0.0,
+        }),
+        visual_maps: vec![],
+        series: vec![
+            SeriesSpec {
+                id: series_a,
+                name: None,
+                kind: SeriesKind::Scatter,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_a_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+            },
+            SeriesSpec {
+                id: series_b,
+                name: None,
+                kind: SeriesKind::Scatter,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_b_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+            },
+        ],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let mut table = DataTable::default();
+    table.push_column(Column::F64((0..=10).map(|v| v as f64).collect()));
+    table.push_column(Column::F64(
+        (0..=10)
+            .map(|i| if i % 2 == 0 { 0.0 } else { 1.0 })
+            .collect(),
+    ));
+    table.push_column(Column::F64((0..=10).map(|i| 100.0 + i as f64).collect()));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    // X slices to [2,8] first, then Y filter materializes an indices selection for scatter A:
+    // x=[2..=8], y alternates 0/1 -> indices = [2,4,6,8].
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x_axis,
+        window: Some(DataWindow { min: 2.0, max: 8.0 }),
+    });
+    // Keep only the y=0 samples for series A; series B has no in-window values and becomes empty.
+    engine.apply_action(Action::SetDataWindowY {
+        axis: y_axis,
+        window: Some(DataWindow { min: 0.0, max: 0.1 }),
+    });
+
+    engine.apply_action(Action::HoverAt {
+        point: Point::new(Px(50.0), Px(50.0)),
+    });
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 32))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let axis_pointer = engine.output().axis_pointer.as_ref().unwrap();
+    assert_eq!(axis_pointer.crosshair_px, Point::new(Px(50.0), Px(50.0)));
+
+    let crate::TooltipOutput::Axis(axis) = &axis_pointer.tooltip else {
+        panic!("expected axis-trigger tooltip payload");
+    };
+    assert_eq!(axis.axis, x_axis);
+    assert_eq!(axis.axis_kind, AxisKind::X);
+    assert!((axis.axis_value - 5.0).abs() < 1e-6);
+
+    assert_eq!(axis.series.len(), 2);
+    assert_eq!(axis.series[0].series, series_a);
+    assert_eq!(axis.series[1].series, series_b);
+
+    assert!(matches!(axis.series[0].value, crate::TooltipSeriesValue::Scalar(v) if v == 0.0));
+    assert!(matches!(
+        axis.series[1].value,
+        crate::TooltipSeriesValue::Missing
+    ));
+}
+
+#[test]
 fn axis_pointer_axis_trigger_uses_nearest_x_index_for_large_non_monotonic_views() {
     let dataset_id = crate::ids::DatasetId::new(1);
     let grid_id = crate::ids::GridId::new(1);
