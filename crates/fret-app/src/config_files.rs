@@ -61,11 +61,11 @@ pub fn load_layered_settings(
 
     let mut report = LayeredSettingsReport::default();
 
-    if let Some(path) = paths.user_settings_json() {
-        if let Some(value) = SettingsFileV1::load_json_value_if_exists(&path)? {
-            merge_json(&mut merged, value);
-            report.user = Some(path);
-        }
+    if let Some(path) = paths.user_settings_json()
+        && let Some(value) = SettingsFileV1::load_json_value_if_exists(&path)?
+    {
+        merge_json(&mut merged, value);
+        report.user = Some(path);
     }
 
     let project_path = paths.project_settings_json();
@@ -89,11 +89,11 @@ pub fn load_layered_keymap(
     let mut keymap = Keymap::default();
     let mut report = LayeredKeymapReport::default();
 
-    if let Some(path) = paths.user_keymap_json() {
-        if let Some(layer) = crate::keymap::keymap_from_file_if_exists(&path)? {
-            keymap.extend(layer);
-            report.user = Some(path);
-        }
+    if let Some(path) = paths.user_keymap_json()
+        && let Some(layer) = crate::keymap::keymap_from_file_if_exists(&path)?
+    {
+        keymap.extend(layer);
+        report.user = Some(path);
     }
 
     let project_path = paths.project_keymap_json();
