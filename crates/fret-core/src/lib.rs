@@ -65,8 +65,8 @@ pub use svg::{SvgFit, SvgService};
 pub use text::{
     AttributedText, CaretAffinity, DecorationLineStyle, FontWeight, HitTestResult,
     StrikethroughStyle, TextConstraints, TextFontFamilyConfig, TextInput, TextMetrics,
-    TextOverflow, TextPaintStyle, TextService, TextShapingStyle, TextSlant, TextSpan, TextStyle,
-    TextWrap, UnderlineStyle,
+    TextInputRef, TextOverflow, TextPaintStyle, TextService, TextShapingStyle, TextSlant, TextSpan,
+    TextStyle, TextWrap, UnderlineStyle,
 };
 pub use vector_path::{
     FillRule, FillStyle, PathCommand, PathConstraints, PathMetrics, PathService, PathStyle,
