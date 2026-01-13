@@ -58,6 +58,22 @@ Given `ViewportInputEvent event`:
 This is the most ergonomic option when gizmos are rendered into the engine target and the engine
 itself already operates in target pixels.
 
+#### Helper: `ViewportToolInput` (recommended)
+
+To reduce boilerplate and keep unit conversions consistent, use:
+
+- `fret_gizmo::ViewportToolInput::from_viewport_input_target_px(&event, MouseButton::Left)`
+
+It derives:
+
+- `viewport: ViewportRect` in render-target pixels,
+- `cursor_px` in render-target pixels (float),
+- `drag_started` / `dragging` for the chosen button,
+- `cursor_units_per_screen_px` (a conservative `target_px_per_screen_px`), useful for scaling
+  pixel-sized thresholds via `GizmoConfig::scale_for_cursor_units_per_screen_px(...)`.
+
+The end-to-end example uses this helper: `apps/fret-examples/src/gizmo3d_demo.rs`.
+
 ### Strategy B: drive gizmos in window logical pixels
 
 This is sometimes convenient if you want tooling math to live entirely in UI/input space.
@@ -147,4 +163,3 @@ Recommended direction:
 
 Until those helpers exist, use `apps/fret-examples/src/gizmo3d_demo.rs` as the canonical reference
 for integrating `fret-gizmo` correctly.
-
