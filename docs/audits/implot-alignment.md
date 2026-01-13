@@ -5,6 +5,7 @@ This document tracks feature parity between:
 - ImPlot (reference in `repo-ref/implot`)
 - `fret-plot` (2D, retained)
 - `fret-plot3d` (3D, retained; currently minimal)
+- For Plot3D-specific parity tracking: `docs/audits/implot3d-alignment.md`.
 
 The goal is not API compatibility. The goal is to match UX and core capabilities with clean,
 token-driven theming and retained rendering/cache.
