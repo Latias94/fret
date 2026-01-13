@@ -550,16 +550,12 @@ impl<H: UiHost> UiTree<H> {
                 .saturating_add(1);
         }
 
-        if std::env::var_os("FRET_LAYOUT_FORBID_WIDGET_FALLBACK_SOLVES").is_some() {
-            let label = crate::declarative::frame::element_record_for_node(app, window, node)
-                .map(|r| format!("{:?}", r.instance))
-                .unwrap_or_default();
-            panic!(
-                "layout engine fallback solve ({widget_kind}) for {node:?} {label} missing_child={missing_child:?}"
-            );
-        }
+        let forbid_fallback_solves =
+            std::env::var_os("FRET_LAYOUT_FORBID_WIDGET_FALLBACK_SOLVES").is_some();
+        let trace_fallback_solves =
+            std::env::var_os("FRET_LAYOUT_TRACE_WIDGET_FALLBACK_SOLVES").is_some();
 
-        if std::env::var_os("FRET_LAYOUT_TRACE_WIDGET_FALLBACK_SOLVES").is_some() {
+        if trace_fallback_solves {
             let label = crate::declarative::frame::element_record_for_node(app, window, node)
                 .map(|r| r.instance);
             let missing_label = missing_child.and_then(|child| {
@@ -576,6 +572,21 @@ impl<H: UiHost> UiTree<H> {
                 missing_label = ?missing_label,
                 path = ?self.debug_node_path(node),
                 "layout engine child rects missing; falling back to widget-local solve"
+            );
+        }
+
+        if forbid_fallback_solves {
+            let label = crate::declarative::frame::element_record_for_node(app, window, node)
+                .map(|r| format!("{:?}", r.instance))
+                .unwrap_or_default();
+            let missing_label = missing_child
+                .and_then(|child| {
+                    crate::declarative::frame::element_record_for_node(app, window, child)
+                })
+                .map(|r| format!("{:?}", r.instance));
+            let path = self.debug_node_path(node);
+            panic!(
+                "layout engine fallback solve ({widget_kind}) for {node:?} {label} missing_child={missing_child:?} missing_label={missing_label:?} path={path:?}"
             );
         }
     }
