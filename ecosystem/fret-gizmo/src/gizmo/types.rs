@@ -35,6 +35,47 @@ pub enum GizmoHandedness {
     LeftHanded,
 }
 
+impl GizmoHandedness {
+    /// Attempts to infer the coordinate handedness from a projection matrix.
+    ///
+    /// This mirrors the lightweight detection used by the `transform-gizmo` reference:
+    /// - Perspective projections can be distinguished by the sign of `projection.z_axis.w`.
+    /// - Orthographic projections (where `z_axis.w` is zero) can be distinguished by the sign of
+    ///   `projection.z_axis.z`.
+    ///
+    /// Note: this is a heuristic intended as a convenience for hosts that build projections via
+    /// `glam`'s `*_rh` / `*_lh` constructors. If your engine mixes conventions (e.g. a right-handed
+    /// world with a left-handed clip-space projection), prefer setting `GizmoConfig::handedness`
+    /// explicitly.
+    pub fn detect_from_projection(projection: Mat4) -> Option<Self> {
+        if !projection.is_finite() {
+            return None;
+        }
+
+        let z_axis = projection.z_axis;
+        let w = z_axis.w;
+        let z = z_axis.z;
+
+        if !w.is_finite() || !z.is_finite() {
+            return None;
+        }
+
+        // `transform-gizmo` treats `z_axis.w == 0` as orthographic. Use an epsilon to avoid
+        // float noise when the projection was built through intermediate math.
+        if w.abs() <= 1e-6 {
+            if z > 0.0 {
+                Some(Self::LeftHanded)
+            } else {
+                Some(Self::RightHanded)
+            }
+        } else if w > 0.0 {
+            Some(Self::LeftHanded)
+        } else {
+            Some(Self::RightHanded)
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DepthMode {
     Test,
@@ -233,6 +274,33 @@ mod tests {
         let h = HandleId::from_parts(pid, 42);
         assert_eq!(h.plugin(), pid);
         assert_eq!(h.local(), 42);
+    }
+
+    #[test]
+    fn handedness_detect_from_projection_matches_glam_constructors() {
+        let proj_rh = Mat4::perspective_rh(60.0_f32.to_radians(), 16.0 / 9.0, 0.1, 100.0);
+        assert_eq!(
+            GizmoHandedness::detect_from_projection(proj_rh),
+            Some(GizmoHandedness::RightHanded)
+        );
+
+        let proj_lh = Mat4::perspective_lh(60.0_f32.to_radians(), 16.0 / 9.0, 0.1, 100.0);
+        assert_eq!(
+            GizmoHandedness::detect_from_projection(proj_lh),
+            Some(GizmoHandedness::LeftHanded)
+        );
+
+        let ortho_rh = Mat4::orthographic_rh(-1.0, 1.0, -1.0, 1.0, 0.1, 100.0);
+        assert_eq!(
+            GizmoHandedness::detect_from_projection(ortho_rh),
+            Some(GizmoHandedness::RightHanded)
+        );
+    }
+
+    #[test]
+    fn handedness_detect_from_projection_rejects_non_finite_matrices() {
+        let bad = Mat4::from_cols_array(&[f32::NAN; 16]);
+        assert_eq!(GizmoHandedness::detect_from_projection(bad), None);
     }
 }
 
