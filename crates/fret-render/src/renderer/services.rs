@@ -4,38 +4,52 @@ use std::collections::hash_map::Entry;
 impl fret_core::TextService for Renderer {
     fn prepare(
         &mut self,
-        text: &str,
-        style: &fret_core::TextStyle,
+        input: &fret_core::TextInput,
         constraints: fret_core::TextConstraints,
     ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
-        self.text_system.prepare(text, style, constraints)
-    }
-
-    fn prepare_rich(
-        &mut self,
-        rich: &fret_core::RichText,
-        base_style: &fret_core::TextStyle,
-        constraints: fret_core::TextConstraints,
-    ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
-        self.text_system.prepare_rich(rich, base_style, constraints)
+        match input {
+            fret_core::TextInput::Plain { text, style } => {
+                self.text_system.prepare(text.as_ref(), style, constraints)
+            }
+            fret_core::TextInput::Attributed { text, base, spans } => {
+                let rich = fret_core::AttributedText::new(text.clone(), spans.clone());
+                self.text_system
+                    .prepare_attributed(&rich, base, constraints)
+            }
+            _ => {
+                debug_assert!(false, "unsupported TextInput variant");
+                self.text_system.prepare(
+                    input.text(),
+                    &fret_core::TextStyle::default(),
+                    constraints,
+                )
+            }
+        }
     }
 
     fn measure(
         &mut self,
-        text: &str,
-        style: &fret_core::TextStyle,
+        input: &fret_core::TextInput,
         constraints: fret_core::TextConstraints,
     ) -> fret_core::TextMetrics {
-        self.text_system.measure(text, style, constraints)
-    }
-
-    fn measure_rich(
-        &mut self,
-        rich: &fret_core::RichText,
-        base_style: &fret_core::TextStyle,
-        constraints: fret_core::TextConstraints,
-    ) -> fret_core::TextMetrics {
-        self.text_system.measure_rich(rich, base_style, constraints)
+        match input {
+            fret_core::TextInput::Plain { text, style } => {
+                self.text_system.measure(text.as_ref(), style, constraints)
+            }
+            fret_core::TextInput::Attributed { text, base, spans } => {
+                let rich = fret_core::AttributedText::new(text.clone(), spans.clone());
+                self.text_system
+                    .measure_attributed(&rich, base, constraints)
+            }
+            _ => {
+                debug_assert!(false, "unsupported TextInput variant");
+                self.text_system.measure(
+                    input.text(),
+                    &fret_core::TextStyle::default(),
+                    constraints,
+                )
+            }
+        }
     }
 
     fn caret_x(&mut self, blob: fret_core::TextBlobId, index: usize) -> fret_core::Px {

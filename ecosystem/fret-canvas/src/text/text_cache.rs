@@ -130,7 +130,7 @@ impl TextCache {
                 e.get().prepared
             }
             Entry::Vacant(e) => {
-                let (blob, metrics) = services.text().prepare(text, style, constraints);
+                let (blob, metrics) = services.text().prepare_str(text, style, constraints);
                 let prepared = PreparedText {
                     blob,
                     metrics,

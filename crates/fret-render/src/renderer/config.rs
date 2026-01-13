@@ -32,6 +32,7 @@ impl Renderer {
             pipeline_switches_mask: self.perf.pipeline_switches_mask,
             pipeline_switches_text_mask: self.perf.pipeline_switches_text_mask,
             pipeline_switches_text_color: self.perf.pipeline_switches_text_color,
+            pipeline_switches_text_subpixel: self.perf.pipeline_switches_text_subpixel,
             pipeline_switches_path: self.perf.pipeline_switches_path,
             pipeline_switches_path_msaa: self.perf.pipeline_switches_path_msaa,
             pipeline_switches_composite: self.perf.pipeline_switches_composite,

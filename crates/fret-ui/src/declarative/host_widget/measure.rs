@@ -311,7 +311,7 @@ impl ElementHostWidget {
         let metrics = cx
             .services
             .text()
-            .measure(props.text.as_ref(), &style, constraints);
+            .measure_str(props.text.as_ref(), &style, constraints);
         clamp_to_constraints_in_measure(metrics.size, props.layout, cx.constraints)
     }
 
@@ -333,10 +333,12 @@ impl ElementHostWidget {
             overflow: props.overflow,
             scale_factor: cx.scale_factor,
         };
-        let metrics = cx
-            .services
-            .text()
-            .measure_rich(&props.rich, &style, constraints);
+        let input = fret_core::TextInput::attributed(
+            props.rich.text.clone(),
+            style.clone(),
+            props.rich.spans.clone(),
+        );
+        let metrics = cx.services.text().measure(&input, constraints);
         clamp_to_constraints_in_measure(metrics.size, props.layout, cx.constraints)
     }
 
@@ -358,10 +360,12 @@ impl ElementHostWidget {
             overflow: props.overflow,
             scale_factor: cx.scale_factor,
         };
-        let metrics = cx
-            .services
-            .text()
-            .measure_rich(&props.rich, &style, constraints);
+        let input = fret_core::TextInput::attributed(
+            props.rich.text.clone(),
+            style.clone(),
+            props.rich.spans.clone(),
+        );
+        let metrics = cx.services.text().measure(&input, constraints);
         clamp_to_constraints_in_measure(metrics.size, props.layout, cx.constraints)
     }
 
@@ -384,7 +388,7 @@ impl ElementHostWidget {
         let metrics = cx
             .services
             .text()
-            .measure("M", &props.text_style, constraints);
+            .measure_str("M", &props.text_style, constraints);
         let border_h = props.chrome.border.top.0.max(0.0) + props.chrome.border.bottom.0.max(0.0);
         let pad_h = props.chrome.padding.top.0.max(0.0) + props.chrome.padding.bottom.0.max(0.0);
         let h = Px((metrics.size.height.0 + pad_h + border_h).max(0.0));
@@ -417,7 +421,7 @@ impl ElementHostWidget {
         let metrics = cx
             .services
             .text()
-            .measure("M", &props.text_style, constraints);
+            .measure_str("M", &props.text_style, constraints);
         let border_h = props.chrome.border.top.0.max(0.0) + props.chrome.border.bottom.0.max(0.0);
         let pad_h = props.chrome.padding_y.0.max(0.0) * 2.0;
         let min_h = props.min_height.0.max(0.0);

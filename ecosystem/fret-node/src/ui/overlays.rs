@@ -510,7 +510,10 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
             });
 
             let label = Self::label_for(*btn, mode);
-            let (id, metrics) = cx.services.text().prepare(label, &text_style, constraints);
+            let (id, metrics) = cx
+                .services
+                .text()
+                .prepare_str(label, &text_style, constraints);
             self.text_blobs.push(id);
 
             let tx = rect.origin.x.0 + 0.5 * (rect.size.width.0 - metrics.size.width.0);
