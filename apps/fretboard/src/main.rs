@@ -44,6 +44,7 @@ fn help() -> Result<(), String> {
 Usage:
   fretboard help
   fretboard init todo [--path <path>] [--name <name>] [--ui-assets]
+  fretboard init hello [--path <path>] [--name <name>]
   fretboard hotpatch poke [--path <path>]
   fretboard hotpatch path [--path <path>]
   fretboard hotpatch watch [--path <path>...] [--trigger-path <path>] [--poll-ms <ms>] [--debounce-ms <ms>]
@@ -56,6 +57,7 @@ Usage:
 
 Examples:
   fretboard init todo --name my-todo
+  fretboard init hello --name hello-world
   fretboard dev native --bin components_gallery
   fretboard dev native --bin todo_demo
   fretboard dev native --bin assets_demo
@@ -91,6 +93,7 @@ fn init_cmd(args: Vec<String>) -> Result<(), String> {
 
     match template.as_str() {
         "todo" => init_todo(it.collect()),
+        "hello" | "hello-world" => init_hello(it.collect()),
         other => Err(format!("unknown init template: {other}")),
     }
 }
@@ -143,6 +146,60 @@ fn init_todo(args: Vec<String>) -> Result<(), String> {
     )?;
 
     println!("Initialized todo template at: {}", out_dir.display());
+    println!("Next:");
+    println!(
+        "  cargo run --manifest-path {}",
+        out_dir.join("Cargo.toml").display()
+    );
+    Ok(())
+}
+
+fn init_hello(args: Vec<String>) -> Result<(), String> {
+    let root = workspace_root()?;
+
+    let mut out_path: Option<PathBuf> = None;
+    let mut name: Option<String> = None;
+
+    let mut it = args.into_iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--path" => {
+                let raw = it
+                    .next()
+                    .ok_or_else(|| "--path requires a value".to_string())?;
+                out_path = Some(PathBuf::from(raw));
+            }
+            "--name" => {
+                name = Some(
+                    it.next()
+                        .ok_or_else(|| "--name requires a value".to_string())?,
+                );
+            }
+            "--help" | "-h" => return help(),
+            other => return Err(format!("unknown argument for init hello: {other}")),
+        }
+    }
+
+    let package_name = sanitize_package_name(name.as_deref().unwrap_or("hello-world"))?;
+
+    let out_dir = out_path.unwrap_or_else(|| root.join("local").join(&package_name));
+    ensure_dir_is_new_or_empty(&out_dir)?;
+
+    let cargo_toml = hello_template_cargo_toml(&package_name);
+    write_new_file(&out_dir.join("Cargo.toml"), &cargo_toml)?;
+
+    let src_dir = out_dir.join("src");
+    std::fs::create_dir_all(&src_dir).map_err(|e| e.to_string())?;
+    write_new_file(
+        &src_dir.join("main.rs"),
+        &hello_template_main_rs(&package_name),
+    )?;
+    write_new_file(
+        &out_dir.join("README.md"),
+        &hello_template_readme_md(&package_name),
+    )?;
+
+    println!("Initialized hello template at: {}", out_dir.display());
     println!("Next:");
     println!(
         "  cargo run --manifest-path {}",
@@ -211,6 +268,24 @@ anyhow = "1"
 fret-app = {{ path = "../../crates/fret-app" }}
 fret-bootstrap = {{ path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver", "preload-icon-svgs", "icons-lucide", "diagnostics"{ui_assets_features}] }}
 fret-ui-shadcn = {{ path = "../../ecosystem/fret-ui-shadcn", features = ["app-integration"] }}
+[workspace]
+"#
+    )
+}
+
+fn hello_template_cargo_toml(package_name: &str) -> String {
+    format!(
+        r#"[package]
+name = "{package_name}"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1"
+fret-app = {{ path = "../../crates/fret-app" }}
+fret-bootstrap = {{ path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver", "diagnostics"] }}
+fret-ui-shadcn = {{ path = "../../ecosystem/fret-ui-shadcn", features = ["app-integration"] }}
+
 [workspace]
 "#
     )
@@ -523,6 +598,63 @@ fn on_command(
     TEMPLATE.replace("__UI_ASSETS_BUILDER__", ui_assets_builder)
 }
 
+fn hello_template_main_rs(package_name: &str) -> String {
+    format!(
+        r#"use fret_app::{{App, CommandId}};
+use fret_bootstrap::ui_app_with_hooks;
+use fret_ui_shadcn::{{self as shadcn, prelude::*}};
+
+const CMD_CLICK: &str = "hello.click";
+
+fn main() -> anyhow::Result<()> {{
+    ui_app_with_hooks("{package_name}", init_window, view, |d| d.on_command(on_command))
+        .with_default_diagnostics()
+        .with_default_config_files()?
+        .with_main_window("{package_name}", (560.0, 360.0))
+        .init_app(|app| {{
+            shadcn::install_app(app);
+        }})
+        .run()
+        .map_err(anyhow::Error::from)
+}}
+
+fn init_window(_app: &mut App, _window: AppWindowId) {{}}
+
+fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> Vec<AnyElement> {{
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().size_full())
+            .gap(Space::N4)
+            .items_center()
+            .justify_center(),
+        |cx| {{
+            vec![
+                shadcn::Label::new("Hello, world!").into_element(cx),
+                shadcn::Button::new("Click me")
+                    .on_click(CMD_CLICK)
+                    .into_element(cx),
+            ]
+        }},
+    )]
+}}
+
+fn on_command(
+    _app: &mut App,
+    _services: &mut dyn UiServices,
+    _window: AppWindowId,
+    _ui: &mut UiTree<App>,
+    _st: &mut (),
+    cmd: &CommandId,
+) {{
+    if cmd.as_str() == CMD_CLICK {{
+        println!("Clicked!");
+    }}
+}}
+"#
+    )
+}
+
 fn todo_template_readme_md(package_name: &str, ui_assets: bool) -> String {
     let ui_assets_line = if ui_assets {
         "- UI assets: enabled (`fret-bootstrap/ui-assets`)\n"
@@ -550,6 +682,26 @@ cargo run
 
 - Edit UI in `src/main.rs`
 - If you want hotpatch later, keep commands/IDs stable and prefer the `ui_app_with_hooks` golden path (ADR 0107 / 0112).
+"#
+    )
+}
+
+fn hello_template_readme_md(package_name: &str) -> String {
+    format!(
+        r#"# {package_name}
+
+Generated by `fretboard init hello`.
+
+## Run
+
+```bash
+cargo run
+```
+
+## Notes
+
+- Theme: shadcn new-york-v4 (default via `fret-ui-shadcn/app-integration`)
+- Next: edit `src/main.rs` and replace the view tree
 "#
     )
 }
