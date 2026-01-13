@@ -1494,10 +1494,10 @@ mod tests {
                         },
                     );
 
-                    let rich = fret_core::RichText::new(
-                        "hello world",
-                        Arc::<[fret_core::TextRun]>::from([]),
-                    );
+                    let text = Arc::<str>::from("hello world");
+                    let spans =
+                        Arc::<[fret_core::TextSpan]>::from([fret_core::TextSpan::new(text.len())]);
+                    let rich = fret_core::AttributedText::new(text, spans);
 
                     let content = cx.semantics(
                         SemanticsProps {

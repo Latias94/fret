@@ -13,7 +13,8 @@ impl fret_core::TextService for Renderer {
             }
             fret_core::TextInput::Attributed { text, base, spans } => {
                 let rich = fret_core::AttributedText::new(text.clone(), spans.clone());
-                self.text_system.prepare_attributed(&rich, base, constraints)
+                self.text_system
+                    .prepare_attributed(&rich, base, constraints)
             }
             _ => {
                 debug_assert!(false, "unsupported TextInput variant");
@@ -37,7 +38,8 @@ impl fret_core::TextService for Renderer {
             }
             fret_core::TextInput::Attributed { text, base, spans } => {
                 let rich = fret_core::AttributedText::new(text.clone(), spans.clone());
-                self.text_system.measure_attributed(&rich, base, constraints)
+                self.text_system
+                    .measure_attributed(&rich, base, constraints)
             }
             _ => {
                 debug_assert!(false, "unsupported TextInput variant");

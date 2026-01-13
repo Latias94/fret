@@ -1,4 +1,4 @@
-use fret_core::{FontId, TextInput, TextShapingStyle, TextSlant, TextSpan, TextStyle};
+use fret_core::{FontId, TextInputRef, TextShapingStyle, TextSlant, TextSpan, TextStyle};
 use parley::FontContext;
 use parley::FontData;
 use parley::Layout;
@@ -81,10 +81,10 @@ impl ParleyShaper {
         true
     }
 
-    pub fn shape_single_line(&mut self, input: TextInput<'_>, scale: f32) -> ShapedLineLayout {
+    pub fn shape_single_line(&mut self, input: TextInputRef<'_>, scale: f32) -> ShapedLineLayout {
         let (text, base_style, spans) = match input {
-            TextInput::Plain { text, style } => (text, style, &[][..]),
-            TextInput::Attributed { text, base, spans } => (text, base, spans),
+            TextInputRef::Plain { text, style } => (text, style, &[][..]),
+            TextInputRef::Attributed { text, base, spans } => (text, base, spans),
         };
 
         let root_style = ParleyTextStyle::default();
@@ -115,7 +115,7 @@ impl ParleyShaper {
 
         let Some(line) = self.layout.lines().next() else {
             if text.is_empty() {
-                let fallback = self.shape_single_line(TextInput::plain(" ", base_style), scale);
+                let fallback = self.shape_single_line(TextInputRef::plain(" ", base_style), scale);
                 return ShapedLineLayout {
                     width: 0.0,
                     ascent: fallback.ascent,
@@ -302,7 +302,7 @@ mod tests {
             size: Px(16.0),
             ..Default::default()
         };
-        let input = TextInput::plain("hello", &style);
+        let input = TextInputRef::plain("hello", &style);
 
         let layout = shaper.shape_single_line(input, 1.0);
         assert!(layout.width >= 0.0);

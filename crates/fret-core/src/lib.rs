@@ -64,8 +64,8 @@ pub use streaming::StreamingUploadPerfSnapshot;
 pub use svg::{SvgFit, SvgService};
 pub use text::{
     AttributedText, CaretAffinity, DecorationLineStyle, FontWeight, HitTestResult,
-    StrikethroughStyle, TextConstraints, TextFontFamilyConfig, TextInput, TextMetrics,
-    TextInputRef, TextOverflow, TextPaintStyle, TextService, TextShapingStyle, TextSlant, TextSpan,
+    StrikethroughStyle, TextConstraints, TextFontFamilyConfig, TextInput, TextInputRef,
+    TextMetrics, TextOverflow, TextPaintStyle, TextService, TextShapingStyle, TextSlant, TextSpan,
     TextStyle, TextWrap, UnderlineStyle,
 };
 pub use vector_path::{

@@ -5,7 +5,8 @@ use cosmic_text::{
 use fret_core::scene::{Scene, SceneOp};
 use fret_core::{
     AttributedText, CaretAffinity, HitTestResult, Point, Rect, Size, TextBlobId, TextConstraints,
-    TextInput, TextMetrics, TextOverflow, TextSlant, TextSpan, TextStyle, TextWrap, geometry::Px,
+    TextInputRef, TextMetrics, TextOverflow, TextSlant, TextSpan, TextStyle, TextWrap,
+    geometry::Px,
 };
 use slotmap::SlotMap;
 use std::{
@@ -1524,12 +1525,12 @@ impl TextSystem {
 
     pub fn prepare_input(
         &mut self,
-        input: TextInput<'_>,
+        input: TextInputRef<'_>,
         constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics) {
         match input {
-            TextInput::Plain { text, style } => self.prepare(text, style, constraints),
-            TextInput::Attributed { text, base, spans } => {
+            TextInputRef::Plain { text, style } => self.prepare(text, style, constraints),
+            TextInputRef::Attributed { text, base, spans } => {
                 let rich =
                     AttributedText::new(Arc::<str>::from(text), Arc::<[TextSpan]>::from(spans));
                 self.prepare_attributed(&rich, base, constraints)
@@ -1591,12 +1592,12 @@ impl TextSystem {
             let scale = constraints.scale_factor.max(1.0);
             let shape = {
                 let input = match spans {
-                    Some(spans) => TextInput::Attributed {
+                    Some(spans) => TextInputRef::Attributed {
                         text: text.as_ref(),
                         base: style,
                         spans,
                     },
-                    None => TextInput::Plain {
+                    None => TextInputRef::Plain {
                         text: text.as_ref(),
                         style,
                     },

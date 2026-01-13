@@ -366,7 +366,8 @@ pub trait TextService {
         base_style: &TextStyle,
         constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics) {
-        let input = TextInput::attributed(rich.text.clone(), base_style.clone(), rich.spans.clone());
+        let input =
+            TextInput::attributed(rich.text.clone(), base_style.clone(), rich.spans.clone());
         self.prepare(&input, constraints)
     }
 

@@ -1,5 +1,5 @@
 use super::parley_shaper::{ParleyGlyph, ParleyShaper, ShapedCluster, ShapedLineLayout};
-use fret_core::{CaretAffinity, TextConstraints, TextInput, TextOverflow, TextSpan, TextWrap};
+use fret_core::{CaretAffinity, TextConstraints, TextInputRef, TextOverflow, TextSpan, TextWrap};
 use std::ops::Range;
 
 const ELLIPSIS: &str = "\u{2026}";
@@ -32,18 +32,18 @@ impl WrappedLayout {
 
 pub(crate) fn wrap_with_constraints(
     shaper: &mut ParleyShaper,
-    input: TextInput<'_>,
+    input: TextInputRef<'_>,
     constraints: TextConstraints,
 ) -> WrappedLayout {
     let scale = constraints.scale_factor.max(1.0);
     let text_len = match input {
-        TextInput::Plain { text, .. } => text.len(),
-        TextInput::Attributed { text, .. } => text.len(),
+        TextInputRef::Plain { text, .. } => text.len(),
+        TextInputRef::Attributed { text, .. } => text.len(),
     };
 
     let has_newlines = match input {
-        TextInput::Plain { text, .. } => text.contains('\n'),
-        TextInput::Attributed { text, .. } => text.contains('\n'),
+        TextInputRef::Plain { text, .. } => text.contains('\n'),
+        TextInputRef::Attributed { text, .. } => text.contains('\n'),
     };
     if has_newlines {
         return wrap_with_newlines(shaper, input, constraints, scale);
@@ -80,13 +80,13 @@ pub(crate) fn wrap_with_constraints(
 
 fn wrap_with_newlines(
     shaper: &mut ParleyShaper,
-    input: TextInput<'_>,
+    input: TextInputRef<'_>,
     constraints: TextConstraints,
     scale: f32,
 ) -> WrappedLayout {
     let (text, base, spans) = match input {
-        TextInput::Plain { text, style } => (text, style, None),
-        TextInput::Attributed { text, base, spans } => (text, base, Some(spans)),
+        TextInputRef::Plain { text, style } => (text, style, None),
+        TextInputRef::Attributed { text, base, spans } => (text, base, Some(spans)),
     };
 
     let text_len = text.len();
@@ -167,7 +167,7 @@ fn push_paragraph(
             let shaped = match spans.as_ref() {
                 Some(s) => wrap_none_ellipsis(
                     shaper,
-                    TextInput::Attributed {
+                    TextInputRef::Attributed {
                         text: slice,
                         base,
                         spans: s.as_slice(),
@@ -178,7 +178,7 @@ fn push_paragraph(
                 ),
                 None => wrap_none_ellipsis(
                     shaper,
-                    TextInput::plain(slice, base),
+                    TextInputRef::plain(slice, base),
                     slice.len(),
                     max_w,
                     scale,
@@ -211,14 +211,14 @@ fn push_paragraph(
 
 fn wrap_none_ellipsis(
     shaper: &mut ParleyShaper,
-    input: TextInput<'_>,
+    input: TextInputRef<'_>,
     text_len: usize,
     max_width_px: f32,
     scale: f32,
 ) -> WrappedSingleLineInternal {
     let (text, base, spans) = match input {
-        TextInput::Plain { text, style } => (text, style, None),
-        TextInput::Attributed { text, base, spans } => (text, base, Some(spans)),
+        TextInputRef::Plain { text, style } => (text, style, None),
+        TextInputRef::Attributed { text, base, spans } => (text, base, Some(spans)),
     };
 
     let full = shaper.shape_single_line(input, scale);
@@ -229,7 +229,7 @@ fn wrap_none_ellipsis(
         };
     }
 
-    let ellipsis = shaper.shape_single_line(TextInput::plain(ELLIPSIS, base), scale);
+    let ellipsis = shaper.shape_single_line(TextInputRef::plain(ELLIPSIS, base), scale);
     let ellipsis_w = ellipsis.width.max(0.0);
     let available = (max_width_px - ellipsis_w).max(0.0);
 
@@ -290,14 +290,14 @@ struct WrappedSingleLineInternal {
 
 fn wrap_word(
     shaper: &mut ParleyShaper,
-    input: TextInput<'_>,
+    input: TextInputRef<'_>,
     text_len: usize,
     max_width_px: f32,
     scale: f32,
 ) -> WrappedLayout {
     let (text, base, spans) = match input {
-        TextInput::Plain { text, style } => (text, style, None),
-        TextInput::Attributed { text, base, spans } => (text, base, Some(spans)),
+        TextInputRef::Plain { text, style } => (text, style, None),
+        TextInputRef::Attributed { text, base, spans } => (text, base, Some(spans)),
     };
 
     let (line_ranges, lines) =
@@ -391,7 +391,7 @@ fn shape_prefix(
         Some(spans) => {
             let out = truncate_spans(spans, slice.len());
             shaper.shape_single_line(
-                TextInput::Attributed {
+                TextInputRef::Attributed {
                     text: slice,
                     base,
                     spans: &out,
@@ -399,7 +399,7 @@ fn shape_prefix(
                 scale,
             )
         }
-        None => shaper.shape_single_line(TextInput::plain(slice, base), scale),
+        None => shaper.shape_single_line(TextInputRef::plain(slice, base), scale),
     }
 }
 
@@ -439,7 +439,7 @@ fn shape_slice(
         Some(spans) => {
             let out = slice_spans(spans, start, end);
             shaper.shape_single_line(
-                TextInput::Attributed {
+                TextInputRef::Attributed {
                     text: slice,
                     base,
                     spans: &out,
@@ -447,7 +447,7 @@ fn shape_slice(
                 scale,
             )
         }
-        None => shaper.shape_single_line(TextInput::plain(slice, base), scale),
+        None => shaper.shape_single_line(TextInputRef::plain(slice, base), scale),
     }
 }
 
@@ -640,7 +640,7 @@ mod tests {
 
         let wrapped = wrap_with_constraints(
             &mut shaper,
-            TextInput::Attributed {
+            TextInputRef::Attributed {
                 text,
                 base: &base,
                 spans: &spans,
@@ -686,7 +686,7 @@ mod tests {
 
         let wrapped = wrap_with_constraints(
             &mut shaper,
-            TextInput::Attributed {
+            TextInputRef::Attributed {
                 text,
                 base: &base,
                 spans: &spans,
@@ -722,7 +722,7 @@ mod tests {
 
         let wrapped = wrap_with_constraints(
             &mut shaper,
-            TextInput::Attributed {
+            TextInputRef::Attributed {
                 text,
                 base: &base,
                 spans: &spans,
@@ -763,7 +763,7 @@ mod tests {
 
         let wrapped = wrap_with_constraints(
             &mut shaper,
-            TextInput::Attributed {
+            TextInputRef::Attributed {
                 text,
                 base: &base,
                 spans: &spans,
@@ -806,7 +806,7 @@ mod tests {
         };
 
         let wrapped =
-            wrap_with_constraints(&mut shaper, TextInput::plain(text, &base), constraints);
+            wrap_with_constraints(&mut shaper, TextInputRef::plain(text, &base), constraints);
         assert_eq!(wrapped.lines.len(), 2, "expected two empty paragraphs");
         assert_eq!(wrapped.line_ranges.len(), 2);
         assert_eq!(wrapped.line_ranges[0], 0..0);

@@ -34,7 +34,7 @@ Exit criteria:
 
 Status:
 
-- Done in `feat/text-system-v2-parley` (`3bb0fc8`).
+- Done on `feat/text-system-v2-parley` (see `094fd31`, `256e8a9`).
 
 ### M1 — Renderer text system v2 (Parley + wrapper + atlas)
 
@@ -107,9 +107,10 @@ Legend:
   - sum(len) == text.len()
   - boundaries are UTF-8 char boundaries
 - [x] Update `TextService` to:
-  - `prepare(TextInput<'_>, TextConstraints) -> (TextBlobId, TextMetrics)`
-  - `measure(TextInput<'_>, TextConstraints) -> TextMetrics`
-- [x] Update ADR 0006 references if signatures change (keep the boundary semantics stable).
+  - `prepare(&TextInput, TextConstraints) -> (TextBlobId, TextMetrics)`
+  - `measure(&TextInput, TextConstraints) -> TextMetrics`
+  - keep a borrowed helper `TextInputRef<'_>` for renderer shaping paths.
+  - [x] Update ADR 0006 references if signatures change (keep the boundary semantics stable).
 
 ### B) `fret-render` text system v2 implementation
 
@@ -203,3 +204,4 @@ Legend:
 - 2026-01-13: B7.1: unify glyph key and switch `prepare` to Parley-only (commit `797fe93`).
 - 2026-01-13: B7.2: add subpixel atlas + shader/pipeline and platform subpixel policy (commit `8282cf1`).
 - 2026-01-13: B7.3: add stable `FontFaceKey` registry (commit `9a7f81a`).
+- 2026-01-13: Align `TextService` to `prepare(&TextInput, ...)` and introduce `TextInputRef<'_>` for shaping-only codepaths.

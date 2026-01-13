@@ -346,14 +346,12 @@ impl ElementHostWidget {
                     if let Some(blob) = self.text_cache.blob.take() {
                         cx.services.text().release(blob);
                     }
-                    let (blob, metrics) = cx.services.text().prepare(
-                        fret_core::TextInput::attributed(
-                            props.rich.text.as_ref(),
-                            &style,
-                            props.rich.spans.as_ref(),
-                        ),
-                        constraints,
+                    let input = fret_core::TextInput::attributed(
+                        props.rich.text.clone(),
+                        style.clone(),
+                        props.rich.spans.clone(),
                     );
+                    let (blob, metrics) = cx.services.text().prepare(&input, constraints);
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
@@ -433,14 +431,12 @@ impl ElementHostWidget {
                     if let Some(blob) = self.text_cache.blob.take() {
                         cx.services.text().release(blob);
                     }
-                    let (blob, metrics) = cx.services.text().prepare(
-                        fret_core::TextInput::attributed(
-                            props.rich.text.as_ref(),
-                            &style,
-                            props.rich.spans.as_ref(),
-                        ),
-                        constraints,
+                    let input = fret_core::TextInput::attributed(
+                        props.rich.text.clone(),
+                        style.clone(),
+                        props.rich.spans.clone(),
                     );
+                    let (blob, metrics) = cx.services.text().prepare(&input, constraints);
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.prepared_scale_factor_bits = Some(scale_bits);

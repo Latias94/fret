@@ -328,14 +328,12 @@ impl ElementHostWidget {
             overflow: props.overflow,
             scale_factor: cx.scale_factor,
         };
-        let metrics = cx.services.text().measure(
-            fret_core::TextInput::attributed(
-                props.rich.text.as_ref(),
-                &style,
-                props.rich.spans.as_ref(),
-            ),
-            constraints,
+        let input = fret_core::TextInput::attributed(
+            props.rich.text.clone(),
+            style.clone(),
+            props.rich.spans.clone(),
         );
+        let metrics = cx.services.text().measure(&input, constraints);
         clamp_to_constraints_in_measure(metrics.size, props.layout, cx.constraints)
     }
 
@@ -357,14 +355,12 @@ impl ElementHostWidget {
             overflow: props.overflow,
             scale_factor: cx.scale_factor,
         };
-        let metrics = cx.services.text().measure(
-            fret_core::TextInput::attributed(
-                props.rich.text.as_ref(),
-                &style,
-                props.rich.spans.as_ref(),
-            ),
-            constraints,
+        let input = fret_core::TextInput::attributed(
+            props.rich.text.clone(),
+            style.clone(),
+            props.rich.spans.clone(),
         );
+        let metrics = cx.services.text().measure(&input, constraints);
         clamp_to_constraints_in_measure(metrics.size, props.layout, cx.constraints)
     }
 
