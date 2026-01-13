@@ -113,13 +113,13 @@ single “at a glance” view of:
 
 - ECharts reference: `repo-ref/echarts/src/component/dataZoom/*` (order-sensitive multi-dim filtering)
 - ADR(s): `docs/adr/1136-delinea-datazoom-y-and-2d-semantics.md`, `docs/adr/1137-delinea-row-selection-and-filtering-contract.md`
-- Evidence: `ecosystem/delinea/src/engine/mod.rs` (Y mapping windows), `ecosystem/delinea/src/transform/data_zoom_y.rs` (Y filter node), `ecosystem/delinea/src/view/mod.rs` (opt-in indices materialization), `ecosystem/delinea/src/transform/*` (RowSelection)
+- Evidence: `ecosystem/delinea/src/engine/mod.rs` (Y mapping windows + view patching), `ecosystem/delinea/src/transform/data_zoom_y.rs` (Y filter node), `ecosystem/delinea/src/engine/stages/data_view.rs` (budgeted indices materialization), `ecosystem/delinea/src/view/mod.rs` (view selection policy), `ecosystem/delinea/src/transform/*` (RowSelection)
 - Validation (desktop): `cargo run -p fret-demo --bin fret-demo -- chart_multi_axis_demo`
 - What to validate (current v1 behavior):
   - Wheel on Y axis band zooms Y only; Y span limits (when configured) clamp interaction-derived writes.
   - 2D box zoom writes a paired window update (no sparse filtering materialization).
   - When `DataZoomYSpec.filter_mode=Filter` is enabled, non-stacked scatter and line-family series (Line/Area) may materialize a sparse `RowSelection::Indices` filtered by the effective Y window (current: guarded by a view-size cap and disabled for stacked series).
-  - When both X and Y `filterMode=weakFilter` are enabled (one `dataZoom` per axis), non-stacked scatter and line-family series (Line/Area) may materialize a sparse `RowSelection::Indices` implementing the ECharts `weakFilter` rule: filter only when **all** relevant dimensions are out-of-window on the **same** side (below/below or above/above). This is a v1 subset (cartesian XY only, size-capped, and currently view-level only).
+  - When both X and Y `filterMode=weakFilter` are enabled (one `dataZoom` per axis), non-stacked scatter and line-family series (Line/Area) may materialize a sparse `RowSelection::Indices` implementing the ECharts `weakFilter` rule: filter only when **all** relevant dimensions are out-of-window on the **same** side (below/below or above/above). This is a v1 subset (cartesian XY only, size-capped, and budgeted via `DataViewStage`).
 - Missing vs ECharts (high value):
   - Y-driven filtering semantics (and ordering rules when multiple dims are filtered),
   - full ECharts-class `weakFilter` behavior across arbitrary dimension sets and axis types (beyond cartesian XY),
