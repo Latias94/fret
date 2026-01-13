@@ -1183,11 +1183,18 @@ impl Gizmo3dDemoModel {
             self.gizmo().config.orientation,
             self.gizmo().config.pivot_mode
         ));
+        let cursor_units_per_screen_px = if self.gizmo_cursor_units_per_screen_px.is_finite()
+            && self.gizmo_cursor_units_per_screen_px > 0.0
+        {
+            self.gizmo_cursor_units_per_screen_px
+        } else {
+            1.0
+        };
         out.push_str(&format!(
             "Gizmo: size_px={:.0}   thickness_px={:.0}   pick_radius_px={:.0}\n",
-            self.gizmo().config.size_px,
-            self.gizmo().config.line_thickness_px,
-            self.gizmo().config.pick_radius_px
+            self.gizmo().config.size_px / cursor_units_per_screen_px,
+            self.gizmo().config.line_thickness_px / cursor_units_per_screen_px,
+            self.gizmo().config.pick_radius_px / cursor_units_per_screen_px
         ));
         out.push_str(&format!(
             "Gizmo: size_policy={:?}\n",
@@ -2606,21 +2613,45 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     if modifiers.shift {
                         m.view_gizmo_visual_preset_index = (m.view_gizmo_visual_preset_index + 1)
                             % ViewGizmoVisualPreset::ALL.len();
-                        ViewGizmoVisualPreset::ALL[m.view_gizmo_visual_preset_index]
-                            .apply_to_config(&mut m.view_gizmo.config);
-                        m.view_gizmo.config =
-                            m.view_gizmo.config.scale_for_cursor_units_per_screen_px(
-                                m.gizmo_cursor_units_per_screen_px,
-                            );
+                        let cursor_units_per_screen_px =
+                            m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
+                        let visuals =
+                            ViewGizmoVisualPreset::ALL[m.view_gizmo_visual_preset_index].visuals();
+                        m.view_gizmo.config.margin_px =
+                            visuals.margin_px * cursor_units_per_screen_px;
+                        m.view_gizmo.config.size_px = visuals.size_px * cursor_units_per_screen_px;
+                        m.view_gizmo.config.pick_padding_px =
+                            visuals.pick_padding_px * cursor_units_per_screen_px;
+                        m.view_gizmo.config.center_button_radius_px =
+                            visuals.center_button_radius_px * cursor_units_per_screen_px;
+                        m.view_gizmo.config.face_color = visuals.face_color;
+                        m.view_gizmo.config.edge_color = visuals.edge_color;
+                        m.view_gizmo.config.hover_color = visuals.hover_color;
+                        m.view_gizmo.config.x_color = visuals.x_color;
+                        m.view_gizmo.config.y_color = visuals.y_color;
+                        m.view_gizmo.config.z_color = visuals.z_color;
                     } else {
                         m.gizmo_visual_preset_index =
                             (m.gizmo_visual_preset_index + 1) % GizmoVisualPreset::ALL.len();
-                        GizmoVisualPreset::ALL[m.gizmo_visual_preset_index]
-                            .apply_to_gizmo(m.gizmo_mut());
-                        let cfg = m.gizmo().config.scale_for_cursor_units_per_screen_px(
-                            m.gizmo_cursor_units_per_screen_px,
-                        );
-                        m.gizmo_mut().config = cfg;
+                        let cursor_units_per_screen_px =
+                            m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
+                        let preset = GizmoVisualPreset::ALL[m.gizmo_visual_preset_index];
+                        let visuals = preset.visuals();
+                        let gizmo = m.gizmo_mut();
+                        gizmo.set_part_visuals(preset.part_visuals());
+                        gizmo.config.size_px = visuals.size_px * cursor_units_per_screen_px;
+                        gizmo.config.pick_radius_px =
+                            visuals.pick_radius_px * cursor_units_per_screen_px;
+                        gizmo.config.line_thickness_px =
+                            visuals.line_thickness_px * cursor_units_per_screen_px;
+                        gizmo.config.bounds_handle_size_px =
+                            visuals.bounds_handle_size_px * cursor_units_per_screen_px;
+                        gizmo.config.show_occluded = visuals.show_occluded;
+                        gizmo.config.occluded_alpha = visuals.occluded_alpha;
+                        gizmo.config.x_color = visuals.x_color;
+                        gizmo.config.y_color = visuals.y_color;
+                        gizmo.config.z_color = visuals.z_color;
+                        gizmo.config.hover_color = visuals.hover_color;
                     }
                 });
                 app.request_redraw(window);
@@ -2717,13 +2748,18 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 repeat: false,
                 ..
             } => {
-                let step = if modifiers.shift { 16.0 } else { 4.0 };
+                let step_screen_px = if modifiers.shift { 16.0 } else { 4.0 };
                 let _ = state.demo.update(app, |m, _cx| {
                     if m.is_busy() {
                         return;
                     }
+                    let cursor_units_per_screen_px =
+                        m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
+                    let step = step_screen_px * cursor_units_per_screen_px;
+                    let min = 24.0 * cursor_units_per_screen_px;
+                    let max = 256.0 * cursor_units_per_screen_px;
                     m.gizmo_mut().config.size_px =
-                        (m.gizmo().config.size_px - step).clamp(24.0, 256.0);
+                        (m.gizmo().config.size_px - step).clamp(min, max);
                 });
                 app.request_redraw(window);
             }
@@ -2733,13 +2769,18 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 repeat: false,
                 ..
             } => {
-                let step = if modifiers.shift { 16.0 } else { 4.0 };
+                let step_screen_px = if modifiers.shift { 16.0 } else { 4.0 };
                 let _ = state.demo.update(app, |m, _cx| {
                     if m.is_busy() {
                         return;
                     }
+                    let cursor_units_per_screen_px =
+                        m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
+                    let step = step_screen_px * cursor_units_per_screen_px;
+                    let min = 24.0 * cursor_units_per_screen_px;
+                    let max = 256.0 * cursor_units_per_screen_px;
                     m.gizmo_mut().config.size_px =
-                        (m.gizmo().config.size_px + step).clamp(24.0, 256.0);
+                        (m.gizmo().config.size_px + step).clamp(min, max);
                 });
                 app.request_redraw(window);
             }
@@ -2749,17 +2790,28 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 repeat: false,
                 ..
             } => {
-                let step = if modifiers.shift { 2.0 } else { 1.0 };
+                let step_screen_px = if modifiers.shift { 2.0 } else { 1.0 };
                 let _ = state.demo.update(app, |m, _cx| {
                     if m.is_busy() {
                         return;
                     }
-                    m.gizmo_mut().config.line_thickness_px =
-                        (m.gizmo().config.line_thickness_px - step).clamp(1.0, 24.0);
-                    m.gizmo_mut().config.pick_radius_px =
-                        (m.gizmo().config.pick_radius_px - step).clamp(4.0, 32.0);
+                    let cursor_units_per_screen_px =
+                        m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
+                    let step = step_screen_px * cursor_units_per_screen_px;
+                    let thickness_min = 1.0 * cursor_units_per_screen_px;
+                    let thickness_max = 24.0 * cursor_units_per_screen_px;
+                    let pick_radius_min = 4.0 * cursor_units_per_screen_px;
+                    let pick_radius_max = 32.0 * cursor_units_per_screen_px;
+                    let handle_min = 6.0 * cursor_units_per_screen_px;
+                    let handle_max = 32.0 * cursor_units_per_screen_px;
+                    m.gizmo_mut().config.line_thickness_px = (m.gizmo().config.line_thickness_px
+                        - step)
+                        .clamp(thickness_min, thickness_max);
+                    m.gizmo_mut().config.pick_radius_px = (m.gizmo().config.pick_radius_px - step)
+                        .clamp(pick_radius_min, pick_radius_max);
                     m.gizmo_mut().config.bounds_handle_size_px =
-                        (m.gizmo().config.bounds_handle_size_px - step).clamp(6.0, 32.0);
+                        (m.gizmo().config.bounds_handle_size_px - step)
+                            .clamp(handle_min, handle_max);
                 });
                 app.request_redraw(window);
             }
@@ -2769,17 +2821,28 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 repeat: false,
                 ..
             } => {
-                let step = if modifiers.shift { 2.0 } else { 1.0 };
+                let step_screen_px = if modifiers.shift { 2.0 } else { 1.0 };
                 let _ = state.demo.update(app, |m, _cx| {
                     if m.is_busy() {
                         return;
                     }
-                    m.gizmo_mut().config.line_thickness_px =
-                        (m.gizmo().config.line_thickness_px + step).clamp(1.0, 24.0);
-                    m.gizmo_mut().config.pick_radius_px =
-                        (m.gizmo().config.pick_radius_px + step).clamp(4.0, 32.0);
+                    let cursor_units_per_screen_px =
+                        m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
+                    let step = step_screen_px * cursor_units_per_screen_px;
+                    let thickness_min = 1.0 * cursor_units_per_screen_px;
+                    let thickness_max = 24.0 * cursor_units_per_screen_px;
+                    let pick_radius_min = 4.0 * cursor_units_per_screen_px;
+                    let pick_radius_max = 32.0 * cursor_units_per_screen_px;
+                    let handle_min = 6.0 * cursor_units_per_screen_px;
+                    let handle_max = 32.0 * cursor_units_per_screen_px;
+                    m.gizmo_mut().config.line_thickness_px = (m.gizmo().config.line_thickness_px
+                        + step)
+                        .clamp(thickness_min, thickness_max);
+                    m.gizmo_mut().config.pick_radius_px = (m.gizmo().config.pick_radius_px + step)
+                        .clamp(pick_radius_min, pick_radius_max);
                     m.gizmo_mut().config.bounds_handle_size_px =
-                        (m.gizmo().config.bounds_handle_size_px + step).clamp(6.0, 32.0);
+                        (m.gizmo().config.bounds_handle_size_px + step)
+                            .clamp(handle_min, handle_max);
                 });
                 app.request_redraw(window);
             }
@@ -3033,9 +3096,9 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         };
 
         let pending_undo = model.update(app, |m, _cx| {
-            let target_px_per_screen_px =
-                fret_gizmo::viewport_input_target_px_per_screen_px(&event)
-                    .unwrap_or(event.geometry.pixels_per_point.max(1.0e-6));
+            let target_px_per_screen_px = event
+                .target_px_per_screen_px()
+                .unwrap_or(event.geometry.pixels_per_point.max(1.0e-6));
             apply_gizmo_cursor_units_per_screen_px(m, target_px_per_screen_px);
             if m.viewport_target != event.target {
                 return PendingUndoRecords::default();
