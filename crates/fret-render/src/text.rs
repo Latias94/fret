@@ -354,14 +354,40 @@ impl TextShapeKey {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct FontFaceKey {
+    blob_id: u64,
+    face_index: u32,
+    variation_key: u64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct GlyphKey {
-    font_blob_id: u64,
-    font_index: u32,
+    font: FontFaceKey,
     glyph_id: u32,
     size_bits: u32,
     x_bin: u8,
     y_bin: u8,
     kind: GlyphQuadKind,
+}
+
+fn stable_font_blob_id(bytes: &[u8]) -> u64 {
+    // Stable, dependency-free fingerprint for font bytes.
+    // This intentionally avoids `DefaultHasher` to stay deterministic across Rust versions.
+    const FNV_OFFSET_BASIS: u64 = 0xcbf29ce484222325;
+    const FNV_PRIME: u64 = 0x100000001b3;
+
+    fn fnv1a64_update(mut hash: u64, input: &[u8]) -> u64 {
+        for b in input {
+            hash ^= u64::from(*b);
+            hash = hash.wrapping_mul(FNV_PRIME);
+        }
+        hash
+    }
+
+    let mut hash = FNV_OFFSET_BASIS;
+    hash = fnv1a64_update(hash, b"fret.text.font_blob_id.v1\0");
+    hash = fnv1a64_update(hash, &(bytes.len() as u64).to_le_bytes());
+    fnv1a64_update(hash, bytes)
 }
 
 fn subpixel_bin_q4(pos: f32) -> (i32, u8) {
@@ -980,6 +1006,7 @@ pub struct TextSystem {
     text_pin_color: Vec<Vec<GlyphKey>>,
     text_pin_subpixel: Vec<Vec<GlyphKey>>,
     font_bytes_by_blob_id: HashMap<u64, Arc<[u8]>>,
+    font_face_key_by_fontique: HashMap<(u64, u32), FontFaceKey>,
 }
 
 fn family_for_font_id(font: &fret_core::FontId) -> Family<'_> {
@@ -1039,6 +1066,7 @@ impl TextSystem {
             self.text_pin_color.iter_mut().for_each(|v| v.clear());
             self.text_pin_subpixel.iter_mut().for_each(|v| v.clear());
             self.font_bytes_by_blob_id.clear();
+            self.font_face_key_by_fontique.clear();
         }
 
         added
@@ -1170,6 +1198,7 @@ impl TextSystem {
             text_pin_color: vec![Vec::new(); 3],
             text_pin_subpixel: vec![Vec::new(); 3],
             font_bytes_by_blob_id: HashMap::new(),
+            font_face_key_by_fontique: HashMap::new(),
         }
     }
 
@@ -1260,6 +1289,7 @@ impl TextSystem {
         self.text_pin_color.iter_mut().for_each(|v| v.clear());
         self.text_pin_subpixel.iter_mut().for_each(|v| v.clear());
         self.font_bytes_by_blob_id.clear();
+        self.font_face_key_by_fontique.clear();
         true
     }
 
@@ -1405,12 +1435,12 @@ impl TextSystem {
     }
 
     fn ensure_parley_glyph(&mut self, key: GlyphKey, epoch: u64) {
-        let Some(font_bytes) = self.font_bytes_by_blob_id.get(&key.font_blob_id) else {
+        let Some(font_bytes) = self.font_bytes_by_blob_id.get(&key.font.blob_id) else {
             return;
         };
 
         let Some(font_ref) =
-            parley::swash::FontRef::from_index(font_bytes.as_ref(), key.font_index as usize)
+            parley::swash::FontRef::from_index(font_bytes.as_ref(), key.font.face_index as usize)
         else {
             return;
         };
@@ -1642,9 +1672,29 @@ impl TextSystem {
                         let Ok(glyph_id) = u16::try_from(g.id) else {
                             continue;
                         };
-                        self.font_bytes_by_blob_id
-                            .entry(g.font.data.id())
-                            .or_insert_with(|| Arc::from(g.font.data.data().to_vec()));
+                        let fontique_id = g.font.data.id();
+                        let face_index = g.font.index;
+                        let face_key = if let Some(hit) = self
+                            .font_face_key_by_fontique
+                            .get(&(fontique_id, face_index))
+                            .copied()
+                        {
+                            hit
+                        } else {
+                            let bytes = g.font.data.data();
+                            let blob_id = stable_font_blob_id(bytes);
+                            self.font_bytes_by_blob_id
+                                .entry(blob_id)
+                                .or_insert_with(|| Arc::from(bytes.to_vec()));
+                            let key = FontFaceKey {
+                                blob_id,
+                                face_index,
+                                variation_key: 0,
+                            };
+                            self.font_face_key_by_fontique
+                                .insert((fontique_id, face_index), key);
+                            key
+                        };
                         let Some(font_ref) = parley::swash::FontRef::from_index(
                             g.font.data.data(),
                             g.font.index as usize,
@@ -1692,8 +1742,7 @@ impl TextSystem {
                         };
 
                         let glyph_key = GlyphKey {
-                            font_blob_id: g.font.data.id(),
-                            font_index: g.font.index,
+                            font: face_key,
                             glyph_id: g.id,
                             size_bits: g.font_size.to_bits(),
                             x_bin,
