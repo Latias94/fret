@@ -529,8 +529,19 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         zoom,
                         presenter,
                     );
-                    let max_hit_pad_canvas = 96.0 / zoom.max(1.0e-6);
-                    let index = CanvasSpatialIndex::build(graph, &geom, zoom, max_hit_pad_canvas);
+                    let z = zoom.max(1.0e-6);
+                    let tuning = snapshot.interaction.spatial_index;
+                    let cell_size_canvas = (tuning.cell_size_screen_px / z)
+                        .max(tuning.min_cell_size_screen_px / z)
+                        .max(1.0);
+                    let max_hit_pad_canvas = (tuning.edge_aabb_pad_screen_px / z).max(0.0);
+                    let index = CanvasSpatialIndex::build(
+                        graph,
+                        &geom,
+                        zoom,
+                        max_hit_pad_canvas,
+                        cell_size_canvas,
+                    );
                     (geom, index)
                 })
                 .ok()
@@ -8266,7 +8277,11 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
             }
         }
 
-        self.paint_cache.prune(cx.services, 300, 30_000);
+        let prune = snapshot.interaction.paint_cache_prune;
+        if prune.max_entries > 0 && prune.max_age_frames > 0 {
+            self.paint_cache
+                .prune(cx.services, prune.max_age_frames, prune.max_entries);
+        }
 
         let mut draw_drop_marker = |pos: Point, color: Color| {
             let z = zoom.max(1.0e-6);

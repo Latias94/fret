@@ -443,6 +443,14 @@ fn default_bezier_hit_test_steps() -> u8 {
     24
 }
 
+fn default_spatial_index_tuning() -> NodeGraphSpatialIndexTuning {
+    NodeGraphSpatialIndexTuning::default()
+}
+
+fn default_paint_cache_prune_tuning() -> NodeGraphPaintCachePruneTuning {
+    NodeGraphPaintCachePruneTuning::default()
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum NodeGraphPanOnScrollMode {
@@ -514,6 +522,14 @@ pub struct NodeGraphInteractionState {
     /// Subdivision count used for Bezier wire hit-testing (higher is more accurate, but slower).
     #[serde(default = "default_bezier_hit_test_steps")]
     pub bezier_hit_test_steps: u8,
+
+    /// Spatial index tuning for hit-testing and culling.
+    #[serde(default = "default_spatial_index_tuning")]
+    pub spatial_index: NodeGraphSpatialIndexTuning,
+
+    /// Paint-cache pruning tuning for long-lived graphs.
+    #[serde(default = "default_paint_cache_prune_tuning")]
+    pub paint_cache_prune: NodeGraphPaintCachePruneTuning,
 
     /// Snap nodes to a grid during move/resize interactions.
     #[serde(default)]
@@ -731,6 +747,8 @@ impl Default for NodeGraphInteractionState {
             reconnect_on_drop_empty: false,
             edge_interaction_width: default_edge_interaction_width(),
             bezier_hit_test_steps: default_bezier_hit_test_steps(),
+            spatial_index: NodeGraphSpatialIndexTuning::default(),
+            paint_cache_prune: NodeGraphPaintCachePruneTuning::default(),
             snap_to_grid: false,
             snap_grid: default_snap_grid(),
             snaplines: default_snaplines(),
@@ -765,6 +783,72 @@ impl Default for NodeGraphInteractionState {
             auto_pan: NodeGraphAutoPanTuning::default(),
             translate_extent: None,
             node_extent: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct NodeGraphSpatialIndexTuning {
+    /// Preferred cell size in screen pixels (converted to canvas units by dividing by zoom).
+    #[serde(default = "NodeGraphSpatialIndexTuning::default_cell_size_screen_px")]
+    pub cell_size_screen_px: f32,
+    /// Minimum cell size in screen pixels (converted to canvas units by dividing by zoom).
+    #[serde(default = "NodeGraphSpatialIndexTuning::default_min_cell_size_screen_px")]
+    pub min_cell_size_screen_px: f32,
+    /// Extra padding (screen px) applied to edge wire AABBs to ensure stable hit-test candidate sets.
+    #[serde(default = "NodeGraphSpatialIndexTuning::default_edge_aabb_pad_screen_px")]
+    pub edge_aabb_pad_screen_px: f32,
+}
+
+impl NodeGraphSpatialIndexTuning {
+    fn default_cell_size_screen_px() -> f32 {
+        256.0
+    }
+
+    fn default_min_cell_size_screen_px() -> f32 {
+        16.0
+    }
+
+    fn default_edge_aabb_pad_screen_px() -> f32 {
+        96.0
+    }
+}
+
+impl Default for NodeGraphSpatialIndexTuning {
+    fn default() -> Self {
+        Self {
+            cell_size_screen_px: Self::default_cell_size_screen_px(),
+            min_cell_size_screen_px: Self::default_min_cell_size_screen_px(),
+            edge_aabb_pad_screen_px: Self::default_edge_aabb_pad_screen_px(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct NodeGraphPaintCachePruneTuning {
+    /// Remove cache entries not used within this many frames.
+    #[serde(default = "NodeGraphPaintCachePruneTuning::default_max_age_frames")]
+    pub max_age_frames: u64,
+    /// Hard cap on total cache entries (paths + markers + text blobs + text metrics).
+    #[serde(default = "NodeGraphPaintCachePruneTuning::default_max_entries")]
+    pub max_entries: usize,
+}
+
+impl NodeGraphPaintCachePruneTuning {
+    fn default_max_age_frames() -> u64 {
+        300
+    }
+
+    fn default_max_entries() -> usize {
+        30_000
+    }
+}
+
+impl Default for NodeGraphPaintCachePruneTuning {
+    fn default() -> Self {
+        Self {
+            max_age_frames: Self::default_max_age_frames(),
+            max_entries: Self::default_max_entries(),
         }
     }
 }

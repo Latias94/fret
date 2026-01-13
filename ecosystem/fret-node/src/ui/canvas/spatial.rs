@@ -3,7 +3,7 @@
 //! This module indexes ports and edges into a coarse grid in canvas space.
 //! It is intended as a UI-only acceleration structure for hit-testing and interaction previews.
 
-use fret_canvas::spatial::GridIndex;
+use fret_canvas::spatial::GridIndexWithBackrefs;
 use fret_canvas::wires as canvas_wires;
 use fret_core::{Point, Px, Rect, Size};
 
@@ -33,17 +33,17 @@ fn wire_aabb(from: Point, to: Point, zoom: f32, pad: f32) -> Rect {
 /// Coarse grid index for ports and edges (canvas space).
 #[derive(Debug, Clone)]
 pub(crate) struct CanvasSpatialIndex {
-    nodes: GridIndex<NodeId>,
-    ports: GridIndex<PortId>,
-    edges: GridIndex<EdgeId>,
+    nodes: GridIndexWithBackrefs<NodeId>,
+    ports: GridIndexWithBackrefs<PortId>,
+    edges: GridIndexWithBackrefs<EdgeId>,
 }
 
 impl CanvasSpatialIndex {
     pub(crate) fn empty() -> Self {
         Self {
-            nodes: GridIndex::new(1.0),
-            ports: GridIndex::new(1.0),
-            edges: GridIndex::new(1.0),
+            nodes: GridIndexWithBackrefs::new(1.0),
+            ports: GridIndexWithBackrefs::new(1.0),
+            edges: GridIndexWithBackrefs::new(1.0),
         }
     }
 
@@ -52,17 +52,22 @@ impl CanvasSpatialIndex {
         geom: &CanvasGeometry,
         zoom: f32,
         max_hit_pad_canvas: f32,
+        cell_size_canvas: f32,
     ) -> Self {
         let zoom = if zoom.is_finite() && zoom > 0.0 {
             zoom
         } else {
             1.0
         };
-        let cell_size = (256.0 / zoom).max(16.0 / zoom).max(1.0);
+        let cell_size = if cell_size_canvas.is_finite() && cell_size_canvas > 0.0 {
+            cell_size_canvas
+        } else {
+            (256.0 / zoom).max(16.0 / zoom).max(1.0)
+        };
 
-        let mut nodes = GridIndex::new(cell_size);
-        let mut ports = GridIndex::new(cell_size);
-        let mut edges = GridIndex::new(cell_size);
+        let mut nodes = GridIndexWithBackrefs::new(cell_size);
+        let mut ports = GridIndexWithBackrefs::new(cell_size);
+        let mut edges = GridIndexWithBackrefs::new(cell_size);
 
         // Index nodes in draw order so deterministic tie-breaking can be layered on top.
         for node_id in geom.order.iter().copied() {
