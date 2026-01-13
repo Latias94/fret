@@ -172,6 +172,9 @@ fn child_node_drag_is_clamped_to_group_when_expand_parent_is_false() {
         primary: node_id,
         node_ids: vec![node_id],
         nodes: vec![(node_id, CanvasPoint { x: 10.0, y: 10.0 })],
+        current_nodes: vec![(node_id, CanvasPoint { x: 10.0, y: 10.0 })],
+        current_groups: Vec::new(),
+        preview_rev: 0,
         grab_offset: Point::new(Px(0.0), Px(0.0)),
         start_pos: Point::new(Px(10.0), Px(10.0)),
     });
@@ -193,17 +196,47 @@ fn child_node_drag_is_clamped_to_group_when_expand_parent_is_false() {
         snapshot.zoom,
     ));
 
-    let node_pos = graph
-        .read_ref(&mut host, |g| g.nodes.get(&node_id).map(|n| n.pos))
+    let node_pos_after_move = graph
+        .read_ref(cx.app, |g| g.nodes.get(&node_id).map(|n| n.pos))
         .unwrap()
         .unwrap();
-    assert_eq!(node_pos.x, 20.0);
+    assert_eq!(node_pos_after_move.x, 10.0);
 
-    let group_rect = graph
-        .read_ref(&mut host, |g| g.groups.get(&group_id).map(|gr| gr.rect))
+    let drag = canvas
+        .interaction
+        .node_drag
+        .as_ref()
+        .expect("node drag active");
+    let preview = drag
+        .current_nodes
+        .iter()
+        .find(|(id, _)| *id == node_id)
+        .map(|(_, p)| *p)
+        .unwrap();
+    assert_eq!(preview.x, 20.0);
+
+    let group_rect_after_move = graph
+        .read_ref(cx.app, |g| g.groups.get(&group_id).map(|gr| gr.rect))
         .unwrap()
         .unwrap();
-    assert_eq!(group_rect.size.width, 100.0);
+    assert_eq!(group_rect_after_move.size.width, 100.0);
+
+    assert!(super::super::pointer_up::handle_pointer_up(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        Point::new(Px(80.0), Px(10.0)),
+        fret_core::MouseButton::Left,
+        1,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    let node_pos_after_commit = graph
+        .read_ref(cx.app, |g| g.nodes.get(&node_id).map(|n| n.pos))
+        .unwrap()
+        .unwrap();
+    assert_eq!(node_pos_after_commit.x, 20.0);
 }
 
 #[test]
@@ -260,6 +293,9 @@ fn child_node_drag_expands_group_when_expand_parent_is_true() {
         primary: node_id,
         node_ids: vec![node_id],
         nodes: vec![(node_id, CanvasPoint { x: 10.0, y: 10.0 })],
+        current_nodes: vec![(node_id, CanvasPoint { x: 10.0, y: 10.0 })],
+        current_groups: Vec::new(),
+        preview_rev: 0,
         grab_offset: Point::new(Px(0.0), Px(0.0)),
         start_pos: Point::new(Px(10.0), Px(10.0)),
     });
@@ -281,17 +317,61 @@ fn child_node_drag_expands_group_when_expand_parent_is_true() {
         snapshot.zoom,
     ));
 
-    let node_pos = graph
-        .read_ref(&mut host, |g| g.nodes.get(&node_id).map(|n| n.pos))
+    let node_pos_after_move = graph
+        .read_ref(cx.app, |g| g.nodes.get(&node_id).map(|n| n.pos))
         .unwrap()
         .unwrap();
-    assert_eq!(node_pos.x, 80.0);
+    assert_eq!(node_pos_after_move.x, 10.0);
 
-    let group_rect = graph
-        .read_ref(&mut host, |g| g.groups.get(&group_id).map(|gr| gr.rect))
+    let drag = canvas
+        .interaction
+        .node_drag
+        .as_ref()
+        .expect("node drag active");
+    let preview = drag
+        .current_nodes
+        .iter()
+        .find(|(id, _)| *id == node_id)
+        .map(|(_, p)| *p)
+        .unwrap();
+    assert_eq!(preview.x, 80.0);
+
+    let group_rect_preview = drag
+        .current_groups
+        .iter()
+        .find(|(id, _)| *id == group_id)
+        .map(|(_, r)| *r)
+        .unwrap();
+    assert_eq!(group_rect_preview.size.width, 160.0);
+
+    let group_rect_after_move = graph
+        .read_ref(cx.app, |g| g.groups.get(&group_id).map(|gr| gr.rect))
         .unwrap()
         .unwrap();
-    assert_eq!(group_rect.size.width, 160.0);
+    assert_eq!(group_rect_after_move.size.width, 100.0);
+
+    assert!(super::super::pointer_up::handle_pointer_up(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        Point::new(Px(80.0), Px(10.0)),
+        fret_core::MouseButton::Left,
+        1,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    let node_pos_after_commit = graph
+        .read_ref(cx.app, |g| g.nodes.get(&node_id).map(|n| n.pos))
+        .unwrap()
+        .unwrap();
+    assert_eq!(node_pos_after_commit.x, 80.0);
+
+    let group_rect_after_commit = graph
+        .read_ref(cx.app, |g| g.groups.get(&group_id).map(|gr| gr.rect))
+        .unwrap()
+        .unwrap();
+    assert_eq!(group_rect_after_commit.size.width, 160.0);
 }
 
 #[test]
@@ -340,6 +420,9 @@ fn node_drag_respects_per_node_extent_rect() {
         primary: node_id,
         node_ids: vec![node_id],
         nodes: vec![(node_id, CanvasPoint { x: 0.0, y: 0.0 })],
+        current_nodes: vec![(node_id, CanvasPoint { x: 0.0, y: 0.0 })],
+        current_groups: Vec::new(),
+        preview_rev: 0,
         grab_offset: Point::new(Px(0.0), Px(0.0)),
         start_pos: Point::new(Px(0.0), Px(0.0)),
     });
@@ -361,11 +444,41 @@ fn node_drag_respects_per_node_extent_rect() {
         snapshot.zoom,
     ));
 
-    let node_pos = graph
-        .read_ref(&mut host, |g| g.nodes.get(&node_id).map(|n| n.pos))
+    let node_pos_after_move = graph
+        .read_ref(cx.app, |g| g.nodes.get(&node_id).map(|n| n.pos))
         .unwrap()
         .unwrap();
-    assert_eq!(node_pos.x, 20.0);
+    assert_eq!(node_pos_after_move.x, 0.0);
+
+    let drag = canvas
+        .interaction
+        .node_drag
+        .as_ref()
+        .expect("node drag active");
+    let preview = drag
+        .current_nodes
+        .iter()
+        .find(|(id, _)| *id == node_id)
+        .map(|(_, p)| *p)
+        .unwrap();
+    assert_eq!(preview.x, 20.0);
+
+    assert!(super::super::pointer_up::handle_pointer_up(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        Point::new(Px(80.0), Px(0.0)),
+        fret_core::MouseButton::Left,
+        1,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    let node_pos_after_commit = graph
+        .read_ref(cx.app, |g| g.nodes.get(&node_id).map(|n| n.pos))
+        .unwrap()
+        .unwrap();
+    assert_eq!(node_pos_after_commit.x, 20.0);
 }
 
 #[test]
@@ -2475,6 +2588,9 @@ fn missing_pointer_up_can_be_inferred_from_mouse_buttons_state() {
         primary: a,
         node_ids: vec![a],
         nodes: vec![(a, CanvasPoint { x: 0.0, y: 0.0 })],
+        current_nodes: vec![(a, CanvasPoint { x: 0.0, y: 0.0 })],
+        current_groups: Vec::new(),
+        preview_rev: 0,
         grab_offset: Point::new(Px(0.0), Px(0.0)),
         start_pos: Point::new(Px(0.0), Px(0.0)),
     });

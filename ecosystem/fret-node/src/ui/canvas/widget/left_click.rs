@@ -107,11 +107,31 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddle
                         let Some(group) = graph.groups.get(group_id) else {
                             continue;
                         };
-                        let rect = super::group_resize::group_rect_to_px(group.rect);
+                        let rect0 = if let Some(drag) = this
+                            .interaction
+                            .group_drag
+                            .as_ref()
+                            .filter(|d| d.group == *group_id)
+                            .map(|d| d.current_rect)
+                        {
+                            drag
+                        } else if let Some(rect) =
+                            this.interaction.node_drag.as_ref().and_then(|d| {
+                                d.current_groups
+                                    .iter()
+                                    .find(|(id, _)| *id == *group_id)
+                                    .map(|(_, r)| *r)
+                            })
+                        {
+                            rect
+                        } else {
+                            group.rect
+                        };
+                        let rect = super::group_resize::group_rect_to_px(rect0);
                         let handle = this.resize_handle_rect(rect, zoom);
                         if super::group_resize::group_resize_handle_hit(handle, position, zoom, 6.0)
                         {
-                            return Hit::GroupResize(*group_id, group.rect);
+                            return Hit::GroupResize(*group_id, rect0);
                         }
                     }
 
@@ -120,12 +140,32 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddle
                         let Some(group) = graph.groups.get(group_id) else {
                             continue;
                         };
+                        let rect0 = if let Some(drag) = this
+                            .interaction
+                            .group_drag
+                            .as_ref()
+                            .filter(|d| d.group == *group_id)
+                            .map(|d| d.current_rect)
+                        {
+                            drag
+                        } else if let Some(rect) =
+                            this.interaction.node_drag.as_ref().and_then(|d| {
+                                d.current_groups
+                                    .iter()
+                                    .find(|(id, _)| *id == *group_id)
+                                    .map(|(_, r)| *r)
+                            })
+                        {
+                            rect
+                        } else {
+                            group.rect
+                        };
                         if !super::pending_group_drag::group_header_hit(
-                            group.rect, header_h, zoom, position,
+                            rect0, header_h, zoom, position,
                         ) {
                             continue;
                         }
-                        return Hit::GroupHeader(*group_id, group.rect);
+                        return Hit::GroupHeader(*group_id, rect0);
                     }
                     return Hit::Background;
                 };

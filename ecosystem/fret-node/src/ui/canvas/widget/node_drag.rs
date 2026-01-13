@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use fret_canvas::scale::canvas_units_from_screen_px;
 use fret_core::{Modifiers, Point, Px, Rect};
@@ -60,7 +60,7 @@ pub(super) fn handle_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     modifiers: Modifiers,
     zoom: f32,
 ) -> bool {
-    let Some(drag) = canvas.interaction.node_drag.clone() else {
+    let Some(mut drag) = canvas.interaction.node_drag.clone() else {
         return false;
     };
 
@@ -159,60 +159,80 @@ pub(super) fn handle_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     }
 
     let geom_for_extent = canvas.canvas_geometry(&*cx.app, snapshot);
-    let _ = canvas.graph.update(cx.app, |g, _cx| {
-        for (id, start) in &drag.nodes {
-            let Some(node) = g.nodes.get(id) else {
-                continue;
-            };
-            let from = node.pos;
-            let mut to = CanvasPoint {
-                x: start.x + delta.x,
-                y: start.y + delta.y,
-            };
+    let (next_nodes, next_groups) = canvas
+        .graph
+        .read_ref(cx.app, |g| {
+            let mut out_nodes: Vec<(GraphNodeId, CanvasPoint)> =
+                Vec::with_capacity(drag.nodes.len());
+            let mut group_overrides: HashMap<crate::core::GroupId, CanvasRect> = HashMap::new();
 
-            let Some(node_geom) = geom_for_extent.nodes.get(id) else {
-                continue;
-            };
-            let node_size = CanvasSize {
-                width: node_geom.rect.size.width.0,
-                height: node_geom.rect.size.height.0,
-            };
+            for (id, start) in &drag.nodes {
+                let Some(node) = g.nodes.get(id) else {
+                    continue;
+                };
 
-            if let Some(extent) = snapshot.interaction.node_extent {
-                to = clamp_point_in_rect_with_size(to, node_size, extent);
-            }
+                let mut to = CanvasPoint {
+                    x: start.x + delta.x,
+                    y: start.y + delta.y,
+                };
 
-            if let Some(NodeExtent::Rect { rect }) = node.extent {
-                to = clamp_point_in_rect_with_size(to, node_size, rect);
-            }
+                let Some(node_geom) = geom_for_extent.nodes.get(id) else {
+                    continue;
+                };
+                let node_size = CanvasSize {
+                    width: node_geom.rect.size.width.0,
+                    height: node_geom.rect.size.height.0,
+                };
 
-            let expand_parent = node.expand_parent.unwrap_or(false);
-            if let Some(parent) = node.parent {
-                let parent_rect = g.groups.get(&parent).map(|gr| gr.rect);
-
-                let clamp_to_parent = !expand_parent
-                    && match node.extent {
-                        Some(NodeExtent::Parent) | None | Some(NodeExtent::Rect { .. }) => true,
-                    };
-
-                if clamp_to_parent && let Some(group_rect) = parent_rect {
-                    to = clamp_point_in_rect_with_size(to, node_size, group_rect);
-                } else if expand_parent && let Some(group) = g.groups.get_mut(&parent) {
-                    let child_rect = CanvasRect {
-                        origin: to,
-                        size: node_size,
-                    };
-                    group.rect = union_rect(group.rect, child_rect);
+                if let Some(extent) = snapshot.interaction.node_extent {
+                    to = clamp_point_in_rect_with_size(to, node_size, extent);
                 }
+
+                if let Some(NodeExtent::Rect { rect }) = node.extent {
+                    to = clamp_point_in_rect_with_size(to, node_size, rect);
+                }
+
+                let expand_parent = node.expand_parent.unwrap_or(false);
+                if let Some(parent) = node.parent {
+                    let parent_rect = g.groups.get(&parent).map(|gr| gr.rect);
+
+                    let clamp_to_parent = !expand_parent
+                        && match node.extent {
+                            Some(NodeExtent::Parent) | None | Some(NodeExtent::Rect { .. }) => true,
+                        };
+
+                    if clamp_to_parent && let Some(group_rect) = parent_rect {
+                        to = clamp_point_in_rect_with_size(to, node_size, group_rect);
+                    } else if expand_parent && let Some(group_rect) = parent_rect {
+                        let child_rect = CanvasRect {
+                            origin: to,
+                            size: node_size,
+                        };
+                        let next = union_rect(group_rect, child_rect);
+                        group_overrides
+                            .entry(parent)
+                            .and_modify(|r| *r = union_rect(*r, next))
+                            .or_insert(next);
+                    }
+                }
+
+                out_nodes.push((*id, to));
             }
 
-            if from != to {
-                if let Some(node) = g.nodes.get_mut(id) {
-                    node.pos = to;
-                }
-            }
-        }
-    });
+            let mut out_groups: Vec<(crate::core::GroupId, CanvasRect)> =
+                group_overrides.into_iter().collect();
+            out_groups.sort_by(|a, b| a.0.cmp(&b.0));
+            (out_nodes, out_groups)
+        })
+        .ok()
+        .unwrap_or_default();
+
+    if drag.current_nodes != next_nodes || drag.current_groups != next_groups {
+        drag.current_nodes = next_nodes;
+        drag.current_groups = next_groups;
+        drag.preview_rev = drag.preview_rev.wrapping_add(1);
+    }
+    canvas.interaction.node_drag = Some(drag.clone());
 
     if auto_pan_delta.x != 0.0 || auto_pan_delta.y != 0.0 {
         canvas.update_view_state(cx.app, |s| {

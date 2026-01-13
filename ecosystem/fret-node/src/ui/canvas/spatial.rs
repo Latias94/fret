@@ -6,6 +6,7 @@
 use fret_canvas::spatial::GridIndexWithBackrefs;
 use fret_canvas::wires as canvas_wires;
 use fret_core::{Point, Px, Rect, Size};
+use std::collections::HashMap;
 
 use crate::core::{EdgeId, Graph, NodeId, PortId};
 
@@ -36,6 +37,8 @@ pub(crate) struct CanvasSpatialIndex {
     nodes: GridIndexWithBackrefs<NodeId>,
     ports: GridIndexWithBackrefs<PortId>,
     edges: GridIndexWithBackrefs<EdgeId>,
+    edge_aabb_pad_canvas: f32,
+    edges_by_port: HashMap<PortId, Vec<EdgeId>>,
 }
 
 impl CanvasSpatialIndex {
@@ -44,6 +47,8 @@ impl CanvasSpatialIndex {
             nodes: GridIndexWithBackrefs::new(1.0),
             ports: GridIndexWithBackrefs::new(1.0),
             edges: GridIndexWithBackrefs::new(1.0),
+            edge_aabb_pad_canvas: 0.0,
+            edges_by_port: HashMap::new(),
         }
     }
 
@@ -68,6 +73,7 @@ impl CanvasSpatialIndex {
         let mut nodes = GridIndexWithBackrefs::new(cell_size);
         let mut ports = GridIndexWithBackrefs::new(cell_size);
         let mut edges = GridIndexWithBackrefs::new(cell_size);
+        let mut edges_by_port: HashMap<PortId, Vec<EdgeId>> = HashMap::new();
 
         // Index nodes in draw order so deterministic tie-breaking can be layered on top.
         for node_id in geom.order.iter().copied() {
@@ -93,6 +99,9 @@ impl CanvasSpatialIndex {
 
         let pad = max_hit_pad_canvas.max(0.0);
         for (&edge_id, edge) in &graph.edges {
+            edges_by_port.entry(edge.from).or_default().push(edge_id);
+            edges_by_port.entry(edge.to).or_default().push(edge_id);
+
             let Some(from) = geom.port_center(edge.from) else {
                 continue;
             };
@@ -107,6 +116,8 @@ impl CanvasSpatialIndex {
             nodes,
             ports,
             edges,
+            edge_aabb_pad_canvas: pad,
+            edges_by_port,
         }
     }
 
@@ -128,6 +139,26 @@ impl CanvasSpatialIndex {
         self.nodes.query_rect(rect, out);
         out.sort_unstable();
         out.dedup();
+    }
+
+    pub(crate) fn edge_aabb(&self, from: Point, to: Point, zoom: f32) -> Rect {
+        wire_aabb(from, to, zoom, self.edge_aabb_pad_canvas)
+    }
+
+    pub(crate) fn edges_for_port(&self, port: PortId) -> Option<&[EdgeId]> {
+        self.edges_by_port.get(&port).map(|v| v.as_slice())
+    }
+
+    pub(crate) fn update_node_rect(&mut self, node: NodeId, rect: Rect) {
+        self.nodes.update_rect(node, rect);
+    }
+
+    pub(crate) fn update_port_rect(&mut self, port: PortId, rect: Rect) {
+        self.ports.update_rect(port, rect);
+    }
+
+    pub(crate) fn update_edge_rect(&mut self, edge: EdgeId, rect: Rect) {
+        self.edges.update_rect(edge, rect);
     }
 }
 
