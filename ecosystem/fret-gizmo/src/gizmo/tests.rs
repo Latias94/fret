@@ -2250,6 +2250,46 @@ fn arcball_drag_returns_to_identity_when_cursor_returns() {
 }
 
 #[test]
+fn rotate_axis_ring_is_pickable_when_partially_behind_camera() {
+    let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+    // Put the camera extremely close to the origin so a large axis ring can wrap behind it.
+    let view_proj = test_view_projection_fov((800.0, 600.0), 60.0, Vec3::new(0.20, 0.0, 0.20));
+    let origin = Vec3::ZERO;
+
+    let mut config = GizmoConfig::default();
+    config.mode = GizmoMode::Rotate;
+    config.depth_range = DepthRange::ZeroToOne;
+    config.pick_radius_px = 18.0;
+    config.drag_start_threshold_px = 0.0;
+    config.allow_axis_flip = false;
+    config.axis_fade_px = (f32::NAN, f32::NAN);
+    config.plane_fade_px2 = (f32::NAN, f32::NAN);
+    config.show_view_axis_ring = false;
+    config.show_arcball = false;
+    // Only enable the X axis ring so the expected handle is deterministic.
+    config.axis_mask = [false, true, true];
+    let gizmo = Gizmo::new(config);
+
+    let axes = gizmo.axis_dirs(&Transform3d::default());
+
+    // Make the ring radius larger than the camera distance so some ring points are behind the
+    // camera (project_point returns None), while the opposite arc remains in front.
+    let radius_world = 1.0;
+    let front = project_point(
+        view_proj,
+        vp,
+        origin + Vec3::new(0.0, 0.0, -radius_world),
+        gizmo.config.depth_range,
+    )
+    .unwrap();
+
+    let hit = gizmo
+        .pick_rotate_axis(view_proj, vp, origin, front.screen, axes, radius_world)
+        .expect("expected visible arc of the X axis ring to remain pickable");
+    assert_eq!(hit.handle, RotateHandle::AxisX.id());
+}
+
+#[test]
 fn scale_axis_drag_returns_to_one_when_cursor_returns() {
     let mut gizmo = base_gizmo(GizmoMode::Scale);
     let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
