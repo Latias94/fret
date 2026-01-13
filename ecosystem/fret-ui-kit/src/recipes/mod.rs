@@ -1,3 +1,5 @@
+#[cfg(feature = "recipes")]
+pub mod canvas_pan_zoom;
 pub mod control;
 pub mod effect_recipe;
 pub mod glass;
