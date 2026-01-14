@@ -273,7 +273,7 @@ This is a suggested sequence for reaching "mature editor" parity without over-de
        - `LightRadiusGizmoPlugin` (non-transform scalar edits) in `ecosystem/fret-gizmo/src/light_radius_plugin.rs`
 
      Known gaps (future-facing):
-     - Host-side property source contract (read/write) so plugins can query domain values without maintaining a local cache.
+     - Host-side property source contract is read-only today (ADR 0167). Writes remain host-owned via `GizmoCustomEdit` (no direct write API).
      - 3D picking primitives / acceleration (Godot-style collision + BVH) for complex gizmos.
      - Engine/editor undo/redo coalescing integration for `custom_edits` (framework support is still evolving).
 

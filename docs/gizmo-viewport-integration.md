@@ -24,9 +24,13 @@ See also:
 **Driver / engine layer:**
 
 - Own the camera, selection, and gizmo state (`Gizmo`, `ViewGizmo`, targets).
+- If you host multiple gizmos/plugins (recommended), own a `GizmoPluginManager` and register plugins
+  (e.g. `TransformGizmoPlugin`, `LightRadiusGizmoPlugin`).
 - Consume `ViewportInputEvent` to build `GizmoInput` / `ViewGizmoInput`.
-- Call `Gizmo::update(...)` to produce `GizmoUpdate` phases.
-- Render `Gizmo::draw(...) -> GizmoDrawList3d` during the engine pass.
+- Call `GizmoPluginManager::update(...)` (or `Gizmo::update(...)` for a single built-in gizmo) to
+  produce `GizmoUpdate` phases.
+- Render `GizmoPluginManager::draw(...) -> GizmoDrawList3d` (or `Gizmo::draw(...)`) during the
+  engine pass.
 
 This separation keeps `fret-ui` as a portable UI runtime and avoids coupling viewport tools to
 backend crates (`wgpu`, `winit`).
@@ -123,7 +127,7 @@ Reference mapping is in `apps/fret-examples/src/gizmo3d_demo.rs`.
 
 ## Update, commit, and undo/redo
 
-`Gizmo::update(...)` returns `Option<GizmoUpdate>` with:
+`GizmoPluginManager::update(...)` returns `Option<GizmoUpdate>` with:
 
 - `phase`: `Begin` / `Update` / `Commit` / `Cancel`
 - `updated_targets`: transforms computed from the drag-start snapshot + current totals
@@ -136,11 +140,28 @@ Host responsibilities:
 - On `Commit`: finalize the undo record.
 - On `Cancel`: restore the drag-start snapshot (or apply the inverse, depending on your model).
 
+## Host properties for custom plugins (read-only)
+
+Custom gizmo plugins often need to read host domain values (to draw correct readouts, and to capture
+drag-start snapshots) without maintaining a host-driven push cache.
+
+`fret-gizmo` supports this via a host-implemented, read-only contract:
+
+- `fret_gizmo::GizmoPropertySource` (`read_scalar(target, key) -> Option<f32>`)
+
+Thread it into the plugin manager:
+
+- pass `Some(&your_source)` to `GizmoPluginManager::{update,draw}`
+
+Reference:
+
+- `apps/fret-examples/src/gizmo3d_demo.rs` (`DemoGizmoPropertySource`)
+
 ## Rendering: engine-pass draw lists
 
 Call:
 
-- `Gizmo::draw(view_projection, viewport, active_target, targets) -> GizmoDrawList3d`
+- `GizmoPluginManager::draw(view_projection, viewport, depth_range, active_target, targets, input, properties) -> GizmoDrawList3d`
 
 and render the returned draw list in the engine pass (typically after scene geometry), using the
 explicit depth mode in the draw data. This ensures correct depth occlusion and avoids treating gizmo
