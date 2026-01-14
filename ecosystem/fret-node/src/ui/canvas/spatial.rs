@@ -3,7 +3,7 @@
 //! This module indexes ports and edges into a coarse grid in canvas space.
 //! It is intended as a UI-only acceleration structure for hit-testing and interaction previews.
 
-use fret_canvas::spatial::GridIndexWithBackrefs;
+use fret_canvas::spatial::DefaultIndexWithBackrefs;
 use fret_canvas::wires as canvas_wires;
 use fret_core::{Point, Rect};
 use std::collections::HashMap;
@@ -15,9 +15,9 @@ use super::geometry::CanvasGeometry;
 /// Coarse grid index for ports and edges (canvas space).
 #[derive(Debug, Clone)]
 pub(crate) struct CanvasSpatialIndex {
-    nodes: GridIndexWithBackrefs<NodeId>,
-    ports: GridIndexWithBackrefs<PortId>,
-    edges: GridIndexWithBackrefs<EdgeId>,
+    nodes: DefaultIndexWithBackrefs<NodeId>,
+    ports: DefaultIndexWithBackrefs<PortId>,
+    edges: DefaultIndexWithBackrefs<EdgeId>,
     edge_aabb_pad_canvas: f32,
     edges_by_port: HashMap<PortId, Vec<EdgeId>>,
 }
@@ -25,9 +25,9 @@ pub(crate) struct CanvasSpatialIndex {
 impl CanvasSpatialIndex {
     pub(crate) fn empty() -> Self {
         Self {
-            nodes: GridIndexWithBackrefs::new(1.0),
-            ports: GridIndexWithBackrefs::new(1.0),
-            edges: GridIndexWithBackrefs::new(1.0),
+            nodes: DefaultIndexWithBackrefs::new(1.0),
+            ports: DefaultIndexWithBackrefs::new(1.0),
+            edges: DefaultIndexWithBackrefs::new(1.0),
             edge_aabb_pad_canvas: 0.0,
             edges_by_port: HashMap::new(),
         }
@@ -51,9 +51,9 @@ impl CanvasSpatialIndex {
             (256.0 / zoom).max(16.0 / zoom).max(1.0)
         };
 
-        let mut nodes = GridIndexWithBackrefs::new(cell_size);
-        let mut ports = GridIndexWithBackrefs::new(cell_size);
-        let mut edges = GridIndexWithBackrefs::new(cell_size);
+        let mut nodes = DefaultIndexWithBackrefs::new(cell_size);
+        let mut ports = DefaultIndexWithBackrefs::new(cell_size);
+        let mut edges = DefaultIndexWithBackrefs::new(cell_size);
         let mut edges_by_port: HashMap<PortId, Vec<EdgeId>> = HashMap::new();
 
         // Index nodes in draw order so deterministic tie-breaking can be layered on top.

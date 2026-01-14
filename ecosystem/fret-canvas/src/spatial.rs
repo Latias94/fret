@@ -11,6 +11,9 @@ use std::hash::Hash;
 
 use fret_core::{Point, Rect};
 
+#[cfg(feature = "rstar")]
+use crate::spatial_rstar::RStarIndexWithBackrefs;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct Cell {
     x: i32,
@@ -292,6 +295,64 @@ impl<T: Copy + Eq + Hash> GridIndexWithBackrefs<T> {
                 }
             }
         }
+    }
+}
+
+/// Default incremental spatial index backend used by canvas widgets.
+///
+/// This is a small wrapper that keeps call sites stable while allowing the backend to be swapped
+/// via a feature flag:
+/// - default: uniform grid (`GridIndexWithBackrefs`)
+/// - `fret-canvas/rstar`: R-tree (`RStarIndexWithBackrefs`)
+#[derive(Debug, Clone)]
+pub struct DefaultIndexWithBackrefs<T> {
+    #[cfg(feature = "rstar")]
+    inner: RStarIndexWithBackrefs<T>,
+    #[cfg(not(feature = "rstar"))]
+    inner: GridIndexWithBackrefs<T>,
+}
+
+impl<T: Copy + Eq + Hash> DefaultIndexWithBackrefs<T> {
+    pub fn new(cell_size: f32) -> Self {
+        Self {
+            #[cfg(feature = "rstar")]
+            inner: {
+                let _ = cell_size;
+                RStarIndexWithBackrefs::new()
+            },
+            #[cfg(not(feature = "rstar"))]
+            inner: GridIndexWithBackrefs::new(cell_size),
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.inner.clear();
+    }
+
+    pub fn insert_rect(&mut self, item: T, rect: Rect) {
+        self.inner.insert_rect(item, rect);
+    }
+
+    pub fn update_rect(&mut self, item: T, rect: Rect) {
+        self.inner.update_rect(item, rect);
+    }
+
+    pub fn remove(&mut self, item: T) -> bool {
+        self.inner.remove(item)
+    }
+
+    pub fn query_radius(&self, pos: Point, radius: f32, out: &mut Vec<T>) {
+        self.inner.query_radius(pos, radius, out);
+    }
+
+    pub fn query_rect(&self, rect: Rect, out: &mut Vec<T>) {
+        self.inner.query_rect(rect, out);
+    }
+}
+
+impl<T: Copy + Eq + Hash> Default for DefaultIndexWithBackrefs<T> {
+    fn default() -> Self {
+        Self::new(1.0)
     }
 }
 

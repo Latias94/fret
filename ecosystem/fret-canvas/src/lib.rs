@@ -11,6 +11,8 @@
 pub mod drag;
 pub mod scale;
 pub mod spatial;
+#[cfg(feature = "rstar")]
+pub mod spatial_rstar;
 pub mod text;
 pub mod view;
 pub mod wires;
