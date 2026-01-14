@@ -174,20 +174,29 @@ single “at a glance” view of:
     - Bar: category-ordinal lookup (stable index mapping), respecting stacked value when applicable.
 - What exists in v1:
   - `ChartSpec.tooltip: Option<TooltipSpecV1>` supports templates + decimals, including per-series overrides (adapter-side).
+    - `TooltipSpecV1.item_axis_line` controls whether item-trigger tooltips include the axis row (`hide` is the default, ECharts-aligned).
   - Tooltip marker swatches are rendered from the series palette (UI-side).
   - Tooltip lines support a two-column `label: value` layout (UI-side; shared helper `ecosystem/fret-chart/src/tooltip_layout.rs`).
+  - Tooltip text is structurally typed for stable styling across adapters:
+    - `TooltipTextLineKind` (`AxisHeader` / `SeriesRow` / `Body`) + `value_emphasis` for value weight, and `is_missing` for de-emphasis.
+    - Evidence: `ecosystem/fret-chart/src/retained/tooltip.rs`, `ecosystem/fret-chart/src/{retained/canvas.rs,declarative/tooltip_overlay.rs}`.
   - Declarative overlay: axisPointer shadow/crosshair + snap marker + tooltip bubble is rendered by `ecosystem/fret-chart/src/declarative/tooltip_overlay.rs` (state is snapshotted during render; paint reads only the snapshot).
   - Delinea: `AxisPointerSpec.pointer_type=Shadow` (ECharts: `axisPointer.type="shadow"`) highlights the active category band (`AxisPointerOutput.shadow_rect_px`).
-  - Delinea: `AxisPointerSpec.label.show=true` (ECharts: `axisPointer.label.show=true`) draws an axis value label on the trigger axis band (adapter-side; default is `false`). v1 supports a string template formatter via `AxisPointerSpec.label.template` (`{value}`, `{axis_name}`).
+  - Delinea: `AxisPointerSpec.label.show=true` (ECharts: `axisPointer.label.show=true`) draws axis value labels (adapter-side; default is `false`).
+    - Axis trigger: one label on the trigger axis band.
+    - Item trigger: labels for both X and Y axes (best-effort), and tooltip placement avoids label rects.
+    - v1 supports a string template formatter via `AxisPointerSpec.label.template` (`{value}`, `{axis_name}`).
+  - Tooltip placement is confine-first and avoids axisPointer label rects (shared placement helper):
+    - Evidence: `ecosystem/fret-chart/src/tooltip_layout.rs` (`place_tooltip_rect`), used by both retained and declarative tooltip overlays.
   - Axis-trigger sampling reads from the current view selection (DataZoom/filter/selection) and is allocation-aware:
     - monotonic ranges use a bounded `lower_bound` interpolation path,
     - non-monotonic ranges use nearest-scan with a hard cap (`MAX_UNSORTED_AXIS_SCAN_POINTS`) to avoid O(n) work on huge datasets,
     - for very large non-monotonic X views, the engine can build a budgeted "nearest X" index to recover near-O(log n) sampling (`NearestXIndexStage`).
       The stage supports append-only resume and prefix reuse when the request end grows.
 - Missing vs ECharts:
-  - ECharts formatter parity (rich text/HTML markers, richer structural layout). Callback-style formatting is available via adapter hooks (`TooltipFormatter`, retained + declarative), and per-series overrides exist in `TooltipSpecV1`,
-  - richer tooltip layout (structural columns, rich text/HTML) and additional snapping policies,
-  - formatter parity across adapters (retained + declarative hooks exist; still missing rich text/HTML parity).
+  - Rich text / HTML tooltip content and marker layout parity (ECharts `richText` / DOM tooltip).
+  - Tooltip composition parity for complex series payloads (multi-dim values, multiple value axes, custom marker shapes).
+  - More complete axisPointer label policies (only-X label for item trigger, label collision/stacking policy, per-axis styling options).
 
 **S6 - Legend semantics (series visibility) + UI parity** (`[x]`)
 
@@ -463,18 +472,20 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 
 ## Known Gaps vs ECharts (High Value)
 
-- Tooltip formatter parity (formatter hooks, rich layout/markers, stable axis-trigger semantics across adapters) (S5).
-- DataZoom Y parity + multi-dimensional filtering semantics (ordering rules; sparse selection carriers) (S2).
+- Order-sensitive multi-dimensional filtering semantics (ECharts `dataZoomProcessor` ordering, per-axis composition) (S2).
+- General transform graph with cached node outputs + derived columns (ECharts-class dataset transforms).
+- Multi-grid layout (multiple independent grids in one chart).
 - Category axis indexing under zoom for non-bar series (S4).
 - VisualMap: multiple maps per series and per-item attribute pipelines (S7).
 - Series-specific LOD / downsampling policies + conformance harness (S8).
 - Append/update semantics (ECharts `appendData`) (S9).
+- Tooltip rich text / HTML parity (S5) (deferred; current work focuses on infra stability).
 
 ## Recommended Next Steps (P0 -> P1)
 
-1. P0: Tooltip formatter parity (callback-style formatting + rich text/HTML markers) (S5 / ADR 1148).
-2. P0/P1: DataZoom Y filtering semantics + ordering rules (and the “sparse selection” carrier boundary) (S2).
-3. P0/P1: VisualMap: multiple maps per series and a plan for per-item attributes/instancing (S7).
-4. P1: Category axis indexing under zoom for non-bar series (lock ordinal invariants with a dedicated demo) (S4).
-5. P1: LOD / downsampling policies + conformance harness (S8).
-6. P1: Append/update semantics (ECharts `appendData`) (S9).
+1. P0: Add a dedicated “filter processor” stage that owns order-sensitive multi-dim composition (ECharts `dataZoomProcessor` analogue) and emits a unified participation contract (selection + masks) (S2).
+2. P0: Add a general transform graph (cached nodes + derived columns) and migrate DataZoom/filtering to it incrementally (ECharts-class dataset transforms).
+3. P0: Multi-grid layout + deterministic routing rules (UI adapter + engine layout) (ADR 1134 follow-ups).
+4. P0/P1: Incremental dataset updates + stable partial recompute (append/update + cache invalidation boundaries) (S9 / ADR 1149).
+5. P1: VisualMap per-item attribute pipelines (beyond bucketization) and multi-map targeting semantics (S7).
+6. P1: Tooltip rich text / HTML parity and richer formatter surfaces (S5 / ADR 1148).

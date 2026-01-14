@@ -62,7 +62,8 @@ Status symbols:
 - `[x]` dataZoom X inside + slider UI (`fret-chart`) (ADR 1129 / ADR 1138)
 - `[~]` dataZoom Y + 2D zoom semantics (v1 boundary + opt-in filtering) (ADR 1136 / ADR 1150)
 - `[x]` AxisPointer (axis-trigger + item-trigger) baseline (ADR 1133)
-- `[~]` Tooltip formatting contract (templates + hooks; missing rich text/HTML parity) (ADR 1148)
+- `[~]` Tooltip formatting contract (structured rows + hooks; missing rich text/HTML parity) (ADR 1148)
+  - Item-trigger defaults are ECharts-aligned (`TooltipSpecV1.item_axis_line=hide` by default; axis values are shown via axisPointer labels when enabled).
 - `[x]` Legend visibility and isolation semantics (`Action::SetSeriesVisible`) (ADR 1128; UX tracked by `docs/delinea-echarts-alignment.md`)
 - `[~]` Brush selection output + link events (ADR 1144 / ADR 1146; parity tests still sparse)
 - `[~]` VisualMap baseline (continuous + piecewise) (ADR 1147; channel coverage is incomplete)
@@ -83,13 +84,14 @@ Status symbols:
 
 ## Recommended Next Steps (ECharts Replica Workstream)
 
-1. Add a dedicated “filter processor” stage (ECharts `dataZoomProcessor` analogue) that owns ordering-sensitive
+1. P0: Add a dedicated “filter processor” stage (ECharts `dataZoomProcessor` analogue) that owns ordering-sensitive
    composition (X-before-Y) and outputs a unified per-series participation contract (selection + masks).
-2. Extend `Empty` parity beyond line-family (scatter/bar mark emission + tests), keeping tooltip/axisPointer/hit-test
+2. P0: Add a general transform graph with cached node outputs + derived columns (ECharts-class dataset transforms).
+3. P0: Multi-grid layout (engine layout + UI adapter routing) and a conformance harness that locks routing invariants.
+4. P1: Extend `Empty` parity beyond line-family (scatter/bar mark emission + tests), keeping tooltip/axisPointer/hit-test
    consistent via the shared mask contract.
-3. Expand conformance coverage in `apps/fret-examples/src/chart_multi_axis_demo.rs` and lock regression tests for:
+5. P1: Expand conformance coverage in `apps/fret-examples/src/chart_multi_axis_demo.rs` and lock regression tests for:
    - 2D dataZoom ordering rules,
-   - multi-grid routing once multi-grid lands,
    - visualMap + tooltip/axisPointer interactions.
 
 ## Evidence Anchors
