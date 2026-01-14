@@ -203,92 +203,86 @@ impl DataGrid {
                     let headers = headers.clone();
                     let col_widths = col_widths.clone();
 
-                    let (
-                        scroll_handle,
-                        scroll_x,
-                        total_w,
-                        total_h,
-                        rows_visible,
-                        cols_visible,
-                    ) = cx.with_state(DataGridViewportState::default, |state| {
-                        let cols_signature = (cols_revision, cols);
-                        state.row_metrics.ensure_fixed_with_key(
-                            rows,
-                            rows_revision,
-                            row_height,
-                            Px(0.0),
-                            Px(0.0),
-                            |i| i as u64,
-                        );
-
-                        if col_widths.is_empty() {
-                            state.col_metrics.ensure_fixed_with_key(
-                                cols,
-                                cols_revision,
-                                Px(160.0),
+                    let (scroll_handle, scroll_x, total_w, total_h, rows_visible, cols_visible) =
+                        cx.with_state(DataGridViewportState::default, |state| {
+                            let cols_signature = (cols_revision, cols);
+                            state.row_metrics.ensure_fixed_with_key(
+                                rows,
+                                rows_revision,
+                                row_height,
                                 Px(0.0),
                                 Px(0.0),
                                 |i| i as u64,
                             );
-                        } else {
-                            state.col_metrics.ensure_measured_with_key(
-                                cols,
-                                cols_revision,
-                                Px(160.0),
-                                Px(0.0),
-                                Px(0.0),
-                                |i| i as u64,
-                            );
-                        }
 
-                        if state.applied_col_signature != cols_signature {
-                            if !col_widths.is_empty() {
-                                state.col_metrics.reset_measurements();
-                                for i in 0..cols {
-                                    let w = col_widths.get(i).copied().unwrap_or(Px(160.0));
-                                    state.col_metrics.measure(i, w);
-                                }
+                            if col_widths.is_empty() {
+                                state.col_metrics.ensure_fixed_with_key(
+                                    cols,
+                                    cols_revision,
+                                    Px(160.0),
+                                    Px(0.0),
+                                    Px(0.0),
+                                    |i| i as u64,
+                                );
+                            } else {
+                                state.col_metrics.ensure_measured_with_key(
+                                    cols,
+                                    cols_revision,
+                                    Px(160.0),
+                                    Px(0.0),
+                                    Px(0.0),
+                                    |i| i as u64,
+                                );
                             }
-                            state.applied_col_signature = cols_signature;
-                        }
 
-                        let viewport = state.scroll.viewport_size();
-                        let offset = state.scroll.offset();
-                        let vp = compute_grid_viewport_2d(
-                            &state.row_metrics,
-                            &state.col_metrics,
-                            offset.x,
-                            offset.y,
-                            viewport.width,
-                            viewport.height,
-                            overscan_rows,
-                            overscan_cols,
-                        );
+                            if state.applied_col_signature != cols_signature {
+                                if !col_widths.is_empty() {
+                                    state.col_metrics.reset_measurements();
+                                    for i in 0..cols {
+                                        let w = col_widths.get(i).copied().unwrap_or(Px(160.0));
+                                        state.col_metrics.measure(i, w);
+                                    }
+                                }
+                                state.applied_col_signature = cols_signature;
+                            }
 
-                        let mut rows_visible = Vec::new();
-                        let mut cols_visible = Vec::new();
-                        let mut scroll_x = offset.x;
-                        if let Some(vp) = vp {
-                            scroll_x = vp.scroll_x;
-                            rows_visible = default_range_extractor(vp.row_range)
-                                .into_iter()
-                                .filter_map(|i| state.row_metrics.axis_item(i))
-                                .collect();
-                            cols_visible = default_range_extractor(vp.col_range)
-                                .into_iter()
-                                .filter_map(|i| state.col_metrics.axis_item(i))
-                                .collect();
-                        }
+                            let viewport = state.scroll.viewport_size();
+                            let offset = state.scroll.offset();
+                            let vp = compute_grid_viewport_2d(
+                                &state.row_metrics,
+                                &state.col_metrics,
+                                offset.x,
+                                offset.y,
+                                viewport.width,
+                                viewport.height,
+                                overscan_rows,
+                                overscan_cols,
+                            );
 
-                        (
-                            state.scroll.clone(),
-                            scroll_x,
-                            state.col_metrics.total_size(),
-                            state.row_metrics.total_size(),
-                            rows_visible,
-                            cols_visible,
-                        )
-                    });
+                            let mut rows_visible = Vec::new();
+                            let mut cols_visible = Vec::new();
+                            let mut scroll_x = offset.x;
+                            if let Some(vp) = vp {
+                                scroll_x = vp.scroll_x;
+                                rows_visible = default_range_extractor(vp.row_range)
+                                    .into_iter()
+                                    .filter_map(|i| state.row_metrics.axis_item(i))
+                                    .collect();
+                                cols_visible = default_range_extractor(vp.col_range)
+                                    .into_iter()
+                                    .filter_map(|i| state.col_metrics.axis_item(i))
+                                    .collect();
+                            }
+
+                            (
+                                state.scroll.clone(),
+                                scroll_x,
+                                state.col_metrics.total_size(),
+                                state.row_metrics.total_size(),
+                                rows_visible,
+                                cols_visible,
+                            )
+                        });
 
                     let body = {
                         let mut body_layout = list_layout_style();
@@ -368,15 +362,19 @@ impl DataGrid {
                                                         .border_1()
                                                         .border_color(ColorRef::Color(border));
                                                     if selected {
-                                                        chrome = chrome.bg(ColorRef::Color(selected_bg));
+                                                        chrome =
+                                                            chrome.bg(ColorRef::Color(selected_bg));
                                                     } else if state.hovered {
-                                                        chrome = chrome.bg(ColorRef::Color(hover_bg));
+                                                        chrome =
+                                                            chrome.bg(ColorRef::Color(hover_bg));
                                                     }
 
-                                                    let mut row_container_layout = LayoutStyle::default();
+                                                    let mut row_container_layout =
+                                                        LayoutStyle::default();
                                                     row_container_layout.size.width = Length::Fill;
                                                     row_container_layout.size.height = Length::Fill;
-                                                    row_container_layout.overflow = Overflow::Visible;
+                                                    row_container_layout.overflow =
+                                                        Overflow::Visible;
 
                                                     let mut props = decl_style::container_props(
                                                         &row_theme,
@@ -416,18 +414,24 @@ impl DataGrid {
                                                             let row_cell_at = row_cell_at.clone();
                                                             let row_index = row.index;
                                                             let col_index = col.index;
-                                                            cells.push(cx.keyed((row_key, col.key), move |cx| {
-                                                                let cell =
-                                                                    row_cell_at.borrow_mut()(cx, row_index, col_index);
-                                                                let cell = TableCell::new(cell).into_element(cx);
-                                                                cx.container(
-                                                                    ContainerProps {
-                                                                        layout: cell_layout,
-                                                                        ..Default::default()
-                                                                    },
-                                                                    move |_cx| vec![cell],
-                                                                )
-                                                            }));
+                                                            cells.push(cx.keyed(
+                                                                (row_key, col.key),
+                                                                move |cx| {
+                                                                    let cell = row_cell_at
+                                                                        .borrow_mut()(
+                                                                        cx, row_index, col_index,
+                                                                    );
+                                                                    let cell = TableCell::new(cell)
+                                                                        .into_element(cx);
+                                                                    cx.container(
+                                                                        ContainerProps {
+                                                                            layout: cell_layout,
+                                                                            ..Default::default()
+                                                                        },
+                                                                        move |_cx| vec![cell],
+                                                                    )
+                                                                },
+                                                            ));
                                                         }
                                                         cells
                                                     })]
