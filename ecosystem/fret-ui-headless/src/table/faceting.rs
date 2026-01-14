@@ -91,9 +91,7 @@ pub fn faceted_min_max_u64<'a, TData>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::headless::table::{
-        ColumnDef, ColumnFilter, Table, TableState, create_column_helper,
-    };
+    use crate::table::{ColumnDef, ColumnFilter, Table, TableState, create_column_helper};
     use std::sync::Arc;
 
     #[derive(Debug, Clone)]

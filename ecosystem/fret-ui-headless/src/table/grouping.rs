@@ -462,7 +462,7 @@ pub fn group_row_model<'a, TData>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::headless::table::{Table, create_column_helper};
+    use crate::table::{Table, create_column_helper};
     use std::sync::Arc;
 
     #[derive(Debug, Clone)]
@@ -514,7 +514,7 @@ mod tests {
             helper.accessor("score", |it| it.score),
         ];
 
-        let mut state = crate::headless::table::TableState::default();
+        let mut state = crate::table::TableState::default();
         state.grouping = vec![ColumnId::from("role")];
         let table = Table::builder(&data).columns(columns).state(state).build();
 

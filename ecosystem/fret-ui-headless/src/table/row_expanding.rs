@@ -178,7 +178,7 @@ pub fn expand_row_model<'a, TData>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::headless::table::Table;
+    use crate::table::Table;
 
     #[derive(Debug, Clone)]
     struct Node {

@@ -100,7 +100,7 @@ pub fn paginate_row_model<'a, TData>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::headless::table::{RowKey, Table};
+    use crate::table::{RowKey, Table};
 
     #[derive(Debug, Clone)]
     struct Item {

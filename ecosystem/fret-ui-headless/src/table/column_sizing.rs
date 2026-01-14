@@ -149,7 +149,7 @@ pub fn end_column_resize(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::headless::table::TableOptions;
+    use crate::table::TableOptions;
 
     #[test]
     fn column_size_reads_from_map() {

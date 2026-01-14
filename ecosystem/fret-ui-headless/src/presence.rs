@@ -1,4 +1,4 @@
-use crate::headless::transition::TransitionTimeline;
+use crate::transition::TransitionTimeline;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PresenceOutput {
@@ -64,7 +64,7 @@ impl FadePresence {
     }
 
     pub fn update(&mut self, open: bool, tick: u64) -> PresenceOutput {
-        self.update_with_easing(open, tick, crate::headless::easing::smoothstep)
+        self.update_with_easing(open, tick, crate::easing::smoothstep)
     }
 
     /// Like [`FadePresence::update`], but allows callers to provide an easing function.
@@ -151,7 +151,7 @@ impl ScaleFadePresence {
     }
 
     pub fn update(&mut self, open: bool, tick: u64) -> ScaleFadePresenceOutput {
-        self.update_with_easing(open, tick, crate::headless::easing::smoothstep)
+        self.update_with_easing(open, tick, crate::easing::smoothstep)
     }
 
     pub fn update_with_easing(
@@ -208,12 +208,12 @@ mod tests {
         let mut p = FadePresence::default();
         p.set_fade_ticks(4);
 
-        let a0 = p.update_with_easing(true, 0, crate::headless::easing::linear);
+        let a0 = p.update_with_easing(true, 0, crate::easing::linear);
         assert!(a0.present);
         assert!(a0.animating);
         assert!((a0.opacity - 0.25).abs() < 1e-6);
 
-        let a3 = p.update_with_easing(true, 3, crate::headless::easing::linear);
+        let a3 = p.update_with_easing(true, 3, crate::easing::linear);
         assert!(a3.present);
         assert!(!a3.animating);
         assert!((a3.opacity - 1.0).abs() < 1e-6);
@@ -224,13 +224,13 @@ mod tests {
         let mut p = ScaleFadePresence::new(0.8, 1.0);
         p.set_durations(4, 4);
 
-        let a0 = p.update_with_easing(true, 0, crate::headless::easing::linear);
+        let a0 = p.update_with_easing(true, 0, crate::easing::linear);
         assert!(a0.present);
         assert!(a0.animating);
         assert!((a0.opacity - 0.25).abs() < 1e-6);
         assert!((a0.scale - 0.85).abs() < 1e-6);
 
-        let a3 = p.update_with_easing(true, 3, crate::headless::easing::linear);
+        let a3 = p.update_with_easing(true, 3, crate::easing::linear);
         assert!(a3.present);
         assert!(!a3.animating);
         assert!((a3.opacity - 1.0).abs() < 1e-6);

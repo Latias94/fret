@@ -136,7 +136,7 @@ fn columns_signature<TData>(columns: &[ColumnDef<TData>]) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::compute_flat_row_order;
-    use crate::headless::table::{ColumnDef, SortSpec};
+    use crate::table::{ColumnDef, SortSpec};
     use std::cmp::Ordering;
     use std::sync::Arc;
 
@@ -288,7 +288,7 @@ mod tests {
                 column: "value".into(),
                 desc: false,
             }],
-            &[crate::headless::table::ColumnFilter {
+            &[crate::table::ColumnFilter {
                 column: "kind".into(),
                 value: "keep".into(),
             }],

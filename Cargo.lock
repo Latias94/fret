@@ -1406,6 +1406,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-ui-headless"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-ui",
+ "time",
+ "virtualizer",
+]
+
+[[package]]
 name = "fret-ui-kit"
 version = "0.1.0"
 dependencies = [
@@ -1415,6 +1425,7 @@ dependencies = [
  "fret-icons",
  "fret-runtime",
  "fret-ui",
+ "fret-ui-headless",
  "serde",
  "serde_json",
  "time",

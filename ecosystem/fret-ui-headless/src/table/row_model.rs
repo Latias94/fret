@@ -1175,8 +1175,8 @@ fn build_core_row_model<'a, TData>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::headless::table::is_column_visible;
-    use crate::headless::table::{
+    use crate::table::is_column_visible;
+    use crate::table::{
         ColumnDef, ColumnFilter, ColumnId, ColumnPinPosition, ColumnSizingRegion, PaginationState,
         SortSpec, TableOptions, TableState, create_column_helper,
     };
@@ -1679,7 +1679,7 @@ mod tests {
         }];
 
         let mut state = TableState::default();
-        state.expanding = crate::headless::table::ExpandingState::All;
+        state.expanding = crate::table::ExpandingState::All;
 
         let table = Table::builder(&data)
             .get_row_key(|n, _i, _parent| RowKey(n.id))

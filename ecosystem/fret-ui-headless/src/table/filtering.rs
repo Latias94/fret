@@ -188,7 +188,7 @@ pub fn contains_ascii_case_insensitive(haystack: &str, needle: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::headless::table::{Table, create_column_helper};
+    use crate::table::{Table, create_column_helper};
 
     #[derive(Debug, Clone)]
     struct Item {
@@ -235,7 +235,7 @@ mod tests {
 
         assert_eq!(filtered.root_rows().len(), 1);
         let row = filtered.row(filtered.root_rows()[0]).expect("row");
-        assert_eq!(row.key, crate::headless::table::RowKey::from_index(0));
+        assert_eq!(row.key, crate::table::RowKey::from_index(0));
         assert!(filtered.row_by_key(row.key).is_some());
     }
 }

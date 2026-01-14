@@ -153,7 +153,7 @@ pub fn sort_row_model<'a, TData>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::headless::table::{Table, create_column_helper};
+    use crate::table::{Table, create_column_helper};
 
     #[derive(Debug, Clone)]
     struct Item {

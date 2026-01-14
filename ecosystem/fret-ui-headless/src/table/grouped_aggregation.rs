@@ -130,7 +130,7 @@ pub fn compute_grouped_u64_aggregations<TData>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::headless::table::{ColumnDef, Table, TableState};
+    use crate::table::{ColumnDef, Table, TableState};
     use std::sync::Arc;
 
     #[derive(Debug, Clone)]

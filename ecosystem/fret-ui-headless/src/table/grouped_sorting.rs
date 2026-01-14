@@ -126,7 +126,7 @@ pub fn sort_grouped_row_indices_in_place<TData>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::headless::table::{Aggregation, Table, TableState};
+    use crate::table::{Aggregation, Table, TableState};
 
     #[derive(Debug, Clone)]
     struct Item {
@@ -175,7 +175,7 @@ mod tests {
         for i in 0..data.len() {
             row_index_by_key.insert(RowKey(i as u64), i);
         }
-        let aggs = crate::headless::table::compute_grouped_u64_aggregations(
+        let aggs = crate::table::compute_grouped_u64_aggregations(
             &grouped,
             &data,
             &row_index_by_key,
@@ -230,7 +230,7 @@ mod tests {
         for i in 0..data.len() {
             row_index_by_key.insert(RowKey(i as u64), i);
         }
-        let aggs = crate::headless::table::compute_grouped_u64_aggregations(
+        let aggs = crate::table::compute_grouped_u64_aggregations(
             &grouped,
             &data,
             &row_index_by_key,
