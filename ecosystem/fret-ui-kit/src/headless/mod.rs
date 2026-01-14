@@ -1,6 +1,5 @@
 pub mod dismissible_layer;
 pub mod focus_scope;
-pub mod scroll_area_visibility;
 
 pub use fret_ui_headless::calendar;
 pub use fret_ui_headless::checked_state;
@@ -15,6 +14,8 @@ pub use fret_ui_headless::menu_nav;
 pub use fret_ui_headless::presence;
 pub use fret_ui_headless::roving_focus;
 pub use fret_ui_headless::safe_hover;
+pub use fret_ui_headless::scroll_area;
+pub use fret_ui_headless::scroll_area_visibility;
 pub use fret_ui_headless::select_item_aligned;
 pub use fret_ui_headless::slider;
 pub use fret_ui_headless::table;

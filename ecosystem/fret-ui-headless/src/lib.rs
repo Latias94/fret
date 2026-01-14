@@ -16,6 +16,8 @@ pub mod menu_nav;
 pub mod presence;
 pub mod roving_focus;
 pub mod safe_hover;
+pub mod scroll_area;
+pub mod scroll_area_visibility;
 pub mod select_item_aligned;
 pub mod slider;
 pub mod table;

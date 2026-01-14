@@ -1,4 +1,4 @@
-use crate::primitives::scroll_area::ScrollAreaType;
+use crate::scroll_area::ScrollAreaType;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ScrollVisibilityState {
