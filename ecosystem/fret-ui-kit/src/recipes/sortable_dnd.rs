@@ -14,7 +14,7 @@ use fret_runtime::Model;
 use fret_ui::action::{
     OnPointerDown, OnPointerMove, OnPointerUp, PointerDownCx, PointerMoveCx, PointerUpCx,
 };
-use fret_ui::element::{AnyElement, ContainerProps, Length, PointerRegionProps};
+use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length, PointerRegionProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::declarative::model_watch::ModelWatchExt as _;
@@ -204,6 +204,10 @@ pub fn sortable_reorder_list<H: UiHost>(
                     }
 
                     if st.dragging {
+                        debug_assert!(
+                            !st.droppables.is_empty(),
+                            "sortable_dnd: expected droppables to be registered before drag move"
+                        );
                         let cols = collisions_for(collision_strategy, &st.droppables, mv.position);
                         st.over = cols.first().map(|c| c.id);
                         outcome = MoveOutcome::Updated;
@@ -282,27 +286,32 @@ pub fn sortable_reorder_list<H: UiHost>(
             };
 
             cx.pointer_region(pr, |cx| {
-                let element = cx.root_id();
-                if let Some(rect) = cx.last_visual_bounds_for_element(element) {
-                    droppables.push(Droppable {
-                        id,
-                        rect,
-                        disabled: false,
-                        z_index: 0,
-                    });
-                }
-
                 cx.pointer_region_on_pointer_down(on_down);
                 cx.pointer_region_on_pointer_move(on_move);
                 cx.pointer_region_on_pointer_up(on_up);
 
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Fill;
+                layout.size.height = Length::Fill;
+
                 vec![cx.container(
                     ContainerProps {
-                        layout: Default::default(),
+                        layout,
                         background: bg.or(Some(list_bg)),
                         ..Default::default()
                     },
-                    |cx| row_contents(cx, id),
+                    |cx| {
+                        let element = cx.root_id();
+                        if let Some(rect) = cx.last_bounds_for_element(element) {
+                            droppables.push(Droppable {
+                                id,
+                                rect,
+                                disabled: false,
+                                z_index: 0,
+                            });
+                        }
+                        row_contents(cx, id)
+                    },
                 )]
             })
         });
@@ -321,7 +330,7 @@ pub fn sortable_reorder_list<H: UiHost>(
             .gap_y(Space::N0)
             .justify(Justify::Start)
             .items(Items::Stretch)
-            .layout(LayoutRefinement::default()),
+            .layout(LayoutRefinement::default().w_full()),
         |_cx| children,
     )
 }
@@ -416,8 +425,7 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let row_ids: Rc<RefCell<Vec<fret_ui::GlobalElementId>>> =
-            Rc::new(RefCell::new(Vec::new()));
+        let row_ids: Rc<RefCell<Vec<fret_ui::GlobalElementId>>> = Rc::new(RefCell::new(Vec::new()));
 
         fn render(
             ui: &mut UiTree<App>,
@@ -476,6 +484,15 @@ mod tests {
             .map(|&n| ui.debug_node_bounds(n).expect("bounds"))
             .collect::<Vec<_>>();
 
+        assert!(
+            rects[0].size.width.0 > 0.0 && rects[0].size.height.0 > 0.0,
+            "expected non-empty row bounds"
+        );
+        assert!(
+            rects[0].origin.y.0 < rects[1].origin.y.0 && rects[1].origin.y.0 < rects[2].origin.y.0,
+            "expected stacked rows to have increasing y origins"
+        );
+
         let center = |r: Rect| {
             Point::new(
                 Px(r.origin.x.0 + r.size.width.0 * 0.5),
@@ -499,6 +516,10 @@ mod tests {
                 pointer_type: PointerType::Mouse,
             }),
         );
+        assert!(
+            ui.captured_for(PointerId(0)).is_some(),
+            "expected pointer to be captured after down"
+        );
 
         bump(&mut app);
         ui.dispatch_event(
@@ -515,6 +536,10 @@ mod tests {
                 pointer_type: PointerType::Mouse,
             }),
         );
+        assert!(
+            ui.captured_for(PointerId(0)).is_some(),
+            "expected pointer to remain captured during move"
+        );
 
         bump(&mut app);
         ui.dispatch_event(
@@ -528,6 +553,10 @@ mod tests {
                 pointer_id: PointerId(0),
                 pointer_type: PointerType::Mouse,
             }),
+        );
+        assert!(
+            ui.captured_for(PointerId(0)).is_none(),
+            "expected pointer capture to be released after up"
         );
 
         bump(&mut app);
