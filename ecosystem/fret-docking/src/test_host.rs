@@ -260,41 +260,48 @@ impl TimeHost for TestHost {
 }
 
 impl DragHost for TestHost {
-    fn drag(&self) -> Option<&DragSession> {
-        self.drag.as_ref()
+    fn drag(&self, pointer_id: PointerId) -> Option<&DragSession> {
+        self.drags.get(&pointer_id)
     }
 
-    fn drag_mut(&mut self) -> Option<&mut DragSession> {
-        self.drag.as_mut()
+    fn drag_mut(&mut self, pointer_id: PointerId) -> Option<&mut DragSession> {
+        self.drags.get_mut(&pointer_id)
     }
 
-    fn cancel_drag(&mut self) {
-        self.drag = None;
+    fn cancel_drag(&mut self, pointer_id: PointerId) {
+        self.drags.remove(&pointer_id);
     }
 
     fn begin_drag_with_kind<T: Any>(
         &mut self,
-        kind: DragKind,
+        pointer_id: PointerId,
+        kind: DragKindId,
         source_window: AppWindowId,
         start: Point,
         payload: T,
     ) {
-        self.drag = Some(DragSession::new(source_window, kind, start, payload));
+        let session_id = DragSessionId(self.next_drag_session_id);
+        self.next_drag_session_id = self.next_drag_session_id.saturating_add(1);
+        self.drags.insert(
+            pointer_id,
+            DragSession::new(session_id, pointer_id, source_window, kind, start, payload),
+        );
     }
 
     fn begin_cross_window_drag_with_kind<T: Any>(
         &mut self,
-        kind: DragKind,
+        pointer_id: PointerId,
+        kind: DragKindId,
         source_window: AppWindowId,
         start: Point,
         payload: T,
     ) {
-        self.drag = Some(DragSession::new_cross_window(
-            source_window,
-            kind,
-            start,
-            payload,
-        ));
+        let session_id = DragSessionId(self.next_drag_session_id);
+        self.next_drag_session_id = self.next_drag_session_id.saturating_add(1);
+        self.drags.insert(
+            pointer_id,
+            DragSession::new_cross_window(session_id, pointer_id, source_window, kind, start, payload),
+        );
     }
 }
 
