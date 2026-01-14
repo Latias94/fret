@@ -372,6 +372,65 @@ async function clickFirst(page: puppeteer.Page, selector: string) {
   await handle.click()
 }
 
+async function hoverFirstByText(
+  page: puppeteer.Page,
+  selector: string,
+  containsText: string
+) {
+  const handles = await page.$$(selector)
+  for (const handle of handles) {
+    const text = await handle.evaluate((el) => (el.textContent || "").trim())
+    if (text.includes(containsText)) {
+      await handle.hover()
+      return
+    }
+  }
+  throw new Error(`no element for ${selector} containing text: ${containsText}`)
+}
+
+async function clickExampleTrigger(
+  page: puppeteer.Page,
+  title: string,
+  triggerSelector: string
+) {
+  const examples = await page.$$('[data-slot="example"]')
+  for (const example of examples) {
+    const titleText = await example.evaluate((el) =>
+      (el.firstElementChild?.textContent || "").trim()
+    )
+    if (titleText !== title) continue
+    const trigger = await example.$(triggerSelector)
+    if (!trigger) {
+      throw new Error(
+        `missing trigger selector=${triggerSelector} for example title=${title}`
+      )
+    }
+    await trigger.click()
+    return
+  }
+  throw new Error(`missing example title=${title} for selector=${triggerSelector}`)
+}
+
+async function clickWithinSelectorByText(
+  page: puppeteer.Page,
+  containerSelector: string,
+  itemSelector: string,
+  containsText: string
+) {
+  const container = await page.$(containerSelector)
+  if (!container) throw new Error(`missing container: ${containerSelector}`)
+  const items = await container.$$(itemSelector)
+  for (const item of items) {
+    const text = await item.evaluate((el) => (el.textContent || "").trim())
+    if (!text.includes(containsText)) continue
+    await item.click()
+    return
+  }
+  throw new Error(
+    `no element in ${containerSelector} for ${itemSelector} containing text: ${containsText}`
+  )
+}
+
 async function press(page: puppeteer.Page, key: string) {
   await page.keyboard.press(key)
 }
@@ -572,6 +631,61 @@ const scenarios: Scenario[] = [
       await sleep(50)
       await waitForRole(ctx.page, "menu", false, Math.min(15000, ctx.timeoutMs))
       await pushStep(ctx, { kind: "press", key: "ArrowDown,Enter" })
+    },
+  },
+  {
+    primitive: "dropdown-menu",
+    scenario: "submenu-hover-select",
+    item: "dropdown-menu-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+
+      await clickExampleTrigger(
+        ctx.page,
+        "With Submenu",
+        '[data-slot="dropdown-menu-trigger"]'
+      )
+      await sleep(50)
+      await waitForSelectorPresent(ctx.page, '[data-slot="dropdown-menu-content"]', true, ctx.timeoutMs).catch(
+        (err) => {
+          throw new Error(`submenu-hover-select: menu content did not appear: ${String(err)}`)
+        }
+      )
+      await pushStep(ctx, { kind: "click", target: "dropdown-menu:with-submenu" })
+
+      await hoverFirstByText(
+        ctx.page,
+        '[data-slot="dropdown-menu-sub-trigger"]',
+        "Invite users"
+      )
+      await sleep(50)
+      await waitForSelectorPresent(ctx.page, '[data-slot="dropdown-menu-sub-content"]', true, ctx.timeoutMs).catch(
+        (err) => {
+          throw new Error(`submenu-hover-select: submenu content did not appear: ${String(err)}`)
+        }
+      )
+      await pushStep(ctx, { kind: "hover", target: "dropdown-menu-sub-trigger:Invite users" })
+
+      const content = await ctx.page.$('[data-slot="dropdown-menu-sub-content"]')
+      if (!content) throw new Error("missing dropdown-menu-sub-content after hover")
+      await content.hover()
+      await sleep(50)
+      await waitForSelectorPresent(ctx.page, '[data-slot="dropdown-menu-sub-content"]', true, ctx.timeoutMs)
+      await pushStep(ctx, { kind: "hover", target: "dropdown-menu-sub-content" })
+
+      await clickWithinSelectorByText(
+        ctx.page,
+        '[data-slot="dropdown-menu-sub-content"]',
+        '[role="menuitem"]',
+        "Email"
+      )
+      await sleep(50)
+      await waitForRole(ctx.page, "menu", false, Math.min(15000, ctx.timeoutMs)).catch(
+        (err) => {
+          throw new Error(`submenu-hover-select: menu did not close after select: ${String(err)}`)
+        }
+      )
+      await pushStep(ctx, { kind: "click", target: "dropdown-menu-sub-item:Email" })
     },
   },
   {
