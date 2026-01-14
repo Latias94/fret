@@ -10,7 +10,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::table::{TableViewOutput, TableViewProps, table_virtualized};
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius};
 
-use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState};
+use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
 
 fn border_color(theme: &Theme) -> Color {
     theme.color_required("border")

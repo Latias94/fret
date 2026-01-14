@@ -11,11 +11,11 @@ use fret_ui::element::{
 };
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::headless::grid_viewport::{
+use fret_ui_headless::grid_viewport::{
     GridAxisItem, GridAxisMeasureMode, GridAxisMetrics, GridViewport2D, compute_grid_viewport_2d,
     default_range_extractor,
 };
+use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius};
 
 fn border_color(theme: &Theme) -> Color {

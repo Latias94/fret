@@ -6,10 +6,10 @@ use fret_runtime::Model;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, LayoutStyle, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_headless::table::{ColumnDef, ColumnId, TableState};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack::{HStackProps, hstack};
 use fret_ui_kit::declarative::table::TableViewOutput;
-use fret_ui_kit::headless::table::{ColumnDef, ColumnId, TableState};
 use fret_ui_kit::{LayoutRefinement, Space};
 
 use crate::button::{Button, ButtonSize, ButtonVariant};
