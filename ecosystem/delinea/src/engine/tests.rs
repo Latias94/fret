@@ -5781,6 +5781,137 @@ fn data_zoom_y_filter_mode_empty_sets_empty_mask_without_culling_row_selection()
 }
 
 #[test]
+fn data_zoom_y_filter_mode_empty_keeps_band_visible_when_interval_intersects_window() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let zoom_id = crate::ids::DataZoomId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y0_field = crate::ids::FieldId::new(2);
+    let y1_field = crate::ids::FieldId::new(3);
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(160.0)),
+        )),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y0_field,
+                    column: 1,
+                },
+                FieldSpec {
+                    id: y1_field,
+                    column: 2,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        data_zoom_y: vec![DataZoomYSpec {
+            id: zoom_id,
+            axis: y_axis,
+            filter_mode: FilterMode::Empty,
+            min_value_span: None,
+            max_value_span: None,
+        }],
+        tooltip: None,
+        axis_pointer: None,
+        visual_maps: vec![],
+        series: vec![SeriesSpec {
+            id: series_id,
+            name: None,
+            kind: SeriesKind::Band,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y0_field,
+                y2: Some(y1_field),
+            },
+            x_axis,
+            y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
+            bar_layout: Default::default(),
+            area_baseline: None,
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let xs = vec![0.0, 1.0, 2.0];
+    let y0 = vec![-1.0, -2.0, -1.0];
+    let y1 = vec![0.5, 0.8, 0.6];
+
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(xs.clone()));
+    table.push_column(Column::F64(y0.clone()));
+    table.push_column(Column::F64(y1.clone()));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    engine.apply_action(Action::SetDataWindowY {
+        axis: y_axis,
+        window: Some(DataWindow { min: 0.0, max: 1.0 }),
+    });
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let Some(participation) = engine.participation().series_participation(series_id) else {
+        panic!("expected series participation");
+    };
+    let mask = participation.empty_mask;
+    assert!(mask.y_active, "expected Y Empty to activate empty masking");
+    for i in 0..xs.len() {
+        assert!(
+            mask.allows_raw_index(i, &xs, &y0, Some(&y1)),
+            "expected band interval to be visible when it intersects the window"
+        );
+    }
+
+    let marks = &engine.output().marks;
+    assert!(
+        marks
+            .nodes
+            .iter()
+            .any(|n| n.kind == crate::marks::MarkKind::Polyline
+                && n.source_series == Some(series_id)),
+        "expected band marks to be emitted when intervals intersect the Y window"
+    );
+}
+
+#[test]
 fn data_zoom_x_filter_mode_empty_breaks_band_into_segments_for_interleaved_out_of_window_points() {
     let dataset_id = crate::ids::DatasetId::new(1);
     let zoom_id = crate::ids::DataZoomId::new(1);

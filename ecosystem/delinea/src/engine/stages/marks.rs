@@ -317,32 +317,24 @@ impl MarksStage {
                 self.series_index += 1;
                 continue;
             };
-            let (
-                base_selection,
-                view_x_filter,
-                view_x_mapping_window,
-                x_filter_mode,
-                y_filter_mode,
-                view_y_filter,
-            ) = if let Some(v) = participation.series_participation(series.id) {
-                (
-                    v.selection.clone(),
-                    v.x_policy.filter,
-                    v.x_policy.mapping_window,
-                    v.x_filter_mode,
-                    v.y_filter_mode,
-                    v.y_filter,
-                )
-            } else {
-                (
-                    RowSelection::All,
-                    crate::engine::window_policy::AxisFilter1D::default(),
-                    None,
-                    crate::spec::FilterMode::None,
-                    crate::spec::FilterMode::None,
-                    crate::engine::window_policy::AxisFilter1D::default(),
-                )
-            };
+            let (base_selection, view_x_filter, view_x_mapping_window, view_y_filter, empty_mask) =
+                if let Some(v) = participation.series_participation(series.id) {
+                    (
+                        v.selection.clone(),
+                        v.x_policy.filter,
+                        v.x_policy.mapping_window,
+                        v.y_filter,
+                        v.empty_mask,
+                    )
+                } else {
+                    (
+                        RowSelection::All,
+                        crate::engine::window_policy::AxisFilter1D::default(),
+                        None,
+                        crate::engine::window_policy::AxisFilter1D::default(),
+                        crate::view::SeriesEmptyMask::default(),
+                    )
+                };
 
             let Some(dataset) = model.datasets.get(&series.dataset) else {
                 self.series_index += 1;
@@ -1681,15 +1673,8 @@ impl MarksStage {
             ) {
                 // v1 policy: `Empty` masking is implemented via mark-level segmentation for line-family series.
                 // For now, apply Y-empty only for non-stacked series (stacked empty semantics are TBD).
-                let y_empty_active = y_filter_mode == crate::spec::FilterMode::Empty
-                    && series.stack.is_none()
-                    && matches!(
-                        series.kind,
-                        crate::spec::SeriesKind::Line
-                            | crate::spec::SeriesKind::Area
-                            | crate::spec::SeriesKind::Band
-                    );
-                let break_on_out_of_window = x_filter_mode == crate::spec::FilterMode::Empty;
+                let y_empty_active = empty_mask.y_active;
+                let break_on_out_of_window = empty_mask.x_active;
                 if self.segmented_series != Some(series.id) {
                     self.segmented_series = Some(series.id);
                     self.segmented_cursor =
@@ -1737,8 +1722,7 @@ impl MarksStage {
                                     return true;
                                 }
                                 y_empty_active
-                                    && (!view_y_filter.contains(yi)
-                                        || !view_y_filter.contains(y_upper))
+                                    && !empty_mask.y_filter.intersects_interval(yi, y_upper)
                             },
                         )
                     } else if series.kind == crate::spec::SeriesKind::Area && series.stack.is_some()
