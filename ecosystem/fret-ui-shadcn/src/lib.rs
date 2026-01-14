@@ -17,6 +17,7 @@ pub mod badge;
 pub mod breadcrumb;
 pub mod button;
 pub mod button_group;
+pub mod calendar;
 pub mod card;
 pub mod checkbox;
 pub mod collapsible;
@@ -27,6 +28,7 @@ pub mod data_grid;
 pub mod data_grid_canvas;
 pub mod data_table;
 pub mod data_table_tanstack;
+pub mod date_picker;
 pub mod dialog;
 pub mod drawer;
 pub mod dropdown_menu;
@@ -89,6 +91,7 @@ pub use button::{Button, ButtonSize, ButtonVariant};
 pub use button_group::{
     ButtonGroup, ButtonGroupItem, ButtonGroupKind, button_group_multiple, button_group_single,
 };
+pub use calendar::Calendar;
 pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle};
 pub use checkbox::{Checkbox, checkbox};
 pub use collapsible::{
@@ -111,6 +114,7 @@ pub use data_table::{
     DataTableViewOptions,
 };
 pub use data_table_tanstack::DataTableTanstack;
+pub use date_picker::DatePicker;
 pub use dialog::{
     Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 };

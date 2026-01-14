@@ -23,6 +23,7 @@ fret-ui-kit = { path = "../fret-ui-kit", features = ["icons", "table"] }
 fret-icons = { path = "../fret-icons" }
 serde.workspace = true
 serde_json.workspace = true
+time.workspace = true
 
 [dev-dependencies]
 fret-app = { path = "../../crates/fret-app" }

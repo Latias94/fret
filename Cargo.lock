@@ -1400,6 +1400,7 @@ dependencies = [
  "fret-ui-kit",
  "serde",
  "serde_json",
+ "time",
 ]
 
 [[package]]

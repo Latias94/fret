@@ -62,7 +62,10 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
-fn variant_colors(theme: &Theme, variant: ButtonVariant) -> (Color, Color, Color, Color, Color) {
+pub(crate) fn variant_colors(
+    theme: &Theme,
+    variant: ButtonVariant,
+) -> (Color, Color, Color, Color, Color) {
     let transparent = Color::TRANSPARENT;
 
     let bg_primary = theme.color_required("primary");
@@ -128,7 +131,7 @@ fn variant_colors(theme: &Theme, variant: ButtonVariant) -> (Color, Color, Color
     }
 }
 
-fn button_text_style(theme: &Theme, size: ButtonSize) -> TextStyle {
+pub(crate) fn button_text_style(theme: &Theme, size: ButtonSize) -> TextStyle {
     let px = size.component_size().control_text_px(theme);
     let line_height = theme.metric_required("font.line_height");
 
