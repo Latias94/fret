@@ -51,6 +51,8 @@ font resolution failures degrade predictably and that fallback remains determini
   - `ui_mono`
 - The renderer resolves each list to an effective family name by selecting the first installed/available family.
 - An empty list means “use the platform/system default mapping” (implementation-defined).
+- `common_fallback` is an ordered list of extra family candidates appended to the framework fallback
+  chain (used for mixed-script “no tofu” behavior without per-span font selection).
 
 `TextFontStackKey`:
 
