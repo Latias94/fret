@@ -460,6 +460,7 @@ fn dismissible_popover_closes_on_outside_press() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_id: PointerId(0),
             pointer_type: Default::default(),
         }),
     );
@@ -471,6 +472,7 @@ fn dismissible_popover_closes_on_outside_press() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_id: PointerId(0),
             pointer_type: Default::default(),
         }),
     );
@@ -1498,6 +1500,7 @@ fn toast_hit_testing_tracks_render_transform() {
                     button: fret_core::MouseButton::Left,
                     modifiers: fret_core::Modifiers::default(),
                     click_count: 1,
+                    pointer_id: PointerId(0),
                     pointer_type: fret_core::PointerType::Mouse,
                 }),
             );
@@ -1522,6 +1525,7 @@ fn toast_hit_testing_tracks_render_transform() {
                     button: fret_core::MouseButton::Left,
                     modifiers: fret_core::Modifiers::default(),
                     click_count: 1,
+                    pointer_id: PointerId(0),
                     pointer_type: fret_core::PointerType::Mouse,
                 }),
             );
