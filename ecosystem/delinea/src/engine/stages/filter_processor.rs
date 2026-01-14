@@ -542,9 +542,16 @@ impl FilterProcessorStage {
                 continue;
             }
 
-            // Apply X filter predicate when it is active (non-monotonic X case keeps a broad range).
+            // Apply the X filter predicate only when X is in a filtering mode (Filter/WeakFilter).
+            // For `Empty`, the X window is represented as a masking predicate and must not cull the
+            // row participation space.
+            let x_filter_mode = series_view.x_filter_mode;
             let x_filter = series_view.x_policy.filter;
             let x_filter_active = x_filter.min.is_some() || x_filter.max.is_some();
+            let x_filter_should_cull_selection = matches!(
+                x_filter_mode,
+                crate::spec::FilterMode::Filter | crate::spec::FilterMode::WeakFilter
+            );
 
             let mut indices: Vec<u32> = Vec::new();
             indices.reserve(view_len.min(4096));
@@ -559,7 +566,7 @@ impl FilterProcessorStage {
                 if !xi.is_finite() || !yi.is_finite() {
                     continue;
                 }
-                if x_filter_active && !x_filter.contains(xi) {
+                if x_filter_should_cull_selection && x_filter_active && !x_filter.contains(xi) {
                     continue;
                 }
                 if !y_filter.contains(yi) {
@@ -574,7 +581,7 @@ impl FilterProcessorStage {
             }
 
             series_view.selection = RowSelection::Indices(indices.into());
-            if series_view.x_policy.filter != Default::default() {
+            if x_filter_should_cull_selection && series_view.x_policy.filter != Default::default() {
                 series_view.x_policy.filter = Default::default();
             }
             view_changed = true;
