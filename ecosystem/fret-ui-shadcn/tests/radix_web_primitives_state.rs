@@ -273,6 +273,7 @@ fn right_click_center(
         app,
         services,
         &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId(0),
             position: center,
             button: MouseButton::Right,
             modifiers: Modifiers::default(),
@@ -284,6 +285,7 @@ fn right_click_center(
         app,
         services,
         &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId(0),
             position: center,
             button: MouseButton::Right,
             modifiers: Modifiers::default(),
@@ -323,6 +325,7 @@ fn move_pointer(ui: &mut UiTree<App>, app: &mut App, services: &mut dyn UiServic
         app,
         services,
         &Event::Pointer(PointerEvent::Move {
+            pointer_id: fret_core::PointerId(0),
             position: point,
             buttons: fret_core::MouseButtons::default(),
             modifiers: Modifiers::default(),
