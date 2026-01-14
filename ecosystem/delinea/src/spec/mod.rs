@@ -428,7 +428,9 @@ impl Default for TooltipSpecV1 {
         Self {
             axis_line_template: "{label}: {value}".to_string(),
             series_line_template: "{label}: {value}".to_string(),
-            item_axis_line: TooltipItemAxisLineMode::Auto,
+            // ECharts-aligned default: item trigger tooltips usually do not include an axis row
+            // (axis values are typically shown via axisPointer labels when enabled).
+            item_axis_line: TooltipItemAxisLineMode::Hide,
             missing_value: "-".to_string(),
             range_template: "{min} .. {max}".to_string(),
             value_decimals: None,
