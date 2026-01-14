@@ -15,6 +15,7 @@ use fret_gizmo::{
     ViewGizmoConfig, ViewGizmoProjection, ViewGizmoUpdate, ViewGizmoVisualPreset, ViewportRect,
     ViewportToolInput,
 };
+use fret_gizmo::{ViewportToolCx, ViewportToolId, ViewportToolPriority, ViewportToolResult};
 use fret_launch::{
     EngineFrameUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService,
     ViewportRenderTargetWithDepth, WinitAppDriver, WinitCommandContext, WinitEventContext,
@@ -29,6 +30,10 @@ use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 use fret_ui::{Theme, ThemeConfig};
+use fret_ui_kit::viewport_tooling::{
+    ViewportToolArbitratorConfig, ViewportToolCoordinateSpace, ViewportToolEntry,
+    ViewportToolRouterState, route_viewport_tools,
+};
 use fret_undo::{CoalesceKey, DocumentId, UndoRecord, UndoService, ValueTx};
 use glam::{Mat4, Quat, Vec2, Vec3};
 use std::any::TypeId;
@@ -972,6 +977,7 @@ struct Gizmo3dDemoModel {
     gizmo_cursor_units_per_screen_px: f32,
     gizmo_mgr: GizmoPluginManager,
     view_gizmo: ViewGizmo,
+    view_gizmo_tool_router: ViewportToolRouterState,
     gizmo_visual_preset_index: usize,
     view_gizmo_visual_preset_index: usize,
     theme_preset_index: usize,
@@ -993,6 +999,171 @@ struct Gizmo3dDemoModel {
     hud: GizmoHudState,
     custom_scalar_values: HashMap<CustomScalarKey, f32>,
     custom_scalar_drag_start: Option<HashMap<CustomScalarKey, f32>>,
+}
+
+const TOOL_ID_VIEW_GIZMO: ViewportToolId = ViewportToolId::new(1);
+
+fn view_gizmo_tool_set_hot(model: &mut Gizmo3dDemoModel, hot: bool) {
+    if hot || model.view_gizmo.state.drag_active {
+        return;
+    }
+    model.view_gizmo.state.hovered = None;
+    model.view_gizmo.state.hovered_center_button = false;
+}
+
+fn view_gizmo_tool_hit_test(model: &mut Gizmo3dDemoModel, cx: ViewportToolCx<'_>) -> bool {
+    if model.camera.orbiting || model.camera.panning {
+        return false;
+    }
+
+    let viewport_px = cx.event.geometry.target_px_size;
+    let view_projection = camera_view_projection(viewport_px, model.camera);
+    model
+        .view_gizmo
+        .hit_test(view_projection, cx.input.viewport, cx.input.cursor_px)
+}
+
+fn view_gizmo_tool_handle_event(
+    model: &mut Gizmo3dDemoModel,
+    cx: ViewportToolCx<'_>,
+    _hot: bool,
+    _active: bool,
+) -> ViewportToolResult {
+    let is_navigating = model.camera.orbiting || model.camera.panning;
+    let hovered = !is_navigating;
+
+    let viewport_px = cx.event.geometry.target_px_size;
+    let view_projection = camera_view_projection(viewport_px, model.camera);
+    let viewport = cx.input.viewport;
+
+    let input = fret_gizmo::ViewGizmoInput {
+        cursor_px: cx.input.cursor_px,
+        hovered,
+        drag_started: cx.input.drag_started,
+        dragging: cx.input.dragging,
+    };
+
+    let update = model.view_gizmo.update(view_projection, viewport, input);
+
+    if !model.is_busy() && cx.input.drag_started && model.view_gizmo.state.drag_active {
+        let modifiers = viewport_modifiers(cx.event.kind);
+        let snap = gizmo_snap_from_modifiers(&modifiers);
+        let precision = precision_multiplier(&modifiers);
+        model.clear_other_interactions(cx.input.cursor_px, snap, precision);
+        return ViewportToolResult::handled_and_capture();
+    }
+
+    if model.is_busy() {
+        return ViewportToolResult::unhandled();
+    }
+
+    let modifiers = viewport_modifiers(cx.event.kind);
+    let snap = gizmo_snap_from_modifiers(&modifiers);
+    let precision = precision_multiplier(&modifiers);
+
+    match update {
+        Some(ViewGizmoUpdate::OrbitDelta {
+            delta_yaw_radians,
+            delta_pitch_radians,
+        }) => {
+            model.clear_other_interactions(cx.input.cursor_px, snap, precision);
+            model.camera.frame_anim = None;
+            model.camera.yaw_radians += delta_yaw_radians;
+            model.camera.pitch_radians =
+                (model.camera.pitch_radians + delta_pitch_radians).clamp(-1.55, 1.55);
+            ViewportToolResult::handled()
+        }
+        Some(ViewGizmoUpdate::ToggleProjection) => {
+            model.clear_other_interactions(cx.input.cursor_px, snap, precision);
+            let target = model.camera.target;
+            let yaw_radians = model.camera.yaw_radians;
+            let pitch_radians = model.camera.pitch_radians;
+            let smooth_time_s = 0.12;
+
+            match model.camera.projection {
+                OrbitProjection::Perspective => {
+                    let ortho_half_height = distance_to_ortho_half_height(model.camera.distance);
+                    model.camera.projection = OrbitProjection::Orthographic;
+                    model.camera.frame_anim = Some(FrameAnim {
+                        target,
+                        distance: model.camera.distance,
+                        yaw_radians,
+                        pitch_radians,
+                        ortho_half_height,
+                        target_velocity: Vec3::ZERO,
+                        distance_velocity: 0.0,
+                        yaw_velocity: 0.0,
+                        pitch_velocity: 0.0,
+                        ortho_half_height_velocity: 0.0,
+                        smooth_time_s,
+                    });
+                }
+                OrbitProjection::Orthographic => {
+                    let distance = ortho_half_height_to_distance(model.camera.ortho_half_height);
+                    model.camera.projection = OrbitProjection::Perspective;
+                    model.camera.frame_anim = Some(FrameAnim {
+                        target,
+                        distance,
+                        yaw_radians,
+                        pitch_radians,
+                        ortho_half_height: model.camera.ortho_half_height,
+                        target_velocity: Vec3::ZERO,
+                        distance_velocity: 0.0,
+                        yaw_velocity: 0.0,
+                        pitch_velocity: 0.0,
+                        ortho_half_height_velocity: 0.0,
+                        smooth_time_s,
+                    });
+                }
+            }
+            ViewportToolResult::handled()
+        }
+        Some(ViewGizmoUpdate::SnapView { view_dir, .. }) => {
+            model.clear_other_interactions(cx.input.cursor_px, snap, precision);
+            let pivot = if model.selection.is_empty() {
+                model.camera.target
+            } else {
+                let selected: Vec<GizmoTarget3d> = model
+                    .targets
+                    .iter()
+                    .copied()
+                    .filter(|t| model.selection.contains(&t.id))
+                    .collect();
+                targets_world_aabb(&selected)
+                    .map(|(min, max)| (min + max) * 0.5)
+                    .unwrap_or(model.camera.target)
+            };
+
+            let desired_eye_dir = (-view_dir).normalize_or_zero();
+            if desired_eye_dir.length_squared() > 0.0 {
+                let (yaw_radians, pitch_radians) = if desired_eye_dir.dot(Vec3::Y).abs() > 0.98 {
+                    (model.camera.yaw_radians, desired_eye_dir.y.signum() * 1.55)
+                } else {
+                    (
+                        desired_eye_dir.z.atan2(desired_eye_dir.x),
+                        desired_eye_dir.y.asin(),
+                    )
+                };
+
+                model.camera.frame_anim = Some(FrameAnim {
+                    target: pivot,
+                    distance: model.camera.distance,
+                    yaw_radians,
+                    pitch_radians: pitch_radians.clamp(-1.55, 1.55),
+                    ortho_half_height: model.camera.ortho_half_height,
+                    target_velocity: Vec3::ZERO,
+                    distance_velocity: 0.0,
+                    yaw_velocity: 0.0,
+                    pitch_velocity: 0.0,
+                    ortho_half_height_velocity: 0.0,
+                    smooth_time_s: 0.12,
+                });
+            }
+
+            ViewportToolResult::handled()
+        }
+        _ => ViewportToolResult::unhandled(),
+    }
 }
 
 impl Gizmo3dDemoModel {
@@ -1416,6 +1587,7 @@ impl Default for Gizmo3dDemoModel {
                 mgr
             },
             view_gizmo,
+            view_gizmo_tool_router: ViewportToolRouterState::default(),
             gizmo_visual_preset_index,
             view_gizmo_visual_preset_index,
             theme_preset_index: 0,
@@ -3220,131 +3392,26 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             let view_projection = camera_view_projection(viewport_px, m.camera);
             let viewport = tool_input.viewport;
 
-            let view_gizmo_drag_started = tool_input.drag_started;
-            let view_gizmo_input =
-                fret_gizmo::view_gizmo_input_from_tool_input(tool_input, hovered);
-            let view_gizmo_update =
-                m.view_gizmo
-                    .update(view_projection, viewport, view_gizmo_input);
-
-            // If the left press starts on the view gizmo, consume the interaction so it doesn't
-            // become a selection click or a transform gizmo drag.
-            if view_gizmo_drag_started && m.view_gizmo.state.drag_active && !m.is_busy() {
-                m.clear_other_interactions(cursor_target_px, snap, precision);
+            let view_gizmo_handled = {
+                let config = ViewportToolArbitratorConfig {
+                    primary_button: fret_core::MouseButton::Left,
+                    coordinate_space: ViewportToolCoordinateSpace::TargetPx,
+                };
+                let mut tools = [ViewportToolEntry {
+                    id: TOOL_ID_VIEW_GIZMO,
+                    priority: ViewportToolPriority(1000),
+                    set_hot: Some(view_gizmo_tool_set_hot),
+                    hit_test: view_gizmo_tool_hit_test,
+                    handle_event: view_gizmo_tool_handle_event,
+                    cancel: None,
+                }];
+                let mut router = m.view_gizmo_tool_router;
+                let handled = route_viewport_tools(&mut router, config, m, &event, &mut tools);
+                m.view_gizmo_tool_router = router;
+                handled
+            };
+            if view_gizmo_handled {
                 return pending;
-            }
-
-            if !m.is_busy() {
-                match view_gizmo_update {
-                    Some(ViewGizmoUpdate::OrbitDelta {
-                        delta_yaw_radians,
-                        delta_pitch_radians,
-                    }) => {
-                        m.clear_other_interactions(cursor_target_px, snap, precision);
-                        m.camera.frame_anim = None;
-                        m.camera.yaw_radians += delta_yaw_radians;
-                        m.camera.pitch_radians =
-                            (m.camera.pitch_radians + delta_pitch_radians).clamp(-1.55, 1.55);
-                        return pending;
-                    }
-                    Some(ViewGizmoUpdate::ToggleProjection) => {
-                        m.clear_other_interactions(cursor_target_px, snap, precision);
-                        let target = m.camera.target;
-                        let yaw_radians = m.camera.yaw_radians;
-                        let pitch_radians = m.camera.pitch_radians;
-                        let smooth_time_s = 0.12;
-
-                        match m.camera.projection {
-                            OrbitProjection::Perspective => {
-                                let ortho_half_height =
-                                    distance_to_ortho_half_height(m.camera.distance);
-                                m.camera.projection = OrbitProjection::Orthographic;
-                                m.camera.frame_anim = Some(FrameAnim {
-                                    target,
-                                    distance: m.camera.distance,
-                                    yaw_radians,
-                                    pitch_radians,
-                                    ortho_half_height,
-                                    target_velocity: Vec3::ZERO,
-                                    distance_velocity: 0.0,
-                                    yaw_velocity: 0.0,
-                                    pitch_velocity: 0.0,
-                                    ortho_half_height_velocity: 0.0,
-                                    smooth_time_s,
-                                });
-                            }
-                            OrbitProjection::Orthographic => {
-                                let distance =
-                                    ortho_half_height_to_distance(m.camera.ortho_half_height);
-                                m.camera.projection = OrbitProjection::Perspective;
-                                m.camera.frame_anim = Some(FrameAnim {
-                                    target,
-                                    distance,
-                                    yaw_radians,
-                                    pitch_radians,
-                                    ortho_half_height: m.camera.ortho_half_height,
-                                    target_velocity: Vec3::ZERO,
-                                    distance_velocity: 0.0,
-                                    yaw_velocity: 0.0,
-                                    pitch_velocity: 0.0,
-                                    ortho_half_height_velocity: 0.0,
-                                    smooth_time_s,
-                                });
-                            }
-                        }
-                        return pending;
-                    }
-                    Some(ViewGizmoUpdate::SnapView {
-                        snap: _,
-                        view_dir,
-                        up: _,
-                    }) => {
-                        m.clear_other_interactions(cursor_target_px, snap, precision);
-                        let pivot = if m.selection.is_empty() {
-                            m.camera.target
-                        } else {
-                            let selected: Vec<GizmoTarget3d> = m
-                                .targets
-                                .iter()
-                                .copied()
-                                .filter(|t| m.selection.contains(&t.id))
-                                .collect();
-                            targets_world_aabb(&selected)
-                                .map(|(min, max)| (min + max) * 0.5)
-                                .unwrap_or(m.camera.target)
-                        };
-
-                        let desired_eye_dir = (-view_dir).normalize_or_zero();
-                        if desired_eye_dir.length_squared() > 0.0 {
-                            let (yaw_radians, pitch_radians) =
-                                if desired_eye_dir.dot(Vec3::Y).abs() > 0.98 {
-                                    (m.camera.yaw_radians, desired_eye_dir.y.signum() * 1.55)
-                                } else {
-                                    (
-                                        desired_eye_dir.z.atan2(desired_eye_dir.x),
-                                        desired_eye_dir.y.asin(),
-                                    )
-                                };
-
-                            m.camera.frame_anim = Some(FrameAnim {
-                                target: pivot,
-                                distance: m.camera.distance,
-                                yaw_radians,
-                                pitch_radians: pitch_radians.clamp(-1.55, 1.55),
-                                ortho_half_height: m.camera.ortho_half_height,
-                                target_velocity: Vec3::ZERO,
-                                distance_velocity: 0.0,
-                                yaw_velocity: 0.0,
-                                pitch_velocity: 0.0,
-                                ortho_half_height_velocity: 0.0,
-                                smooth_time_s: 0.12,
-                            });
-                        }
-
-                        return pending;
-                    }
-                    _ => {}
-                }
             }
 
             let over_view_gizmo = m.view_gizmo.state.drag_active

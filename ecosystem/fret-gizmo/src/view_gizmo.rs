@@ -317,6 +317,19 @@ impl ViewGizmo {
         }
     }
 
+    pub fn hit_test(&self, view_projection: Mat4, viewport: ViewportRect, cursor_px: Vec2) -> bool {
+        let center_radius_px = self.config.center_button_radius_px;
+        if center_radius_px > 0.0 {
+            let center_px = self.anchor_center_px(viewport, self.config.size_px.max(1.0));
+            if (cursor_px - center_px).length() <= center_radius_px {
+                return true;
+            }
+        }
+
+        self.pick_snap(view_projection, viewport, cursor_px)
+            .is_some()
+    }
+
     pub fn update(
         &mut self,
         view_projection: Mat4,
