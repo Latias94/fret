@@ -2846,6 +2846,7 @@ fn pointer_left_cancels_wire_drag() {
             },
             modifiers: Modifiers::default(),
             pointer_type: fret_core::PointerType::Mouse,
+            pointer_id: fret_core::PointerId::default(),
             reason: fret_core::PointerCancelReason::LeftWindow,
         }),
     );
@@ -2910,6 +2911,7 @@ fn missing_pointer_up_can_be_inferred_from_mouse_buttons_state() {
     canvas.event(
         &mut cx,
         &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            pointer_id: fret_core::PointerId::default(),
             position: Point::new(Px(40.0), Px(10.0)),
             buttons: MouseButtons::default(),
             modifiers: Modifiers::default(),
@@ -2955,6 +2957,7 @@ fn right_click_cancels_wire_drag_and_opens_context_menu() {
     canvas.event(
         &mut cx,
         &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
             position: Point::new(Px(400.0), Px(300.0)),
             button: fret_core::MouseButton::Right,
             modifiers: Modifiers::default(),
@@ -2990,6 +2993,7 @@ fn right_pan_defers_context_menu_until_pointer_up() {
     canvas.event(
         &mut cx,
         &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
             position: pos,
             button: fret_core::MouseButton::Right,
             modifiers: Modifiers::default(),
@@ -3004,6 +3008,7 @@ fn right_pan_defers_context_menu_until_pointer_up() {
     canvas.event(
         &mut cx,
         &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
             position: pos,
             button: fret_core::MouseButton::Right,
             modifiers: Modifiers::default(),
@@ -3043,6 +3048,7 @@ fn right_pan_drag_does_not_open_context_menu() {
     canvas.event(
         &mut cx,
         &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
             position: start_local,
             button: fret_core::MouseButton::Right,
             modifiers: Modifiers::default(),
@@ -3056,6 +3062,7 @@ fn right_pan_drag_does_not_open_context_menu() {
     canvas.event(
         &mut cx,
         &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            pointer_id: fret_core::PointerId::default(),
             position: first_screen,
             buttons: MouseButtons {
                 right: true,
@@ -3083,6 +3090,7 @@ fn right_pan_drag_does_not_open_context_menu() {
         canvas.event(
             &mut cx,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId::default(),
                 position: local,
                 buttons: MouseButtons {
                     right: true,
@@ -3100,6 +3108,7 @@ fn right_pan_drag_does_not_open_context_menu() {
     canvas.event(
         &mut cx,
         &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
             position: Point::new(Px(0.0), Px(0.0)),
             button: fret_core::MouseButton::Right,
             modifiers: Modifiers::default(),

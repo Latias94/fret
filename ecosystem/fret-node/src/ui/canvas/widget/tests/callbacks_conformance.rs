@@ -722,6 +722,7 @@ fn wheel_zoom_emits_move_start_and_debounced_move_end() {
     canvas.event(
         &mut cx,
         &Event::Pointer(PointerEvent::Wheel {
+            pointer_id: fret_core::PointerId::default(),
             position: pos,
             delta: Point::new(Px(0.0), Px(-120.0)),
             modifiers: Modifiers::default(),
@@ -773,6 +774,7 @@ fn pinch_zoom_emits_move_start_and_debounced_move_end() {
     canvas.event(
         &mut cx,
         &Event::Pointer(PointerEvent::PinchGesture {
+            pointer_id: fret_core::PointerId::default(),
             position: pos,
             delta: 1.0,
             modifiers: Modifiers::default(),
@@ -825,6 +827,7 @@ fn wheel_pan_emits_move_start_and_debounced_move_end() {
     canvas.event(
         &mut cx,
         &Event::Pointer(PointerEvent::Wheel {
+            pointer_id: fret_core::PointerId::default(),
             position: pos,
             delta: Point::new(Px(20.0), Px(0.0)),
             modifiers: Modifiers::default(),
@@ -870,6 +873,7 @@ fn double_click_background_zoom_emits_move_start_and_move_end() {
     canvas.event(
         &mut cx,
         &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
             position: Point::new(Px(10.0), Px(10.0)),
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
@@ -909,6 +913,7 @@ fn wheel_pan_then_wheel_zoom_ends_pan_and_starts_zoom() {
         canvas.event(
             &mut cx,
             &Event::Pointer(PointerEvent::Wheel {
+                pointer_id: fret_core::PointerId::default(),
                 position: pos,
                 delta: Point::new(Px(20.0), Px(0.0)),
                 modifiers: Modifiers::default(),
@@ -929,6 +934,7 @@ fn wheel_pan_then_wheel_zoom_ends_pan_and_starts_zoom() {
         canvas.event(
             &mut cx,
             &Event::Pointer(PointerEvent::Wheel {
+                pointer_id: fret_core::PointerId::default(),
                 position: pos,
                 delta: Point::new(Px(0.0), Px(-120.0)),
                 modifiers: Modifiers::default(),

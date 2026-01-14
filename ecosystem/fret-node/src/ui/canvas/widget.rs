@@ -10319,6 +10319,7 @@ mod tests {
     mod perf_cache;
     mod portal_conformance;
     mod portal_keyboard_conformance;
+    mod portal_lifecycle_conformance;
     mod portal_pointer_passthrough_conformance;
 
     #[test]
@@ -10434,6 +10435,7 @@ mod tests {
         canvas.event(
             &mut cx,
             &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId::default(),
                 position: Point::new(Px(100.0), Px(100.0)),
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -10461,6 +10463,7 @@ mod tests {
             canvas.event(
                 &mut cx,
                 &Event::Pointer(PointerEvent::Move {
+                    pointer_id: fret_core::PointerId::default(),
                     position: local,
                     buttons: MouseButtons {
                         left: true,
@@ -10480,6 +10483,7 @@ mod tests {
         canvas.event(
             &mut cx,
             &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId::default(),
                 position: *screen_positions.last().unwrap(),
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -10618,6 +10622,7 @@ mod tests {
         canvas.event(
             &mut cx,
             &Event::Pointer(PointerEvent::Wheel {
+                pointer_id: fret_core::PointerId::default(),
                 position: Point::new(Px(0.0), Px(0.0)),
                 delta: Point::new(Px(0.0), Px(120.0)),
                 modifiers: Modifiers::default(),
@@ -10630,6 +10635,7 @@ mod tests {
         canvas.event(
             &mut cx,
             &Event::Pointer(PointerEvent::Wheel {
+                pointer_id: fret_core::PointerId::default(),
                 position: Point::new(Px(0.0), Px(0.0)),
                 delta: Point::new(Px(80.0), Px(0.0)),
                 modifiers: Modifiers::default(),
@@ -10667,6 +10673,7 @@ mod tests {
         canvas.event(
             &mut cx,
             &Event::Pointer(PointerEvent::Wheel {
+                pointer_id: fret_core::PointerId::default(),
                 position: Point::new(Px(0.0), Px(0.0)),
                 delta: Point::new(Px(0.0), Px(120.0)),
                 modifiers: Modifiers {
@@ -10708,6 +10715,7 @@ mod tests {
         canvas.event(
             &mut cx,
             &Event::Pointer(PointerEvent::Wheel {
+                pointer_id: fret_core::PointerId::default(),
                 position: Point::new(Px(0.0), Px(0.0)),
                 delta: Point::new(Px(0.0), Px(120.0)),
                 modifiers: Modifiers::default(),
@@ -10730,6 +10738,7 @@ mod tests {
         canvas.event(
             &mut cx,
             &Event::Pointer(PointerEvent::Wheel {
+                pointer_id: fret_core::PointerId::default(),
                 position: Point::new(Px(0.0), Px(0.0)),
                 delta: Point::new(Px(0.0), Px(120.0)),
                 modifiers: Modifiers::default(),
@@ -10768,6 +10777,7 @@ mod tests {
         canvas.event(
             &mut cx,
             &Event::Pointer(PointerEvent::PinchGesture {
+                pointer_id: fret_core::PointerId::default(),
                 position: pos,
                 delta: 1.0,
                 modifiers: Modifiers::default(),
@@ -10803,6 +10813,7 @@ mod tests {
         canvas.event(
             &mut cx,
             &Event::Pointer(PointerEvent::PinchGesture {
+                pointer_id: fret_core::PointerId::default(),
                 position: Point::new(Px(100.0), Px(100.0)),
                 delta: 1.0,
                 modifiers: Modifiers::default(),
@@ -10840,6 +10851,7 @@ mod tests {
         canvas.event(
             &mut cx,
             &Event::Pointer(PointerEvent::Wheel {
+                pointer_id: fret_core::PointerId::default(),
                 position: pos,
                 delta: Point::new(Px(0.0), Px(-120.0)),
                 modifiers: Modifiers::default(),
@@ -11011,6 +11023,7 @@ mod tests {
         canvas.event(
             &mut cx,
             &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId::default(),
                 position: pos,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -11050,6 +11063,7 @@ mod tests {
         canvas.event(
             &mut cx,
             &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId::default(),
                 position: pos,
                 button: MouseButton::Left,
                 modifiers: Modifiers {
@@ -11110,6 +11124,7 @@ mod tests {
         canvas.event(
             &mut cx,
             &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId::default(),
                 position: pos,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -11181,6 +11196,7 @@ mod tests {
         canvas.event(
             &mut cx,
             &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId::default(),
                 position: pos,
                 button: MouseButton::Left,
                 modifiers: Modifiers {
@@ -11248,6 +11264,7 @@ mod tests {
         canvas.event(
             &mut cx,
             &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId::default(),
                 position: edge_pos,
                 button: MouseButton::Left,
                 modifiers: Modifiers {
@@ -11262,6 +11279,7 @@ mod tests {
         canvas.event(
             &mut cx,
             &Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId::default(),
                 position: Point::new(Px(edge_pos.x.0 + 16.0), edge_pos.y),
                 buttons: MouseButtons {
                     left: true,
@@ -11278,6 +11296,7 @@ mod tests {
         canvas.event(
             &mut cx,
             &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId::default(),
                 position: Point::new(Px(edge_pos.x.0 + 16.0), edge_pos.y),
                 button: MouseButton::Left,
                 modifiers: Modifiers {
@@ -11393,6 +11412,7 @@ mod tests {
         canvas.event(
             &mut cx,
             &Event::InternalDrag(InternalDragEvent {
+                pointer_id: fret_core::PointerId::default(),
                 position: pos,
                 kind: InternalDragKind::Drop,
                 modifiers: Modifiers::default(),
