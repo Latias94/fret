@@ -6928,6 +6928,201 @@ fn data_zoom_x_then_y_filter_materializes_indices_in_order_for_large_non_monoton
 }
 
 #[test]
+fn filter_plan_isolated_per_grid_for_x_indices_materialization() {
+    let dataset1_id = crate::ids::DatasetId::new(1);
+    let dataset2_id = crate::ids::DatasetId::new(2);
+    let grid1_id = crate::ids::GridId::new(1);
+    let grid2_id = crate::ids::GridId::new(2);
+    let x1_axis = crate::ids::AxisId::new(1);
+    let y1_axis = crate::ids::AxisId::new(2);
+    let x2_axis = crate::ids::AxisId::new(3);
+    let y2_axis = crate::ids::AxisId::new(4);
+    let zoom1_id = crate::ids::DataZoomId::new(1);
+    let series1_id = crate::ids::SeriesId::new(1);
+    let series2_id = crate::ids::SeriesId::new(2);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(160.0)),
+        )),
+        datasets: vec![
+            DatasetSpec {
+                id: dataset1_id,
+                fields: vec![
+                    FieldSpec {
+                        id: x_field,
+                        column: 0,
+                    },
+                    FieldSpec {
+                        id: y_field,
+                        column: 1,
+                    },
+                ],
+            },
+            DatasetSpec {
+                id: dataset2_id,
+                fields: vec![
+                    FieldSpec {
+                        id: x_field,
+                        column: 0,
+                    },
+                    FieldSpec {
+                        id: y_field,
+                        column: 1,
+                    },
+                ],
+            },
+        ],
+        grids: vec![GridSpec { id: grid1_id }, GridSpec { id: grid2_id }],
+        axes: vec![
+            AxisSpec {
+                id: x1_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid1_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y1_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid1_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: x2_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid2_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y2_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid2_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![DataZoomXSpec {
+            id: zoom1_id,
+            axis: x1_axis,
+            filter_mode: FilterMode::Filter,
+            min_value_span: None,
+            max_value_span: None,
+        }],
+        data_zoom_y: vec![],
+        tooltip: None,
+        axis_pointer: None,
+        visual_maps: vec![],
+        series: vec![
+            SeriesSpec {
+                id: series1_id,
+                name: None,
+                kind: SeriesKind::Scatter,
+                dataset: dataset1_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_field,
+                    y2: None,
+                },
+                x_axis: x1_axis,
+                y_axis: y1_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+            },
+            SeriesSpec {
+                id: series2_id,
+                name: None,
+                kind: SeriesKind::Scatter,
+                dataset: dataset2_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_field,
+                    y2: None,
+                },
+                x_axis: x2_axis,
+                y_axis: y2_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+            },
+        ],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let mut table1 = DataTable::default();
+    let n = 60_001usize;
+    let period = 1000usize;
+    let denom = 1000.0f64;
+    let xs1: Vec<f64> = (0..n).map(|i| (i % period) as f64 / denom).collect();
+    let ys1: Vec<f64> = (0..n).map(|i| i as f64).collect();
+    table1.push_column(Column::F64(xs1));
+    table1.push_column(Column::F64(ys1));
+    engine.datasets_mut().insert(dataset1_id, table1);
+
+    let mut table2 = DataTable::default();
+    table2.push_column(Column::F64((0..=7).map(|v| v as f64).collect()));
+    table2.push_column(Column::F64((0..=7).map(|v| v as f64).collect()));
+    engine.datasets_mut().insert(dataset2_id, table2);
+
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x1_axis,
+        window: Some(DataWindow { min: 0.2, max: 0.8 }),
+    });
+
+    let mut measurer = NullTextMeasurer::default();
+    let mut steps = 0u64;
+    for _ in 0..64 {
+        let _ = engine
+            .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+            .unwrap();
+        steps += 1;
+
+        let Some(p1) = engine.participation().series_participation(series1_id) else {
+            continue;
+        };
+        let RowSelection::Indices(_indices1) = &p1.selection else {
+            continue;
+        };
+
+        let Some(p2) = engine.participation().series_participation(series2_id) else {
+            panic!("expected series2 participation");
+        };
+        assert!(
+            matches!(p2.selection, RowSelection::Range(_)),
+            "expected grid2 series selection to remain a range (unaffected by grid1 indices)"
+        );
+
+        let stats = engine.stats();
+        assert_eq!(stats.filter_plan_runs, steps);
+        assert_eq!(stats.filter_plan_grids, steps * 2);
+        assert_eq!(stats.filter_plan_steps_run, steps * 6);
+        assert_eq!(stats.filter_x_indices_applied_series, 1);
+        assert_eq!(stats.filter_y_indices_applied_series, 0);
+        return;
+    }
+
+    panic!("expected x filter indices view to be materialized within the step loop");
+}
+
+#[test]
 fn axis_pointer_axis_trigger_handles_non_monotonic_x_by_nearest_sample() {
     let dataset_id = crate::ids::DatasetId::new(1);
     let grid_id = crate::ids::GridId::new(1);
