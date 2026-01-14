@@ -104,6 +104,36 @@ These are small reductions in per-frame overhead without changing behavior:
 
 Implementation: `ecosystem/fret-ui-shadcn/src/data_grid_canvas.rs`
 
+## Baseline Measurements (Fret)
+
+Benchmark harness:
+
+- Demo: `cargo run -p fret-demo --bin canvas_datagrid_stress_demo --release`
+- Script: `tools/bench_canvas_datagrid.ps1`
+- Env: `FRET_CANVAS_GRID_AUTO_SCROLL=1`, `FRET_CANVAS_GRID_EXIT_AFTER_FRAMES=600`, `FRET_CANVAS_GRID_STATS_WINDOW=240`
+
+Environment (sample run):
+
+- Commit: `eafbdda750bc3b8cae3f1c19c49af6531d602600`
+- GPU: NVIDIA GeForce RTX 4090 (Vulkan)
+- Toolchain: `rustc 1.92.0`
+
+Summary (last rolling window, 240 samples):
+
+| Case | Grid compute avg/p95 (ms) | Renderer `prepare_text` (ms) | Renderer `draws` |
+| --- | --- | --- | --- |
+| 200k × 200 (fixed) | 0.005 / 0.007 | 10.510 | 33060 |
+| 200k × 200 (variable) | 0.006 / 0.006 | 4.140 | 23700 |
+| 1m × 200 (fixed) | 0.004 / 0.005 | 4.740 | 33060 |
+| 1m × 200 (variable) | 0.006 / 0.008 | 4.120 | 24095 |
+
+Interpretation:
+
+- Grid viewport/visible list math is already “in the noise” on high-end hardware.
+- The primary bottleneck is renderer-side text preparation and draw call count (not axis math).
+- Current text cache keying is per-cell (`(row_key, col_key)`), which is worst-case under scrolling; matching Glide’s
+  behavior likely requires a more reuse-friendly cache policy (e.g. keyed by `(col, wrap_width, text, style)`).
+
 ## Next P0/P1 Tasks (Recommended Order)
 
 P0 (fast, low risk):
@@ -116,4 +146,3 @@ P1 (medium scope):
 
 - Introduce a canvas cell renderer registry (text, number, bool, pill/tag, etc.) with optional prep caching.
 - Add overlay layers (selection rect, caret, editor popover) without increasing per-cell node count.
-
