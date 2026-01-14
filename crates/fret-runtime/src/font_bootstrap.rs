@@ -14,6 +14,10 @@ pub enum FontFamilyDefaultsPolicy {
     FillIfEmptyFromCatalogPrefix {
         max: usize,
     },
+    /// If any UI family list is empty, seed it with a small curated list of common UI families.
+    ///
+    /// This is primarily intended for Web/WASM bootstrap.
+    FillIfEmptyWithCuratedCandidates,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -70,6 +74,39 @@ pub fn apply_font_catalog_update(
             }
             if config.ui_mono.is_empty() {
                 config.ui_mono = seed;
+            }
+        }
+        FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates => {
+            if config.ui_sans.is_empty() {
+                config.ui_sans = vec![
+                    "Inter".to_string(),
+                    "Segoe UI".to_string(),
+                    "Helvetica".to_string(),
+                    "Arial".to_string(),
+                    "Ubuntu".to_string(),
+                    "Adwaita Sans".to_string(),
+                    "Cantarell".to_string(),
+                    "Noto Sans".to_string(),
+                    "DejaVu Sans".to_string(),
+                ];
+            }
+            if config.ui_serif.is_empty() {
+                config.ui_serif = vec![
+                    "Noto Serif".to_string(),
+                    "Times New Roman".to_string(),
+                    "Georgia".to_string(),
+                    "DejaVu Serif".to_string(),
+                ];
+            }
+            if config.ui_mono.is_empty() {
+                config.ui_mono = vec![
+                    "JetBrains Mono".to_string(),
+                    "Fira Mono".to_string(),
+                    "Consolas".to_string(),
+                    "Menlo".to_string(),
+                    "DejaVu Sans Mono".to_string(),
+                    "Noto Sans Mono".to_string(),
+                ];
             }
         }
     }
