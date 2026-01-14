@@ -126,6 +126,19 @@ arrives.
 In v1, this is modeled by storing the captured mouse button in the router state and deriving drag flags from that
 button during the active session (instead of trusting `PointerMove.buttons`).
 
+#### Keyboard cancellation (Escape) is a first-class host helper
+
+Hosts frequently need to cancel the active tool session without any pointer event edge:
+
+- `Esc` / cancel commands,
+- undo/redo (cancel active interaction before mutating state),
+- viewport teardown / tool switching.
+
+In v1, the routing helpers provide explicit cancellation entry points:
+
+- `ViewportToolArbitrator::cancel_active_and_clear_hot()` (trait-object tools)
+- `cancel_active_viewport_tools(...)` (callback tools)
+
 ### 3) Keep engine-pass overlay integration explicit, but provide a recommended wiring shape
 
 Tool rendering is intentionally engine-pass for Tier A:

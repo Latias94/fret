@@ -152,6 +152,9 @@ Recommended host pattern:
   state you store in your model.
 - If you need a pure “am I over a handle?” check for routing, prefer the side-effect-free pick helper:
   - `GizmoPluginManager::pick_hovered_handle(...)` (no state updates; see ADR 0168 hit-test rule)
+- When handling `Esc` / cancel commands, cancel the active tool session via the routing helpers:
+  - callback router: `cancel_active_viewport_tools(...)`
+  - trait-object router: `ViewportToolArbitrator::cancel_active_and_clear_hot()`
 
 End-to-end reference:
 
