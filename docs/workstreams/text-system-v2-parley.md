@@ -69,6 +69,11 @@ Current:
 - Automated conformance (unit): emoji sequences (VS16/ZWJ/flags/keycaps) produce
   `GlyphQuadKind::Color` and populate the `color_atlas` when a bundled color emoji font is available
   (`cargo nextest run -p fret-render`; `crates/fret-render/src/text.rs`).
+- Manual CJK conformance harness exists: `apps/fret-examples/src/cjk_conformance_demo.rs`.
+  - Web runner supports `?demo=cjk_conformance_demo` and optional bundled CJK fonts via
+    `apps/fret-demo-web` feature `cjk-lite-fonts`.
+- Automated conformance (unit): CJK glyphs populate `mask_atlas`/`subpixel_atlas` when a bundled CJK
+  font is available (`cargo nextest run -p fret-render`; `crates/fret-render/src/text.rs`).
 
 ## Acceptance Checklist (what “done” means)
 
@@ -218,3 +223,5 @@ Legend:
 - 2026-01-14: Add automated color emoji atlas conformance test in `fret-render` (commit `26ddc6d`).
 - 2026-01-14: Expose `fret-fonts` bootstrap/emoji bundles (commit `84b8a65`).
 - 2026-01-14: Expand emoji sequence conformance (VS16/ZWJ/flags/keycaps) in `fret-render` (commit `dbc5a89`).
+- 2026-01-14: Add cjk-lite bundle + CJK conformance demo and atlas test (commit `8c0700b`).
+- 2026-01-14: Add wasm fallback candidates for bundled fonts (commit `56b6e92`).

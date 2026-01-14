@@ -52,6 +52,8 @@ Recent work also improved determinism around font bootstrapping and invalidation
 - Web/wasm bootstrap now seeds curated defaults and bumps `TextFontStackKey` on font/config mutation
   (ADR 0162, and the font bootstrap plumbing in `crates/fret-runtime` + `crates/fret-launch`).
 - A dedicated emoji conformance demo exists (`apps/fret-examples/src/emoji_conformance_demo.rs`).
+- A dedicated CJK conformance demo exists (`apps/fret-examples/src/cjk_conformance_demo.rs`) and can
+  use an optional `cjk-lite` bundled font tier on Web/WASM.
 
 However, the *implementation shape* is still mid-transition:
 
@@ -136,4 +138,3 @@ P0/P1 (implementation):
 - Fret text system boundary: `docs/adr/0006-text-system.md`
 - Fret text pipeline strategy: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
 - Fret text system v2 direction: `docs/adr/0157-text-system-v2-parley-attributed-spans-and-quality-baseline.md`
-
