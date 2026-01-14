@@ -643,8 +643,10 @@ fn paint_grid_canvas(p: &mut fret_ui::canvas::CanvasPainter<'_>, data: &DataGrid
                     Px(col.start.0 + data.cell_pad_x.0),
                     Px(row.start.0 + data.cell_pad_y.0),
                 );
-                let cache_key: u64 = p.child_key(scope, &(row.key, col.key)).into();
                 let text = (data.cell_text_at)(row.key, col.key);
+                let cache_key: u64 = p
+                    .child_key(scope, &(col.key, max_width.0.to_bits(), text.as_ref()))
+                    .into();
                 p.text(
                     cache_key,
                     DrawOrder(2),
@@ -670,6 +672,7 @@ fn paint_grid_canvas(p: &mut fret_ui::canvas::CanvasPainter<'_>, data: &DataGrid
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
             };
+            let marker_cache_key: u64 = p.child_key(scope, &("clamp_marker", last_col.key)).into();
             for (row, clamped) in data.rows.iter().zip(data.rows_clamped.iter().copied()) {
                 if !clamped {
                     continue;
@@ -680,9 +683,8 @@ fn paint_grid_canvas(p: &mut fret_ui::canvas::CanvasPainter<'_>, data: &DataGrid
                     Px(last_col.end.0 - data.cell_pad_x.0 - data.style.size.0),
                     Px(row.end.0 - data.cell_pad_y.0 - line_height.0),
                 );
-                let cache_key: u64 = p.child_key(scope, &(row.key, u64::MAX)).into();
                 p.text(
-                    cache_key,
+                    marker_cache_key,
                     DrawOrder(3),
                     origin,
                     Arc::from("…"),
