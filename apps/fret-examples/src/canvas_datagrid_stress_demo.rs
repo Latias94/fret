@@ -10,7 +10,7 @@ use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign};
 use fret_ui::{Invalidation, Theme, UiTree};
-use fret_ui_shadcn::{DataGrid, DataGridCanvasAxis};
+use fret_ui_shadcn::{DataGrid, DataGridCanvasAxis, DataGridCanvasOutput};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -51,6 +51,7 @@ struct CanvasDataGridStressWindowState {
     variable_sizes: Model<bool>,
     clamp_rows: Model<bool>,
     revision: Model<u64>,
+    grid_output: Model<DataGridCanvasOutput>,
     frame: u64,
     exit_after_frames: Option<u64>,
     auto_scroll: bool,
@@ -81,6 +82,7 @@ impl CanvasDataGridStressDriver {
             .models_mut()
             .insert(parse_env_bool("FRET_CANVAS_GRID_CLAMP_ROWS"));
         let revision = app.models_mut().insert(1u64);
+        let grid_output = app.models_mut().insert(DataGridCanvasOutput::default());
 
         let exit_after_frames = parse_env_u64("FRET_CANVAS_GRID_EXIT_AFTER_FRAMES");
         let auto_scroll = parse_env_bool("FRET_CANVAS_GRID_AUTO_SCROLL");
@@ -96,6 +98,7 @@ impl CanvasDataGridStressDriver {
             variable_sizes,
             clamp_rows,
             revision,
+            grid_output,
             frame: 0,
             exit_after_frames,
             auto_scroll,
@@ -113,7 +116,7 @@ impl WinitAppDriver for CanvasDataGridStressDriver {
 
     fn gpu_frame_prepare(
         &mut self,
-        _app: &mut App,
+        app: &mut App,
         _window: AppWindowId,
         state: &mut Self::WindowState,
         _context: &WgpuContext,
@@ -149,6 +152,22 @@ impl WinitAppDriver for CanvasDataGridStressDriver {
                     );
                 }
             }
+
+            let grid = app
+                .models()
+                .read(&state.grid_output, |v| *v)
+                .unwrap_or_default();
+            try_println!(
+                "datagrid_canvas: visible_rows={} visible_cols={} visible_cells={} ensure_axes={:.3}ms overrides={:.3}ms viewport={:.3}ms build={:.3}ms",
+                grid.visible_rows,
+                grid.visible_cols,
+                grid.visible_cells,
+                grid.ensure_axes_us as f64 / 1000.0,
+                grid.apply_overrides_us as f64 / 1000.0,
+                grid.compute_viewport_us as f64 / 1000.0,
+                grid.build_visible_items_us as f64 / 1000.0
+            );
+
             state.last_renderer_report = Some(now);
         }
     }
@@ -270,6 +289,7 @@ impl WinitAppDriver for CanvasDataGridStressDriver {
             cx.observe_model(&state.variable_sizes, Invalidation::Layout);
             cx.observe_model(&state.clamp_rows, Invalidation::Layout);
             cx.observe_model(&state.revision, Invalidation::Layout);
+            cx.observe_model(&state.grid_output, Invalidation::Layout);
 
             let theme = Theme::global(&*cx.app).clone();
             let padding = theme.metric_required("metric.padding.md");
@@ -278,10 +298,19 @@ impl WinitAppDriver for CanvasDataGridStressDriver {
             root_layout.size.width = Length::Fill;
             root_layout.size.height = Length::Fill;
 
+            let grid = cx
+                .app
+                .models()
+                .read(&state.grid_output, |v| *v)
+                .unwrap_or_default();
             let header: Arc<str> = Arc::from(format!(
-                "CanvasDataGrid stress | rows={} cols={} | variable={} clamp_rows={} | [Esc]=close",
+                "CanvasDataGrid stress | rows={} cols={} | visible={}x{} cells={} | compute={:.3}ms | variable={} clamp_rows={} | [Esc]=close",
                 rows.len(),
                 cols.len(),
+                grid.visible_rows,
+                grid.visible_cols,
+                grid.visible_cells,
+                (grid.ensure_axes_us + grid.apply_overrides_us + grid.compute_viewport_us + grid.build_visible_items_us) as f64 / 1000.0,
                 variable,
                 clamp_rows
             ));
@@ -341,6 +370,7 @@ impl WinitAppDriver for CanvasDataGridStressDriver {
             let grid = DataGrid::new(rows_axis, cols_axis)
                 .overscan_rows(8)
                 .overscan_cols(4)
+                .output_model(state.grid_output.clone())
                 .into_element(cx, move |r, c| {
                     let idx = ((r ^ (c.wrapping_mul(31))) & 255) as usize;
                     Arc::clone(&cell_texts[idx])
