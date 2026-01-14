@@ -259,20 +259,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 renderer.text_font_stack_key(),
             ));
 
-        let prev_rev = self
-            .app
-            .global::<fret_runtime::FontCatalog>()
-            .map(|c| c.revision)
-            .unwrap_or(0);
-        let revision = prev_rev.saturating_add(1);
-        let families = renderer.all_font_names();
-        let cache = fret_app::FontCatalogCache::from_families(revision, &families);
-        self.app
-            .set_global::<fret_runtime::FontCatalog>(fret_runtime::FontCatalog {
-                families,
-                revision,
-            });
-        self.app.set_global::<fret_app::FontCatalogCache>(cache);
+        let _ = fret_runtime::apply_font_catalog_update(
+            &mut self.app,
+            renderer.all_font_names(),
+            fret_runtime::FontFamilyDefaultsPolicy::None,
+        );
 
         self.context = Some(context);
         self.renderer = Some(renderer);

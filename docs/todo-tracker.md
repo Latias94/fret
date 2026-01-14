@@ -44,23 +44,26 @@ It complements (but does not replace) ADRs:
   - Current: `TextStyle.font` is a semantic `FontId` (`Ui/Serif/Monospace/Family(name)`) and maps to generic stacks (`sans-serif`/`serif`/`monospace`) for shaping.
   - TODO: expose a curated default font stack at the theme/settings layer (and decide how user font loading maps to stable `FontId` values).
 
-- **Web/WASM bootstrap fonts are insufficient**
+- **Web/WASM bootstrap fonts are insufficient** (done)
   - Problem: `fret-fonts` currently bundles a mono subset only; general UI text needs a UI sans baseline (and eventually emoji).
   - ADRs: `docs/adr/0162-font-stack-bootstrap-and-textfontstackkey-v1.md`
   - Code: `crates/fret-fonts/src/lib.rs`, `crates/fret-launch/src/runner/web.rs`
-  - TODO: bundle at least one UI sans font (or subset) and update the web runner bootstrap to use it as the default UI mapping.
+  - Current: `fret-fonts` bundles a UI sans + monospace baseline for wasm (`Inter` + `JetBrains Mono` subsets).
+  - Current: optional `emoji` font bundle is available (`Noto Color Emoji`), gated behind `fret-fonts/emoji`.
+  - Current: web runner seeds `TextFontFamilyConfig` from curated defaults when empty, and bumps `TextFontStackKey` via `apply_font_catalog_update` after font injection.
 
 - **Fallback list participates in `TextBlobId` caching / invalidation**
   - Problem: changing configured fallbacks or font DB state must invalidate cached shaping/rasterization results.
   - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0162-font-stack-bootstrap-and-textfontstackkey-v1.md`
   - Code: `crates/fret-render/src/text.rs`
   - Current: `crates/fret-render/src/text.rs` includes a `font_stack_key` (derived from locale + configured generic families + fallback policy) in the `TextBlobKey` cache key.
-  - TODO: standardize runner update plumbing so any font/config mutation bumps `TextFontStackKey` and cannot reuse stale layout/raster caches.
+  - Current: runner font/config mutations go through `fret_runtime::apply_font_catalog_update`, which bumps `TextFontStackKey` to prevent stale layout/raster cache reuse.
 
 - **Emoji / variation selectors policy**
   - Goal: define baseline behavior for emoji fonts and variation selectors, and add a smoke test string that exercises it.
   - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
   - Code: `crates/fret-render/src/text.rs`
+  - Current: optional wasm emoji font bundle (`fret-fonts/emoji` -> `Noto Color Emoji`) and a dedicated conformance demo (`apps/fret-examples/src/emoji_conformance_demo.rs`).
 
 - **Center baseline within the line box across font swaps**
   - Symptom: switching the UI font in `fret-demo` to fonts with unusual metrics (e.g. Nerd Fonts like "Agave NF") can make text look slightly "up/right" in controls that visually expect centered labels.

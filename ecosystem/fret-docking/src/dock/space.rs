@@ -1817,7 +1817,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
         // over unrelated UI (ADR 0072) and even when no events have fired this frame.
         cx.app
             .with_global_mut(InternalDragRouteService::default, |routes, _app| {
-                routes.set(self.window, DragKind::DockPanel, cx.node);
+                routes.set(self.window, fret_runtime::DRAG_KIND_DOCK_PANEL, cx.node);
             });
         let overlay_hooks = cx
             .app
@@ -1825,7 +1825,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             .and_then(|svc| svc.hooks());
         let is_dock_dragging = cx
             .app
-            .drag()
+            .drag(fret_core::PointerId(0))
             .is_some_and(|d| d.dragging && d.payload::<DockPanelDragPayload>().is_some());
         let wants_animation_frames = is_dock_dragging
             || self.divider_drag.is_some()
