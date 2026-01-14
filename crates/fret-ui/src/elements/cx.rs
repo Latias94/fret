@@ -1040,6 +1040,20 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn key_prepend_on_key_down_for(&mut self, element: GlobalElementId, handler: OnKeyDown) {
+        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+            hooks.on_key_down = match hooks.on_key_down.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, down| {
+                        next(host, cx, down) || prev(host, cx, down)
+                    }))
+                }
+            };
+        });
+    }
+
     pub fn key_clear_on_key_down_for(&mut self, element: GlobalElementId) {
         self.with_state_for(element, KeyActionHooks::default, |hooks| {
             hooks.on_key_down = None;
