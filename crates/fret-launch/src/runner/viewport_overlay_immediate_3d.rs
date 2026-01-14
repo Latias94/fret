@@ -188,3 +188,46 @@ pub fn upload_viewport_overlay_3d_immediate(
         )
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct DummyHooks;
+
+    impl ViewportOverlay3dHooks for DummyHooks {
+        fn record(
+            &self,
+            _app: &mut App,
+            _window: AppWindowId,
+            _target: RenderTargetId,
+            _pass: &mut wgpu::RenderPass<'_>,
+            _ctx: &ViewportOverlay3dContext,
+        ) {
+        }
+    }
+
+    #[test]
+    fn install_is_idempotent() {
+        let mut app = App::new();
+        install_viewport_overlay_3d_immediate(&mut app);
+        install_viewport_overlay_3d_immediate(&mut app);
+
+        let hooks = app.global::<ViewportOverlay3dHooksService>().unwrap();
+        assert_eq!(hooks.hooks_all().len(), 1);
+    }
+
+    #[test]
+    fn install_preserves_existing_hooks() {
+        let mut app = App::new();
+        app.with_global_mut(ViewportOverlay3dHooksService::default, |svc, _app| {
+            svc.set(Arc::new(DummyHooks));
+        });
+
+        install_viewport_overlay_3d_immediate(&mut app);
+        install_viewport_overlay_3d_immediate(&mut app);
+
+        let hooks = app.global::<ViewportOverlay3dHooksService>().unwrap();
+        assert_eq!(hooks.hooks_all().len(), 2);
+    }
+}
