@@ -123,8 +123,7 @@ function writeIfChanged(filePath: string, json: unknown, update: boolean) {
 const SETTLE_MS = 250
 
 async function sleep(ms: number) {
-  const next = ms === 50 ? SETTLE_MS : ms
-  await new Promise((r) => setTimeout(r, next))
+  await new Promise((r) => setTimeout(r, ms))
 }
 
 function resolveBrowserExecutablePath(): string | undefined {
@@ -437,6 +436,21 @@ async function clickExampleTrigger(
     )
   }
   await trigger.click()
+}
+
+async function focusExampleTrigger(
+  page: puppeteer.Page,
+  title: string,
+  triggerSelector: string
+) {
+  const example = await findExampleByTitle(page, title)
+  const trigger = await example.$(triggerSelector)
+  if (!trigger) {
+    throw new Error(
+      `missing trigger selector=${triggerSelector} for example title=${title}`
+    )
+  }
+  await trigger.focus()
 }
 
 async function rightClickExampleTrigger(
@@ -837,6 +851,44 @@ const scenarios: Scenario[] = [
       await sleep(50)
       await waitForRole(ctx.page, "menu", false, Math.min(15000, ctx.timeoutMs))
       await pushStep(ctx, { kind: "click", target: "dropdown-menu-sub-item:Email" })
+    },
+  },
+  {
+    primitive: "dropdown-menu",
+    scenario: "submenu-keyboard-open-close",
+    item: "dropdown-menu-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+
+      await focusExampleTrigger(
+        ctx.page,
+        "With Submenu",
+        '[data-slot="dropdown-menu-trigger"]'
+      )
+      await press(ctx.page, "ArrowDown")
+      await sleep(50)
+      await waitForRole(ctx.page, "menu", true, Math.min(15000, ctx.timeoutMs))
+      await pushStep(ctx, { kind: "press", key: "ArrowDown" })
+
+      await pressChord(ctx.page, ["ArrowDown", "ArrowRight"])
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="dropdown-menu-sub-content"]',
+        true,
+        ctx.timeoutMs
+      )
+      await pushStep(ctx, { kind: "press", key: "ArrowDown,ArrowRight" })
+
+      await press(ctx.page, "ArrowLeft")
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="dropdown-menu-sub-content"]',
+        false,
+        ctx.timeoutMs
+      )
+      await pushStep(ctx, { kind: "press", key: "ArrowLeft" })
     },
   },
   {
@@ -1474,7 +1526,14 @@ function selectedScenarios(): Scenario[] {
         ].includes(s.item)
       )
     }
-    return scenarios.filter((s) => wanted.has(s.item) || wanted.has(s.primitive))
+    return scenarios.filter((s) => {
+      if (wanted.has(s.item) || wanted.has(s.primitive)) return true
+      const full = `${s.item}.${s.primitive}.${s.scenario}`
+      if (wanted.has(full)) return true
+      const short = `${s.primitive}.${s.scenario}`
+      if (wanted.has(short)) return true
+      return false
+    })
   }
   return scenarios
 }
@@ -1591,6 +1650,18 @@ async function main() {
 
       const page = await browser.newPage()
       page.setDefaultTimeout(timeoutMs)
+
+      // Behavior goldens should be deterministic. External images add timing and network
+      // nondeterminism (e.g. Radix Avatar conditionally mounting <img/> only once loaded), so we
+      // abort image requests and rely on fallbacks.
+      await page.setRequestInterception(true)
+      page.on("request", (req) => {
+        if (req.resourceType() === "image") {
+          void req.abort()
+          return
+        }
+        void req.continue()
+      })
 
       // Ensure theme is stable.
       await page.evaluateOnNewDocument((theme) => {

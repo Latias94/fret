@@ -197,6 +197,14 @@ It complements (but does not replace) ADRs:
   - Goal: make it easy to run conformance tests consistently.
   - Docs: `docs/README.md`, `docs/adr/README.md`
 
+- **Harden radix-web golden extraction (determinism + Windows dev loop)**
+  - Problem: upstream examples can include external images (e.g. avatar images), which makes DOM
+    timelines nondeterministic when the image load races snapshots; Windows shell semantics can
+    also break parallel dev scripts (e.g. `&` not backgrounding).
+  - Tooling: `goldens/radix-web/scripts/extract-behavior.mts`, `goldens/radix-web/README.md`
+  - TODO: keep extractor deterministic (block images / settle timing), and document a known-good
+    Windows command sequence for starting the preview server + regenerating goldens.
+
 ## P1 - Core Contract Drift
 
 - **Formalize the vector path contract now that `SceneOp::Path` exists**
