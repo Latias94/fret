@@ -56,7 +56,7 @@ fn kurbo_accuracy_canvas_units(from: Point, to: Point, zoom: f32, steps: usize) 
     // - scale by `sqrt(base_steps/steps)` so higher step counts request higher precision,
     // - clamp to a reasonable range so we don't under-refine near the hit threshold.
     let step_scale = (base_steps / steps).sqrt().clamp(0.5, 2.0);
-    let accuracy_screen_px = (segment_len_screen * 0.35 * step_scale).clamp(0.75, 6.0);
+    let accuracy_screen_px = (segment_len_screen * 0.35 * step_scale).clamp(0.75, 10.0);
 
     (accuracy_screen_px / z) as f64
 }

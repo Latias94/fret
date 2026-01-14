@@ -154,6 +154,7 @@ fn parse_args() -> Config {
             "--port-queries" => cfg.port_queries = value.parse().unwrap_or(cfg.port_queries),
             "--edge-queries" => cfg.edge_queries = value.parse().unwrap_or(cfg.edge_queries),
             "--rect-queries" => cfg.rect_queries = value.parse().unwrap_or(cfg.rect_queries),
+            "--edge-hit-width" => cfg.edge_hit_width = value.parse().unwrap_or(cfg.edge_hit_width),
             "--cell" => cfg.cell = value.parse().unwrap_or(cfg.cell),
             _ => {}
         }
