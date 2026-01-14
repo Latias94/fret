@@ -10,6 +10,7 @@ use crate::core::Graph;
 use crate::io::NodeGraphViewState;
 use crate::ops::{GraphHistory, GraphTransaction, apply_transaction};
 use crate::profile::{ApplyPipelineError, GraphProfile, apply_transaction_with_profile};
+use crate::rules::{Diagnostic, DiagnosticSeverity, DiagnosticTarget};
 use crate::runtime::changes::{ChangesToTransactionError, NodeGraphChanges};
 use crate::runtime::events::{
     NodeGraphStoreEvent, NodeGraphStoreSnapshot, SubscriptionToken, ViewChange,
@@ -405,8 +406,29 @@ impl NodeGraphStore {
         &mut self,
         tx: &GraphTransaction,
     ) -> Result<DispatchOutcome, DispatchError> {
+        let tx = crate::ops::normalize_transaction(tx.clone());
+        if tx.is_empty() {
+            return Ok(DispatchOutcome {
+                committed: tx,
+                changes: NodeGraphChanges::default(),
+            });
+        }
+        if let Some((key, message)) = crate::ops::find_non_finite_in_tx(&tx) {
+            return Err(DispatchError::Apply(Self::reject_tx(key, message)));
+        }
+        if let Some((key, message)) = crate::ops::find_invalid_size_in_tx(&tx) {
+            return Err(DispatchError::Apply(Self::reject_tx(key, message)));
+        }
+
         let mut scratch = self.graph.clone();
-        let committed = self.apply_to_graph(&mut scratch, tx)?;
+        let committed = self.apply_to_graph(&mut scratch, &tx)?;
+        let committed = crate::ops::normalize_transaction(committed);
+        if let Some((key, message)) = crate::ops::find_non_finite_in_tx(&committed) {
+            return Err(DispatchError::Apply(Self::reject_tx(key, message)));
+        }
+        if let Some((key, message)) = crate::ops::find_invalid_size_in_tx(&committed) {
+            return Err(DispatchError::Apply(Self::reject_tx(key, message)));
+        }
         self.graph = scratch;
         self.lookups.apply_transaction(&self.graph, &committed);
         self.history.record(committed.clone());
@@ -427,8 +449,29 @@ impl NodeGraphStore {
         tx: &GraphTransaction,
         profile: &mut dyn GraphProfile,
     ) -> Result<DispatchOutcome, ApplyPipelineError> {
+        let tx = crate::ops::normalize_transaction(tx.clone());
+        if tx.is_empty() {
+            return Ok(DispatchOutcome {
+                committed: tx,
+                changes: NodeGraphChanges::default(),
+            });
+        }
+        if let Some((key, message)) = crate::ops::find_non_finite_in_tx(&tx) {
+            return Err(Self::reject_tx(key, message));
+        }
+        if let Some((key, message)) = crate::ops::find_invalid_size_in_tx(&tx) {
+            return Err(Self::reject_tx(key, message));
+        }
+
         let mut scratch = self.graph.clone();
-        let committed = apply_transaction_with_profile(&mut scratch, profile, tx)?;
+        let committed = apply_transaction_with_profile(&mut scratch, profile, &tx)?;
+        let committed = crate::ops::normalize_transaction(committed);
+        if let Some((key, message)) = crate::ops::find_non_finite_in_tx(&committed) {
+            return Err(Self::reject_tx(key, message));
+        }
+        if let Some((key, message)) = crate::ops::find_invalid_size_in_tx(&committed) {
+            return Err(Self::reject_tx(key, message));
+        }
         self.graph = scratch;
         self.lookups.apply_transaction(&self.graph, &committed);
         self.history.record(committed.clone());
@@ -587,6 +630,19 @@ impl NodeGraphStore {
                 label: tx.label.clone(),
                 ops: tx.ops.clone(),
             })
+        }
+    }
+
+    fn reject_tx(key: String, message: String) -> ApplyPipelineError {
+        ApplyPipelineError::Rejected {
+            message: message.clone(),
+            diagnostics: vec![Diagnostic {
+                key,
+                severity: DiagnosticSeverity::Error,
+                target: DiagnosticTarget::Graph,
+                message,
+                fixes: Vec::new(),
+            }],
         }
     }
 
