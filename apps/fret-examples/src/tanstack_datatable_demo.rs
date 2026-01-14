@@ -12,13 +12,10 @@ use fret_ui::element::{
 };
 use fret_ui::{Invalidation, Theme, UiTree};
 use fret_ui_kit::OverlayController;
-use fret_ui_kit::headless::table::{
-    RowKey, TableState, create_column_helper, toggle_column_visible,
-};
+use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState, create_column_helper};
 use fret_ui_shadcn::button::{Button, ButtonSize, ButtonVariant};
-use fret_ui_shadcn::dropdown_menu::{DropdownMenu, DropdownMenuEntry, DropdownMenuItem};
 use fret_ui_shadcn::stack;
-use fret_ui_shadcn::{DataTable, Space};
+use fret_ui_shadcn::{DataTable, DataTablePagination, DataTableToolbar, Space};
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -34,7 +31,6 @@ struct DemoWindowState {
     ui: UiTree<App>,
     table_state: Model<TableState>,
     rows: Arc<[DemoRow]>,
-    view_options_open: Model<bool>,
     started_at: Instant,
     frame: u64,
     profile_frames_left: u64,
@@ -63,7 +59,7 @@ impl TanstackDataTableDemoDriver {
             .into();
 
         let mut table_state = TableState::default();
-        table_state.pagination.page_size = rows.len();
+        table_state.pagination.page_size = 50;
         let table_state = app.models_mut().insert(table_state);
 
         let mut ui: UiTree<App> = UiTree::new();
@@ -73,7 +69,6 @@ impl TanstackDataTableDemoDriver {
             ui,
             table_state,
             rows,
-            view_options_open: app.models_mut().insert(false),
             started_at: Instant::now(),
             frame: 0,
             profile_frames_left,
@@ -141,18 +136,6 @@ impl WinitAppDriver for TanstackDataTableDemoDriver {
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
             return;
         }
-
-        if let Some(id) = command
-            .as_str()
-            .strip_prefix("tanstack_datatable.toggle_column.")
-        {
-            let id: Arc<str> = Arc::from(id);
-            let _ = app.models_mut().update(&state.table_state, |st| {
-                toggle_column_visible(&mut st.column_visibility, &id, None);
-            });
-            app.request_redraw(window);
-            return;
-        }
     }
 
     fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
@@ -200,12 +183,10 @@ impl WinitAppDriver for TanstackDataTableDemoDriver {
 
         let rows = Arc::clone(&state.rows);
         let table_state = state.table_state.clone();
-        let view_options_open = state.view_options_open.clone();
         let root =
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
                 .render_root("tanstack-datatable-demo", move |cx| {
                     cx.observe_model(&table_state, Invalidation::Layout);
-                    cx.observe_model(&view_options_open, Invalidation::Layout);
 
                     let theme = Theme::global(&*cx.app).clone();
                     let padding = theme.metric_required("metric.padding.md");
@@ -231,43 +212,19 @@ impl WinitAppDriver for TanstackDataTableDemoDriver {
                         .unwrap_or((0, "<none>".to_string()));
 
                     let helper = create_column_helper::<DemoRow>();
-                    let columns = vec![
+                    let columns: Vec<ColumnDef<DemoRow>> = vec![
                         helper.clone().accessor("id", |r| r.id),
                         helper.clone().accessor("name", |r| r.name.clone()),
                         helper.clone().accessor("role", |r| r.role.clone()),
                         helper.accessor("score", |r| r.score),
                     ];
+                    let columns: Arc<[ColumnDef<DemoRow>]> = columns.into();
                     let columns_for_menu: Arc<[(Arc<str>, Arc<str>)]> = Arc::from([
                         (Arc::from("id"), Arc::from("ID")),
                         (Arc::from("name"), Arc::from("Name")),
                         (Arc::from("role"), Arc::from("Role")),
                         (Arc::from("score"), Arc::from("Score")),
                     ]);
-
-                    let menu_entries = {
-                        let visible = cx
-                            .app
-                            .models()
-                            .read(&table_state, |st| st.column_visibility.clone())
-                            .unwrap_or_default();
-
-                        columns_for_menu
-                            .iter()
-                            .map(|(id, label)| {
-                                let is_visible = visible.get(id).copied().unwrap_or(true);
-                                let title = if is_visible {
-                                    format!("✓ {label}")
-                                } else {
-                                    format!("  {label}")
-                                };
-                                DropdownMenuEntry::Item(DropdownMenuItem::new(title).on_select(
-                                    CommandId::new(format!(
-                                        "tanstack_datatable.toggle_column.{id}"
-                                    )),
-                                ))
-                            })
-                            .collect::<Vec<_>>()
-                    };
 
                     let mut root_layout = LayoutStyle::default();
                     root_layout.size.width = Length::Fill;
@@ -293,28 +250,34 @@ impl WinitAppDriver for TanstackDataTableDemoDriver {
                                 cx.text(Arc::from(format!(
                                     "DataTable | selected={selected} sort={sorting}"
                                 ))),
-                                DropdownMenu::new(view_options_open.clone()).into_element(
-                                    cx,
-                                    |cx| {
-                                        Button::new("Columns")
-                                            .variant(ButtonVariant::Outline)
-                                            .size(ButtonSize::Sm)
-                                            .into_element(cx)
-                                    },
-                                    move |_cx| menu_entries.clone(),
-                                ),
                             ]
                         },
                     );
 
                     let columns_for_header: Arc<[(Arc<str>, Arc<str>)]> =
                         Arc::clone(&columns_for_menu);
+                    let columns_for_toolbar = Arc::clone(&columns_for_header);
+                    let toolbar = DataTableToolbar::new(
+                        table_state.clone(),
+                        Arc::clone(&columns),
+                        move |col| {
+                            columns_for_toolbar
+                                .iter()
+                                .find_map(|(id, label)| {
+                                    (id.as_ref() == col.id.as_ref()).then(|| Arc::clone(label))
+                                })
+                                .unwrap_or_else(|| Arc::clone(&col.id))
+                        },
+                    )
+                    .into_element(cx);
+                    let pagination = DataTablePagination::new(table_state.clone()).into_element(cx);
+
                     let data_table = DataTable::new().into_element(
                         cx,
                         Arc::clone(&rows),
                         1,
                         table_state.clone(),
-                        columns,
+                        Arc::clone(&columns),
                         |row, _i, _parent| RowKey(row.id),
                         move |col| {
                             columns_for_header
@@ -357,6 +320,7 @@ impl WinitAppDriver for TanstackDataTableDemoDriver {
                                 move |cx| {
                                     vec![
                                         header.clone(),
+                                        toolbar.clone(),
                                         cx.container(
                                             ContainerProps {
                                                 layout: table_slot,
@@ -370,6 +334,7 @@ impl WinitAppDriver for TanstackDataTableDemoDriver {
                                             },
                                             move |_cx| vec![data_table.clone()],
                                         ),
+                                        pagination.clone(),
                                     ]
                                 },
                             )]

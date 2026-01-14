@@ -136,6 +136,7 @@ As of the initial audit:
 - [x] Remove the `datagrid` feature gate (no heavy deps).
 - [x] Add headless-backed `DataTable` (formerly `DataTableTanstack`).
 - [x] Add a demo page in `apps/fret-examples` to validate interaction outcomes (`apps/fret-examples/src/tanstack_datatable_demo.rs`).
+- [x] Add recipe controls: `DataTableToolbar` + `DataTablePagination` (wires `global_filter`, `column_visibility`, `pagination`).
 
 ### M3 — Forms (headless + shadcn wrappers)
 
@@ -219,8 +220,8 @@ preserving specialized variants and performance ceilings.
 
 ### Follow-ups (to fully “close” the DataTable recipe)
 
-- Recipe-level controls (shadcn): column visibility dropdown, global filter input, pagination widgets wired to
-  `TableState`.
+- Recipe-level controls exist (`DataTableToolbar` + `DataTablePagination`), but pagination still needs a
+  filtered row-count output surface to properly clamp/disable “Next”.
 - Profile and validate large-table performance:
   - stable `items_revision` and cache invalidation behavior,
   - overscan defaults for typical inspector/admin tables,
