@@ -397,6 +397,14 @@ pub struct TooltipSpecV1 {
     /// - `{label}`: series label (e.g. `A`),
     /// - `{value}`: formatted series value.
     pub series_line_template: String,
+    /// Controls whether `trigger=Item` tooltips include the axis row.
+    ///
+    /// v1 behavior:
+    /// - `Auto`: show the axis row unless `axisPointer.label.show` is enabled.
+    /// - `Show`: always show the axis row.
+    /// - `Hide`: never show the axis row.
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub item_axis_line: TooltipItemAxisLineMode,
     /// Placeholder used when a series cannot be sampled (missing/NaN/out-of-range).
     pub missing_value: String,
     /// Template used for range values (band-like series).
@@ -420,6 +428,7 @@ impl Default for TooltipSpecV1 {
         Self {
             axis_line_template: "{label}: {value}".to_string(),
             series_line_template: "{label}: {value}".to_string(),
+            item_axis_line: TooltipItemAxisLineMode::Auto,
             missing_value: "-".to_string(),
             range_template: "{min} .. {max}".to_string(),
             value_decimals: None,
@@ -427,6 +436,16 @@ impl Default for TooltipSpecV1 {
             series_overrides: Vec::default(),
         }
     }
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
+pub enum TooltipItemAxisLineMode {
+    #[default]
+    Auto,
+    Show,
+    Hide,
 }
 
 #[derive(Debug, Clone, PartialEq)]
