@@ -20,6 +20,7 @@ By default, the web runner starts the components gallery. To launch a specific d
 hash or query string:
 
 - `?demo=emoji_conformance_demo` (or `#emoji_conformance_demo`)
+- `?demo=cjk_conformance_demo` (or `#cjk_conformance_demo`)
 - `?demo=chart_demo` (or `#chart_demo`)
 - `?demo=chart_multi_axis_demo` (or `#chart_multi_axis_demo`)
 - `?demo=horizontal_bars_demo` (or `#horizontal_bars_demo`)
@@ -41,6 +42,13 @@ hash or query string:
 - `?demo=inf_lines_demo` (or `#inf_lines_demo`)
 - `?demo=tags_demo` (or `#tags_demo`)
 - `?demo=drag_demo` (or `#drag_demo`)
+
+## Optional bundled fonts (WASM)
+
+For Web/WASM, system fonts are not available. You can opt into extra bundled fonts:
+
+- `emoji-fonts`: includes `Noto Color Emoji` (large).
+- `cjk-lite-fonts`: includes a small subset of `Noto Sans CJK SC` (see `fret-fonts` docs).
 
 ## Debug teardown
 

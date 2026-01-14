@@ -11,6 +11,7 @@ thread_local! {
 enum Demo {
     ComponentsGallery,
     EmojiConformanceDemo,
+    CjkConformanceDemo,
     ChartDemo,
     ChartMultiAxisDemo,
     HorizontalBarsDemo,
@@ -112,6 +113,10 @@ fn select_demo() -> Demo {
         return Demo::EmojiConformanceDemo;
     }
 
+    if hash.contains("cjk_conformance_demo") || search.contains("demo=cjk_conformance_demo") {
+        return Demo::CjkConformanceDemo;
+    }
+
     Demo::ComponentsGallery
 }
 
@@ -134,6 +139,13 @@ pub fn start() -> Result<(), JsValue> {
             let mut config = fret_examples::emoji_conformance_demo::build_runner_config();
             config.main_window_title = "fret-demo emoji_conformance_demo (web)".to_string();
             let driver = fret_examples::emoji_conformance_demo::build_driver();
+            fret_launch::run_app_with_handle(config, app, driver)
+        }
+        Demo::CjkConformanceDemo => {
+            let app = fret_examples::cjk_conformance_demo::build_app();
+            let mut config = fret_examples::cjk_conformance_demo::build_runner_config();
+            config.main_window_title = "fret-demo cjk_conformance_demo (web)".to_string();
+            let driver = fret_examples::cjk_conformance_demo::build_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::ChartDemo => {

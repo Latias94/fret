@@ -17,6 +17,7 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 emoji-fonts = ["fret-launch/wasm-emoji-fonts"]
+cjk-lite-fonts = ["fret-launch/wasm-cjk-lite-fonts"]
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 fret-examples = { path = "../fret-examples" }
