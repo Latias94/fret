@@ -260,7 +260,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return;
         }
         let pending = self.pending_gfx.borrow_mut().take();
-        let Some(gfx) = pending else {
+        let Some(mut gfx) = pending else {
             return;
         };
 
