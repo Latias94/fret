@@ -13,7 +13,6 @@ use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_headless::grid_viewport::{
     GridAxisItem, GridAxisMeasureMode, GridAxisMetrics, GridViewport2D, compute_grid_viewport_2d,
-    default_range_extractor,
 };
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius};
@@ -209,18 +208,20 @@ impl DataGridCanvas {
                     let viewport = state.scroll.viewport_size();
                     let offset = state.scroll.offset();
 
-                    // Apply size overrides for currently visible rows/cols, then recompute the viewport.
-                    if let Some(vp) = compute_grid_viewport_2d(
-                        &state.row_metrics,
-                        &state.col_metrics,
-                        offset.x,
-                        offset.y,
-                        viewport.width,
-                        viewport.height,
-                        overscan_rows,
-                        overscan_cols,
-                    ) {
-                        state.apply_overrides(&rows, &cols, &vp);
+                    if rows.size_override.is_some() || cols.size_override.is_some() {
+                        // Apply size overrides for currently visible rows/cols, then recompute the viewport.
+                        if let Some(vp) = compute_grid_viewport_2d(
+                            &state.row_metrics,
+                            &state.col_metrics,
+                            offset.x,
+                            offset.y,
+                            viewport.width,
+                            viewport.height,
+                            overscan_rows,
+                            overscan_cols,
+                        ) {
+                            state.apply_overrides(&rows, &cols, &vp);
+                        }
                     }
 
                     let viewport = state.scroll.viewport_size();
@@ -240,17 +241,29 @@ impl DataGridCanvas {
                     let mut cols_visible = Vec::new();
                     let mut rows_clamped = Vec::new();
                     if let Some(vp) = vp {
-                        let row_indices = default_range_extractor(vp.row_range.clone());
-                        let col_indices = default_range_extractor(vp.col_range.clone());
+                        let row_start = vp
+                            .row_range
+                            .start_index
+                            .saturating_sub(vp.row_range.overscan);
+                        let row_end = (vp.row_range.end_index + vp.row_range.overscan)
+                            .min(vp.row_range.count.saturating_sub(1));
+                        let col_start = vp
+                            .col_range
+                            .start_index
+                            .saturating_sub(vp.col_range.overscan);
+                        let col_end = (vp.col_range.end_index + vp.col_range.overscan)
+                            .min(vp.col_range.count.saturating_sub(1));
 
-                        rows_visible = row_indices
-                            .into_iter()
-                            .filter_map(|i| state.row_metrics.axis_item(i))
-                            .collect();
-                        cols_visible = col_indices
-                            .into_iter()
-                            .filter_map(|i| state.col_metrics.axis_item(i))
-                            .collect();
+                        for i in row_start..=row_end {
+                            if let Some(item) = state.row_metrics.axis_item(i) {
+                                rows_visible.push(item);
+                            }
+                        }
+                        for i in col_start..=col_end {
+                            if let Some(item) = state.col_metrics.axis_item(i) {
+                                cols_visible.push(item);
+                            }
+                        }
 
                         rows_clamped = rows_visible
                             .iter()
@@ -455,7 +468,13 @@ impl DataGridCanvasState {
         vp: &GridViewport2D,
     ) {
         if let Some(f) = &rows.size_override {
-            for idx in default_range_extractor(vp.row_range.clone()) {
+            let start = vp
+                .row_range
+                .start_index
+                .saturating_sub(vp.row_range.overscan);
+            let end = (vp.row_range.end_index + vp.row_range.overscan)
+                .min(vp.row_range.count.saturating_sub(1));
+            for idx in start..=end {
                 let Some(key) = rows.keys.get(idx).copied() else {
                     continue;
                 };
@@ -467,7 +486,13 @@ impl DataGridCanvasState {
         }
 
         if let Some(f) = &cols.size_override {
-            for idx in default_range_extractor(vp.col_range.clone()) {
+            let start = vp
+                .col_range
+                .start_index
+                .saturating_sub(vp.col_range.overscan);
+            let end = (vp.col_range.end_index + vp.col_range.overscan)
+                .min(vp.col_range.count.saturating_sub(1));
+            for idx in start..=end {
                 let Some(key) = cols.keys.get(idx).copied() else {
                     continue;
                 };
