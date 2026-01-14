@@ -187,7 +187,7 @@ single “at a glance” view of:
 - Missing vs ECharts:
   - ECharts formatter parity (callback-style formatting, rich text/HTML markers, per-series overrides),
   - richer tooltip layout (structural columns, rich text/HTML) and additional snapping policies,
-  - formatter-hook parity for the declarative chart panel (retained `ChartCanvas` supports `set_tooltip_formatter`).
+  - formatter parity across adapters (retained + declarative hooks exist; still missing rich text/HTML parity).
 
 **S6 - Legend semantics (series visibility) + UI parity** (`[x]`)
 
@@ -472,7 +472,7 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 
 ## Recommended Next Steps (P0 -> P1)
 
-1. P0: Tooltip formatter parity + declarative formatter hook surface (S5 / ADR 1148).
+1. P0: Tooltip formatter parity (callback-style formatting + rich text/HTML markers) (S5 / ADR 1148).
 2. P0/P1: DataZoom Y filtering semantics + ordering rules (and the “sparse selection” carrier boundary) (S2).
 3. P0/P1: VisualMap: multiple maps per series and a plan for per-item attributes/instancing (S7).
 4. P1: Category axis indexing under zoom for non-bar series (lock ordinal invariants with a dedicated demo) (S4).
