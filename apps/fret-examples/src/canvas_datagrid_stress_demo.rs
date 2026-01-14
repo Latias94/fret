@@ -10,7 +10,7 @@ use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign};
 use fret_ui::{Invalidation, Theme, UiTree};
-use fret_ui_shadcn::{DataGridCanvas, DataGridCanvasAxis};
+use fret_ui_shadcn::{DataGrid, DataGridCanvasAxis};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -338,7 +338,7 @@ impl WinitAppDriver for CanvasDataGridStressDriver {
                 axis
             };
 
-            let grid = DataGridCanvas::new(rows_axis, cols_axis)
+            let grid = DataGrid::new(rows_axis, cols_axis)
                 .overscan_rows(8)
                 .overscan_cols(4)
                 .into_element(cx, move |r, c| {
