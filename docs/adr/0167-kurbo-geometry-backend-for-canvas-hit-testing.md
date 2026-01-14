@@ -123,6 +123,12 @@ Observed results (typical runs on a large synthetic graph):
 - Hit classification disagreement is low (near the boundary it still exists), and the benefit is
   not yet large enough to justify making `kurbo` the default solely for wire hit testing.
 
+We also prototyped an adaptive polyline flattener (screen-space error budget) to improve the
+"polyline" baseline without taking a new dependency. In the current synthetic workloads it tends
+to be slower than the fixed-step baseline unless the tolerance is loosened, at which point hit
+classification disagreements increase. As a result, adaptive polyline is kept as an opt-in tool
+for experimentation/benchmarking rather than the default path.
+
 Therefore, we keep `kurbo` feature-gated for now and use it as:
 
 - a correctness reference implementation for future geometry work, and/or

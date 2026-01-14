@@ -499,6 +499,19 @@ mod tests {
     }
 
     #[test]
+    fn adaptive_polyline_hit_testing_is_finite() {
+        let p = Point::new(Px(10.0), Px(20.0));
+        let from = Point::new(Px(0.0), Px(0.0));
+        let to = Point::new(Px(100.0), Px(50.0));
+
+        let d2 = bezier_wire_distance2_polyline_adaptive(p, from, to, 1.0, 2.0);
+        assert!(d2.is_finite());
+
+        let q = closest_point_on_bezier_wire_polyline_adaptive(p, from, to, 1.0, 2.0);
+        assert!(q.x.0.is_finite() && q.y.0.is_finite());
+    }
+
+    #[test]
     fn wire_aabb_is_conservative_and_pad_expands() {
         let from = Point::new(Px(0.0), Px(10.0));
         let to = Point::new(Px(200.0), Px(30.0));
