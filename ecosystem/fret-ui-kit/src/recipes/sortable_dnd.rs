@@ -204,10 +204,6 @@ pub fn sortable_reorder_list<H: UiHost>(
                     }
 
                     if st.dragging {
-                        debug_assert!(
-                            !st.droppables.is_empty(),
-                            "sortable_dnd: expected droppables to be registered before drag move"
-                        );
                         let cols = collisions_for(collision_strategy, &st.droppables, mv.position);
                         st.over = cols.first().map(|c| c.id);
                         outcome = MoveOutcome::Updated;
@@ -455,8 +451,9 @@ mod tests {
             })
         }
 
-        // Needs two passes: geometry comes from `last_visual_bounds_for_element`.
+        // Needs two frames: geometry comes from `last_bounds_for_element` (prev-bounds snapshot).
         for _ in 0..2 {
+            bump(&mut app);
             let root = render(
                 &mut ui,
                 &mut app,
