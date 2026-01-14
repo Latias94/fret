@@ -120,8 +120,6 @@ function writeIfChanged(filePath: string, json: unknown, update: boolean) {
   fs.writeFileSync(filePath, data, "utf8")
 }
 
-const SETTLE_MS = 250
-
 async function sleep(ms: number) {
   await new Promise((r) => setTimeout(r, ms))
 }
@@ -1483,6 +1481,11 @@ async function loadPuppeteer(): Promise<typeof import("puppeteer")> {
 }
 
 const { flags, names } = parseArgs(process.argv.slice(2))
+
+if (process.env.DEBUG_ARGS === "1") {
+  console.log("?? argv debug")
+  console.log({ flags, names })
+}
 
 const baseUrl =
   (typeof flags.baseUrl === "string" ? flags.baseUrl : undefined) ??

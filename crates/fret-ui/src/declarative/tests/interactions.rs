@@ -1,6 +1,17 @@
 #![allow(clippy::arc_with_non_send_sync)]
 
 use super::*;
+use std::sync::Arc;
+
+fn attributed_plain(text: &str) -> fret_core::AttributedText {
+    fret_core::AttributedText::new(
+        Arc::<str>::from(text),
+        [fret_core::TextSpan {
+            len: text.len(),
+            ..Default::default()
+        }],
+    )
+}
 
 #[test]
 fn pressable_state_reports_focused_when_focused() {
@@ -187,6 +198,7 @@ fn declarative_pointer_region_can_capture_and_receive_move_up() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -201,6 +213,7 @@ fn declarative_pointer_region_can_capture_and_receive_move_up() {
                 ..Default::default()
             },
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -213,6 +226,7 @@ fn declarative_pointer_region_can_capture_and_receive_move_up() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -275,6 +289,71 @@ fn declarative_pointer_region_can_handle_wheel() {
             position: inside,
             delta: Point::new(Px(0.0), Px(10.0)),
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let v = app.models_mut().read(&counter, |v| *v).unwrap_or_default();
+    assert_eq!(v, 1);
+}
+
+#[test]
+fn declarative_pointer_region_can_handle_pinch_gesture() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let counter = app.models_mut().insert(0u32);
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pointer-region-pinch",
+        |cx| {
+            let counter_pinch = counter.clone();
+            let on_pinch = Arc::new(
+                move |host: &mut dyn crate::action::UiPointerActionHost,
+                      cx: crate::action::ActionCx,
+                      _pinch: crate::action::PinchGestureCx| {
+                    let _ = host
+                        .models_mut()
+                        .update(&counter_pinch, |v: &mut u32| *v = v.saturating_add(1));
+                    host.request_redraw(cx.window);
+                    true
+                },
+            );
+
+            let mut props = crate::element::PointerRegionProps::default();
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+            vec![cx.pointer_region(props, |cx| {
+                cx.pointer_region_on_pinch_gesture(on_pinch);
+                Vec::new()
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let inside = Point::new(Px(10.0), Px(10.0));
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::PinchGesture {
+            position: inside,
+            delta: 0.5,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -325,10 +404,7 @@ fn selectable_text_drag_autoscrolls_scroll_container() {
                         },
                         |cx| {
                             let mut out: Vec<AnyElement> = Vec::new();
-                            out.push(cx.selectable_text(fret_core::RichText::new(
-                                "hello selectable text",
-                                Arc::<[fret_core::TextRun]>::from([]),
-                            )));
+                            out.push(cx.selectable_text(attributed_plain("hello selectable text")));
                             for _ in 0..50 {
                                 out.push(cx.text("filler"));
                             }
@@ -370,6 +446,7 @@ fn selectable_text_drag_autoscrolls_scroll_container() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -383,6 +460,7 @@ fn selectable_text_drag_autoscrolls_scroll_container() {
                 ..Default::default()
             },
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -444,9 +522,8 @@ fn selectable_text_drag_autoscrolls_horizontal_scroll_container() {
                         |cx| {
                             vec![cx.selectable_text_props(crate::element::SelectableTextProps {
                                 layout: Default::default(),
-                                rich: fret_core::RichText::new(
+                                rich: attributed_plain(
                                     "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
-                                    Arc::<[fret_core::TextRun]>::from([]),
                                 ),
                                 style: None,
                                 color: None,
@@ -489,6 +566,7 @@ fn selectable_text_drag_autoscrolls_horizontal_scroll_container() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -502,6 +580,7 @@ fn selectable_text_drag_autoscrolls_horizontal_scroll_container() {
                 ..Default::default()
             },
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -527,10 +606,7 @@ fn selectable_text_double_and_triple_click_select() {
     let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(60.0)));
     let mut services = FakeTextService::default();
 
-    let rich = fret_core::RichText::new(
-        "hello world\nsecond line",
-        Arc::<[fret_core::TextRun]>::from([]),
-    );
+    let rich = attributed_plain("hello world\nsecond line");
 
     let root = render_root(
         &mut ui,
@@ -560,6 +636,7 @@ fn selectable_text_double_and_triple_click_select() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 2,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -581,6 +658,7 @@ fn selectable_text_double_and_triple_click_select() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 2,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -593,6 +671,7 @@ fn selectable_text_double_and_triple_click_select() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 3,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -618,7 +697,7 @@ fn selectable_text_sets_active_text_selection() {
     let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(60.0)));
     let mut services = FakeTextService::default();
 
-    let rich = fret_core::RichText::new("hello world", Arc::<[fret_core::TextRun]>::from([]));
+    let rich = attributed_plain("hello world");
     let root_name = "selectable-text-active-text-selection";
     let root = render_root(
         &mut ui,
@@ -647,6 +726,7 @@ fn selectable_text_sets_active_text_selection() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 2,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -756,6 +836,7 @@ fn declarative_pointer_region_hook_can_request_focus_for_other_element() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -840,6 +921,7 @@ fn dismissible_layer_pointer_move_observer_does_not_break_click_through() {
             position: p,
             buttons: MouseButtons::default(),
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -853,6 +935,7 @@ fn dismissible_layer_pointer_move_observer_does_not_break_click_through() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -926,6 +1009,7 @@ fn declarative_resizable_panel_group_updates_model_on_drag() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -936,6 +1020,7 @@ fn declarative_resizable_panel_group_updates_model_on_drag() {
             position: Point::new(Px(128.0), Px(20.0)),
             buttons: MouseButtons::default(),
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -947,6 +1032,7 @@ fn declarative_resizable_panel_group_updates_model_on_drag() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -1110,6 +1196,7 @@ fn pressable_on_activate_hook_runs_on_pointer_activation() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -1121,6 +1208,7 @@ fn pressable_on_activate_hook_runs_on_pointer_activation() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -1182,6 +1270,7 @@ fn pressable_on_hover_change_hook_runs_on_pointer_move() {
             position: inside,
             buttons: MouseButtons::default(),
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -1195,6 +1284,7 @@ fn pressable_on_hover_change_hook_runs_on_pointer_move() {
             position: Point::new(Px(pressable_bounds.origin.x.0 + 200.0), Px(2.0)),
             buttons: MouseButtons::default(),
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -1377,6 +1467,7 @@ fn dismissible_on_dismiss_request_hook_runs_on_outside_press_observer() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );

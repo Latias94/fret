@@ -32,6 +32,24 @@ pub const CMD_STEP_TEXT_PREFIX: &str = "fret_node.portal.step_text:";
 
 const DEFAULT_PORTAL_CULL_MARGIN_PX: f32 = 256.0;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct PortalNodeKey {
+    node: NodeId,
+    kind_hash: u64,
+    kind_version: u32,
+}
+
+fn fnv1a_64_bytes(bytes: &[u8]) -> u64 {
+    const OFFSET: u64 = 0xcbf29ce484222325;
+    const PRIME: u64 = 0x100000001b3;
+    let mut hash = OFFSET;
+    for b in bytes {
+        hash ^= *b as u64;
+        hash = hash.wrapping_mul(PRIME);
+    }
+    hash
+}
+
 fn rects_intersect(a: Rect, b: Rect) -> bool {
     let ax0 = a.origin.x.0;
     let ay0 = a.origin.y.0;
@@ -459,8 +477,14 @@ where
                             zoom,
                         };
 
-                        let children =
-                            ecx.keyed(*node_id, |ecx| render(ecx, &graph_snapshot, layout));
+                        // Key by (node id + node kind/version) so portal subtree state does not
+                        // leak across "node type" changes (XyFlow-style lifecycle contract).
+                        let key = PortalNodeKey {
+                            node: *node_id,
+                            kind_hash: fnv1a_64_bytes(node.kind.0.as_bytes()),
+                            kind_version: node.kind_version,
+                        };
+                        let children = ecx.keyed(key, |ecx| render(ecx, &graph_snapshot, layout));
                         if children.is_empty() {
                             continue;
                         }

@@ -15,6 +15,13 @@ default = []
 # Reserved for a future declarative canvas element surface (ADR 0137).
 declarative = []
 
+# Optional spatial index backend.
+rstar = ["dep:rstar"]
+
+# Optional geometry backend for hit-testing and path ops (ADR 0167).
+kurbo = ["dep:kurbo"]
+
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
-
+rstar = { workspace = true, optional = true }
+kurbo = { workspace = true, optional = true }

@@ -89,7 +89,10 @@ pub(super) fn handle_pending_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddlew
     canvas.interaction.node_drag = Some(NodeDrag {
         primary: pending.primary,
         node_ids: drag_nodes.clone(),
-        nodes: start_nodes,
+        nodes: start_nodes.clone(),
+        current_nodes: start_nodes,
+        current_groups: Vec::new(),
+        preview_rev: 0,
         grab_offset: pending.grab_offset,
         start_pos: pending.start_pos,
     });

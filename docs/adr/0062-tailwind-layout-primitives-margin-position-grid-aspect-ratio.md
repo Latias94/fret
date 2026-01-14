@@ -117,6 +117,6 @@ Grid is not a substitute for virtualization (ADR 0042). Large tables/lists remai
 
 ## References
 
-- Flex sizing vocabulary baseline: `docs/adr/0057-tailwind-flex-and-size-vocabulary.md`
-- Overlays and portals: `docs/adr/0011-overlays-and-multi-root.md`, `docs/adr/0067-window-overlays-and-portals.md`
+- Flex sizing vocabulary baseline: `docs/adr/0057-declarative-layout-style-and-flex-semantics.md`
+- Overlays and portals: `docs/adr/0011-overlays-and-multi-root.md`, `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
 - Renderer ordering contract: `docs/adr/0009-renderer-ordering-and-batching.md`

@@ -3,8 +3,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Edges, FontId, FontWeight, Px, RichText, SemanticsRole, TextOverflow, TextRun, TextSlant,
-    TextStyle, TextWrap,
+    AttributedText, Axis, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow,
+    TextPaintStyle, TextShapingStyle, TextSlant, TextSpan, TextStyle, TextWrap,
 };
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
@@ -1235,7 +1235,7 @@ fn render_rich_text_inline<H: UiHost>(
     }
 
     let mut text = String::new();
-    let mut runs: Vec<TextRun> = Vec::new();
+    let mut spans: Vec<TextSpan> = Vec::new();
     for p in pieces {
         let InlinePieceKind::Text(t) = &p.kind else {
             continue;
@@ -1261,11 +1261,17 @@ fn render_rich_text_inline<H: UiHost>(
             None
         };
 
-        runs.push(TextRun {
+        spans.push(TextSpan {
             len: t.len(),
-            color: run_color,
-            weight: run_weight,
-            slant: run_slant,
+            shaping: TextShapingStyle {
+                weight: run_weight,
+                slant: run_slant,
+                ..Default::default()
+            },
+            paint: TextPaintStyle {
+                fg: run_color,
+                ..Default::default()
+            },
         });
     }
 
@@ -1273,7 +1279,7 @@ fn render_rich_text_inline<H: UiHost>(
         return None;
     }
 
-    let rich = RichText::new(Arc::<str>::from(text), runs);
+    let rich = AttributedText::new(Arc::<str>::from(text), spans);
 
     let mut props = SelectableTextProps::new(rich);
     props.layout.size.width = Length::Fill;

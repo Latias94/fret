@@ -45,8 +45,10 @@ pub fn axis_filter_1d(
             out.max = Some(max);
         }
         AxisRange::Auto | AxisRange::LockMin { .. } | AxisRange::LockMax { .. } => {
-            if filter_mode == FilterMode::Filter
-                && let Some(mut w) = state_window
+            if matches!(
+                filter_mode,
+                FilterMode::Filter | FilterMode::WeakFilter | FilterMode::Empty
+            ) && let Some(mut w) = state_window
             {
                 w.clamp_non_degenerate();
                 out.min = Some(w.min);

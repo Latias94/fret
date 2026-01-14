@@ -12,10 +12,14 @@ documentation.workspace = true
 [features]
 default = []
 # Enable `preload_icon_svgs_on_gpu_ready`, which depends on `fret-ui-kit`.
-preload-icon-svgs = ["dep:fret-ui-kit"]
-ui-assets = ["dep:fret-ui-assets"]
+preload-icon-svgs = ["dep:fret-ui-kit", "fret-ui-kit/icons"]
+ui-assets = ["dep:fret-ui-assets", "fret-ui-assets/app-integration"]
+# Convenience icon pack installers (data-only).
+icons-lucide = ["dep:fret-icons-lucide", "fret-icons-lucide/app-integration"]
+icons-radix = ["dep:fret-icons-radix", "fret-icons-radix/app-integration"]
 hotpatch-subsecond = ["fret-launch/hotpatch-subsecond", "dep:subsecond"]
 ui-app-driver = ["dep:fret-ui", "dep:fret-ui-app", "dep:fret-ui-kit"]
+ui-app-command-palette = ["ui-app-driver", "dep:fret-ui-shadcn"]
 tracing = ["dep:tracing", "dep:tracing-subscriber"]
 diagnostics = ["tracing"]
 
@@ -33,5 +37,8 @@ fret-ui = { path = "../../crates/fret-ui", optional = true }
 fret-ui-app = { path = "../../crates/fret-ui-app", optional = true }
 
 fret-ui-kit = { path = "../fret-ui-kit", optional = true }
+fret-ui-shadcn = { path = "../fret-ui-shadcn", optional = true }
 fret-ui-assets = { path = "../fret-ui-assets", optional = true }
+fret-icons-lucide = { path = "../fret-icons-lucide", optional = true }
+fret-icons-radix = { path = "../fret-icons-radix", optional = true }
 subsecond = { version = "0.7.2", optional = true }

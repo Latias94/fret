@@ -13,6 +13,8 @@ use fret_ui::{ElementContext, UiFrameCx, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_kit::primitives::direction as direction_prim;
 use std::cell::Cell;
+#[cfg(feature = "ui-app-command-palette")]
+use std::collections::HashMap;
 use std::sync::OnceLock;
 
 use fret_core::time::Instant;
@@ -67,6 +69,9 @@ pub struct UiAppDriver<S> {
 
     viewport_input: Option<fn(&mut App, ViewportInputEvent)>,
     dock_op: Option<fn(&mut App, fret_core::DockOp)>,
+
+    #[cfg(feature = "ui-app-command-palette")]
+    command_palette_enabled: bool,
 }
 
 impl<S> UiAppDriver<S> {
@@ -93,7 +98,16 @@ impl<S> UiAppDriver<S> {
             handle_global_command: None,
             viewport_input: None,
             dock_op: None,
+
+            #[cfg(feature = "ui-app-command-palette")]
+            command_palette_enabled: true,
         }
+    }
+
+    #[cfg(feature = "ui-app-command-palette")]
+    pub fn command_palette(mut self, enabled: bool) -> Self {
+        self.command_palette_enabled = enabled;
+        self
     }
 
     pub fn on_event(mut self, f: EventHookFn<S>) -> Self {
@@ -215,6 +229,39 @@ pub struct UiAppWindowState<S> {
     pub ui: UiTree<App>,
     pub root: Option<NodeId>,
     pub state: S,
+}
+
+#[cfg(feature = "ui-app-command-palette")]
+#[derive(Debug, Clone)]
+pub struct CommandPaletteModels {
+    pub open: fret_app::Model<bool>,
+    pub query: fret_app::Model<String>,
+}
+
+#[cfg(feature = "ui-app-command-palette")]
+#[derive(Debug, Default)]
+pub struct CommandPaletteService {
+    by_window: HashMap<AppWindowId, CommandPaletteModels>,
+}
+
+#[cfg(feature = "ui-app-command-palette")]
+impl CommandPaletteService {
+    pub fn models(&self, window: AppWindowId) -> Option<CommandPaletteModels> {
+        self.by_window.get(&window).cloned()
+    }
+
+    fn ensure_window(&mut self, app: &mut App, window: AppWindowId) -> CommandPaletteModels {
+        if let Some(existing) = self.by_window.get(&window) {
+            return existing.clone();
+        }
+
+        let models = CommandPaletteModels {
+            open: app.models_mut().insert(false),
+            query: app.models_mut().insert(String::new()),
+        };
+        self.by_window.insert(window, models.clone());
+        models
+    }
 }
 
 fn hotpatch_trace_enabled() -> bool {
@@ -384,6 +431,13 @@ fn ui_app_create_window_state<S>(
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
 
+    #[cfg(feature = "ui-app-command-palette")]
+    if driver.command_palette_enabled {
+        app.with_global_mut(CommandPaletteService::default, |svc, app| {
+            svc.ensure_window(app, window);
+        });
+    }
+
     let state = {
         #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
         {
@@ -414,6 +468,28 @@ fn ui_app_handle_event<S>(
         window,
         state,
     } = context;
+
+    if let Event::Timer { token } = event
+        && let Some(tick) = fret_app::handle_config_files_watcher_timer(app, window, *token)
+    {
+        if tick.reloaded_settings
+            || tick.reloaded_keymap
+            || tick.settings_error.is_some()
+            || tick.keymap_error.is_some()
+            || tick.actionable_keymap_conflicts > 0
+        {
+            hotpatch_trace_log(&format!(
+                "config_watcher: window={window:?} settings_reload={} keymap_reload={} settings_err={:?} keymap_err={:?} conflicts={} samples={:?}",
+                tick.reloaded_settings,
+                tick.reloaded_keymap,
+                tick.settings_error,
+                tick.keymap_error,
+                tick.actionable_keymap_conflicts,
+                tick.keymap_conflict_samples,
+            ));
+        }
+        return;
+    }
 
     state.ui.dispatch_event(app, services, event);
 
@@ -465,6 +541,23 @@ fn ui_app_handle_command<S>(
         window,
         state,
     } = context;
+
+    #[cfg(feature = "ui-app-command-palette")]
+    if driver.command_palette_enabled
+        && matches!(
+            command.as_str(),
+            "app.command_palette" | "command_palette.toggle"
+        )
+    {
+        app.with_global_mut(CommandPaletteService::default, |svc, app| {
+            let models = svc.ensure_window(app, window);
+            let is_open = app.models().get_copied(&models.open).unwrap_or(false);
+            let _ = app.models_mut().update(&models.open, |v| *v = !is_open);
+            let _ = app.models_mut().update(&models.query, |v| v.clear());
+        });
+        app.request_redraw(window);
+        return;
+    }
 
     if state.ui.dispatch_command(app, services, &command) {
         return;
@@ -761,12 +854,40 @@ fn ui_app_render<S>(
                 ));
 
                 let out = direction_prim::with_direction_provider(cx, dir, |cx| {
-                    if use_direct {
+                    let mut out = if use_direct {
                         (driver.view)(cx, &mut state.state)
                     } else {
                         let mut hot = subsecond::HotFn::current(driver.view);
                         hot.call((cx, &mut state.state))
+                    };
+
+                    #[cfg(feature = "ui-app-command-palette")]
+                    if driver.command_palette_enabled
+                        && let Some(models) = cx
+                            .app
+                            .global::<CommandPaletteService>()
+                            .and_then(|svc| svc.models(cx.window))
+                    {
+                        let dialog = fret_ui_shadcn::CommandDialog::new_with_host_commands(
+                            cx,
+                            models.open,
+                            models.query,
+                        )
+                        .a11y_label("Command palette")
+                        .into_element(cx, |cx| {
+                            cx.interactivity_gate_props(
+                                fret_ui::element::InteractivityGateProps {
+                                    present: false,
+                                    interactive: false,
+                                    ..Default::default()
+                                },
+                                |_| vec![],
+                            )
+                        });
+                        out.push(dialog);
                     }
+
+                    out
                 });
                 hotpatch_trace_log(&format!(
                     "ui_app_render: view end window={window:?} depth={view_depth}"
@@ -778,7 +899,35 @@ fn ui_app_render<S>(
             #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
             {
                 let out = direction_prim::with_direction_provider(cx, dir, |cx| {
-                    (driver.view)(cx, &mut state.state)
+                    let mut out = (driver.view)(cx, &mut state.state);
+
+                    #[cfg(feature = "ui-app-command-palette")]
+                    if driver.command_palette_enabled
+                        && let Some(models) = cx
+                            .app
+                            .global::<CommandPaletteService>()
+                            .and_then(|svc| svc.models(cx.window))
+                    {
+                        let dialog = fret_ui_shadcn::CommandDialog::new_with_host_commands(
+                            cx,
+                            models.open,
+                            models.query,
+                        )
+                        .a11y_label("Command palette")
+                        .into_element(cx, |cx| {
+                            cx.interactivity_gate_props(
+                                fret_ui::element::InteractivityGateProps {
+                                    present: false,
+                                    interactive: false,
+                                    ..Default::default()
+                                },
+                                |_| vec![],
+                            )
+                        });
+                        out.push(dialog);
+                    }
+
+                    out
                 });
                 hotpatch_trace_log(&format!(
                     "ui_app_render: view end window={window:?} depth={view_depth}"

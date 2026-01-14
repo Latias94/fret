@@ -16,6 +16,11 @@ pub fn register_icons(reg: &mut IconRegistry) {
     semantic_ui::register(reg);
 }
 
+#[cfg(feature = "app-integration")]
+mod app_integration;
+#[cfg(feature = "app-integration")]
+pub use app_integration::{install, install_app};
+
 fn register_curated(reg: &mut IconRegistry) {
     for line in include_str!("../icon-list.txt").lines() {
         let line = line.trim();

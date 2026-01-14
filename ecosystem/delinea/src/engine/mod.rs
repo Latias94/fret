@@ -986,6 +986,7 @@ impl ChartEngine {
         self.marks_stage.request_data_views(
             &self.model,
             &self.datasets,
+            &self.state,
             &self.view,
             &mut self.data_view_stage,
         );
@@ -1632,6 +1633,7 @@ fn compute_axis_axis_pointer_output(
                     axis_value,
                     x,
                     y0,
+                    filter_for_index,
                     table_view,
                     nearest_index,
                 )
@@ -1647,6 +1649,7 @@ fn compute_axis_axis_pointer_output(
                     x,
                     y0,
                     y1,
+                    filter_for_index,
                     table_view,
                     nearest_index,
                 )
@@ -1819,7 +1822,7 @@ fn snap_axis_pointer_x_to_series(
     let nearest_key = NearestXIndexKey::new(primary.dataset, x_col, selection_range, filter);
     let nearest_index = nearest_x_indices.items_for(nearest_key, table_rev);
     let (raw_index, x_raw) =
-        nearest_raw_index_at_x_view(axis_value, x, &table_view, nearest_index)?;
+        nearest_raw_index_at_x_view(axis_value, x, filter, &table_view, nearest_index)?;
     let sampled = sample_at_raw_index(
         model,
         datasets,
@@ -1860,6 +1863,7 @@ fn snap_axis_pointer_x_to_series(
 fn nearest_raw_index_at_x_view(
     x_value: f64,
     x: &[f64],
+    x_filter: crate::engine::window_policy::AxisFilter1D,
     table_view: &crate::data::DataTableView<'_>,
     nearest_index: Option<&[crate::engine::stages::NearestXIndexItem]>,
 ) -> Option<(usize, f64)> {
@@ -1867,7 +1871,9 @@ fn nearest_raw_index_at_x_view(
         if let Some(hit) =
             crate::engine::stages::nearest_raw_index_in_sorted_x_index(index, x_value)
         {
-            return Some(hit);
+            if x_filter.contains(hit.1) {
+                return Some(hit);
+            }
         }
     }
 
@@ -1910,10 +1916,19 @@ fn nearest_raw_index_at_x_view(
 
             let d0 = (x_value - x0).abs();
             let d1 = (x_value - x1).abs();
-            return if d1 < d0 {
-                Some((i1, x1))
-            } else {
-                Some((i0, x0))
+            let x0_ok = x_filter.contains(x0);
+            let x1_ok = x_filter.contains(x1);
+            return match (x0_ok, x1_ok) {
+                (false, false) => None,
+                (false, true) => Some((i1, x1)),
+                (true, false) => Some((i0, x0)),
+                (true, true) => {
+                    if d1 < d0 {
+                        Some((i1, x1))
+                    } else {
+                        Some((i0, x0))
+                    }
+                }
             };
         }
     }
@@ -1932,6 +1947,9 @@ fn nearest_raw_index_at_x_view(
         };
         let x_raw = x.get(raw_index).copied().unwrap_or(f64::NAN);
         if !x_raw.is_finite() {
+            continue;
+        }
+        if !x_filter.contains(x_raw) {
             continue;
         }
         let dist = (x_value - x_raw).abs();
@@ -2040,6 +2058,9 @@ fn snap_axis_pointer_y_to_series(
 
         let x_raw = x.get(raw_index).copied().unwrap_or(f64::NAN);
         if !x_raw.is_finite() {
+            continue;
+        }
+        if !filter.contains(x_raw) {
             continue;
         }
 
@@ -2252,6 +2273,7 @@ fn sample_nearest_at_x_view(
     x: &[f64],
     y0: &[f64],
     y1: Option<&[f64]>,
+    x_filter: crate::engine::window_policy::AxisFilter1D,
     table_view: &crate::data::DataTableView<'_>,
     nearest_index: Option<&[crate::engine::stages::NearestXIndexItem]>,
 ) -> Option<SampledSeriesValue> {
@@ -2259,9 +2281,12 @@ fn sample_nearest_at_x_view(
         && let Some((raw_index, _x_raw)) =
             crate::engine::stages::nearest_raw_index_in_sorted_x_index(index, x_value)
     {
-        return sample_at_raw_index(
-            model, datasets, stack_dims, model_rev, table_rev, series_id, raw_index, y0, y1,
-        );
+        let x_raw = x.get(raw_index).copied().unwrap_or(f64::NAN);
+        if x_raw.is_finite() && x_filter.contains(x_raw) {
+            return sample_at_raw_index(
+                model, datasets, stack_dims, model_rev, table_rev, series_id, raw_index, y0, y1,
+            );
+        }
     }
 
     let view_len = table_view.len();
@@ -2281,6 +2306,9 @@ fn sample_nearest_at_x_view(
         };
         let x_raw = x.get(raw_index).copied().unwrap_or(f64::NAN);
         if !x_raw.is_finite() {
+            continue;
+        }
+        if !x_filter.contains(x_raw) {
             continue;
         }
         let dist = (x_value - x_raw).abs();
@@ -2321,6 +2349,7 @@ fn sample_scatter_at_x_view(
     x_value: f64,
     x: &[f64],
     y0: &[f64],
+    x_filter: crate::engine::window_policy::AxisFilter1D,
     table_view: &crate::data::DataTableView<'_>,
     nearest_index: Option<&[crate::engine::stages::NearestXIndexItem]>,
 ) -> Option<SampledSeriesValue> {
@@ -2395,6 +2424,7 @@ fn sample_scatter_at_x_view(
         x,
         y0,
         None,
+        x_filter,
         table_view,
         nearest_index,
     )
@@ -2411,6 +2441,7 @@ fn sample_series_at_x_view(
     x: &[f64],
     y0: &[f64],
     y1: Option<&[f64]>,
+    x_filter: crate::engine::window_policy::AxisFilter1D,
     table_view: &crate::data::DataTableView<'_>,
     nearest_index: Option<&[crate::engine::stages::NearestXIndexItem]>,
 ) -> Option<SampledSeriesValue> {
@@ -2509,6 +2540,7 @@ fn sample_series_at_x_view(
         x,
         y0,
         y1,
+        x_filter,
         table_view,
         nearest_index,
     )

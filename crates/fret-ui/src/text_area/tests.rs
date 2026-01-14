@@ -4,7 +4,7 @@ use crate::test_host::TestHost;
 use crate::widget::Widget;
 use fret_core::{
     AppWindowId, CaretAffinity, Event, Point, Px, Rect, Scene, Size, TextConstraints, TextMetrics,
-    TextService, TextStyle,
+    TextService,
 };
 use fret_runtime::{Effect, PlatformCapabilities};
 
@@ -14,8 +14,7 @@ struct FakeTextService {}
 impl TextService for FakeTextService {
     fn prepare(
         &mut self,
-        _text: &str,
-        _style: &TextStyle,
+        _input: &fret_core::TextInput,
         _constraints: TextConstraints,
     ) -> (fret_core::TextBlobId, TextMetrics) {
         (
@@ -98,6 +97,7 @@ fn text_area_hover_sets_text_cursor_effect() {
             position: Point::new(Px(12.0), Px(12.0)),
             buttons: fret_core::MouseButtons::default(),
             modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -279,6 +279,7 @@ fn event_cx<'a>(
             caps: PlatformCapabilities::default(),
             ..Default::default()
         },
+        pointer_id: None,
         children: &[],
         focus: Some(node),
         captured: None,
@@ -459,10 +460,10 @@ struct YTextService {}
 impl TextService for YTextService {
     fn prepare(
         &mut self,
-        text: &str,
-        _style: &TextStyle,
+        input: &fret_core::TextInput,
         _constraints: TextConstraints,
     ) -> (fret_core::TextBlobId, TextMetrics) {
+        let text = input.text();
         (
             fret_core::TextBlobId::default(),
             TextMetrics {
@@ -587,6 +588,7 @@ fn ime_cursor_area_reflects_scroll_offset_in_paint_space() {
                 position: Point::new(Px(0.0), Px(0.0)),
                 delta: Point::new(Px(0.0), Px(-10.0)),
                 modifiers: fret_core::Modifiers::default(),
+                pointer_id: fret_core::PointerId(0),
                 pointer_type: fret_core::PointerType::Mouse,
             }),
         );

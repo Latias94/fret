@@ -36,3 +36,10 @@ pub use interaction::{
 };
 pub use rules::{ConnectPlan, Diagnostic, DiagnosticSeverity};
 pub use types::{TypeDesc, TypeVarId};
+
+#[cfg(feature = "app-integration")]
+mod app_integration;
+#[cfg(feature = "app-integration")]
+pub use app_integration::install;
+#[cfg(feature = "app-integration")]
+pub use app_integration::install_app;

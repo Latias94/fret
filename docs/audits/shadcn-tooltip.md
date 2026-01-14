@@ -61,4 +61,4 @@ Key upstream notes:
 ## Follow-ups (recommended)
 
 - Consider expanding `TooltipProvider` knobs (e.g. disable-hoverable-content) if parity needs it.
-- Web placement gate (layout engine v2): `cargo nextest run -p fret-ui-shadcn -F fret-ui/layout-engine-v2 --test radix_web_overlay_geometry`
+- Web placement gate (layout engine v2): `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`

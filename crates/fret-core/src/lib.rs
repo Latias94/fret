@@ -35,8 +35,8 @@ pub use file_dialog::{
 pub use geometry::{Corners, Edges, Point, Px, Rect, RectPx, Size, Transform2D};
 pub use ids::{
     AppWindowId, ClipboardToken, DockNodeId, ExternalDropToken, FileDialogToken, FontId, FrameId,
-    ImageId, ImageUpdateToken, ImageUploadToken, NodeId, PathId, RenderTargetId, SvgId, TextBlobId,
-    TimerToken,
+    ImageId, ImageUpdateToken, ImageUploadToken, NodeId, PathId, PointerId, RenderTargetId, SvgId,
+    TextBlobId, TimerToken,
 };
 pub use image::{
     AlphaMode, ChromaSiting, ColorPrimaries, ColorRange, ImageColorInfo, ImageColorSpace,
@@ -63,8 +63,10 @@ pub use services::UiServices;
 pub use streaming::StreamingUploadPerfSnapshot;
 pub use svg::{SvgFit, SvgService};
 pub use text::{
-    CaretAffinity, FontWeight, HitTestResult, RichText, TextConstraints, TextFontFamilyConfig,
-    TextMetrics, TextOverflow, TextRun, TextService, TextSlant, TextStyle, TextWrap,
+    AttributedText, CaretAffinity, DecorationLineStyle, FontWeight, HitTestResult,
+    StrikethroughStyle, TextConstraints, TextFontFamilyConfig, TextInput, TextInputRef,
+    TextMetrics, TextOverflow, TextPaintStyle, TextService, TextShapingStyle, TextSlant, TextSpan,
+    TextStyle, TextWrap, UnderlineStyle,
 };
 pub use vector_path::{
     FillRule, FillStyle, PathCommand, PathConstraints, PathMetrics, PathService, PathStyle,

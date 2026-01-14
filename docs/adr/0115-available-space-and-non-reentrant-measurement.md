@@ -6,8 +6,9 @@ Status: Proposed
 
 Fret targets a "Tailwind-like primitives + shadcn-like recipes" component ecosystem without relying
 on DOM/CSS (ADR 0057, ADR 0062, `docs/tailwind-semantics-alignment.md`). Declarative Flex/Grid are
-implemented via `taffy` as an internal algorithm (ADR 0035), and performance hardening has already
-landed for persistent container-owned `TaffyTree`s and per-solve measurement memoization (ADR 0076).
+implemented via `taffy` as an internal algorithm (ADR 0035). The repository has moved away from the
+older container-owned persistent `TaffyTree` strategy (ADR 0076) in favor of a window-scoped layout
+engine (ADR 0116).
 
 However, the current Taffy integration in `crates/fret-ui` measures child subtrees by *re-entering*
 layout (`LayoutCx::layout_in`) inside Taffy's measure callback. When Taffy supplies
@@ -65,10 +66,9 @@ This ADR refines existing accepted contracts; it does not contradict them:
 
 - ADR 0035 (hybrid layout) remains the boundary: `taffy` is still an internal algorithm for specific
   declarative containers, and docking/scroll/virtualization remain explicit layout systems.
-- ADR 0076 (persistent container-owned Taffy trees) remains a valid near-term implementation shape.
-  This ADR specifically tightens the constraint semantics (`AvailableSpace`) and forbids re-entrant
-  layout from solver-time measurement, regardless of whether the Taffy tree is container-owned or
-  window-scoped.
+- ADR 0076 (persistent container-owned Taffy trees) documents a historical implementation shape.
+  This ADR tightens the constraint semantics (`AvailableSpace`) and forbids re-entrant layout from
+  solver-time measurement regardless of the integration shape.
 - ADR 0116 describes a compatible end-state evolution (window-scoped engine + viewport roots) that
   builds on the same measurement and constraint rules defined here.
 
@@ -121,11 +121,10 @@ for declarative layout:
 This aligns Fret's typed Tailwind-like semantics with the constraint-phase reality of Taffy, and
 removes the primary cause of runaway recursion.
 
-Note: ADR 0076 currently locks a container-owned persistent TaffyTree strategy for Flex/Grid as an
-accepted performance hardening step. The "window-scoped layout engine" bullets above describe a
-potential end-state that generalizes those same persistence/incremental-update principles; if that
-end-state is adopted, ADR 0116 is intended to capture the concrete window/viewport integration
-shape.
+Note: ADR 0076 described an accepted performance hardening step for a container-owned integration,
+but the repository now defaults to the window-scoped engine described by ADR 0116. The end-state
+still carries forward the same persistence/incremental-update principles (stable identity + bounded
+measurement), but the ownership model is window-scoped rather than container-scoped.
 
 ## Design (Proposed)
 

@@ -110,13 +110,23 @@ Tools (e.g. `ecosystem/fret-gizmo`) should treat `ViewportInputEvent` as the can
 
 - use `cursor_px` and `geometry.draw_rect_px` for UI-space deltas and hit testing,
 - use `target_px` when interacting with engine-side pixel buffers,
-- use `pixels_per_point` to keep “pixel-sized” affordances stable across DPI.
+- use `pixels_per_point` to keep “pixel-sized” affordances stable across DPI when the consumer
+  operates in window logical pixels,
+- if a tool operates in **render-target pixel space** (e.g. it uses `target_px` / `target_px_size`
+  for picking), convert screen-space thresholds (click distance, drag threshold, hit radius) into
+  target pixels via `ViewportInputEvent::target_px_per_screen_px()`, and use
+  `ViewportInputEvent::{cursor_target_px_f32,cursor_target_px_f32_clamped}` to compute the cursor
+  position in target pixels without re-deriving mapping math.
 
 ## Affected APIs / Surface Area
 
 Core/runtime:
 
 - `crates/fret-core/src/input.rs`: add `ViewportInputEvent`, `ViewportInputGeometry`.
+- `crates/fret-core/src/input.rs`: add `ViewportInputEvent::target_px_per_screen_px()` for
+  screen px → target px conversions in tooling.
+- `crates/fret-core/src/input.rs`: add `ViewportInputEvent::{cursor_target_px_f32,cursor_target_px_f32_clamped}`
+  for window logical px → target px cursor mapping.
 
 Runner:
 - `crates/fret-launch/src/runner/common.rs`: forward `Effect::ViewportInput` to `WinitAppDriver::viewport_input`.

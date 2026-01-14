@@ -38,23 +38,32 @@ It complements (but does not replace) ADRs:
 
 - **Make the default font semantic (system UI font alias)**
   - Problem: relying on `FontId::default()` without a defined font family causes platform-dependent tofu and IME provisional-state breakage.
-  - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0006-text-system.md`
+  - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0006-text-system.md`, `docs/adr/0162-font-stack-bootstrap-and-textfontstackkey-v1.md`
   - Code: `crates/fret-ui/src/theme.rs`, `crates/fret-render/src/text.rs`
-  - Current: `crates/fret-render/src/text.rs` configures `cosmic-text`'s `fontdb` generic families at startup (preferring platform UI font families when present), so `Family::SansSerif` is no longer an implicit "Open Sans" placeholder.
-  - Current: `TextStyle.font` now maps to `cosmic-text` generic families (`FontId::default()` -> sans, `FontId::serif()` -> serif, `FontId::monospace()` -> mono).
-  - TODO: expose the default font stack at the theme/settings layer (and decide how user font loading maps to stable `FontId` values).
+  - Current: `crates/fret-render/src/text.rs` configures both `cosmic-text` fontdb generics and Parley/fontique generic families (keep backend behavior aligned as we converge the font source of truth).
+  - Current: `TextStyle.font` is a semantic `FontId` (`Ui/Serif/Monospace/Family(name)`) and maps to generic stacks (`sans-serif`/`serif`/`monospace`) for shaping.
+  - TODO: expose a curated default font stack at the theme/settings layer (and decide how user font loading maps to stable `FontId` values).
+
+- **Web/WASM bootstrap fonts are insufficient** (done)
+  - Problem: `fret-fonts` currently bundles a mono subset only; general UI text needs a UI sans baseline (and eventually emoji).
+  - ADRs: `docs/adr/0162-font-stack-bootstrap-and-textfontstackkey-v1.md`
+  - Code: `crates/fret-fonts/src/lib.rs`, `crates/fret-launch/src/runner/web.rs`
+  - Current: `fret-fonts` bundles a UI sans + monospace baseline for wasm (`Inter` + `JetBrains Mono` subsets).
+  - Current: optional `emoji` font bundle is available (`Noto Color Emoji`), gated behind `fret-fonts/emoji`.
+  - Current: web runner seeds `TextFontFamilyConfig` from curated defaults when empty, and bumps `TextFontStackKey` via `apply_font_catalog_update` after font injection.
 
 - **Fallback list participates in `TextBlobId` caching / invalidation**
   - Problem: changing configured fallbacks or font DB state must invalidate cached shaping/rasterization results.
-  - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
+  - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0162-font-stack-bootstrap-and-textfontstackkey-v1.md`
   - Code: `crates/fret-render/src/text.rs`
   - Current: `crates/fret-render/src/text.rs` includes a `font_stack_key` (derived from locale + configured generic families + fallback policy) in the `TextBlobKey` cache key.
-  - TODO: when runtime font configuration becomes user-editable, add an explicit invalidation path that bumps the `font_stack_key` and clears cached blobs.
+  - Current: runner font/config mutations go through `fret_runtime::apply_font_catalog_update`, which bumps `TextFontStackKey` to prevent stale layout/raster cache reuse.
 
 - **Emoji / variation selectors policy**
   - Goal: define baseline behavior for emoji fonts and variation selectors, and add a smoke test string that exercises it.
   - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
   - Code: `crates/fret-render/src/text.rs`
+  - Current: optional wasm emoji font bundle (`fret-fonts/emoji` -> `Noto Color Emoji`) and a dedicated conformance demo (`apps/fret-examples/src/emoji_conformance_demo.rs`).
 
 - **Center baseline within the line box across font swaps**
   - Symptom: switching the UI font in `fret-demo` to fonts with unusual metrics (e.g. Nerd Fonts like "Agave NF") can make text look slightly "up/right" in controls that visually expect centered labels.
@@ -64,6 +73,28 @@ It complements (but does not replace) ADRs:
   - Note: some "weird metrics" fonts may still look slightly off-center horizontally. Treat this as expected behavior under the web-aligned model unless we add an explicit per-component opt-in.
   - Option: add an **opt-in** "optical centering" mode for single-line control labels (compute ink bounds per shaped run and apply a small offset at paint time; cache the bounds in the prepared text blob).
   - TODO: add a deterministic regression harness in `apps/fret-examples/src/components_gallery.rs` that toggles a known-problem font and captures a centered-label alignment snapshot (baseline centering regressions only).
+
+## P1 - Text System v2 (Parley / Attributed Spans)
+
+- **Unify rich text under attributed spans (shaping vs paint split)**
+  - Goal: make Markdown/code highlighting structurally compatible with wrapping and geometry queries without “many Text nodes”.
+  - ADRs: `docs/adr/0157-text-system-v2-parley-attributed-spans-and-quality-baseline.md`
+  - Workstream: `docs/workstreams/text-system-v2-parley.md`
+
+- **Stop theme-only changes from forcing reshaping/re-wrapping**
+  - Problem: current v1 `RichText` run colors participate in shaping/layout cache keys, so recolors can trigger expensive rework.
+  - ADRs: `docs/adr/0157-text-system-v2-parley-attributed-spans-and-quality-baseline.md`, `docs/adr/0109-rich-text-runs-and-text-quality-v2.md`
+  - Workstream: `docs/workstreams/text-system-v2-parley.md`
+
+- **Wrapper-owned wrapping and truncation (not backend-owned)**
+  - Goal: keep wrapping/ellipsis policy stable and testable across backends and platforms.
+  - Reference: Zed/GPUI `LineWrapper` (`repo-ref/zed/crates/gpui/src/text_system/line_wrapper.rs`)
+  - Workstream: `docs/workstreams/text-system-v2-parley.md`
+
+- **Budgeted, evictable glyph atlases**
+  - Problem: append-only atlas growth is a long-session risk; eviction must be deterministic and observable.
+  - ADRs: `docs/adr/0157-text-system-v2-parley-attributed-spans-and-quality-baseline.md`, `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
+  - Workstream: `docs/workstreams/text-system-v2-parley.md`
 
 ## P0 - Themes / Token Consistency / shadcn Alignment
 

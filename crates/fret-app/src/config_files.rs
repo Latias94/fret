@@ -51,6 +51,9 @@ pub struct LayeredSettingsReport {
 pub struct LayeredKeymapReport {
     pub user: Option<PathBuf>,
     pub project: Option<PathBuf>,
+    pub conflicts: Vec<fret_runtime::keymap::KeymapConflict>,
+    pub user_conflicts: Vec<fret_runtime::keymap::KeymapConflict>,
+    pub project_conflicts: Vec<fret_runtime::keymap::KeymapConflict>,
 }
 
 pub fn load_layered_settings(
@@ -92,16 +95,19 @@ pub fn load_layered_keymap(
     if let Some(path) = paths.user_keymap_json()
         && let Some(layer) = crate::keymap::keymap_from_file_if_exists(&path)?
     {
+        report.user_conflicts = layer.conflicts();
         keymap.extend(layer);
         report.user = Some(path);
     }
 
     let project_path = paths.project_keymap_json();
     if let Some(layer) = crate::keymap::keymap_from_file_if_exists(&project_path)? {
+        report.project_conflicts = layer.conflicts();
         keymap.extend(layer);
         report.project = Some(project_path);
     }
 
+    report.conflicts = keymap.conflicts();
     Ok((keymap, report))
 }
 

@@ -23,13 +23,16 @@ pub(super) fn layout_positioned_child<H: UiHost>(
 ) {
     match style {
         PositionedLayoutStyle::Static => {
+            cx.solve_barrier_child_root_if_needed(child, base);
             let _ = cx.layout_in(child, base);
         }
         PositionedLayoutStyle::Relative(inset) => {
             let dx = inset.left.unwrap_or(Px(0.0)).0 - inset.right.unwrap_or(Px(0.0)).0;
             let dy = inset.top.unwrap_or(Px(0.0)).0 - inset.bottom.unwrap_or(Px(0.0)).0;
             let origin = fret_core::Point::new(Px(base.origin.x.0 + dx), Px(base.origin.y.0 + dy));
-            let _ = cx.layout_in(child, Rect::new(origin, base.size));
+            let bounds = Rect::new(origin, base.size);
+            cx.solve_barrier_child_root_if_needed(child, bounds);
+            let _ = cx.layout_in(child, bounds);
         }
         PositionedLayoutStyle::Absolute(inset) => {
             let measured = cx.layout_in_probe(child, base);
@@ -67,7 +70,9 @@ pub(super) fn layout_positioned_child<H: UiHost>(
 
             let origin =
                 fret_core::Point::new(Px(base.origin.x.0 + x.0), Px(base.origin.y.0 + y.0));
-            let _ = cx.layout_in(child, Rect::new(origin, Size::new(w, h)));
+            let bounds = Rect::new(origin, Size::new(w, h));
+            cx.solve_barrier_child_root_if_needed(child, bounds);
+            let _ = cx.layout_in(child, bounds);
         }
     }
 }
@@ -115,7 +120,9 @@ pub(super) fn layout_absolute_child_with_probe_bounds<H: UiHost>(
     };
 
     let origin = fret_core::Point::new(Px(base.origin.x.0 + x.0), Px(base.origin.y.0 + y.0));
-    let _ = cx.layout_in(child, Rect::new(origin, Size::new(w, h)));
+    let bounds = Rect::new(origin, Size::new(w, h));
+    cx.solve_barrier_child_root_if_needed(child, bounds);
+    let _ = cx.layout_in(child, bounds);
 }
 
 pub(super) fn clamp_to_constraints(mut size: Size, style: LayoutStyle, available: Size) -> Size {

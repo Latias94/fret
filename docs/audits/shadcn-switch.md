@@ -40,7 +40,7 @@ This audit compares Fret’s shadcn-aligned `Switch` against the upstream shadcn
 ## Validation
 
 - `cargo test -p fret-ui-shadcn --lib switch`
-- Web layout gate: `cargo nextest run -p fret-ui-shadcn -F fret-ui/layout-engine-v2 --test web_vs_fret_layout`
+- Web layout gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
   (`web_vs_fret_layout_switch_demo_track_size`).
 
 ## Follow-ups (recommended)

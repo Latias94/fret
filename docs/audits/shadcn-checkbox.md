@@ -41,7 +41,7 @@ This audit compares Fret’s shadcn-aligned `Checkbox` against the upstream shad
 ## Validation
 
 - `cargo test -p fret-ui-shadcn --lib checkbox`
-- Web layout gate: `cargo nextest run -p fret-ui-shadcn -F fret-ui/layout-engine-v2 --test web_vs_fret_layout`
+- Web layout gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
   (`web_vs_fret_layout_checkbox_demo_control_size`).
 
 ## Follow-ups (recommended)

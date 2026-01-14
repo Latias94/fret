@@ -16,15 +16,22 @@ use fret_core::{
 use fret_runtime::{CommandId, Effect};
 
 #[derive(Default)]
-struct FakeTextService {}
+struct FakeTextService {
+    prepare_calls: usize,
+    release_calls: usize,
+    path_prepare_calls: usize,
+    path_release_calls: usize,
+    svg_register_calls: usize,
+    svg_unregister_calls: usize,
+}
 
 impl TextService for FakeTextService {
     fn prepare(
         &mut self,
-        _text: &str,
-        _style: &TextStyle,
+        _input: &fret_core::TextInput,
         _constraints: TextConstraints,
     ) -> (fret_core::TextBlobId, TextMetrics) {
+        self.prepare_calls += 1;
         (
             fret_core::TextBlobId::default(),
             TextMetrics {
@@ -34,7 +41,9 @@ impl TextService for FakeTextService {
         )
     }
 
-    fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    fn release(&mut self, _blob: fret_core::TextBlobId) {
+        self.release_calls += 1;
+    }
 }
 
 impl fret_core::PathService for FakeTextService {
@@ -44,22 +53,27 @@ impl fret_core::PathService for FakeTextService {
         _style: fret_core::PathStyle,
         _constraints: fret_core::PathConstraints,
     ) -> (fret_core::PathId, fret_core::PathMetrics) {
+        self.path_prepare_calls += 1;
         (
             fret_core::PathId::default(),
             fret_core::PathMetrics::default(),
         )
     }
 
-    fn release(&mut self, _path: fret_core::PathId) {}
+    fn release(&mut self, _path: fret_core::PathId) {
+        self.path_release_calls += 1;
+    }
 }
 
 impl fret_core::SvgService for FakeTextService {
     fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+        self.svg_register_calls += 1;
         fret_core::SvgId::default()
     }
 
     fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
-        false
+        self.svg_unregister_calls += 1;
+        true
     }
 }
 
@@ -97,6 +111,7 @@ fn build_keyed_rows(
 }
 
 mod anchored;
+mod canvas;
 mod core;
 mod interactions;
 mod layout;

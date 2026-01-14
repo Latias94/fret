@@ -103,18 +103,6 @@ pub(crate) fn taffy_justify(justify: MainAlign) -> JustifyContent {
     }
 }
 
-pub(super) struct TaffyContainerCache {
-    pub(super) children: Vec<NodeId>,
-    pub(super) taffy: TaffyTree<Option<NodeId>>,
-    pub(super) root: TaffyNodeId,
-    pub(super) child_nodes: Vec<TaffyNodeId>,
-    pub(super) node_by_child: HashMap<NodeId, TaffyNodeId>,
-    pub(super) root_style: Option<TaffyStyle>,
-    pub(super) child_styles: HashMap<NodeId, TaffyStyle>,
-    pub(super) measure_cache:
-        std::collections::HashMap<TaffyMeasureKey, taffy::geometry::Size<f32>>,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) struct TaffyMeasureKey {
     pub(super) child: NodeId,
@@ -129,94 +117,5 @@ pub(crate) fn taffy_available_space_key(avail: TaffyAvailableSpace) -> (u8, u32)
         TaffyAvailableSpace::Definite(v) => (0, v.to_bits()),
         TaffyAvailableSpace::MinContent => (1, 0),
         TaffyAvailableSpace::MaxContent => (2, 0),
-    }
-}
-
-impl Default for TaffyContainerCache {
-    fn default() -> Self {
-        // Root stays stable across frames; children are updated incrementally.
-        let mut taffy: TaffyTree<Option<NodeId>> = TaffyTree::new();
-        let root = taffy.new_leaf(TaffyStyle::default()).expect("taffy root");
-        Self {
-            children: Vec::new(),
-            taffy,
-            root,
-            child_nodes: Vec::new(),
-            node_by_child: HashMap::new(),
-            root_style: None,
-            child_styles: HashMap::new(),
-            measure_cache: std::collections::HashMap::new(),
-        }
-    }
-}
-
-impl TaffyContainerCache {
-    pub(super) fn sync_root_style(&mut self, root_style: TaffyStyle) {
-        if self.root_style.as_ref() == Some(&root_style) {
-            return;
-        }
-        self.taffy
-            .set_style(self.root, root_style.clone())
-            .expect("taffy root style");
-        self.root_style = Some(root_style);
-    }
-
-    pub(super) fn sync_children(
-        &mut self,
-        children: &[NodeId],
-        mut style_for_child: impl FnMut(NodeId) -> TaffyStyle,
-    ) {
-        let children_changed = self.children != children;
-
-        if children_changed {
-            let keep: std::collections::HashSet<NodeId> = children.iter().copied().collect();
-            let removed: Vec<NodeId> = self
-                .node_by_child
-                .keys()
-                .copied()
-                .filter(|child| !keep.contains(child))
-                .collect();
-
-            for child in removed {
-                let Some(node) = self.node_by_child.remove(&child) else {
-                    continue;
-                };
-                self.child_styles.remove(&child);
-                self.taffy.remove(node).expect("taffy remove");
-            }
-
-            self.children = children.to_vec();
-        }
-
-        self.child_nodes.clear();
-        self.child_nodes.reserve(children.len());
-        for &child in children {
-            let node = if let Some(&node) = self.node_by_child.get(&child) {
-                node
-            } else {
-                let node = self
-                    .taffy
-                    .new_leaf_with_context(TaffyStyle::default(), Some(child))
-                    .expect("taffy leaf");
-                self.node_by_child.insert(child, node);
-                node
-            };
-            self.child_nodes.push(node);
-
-            let style = style_for_child(child);
-            let style_changed = self.child_styles.get(&child) != Some(&style);
-            if style_changed {
-                self.taffy
-                    .set_style(node, style.clone())
-                    .expect("taffy child style");
-                self.child_styles.insert(child, style);
-            }
-        }
-
-        if children_changed {
-            self.taffy
-                .set_children(self.root, &self.child_nodes)
-                .expect("taffy set children");
-        }
     }
 }

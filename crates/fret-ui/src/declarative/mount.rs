@@ -444,6 +444,7 @@ fn mount_element<H: UiHost>(
         ElementKind::Flex(p) => ElementInstance::Flex(p),
         ElementKind::Grid(p) => ElementInstance::Grid(p),
         ElementKind::Image(p) => ElementInstance::Image(p),
+        ElementKind::Canvas(p) => ElementInstance::Canvas(p),
         ElementKind::ViewportSurface(p) => ElementInstance::ViewportSurface(p),
         ElementKind::SvgIcon(p) => ElementInstance::SvgIcon(p),
         ElementKind::Spinner(p) => ElementInstance::Spinner(p),

@@ -1,4 +1,3 @@
-use fret_ui::legacy_widgets::TreeNode;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -11,6 +10,28 @@ use uuid::Uuid;
 
 pub const PROJECT_ROOT: &str = ".fret/project";
 pub const PROJECT_ASSETS_DIR: &str = ".fret/project/Assets";
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TreeNode {
+    pub id: u64,
+    pub label: String,
+    pub children: Vec<TreeNode>,
+}
+
+impl TreeNode {
+    pub fn new(id: u64, label: impl Into<String>) -> Self {
+        Self {
+            id,
+            label: label.into(),
+            children: Vec::new(),
+        }
+    }
+
+    pub fn with_children(mut self, children: Vec<TreeNode>) -> Self {
+        self.children = children;
+        self
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct AssetGuid(pub Uuid);

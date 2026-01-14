@@ -2,8 +2,8 @@ use anyhow::Context as _;
 use fret_app::CreateWindowKind;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_core::{
-    AppWindowId, Color, Corners, DrawOrder, Edges, Event, Rect, Scene, SceneOp, UiServices,
-    ViewportInputEvent, geometry::Px,
+    AppWindowId, Color, Corners, DrawOrder, Edges, Event, Rect, RenderTargetId, Scene, SceneOp,
+    UiServices, ViewportInputEvent, geometry::Px,
 };
 use fret_docking::{
     DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockViewportOverlayHooks,
@@ -21,7 +21,14 @@ use fret_ui::{Invalidation, Theme, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn as shadcn;
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+
+type ViewportKey = (AppWindowId, RenderTargetId);
+
+#[derive(Default)]
+struct DemoViewportToolState {
+    tools: HashMap<ViewportKey, fret_editor::ViewportToolManager>,
+}
 #[derive(Clone)]
 struct DockingArbitrationPanelModels {
     popover_open: Model<bool>,
@@ -99,7 +106,7 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
 
                 let drag_state = cx
                     .app
-                    .drag()
+                    .drag(fret_core::PointerId(0))
                     .map(|d| format!("drag(kind={:?}, dragging={})", d.kind, d.dragging))
                     .unwrap_or_else(|| "drag(<none>)".to_string());
 
@@ -205,15 +212,17 @@ struct ViewportDebugService {
     last_event: HashMap<AppWindowId, Model<Arc<str>>>,
 }
 
-struct DemoViewportOverlayHooks;
+struct DemoViewportOverlayHooks {
+    tools: Arc<Mutex<DemoViewportToolState>>,
+}
 
 impl DockViewportOverlayHooks for DemoViewportOverlayHooks {
     fn paint_with_layout(
         &self,
         theme: fret_ui::ThemeSnapshot,
-        _window: AppWindowId,
+        window: AppWindowId,
         _panel: &fret_core::PanelKey,
-        _viewport: fret_docking::ViewportPanel,
+        viewport: fret_docking::ViewportPanel,
         layout: fret_docking::DockViewportLayout,
         scene: &mut Scene,
     ) {
@@ -230,6 +239,16 @@ impl DockViewportOverlayHooks for DemoViewportOverlayHooks {
             border_color,
             corner_radii: Corners::all(Px(0.0)),
         });
+
+        let overlay = self.tools.lock().ok().and_then(|state| {
+            state
+                .tools
+                .get(&(window, viewport.target))
+                .map(|m| m.overlay())
+        });
+        if let Some(overlay) = overlay {
+            fret_editor::paint_viewport_overlay(theme, layout.draw_rect, overlay, scene);
+        }
     }
 }
 
@@ -245,6 +264,7 @@ struct DockingArbitrationDriver {
     restore: Option<DockLayoutRestoreState>,
     logical_windows: HashMap<AppWindowId, String>,
     next_logical_window_ix: u32,
+    viewport_tools: Arc<Mutex<DemoViewportToolState>>,
 }
 
 struct DockLayoutRestoreState {
@@ -256,7 +276,10 @@ impl DockingArbitrationDriver {
     const DOCK_LAYOUT_PATH: &'static str = ".fret/layout.json";
     const MAIN_LOGICAL_WINDOW_ID: &'static str = "main";
 
-    fn new(pending_layout: Option<fret_core::DockLayout>) -> Self {
+    fn new(
+        pending_layout: Option<fret_core::DockLayout>,
+        viewport_tools: Arc<Mutex<DemoViewportToolState>>,
+    ) -> Self {
         let mut next_logical_window_ix = 1;
         if let Some(layout) = &pending_layout {
             for w in &layout.windows {
@@ -275,6 +298,7 @@ impl DockingArbitrationDriver {
             restore: None,
             logical_windows: HashMap::new(),
             next_logical_window_ix,
+            viewport_tools,
         }
     }
 
@@ -590,18 +614,68 @@ impl WinitAppDriver for DockingArbitrationDriver {
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
             return;
         }
+
+        if let Event::KeyDown {
+            key: fret_core::KeyCode::KeyQ | fret_core::KeyCode::KeyW | fret_core::KeyCode::KeyE,
+            repeat: false,
+            ..
+        } = event
+        {
+            let mode = match event {
+                Event::KeyDown {
+                    key: fret_core::KeyCode::KeyQ,
+                    ..
+                } => fret_editor::ViewportToolMode::Select,
+                Event::KeyDown {
+                    key: fret_core::KeyCode::KeyW,
+                    ..
+                } => fret_editor::ViewportToolMode::Move,
+                Event::KeyDown {
+                    key: fret_core::KeyCode::KeyE,
+                    ..
+                } => fret_editor::ViewportToolMode::Rotate,
+                _ => return,
+            };
+
+            if let Ok(mut tools) = self.viewport_tools.lock() {
+                let mut did_change = false;
+                for ((w, _target), mgr) in tools.tools.iter_mut() {
+                    if *w != window {
+                        continue;
+                    }
+                    if mgr.active != mode {
+                        mgr.active = mode;
+                        mgr.interaction = None;
+                        did_change = true;
+                    }
+                }
+                if did_change {
+                    app.request_redraw(window);
+                }
+            }
+        }
+
         state.ui.dispatch_event(app, services, event);
     }
 
     fn viewport_input(&mut self, app: &mut App, event: ViewportInputEvent) {
+        let cursor_target_px = event
+            .cursor_target_px_f32()
+            .map(|(x, y)| format!("{x:.1},{y:.1}"))
+            .unwrap_or_else(|| "n/a".to_string());
+        let target_px_per_screen_px = event.target_px_per_screen_px().unwrap_or(0.0);
         let msg: Arc<str> = Arc::from(
             format!(
-                "{:?} uv=({:.3},{:.3}) target_px=({}, {}) window={:?}",
+                "{:?} cursor_px=({:.1},{:.1}) uv=({:.3},{:.3}) target_px=({}, {}) cursor_target_px=({}) target_px_per_screen_px={:.3} window={:?}",
                 event.kind,
+                event.cursor_px.x.0,
+                event.cursor_px.y.0,
                 event.uv.0,
                 event.uv.1,
                 event.target_px.0,
                 event.target_px.1,
+                cursor_target_px,
+                target_px_per_screen_px,
                 event.window,
             )
             .into_boxed_str(),
@@ -612,6 +686,14 @@ impl WinitAppDriver for DockingArbitrationDriver {
                 app.request_redraw(event.window);
             }
         });
+
+        if let Ok(mut state) = self.viewport_tools.lock() {
+            let key = (event.window, event.target);
+            let mgr = state.tools.entry(key).or_insert_with(Default::default);
+            if mgr.handle_viewport_input(&event) {
+                app.request_redraw(event.window);
+            }
+        }
     }
 
     fn dock_op(&mut self, app: &mut App, op: fret_core::DockOp) {
@@ -821,6 +903,7 @@ pub fn run() -> anyhow::Result<()> {
         .try_init();
 
     let mut app = App::new();
+    let viewport_tools = Arc::new(Mutex::new(DemoViewportToolState::default()));
     let mut caps = PlatformCapabilities::default();
     if std::env::var("FRET_SINGLE_WINDOW")
         .ok()
@@ -834,7 +917,9 @@ pub fn run() -> anyhow::Result<()> {
         svc.set(Arc::new(DockingArbitrationDockPanelRegistry));
     });
     app.with_global_mut(DockViewportOverlayHooksService::default, |svc, _app| {
-        svc.set(Arc::new(DemoViewportOverlayHooks));
+        svc.set(Arc::new(DemoViewportOverlayHooks {
+            tools: viewport_tools.clone(),
+        }));
     });
 
     let config = WinitRunnerConfig {
@@ -851,6 +936,6 @@ pub fn run() -> anyhow::Result<()> {
                 None
             });
 
-    let driver = DockingArbitrationDriver::new(pending_layout);
+    let driver = DockingArbitrationDriver::new(pending_layout, viewport_tools);
     crate::run_native_demo(config, app, driver).context("run docking_arbitration_demo app")
 }

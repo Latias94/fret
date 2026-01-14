@@ -61,4 +61,4 @@ Fret does not use React context. Instead, popover behavior is composed via:
 
 - `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs` validates popover placement against
   the Radix Vega web golden (`goldens/radix-web/v4/radix-vega/popover-example.popover.open-close.light.json`).
-- Run (layout engine v2): `cargo nextest run -p fret-ui-shadcn -F fret-ui/layout-engine-v2 --test radix_web_overlay_geometry`
+- Run: `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`

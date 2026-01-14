@@ -2314,6 +2314,147 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
 }
 "#;
 
+pub(super) const TEXT_SUBPIXEL_SHADER: &str = r#"
+struct ClipRRect {
+  rect: vec4<f32>,
+  corner_radii: vec4<f32>,
+  inv0: vec4<f32>,
+  inv1: vec4<f32>,
+};
+
+struct Viewport {
+  viewport_size: vec2<f32>,
+  clip_head: u32,
+  clip_count: u32,
+  output_is_srgb: u32,
+  _pad0: u32,
+  _pad1: u32,
+  _pad2: u32,
+};
+
+@group(0) @binding(0) var<uniform> viewport: Viewport;
+struct ClipStack {
+  clips: array<ClipRRect>,
+};
+
+@group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
+
+@group(1) @binding(0) var glyph_sampler: sampler;
+@group(1) @binding(1) var glyph_atlas: texture_2d<f32>;
+
+struct VsIn {
+  @location(0) pos_px: vec2<f32>,
+  @location(1) uv: vec2<f32>,
+  @location(2) color: vec4<f32>,
+};
+
+struct VsOut {
+  @builtin(position) clip_pos: vec4<f32>,
+  @location(0) uv: vec2<f32>,
+  @location(1) color: vec4<f32>,
+  @location(2) pixel_pos: vec2<f32>,
+};
+
+fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
+  let ndc_x = (pixel_pos.x / viewport.viewport_size.x) * 2.0 - 1.0;
+  let ndc_y = 1.0 - (pixel_pos.y / viewport.viewport_size.y) * 2.0;
+  return vec2<f32>(ndc_x, ndc_y);
+}
+
+fn pick_corner_radius(center_to_point: vec2<f32>, radii: vec4<f32>) -> f32 {
+  if (center_to_point.x < 0.0) {
+    if (center_to_point.y < 0.0) { return radii.x; }
+    return radii.w;
+  }
+  if (center_to_point.y < 0.0) { return radii.y; }
+  return radii.z;
+}
+
+fn quad_sdf_impl(corner_center_to_point: vec2<f32>, corner_radius: f32) -> f32 {
+  if (corner_radius == 0.0) {
+    return max(corner_center_to_point.x, corner_center_to_point.y);
+  }
+  let signed_distance_to_inset_quad =
+    length(max(vec2<f32>(0.0), corner_center_to_point)) +
+    min(0.0, max(corner_center_to_point.x, corner_center_to_point.y));
+  return signed_distance_to_inset_quad - corner_radius;
+}
+
+fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corner_radii: vec4<f32>) -> f32 {
+  let center = rect_origin + rect_size * 0.5;
+  let center_to_point = point - center;
+  let half_size = rect_size * 0.5;
+  let corner_radius = pick_corner_radius(center_to_point, corner_radii);
+  let corner_to_point = abs(center_to_point) - half_size;
+  let corner_center_to_point = corner_to_point + corner_radius;
+  return quad_sdf_impl(corner_center_to_point, corner_radius);
+}
+
+fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
+  var alpha = 1.0;
+  var idx = viewport.clip_head;
+  for (var i = 0u; i < 64u; i = i + 1u) {
+    if (i >= viewport.clip_count) {
+      break;
+    }
+    if (idx == 0xffffffffu) {
+      break;
+    }
+    let clip = clip_stack.clips[idx];
+    idx = bitcast<u32>(clip.inv0.w);
+    let clip_local = vec2<f32>(
+      dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
+      dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
+    );
+    let sdf = quad_sdf(clip_local, clip.rect.xy, clip.rect.zw, clip.corner_radii);
+    let aa = max(fwidth(sdf), 1e-4);
+    let a = 1.0 - smoothstep(-aa, aa, sdf);
+    alpha = alpha * a;
+  }
+  return alpha;
+}
+
+fn linear_to_srgb(rgb: vec3<f32>) -> vec3<f32> {
+  let a = 0.055;
+  let lo = rgb * 12.92;
+  let hi = (1.0 + a) * pow(rgb, vec3<f32>(1.0 / 2.4)) - vec3<f32>(a);
+  return select(hi, lo, rgb <= vec3<f32>(0.0031308));
+}
+
+fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
+  if (viewport.output_is_srgb != 0u) {
+    return c;
+  }
+  if (c.a <= 0.0) {
+    return c;
+  }
+  let un = c.rgb / c.a;
+  let enc = linear_to_srgb(un);
+  return vec4<f32>(enc * c.a, c.a);
+}
+
+@vertex
+fn vs_main(input: VsIn) -> VsOut {
+  var out: VsOut;
+  let clip_xy = to_clip_space(input.pos_px);
+  out.clip_pos = vec4<f32>(clip_xy, 0.0, 1.0);
+  out.uv = input.uv;
+  out.color = input.color;
+  out.pixel_pos = input.pos_px;
+  return out;
+}
+
+@fragment
+fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
+  let clip = clip_alpha(input.pixel_pos);
+  let tex = textureSample(glyph_atlas, glyph_sampler, input.uv);
+  let coverage = tex.rgb;
+  let a = max(max(coverage.r, coverage.g), coverage.b) * input.color.a;
+  let out = vec4<f32>(input.color.rgb * coverage, a) * clip;
+  return encode_output_premul(out);
+}
+"#;
+
 pub(super) const MASK_SHADER: &str = r#"
 struct ClipRRect {
   rect: vec4<f32>,

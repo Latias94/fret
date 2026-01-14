@@ -16,6 +16,7 @@ pub(super) fn handle_roving_flex<H: UiHost>(
         app: &'a mut H,
         window: AppWindowId,
         element: crate::GlobalElementId,
+        requested_focus: &'a mut Option<NodeId>,
     }
 
     impl<H: UiHost> action::UiActionHost for RovingHookHost<'_, H> {
@@ -54,6 +55,19 @@ pub(super) fn handle_roving_flex<H: UiHost>(
         }
     }
 
+    impl<H: UiHost> action::UiFocusActionHost for RovingHookHost<'_, H> {
+        fn request_focus(&mut self, target: crate::GlobalElementId) {
+            let Some(node) =
+                crate::elements::with_window_state(&mut *self.app, self.window, |window_state| {
+                    window_state.node_entry(target).map(|e| e.node)
+                })
+            else {
+                return;
+            };
+            *self.requested_focus = Some(node);
+        }
+    }
+
     let Event::KeyDown {
         key,
         modifiers,
@@ -65,6 +79,40 @@ pub(super) fn handle_roving_flex<H: UiHost>(
     if *repeat {
         return;
     }
+
+    let key_hook = crate::elements::with_element_state(
+        &mut *cx.app,
+        window,
+        this.element,
+        crate::action::RovingActionHooks::default,
+        |hooks| hooks.on_key_down.clone(),
+    );
+    if let Some(h) = key_hook {
+        let mut host = RovingHookHost {
+            app: &mut *cx.app,
+            window,
+            element: this.element,
+            requested_focus: &mut cx.requested_focus,
+        };
+        let handled = h(
+            &mut host,
+            action::ActionCx {
+                window,
+                target: this.element,
+            },
+            action::KeyDownCx {
+                key: *key,
+                modifiers: *modifiers,
+                repeat: *repeat,
+            },
+        );
+        if handled {
+            cx.request_redraw();
+            cx.stop_propagation();
+            return;
+        }
+    }
+
     let len = cx.children.len();
     if len == 0 {
         return;
@@ -90,6 +138,7 @@ pub(super) fn handle_roving_flex<H: UiHost>(
             app: &mut *cx.app,
             window,
             element: this.element,
+            requested_focus: &mut cx.requested_focus,
         };
         let result = h(
             &mut host,
@@ -136,6 +185,7 @@ pub(super) fn handle_roving_flex<H: UiHost>(
                 app: &mut *cx.app,
                 window,
                 element: this.element,
+                requested_focus: &mut cx.requested_focus,
             };
             target = h(
                 &mut host,
@@ -185,6 +235,7 @@ pub(super) fn handle_roving_flex<H: UiHost>(
             app: &mut *cx.app,
             window,
             element: this.element,
+            requested_focus: &mut cx.requested_focus,
         };
         h(
             &mut host,

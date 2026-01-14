@@ -4,38 +4,52 @@ use std::collections::hash_map::Entry;
 impl fret_core::TextService for Renderer {
     fn prepare(
         &mut self,
-        text: &str,
-        style: &fret_core::TextStyle,
+        input: &fret_core::TextInput,
         constraints: fret_core::TextConstraints,
     ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
-        self.text_system.prepare(text, style, constraints)
-    }
-
-    fn prepare_rich(
-        &mut self,
-        rich: &fret_core::RichText,
-        base_style: &fret_core::TextStyle,
-        constraints: fret_core::TextConstraints,
-    ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
-        self.text_system.prepare_rich(rich, base_style, constraints)
+        match input {
+            fret_core::TextInput::Plain { text, style } => {
+                self.text_system.prepare(text.as_ref(), style, constraints)
+            }
+            fret_core::TextInput::Attributed { text, base, spans } => {
+                let rich = fret_core::AttributedText::new(text.clone(), spans.clone());
+                self.text_system
+                    .prepare_attributed(&rich, base, constraints)
+            }
+            _ => {
+                debug_assert!(false, "unsupported TextInput variant");
+                self.text_system.prepare(
+                    input.text(),
+                    &fret_core::TextStyle::default(),
+                    constraints,
+                )
+            }
+        }
     }
 
     fn measure(
         &mut self,
-        text: &str,
-        style: &fret_core::TextStyle,
+        input: &fret_core::TextInput,
         constraints: fret_core::TextConstraints,
     ) -> fret_core::TextMetrics {
-        self.text_system.measure(text, style, constraints)
-    }
-
-    fn measure_rich(
-        &mut self,
-        rich: &fret_core::RichText,
-        base_style: &fret_core::TextStyle,
-        constraints: fret_core::TextConstraints,
-    ) -> fret_core::TextMetrics {
-        self.text_system.measure_rich(rich, base_style, constraints)
+        match input {
+            fret_core::TextInput::Plain { text, style } => {
+                self.text_system.measure(text.as_ref(), style, constraints)
+            }
+            fret_core::TextInput::Attributed { text, base, spans } => {
+                let rich = fret_core::AttributedText::new(text.clone(), spans.clone());
+                self.text_system
+                    .measure_attributed(&rich, base, constraints)
+            }
+            _ => {
+                debug_assert!(false, "unsupported TextInput variant");
+                self.text_system.measure(
+                    input.text(),
+                    &fret_core::TextStyle::default(),
+                    constraints,
+                )
+            }
+        }
     }
 
     fn caret_x(&mut self, blob: fret_core::TextBlobId, index: usize) -> fret_core::Px {
@@ -162,19 +176,36 @@ impl fret_core::SvgService for Renderer {
                 let Some(existing) = self.svgs.get(id) else {
                     continue;
                 };
-                if existing.as_ref() == bytes {
+                if existing.bytes.as_ref() == bytes {
+                    if let Some(entry) = self.svgs.get_mut(id) {
+                        entry.refs = entry.refs.saturating_add(1);
+                    }
                     return id;
                 }
             }
         }
 
-        let id = self.svgs.insert(Arc::<[u8]>::from(bytes));
+        let id = self.svgs.insert(super::types::SvgEntry {
+            bytes: Arc::<[u8]>::from(bytes),
+            refs: 1,
+        });
         self.svg_hash_index.entry(h).or_default().push(id);
         id
     }
 
     fn unregister_svg(&mut self, svg: fret_core::SvgId) -> bool {
-        let Some(bytes) = self.svgs.remove(svg) else {
+        let Some(refs) = self.svgs.get(svg).map(|e| e.refs) else {
+            return false;
+        };
+
+        if refs > 1 {
+            if let Some(entry) = self.svgs.get_mut(svg) {
+                entry.refs = entry.refs.saturating_sub(1);
+            }
+            return true;
+        }
+
+        let Some(bytes) = self.svgs.remove(svg).map(|e| e.bytes) else {
             return false;
         };
 

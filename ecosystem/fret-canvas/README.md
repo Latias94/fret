@@ -49,6 +49,32 @@ should be converted to canvas units before comparison:
 
 ## Future: declarative surface
 
-The `declarative` feature is reserved for a future declarative canvas element surface aligned with
-ADR 0137. The current crate intentionally focuses on substrate helpers that are useful both for
-retained widgets and for eventual declarative authoring.
+Fret now provides a declarative canvas element in `crates/fret-ui` (ADR 0156).
+
+- Declarative: use `fret_ui::ElementContext::canvas(...)` + `fret_ui::canvas::CanvasPainter` to
+  emit `SceneOp`s with hosted resources (`TextBlobId`/`PathId`/`SvgId`) and scoped helpers for
+  clip/transform/effect stacks.
+- Retained: keep using `ecosystem/fret-canvas` for retained widgets (node graphs, plots, editors)
+  that own their own interaction policy and internal caches.
+
+This crate intentionally stays focused on reusable retained-canvas helpers that remain useful even
+when the high-level authoring style is declarative.
+
+## Optional: rstar backend
+
+`fret-canvas` ships with a uniform-grid spatial index by default.
+
+For experiments and large graphs with highly non-uniform distributions, an opt-in R-tree backend is
+available via the `rstar` feature:
+
+- Enable: `fret-canvas/rstar`
+- Call sites should prefer `fret_canvas::spatial::DefaultIndexWithBackrefs<T>` so the backend can
+  be swapped without refactors.
+
+## Optional: kurbo backend
+
+For robust 2D geometry operations (Bezier refinement, path hit-testing, intersection helpers),
+`fret-canvas` can optionally use `kurbo` (ADR 0167).
+
+- Enable: `fret-canvas/kurbo`
+- Current scope: Bezier wire refinement (`bezier_wire_distance2`, `closest_point_on_bezier_wire`).

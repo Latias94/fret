@@ -1,12 +1,6 @@
 use super::frame::ElementInstance;
 use super::frame::element_record_for_node;
-use super::frame::layout_style_for_node;
-use super::layout_helpers::clamp_to_constraints;
 use super::prelude::*;
-use super::taffy_layout::*;
-use crate::layout_constraints::{
-    AvailableSpace as RuntimeAvailableSpace, LayoutConstraints, LayoutSize,
-};
 use crate::widget::{CommandCx, MeasureCx};
 use fret_runtime::CommandId;
 
@@ -23,19 +17,32 @@ struct TextCache {
     prepared_scale_factor_bits: Option<u32>,
     measured_scale_factor_bits: Option<u32>,
     last_text: Option<std::sync::Arc<str>>,
-    last_rich: Option<fret_core::RichText>,
+    last_rich: Option<fret_core::AttributedText>,
     last_style: Option<TextStyle>,
     last_wrap: Option<fret_core::TextWrap>,
     last_overflow: Option<TextOverflow>,
     last_width: Option<Px>,
     last_measure_width: Option<Px>,
-    last_theme_revision: Option<u64>,
     last_font_stack_key: Option<u64>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct SvgCache {
+    key: Option<SvgCacheKey>,
+    svg: Option<fret_core::SvgId>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SvgCacheKey {
+    Static { ptr: usize, len: usize },
+    Bytes { ptr: usize, len: usize },
 }
 
 pub(super) struct ElementHostWidget {
     element: GlobalElementId,
     text_cache: TextCache,
+    svg_cache: SvgCache,
+    canvas_cache: crate::canvas::CanvasCache,
     render_transform: Option<fret_core::Transform2D>,
     hit_testable: bool,
     hit_test_children: bool,
@@ -50,8 +57,6 @@ pub(super) struct ElementHostWidget {
     text_input: Option<BoundTextInput>,
     text_area: Option<crate::text_area::BoundTextArea>,
     resizable_panel_group: Option<crate::resizable_panel_group::BoundResizablePanelGroup>,
-    flex_cache: Option<TaffyContainerCache>,
-    grid_cache: Option<TaffyContainerCache>,
 }
 
 impl ElementHostWidget {
@@ -59,6 +64,8 @@ impl ElementHostWidget {
         Self {
             element,
             text_cache: TextCache::default(),
+            svg_cache: SvgCache::default(),
+            canvas_cache: crate::canvas::CanvasCache::default(),
             render_transform: None,
             hit_testable: true,
             hit_test_children: true,
@@ -73,8 +80,52 @@ impl ElementHostWidget {
             text_input: None,
             text_area: None,
             resizable_panel_group: None,
-            flex_cache: None,
-            grid_cache: None,
+        }
+    }
+
+    fn resolve_svg_for_icon(
+        &mut self,
+        services: &mut dyn fret_core::UiServices,
+        source: &crate::SvgSource,
+    ) -> fret_core::SvgId {
+        match source {
+            crate::SvgSource::Id(id) => *id,
+            crate::SvgSource::Static(bytes) => {
+                let key = SvgCacheKey::Static {
+                    ptr: bytes.as_ptr() as usize,
+                    len: bytes.len(),
+                };
+                if self.svg_cache.key == Some(key)
+                    && let Some(svg) = self.svg_cache.svg
+                {
+                    return svg;
+                }
+
+                let svg = services.svg().register_svg(bytes);
+                if let Some(old) = self.svg_cache.svg.replace(svg) {
+                    let _ = services.svg().unregister_svg(old);
+                }
+                self.svg_cache.key = Some(key);
+                svg
+            }
+            crate::SvgSource::Bytes(bytes) => {
+                let key = SvgCacheKey::Bytes {
+                    ptr: bytes.as_ptr() as usize,
+                    len: bytes.len(),
+                };
+                if self.svg_cache.key == Some(key)
+                    && let Some(svg) = self.svg_cache.svg
+                {
+                    return svg;
+                }
+
+                let svg = services.svg().register_svg(bytes);
+                if let Some(old) = self.svg_cache.svg.replace(svg) {
+                    let _ = services.svg().unregister_svg(old);
+                }
+                self.svg_cache.key = Some(key);
+                svg
+            }
         }
     }
 
@@ -85,355 +136,6 @@ impl ElementHostWidget {
         node: NodeId,
     ) -> Option<ElementInstance> {
         element_record_for_node(app, window, node).map(|r| r.instance)
-    }
-
-    #[allow(dead_code)]
-    fn layout_flex_container<H: UiHost>(
-        &mut self,
-        cx: &mut LayoutCx<'_, H>,
-        window: AppWindowId,
-        props: FlexProps,
-    ) -> Size {
-        let pad_left = props.padding.left.0.max(0.0);
-        let pad_right = props.padding.right.0.max(0.0);
-        let pad_top = props.padding.top.0.max(0.0);
-        let pad_bottom = props.padding.bottom.0.max(0.0);
-        let pad_w = pad_left + pad_right;
-        let pad_h = pad_top + pad_bottom;
-        let inner_origin = fret_core::Point::new(
-            Px(cx.bounds.origin.x.0 + pad_left),
-            Px(cx.bounds.origin.y.0 + pad_top),
-        );
-        let outer_avail_w = match props.layout.size.width {
-            Length::Px(px) => Px(px.0.min(cx.available.width.0.max(0.0))),
-            Length::Fill | Length::Auto => cx.available.width,
-        };
-        let outer_avail_h = match props.layout.size.height {
-            Length::Px(px) => Px(px.0.min(cx.available.height.0.max(0.0))),
-            Length::Fill | Length::Auto => cx.available.height,
-        };
-
-        let inner_avail = Size::new(
-            Px((outer_avail_w.0 - pad_w).max(0.0)),
-            Px((outer_avail_h.0 - pad_h).max(0.0)),
-        );
-
-        let root_style = TaffyStyle {
-            display: Display::Flex,
-            flex_direction: match props.direction {
-                fret_core::Axis::Horizontal => FlexDirection::Row,
-                fret_core::Axis::Vertical => FlexDirection::Column,
-            },
-            flex_wrap: if props.wrap {
-                FlexWrap::Wrap
-            } else {
-                FlexWrap::NoWrap
-            },
-            justify_content: Some(taffy_justify(props.justify)),
-            align_items: Some(taffy_align_items(props.align)),
-            gap: TaffySize {
-                width: LengthPercentage::length(props.gap.0.max(0.0)),
-                height: LengthPercentage::length(props.gap.0.max(0.0)),
-            },
-            size: TaffySize {
-                width: match props.layout.size.width {
-                    Length::Px(px) => Dimension::length((px.0 - pad_w).max(0.0)),
-                    Length::Fill => Dimension::length(inner_avail.width.0.max(0.0)),
-                    Length::Auto => Dimension::auto(),
-                },
-                height: match props.layout.size.height {
-                    Length::Px(px) => Dimension::length((px.0 - pad_h).max(0.0)),
-                    Length::Fill => Dimension::length(inner_avail.height.0.max(0.0)),
-                    Length::Auto => Dimension::auto(),
-                },
-            },
-            max_size: TaffySize {
-                width: Dimension::length(inner_avail.width.0.max(0.0)),
-                height: Dimension::length(inner_avail.height.0.max(0.0)),
-            },
-            ..Default::default()
-        };
-
-        let cache = self
-            .flex_cache
-            .get_or_insert_with(TaffyContainerCache::default);
-
-        cache.sync_root_style(root_style);
-        cache.sync_children(cx.children, |child| {
-            let layout_style = layout_style_for_node(cx.app, window, child);
-            let spacer_min = element_record_for_node(cx.app, window, child).and_then(|r| {
-                if let ElementInstance::Spacer(p) = r.instance {
-                    Some(p.min)
-                } else {
-                    None
-                }
-            });
-
-            let mut min_w = layout_style.size.min_width.map(|p| p.0);
-            let mut min_h = layout_style.size.min_height.map(|p| p.0);
-            if let Some(min) = spacer_min {
-                let min = min.0.max(0.0);
-                match props.direction {
-                    fret_core::Axis::Horizontal => {
-                        min_w = Some(min_w.unwrap_or(0.0).max(min));
-                    }
-                    fret_core::Axis::Vertical => {
-                        min_h = Some(min_h.unwrap_or(0.0).max(min));
-                    }
-                }
-            }
-
-            TaffyStyle {
-                display: Display::Block,
-                position: taffy_position(layout_style.position),
-                inset: taffy_rect_lpa_from_inset(layout_style.position, layout_style.inset),
-                size: TaffySize {
-                    width: taffy_dimension(layout_style.size.width),
-                    height: taffy_dimension(layout_style.size.height),
-                },
-                aspect_ratio: layout_style.aspect_ratio,
-                min_size: TaffySize {
-                    width: min_w.map(Dimension::length).unwrap_or_else(Dimension::auto),
-                    height: min_h.map(Dimension::length).unwrap_or_else(Dimension::auto),
-                },
-                max_size: TaffySize {
-                    width: layout_style
-                        .size
-                        .max_width
-                        .map(|p| Dimension::length(p.0))
-                        .unwrap_or_else(Dimension::auto),
-                    height: layout_style
-                        .size
-                        .max_height
-                        .map(|p| Dimension::length(p.0))
-                        .unwrap_or_else(Dimension::auto),
-                },
-                margin: taffy_rect_lpa_from_margin_edges(layout_style.margin),
-                flex_grow: layout_style.flex.grow.max(0.0),
-                flex_shrink: layout_style.flex.shrink.max(0.0),
-                flex_basis: taffy_dimension(layout_style.flex.basis),
-                align_self: layout_style.flex.align_self.map(taffy_align_self),
-                ..Default::default()
-            }
-        });
-
-        cache
-            .taffy
-            .mark_dirty(cache.root)
-            .expect("taffy mark dirty");
-
-        cache.measure_cache.clear();
-        let root = cache.root;
-        {
-            let measure_cache = &mut cache.measure_cache;
-            let taffy = &mut cache.taffy;
-
-            let available = taffy::geometry::Size {
-                width: TaffyAvailableSpace::Definite(inner_avail.width.0),
-                height: TaffyAvailableSpace::Definite(inner_avail.height.0),
-            };
-
-            taffy
-                .compute_layout_with_measure(root, available, |known, avail, _id, ctx, _style| {
-                    let Some(child) = ctx.and_then(|c| *c) else {
-                        return taffy::geometry::Size::default();
-                    };
-
-                    let key = TaffyMeasureKey {
-                        child,
-                        known_w: known.width.map(|v| v.to_bits()),
-                        known_h: known.height.map(|v| v.to_bits()),
-                        avail_w: taffy_available_space_key(avail.width),
-                        avail_h: taffy_available_space_key(avail.height),
-                    };
-                    if let Some(size) = measure_cache.get(&key) {
-                        return *size;
-                    }
-
-                    let constraints = LayoutConstraints::new(
-                        LayoutSize::new(known.width.map(Px), known.height.map(Px)),
-                        LayoutSize::new(
-                            match avail.width {
-                                TaffyAvailableSpace::Definite(w) => {
-                                    RuntimeAvailableSpace::Definite(Px(w))
-                                }
-                                TaffyAvailableSpace::MinContent => {
-                                    RuntimeAvailableSpace::MinContent
-                                }
-                                TaffyAvailableSpace::MaxContent => {
-                                    RuntimeAvailableSpace::MaxContent
-                                }
-                            },
-                            match avail.height {
-                                TaffyAvailableSpace::Definite(h) => {
-                                    RuntimeAvailableSpace::Definite(Px(h))
-                                }
-                                TaffyAvailableSpace::MinContent => {
-                                    RuntimeAvailableSpace::MinContent
-                                }
-                                TaffyAvailableSpace::MaxContent => {
-                                    RuntimeAvailableSpace::MaxContent
-                                }
-                            },
-                        ),
-                    );
-                    let s = cx.measure_in(child, constraints);
-                    let out = taffy::geometry::Size {
-                        width: s.width.0,
-                        height: s.height.0,
-                    };
-                    measure_cache.insert(key, out);
-                    out
-                })
-                .expect("taffy compute");
-        }
-
-        let taffy = &cache.taffy;
-        let root_layout = taffy.layout(root).expect("taffy root layout");
-        let container_inner_size = Size::new(
-            Px(root_layout.size.width.max(0.0)),
-            Px(root_layout.size.height.max(0.0)),
-        );
-        let auto_margin_inner_size = Size::new(
-            match props.layout.size.width {
-                Length::Fill => inner_avail.width,
-                _ => container_inner_size.width,
-            },
-            match props.layout.size.height {
-                Length::Fill => inner_avail.height,
-                _ => container_inner_size.height,
-            },
-        );
-
-        for &child_node in &cache.child_nodes {
-            let layout = taffy.layout(child_node).expect("taffy layout");
-            let Some(child) = taffy.get_node_context(child_node).and_then(|c| *c) else {
-                continue;
-            };
-            let child_style = layout_style_for_node(cx.app, window, child);
-            let single_child = cx.children.len() == 1;
-
-            let mut x = layout.location.x;
-            let mut y = layout.location.y;
-
-            let margin_left_auto =
-                matches!(child_style.margin.left, crate::element::MarginEdge::Auto);
-            let margin_right_auto =
-                matches!(child_style.margin.right, crate::element::MarginEdge::Auto);
-            let margin_top_auto =
-                matches!(child_style.margin.top, crate::element::MarginEdge::Auto);
-            let margin_bottom_auto =
-                matches!(child_style.margin.bottom, crate::element::MarginEdge::Auto);
-
-            let margin_px = |edge: crate::element::MarginEdge| match edge {
-                crate::element::MarginEdge::Px(px) => px.0,
-                crate::element::MarginEdge::Auto => 0.0,
-            };
-
-            match props.direction {
-                fret_core::Axis::Horizontal => {
-                    if single_child && (margin_left_auto || margin_right_auto) {
-                        let left = if margin_left_auto {
-                            0.0
-                        } else {
-                            margin_px(child_style.margin.left)
-                        };
-                        let right = if margin_right_auto {
-                            0.0
-                        } else {
-                            margin_px(child_style.margin.right)
-                        };
-                        let free =
-                            auto_margin_inner_size.width.0 - layout.size.width - left - right;
-                        if margin_left_auto && margin_right_auto {
-                            x = (left + (free.max(0.0) / 2.0)).max(0.0);
-                        } else if margin_left_auto {
-                            x = (left + free.max(0.0)).max(0.0);
-                        } else if margin_right_auto {
-                            x = left.max(0.0);
-                        }
-                    }
-
-                    if margin_top_auto || margin_bottom_auto {
-                        let top = if margin_top_auto {
-                            0.0
-                        } else {
-                            margin_px(child_style.margin.top)
-                        };
-                        let bottom = if margin_bottom_auto {
-                            0.0
-                        } else {
-                            margin_px(child_style.margin.bottom)
-                        };
-                        let free =
-                            auto_margin_inner_size.height.0 - layout.size.height - top - bottom;
-                        if margin_top_auto && margin_bottom_auto {
-                            y = (top + (free.max(0.0) / 2.0)).max(0.0);
-                        } else if margin_top_auto {
-                            y = (top + free.max(0.0)).max(0.0);
-                        } else if margin_bottom_auto {
-                            y = top.max(0.0);
-                        }
-                    }
-                }
-                fret_core::Axis::Vertical => {
-                    if single_child && (margin_top_auto || margin_bottom_auto) {
-                        let top = if margin_top_auto {
-                            0.0
-                        } else {
-                            margin_px(child_style.margin.top)
-                        };
-                        let bottom = if margin_bottom_auto {
-                            0.0
-                        } else {
-                            margin_px(child_style.margin.bottom)
-                        };
-                        let free =
-                            auto_margin_inner_size.height.0 - layout.size.height - top - bottom;
-                        if margin_top_auto && margin_bottom_auto {
-                            y = (top + (free.max(0.0) / 2.0)).max(0.0);
-                        } else if margin_top_auto {
-                            y = (top + free.max(0.0)).max(0.0);
-                        } else if margin_bottom_auto {
-                            y = top.max(0.0);
-                        }
-                    }
-
-                    if margin_left_auto || margin_right_auto {
-                        let left = if margin_left_auto {
-                            0.0
-                        } else {
-                            margin_px(child_style.margin.left)
-                        };
-                        let right = if margin_right_auto {
-                            0.0
-                        } else {
-                            margin_px(child_style.margin.right)
-                        };
-                        let free =
-                            auto_margin_inner_size.width.0 - layout.size.width - left - right;
-                        if margin_left_auto && margin_right_auto {
-                            x = (left + (free.max(0.0) / 2.0)).max(0.0);
-                        } else if margin_left_auto {
-                            x = (left + free.max(0.0)).max(0.0);
-                        } else if margin_right_auto {
-                            x = left.max(0.0);
-                        }
-                    }
-                }
-            }
-            let rect = Rect::new(
-                fret_core::Point::new(Px(inner_origin.x.0 + x), Px(inner_origin.y.0 + y)),
-                Size::new(Px(layout.size.width), Px(layout.size.height)),
-            );
-            let _ = cx.layout_in(child, rect);
-        }
-
-        let desired = Size::new(
-            Px((container_inner_size.width.0 + pad_w).max(0.0)),
-            Px((container_inner_size.height.0 + pad_h).max(0.0)),
-        );
-        clamp_to_constraints(desired, props.layout, cx.available)
     }
 }
 
@@ -617,6 +319,11 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         self.text_cache.metrics = None;
         self.text_cache.last_text = None;
         self.text_cache.last_rich = None;
+        if let Some(svg) = self.svg_cache.svg.take() {
+            let _ = services.svg().unregister_svg(svg);
+        }
+        self.svg_cache.key = None;
+        self.canvas_cache.cleanup_resources(services);
         if let Some(input) = self.text_input.as_mut() {
             input.cleanup_resources(services);
         }

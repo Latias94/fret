@@ -300,10 +300,14 @@ struct StyleAwareServices;
 impl fret_core::TextService for StyleAwareServices {
     fn prepare(
         &mut self,
-        text: &str,
-        style: &fret_core::TextStyle,
+        input: &fret_core::TextInput,
         constraints: fret_core::TextConstraints,
     ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+        let (text, style) = match input {
+            fret_core::TextInput::Plain { text, style } => (text.as_ref(), style.clone()),
+            fret_core::TextInput::Attributed { text, base, .. } => (text.as_ref(), base.clone()),
+            _ => (input.text(), fret_core::TextStyle::default()),
+        };
         let line_height = style
             .line_height
             .unwrap_or(Px((style.size.0 * 1.4).max(0.0)));
@@ -1050,6 +1054,7 @@ fn web_vs_fret_context_menu_demo_overlay_placement_matches() {
                 app,
                 services,
                 &Event::Pointer(PointerEvent::Down {
+                    pointer_id: fret_core::PointerId::default(),
                     position: Point::new(Px(point.x), Px(point.y)),
                     button: MouseButton::Right,
                     modifiers: Modifiers::default(),
@@ -1061,6 +1066,7 @@ fn web_vs_fret_context_menu_demo_overlay_placement_matches() {
                 app,
                 services,
                 &Event::Pointer(PointerEvent::Up {
+                    pointer_id: fret_core::PointerId::default(),
                     position: Point::new(Px(point.x), Px(point.y)),
                     button: MouseButton::Right,
                     modifiers: Modifiers::default(),

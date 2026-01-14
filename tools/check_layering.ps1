@@ -87,6 +87,25 @@ $rendererPatterns = @("^fret-render($|-)")
 $runnerPatterns = @("^fret-runner($|-)")
 $componentsPatterns = @("^fret-components-")
 
+# Ecosystem crates are incubated in-tree (see docs/repo-structure.md) and are expected to be
+# extractable. As a default rule, they should remain backend-agnostic (no platform/render/runner
+# deps), with a small explicit allowlist for wiring-heavy crates.
+$ecosystemAllowBackendDeps = @(
+    # `fret-bootstrap` is intentionally "golden path wiring" and may need direct renderer hooks.
+    "fret-bootstrap"
+)
+
+$ecosystemNameSet = @{}
+foreach ($pkg in $metadata.packages) {
+    if (-not $workspaceIds.ContainsKey($pkg.id)) {
+        continue
+    }
+    $manifest = [string]$pkg.manifest_path
+    if ($manifest -match "\\\\ecosystem\\\\" -or $manifest -match "/ecosystem/") {
+        $ecosystemNameSet[$pkg.name] = $true
+    }
+}
+
 # 1) `fret-core` must not depend on any other workspace crate.
 if ($depsByFrom.ContainsKey("fret-core")) {
     foreach ($to in $depsByFrom["fret-core"]) {
@@ -111,12 +130,28 @@ foreach ($kv in $depsByFrom.GetEnumerator()) {
     AssertNoWorkspaceDepsMatching -From $from -Rule "components-no-backends" -Deps $kv.Value -ForbiddenPatterns ($platformPatterns + $rendererPatterns + $runnerPatterns)
 }
 
+# 3.5) Ecosystem crates must not depend on platform/render/runner crates (unless explicitly allowlisted).
+foreach ($kv in $depsByFrom.GetEnumerator()) {
+    $from = [string]$kv.Key
+    if (-not $ecosystemNameSet.ContainsKey($from)) {
+        continue
+    }
+    if ($ecosystemAllowBackendDeps -contains $from) {
+        continue
+    }
+    AssertNoWorkspaceDepsMatching -From $from -Rule "ecosystem-no-backends" -Deps $kv.Value -ForbiddenPatterns ($platformPatterns + $rendererPatterns + $runnerPatterns)
+}
+
 # 4) Backend crates must not depend on UI/component crates.
 foreach ($from in @("fret-render", "fret-platform", "fret-platform-native", "fret-platform-web")) {
     if (-not $depsByFrom.ContainsKey($from)) {
         continue
     }
-    AssertNoWorkspaceDepsMatching -From $from -Rule "backends-no-ui" -Deps $depsByFrom[$from] -ForbiddenPatterns (@("^fret-ui$") + $componentsPatterns)
+    foreach ($to in $depsByFrom[$from]) {
+        if ($to -eq "fret-ui" -or (MatchesAnyPattern -Value $to -Patterns $componentsPatterns) -or $ecosystemNameSet.ContainsKey($to)) {
+            Write-RuleViolation -Rule "backends-no-ui" -From $from -To $to
+        }
+    }
 }
 
 # 5) Runner may depend on everything; no checks here (it is the wiring crate).

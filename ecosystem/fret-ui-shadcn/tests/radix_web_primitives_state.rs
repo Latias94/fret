@@ -173,8 +173,7 @@ struct FakeServices;
 impl fret_core::TextService for FakeServices {
     fn prepare(
         &mut self,
-        _text: &str,
-        _style: &fret_core::TextStyle,
+        _input: &fret_core::TextInput,
         _constraints: fret_core::TextConstraints,
     ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
         (
@@ -242,6 +241,7 @@ fn click_center(ui: &mut UiTree<App>, app: &mut App, services: &mut dyn UiServic
         app,
         services,
         &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId(0),
             position: center,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
@@ -253,6 +253,7 @@ fn click_center(ui: &mut UiTree<App>, app: &mut App, services: &mut dyn UiServic
         app,
         services,
         &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId(0),
             position: center,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),

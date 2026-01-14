@@ -1149,7 +1149,7 @@ impl ComponentsGalleryDriver {
                                         )
                                         .a11y_label("Command palette")
                                         .into_element(cx, |cx| {
-                                            shadcn::Button::new("CommandDialog (Ctrl+K)")
+                                            shadcn::Button::new("CommandDialog (Ctrl/Cmd+P)")
                                                 .variant(shadcn::ButtonVariant::Outline)
                                                 .toggle_model(cmdk_open.clone())
                                                 .into_element(cx)
@@ -1164,7 +1164,9 @@ impl ComponentsGalleryDriver {
                                                     .as_deref()
                                                     .unwrap_or("<none>")
                                             )),
-                                            cx.text("cmdk: Ctrl+K opens, arrows/hover highlight, Enter selects"),
+                                            cx.text(
+                                                "cmdk: Ctrl/Cmd+P opens, arrows/hover highlight, Enter selects",
+                                            ),
                                             cmdk,
                                         ]
                                     },
@@ -1421,6 +1423,16 @@ impl WinitAppDriver for ComponentsGalleryDriver {
             window,
             state,
         } = context;
+
+        if command.as_str() == fret_app::core_commands::COMMAND_PALETTE
+            || command.as_str() == fret_app::core_commands::COMMAND_PALETTE_LEGACY
+        {
+            let _ = app.models_mut().update(&state.cmdk_open, |v| *v = true);
+            let _ = app.models_mut().update(&state.cmdk_query, |v| v.clear());
+            app.request_redraw(window);
+            return;
+        }
+
         if state.ui.dispatch_command(app, services, &command) {
             return;
         }
@@ -1624,26 +1636,6 @@ impl WinitAppDriver for ComponentsGalleryDriver {
         if overlays_open {
             state.ui.dispatch_event(app, services, event);
             return;
-        }
-
-        if let Event::KeyDown {
-            key: KeyCode::KeyK,
-            modifiers,
-            repeat: false,
-        } = event
-        {
-            let open_chord = if cfg!(target_os = "macos") {
-                modifiers.meta || modifiers.ctrl
-            } else {
-                modifiers.ctrl
-            };
-
-            if open_chord {
-                let _ = app.models_mut().update(&state.cmdk_open, |v| *v = true);
-                let _ = app.models_mut().update(&state.cmdk_query, |v| v.clear());
-                app.request_redraw(window);
-                return;
-            }
         }
 
         let focus = state.ui.focus();
@@ -1888,7 +1880,7 @@ pub fn run() -> anyhow::Result<()> {
         })
         .with_default_config_files()
         .context("load layered config files (settings/keymap)")?
-        .register_icon_pack(fret_icons_lucide::register_icons)
+        .with_lucide_icons()
         .preload_icon_svgs_on_gpu_ready();
 
     builder.run().map_err(anyhow::Error::from)

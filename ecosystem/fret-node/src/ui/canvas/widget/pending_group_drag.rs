@@ -42,7 +42,10 @@ pub(super) fn handle_pending_group_drag_move<H: UiHost, M: NodeGraphCanvasMiddle
         group: pending.group,
         start_pos: pending.start_pos,
         start_rect: pending.start_rect,
-        nodes,
+        nodes: nodes.clone(),
+        current_rect: pending.start_rect,
+        current_nodes: nodes,
+        preview_rev: 0,
     });
 
     false

@@ -162,6 +162,16 @@ fn invert_op(op: &GraphOp) -> Vec<GraphOp> {
             from: *to,
             to: *from,
         }],
+        GraphOp::SetNodeKind { id, from, to } => vec![GraphOp::SetNodeKind {
+            id: *id,
+            from: to.clone(),
+            to: from.clone(),
+        }],
+        GraphOp::SetNodeKindVersion { id, from, to } => vec![GraphOp::SetNodeKindVersion {
+            id: *id,
+            from: *to,
+            to: *from,
+        }],
         GraphOp::SetNodeParent { id, from, to } => vec![GraphOp::SetNodeParent {
             id: *id,
             from: *to,

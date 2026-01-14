@@ -11,6 +11,7 @@ documentation.workspace = true
 
 [dependencies]
 fret-canvas = { path = "../fret-canvas", optional = true }
+fret-app = { path = "../../crates/fret-app", optional = true }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime", optional = true }
 fret-ui = { path = "../../crates/fret-ui", optional = true, features = ["unstable-retained-bridge"] }
@@ -26,10 +27,16 @@ default = ["fret-ui", "kit"]
 # Enables integration helpers for `crates/fret-ui` (canvas widget, action hooks, styling surfaces).
 fret-ui = ["dep:fret-ui", "dep:fret-runtime", "dep:fret-canvas"]
 
+# Opt into the `rstar` spatial index backend for large graphs.
+canvas-rstar = ["fret-ui", "fret-canvas/rstar"]
+
 # Convenience surfaces (profiles + common recipes) built on top of the substrate.
 #
 # This is headless-safe: it must not depend on `fret-ui`.
 kit = []
+
+# Optional integration helpers for `fret-app` applications (command registration + default keybindings).
+app-integration = ["dep:fret-app"]
 
 # Builds only the headless graph model + schema + rules (no `fret-ui` dependency).
 headless = []

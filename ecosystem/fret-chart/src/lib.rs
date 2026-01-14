@@ -2,10 +2,12 @@
 //!
 //! This crate focuses on:
 //! - translating `delinea` marks into Fret draw ops (`SceneOp`)
-//! - mapping UI input into `delinea` actions/patches (planned)
+//! - mapping UI input into `delinea` actions/patches
 
+pub mod declarative;
 pub mod input_map;
 pub mod retained;
 
+pub use declarative::*;
 pub use input_map::*;
 pub use retained::*;

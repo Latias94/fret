@@ -9,7 +9,7 @@ Several existing Fret surfaces assume “editor-grade” interaction:
 
 - Docking operations are expressed as explicit ops (ADR 0013).
 - Viewport tools require interaction phases suitable for undo coalescing (ADR 0049).
-- The node graph editor is op-based and transaction-friendly (ADR 0106).
+- The node graph editor is op-based and transaction-friendly (ADR 0135).
 - Inspector/property editing is designed to emit begin/update/commit phases (ADR 0048).
 
 ADR 0024 intentionally scoped undo/redo as **example editor application** work (Deferred), but we
@@ -79,7 +79,7 @@ This vocabulary must remain compatible with:
 - pointer capture lifetimes (ADR 0020),
 - viewport tool phases (ADR 0049),
 - inspector begin/update/commit patterns (ADR 0048),
-- node graph drag coalescing (ADR 0106).
+- node graph drag coalescing (ADR 0135).
 
 #### b) Coalescing keys (continuous interaction)
 
@@ -111,7 +111,7 @@ Transaction metadata (recommended, not mandatory):
 Undo/redo is invoked via commands routed through the existing focus model (ADR 0020):
 
 - The framework recommends providing commands that can be handled by the focused surface:
-  - Example: a node graph widget can handle `node_graph.undo` / `node_graph.redo` (ADR 0106).
+  - Example: a node graph widget can handle `node_graph.undo` / `node_graph.redo` (ADR 0135).
   - Example: a text input widget can handle `text.undo` / `text.redo` (local history).
 - A window-level fallback may handle “document undo” when focus is not inside a specialized widget.
 
@@ -125,7 +125,7 @@ Command naming guidance (non-normative, recommended):
 
 - Reserve `edit.undo` / `edit.redo` for window/document-level undo targets.
 - Use domain-specific namespaces for specialized surfaces:
-  - `node_graph.undo` / `node_graph.redo` (ADR 0106),
+  - `node_graph.undo` / `node_graph.redo` (ADR 0135),
   - `text.undo` / `text.redo` for text editing surfaces (local history),
   - tool-specific commands may exist but should generally delegate to one of the above.
 
@@ -153,7 +153,7 @@ To avoid late rewrites, undo infrastructure should follow a small set of invaria
   history baseline). If an app chooses branching history, it must define explicit UI for it; the
   framework does not assume branching.
 - **Deterministic identity**: operations and coalescing keys must use stable ids (not UI pointers or
-  transient indices) (aligned with ADR 0024, ADR 0106, ADR 0048).
+  transient indices) (aligned with ADR 0024, ADR 0135, ADR 0048).
 - **Begin/Commit pairing**: a `Commit` without a corresponding active `Begin` is a logic error; a
   `Begin` must eventually `Commit` or `Cancel` (even if routed through error handling).
 - **Cancel is lossless**: cancel must restore the exact pre-begin baseline for the affected domain
@@ -294,7 +294,7 @@ These examples motivate the hooks above; they are non-normative.
 
 #### Node graph
 
-- Node graph edits are already op-based (`GraphOp`) (ADR 0106).
+- Node graph edits are already op-based (`GraphOp`) (ADR 0135).
 - A drag of N nodes can be represented as either:
   - one transaction with one op that stores before+after positions, or
   - a transaction with multiple ops that coalesce by `(tool, node_id)` into a single entry.
@@ -379,4 +379,4 @@ Cons:
 - Docking ops as data: `docs/adr/0013-docking-ops-and-persistence.md`
 - Viewport tool phases: `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
 - Inspector protocol: `docs/adr/0048-inspector-property-protocol-and-editor-registry.md`
-- Node graph editor: `docs/adr/0106-node-graph-editor-and-typed-connections.md`
+- Node graph editor: `docs/adr/0135-node-graph-editor-and-typed-connections.md`

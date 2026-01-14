@@ -86,6 +86,9 @@ pub struct Renderer {
     text_color_pipeline_format: Option<wgpu::TextureFormat>,
     text_color_pipeline: Option<wgpu::RenderPipeline>,
 
+    text_subpixel_pipeline_format: Option<wgpu::TextureFormat>,
+    text_subpixel_pipeline: Option<wgpu::RenderPipeline>,
+
     mask_pipeline_format: Option<wgpu::TextureFormat>,
     mask_pipeline: Option<wgpu::RenderPipeline>,
 
@@ -158,7 +161,7 @@ pub struct Renderer {
     path_cache_epoch: u64,
 
     svg_renderer: SvgRenderer,
-    svgs: SlotMap<fret_core::SvgId, Arc<[u8]>>,
+    svgs: SlotMap<fret_core::SvgId, SvgEntry>,
     svg_hash_index: HashMap<u64, Vec<fret_core::SvgId>>,
     svg_rasters: HashMap<SvgRasterKey, SvgRasterEntry>,
     svg_mask_atlas_pages: Vec<Option<SvgMaskAtlasPage>>,

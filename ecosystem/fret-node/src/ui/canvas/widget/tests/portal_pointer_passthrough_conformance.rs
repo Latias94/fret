@@ -103,6 +103,7 @@ fn portal_pointer_region_blocks_underlay_only_inside_body_region() {
         &mut host,
         &mut services,
         &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
             position: header_pos,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
@@ -114,6 +115,7 @@ fn portal_pointer_region_blocks_underlay_only_inside_body_region() {
         &mut host,
         &mut services,
         &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
             position: header_pos,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
@@ -127,6 +129,7 @@ fn portal_pointer_region_blocks_underlay_only_inside_body_region() {
         &mut host,
         &mut services,
         &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
             position: body_pos,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
@@ -138,6 +141,7 @@ fn portal_pointer_region_blocks_underlay_only_inside_body_region() {
         &mut host,
         &mut services,
         &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
             position: body_pos,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),

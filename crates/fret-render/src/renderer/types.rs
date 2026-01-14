@@ -1,5 +1,6 @@
 use bytemuck::{Pod, Zeroable};
 use fret_core::scene::UvRect;
+use std::sync::Arc;
 use std::time::Duration;
 
 #[repr(C)]
@@ -127,6 +128,7 @@ pub struct RenderPerfSnapshot {
     pub pipeline_switches_mask: u64,
     pub pipeline_switches_text_mask: u64,
     pub pipeline_switches_text_color: u64,
+    pub pipeline_switches_text_subpixel: u64,
     pub pipeline_switches_path: u64,
     pub pipeline_switches_path_msaa: u64,
     pub pipeline_switches_composite: u64,
@@ -169,6 +171,7 @@ pub(super) struct RenderPerfStats {
     pub(super) pipeline_switches_mask: u64,
     pub(super) pipeline_switches_text_mask: u64,
     pub(super) pipeline_switches_text_color: u64,
+    pub(super) pipeline_switches_text_subpixel: u64,
     pub(super) pipeline_switches_path: u64,
     pub(super) pipeline_switches_path_msaa: u64,
     pub(super) pipeline_switches_composite: u64,
@@ -303,6 +306,12 @@ pub(super) struct SvgRasterEntry {
     pub(super) storage: SvgRasterStorage,
 }
 
+#[derive(Debug, Clone)]
+pub(super) struct SvgEntry {
+    pub(super) bytes: Arc<[u8]>,
+    pub(super) refs: u32,
+}
+
 impl SvgMaskAtlasPage {
     pub(super) fn bytes(&self) -> u64 {
         u64::from(self.size_px.0).saturating_mul(u64::from(self.size_px.1))
@@ -348,12 +357,14 @@ pub(super) struct TextDraw {
     pub(super) first_vertex: u32,
     pub(super) vertex_count: u32,
     pub(super) kind: TextDrawKind,
+    pub(super) atlas_page: u16,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum TextDrawKind {
     Mask,
     Color,
+    Subpixel,
 }
 
 #[derive(Clone, Copy)]
@@ -436,4 +447,5 @@ pub(super) struct SceneEncodingCacheKey {
     pub(super) scene_ops_len: usize,
     pub(super) render_targets_generation: u64,
     pub(super) images_generation: u64,
+    pub(super) text_atlas_revision: u64,
 }

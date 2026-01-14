@@ -81,6 +81,20 @@ pub struct WheelCx {
     pub modifiers: Modifiers,
 }
 
+/// Pinch (magnify) gesture payload for component-owned pinch handlers.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PinchGestureCx {
+    pub position: Point,
+    /// Pixels-per-point (a.k.a. window scale factor) for `position`.
+    pub pixels_per_point: f32,
+    /// Positive for magnification (zoom in) and negative for shrinking (zoom out).
+    ///
+    /// This may be NaN depending on the platform backend; callers should guard accordingly.
+    pub delta: f32,
+    pub modifiers: Modifiers,
+    pub pointer_type: PointerType,
+}
+
 /// Pointer up payload for component-owned pointer handlers.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PointerUpCx {
@@ -230,6 +244,9 @@ pub type OnPointerMove =
 
 pub type OnWheel = Arc<dyn Fn(&mut dyn UiPointerActionHost, ActionCx, WheelCx) -> bool + 'static>;
 
+pub type OnPinchGesture =
+    Arc<dyn Fn(&mut dyn UiPointerActionHost, ActionCx, PinchGestureCx) -> bool + 'static>;
+
 pub type OnPointerUp =
     Arc<dyn Fn(&mut dyn UiPointerActionHost, ActionCx, PointerUpCx) -> bool + 'static>;
 
@@ -238,6 +255,7 @@ pub(crate) struct PointerActionHooks {
     pub on_pointer_down: Option<OnPointerDown>,
     pub on_pointer_move: Option<OnPointerMove>,
     pub on_wheel: Option<OnWheel>,
+    pub on_pinch_gesture: Option<OnPinchGesture>,
     pub on_pointer_up: Option<OnPointerUp>,
 }
 
@@ -297,4 +315,5 @@ pub(crate) struct RovingActionHooks {
     pub on_active_change: Option<OnRovingActiveChange>,
     pub on_typeahead: Option<OnRovingTypeahead>,
     pub on_navigate: Option<OnRovingNavigate>,
+    pub on_key_down: Option<OnKeyDown>,
 }

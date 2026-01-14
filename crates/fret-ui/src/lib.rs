@@ -1,6 +1,7 @@
 #![cfg_attr(test, allow(clippy::arc_with_non_send_sync))]
 
 pub mod action;
+pub mod canvas;
 pub mod declarative;
 pub mod drag_route;
 pub mod element;
@@ -11,7 +12,6 @@ mod frame_cx;
 pub mod host;
 pub mod input_modality;
 pub mod layout_constraints;
-#[cfg(feature = "layout-engine-v2")]
 pub mod layout_engine;
 pub mod layout_pass;
 pub mod overlay_placement;

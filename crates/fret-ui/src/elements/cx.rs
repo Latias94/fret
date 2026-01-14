@@ -9,14 +9,15 @@ use fret_runtime::{Effect, FrameId, Model, ModelId, ModelUpdateError};
 use crate::action::OnHoverChange;
 use crate::action::{
     DismissibleActionHooks, KeyActionHooks, OnActivate, OnDismissRequest, OnDismissiblePointerMove,
-    OnKeyDown, OnPointerDown, OnPointerMove, OnPointerUp, OnPressablePointerDown,
+    OnKeyDown, OnPinchGesture, OnPointerDown, OnPointerMove, OnPointerUp, OnPressablePointerDown,
     OnRovingActiveChange, OnRovingNavigate, OnRovingTypeahead, OnTimer, OnWheel,
     PointerActionHooks, PressableActionHooks, PressableHoverActionHooks, RovingActionHooks,
     TimerActionHooks,
 };
+use crate::canvas::{CanvasPaintHooks, CanvasPainter, OnCanvasPaint};
 use crate::element::{
-    AnyElement, ColumnProps, ContainerProps, EffectLayerProps, ElementKind, FlexProps, GridProps,
-    HoverRegionProps, ImageProps, InteractivityGateProps, LayoutStyle, OpacityProps,
+    AnyElement, CanvasProps, ColumnProps, ContainerProps, EffectLayerProps, ElementKind, FlexProps,
+    GridProps, HoverRegionProps, ImageProps, InteractivityGateProps, LayoutStyle, OpacityProps,
     PointerRegionProps, PressableProps, PressableState, ResizablePanelGroupProps, RowProps,
     ScrollProps, ScrollbarProps, SelectableTextProps, SpacerProps, SpinnerProps, StackProps,
     StyledTextProps, SvgIconProps, TextAreaProps, TextInputProps, TextProps, ViewportSurfaceProps,
@@ -870,6 +871,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             cx.pointer_region_clear_on_pointer_down();
             cx.pointer_region_clear_on_pointer_move();
             cx.pointer_region_clear_on_pointer_up();
+            cx.pointer_region_clear_on_wheel();
+            cx.pointer_region_clear_on_pinch_gesture();
             let children = f(cx);
             AnyElement::new(id, ElementKind::PointerRegion(props), children)
         })
@@ -951,6 +954,12 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn pointer_region_on_pinch_gesture(&mut self, handler: OnPinchGesture) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_pinch_gesture = Some(handler);
+        });
+    }
+
     pub fn pointer_region_add_on_pointer_up(&mut self, handler: OnPointerUp) {
         self.with_state(PointerActionHooks::default, |hooks| {
             hooks.on_pointer_up = match hooks.on_pointer_up.clone() {
@@ -979,6 +988,20 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn pointer_region_add_on_pinch_gesture(&mut self, handler: OnPinchGesture) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_pinch_gesture = match hooks.on_pinch_gesture.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, pinch| {
+                        prev(host, cx, pinch) || next(host, cx, pinch)
+                    }))
+                }
+            };
+        });
+    }
+
     pub fn pointer_region_clear_on_pointer_up(&mut self) {
         self.with_state(PointerActionHooks::default, |hooks| {
             hooks.on_pointer_up = None;
@@ -988,6 +1011,12 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn pointer_region_clear_on_wheel(&mut self) {
         self.with_state(PointerActionHooks::default, |hooks| {
             hooks.on_wheel = None;
+        });
+    }
+
+    pub fn pointer_region_clear_on_pinch_gesture(&mut self) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_pinch_gesture = None;
         });
     }
 
@@ -1005,6 +1034,20 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     let next = handler.clone();
                     Some(Arc::new(move |host, cx, down| {
                         prev(host, cx, down) || next(host, cx, down)
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn key_prepend_on_key_down_for(&mut self, element: GlobalElementId, handler: OnKeyDown) {
+        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+            hooks.on_key_down = match hooks.on_key_down.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, down| {
+                        next(host, cx, down) || prev(host, cx, down)
                     }))
                 }
             };
@@ -1169,6 +1212,32 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn roving_on_key_down(&mut self, handler: OnKeyDown) {
+        self.with_state(RovingActionHooks::default, |hooks| {
+            hooks.on_key_down = Some(handler);
+        });
+    }
+
+    pub fn roving_add_on_key_down(&mut self, handler: OnKeyDown) {
+        self.with_state(RovingActionHooks::default, |hooks| {
+            hooks.on_key_down = match hooks.on_key_down.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, down| {
+                        prev(host, cx, down) || next(host, cx, down)
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn roving_clear_on_key_down(&mut self) {
+        self.with_state(RovingActionHooks::default, |hooks| {
+            hooks.on_key_down = None;
+        });
+    }
+
     /// Register a component-owned roving navigation handler for the current roving element.
     ///
     /// This is invoked for key down events that bubble through the roving container so component
@@ -1271,7 +1340,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn styled_text(&mut self, rich: fret_core::RichText) -> AnyElement {
+    pub fn styled_text(&mut self, rich: fret_core::AttributedText) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
             AnyElement::new(
@@ -1291,7 +1360,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn selectable_text(&mut self, rich: fret_core::RichText) -> AnyElement {
+    pub fn selectable_text(&mut self, rich: fret_core::AttributedText) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
             AnyElement::new(
@@ -1352,6 +1421,22 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             AnyElement::new(id, ElementKind::Image(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn canvas(
+        &mut self,
+        props: CanvasProps,
+        paint: impl for<'p> Fn(&mut CanvasPainter<'p>) + 'static,
+    ) -> AnyElement {
+        let on_paint: OnCanvasPaint = Arc::new(paint);
+        self.scope(|cx| {
+            let id = cx.root_id();
+            cx.with_state_for(id, CanvasPaintHooks::default, |hooks| {
+                hooks.on_paint = Some(on_paint.clone());
+            });
+            AnyElement::new(id, ElementKind::Canvas(props), Vec::new())
         })
     }
 

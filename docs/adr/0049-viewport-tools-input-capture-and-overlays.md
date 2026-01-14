@@ -16,6 +16,8 @@ An engine editor’s “feel” is largely determined by viewport tooling:
 Fret already defines the infrastructure contract for viewport embedding and input forwarding:
 
 - `ViewportInputEvent` is data-only and effect-driven (ADR 0025).
+- `ViewportInputEvent` uses window-local logical pixels ("screen px") as the UI/input source of truth
+  (ADR 0017 / ADR 0147).
 
 However, without a clear example-editor pattern for “who receives viewport input” and “who draws
 over the viewport”, tool implementations will proliferate ad-hoc glue code and diverge from a
@@ -58,6 +60,15 @@ Routing rules:
 
 Capture is an editor-layer concept; it should map to the UI runtime’s pointer capture where possible
 (ADR 0005), but tool state ownership remains in the tool manager.
+
+Unit conventions (recommended):
+
+- Treat interaction thresholds (click distance, drag thresholds, hit radii) as **screen px**
+  (window-local logical pixels).
+- If a tool operates in render-target pixel space (e.g. it uses `ViewportInputEvent.target_px` for
+  buffer-based picking), convert thresholds via `ViewportInputEvent::target_px_per_screen_px()` and
+  compute cursor target coordinates via
+  `ViewportInputEvent::{cursor_target_px_f32,cursor_target_px_f32_clamped}`.
 
 ### 3) Overlay rendering over viewports
 

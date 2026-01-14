@@ -2,9 +2,9 @@ use crate::UiHost;
 use crate::elements::{ElementContext, GlobalElementId};
 use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions, Side};
 use fret_core::{
-    CaretAffinity, Color, Corners, Edges, EffectChain, EffectMode, EffectQuality, ImageId, NodeId,
-    Px, RenderTargetId, RichText, SemanticsRole, SvgFit, TextOverflow, TextStyle, TextWrap, UvRect,
-    ViewportFit,
+    AttributedText, CaretAffinity, Color, Corners, Edges, EffectChain, EffectMode, EffectQuality,
+    ImageId, NodeId, Px, RenderTargetId, SemanticsRole, SvgFit, TextOverflow, TextStyle, TextWrap,
+    UvRect, ViewportFit,
 };
 use fret_runtime::{CommandId, Model};
 use std::sync::Arc;
@@ -62,6 +62,8 @@ pub enum ElementKind {
     Flex(FlexProps),
     Grid(GridProps),
     Image(ImageProps),
+    /// A declarative, leaf canvas element for custom scene emission (ADR 0156).
+    Canvas(CanvasProps),
     /// Composites an app-owned render target (Tier A; ADR 0007 / ADR 0038 / ADR 0125).
     ViewportSurface(ViewportSurfaceProps),
     SvgIcon(SvgIconProps),
@@ -725,7 +727,7 @@ pub struct TextProps {
 #[derive(Debug, Clone)]
 pub struct StyledTextProps {
     pub layout: LayoutStyle,
-    pub rich: RichText,
+    pub rich: AttributedText,
     pub style: Option<TextStyle>,
     /// Base color for glyphs without a per-run override.
     pub color: Option<Color>,
@@ -736,7 +738,7 @@ pub struct StyledTextProps {
 #[derive(Debug, Clone)]
 pub struct SelectableTextProps {
     pub layout: LayoutStyle,
-    pub rich: RichText,
+    pub rich: AttributedText,
     pub style: Option<TextStyle>,
     /// Base color for glyphs without a per-run override.
     pub color: Option<Color>,
@@ -930,6 +932,24 @@ impl ViewportSurfaceProps {
     }
 }
 
+/// A declarative leaf canvas element.
+///
+/// Paint handlers are registered via element-local state (not props) so the element tree can
+/// remain `Clone + Debug` (see ADR 0156).
+#[derive(Debug, Clone, Copy)]
+pub struct CanvasProps {
+    pub layout: LayoutStyle,
+}
+
+impl Default for CanvasProps {
+    fn default() -> Self {
+        let mut layout = LayoutStyle::default();
+        layout.size.width = Length::Fill;
+        layout.size.height = Length::Fill;
+        Self { layout }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct SvgIconProps {
     pub layout: LayoutStyle,
@@ -1028,7 +1048,7 @@ impl TextProps {
 }
 
 impl StyledTextProps {
-    pub fn new(rich: RichText) -> Self {
+    pub fn new(rich: AttributedText) -> Self {
         Self {
             layout: LayoutStyle::default(),
             rich,
@@ -1041,7 +1061,7 @@ impl StyledTextProps {
 }
 
 impl SelectableTextProps {
-    pub fn new(rich: RichText) -> Self {
+    pub fn new(rich: AttributedText) -> Self {
         Self {
             layout: LayoutStyle::default(),
             rich,

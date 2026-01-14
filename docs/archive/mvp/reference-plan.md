@@ -48,7 +48,7 @@ MVP work is allowed to prototype quickly, but changes that affect “hard-to-cha
 - MVP 30: prototype implemented in demo (Scene/Game viewport roles: tool gating + context menu control)
 - MVP 31: prototype implemented in demo (play mode stub: RAF scheduling + animated Game viewport)
 - MVP 32: prototype implemented in runner (engine frame update: render target deltas + command buffers, applied before UI render)
-- Example editor layer crate: `crates/fret-editor` extracted (inspector protocol + edit services + viewport tool state)
+- Example editor layer crate: `apps/fret-editor` extracted (inspector protocol + edit services + viewport tool state)
 - MVP 33: prototype implemented in demo (Project panel + `.meta` GUIDs; rename/move keep GUID stable; OS file drop imports into `Assets/Imports`; internal drag move to folders)
 - MVP 34: prototype implemented in demo (dock tab bar titles + hover/active chrome baseline; overflow scroll + close tab)
 - MVP 35: prototype implemented (ImGui-style multi-window internal drag routing: screen-space pointer + hovered window; dock drag now uses `Event::InternalDrag` instead of cross-window `PointerEvent` broadcasting)
@@ -302,7 +302,7 @@ Notes:
 
 Status:
 
-- MVP done in `fret-demo` (see `crates/fret-demo/src/editor_shell.rs`).
+- MVP done in the demo harness (entrypoints evolve; see `apps/fret-demo/src/main.rs` and `apps/fret-demo/src/bin/*`).
   - Note: selection changes are now propagated via model observation + UI invalidation (ADR 0051, prototype implemented); global services are still manual until service revisions are standardized (P1).
 
 References:
@@ -341,7 +341,7 @@ Goal: make the Inspector minimally editable so the “select → inspect → edi
 
 Status:
 
-- MVP done in `fret-demo` (see `crates/fret-demo/src/editor_shell.rs` and `crates/fret-demo/src/inspector_edit.rs`).
+- MVP done in the demo harness (entrypoints evolve; see `apps/fret-demo/src/main.rs` and `apps/fret-editor/src/inspector_edit.rs`).
   - Inspector rows are two-column with inline value cells; Vec3 is shown as three inline fields and supports Alt+drag per-axis scrubbing.
 
 References:
@@ -685,7 +685,7 @@ Goal: extend the undo/redo boundary to a second “editor workflow” domain tha
 References:
 
 - `docs/adr/0024-undo-redo-and-edit-transactions.md`
-- `docs/adr/0016-plugin-boundaries-and-panel-ownership.md`
+- `docs/adr/0016-plugin-and-panel-boundaries.md`
 
 ## MVP 24 — Edit Transactions + Coalescing Policy (Continuous Edits)
 
@@ -838,7 +838,7 @@ Status:
 References:
 
 - `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`
-- `docs/adr/0015-render-ordering-and-z-layers.md`
+- `docs/adr/0015-frame-lifecycle-and-submission-order.md`
 
 ## MVP 29 — Viewport Target Lifecycle P0 (Auto-Resize + Registry Updates)
 
@@ -1227,10 +1227,10 @@ References:
 
 - Command registry + effects: `crates/fret-app/src/app.rs`
 - Keymap + `when`: `crates/fret-app/src/keymap.rs`, `crates/fret-app/src/when_expr.rs`
-- Command palette demo widget: `crates/fret-demo/src/command_palette.rs`
+- Command palette surface: `ecosystem/fret-ui-shadcn/src/command.rs` (demo: `apps/fret-demo/src/bin/components_gallery.rs`)
 - Focus + routing: `crates/fret-ui/src/tree/mod.rs`
 - Overlay/multi-root: `crates/fret-ui/src/tree/mod.rs`, `docs/adr/0011-overlays-and-multi-root.md`
-- Context menu: `ecosystem/fret-ui-kit/src/context_menu.rs`
-- Virtualized lists: `crates/fret-ui/src/primitives/virtual_list.rs`, `crates/fret-ui/src/legacy_widgets/tree_view.rs`
-- Editor shell wiring: `crates/fret-demo/src/editor_shell.rs`
+- Context menu: `ecosystem/fret-ui-kit/src/primitives/context_menu.rs`
+- Virtualized lists: `crates/fret-ui/src/virtual_list.rs` (tree wrapper: `ecosystem/fret-ui-kit/src/declarative/tree.rs`)
+- Demo shell wiring: `apps/fret-demo/src/main.rs`
 - Desktop runner: `crates/fret-launch/src/runner/mod.rs`

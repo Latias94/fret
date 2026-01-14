@@ -30,7 +30,7 @@ We mirror this split in Fret.
 
 - SVG alpha-mask + tint
   - CPU rasterization: `crates/fret-render/src/svg.rs`
-  - UI primitive: `crates/fret-ui/src/primitives/mask_image.rs`
+  - UI primitive: `crates/fret-ui/src/element.rs` (`SvgIconProps`)
   - Scene op: `crates/fret-core/src/scene.rs` (`SceneOp::MaskImage`)
   - Upload helpers: `crates/fret-render/src/svg.rs`
 - SVG RGBA image upload
@@ -38,7 +38,7 @@ We mirror this split in Fret.
   - GPU upload: `upload_rgba_image` in `crates/fret-render/src/svg.rs`
 - Path rendering + offscreen MSAA composite
   - Scene op: `crates/fret-core/src/scene.rs` (`SceneOp::Path`)
-  - Renderer intermediate + composite: `crates/fret-render/src/renderer.rs`
+  - Renderer intermediate + composite: `crates/fret-render/src/renderer/mod.rs`
 - Caching + explicit reclamation (GPUI-aligned)
   - Global cache type: `crates/fret-render/src/svg_cache.rs` (`SvgImageCache`)
   - Eviction API: `clear/remove_alpha_mask/remove_rgba`

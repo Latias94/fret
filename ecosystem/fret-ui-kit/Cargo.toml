@@ -13,6 +13,7 @@ documentation.workspace = true
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
+fret-canvas = { path = "../fret-canvas", optional = true }
 fret-icons = { path = "../fret-icons", optional = true }
 tracing.workspace = true
 
@@ -27,7 +28,7 @@ unstable-internals = []
 icons = ["dep:fret-icons"]
 
 # Opinionated declarative helpers that are closer to "recipes" than substrate.
-recipes = ["icons"]
+recipes = ["icons", "dep:fret-canvas"]
 
 # TanStack-inspired headless table engine (`headless::table`).
 table = []

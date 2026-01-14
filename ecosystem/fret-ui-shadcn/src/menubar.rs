@@ -1201,6 +1201,7 @@ impl MenubarMenuEntries {
                         let open_for_submenu = open_for_overlay.clone();
                         let submenu_for_content = submenu.clone();
                         let submenu_for_panel = submenu.clone();
+                        let submenu_for_panel_for_content = submenu_for_panel.clone();
                         let entries_for_content = entries.clone();
                         let entries_for_submenu = entries.clone();
                         let group_active_for_content = group_active.clone();
@@ -1236,30 +1237,31 @@ impl MenubarMenuEntries {
                                                 group_active_for_content.clone();
                                             let trigger_registry_for_switch =
                                                 trigger_registry_for_overlay_for_content.clone();
-                                            let roving = menu::sub_content::submenu_roving_group_apg_prefix_typeahead(
-                                                cx,
-                                                RovingFlexProps {
-                                                    flex: FlexProps {
-                                                        layout: LayoutStyle::default(),
+                                             let roving = menu::sub_content::submenu_roving_group_apg_prefix_typeahead(
+                                                 cx,
+                                                 RovingFlexProps {
+                                                     flex: FlexProps {
+                                                         layout: LayoutStyle::default(),
                                                         direction: fret_core::Axis::Vertical,
                                                         gap: Px(0.0),
                                                         padding: Edges::all(Px(0.0)),
                                                         justify: MainAlign::Start,
                                                         align: CrossAlign::Stretch,
                                                         wrap: false,
-                                                    },
-                                                    roving,
-                                                },
-                                                labels_arc.clone(),
-                                                typeahead_timeout_ticks,
-                                                move |cx| {
-                                                    let mut out: Vec<AnyElement> =
-                                                        Vec::with_capacity(entries_for_content.len());
+                                                  },
+                                                  roving,
+                                              },
+                                              labels_arc.clone(),
+                                              typeahead_timeout_ticks,
+                                              submenu_for_panel_for_content.clone(),
+                                              move |cx| {
+                                                  let mut out: Vec<AnyElement> =
+                                                      Vec::with_capacity(entries_for_content.len());
 
-                                                let mut item_ix: usize = 0;
+                                                  let mut item_ix: usize = 0;
 
-                                                for (idx, entry) in
-                                                    entries_for_content.iter().enumerate()
+                                                 for (idx, entry) in
+                                                     entries_for_content.iter().enumerate()
                                                 {
                                                                  match entry {
                                                                      MenubarEntry::Separator => {
@@ -2718,8 +2720,7 @@ mod tests {
     impl TextService for FakeServices {
         fn prepare(
             &mut self,
-            _text: &str,
-            _style: &TextStyle,
+            _input: &fret_core::TextInput,
             _constraints: TextConstraints,
         ) -> (TextBlobId, TextMetrics) {
             (
@@ -2884,6 +2885,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position: file,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -2895,6 +2897,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position: file,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -2914,6 +2917,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: edit,
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),
@@ -3052,6 +3056,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position: file_pos,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3063,6 +3068,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position: file_pos,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3116,6 +3122,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position: file,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3127,6 +3134,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position: file,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3179,6 +3187,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position: file,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3190,6 +3199,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position: file,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),

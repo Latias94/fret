@@ -295,7 +295,7 @@ impl DockSpace {
             scale_factor,
         };
 
-        let (close_blob, close_metrics) = services.text().prepare(
+        let (close_blob, close_metrics) = services.text().prepare_str(
             "×",
             &self.tab_close_style,
             TextConstraints {
@@ -317,9 +317,10 @@ impl DockSpace {
                 .map(|p| p.title.as_str())
                 .unwrap_or(panel.kind.0.as_str());
             let title_hash = hash_title(title);
-            let (blob, metrics) = services
-                .text()
-                .prepare(title, &self.tab_text_style, constraints);
+            let (blob, metrics) =
+                services
+                    .text()
+                    .prepare_str(title, &self.tab_text_style, constraints);
             self.tab_titles.insert(
                 panel,
                 PreparedTabTitle {
@@ -408,7 +409,7 @@ impl DockSpace {
             overflow: TextOverflow::Clip,
             scale_factor,
         };
-        let (blob, metrics) = services.text().prepare(
+        let (blob, metrics) = services.text().prepare_str(
             "No panels in this window.\nUse File → Layout → Reset Layout.",
             &self.empty_state_style,
             constraints,
@@ -531,11 +532,24 @@ impl<H: UiHost> Widget<H> for DockSpace {
             (root, dock_bounds)
         }
 
-        let dock_drag = cx.app.drag().and_then(|d| {
+        let pointer_id: fret_core::PointerId = match event {
+            fret_core::Event::Pointer(fret_core::PointerEvent::Move { pointer_id, .. })
+            | fret_core::Event::Pointer(fret_core::PointerEvent::Down { pointer_id, .. })
+            | fret_core::Event::Pointer(fret_core::PointerEvent::Up { pointer_id, .. })
+            | fret_core::Event::Pointer(fret_core::PointerEvent::Wheel { pointer_id, .. })
+            | fret_core::Event::Pointer(fret_core::PointerEvent::PinchGesture {
+                pointer_id, ..
+            }) => *pointer_id,
+            fret_core::Event::PointerCancel(e) => e.pointer_id,
+            fret_core::Event::InternalDrag(e) => e.pointer_id,
+            _ => fret_core::PointerId(0),
+        };
+
+        let dock_drag = cx.app.drag(pointer_id).and_then(|d| {
             d.payload::<DockPanelDragPayload>()
                 .map(|p| DockDragSnapshot {
                     source_window: d.source_window,
-                    start: d.start,
+                    start: d.start_position,
                     dragging: d.dragging,
                     panel: p.panel.clone(),
                     grab_offset: p.grab_offset,
@@ -545,7 +559,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
         // While a dock drag session exists (even before it crosses the drag threshold), we must
         // not forward pointer moves/wheel to embedded viewports in this window. Docking owns the
         // interaction until the session ends (ADR 0072).
-        let allow_viewport_hover = dock_drag.is_none() && cx.app.drag().is_none_or(|d| !d.dragging);
+        let allow_viewport_hover =
+            dock_drag.is_none() && cx.app.drag(pointer_id).is_none_or(|d| !d.dragging);
         let docking_interaction_settings = cx
             .app
             .global::<fret_runtime::DockingInteractionSettings>()
@@ -571,7 +586,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
         {
             cx.app
                 .with_global_mut(InternalDragRouteService::default, |routes, _app| {
-                    routes.set(self.window, DragKind::DockPanel, cx.node);
+                    routes.set(self.window, fret_runtime::DRAG_KIND_DOCK_PANEL, cx.node);
                 });
             let Some(dock) = cx.app.global_mut::<DockManager>() else {
                 return;
@@ -1341,8 +1356,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     let dx = position.x.0 - drag.start.x.0;
                                     let dy = position.y.0 - drag.start.y.0;
                                     let dist2 = dx * dx + dy * dy;
-                                    // Match ImGui's default drag threshold (~6px).
-                                    if !dragging && dist2 > 36.0 {
+                                    // Match ImGui's default drag threshold (~6 screen px).
+                                    const DOCK_PANEL_DRAG_THRESHOLD_PX: Px = Px(6.0);
+                                    let threshold_sq = DOCK_PANEL_DRAG_THRESHOLD_PX.0
+                                        * DOCK_PANEL_DRAG_THRESHOLD_PX.0;
+                                    if !dragging && dist2 > threshold_sq {
                                         dragging = true;
                                     }
                                 } else if !dragging {
@@ -1619,7 +1637,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
         if let Some((start, panel, grab_offset)) = begin_drag {
             cx.app.begin_cross_window_drag_with_kind(
-                DragKind::DockPanel,
+                pointer_id,
+                fret_runtime::DRAG_KIND_DOCK_PANEL,
                 self.window,
                 start,
                 DockPanelDragPayload {
@@ -1638,7 +1657,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
         }
 
         if let Some((position, dragging)) = update_drag
-            && let Some(drag) = cx.app.drag_mut()
+            && let Some(drag) = cx.app.drag_mut(pointer_id)
             && drag.payload::<DockPanelDragPayload>().is_some()
         {
             drag.position = position;
@@ -1653,11 +1672,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
         if end_dock_drag
             && cx
                 .app
-                .drag()
+                .drag(pointer_id)
                 .and_then(|d| d.payload::<DockPanelDragPayload>())
                 .is_some()
         {
-            cx.app.cancel_drag();
+            cx.app.cancel_drag(pointer_id);
         }
 
         if let Some(node) = request_focus {
@@ -1714,7 +1733,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
         cx.app
             .with_global_mut(InternalDragRouteService::default, |routes, _app| {
-                routes.set(self.window, DragKind::DockPanel, cx.node);
+                routes.set(self.window, fret_runtime::DRAG_KIND_DOCK_PANEL, cx.node);
             });
         if let Some(dock) = cx.app.global_mut::<DockManager>() {
             dock.register_dock_space_node(self.window, cx.node);
@@ -1798,7 +1817,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
         // over unrelated UI (ADR 0072) and even when no events have fired this frame.
         cx.app
             .with_global_mut(InternalDragRouteService::default, |routes, _app| {
-                routes.set(self.window, DragKind::DockPanel, cx.node);
+                routes.set(self.window, fret_runtime::DRAG_KIND_DOCK_PANEL, cx.node);
             });
         let overlay_hooks = cx
             .app
@@ -1806,7 +1825,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             .and_then(|svc| svc.hooks());
         let is_dock_dragging = cx
             .app
-            .drag()
+            .drag(fret_core::PointerId(0))
             .is_some_and(|d| d.dragging && d.payload::<DockPanelDragPayload>().is_some());
         let wants_animation_frames = is_dock_dragging
             || self.divider_drag.is_some()

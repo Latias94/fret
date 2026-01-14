@@ -2,8 +2,6 @@
 pub mod alloc_profile;
 
 pub(crate) mod hotpatch;
-#[cfg(not(target_arch = "wasm32"))]
-pub(crate) mod keymap_defaults;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(
@@ -20,7 +18,7 @@ pub(crate) fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(
         })
         .with_default_config_files()
         .context("load layered config files (settings/keymap)")?
-        .register_icon_pack(fret_icons_lucide::register_icons)
+        .with_lucide_icons()
         .run()
         .map_err(anyhow::Error::from)
 }
@@ -33,6 +31,8 @@ pub mod assets_demo;
 pub mod bars_demo;
 pub mod candlestick_demo;
 pub mod category_line_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod chart_declarative_demo;
 pub mod chart_demo;
 pub mod chart_multi_axis_demo;
 #[cfg(not(target_arch = "wasm32"))]
@@ -45,6 +45,7 @@ pub mod docking_demo;
 pub mod drag_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod effects_demo;
+pub mod emoji_conformance_demo;
 pub mod error_bars_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod first_frame_smoke_demo;

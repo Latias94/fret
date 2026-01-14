@@ -26,17 +26,24 @@ pub(in super::super) fn encode_text(
     let base_x = origin.x.0 * state.scale_factor;
     let base_y = origin.y.0 * state.scale_factor;
     let base_color = EncodeState::color_with_opacity(color, group_opacity);
+    let paint_opacity = group_opacity * color.a;
 
     let mut active_kind: Option<TextDrawKind> = None;
+    let mut active_page: u16 = 0;
     let mut group_first_vertex = state.text_vertices.len() as u32;
 
-    for g in &blob.glyphs {
-        let kind = match g.kind {
+    for g in blob.shape.glyphs.as_ref() {
+        let kind = match g.kind() {
             GlyphQuadKind::Mask => TextDrawKind::Mask,
             GlyphQuadKind::Color => TextDrawKind::Color,
+            GlyphQuadKind::Subpixel => TextDrawKind::Subpixel,
         };
 
-        if active_kind != Some(kind) {
+        let Some((atlas_page, uv)) = renderer.text_system.glyph_uv_for_instance(g) else {
+            continue;
+        };
+
+        if active_kind != Some(kind) || (active_kind.is_some() && active_page != atlas_page) {
             if let Some(prev) = active_kind {
                 let vertex_count =
                     (state.text_vertices.len() as u32).saturating_sub(group_first_vertex);
@@ -47,18 +54,28 @@ pub(in super::super) fn encode_text(
                         first_vertex: group_first_vertex,
                         vertex_count,
                         kind: prev,
+                        atlas_page: active_page,
                     }));
                 }
             }
             active_kind = Some(kind);
+            active_page = atlas_page;
             group_first_vertex = state.text_vertices.len() as u32;
         }
 
-        let paint_color = g.color.unwrap_or(base_color);
+        let paint_color = match (g.paint_span, blob.paint_palette.as_ref()) {
+            (Some(slot), Some(palette)) => palette
+                .get(slot as usize)
+                .and_then(|c| *c)
+                .map(|c| EncodeState::color_with_opacity(c, paint_opacity))
+                .unwrap_or(base_color),
+            _ => base_color,
+        };
         let premul = color_to_linear_rgba_premul(paint_color);
         let vertex_color = match kind {
             TextDrawKind::Mask => premul,
             TextDrawKind::Color => [1.0, 1.0, 1.0, premul[3]],
+            TextDrawKind::Subpixel => premul,
         };
 
         let lx0 = base_x + g.rect[0] * state.scale_factor;
@@ -72,7 +89,7 @@ pub(in super::super) fn encode_text(
             apply_transform_px(t_px, lx0, ly1),
         ];
 
-        let (u0, v0, u1, v1) = (g.uv[0], g.uv[1], g.uv[2], g.uv[3]);
+        let (u0, v0, u1, v1) = (uv[0], uv[1], uv[2], uv[3]);
 
         state.text_vertices.extend_from_slice(&[
             TextVertex {
@@ -117,6 +134,7 @@ pub(in super::super) fn encode_text(
                 first_vertex: group_first_vertex,
                 vertex_count,
                 kind,
+                atlas_page: active_page,
             }));
         }
     }

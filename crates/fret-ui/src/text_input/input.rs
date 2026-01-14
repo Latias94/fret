@@ -321,7 +321,7 @@ impl TextInput {
             let pre_metrics =
                 cx.services
                     .text()
-                    .measure(&self.preedit[..cursor], &self.style, constraints);
+                    .measure_str(&self.preedit[..cursor], &self.style, constraints);
             x = x + pre_metrics.size.width;
         }
 

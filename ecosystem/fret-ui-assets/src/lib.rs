@@ -9,3 +9,8 @@ pub mod ui_assets;
 
 pub use fret_asset_cache::*;
 pub use ui_assets::*;
+
+#[cfg(feature = "app-integration")]
+mod app_integration;
+#[cfg(feature = "app-integration")]
+pub use app_integration::{install, install_app, install_app_with_budgets, install_with_budgets};

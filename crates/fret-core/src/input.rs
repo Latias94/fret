@@ -1,7 +1,7 @@
 use crate::{
     AppWindowId, ClipboardToken, ExternalDropToken, FileDialogDataEvent, FileDialogSelection,
-    ImageId, ImageUpdateToken, ImageUploadToken, Rect, RenderTargetId, TimerToken, ViewportFit,
-    ViewportMapping, WindowLogicalPosition,
+    ImageId, ImageUpdateToken, ImageUploadToken, PointerId, Rect, RenderTargetId, TimerToken,
+    ViewportFit, ViewportMapping, WindowLogicalPosition,
     geometry::{Point, Px},
 };
 
@@ -107,12 +107,14 @@ pub enum ImeEvent {
 #[derive(Debug, Clone, PartialEq)]
 pub enum PointerEvent {
     Move {
+        pointer_id: PointerId,
         position: Point,
         buttons: MouseButtons,
         modifiers: Modifiers,
         pointer_type: PointerType,
     },
     Down {
+        pointer_id: PointerId,
         position: Point,
         button: MouseButton,
         modifiers: Modifiers,
@@ -124,6 +126,7 @@ pub enum PointerEvent {
         pointer_type: PointerType,
     },
     Up {
+        pointer_id: PointerId,
         position: Point,
         button: MouseButton,
         modifiers: Modifiers,
@@ -134,6 +137,7 @@ pub enum PointerEvent {
         pointer_type: PointerType,
     },
     Wheel {
+        pointer_id: PointerId,
         position: Point,
         delta: Point,
         modifiers: Modifiers,
@@ -144,6 +148,7 @@ pub enum PointerEvent {
     /// `delta` is positive for magnification (zoom in) and negative for shrinking (zoom out).
     /// This value may be NaN depending on the platform backend; callers should guard accordingly.
     PinchGesture {
+        pointer_id: PointerId,
         position: Point,
         delta: f32,
         modifiers: Modifiers,
@@ -159,6 +164,7 @@ pub enum PointerCancelReason {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PointerCancelEvent {
+    pub pointer_id: PointerId,
     /// When provided by the platform, this is the last known pointer position (logical pixels).
     pub position: Option<Point>,
     pub buttons: MouseButtons,
@@ -239,6 +245,7 @@ pub enum InternalDragKind {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct InternalDragEvent {
+    pub pointer_id: PointerId,
     pub position: Point,
     pub kind: InternalDragKind,
     pub modifiers: Modifiers,
@@ -367,6 +374,72 @@ pub struct ViewportInputEvent {
 }
 
 impl ViewportInputEvent {
+    /// Returns the scale from window-local logical pixels ("screen px") to render-target pixels.
+    ///
+    /// This is derived from `self.geometry.draw_rect_px` (logical pixels) and the backing render
+    /// target size `self.geometry.target_px_size` (physical pixels).
+    ///
+    /// For `ViewportFit::Contain`/`Cover` this is uniform; for `ViewportFit::Stretch` the mapping
+    /// is non-uniform, so this returns the smaller axis scale as a conservative approximation for
+    /// isotropic thresholds (hit radii, click distances).
+    pub fn target_px_per_screen_px(&self) -> Option<f32> {
+        let (tw, th) = self.geometry.target_px_size;
+        let tw = tw.max(1) as f32;
+        let th = th.max(1) as f32;
+
+        let rect = self.geometry.draw_rect_px;
+        let dw = rect.size.width.0.max(0.0);
+        let dh = rect.size.height.0.max(0.0);
+        if dw <= 0.0 || dh <= 0.0 || !dw.is_finite() || !dh.is_finite() {
+            return None;
+        }
+
+        let sx = tw / dw;
+        let sy = th / dh;
+        let s = sx.min(sy);
+        (s.is_finite() && s > 0.0).then_some(s)
+    }
+
+    /// Computes the cursor position in the viewport render target's pixel space (float).
+    ///
+    /// - Input `self.cursor_px` is in window-local logical pixels (ADR 0017).
+    /// - The mapping uses `self.geometry.draw_rect_px` (logical pixels) as the area that maps to
+    ///   the full render target.
+    /// - Output is expressed in physical target pixels (`self.geometry.target_px_size`).
+    ///
+    /// This is useful for editor tooling that operates directly on render-target pixel buffers.
+    /// Prefer this over reconstructing target coordinates from `uv * target_px_size` because `uv`
+    /// and `target_px` may be clamped when pointer capture is active.
+    pub fn cursor_target_px_f32(&self) -> Option<(f32, f32)> {
+        let (tw, th) = self.geometry.target_px_size;
+        let tw = tw.max(1) as f32;
+        let th = th.max(1) as f32;
+
+        let rect = self.geometry.draw_rect_px;
+        let dw = rect.size.width.0.max(0.0);
+        let dh = rect.size.height.0.max(0.0);
+        if dw <= 0.0 || dh <= 0.0 || !dw.is_finite() || !dh.is_finite() {
+            return None;
+        }
+
+        let uv_x = (self.cursor_px.x.0 - rect.origin.x.0) / dw;
+        let uv_y = (self.cursor_px.y.0 - rect.origin.y.0) / dh;
+        Some((uv_x * tw, uv_y * th))
+    }
+
+    /// Like [`Self::cursor_target_px_f32`], but clamps the resulting coordinates to the render
+    /// target bounds.
+    pub fn cursor_target_px_f32_clamped(&self) -> (f32, f32) {
+        let (tw, th) = self.geometry.target_px_size;
+        let tw = tw.max(1) as f32;
+        let th = th.max(1) as f32;
+
+        let Some((x, y)) = self.cursor_target_px_f32() else {
+            return (self.target_px.0 as f32, self.target_px.1 as f32);
+        };
+        (x.clamp(0.0, tw), y.clamp(0.0, th))
+    }
+
     pub fn from_mapping_window_point(
         window: AppWindowId,
         target: RenderTargetId,
@@ -421,6 +494,67 @@ impl ViewportInputEvent {
             target_px,
             kind,
         }
+    }
+}
+
+#[cfg(test)]
+mod viewport_input_event_tests {
+    use super::*;
+    use crate::geometry::{Point, Px, Rect, Size};
+
+    fn dummy_event(cursor: Point) -> ViewportInputEvent {
+        ViewportInputEvent {
+            window: AppWindowId::default(),
+            target: RenderTargetId::default(),
+            geometry: ViewportInputGeometry {
+                content_rect_px: Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(200.0), Px(100.0)),
+                ),
+                draw_rect_px: Rect::new(
+                    Point::new(Px(50.0), Px(25.0)),
+                    Size::new(Px(100.0), Px(50.0)),
+                ),
+                target_px_size: (1000, 500),
+                fit: ViewportFit::Contain,
+                pixels_per_point: 2.0,
+            },
+            cursor_px: cursor,
+            uv: (0.0, 0.0),
+            target_px: (0, 0),
+            kind: ViewportInputKind::PointerMove {
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+            },
+        }
+    }
+
+    #[test]
+    fn target_px_per_screen_px_matches_draw_rect_mapping() {
+        let event = dummy_event(Point::new(Px(0.0), Px(0.0)));
+        let scale = event.target_px_per_screen_px().unwrap();
+        assert!((scale - 10.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn cursor_target_px_maps_draw_rect_origin_to_zero() {
+        let event = dummy_event(Point::new(Px(50.0), Px(25.0)));
+        let (x, y) = event.cursor_target_px_f32().unwrap();
+        assert!(((x - 0.0).powi(2) + (y - 0.0).powi(2)).sqrt() < 1e-3);
+    }
+
+    #[test]
+    fn cursor_target_px_maps_draw_rect_max_to_target_size() {
+        let event = dummy_event(Point::new(Px(150.0), Px(75.0)));
+        let (x, y) = event.cursor_target_px_f32().unwrap();
+        assert!(((x - 1000.0).powi(2) + (y - 500.0).powi(2)).sqrt() < 1e-3);
+    }
+
+    #[test]
+    fn cursor_target_px_clamped_caps_outside_values() {
+        let event = dummy_event(Point::new(Px(200.0), Px(125.0)));
+        let (x, y) = event.cursor_target_px_f32_clamped();
+        assert_eq!((x, y), (1000.0, 500.0));
     }
 }
 

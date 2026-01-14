@@ -6,6 +6,18 @@ use crate::{FontCatalog, FontCatalogCache, GlobalsHost};
 pub enum FontFamilyDefaultsPolicy {
     None,
     FillIfEmpty,
+    /// If any UI family list is empty, seed it from the head of the current font catalog.
+    ///
+    /// This is primarily intended for Web/WASM bootstrap, where system font discovery is not
+    /// available and we need a deterministic, minimal fallback without exploding settings to
+    /// "all fonts".
+    FillIfEmptyFromCatalogPrefix {
+        max: usize,
+    },
+    /// If any UI family list is empty, seed it with a small curated list of common UI families.
+    ///
+    /// This is primarily intended for Web/WASM bootstrap.
+    FillIfEmptyWithCuratedCandidates,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -38,15 +50,64 @@ pub fn apply_font_catalog_update(
         .unwrap_or_default();
     let mut config = prev_config.clone();
 
-    if policy == FontFamilyDefaultsPolicy::FillIfEmpty {
-        if config.ui_sans.is_empty() {
-            config.ui_sans = families.clone();
+    match policy {
+        FontFamilyDefaultsPolicy::None => {}
+        FontFamilyDefaultsPolicy::FillIfEmpty => {
+            if config.ui_sans.is_empty() {
+                config.ui_sans = families.clone();
+            }
+            if config.ui_serif.is_empty() {
+                config.ui_serif = families.clone();
+            }
+            if config.ui_mono.is_empty() {
+                config.ui_mono = families.clone();
+            }
         }
-        if config.ui_serif.is_empty() {
-            config.ui_serif = families.clone();
+        FontFamilyDefaultsPolicy::FillIfEmptyFromCatalogPrefix { max } => {
+            let max = max.max(1);
+            let seed: Vec<String> = families.iter().take(max).cloned().collect();
+            if config.ui_sans.is_empty() {
+                config.ui_sans = seed.clone();
+            }
+            if config.ui_serif.is_empty() {
+                config.ui_serif = seed.clone();
+            }
+            if config.ui_mono.is_empty() {
+                config.ui_mono = seed;
+            }
         }
-        if config.ui_mono.is_empty() {
-            config.ui_mono = families.clone();
+        FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates => {
+            if config.ui_sans.is_empty() {
+                config.ui_sans = vec![
+                    "Inter".to_string(),
+                    "Segoe UI".to_string(),
+                    "Helvetica".to_string(),
+                    "Arial".to_string(),
+                    "Ubuntu".to_string(),
+                    "Adwaita Sans".to_string(),
+                    "Cantarell".to_string(),
+                    "Noto Sans".to_string(),
+                    "DejaVu Sans".to_string(),
+                ];
+            }
+            if config.ui_serif.is_empty() {
+                config.ui_serif = vec![
+                    "Noto Serif".to_string(),
+                    "Times New Roman".to_string(),
+                    "Georgia".to_string(),
+                    "DejaVu Serif".to_string(),
+                ];
+            }
+            if config.ui_mono.is_empty() {
+                config.ui_mono = vec![
+                    "JetBrains Mono".to_string(),
+                    "Fira Mono".to_string(),
+                    "Consolas".to_string(),
+                    "Menlo".to_string(),
+                    "DejaVu Sans Mono".to_string(),
+                    "Noto Sans Mono".to_string(),
+                ];
+            }
         }
     }
 

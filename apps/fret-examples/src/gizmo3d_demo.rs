@@ -9,11 +9,11 @@ use fret_core::{
 use fret_gizmo::{
     Aabb3, DepthMode, DepthRange, Gizmo, GizmoConfig, GizmoCustomEdit, GizmoDrawList3d, GizmoInput,
     GizmoMode, GizmoOps, GizmoOrientation, GizmoPhase, GizmoPivotMode, GizmoPluginManager,
-    GizmoPluginManagerConfig, GizmoPropertyKey, GizmoResult, GizmoSizePolicy, GizmoTarget3d,
-    GizmoTargetId, GizmoVisualPreset, Grid3d, HandleId, LightRadiusGizmoPlugin,
+    GizmoPluginManagerConfig, GizmoPropertyKey, GizmoPropertySource, GizmoResult, GizmoSizePolicy,
+    GizmoTarget3d, GizmoTargetId, GizmoVisualPreset, Grid3d, HandleId, LightRadiusGizmoPlugin,
     RingScaleGizmoPlugin, Transform3d, TransformGizmoPlugin, ViewGizmo, ViewGizmoAnchor,
-    ViewGizmoConfig, ViewGizmoInput, ViewGizmoProjection, ViewGizmoUpdate, ViewGizmoVisualPreset,
-    ViewportRect, viewport_input_cursor_target_px,
+    ViewGizmoConfig, ViewGizmoProjection, ViewGizmoUpdate, ViewGizmoVisualPreset, ViewportRect,
+    ViewportToolInput,
 };
 use fret_launch::{
     EngineFrameUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService,
@@ -50,6 +50,16 @@ enum GizmoOpMaskPreset {
 }
 
 type CustomScalarKey = (GizmoPropertyKey, GizmoTargetId);
+
+struct DemoGizmoPropertySource<'a> {
+    scalars: &'a HashMap<CustomScalarKey, f32>,
+}
+
+impl GizmoPropertySource for DemoGizmoPropertySource<'_> {
+    fn read_scalar(&self, target: GizmoTargetId, key: GizmoPropertyKey) -> Option<f32> {
+        self.scalars.get(&(key, target)).copied()
+    }
+}
 
 impl GizmoOpMaskPreset {
     const ALL: [Self; 6] = [
@@ -179,7 +189,7 @@ impl ViewGizmoLabelCache {
                 if blob.is_some() && metrics.is_some() {
                     return;
                 }
-                let (b, m) = services.text().prepare(text, &style, constraints);
+                let (b, m) = services.text().prepare_str(text, &style, constraints);
                 *blob = Some(b);
                 *metrics = Some(m);
             };
@@ -527,11 +537,20 @@ fn selection_op(modifiers: &fret_core::Modifiers) -> SelectionOp {
 }
 
 fn precision_multiplier(modifiers: &fret_core::Modifiers) -> f32 {
-    if modifiers.ctrl || modifiers.meta {
-        0.2
-    } else {
-        1.0
+    if modifiers.shift { 0.2 } else { 1.0 }
+}
+
+fn viewport_modifiers(kind: ViewportInputKind) -> fret_core::Modifiers {
+    match kind {
+        ViewportInputKind::PointerMove { modifiers, .. } => modifiers,
+        ViewportInputKind::PointerDown { modifiers, .. } => modifiers,
+        ViewportInputKind::PointerUp { modifiers, .. } => modifiers,
+        ViewportInputKind::Wheel { modifiers, .. } => modifiers,
     }
+}
+
+fn gizmo_snap_from_modifiers(modifiers: &fret_core::Modifiers) -> bool {
+    modifiers.ctrl || modifiers.meta
 }
 
 fn transform_gizmo_kind_for_handle(handle: HandleId) -> Option<GizmoMode> {
@@ -544,14 +563,17 @@ fn transform_gizmo_kind_for_handle(handle: HandleId) -> Option<GizmoMode> {
     }
 }
 
-fn apply_pixels_per_point(model: &mut Gizmo3dDemoModel, pixels_per_point: f32) {
-    let next = if pixels_per_point.is_finite() {
-        pixels_per_point.clamp(0.1, 16.0)
+fn apply_gizmo_cursor_units_per_screen_px(
+    model: &mut Gizmo3dDemoModel,
+    cursor_units_per_screen_px: f32,
+) {
+    let next = if cursor_units_per_screen_px.is_finite() {
+        cursor_units_per_screen_px.clamp(0.1, 16.0)
     } else {
         1.0
     };
-    let prev = if model.pixels_per_point.is_finite() {
-        model.pixels_per_point.clamp(0.1, 16.0)
+    let prev = if model.gizmo_cursor_units_per_screen_px.is_finite() {
+        model.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0)
     } else {
         1.0
     };
@@ -560,10 +582,16 @@ fn apply_pixels_per_point(model: &mut Gizmo3dDemoModel, pixels_per_point: f32) {
     }
 
     let ratio = (next / prev).clamp(0.1, 16.0);
-    model.pixels_per_point = next;
-    let next_gizmo_cfg = model.gizmo().config.scale_for_pixels_per_point(ratio);
+    model.gizmo_cursor_units_per_screen_px = next;
+    let next_gizmo_cfg = model
+        .gizmo()
+        .config
+        .scale_for_cursor_units_per_screen_px(ratio);
     model.gizmo_mut().config = next_gizmo_cfg;
-    model.view_gizmo.config = model.view_gizmo.config.scale_for_pixels_per_point(ratio);
+    model.view_gizmo.config = model
+        .view_gizmo
+        .config
+        .scale_for_cursor_units_per_screen_px(ratio);
 }
 
 fn apply_click_selection_op(
@@ -941,7 +969,7 @@ struct PendingUndoRecords {
 struct Gizmo3dDemoModel {
     viewport_target: RenderTargetId,
     viewport_px: (u32, u32),
-    pixels_per_point: f32,
+    gizmo_cursor_units_per_screen_px: f32,
     gizmo_mgr: GizmoPluginManager,
     view_gizmo: ViewGizmo,
     gizmo_visual_preset_index: usize,
@@ -986,19 +1014,6 @@ impl Gizmo3dDemoModel {
 
     fn gizmo_mut(&mut self) -> &mut Gizmo {
         &mut self.transform_plugin_mut().gizmo
-    }
-
-    fn sync_light_radius_plugin(&mut self, targets: &[GizmoTarget3d]) {
-        let Some(plugin) = self.gizmo_mgr.plugin_mut::<LightRadiusGizmoPlugin>() else {
-            return;
-        };
-
-        for t in targets {
-            let key = (LightRadiusGizmoPlugin::PROPERTY_RADIUS, t.id);
-            if let Some(radius) = self.custom_scalar_values.get(&key).copied() {
-                plugin.set_radius_world(t.id, radius);
-            }
-        }
     }
 
     fn capture_custom_scalar_drag_start(&mut self, edits: &[GizmoCustomEdit]) {
@@ -1051,6 +1066,101 @@ impl Gizmo3dDemoModel {
         for (k, v) in start {
             self.custom_scalar_values.insert(k, v);
         }
+    }
+
+    fn clear_other_interactions(&mut self, cursor_px: Vec2, snap: bool, precision: f32) {
+        self.gizmo_mgr.state.hovered = None;
+        self.pending_selection = None;
+        self.marquee = None;
+        self.marquee_preview.clear();
+        self.selection_before_select = None;
+        self.active_before_select = None;
+        self.input = GizmoInput {
+            cursor_px,
+            hovered: false,
+            drag_started: false,
+            dragging: false,
+            snap,
+            cancel: false,
+            precision,
+        };
+    }
+
+    fn cancel_in_progress_interaction(&mut self, viewport_px: (u32, u32)) -> bool {
+        let is_gizmo_dragging = self.input.dragging || self.gizmo_mgr.state.active.is_some();
+        let is_selecting = self.pending_selection.is_some() || self.marquee.is_some();
+
+        if !is_gizmo_dragging && !is_selecting {
+            return false;
+        }
+
+        if is_selecting {
+            self.pending_selection = None;
+            self.marquee = None;
+            self.marquee_preview.clear();
+            if let Some(sel) = self.selection_before_select.take() {
+                self.selection = sel;
+            }
+            if let Some(active) = self.active_before_select.take() {
+                self.active_target = active;
+            }
+            return true;
+        }
+
+        let viewport_px = (viewport_px.0.max(1), viewport_px.1.max(1));
+        let view_projection = camera_view_projection(viewport_px, self.camera);
+        let viewport = ViewportToolInput::from_target_px_viewport(
+            viewport_px,
+            self.input.cursor_px,
+            false,
+            false,
+            self.gizmo_cursor_units_per_screen_px,
+        );
+
+        let mut input = self.input;
+        input.hovered = false;
+        input.drag_started = false;
+        input.dragging = false;
+        input.cancel = true;
+
+        let selected: Vec<GizmoTarget3d> = self
+            .targets
+            .iter()
+            .copied()
+            .filter(|t| self.selection.contains(&t.id))
+            .collect();
+
+        let properties = DemoGizmoPropertySource {
+            scalars: &self.custom_scalar_values,
+        };
+        let update = self.gizmo_mgr.update(
+            view_projection,
+            viewport.viewport,
+            self.gizmo().config.depth_range,
+            input,
+            self.active_target,
+            &selected,
+            Some(&properties),
+        );
+
+        if matches!(update.as_ref().map(|u| u.phase), Some(GizmoPhase::Cancel)) {
+            if let Some(start) = self.drag_start_targets.take() {
+                for updated in start {
+                    if let Some(target) = self.targets.iter_mut().find(|t| t.id == updated.id) {
+                        target.transform = updated.transform;
+                    }
+                }
+            }
+            self.cancel_custom_scalar_drag();
+        }
+
+        self.drag_start_targets = None;
+        self.input.cancel = false;
+        self.input.dragging = false;
+        self.input.drag_started = false;
+        self.selection_before_select = None;
+        self.active_before_select = None;
+        true
     }
 
     fn commit_custom_scalar_undo_record(
@@ -1165,6 +1275,7 @@ impl Gizmo3dDemoModel {
         out.push_str("  -/=: gizmo size   ,/.: thickness + pick radius (Shift: bigger step)\n");
         out.push_str("  H: toggle help\n");
         out.push_str("  Esc: cancel drag / selection\n");
+        out.push_str("  Drag: Ctrl/Cmd: snap   Shift: precision\n");
         out.push_str("  Ctrl+A: select all (Shift: clear)\n");
         out.push('\n');
 
@@ -1174,11 +1285,18 @@ impl Gizmo3dDemoModel {
             self.gizmo().config.orientation,
             self.gizmo().config.pivot_mode
         ));
+        let cursor_units_per_screen_px = if self.gizmo_cursor_units_per_screen_px.is_finite()
+            && self.gizmo_cursor_units_per_screen_px > 0.0
+        {
+            self.gizmo_cursor_units_per_screen_px
+        } else {
+            1.0
+        };
         out.push_str(&format!(
             "Gizmo: size_px={:.0}   thickness_px={:.0}   pick_radius_px={:.0}\n",
-            self.gizmo().config.size_px,
-            self.gizmo().config.line_thickness_px,
-            self.gizmo().config.pick_radius_px
+            self.gizmo().config.size_px / cursor_units_per_screen_px,
+            self.gizmo().config.line_thickness_px / cursor_units_per_screen_px,
+            self.gizmo().config.pick_radius_px / cursor_units_per_screen_px
         ));
         out.push_str(&format!(
             "Gizmo: size_policy={:?}\n",
@@ -1287,7 +1405,7 @@ impl Default for Gizmo3dDemoModel {
         Self {
             viewport_target: RenderTargetId::default(),
             viewport_px: (960, 540),
-            pixels_per_point: 1.0,
+            gizmo_cursor_units_per_screen_px: 1.0,
             gizmo_mgr: {
                 let mut mgr = GizmoPluginManager::new(GizmoPluginManagerConfig::default());
                 let mut plugin = TransformGizmoPlugin::new(Gizmo::new(gizmo_cfg));
@@ -1935,54 +2053,15 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
     ) -> bool {
         let mut did_apply = false;
 
-        // Always cancel any in-progress gizmo interaction before applying undo/redo.
-        let _ = state.demo.update(app, |m, _cx| {
-            let is_dragging = m.input.dragging || m.gizmo_mgr.state.active.is_some();
-            if is_dragging {
-                let view_projection = camera_view_projection(m.viewport_px, m.camera);
-                let viewport = ViewportRect::new(
-                    Vec2::ZERO,
-                    Vec2::new(m.viewport_px.0 as f32, m.viewport_px.1 as f32),
-                );
-                let mut input = m.input;
-                input.drag_started = false;
-                input.dragging = false;
-                input.cancel = true;
-
-                let selected: Vec<GizmoTarget3d> = m
-                    .targets
-                    .iter()
-                    .copied()
-                    .filter(|t| m.selection.contains(&t.id))
-                    .collect();
-                m.sync_light_radius_plugin(&selected);
-                if let Some(update) = m.gizmo_mgr.update(
-                    view_projection,
-                    viewport,
-                    m.gizmo().config.depth_range,
-                    input,
-                    m.active_target,
-                    &selected,
-                ) {
-                    if update.phase == GizmoPhase::Cancel {
-                        if let Some(start) = m.drag_start_targets.take() {
-                            for updated in start {
-                                if let Some(target) =
-                                    m.targets.iter_mut().find(|t| t.id == updated.id)
-                                {
-                                    target.transform = updated.transform;
-                                }
-                            }
-                        }
-                        m.cancel_custom_scalar_drag();
-                    }
-                }
-                m.drag_start_targets = None;
-                m.input.cancel = false;
-                m.input.dragging = false;
-                m.input.drag_started = false;
-            }
-        });
+        // Always cancel in-progress viewport interactions before applying undo/redo.
+        let viewport_px = state
+            .plot
+            .read(app, |_app, m| m.viewport.target_px_size)
+            .unwrap_or((960, 540));
+        let did_cancel = state
+            .demo
+            .update(app, |m, _cx| m.cancel_in_progress_interaction(viewport_px))
+            .unwrap_or(false);
 
         let mut applied_transform = false;
         let _ = app.with_global_mut(
@@ -2060,7 +2139,7 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
             );
         }
 
-        if did_apply {
+        if did_apply || did_cancel {
             app.request_redraw(window);
         }
         did_apply
@@ -2337,77 +2416,14 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 key: fret_core::KeyCode::Escape,
                 ..
             } => {
-                let mut did_cancel = false;
-                let _ = state.demo.update(app, |m, _cx| {
-                    let is_gizmo_dragging = m.input.dragging || m.gizmo_mgr.state.active.is_some();
-                    let is_selecting = m.pending_selection.is_some() || m.marquee.is_some();
-
-                    if !is_gizmo_dragging && !is_selecting {
-                        return;
-                    }
-
-                    if is_selecting {
-                        m.pending_selection = None;
-                        m.marquee = None;
-                        m.marquee_preview.clear();
-                        if let Some(sel) = m.selection_before_select.take() {
-                            m.selection = sel;
-                        }
-                        if let Some(active) = m.active_before_select.take() {
-                            m.active_target = active;
-                        }
-                        did_cancel = true;
-                        return;
-                    }
-
-                    let view_projection = camera_view_projection(m.viewport_px, m.camera);
-                    let viewport = ViewportRect::new(
-                        Vec2::ZERO,
-                        Vec2::new(m.viewport_px.0 as f32, m.viewport_px.1 as f32),
-                    );
-
-                    let mut input = m.input;
-                    input.drag_started = false;
-                    input.dragging = false;
-                    input.cancel = true;
-
-                    let selected: Vec<GizmoTarget3d> = m
-                        .targets
-                        .iter()
-                        .copied()
-                        .filter(|t| m.selection.contains(&t.id))
-                        .collect();
-
-                    m.sync_light_radius_plugin(&selected);
-                    if let Some(update) = m.gizmo_mgr.update(
-                        view_projection,
-                        viewport,
-                        m.gizmo().config.depth_range,
-                        input,
-                        m.active_target,
-                        &selected,
-                    ) {
-                        if update.phase == GizmoPhase::Cancel {
-                            if let Some(start) = m.drag_start_targets.take() {
-                                for updated in start {
-                                    if let Some(target) =
-                                        m.targets.iter_mut().find(|t| t.id == updated.id)
-                                    {
-                                        target.transform = updated.transform;
-                                    }
-                                }
-                            }
-                            m.cancel_custom_scalar_drag();
-                            did_cancel = true;
-                        }
-                    }
-
-                    m.input.cancel = false;
-                    m.input.dragging = false;
-                    m.input.drag_started = false;
-                    m.selection_before_select = None;
-                    m.active_before_select = None;
-                });
+                let viewport_px = state
+                    .plot
+                    .read(app, |_app, m| m.viewport.target_px_size)
+                    .unwrap_or((960, 540));
+                let did_cancel = state
+                    .demo
+                    .update(app, |m, _cx| m.cancel_in_progress_interaction(viewport_px))
+                    .unwrap_or(false);
 
                 if did_cancel {
                     app.request_redraw(window);
@@ -2597,22 +2613,45 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     if modifiers.shift {
                         m.view_gizmo_visual_preset_index = (m.view_gizmo_visual_preset_index + 1)
                             % ViewGizmoVisualPreset::ALL.len();
-                        ViewGizmoVisualPreset::ALL[m.view_gizmo_visual_preset_index]
-                            .apply_to_config(&mut m.view_gizmo.config);
-                        m.view_gizmo.config = m
-                            .view_gizmo
-                            .config
-                            .scale_for_pixels_per_point(m.pixels_per_point);
+                        let cursor_units_per_screen_px =
+                            m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
+                        let visuals =
+                            ViewGizmoVisualPreset::ALL[m.view_gizmo_visual_preset_index].visuals();
+                        m.view_gizmo.config.margin_px =
+                            visuals.margin_px * cursor_units_per_screen_px;
+                        m.view_gizmo.config.size_px = visuals.size_px * cursor_units_per_screen_px;
+                        m.view_gizmo.config.pick_padding_px =
+                            visuals.pick_padding_px * cursor_units_per_screen_px;
+                        m.view_gizmo.config.center_button_radius_px =
+                            visuals.center_button_radius_px * cursor_units_per_screen_px;
+                        m.view_gizmo.config.face_color = visuals.face_color;
+                        m.view_gizmo.config.edge_color = visuals.edge_color;
+                        m.view_gizmo.config.hover_color = visuals.hover_color;
+                        m.view_gizmo.config.x_color = visuals.x_color;
+                        m.view_gizmo.config.y_color = visuals.y_color;
+                        m.view_gizmo.config.z_color = visuals.z_color;
                     } else {
                         m.gizmo_visual_preset_index =
                             (m.gizmo_visual_preset_index + 1) % GizmoVisualPreset::ALL.len();
-                        GizmoVisualPreset::ALL[m.gizmo_visual_preset_index]
-                            .apply_to_gizmo(m.gizmo_mut());
-                        let cfg = m
-                            .gizmo()
-                            .config
-                            .scale_for_pixels_per_point(m.pixels_per_point);
-                        m.gizmo_mut().config = cfg;
+                        let cursor_units_per_screen_px =
+                            m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
+                        let preset = GizmoVisualPreset::ALL[m.gizmo_visual_preset_index];
+                        let visuals = preset.visuals();
+                        let gizmo = m.gizmo_mut();
+                        gizmo.set_part_visuals(preset.part_visuals());
+                        gizmo.config.size_px = visuals.size_px * cursor_units_per_screen_px;
+                        gizmo.config.pick_radius_px =
+                            visuals.pick_radius_px * cursor_units_per_screen_px;
+                        gizmo.config.line_thickness_px =
+                            visuals.line_thickness_px * cursor_units_per_screen_px;
+                        gizmo.config.bounds_handle_size_px =
+                            visuals.bounds_handle_size_px * cursor_units_per_screen_px;
+                        gizmo.config.show_occluded = visuals.show_occluded;
+                        gizmo.config.occluded_alpha = visuals.occluded_alpha;
+                        gizmo.config.x_color = visuals.x_color;
+                        gizmo.config.y_color = visuals.y_color;
+                        gizmo.config.z_color = visuals.z_color;
+                        gizmo.config.hover_color = visuals.hover_color;
                     }
                 });
                 app.request_redraw(window);
@@ -2709,13 +2748,18 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 repeat: false,
                 ..
             } => {
-                let step = if modifiers.shift { 16.0 } else { 4.0 };
+                let step_screen_px = if modifiers.shift { 16.0 } else { 4.0 };
                 let _ = state.demo.update(app, |m, _cx| {
                     if m.is_busy() {
                         return;
                     }
+                    let cursor_units_per_screen_px =
+                        m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
+                    let step = step_screen_px * cursor_units_per_screen_px;
+                    let min = 24.0 * cursor_units_per_screen_px;
+                    let max = 256.0 * cursor_units_per_screen_px;
                     m.gizmo_mut().config.size_px =
-                        (m.gizmo().config.size_px - step).clamp(24.0, 256.0);
+                        (m.gizmo().config.size_px - step).clamp(min, max);
                 });
                 app.request_redraw(window);
             }
@@ -2725,13 +2769,18 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 repeat: false,
                 ..
             } => {
-                let step = if modifiers.shift { 16.0 } else { 4.0 };
+                let step_screen_px = if modifiers.shift { 16.0 } else { 4.0 };
                 let _ = state.demo.update(app, |m, _cx| {
                     if m.is_busy() {
                         return;
                     }
+                    let cursor_units_per_screen_px =
+                        m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
+                    let step = step_screen_px * cursor_units_per_screen_px;
+                    let min = 24.0 * cursor_units_per_screen_px;
+                    let max = 256.0 * cursor_units_per_screen_px;
                     m.gizmo_mut().config.size_px =
-                        (m.gizmo().config.size_px + step).clamp(24.0, 256.0);
+                        (m.gizmo().config.size_px + step).clamp(min, max);
                 });
                 app.request_redraw(window);
             }
@@ -2741,17 +2790,28 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 repeat: false,
                 ..
             } => {
-                let step = if modifiers.shift { 2.0 } else { 1.0 };
+                let step_screen_px = if modifiers.shift { 2.0 } else { 1.0 };
                 let _ = state.demo.update(app, |m, _cx| {
                     if m.is_busy() {
                         return;
                     }
-                    m.gizmo_mut().config.line_thickness_px =
-                        (m.gizmo().config.line_thickness_px - step).clamp(1.0, 24.0);
-                    m.gizmo_mut().config.pick_radius_px =
-                        (m.gizmo().config.pick_radius_px - step).clamp(4.0, 32.0);
+                    let cursor_units_per_screen_px =
+                        m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
+                    let step = step_screen_px * cursor_units_per_screen_px;
+                    let thickness_min = 1.0 * cursor_units_per_screen_px;
+                    let thickness_max = 24.0 * cursor_units_per_screen_px;
+                    let pick_radius_min = 4.0 * cursor_units_per_screen_px;
+                    let pick_radius_max = 32.0 * cursor_units_per_screen_px;
+                    let handle_min = 6.0 * cursor_units_per_screen_px;
+                    let handle_max = 32.0 * cursor_units_per_screen_px;
+                    m.gizmo_mut().config.line_thickness_px = (m.gizmo().config.line_thickness_px
+                        - step)
+                        .clamp(thickness_min, thickness_max);
+                    m.gizmo_mut().config.pick_radius_px = (m.gizmo().config.pick_radius_px - step)
+                        .clamp(pick_radius_min, pick_radius_max);
                     m.gizmo_mut().config.bounds_handle_size_px =
-                        (m.gizmo().config.bounds_handle_size_px - step).clamp(6.0, 32.0);
+                        (m.gizmo().config.bounds_handle_size_px - step)
+                            .clamp(handle_min, handle_max);
                 });
                 app.request_redraw(window);
             }
@@ -2761,17 +2821,28 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 repeat: false,
                 ..
             } => {
-                let step = if modifiers.shift { 2.0 } else { 1.0 };
+                let step_screen_px = if modifiers.shift { 2.0 } else { 1.0 };
                 let _ = state.demo.update(app, |m, _cx| {
                     if m.is_busy() {
                         return;
                     }
-                    m.gizmo_mut().config.line_thickness_px =
-                        (m.gizmo().config.line_thickness_px + step).clamp(1.0, 24.0);
-                    m.gizmo_mut().config.pick_radius_px =
-                        (m.gizmo().config.pick_radius_px + step).clamp(4.0, 32.0);
+                    let cursor_units_per_screen_px =
+                        m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
+                    let step = step_screen_px * cursor_units_per_screen_px;
+                    let thickness_min = 1.0 * cursor_units_per_screen_px;
+                    let thickness_max = 24.0 * cursor_units_per_screen_px;
+                    let pick_radius_min = 4.0 * cursor_units_per_screen_px;
+                    let pick_radius_max = 32.0 * cursor_units_per_screen_px;
+                    let handle_min = 6.0 * cursor_units_per_screen_px;
+                    let handle_max = 32.0 * cursor_units_per_screen_px;
+                    m.gizmo_mut().config.line_thickness_px = (m.gizmo().config.line_thickness_px
+                        + step)
+                        .clamp(thickness_min, thickness_max);
+                    m.gizmo_mut().config.pick_radius_px = (m.gizmo().config.pick_radius_px + step)
+                        .clamp(pick_radius_min, pick_radius_max);
                     m.gizmo_mut().config.bounds_handle_size_px =
-                        (m.gizmo().config.bounds_handle_size_px + step).clamp(6.0, 32.0);
+                        (m.gizmo().config.bounds_handle_size_px + step)
+                            .clamp(handle_min, handle_max);
                 });
                 app.request_redraw(window);
             }
@@ -2988,32 +3059,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         if !changed.contains(&TypeId::of::<fret_core::WindowMetricsService>()) {
             return;
         }
-
-        let pixels_per_point = context
-            .app
-            .global::<fret_core::WindowMetricsService>()
-            .and_then(|svc| svc.scale_factor(context.window))
-            .unwrap_or(1.0);
-
-        let model = context
-            .app
-            .with_global_mut(Gizmo3dDemoService::default, |svc, _app| {
-                svc.per_window.get(&context.window).cloned()
-            });
-        let Some(model) = model else {
-            return;
-        };
-
-        let did_change = model
-            .update(context.app, |m, _cx| {
-                let before = m.pixels_per_point;
-                apply_pixels_per_point(m, pixels_per_point);
-                (m.pixels_per_point - before).abs() > 1e-3
-            })
-            .unwrap_or(false);
-        if did_change {
-            context.app.request_redraw(context.window);
-        }
+        context.app.request_redraw(context.window);
     }
 
     fn viewport_input(&mut self, app: &mut App, event: ViewportInputEvent) {
@@ -3025,16 +3071,18 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         };
 
         let pending_undo = model.update(app, |m, _cx| {
-            apply_pixels_per_point(m, event.geometry.pixels_per_point);
             if m.viewport_target != event.target {
                 return PendingUndoRecords::default();
             }
 
-            let cursor_target_px = viewport_input_cursor_target_px(&event).unwrap_or_else(|| {
-                // Fallback: use UV instead of integer target pixels to avoid quantization.
-                let (tw, th) = event.geometry.target_px_size;
-                Vec2::new(event.uv.0 * tw as f32, event.uv.1 * th as f32)
-            });
+            let tool_input = ViewportToolInput::from_viewport_input_target_px(
+                &event,
+                fret_core::MouseButton::Left,
+            );
+            let target_px_per_screen_px = tool_input.cursor_units_per_screen_px;
+            apply_gizmo_cursor_units_per_screen_px(m, target_px_per_screen_px);
+
+            let cursor_target_px = tool_input.cursor_px;
             let cursor_screen_px = Vec2::new(event.cursor_px.x.0, event.cursor_px.y.0);
 
             let mut pending = PendingUndoRecords::default();
@@ -3155,23 +3203,9 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 _ => (false, m.input.dragging),
             };
 
-            let snap = match event.kind {
-                ViewportInputKind::PointerMove { modifiers, .. } => modifiers.shift,
-                ViewportInputKind::PointerDown { modifiers, .. } => modifiers.shift,
-                ViewportInputKind::PointerUp { modifiers, .. } => modifiers.shift,
-                ViewportInputKind::Wheel { modifiers, .. } => modifiers.shift,
-            };
-
-            let precision = match event.kind {
-                ViewportInputKind::PointerMove { modifiers, .. } => {
-                    precision_multiplier(&modifiers)
-                }
-                ViewportInputKind::PointerDown { modifiers, .. } => {
-                    precision_multiplier(&modifiers)
-                }
-                ViewportInputKind::PointerUp { modifiers, .. } => precision_multiplier(&modifiers),
-                ViewportInputKind::Wheel { modifiers, .. } => precision_multiplier(&modifiers),
-            };
+            let modifiers = viewport_modifiers(event.kind);
+            let snap = gizmo_snap_from_modifiers(&modifiers);
+            let precision = precision_multiplier(&modifiers);
 
             let is_navigating = m.camera.orbiting || m.camera.panning;
             let hovered = !is_navigating;
@@ -3182,56 +3216,21 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 (drag_started, dragging)
             };
 
-            let view_projection = camera_view_projection(m.viewport_px, m.camera);
-            let viewport = ViewportRect::new(
-                Vec2::ZERO,
-                Vec2::new(m.viewport_px.0 as f32, m.viewport_px.1 as f32),
-            );
+            let viewport_px = event.geometry.target_px_size;
+            let view_projection = camera_view_projection(viewport_px, m.camera);
+            let viewport = tool_input.viewport;
 
-            let (view_gizmo_drag_started, view_gizmo_dragging) = match event.kind {
-                ViewportInputKind::PointerDown {
-                    button: fret_core::MouseButton::Left,
-                    ..
-                } => (true, true),
-                ViewportInputKind::PointerMove { buttons, .. } => (false, buttons.left),
-                ViewportInputKind::PointerUp {
-                    button: fret_core::MouseButton::Left,
-                    ..
-                } => (false, false),
-                _ => (false, false),
-            };
-            let view_gizmo_input = ViewGizmoInput {
-                cursor_px: cursor_target_px,
-                hovered,
-                drag_started: view_gizmo_drag_started,
-                dragging: view_gizmo_dragging,
-            };
+            let view_gizmo_drag_started = tool_input.drag_started;
+            let view_gizmo_input =
+                fret_gizmo::view_gizmo_input_from_tool_input(tool_input, hovered);
             let view_gizmo_update =
                 m.view_gizmo
                     .update(view_projection, viewport, view_gizmo_input);
 
-            let clear_other_interactions = |m: &mut Gizmo3dDemoModel| {
-                m.gizmo_mgr.state.hovered = None;
-                m.pending_selection = None;
-                m.marquee = None;
-                m.marquee_preview.clear();
-                m.selection_before_select = None;
-                m.active_before_select = None;
-                m.input = GizmoInput {
-                    cursor_px: cursor_target_px,
-                    hovered: false,
-                    drag_started: false,
-                    dragging: false,
-                    snap,
-                    cancel: false,
-                    precision,
-                };
-            };
-
             // If the left press starts on the view gizmo, consume the interaction so it doesn't
             // become a selection click or a transform gizmo drag.
             if view_gizmo_drag_started && m.view_gizmo.state.drag_active && !m.is_busy() {
-                clear_other_interactions(m);
+                m.clear_other_interactions(cursor_target_px, snap, precision);
                 return pending;
             }
 
@@ -3241,7 +3240,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         delta_yaw_radians,
                         delta_pitch_radians,
                     }) => {
-                        clear_other_interactions(m);
+                        m.clear_other_interactions(cursor_target_px, snap, precision);
                         m.camera.frame_anim = None;
                         m.camera.yaw_radians += delta_yaw_radians;
                         m.camera.pitch_radians =
@@ -3249,7 +3248,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         return pending;
                     }
                     Some(ViewGizmoUpdate::ToggleProjection) => {
-                        clear_other_interactions(m);
+                        m.clear_other_interactions(cursor_target_px, snap, precision);
                         let target = m.camera.target;
                         let yaw_radians = m.camera.yaw_radians;
                         let pitch_radians = m.camera.pitch_radians;
@@ -3300,7 +3299,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         view_dir,
                         up: _,
                     }) => {
-                        clear_other_interactions(m);
+                        m.clear_other_interactions(cursor_target_px, snap, precision);
                         let pivot = if m.selection.is_empty() {
                             m.camera.target
                         } else {
@@ -3357,7 +3356,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 match event.kind {
                     ViewportInputKind::PointerDown {
                         button: fret_core::MouseButton::Left,
-                        modifiers,
+                        modifiers: _,
                         click_count,
                         ..
                     } => {
@@ -3373,11 +3372,13 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                             hovered: true,
                             drag_started: false,
                             dragging: false,
-                            snap: modifiers.shift,
+                            snap,
                             cancel: false,
                             precision,
                         };
-                        m.sync_light_radius_plugin(&selected);
+                        let properties = DemoGizmoPropertySource {
+                            scalars: &m.custom_scalar_values,
+                        };
                         let _ = m.gizmo_mgr.update(
                             view_projection,
                             viewport,
@@ -3385,6 +3386,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                             hover_input,
                             m.active_target,
                             &selected,
+                            Some(&properties),
                         );
 
                         let over_handle = m.gizmo_mgr.state.hovered.is_some();
@@ -3411,9 +3413,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     }
                     ViewportInputKind::PointerMove { buttons, modifiers } => {
                         const MARQUEE_THRESHOLD_PX: f32 = 4.0;
-                        let threshold_target_px = MARQUEE_THRESHOLD_PX
-                            * fret_gizmo::viewport_input_target_px_per_screen_px(&event)
-                                .unwrap_or(event.geometry.pixels_per_point.max(1.0e-6));
+                        let threshold_target_px = MARQUEE_THRESHOLD_PX * target_px_per_screen_px;
                         let threshold_sq = threshold_target_px * threshold_target_px;
 
                         if buttons.left {
@@ -3529,13 +3529,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                                             .filter(|t| m.selection.contains(&t.id))
                                             .collect();
                                         if let Some((min, max)) = targets_world_aabb(&targets) {
-                                            frame_aabb(
-                                                &mut m.camera,
-                                                m.viewport_px,
-                                                min,
-                                                max,
-                                                0.18,
-                                            );
+                                            frame_aabb(&mut m.camera, viewport_px, min, max, 0.18);
                                         }
                                     }
                                 } else if matches!(op, SelectionOp::Replace) {
@@ -3582,7 +3576,9 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     }
                 };
 
-            m.sync_light_radius_plugin(&selected);
+            let properties = DemoGizmoPropertySource {
+                scalars: &m.custom_scalar_values,
+            };
             if let Some(update) = m.gizmo_mgr.update(
                 view_projection,
                 viewport,
@@ -3590,6 +3586,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 m.input,
                 m.active_target,
                 &selected,
+                Some(&properties),
             ) {
                 m.hud.last = Some(GizmoHudLastUpdate {
                     phase: update.phase,
@@ -3767,7 +3764,9 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         .copied()
                         .filter(|t| selection.contains(&t.id))
                         .collect();
-                    m.sync_light_radius_plugin(&gizmo_targets);
+                    let properties = DemoGizmoPropertySource {
+                        scalars: &m.custom_scalar_values,
+                    };
                     m.gizmo_mgr.draw(
                         view_proj,
                         viewport,
@@ -3775,6 +3774,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         active_target,
                         &gizmo_targets,
                         m.input,
+                        Some(&properties),
                     )
                 };
                 if marquee.is_none() {
@@ -4067,7 +4067,10 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     scale_factor,
                 };
 
-                let (blob, metrics) = services.text().prepare(&overlay_text, &style, constraints);
+                let (blob, metrics) =
+                    services
+                        .text()
+                        .prepare_str(overlay_text.as_str(), &style, constraints);
                 state.overlay.last_text = overlay_text;
                 state.overlay.last_scale_bits = scale_bits;
                 state.overlay.blob = Some(blob);
@@ -4128,29 +4131,32 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             .plot
             .read(app, |_app, m| m.viewport)
             .unwrap_or_default();
-        let (viewport_px, camera, view_gizmo, gizmo_cfg, hud_state) = state
+        let viewport_px = viewport.target_px_size;
+
+        let mapping = viewport.mapping(bounds);
+        let draw_rect = mapping.map().draw_rect;
+        let scale_x = draw_rect.size.width.0 / (viewport_px.0.max(1) as f32);
+        let scale_y = draw_rect.size.height.0 / (viewport_px.1.max(1) as f32);
+        let scale = scale_x.min(scale_y).max(1e-6);
+        let target_px_per_screen_px = mapping
+            .target_px_per_screen_px()
+            .unwrap_or_else(|| viewport_px.0.max(1) as f32 / draw_rect.size.width.0.max(1.0));
+
+        let _ = state.demo.update(app, |m, _cx| {
+            apply_gizmo_cursor_units_per_screen_px(m, target_px_per_screen_px);
+        });
+
+        let (camera, view_gizmo, gizmo_cfg, hud_state) = state
             .demo
             .read(app, |_app, m| {
-                (
-                    m.viewport_px,
-                    m.camera,
-                    m.view_gizmo.clone(),
-                    m.gizmo().config,
-                    m.hud,
-                )
+                (m.camera, m.view_gizmo.clone(), m.gizmo().config, m.hud)
             })
             .unwrap_or((
-                (1, 1),
                 OrbitCamera::default(),
                 ViewGizmo::new(ViewGizmoConfig::default()),
                 GizmoConfig::default(),
                 GizmoHudState::default(),
             ));
-
-        let draw_rect = viewport.draw_rect(bounds);
-        let scale_x = draw_rect.size.width.0 / (viewport_px.0.max(1) as f32);
-        let scale_y = draw_rect.size.height.0 / (viewport_px.1.max(1) as f32);
-        let scale = scale_x.min(scale_y).max(1e-6);
 
         let view_proj = camera_view_projection(viewport_px, camera);
         let viewport_rect = ViewportRect::new(
@@ -4244,7 +4250,10 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     scale_factor,
                 };
 
-                let (blob, metrics) = services.text().prepare(&text, &style, constraints);
+                let (blob, metrics) =
+                    services
+                        .text()
+                        .prepare_str(text.as_str(), &style, constraints);
                 state.hud.last_text = text;
                 state.hud.last_scale_bits = scale_bits;
                 state.hud.blob = Some(blob);

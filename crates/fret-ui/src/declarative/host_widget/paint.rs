@@ -217,7 +217,6 @@ impl ElementHostWidget {
                 }
             }
             ElementInstance::Text(props) => {
-                let theme_revision = cx.theme().revision();
                 cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
                 let font_stack_key = cx
                     .app
@@ -257,7 +256,6 @@ impl ElementHostWidget {
                     || self.text_cache.last_wrap != Some(props.wrap)
                     || self.text_cache.last_overflow != Some(props.overflow)
                     || self.text_cache.last_width != Some(cx.bounds.size.width)
-                    || self.text_cache.last_theme_revision != Some(theme_revision)
                     || self.text_cache.last_font_stack_key != Some(font_stack_key);
 
                 if needs_prepare {
@@ -265,7 +263,9 @@ impl ElementHostWidget {
                         cx.services.text().release(blob);
                     }
                     let (blob, metrics) =
-                        cx.services.text().prepare(&props.text, &style, constraints);
+                        cx.services
+                            .text()
+                            .prepare_str(props.text.as_ref(), &style, constraints);
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
@@ -274,7 +274,6 @@ impl ElementHostWidget {
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
                     self.text_cache.last_width = Some(cx.bounds.size.width);
-                    self.text_cache.last_theme_revision = Some(theme_revision);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
                 }
 
@@ -297,7 +296,6 @@ impl ElementHostWidget {
                 });
             }
             ElementInstance::StyledText(props) => {
-                let theme_revision = cx.theme().revision();
                 cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
                 let font_stack_key = cx
                     .app
@@ -337,17 +335,18 @@ impl ElementHostWidget {
                     || self.text_cache.last_wrap != Some(props.wrap)
                     || self.text_cache.last_overflow != Some(props.overflow)
                     || self.text_cache.last_width != Some(cx.bounds.size.width)
-                    || self.text_cache.last_theme_revision != Some(theme_revision)
                     || self.text_cache.last_font_stack_key != Some(font_stack_key);
 
                 if needs_prepare {
                     if let Some(blob) = self.text_cache.blob.take() {
                         cx.services.text().release(blob);
                     }
-                    let (blob, metrics) =
-                        cx.services
-                            .text()
-                            .prepare_rich(&props.rich, &style, constraints);
+                    let input = fret_core::TextInput::attributed(
+                        props.rich.text.clone(),
+                        style.clone(),
+                        props.rich.spans.clone(),
+                    );
+                    let (blob, metrics) = cx.services.text().prepare(&input, constraints);
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
@@ -357,7 +356,6 @@ impl ElementHostWidget {
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
                     self.text_cache.last_width = Some(cx.bounds.size.width);
-                    self.text_cache.last_theme_revision = Some(theme_revision);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
                 }
 
@@ -380,7 +378,6 @@ impl ElementHostWidget {
                 });
             }
             ElementInstance::SelectableText(props) => {
-                let theme_revision = cx.theme().revision();
                 cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
                 let font_stack_key = cx
                     .app
@@ -420,17 +417,18 @@ impl ElementHostWidget {
                     || self.text_cache.last_wrap != Some(props.wrap)
                     || self.text_cache.last_overflow != Some(props.overflow)
                     || self.text_cache.last_width != Some(cx.bounds.size.width)
-                    || self.text_cache.last_theme_revision != Some(theme_revision)
                     || self.text_cache.last_font_stack_key != Some(font_stack_key);
 
                 if needs_prepare {
                     if let Some(blob) = self.text_cache.blob.take() {
                         cx.services.text().release(blob);
                     }
-                    let (blob, metrics) =
-                        cx.services
-                            .text()
-                            .prepare_rich(&props.rich, &style, constraints);
+                    let input = fret_core::TextInput::attributed(
+                        props.rich.text.clone(),
+                        style.clone(),
+                        props.rich.spans.clone(),
+                    );
+                    let (blob, metrics) = cx.services.text().prepare(&input, constraints);
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
@@ -440,7 +438,6 @@ impl ElementHostWidget {
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
                     self.text_cache.last_width = Some(cx.bounds.size.width);
-                    self.text_cache.last_theme_revision = Some(theme_revision);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
                 }
 
@@ -771,6 +768,26 @@ impl ElementHostWidget {
                     });
                 }
             }
+            ElementInstance::Canvas(_props) => {
+                let on_paint = crate::elements::with_element_state(
+                    cx.app,
+                    window,
+                    self.element,
+                    crate::canvas::CanvasPaintHooks::default,
+                    |hooks| hooks.on_paint.clone(),
+                );
+
+                self.canvas_cache.begin_paint();
+                if let Some(on_paint) = on_paint {
+                    {
+                        let mut host = crate::canvas::UiCanvasHostAdapter::new(cx);
+                        let mut painter =
+                            crate::canvas::CanvasPainter::new(&mut host, &mut self.canvas_cache);
+                        (on_paint)(&mut painter);
+                    }
+                }
+                self.canvas_cache.end_paint(cx.services);
+            }
             ElementInstance::ViewportSurface(props) => {
                 let opacity = props.opacity.clamp(0.0, 1.0);
                 if opacity <= 0.0 {
@@ -794,7 +811,7 @@ impl ElementHostWidget {
                     return;
                 }
 
-                let svg = props.svg.resolve(cx.services);
+                let svg = self.resolve_svg_for_icon(cx.services, &props.svg);
                 cx.scene.push(SceneOp::SvgMaskIcon {
                     order: DrawOrder(0),
                     rect: cx.bounds,

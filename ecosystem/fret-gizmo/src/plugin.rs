@@ -5,8 +5,8 @@ use glam::{Mat4, Vec2};
 use crate::math::{DepthRange, ViewportRect};
 use crate::picking::{PickCircle2d, PickConvexQuad2d, PickSegmentCapsule2d};
 use crate::{
-    GizmoDrawList3d, GizmoInput, GizmoPhase, GizmoPluginId, GizmoTarget3d, GizmoTargetId,
-    GizmoUpdate, HandleId,
+    GizmoDrawList3d, GizmoInput, GizmoPhase, GizmoPluginId, GizmoPropertyKey, GizmoTarget3d,
+    GizmoTargetId, GizmoUpdate, HandleId,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -60,12 +60,22 @@ pub struct GizmoPickHit {
     pub score_px: f32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct GizmoPluginContext {
+/// Read-only host domain values for gizmo plugins.
+///
+/// This keeps `fret-gizmo` as mechanism-level glue: plugins can query current values to render
+/// correct readouts and capture stable drag-start snapshots, while the host remains responsible for
+/// applying edits, validation, and undo/redo.
+pub trait GizmoPropertySource {
+    fn read_scalar(&self, target: GizmoTargetId, key: GizmoPropertyKey) -> Option<f32>;
+}
+
+#[derive(Clone, Copy)]
+pub struct GizmoPluginContext<'a> {
     pub view_projection: Mat4,
     pub viewport: ViewportRect,
     pub depth_range: DepthRange,
     pub input: GizmoInput,
+    pub properties: Option<&'a dyn GizmoPropertySource>,
     /// Cursor position at pointer-down for the current active drag.
     ///
     /// When there is no active drag, this equals `input.cursor_px`.
@@ -74,19 +84,34 @@ pub struct GizmoPluginContext {
     pub active: Option<HandleId>,
 }
 
+impl<'a> std::fmt::Debug for GizmoPluginContext<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GizmoPluginContext")
+            .field("view_projection", &self.view_projection)
+            .field("viewport", &self.viewport)
+            .field("depth_range", &self.depth_range)
+            .field("input", &self.input)
+            .field("properties", &self.properties.is_some())
+            .field("drag_start_cursor_px", &self.drag_start_cursor_px)
+            .field("hovered", &self.hovered)
+            .field("active", &self.active)
+            .finish()
+    }
+}
+
 pub trait GizmoPlugin: Any {
     fn plugin_id(&self) -> GizmoPluginId;
 
     fn draw(
         &mut self,
-        ctx: GizmoPluginContext,
+        ctx: GizmoPluginContext<'_>,
         active_target: GizmoTargetId,
         targets: &[GizmoTarget3d],
     ) -> GizmoDrawList3d;
 
     fn pick_items(
         &mut self,
-        ctx: GizmoPluginContext,
+        ctx: GizmoPluginContext<'_>,
         active_target: GizmoTargetId,
         targets: &[GizmoTarget3d],
         out: &mut Vec<GizmoPickItem>,
@@ -94,7 +119,7 @@ pub trait GizmoPlugin: Any {
 
     fn update(
         &mut self,
-        ctx: GizmoPluginContext,
+        ctx: GizmoPluginContext<'_>,
         phase: GizmoPhase,
         active_target: GizmoTargetId,
         targets: &[GizmoTarget3d],
@@ -171,6 +196,7 @@ impl GizmoPluginManager {
         active_target: GizmoTargetId,
         targets: &[GizmoTarget3d],
         input: GizmoInput,
+        properties: Option<&dyn GizmoPropertySource>,
     ) -> GizmoDrawList3d {
         let mut out = GizmoDrawList3d::default();
 
@@ -179,6 +205,7 @@ impl GizmoPluginManager {
             viewport,
             depth_range,
             input,
+            properties,
             drag_start_cursor_px: if self.state.active.is_some() {
                 self.state.drag_start_cursor_px
             } else {
@@ -205,6 +232,7 @@ impl GizmoPluginManager {
         input: GizmoInput,
         active_target: GizmoTargetId,
         targets: &[GizmoTarget3d],
+        properties: Option<&dyn GizmoPropertySource>,
     ) -> Option<GizmoUpdate> {
         if targets.is_empty() {
             self.state.hovered = None;
@@ -223,6 +251,7 @@ impl GizmoPluginManager {
                     input,
                     active_target,
                     targets,
+                    properties,
                 );
             }
 
@@ -242,6 +271,7 @@ impl GizmoPluginManager {
                             active_target,
                             targets,
                             h,
+                            properties,
                         );
                         if out.is_some() {
                             self.state.drag_has_started = true;
@@ -268,6 +298,7 @@ impl GizmoPluginManager {
                     active_target,
                     targets,
                     active,
+                    properties,
                 )
             } else {
                 None
@@ -294,6 +325,7 @@ impl GizmoPluginManager {
                     active_target,
                     targets,
                     active,
+                    properties,
                 );
                 if out.is_some() {
                     self.state.drag_has_started = true;
@@ -310,6 +342,7 @@ impl GizmoPluginManager {
                 active_target,
                 targets,
                 active,
+                properties,
             );
         }
 
@@ -323,6 +356,7 @@ impl GizmoPluginManager {
                 active_target,
                 targets,
                 active,
+                properties,
             )
         } else {
             None
@@ -341,6 +375,7 @@ impl GizmoPluginManager {
         input: GizmoInput,
         active_target: GizmoTargetId,
         targets: &[GizmoTarget3d],
+        properties: Option<&dyn GizmoPropertySource>,
     ) -> Option<HandleId> {
         self.scratch_pick_items.clear();
 
@@ -349,6 +384,7 @@ impl GizmoPluginManager {
             viewport,
             depth_range,
             input,
+            properties,
             drag_start_cursor_px: input.cursor_px,
             hovered: None,
             active: None,
@@ -391,6 +427,7 @@ impl GizmoPluginManager {
         active_target: GizmoTargetId,
         targets: &[GizmoTarget3d],
         active_handle: HandleId,
+        properties: Option<&dyn GizmoPropertySource>,
     ) -> Option<GizmoUpdate> {
         let plugin_id = active_handle.plugin();
         let ctx = GizmoPluginContext {
@@ -398,6 +435,7 @@ impl GizmoPluginManager {
             viewport,
             depth_range,
             input,
+            properties,
             drag_start_cursor_px: self.state.drag_start_cursor_px,
             hovered: self.state.hovered,
             active: self.state.active,
@@ -438,7 +476,7 @@ mod tests {
 
         fn draw(
             &mut self,
-            _ctx: GizmoPluginContext,
+            _ctx: GizmoPluginContext<'_>,
             _active_target: GizmoTargetId,
             _targets: &[GizmoTarget3d],
         ) -> GizmoDrawList3d {
@@ -447,7 +485,7 @@ mod tests {
 
         fn pick_items(
             &mut self,
-            _ctx: GizmoPluginContext,
+            _ctx: GizmoPluginContext<'_>,
             _active_target: GizmoTargetId,
             _targets: &[GizmoTarget3d],
             out: &mut Vec<GizmoPickItem>,
@@ -464,7 +502,7 @@ mod tests {
 
         fn update(
             &mut self,
-            _ctx: GizmoPluginContext,
+            _ctx: GizmoPluginContext<'_>,
             phase: GizmoPhase,
             _active_target: GizmoTargetId,
             targets: &[GizmoTarget3d],
@@ -520,6 +558,7 @@ mod tests {
             input_begin,
             targets[0].id,
             &targets,
+            None,
         );
         assert!(u0.is_some());
         assert_eq!(u0.unwrap().phase, GizmoPhase::Begin);
@@ -535,6 +574,7 @@ mod tests {
             input_update,
             targets[0].id,
             &targets,
+            None,
         );
         assert!(u1.is_some());
         assert_eq!(u1.unwrap().phase, GizmoPhase::Update);
@@ -550,6 +590,7 @@ mod tests {
             input_commit,
             targets[0].id,
             &targets,
+            None,
         );
         assert!(u2.is_some());
         assert_eq!(u2.unwrap().phase, GizmoPhase::Commit);

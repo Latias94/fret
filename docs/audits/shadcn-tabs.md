@@ -52,7 +52,7 @@ examples in `repo-ref/ui`.
 ## Validation
 
 - `cargo test -p fret-ui-shadcn --lib tabs`
-- Web layout gate: `cargo nextest run -p fret-ui-shadcn -F fret-ui/layout-engine-v2 --test web_vs_fret_layout`
+- Web layout gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
   (`web_vs_fret_layout_tabs_demo_active_tab_height`, `web_vs_fret_layout_tabs_demo_panel_gap`).
 
 ## Follow-ups (recommended)

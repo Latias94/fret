@@ -5,7 +5,7 @@
 //! - no `wgpu`/`winit`
 //! - no dependency on `fret-render`
 //!
-//! The Fret UI adapter lives in a separate crate (planned: `fret-chart`).
+//! The Fret UI adapter lives in a separate crate (`fret-chart`).
 
 pub mod action;
 pub mod coord;

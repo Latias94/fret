@@ -41,7 +41,7 @@ impl Renderer {
             self.svg_perf.cache_misses = self.svg_perf.cache_misses.saturating_add(1);
         }
 
-        let bytes = self.svgs.get(svg)?;
+        let bytes = self.svgs.get(svg).map(|e| e.bytes.as_ref())?;
         let target_box_px = (key.target_w, key.target_h);
 
         let (image, uv, size_px, approx_bytes, storage) = match kind {

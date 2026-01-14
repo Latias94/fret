@@ -5,7 +5,6 @@ use crate::test_host::TestHost;
 use crate::widget::Widget;
 use fret_core::{
     AppWindowId, Event, ImeEvent, Point, Px, Rect, Size, TextConstraints, TextMetrics, TextService,
-    TextStyle,
 };
 use fret_runtime::{Effect, PlatformCapabilities};
 use std::sync::Arc;
@@ -18,10 +17,10 @@ struct FakeTextService {
 impl TextService for FakeTextService {
     fn prepare(
         &mut self,
-        text: &str,
-        _style: &TextStyle,
+        input: &fret_core::TextInput,
         _constraints: TextConstraints,
     ) -> (fret_core::TextBlobId, TextMetrics) {
+        let text = input.text();
         self.prepared.push(text.to_string());
         (
             fret_core::TextBlobId::default(),
@@ -77,6 +76,7 @@ fn event_cx<'a>(
             caps: PlatformCapabilities::default(),
             ..Default::default()
         },
+        pointer_id: None,
         children: &[],
         focus: Some(node),
         captured: None,
@@ -119,6 +119,7 @@ fn text_input_hover_sets_text_cursor_effect() {
             position: Point::new(Px(10.0), Px(10.0)),
             buttons: fret_core::MouseButtons::default(),
             modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -213,10 +214,10 @@ struct ImeTextService {}
 impl TextService for ImeTextService {
     fn prepare(
         &mut self,
-        text: &str,
-        _style: &TextStyle,
+        input: &fret_core::TextInput,
         _constraints: TextConstraints,
     ) -> (fret_core::TextBlobId, TextMetrics) {
+        let text = input.text();
         (
             fret_core::TextBlobId::default(),
             TextMetrics {

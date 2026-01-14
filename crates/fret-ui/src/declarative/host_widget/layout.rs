@@ -127,6 +127,7 @@ impl ElementHostWidget {
             | ElementInstance::WheelRegion(_)
             | ElementInstance::Scrollbar(_)
             | ElementInstance::Image(_)
+            | ElementInstance::Canvas(_)
             | ElementInstance::ViewportSurface(_)
             | ElementInstance::SvgIcon(_)
             | ElementInstance::Spinner(_)
@@ -150,16 +151,6 @@ impl ElementHostWidget {
             _ => None,
         };
 
-        let is_flex = matches!(&instance, ElementInstance::Flex(_));
-        let is_roving_flex = matches!(&instance, ElementInstance::RovingFlex(_));
-        let is_grid = matches!(&instance, ElementInstance::Grid(_));
-        if !is_flex && !is_roving_flex {
-            self.flex_cache = None;
-        }
-        if !is_grid {
-            self.grid_cache = None;
-        }
-
         match instance {
             ElementInstance::Container(props) => {
                 let pad_left = props.padding.left.0.max(0.0);
@@ -168,8 +159,6 @@ impl ElementHostWidget {
                 let pad_bottom = props.padding.bottom.0.max(0.0);
                 let pad_w = pad_left + pad_right;
                 let pad_h = pad_top + pad_bottom;
-
-                #[cfg(feature = "layout-engine-v2")]
                 if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
                     cx,
                     window,
@@ -266,57 +255,45 @@ impl ElementHostWidget {
                 desired
             }
             ElementInstance::Pressable(props) => {
-                #[cfg(feature = "layout-engine-v2")]
-                {
-                    if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
-                        cx,
-                        window,
-                        Rect::new(cx.bounds.origin, cx.available),
-                    ) {
-                        return size;
-                    }
+                if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    return size;
                 }
 
                 self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::Semantics(props) => {
-                #[cfg(feature = "layout-engine-v2")]
-                {
-                    if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
-                        cx,
-                        window,
-                        Rect::new(cx.bounds.origin, cx.available),
-                    ) {
-                        return size;
-                    }
+                if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    return size;
                 }
 
                 self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::FocusScope(props) => {
-                #[cfg(feature = "layout-engine-v2")]
-                {
-                    if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
-                        cx,
-                        window,
-                        Rect::new(cx.bounds.origin, cx.available),
-                    ) {
-                        return size;
-                    }
+                if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    return size;
                 }
 
                 self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::Opacity(props) => {
-                #[cfg(feature = "layout-engine-v2")]
-                {
-                    if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
-                        cx,
-                        window,
-                        Rect::new(cx.bounds.origin, cx.available),
-                    ) {
-                        return size;
-                    }
+                if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    return size;
                 }
 
                 self.layout_positioned_container_impl(cx, window, props.layout)
@@ -326,15 +303,12 @@ impl ElementHostWidget {
                     return Size::new(Px(0.0), Px(0.0));
                 }
 
-                #[cfg(feature = "layout-engine-v2")]
-                {
-                    if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
-                        cx,
-                        window,
-                        Rect::new(cx.bounds.origin, cx.available),
-                    ) {
-                        return size;
-                    }
+                if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    return size;
                 }
 
                 // Pass-through wrapper (layout like Opacity/VisualTransform), but with separate
@@ -342,7 +316,6 @@ impl ElementHostWidget {
                 self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::EffectLayer(props) => {
-                #[cfg(feature = "layout-engine-v2")]
                 if cx.children.len() == 1 {
                     let child = cx.children[0];
                     let child_style = layout_style_for_node(cx.app, window, child);
@@ -388,15 +361,12 @@ impl ElementHostWidget {
                 desired
             }
             ElementInstance::VisualTransform(props) => {
-                #[cfg(feature = "layout-engine-v2")]
-                {
-                    if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
-                        cx,
-                        window,
-                        Rect::new(cx.bounds.origin, cx.available),
-                    ) {
-                        return size;
-                    }
+                if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    return size;
                 }
 
                 self.layout_positioned_container_impl(cx, window, props.layout)
@@ -405,16 +375,13 @@ impl ElementHostWidget {
                 // Pass-through wrapper (layout like Opacity/VisualTransform), but with an explicit
                 // render transform that affects hit-testing and pointer coordinate mapping.
 
-                #[cfg(feature = "layout-engine-v2")]
-                {
-                    if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
-                        cx,
-                        window,
-                        Rect::new(cx.bounds.origin, cx.available),
-                    ) {
-                        self.render_transform = Some(props.transform);
-                        return size;
-                    }
+                if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    self.render_transform = Some(props.transform);
+                    return size;
                 }
 
                 // Probe within the available height budget so measurement passes do not observe an
@@ -472,7 +439,6 @@ impl ElementHostWidget {
                     .filter(|bounds| *bounds != Rect::default())
                     .unwrap_or(props.anchor);
 
-                #[cfg(feature = "layout-engine-v2")]
                 if cx.children.len() == 1 {
                     let child = cx.children[0];
                     let child_style = layout_style_for_node(cx.app, window, child);
@@ -578,7 +544,6 @@ impl ElementHostWidget {
                 let desired = clamp_to_constraints(cx.available, props.layout, cx.available);
                 let base = cx.bounds;
 
-                #[cfg(feature = "layout-engine-v2")]
                 if let Some(size) =
                     try_layout_children_from_engine_or_manual_absolute(cx, window, base)
                 {
@@ -592,7 +557,6 @@ impl ElementHostWidget {
                 desired
             }
             ElementInstance::Stack(props) => {
-                #[cfg(feature = "layout-engine-v2")]
                 if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
                     cx,
                     window,
@@ -607,7 +571,6 @@ impl ElementHostWidget {
                 clamp_to_constraints(Size::new(Px(0.0), Px(0.0)), props.layout, cx.available)
             }
             ElementInstance::Text(props) => {
-                let theme_revision = cx.theme().revision();
                 cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
                 let font_stack_key = cx
                     .app
@@ -651,13 +614,13 @@ impl ElementHostWidget {
                     && self.text_cache.last_overflow == Some(props.overflow)
                     && self.text_cache.last_measure_width == Some(measure_width)
                     && self.text_cache.measured_scale_factor_bits == Some(scale_bits)
-                    && self.text_cache.last_theme_revision == Some(theme_revision)
                     && self.text_cache.last_font_stack_key == Some(font_stack_key);
 
                 let metrics = if can_reuse_metrics {
                     self.text_cache.metrics.expect("cached metrics")
                 } else {
-                    let metrics = cx.services.text().measure(&props.text, &style, constraints);
+                    let input = fret_core::TextInput::plain(props.text.clone(), style.clone());
+                    let metrics = cx.services.text().measure(&input, constraints);
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.measured_scale_factor_bits = Some(scale_bits);
                     self.text_cache.last_text = Some(props.text.clone());
@@ -665,17 +628,13 @@ impl ElementHostWidget {
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
                     self.text_cache.last_measure_width = Some(measure_width);
-                    self.text_cache.last_theme_revision = Some(theme_revision);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
                     metrics
                 };
 
-                let _ = theme_revision;
-
                 clamp_to_constraints(metrics.size, props.layout, cx.available)
             }
             ElementInstance::StyledText(props) => {
-                let theme_revision = cx.theme().revision();
                 cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
                 let font_stack_key = cx
                     .app
@@ -719,16 +678,17 @@ impl ElementHostWidget {
                     && self.text_cache.last_overflow == Some(props.overflow)
                     && self.text_cache.last_measure_width == Some(measure_width)
                     && self.text_cache.measured_scale_factor_bits == Some(scale_bits)
-                    && self.text_cache.last_theme_revision == Some(theme_revision)
                     && self.text_cache.last_font_stack_key == Some(font_stack_key);
 
                 let metrics = if can_reuse_metrics {
                     self.text_cache.metrics.expect("cached metrics")
                 } else {
-                    let metrics = cx
-                        .services
-                        .text()
-                        .measure_rich(&props.rich, &style, constraints);
+                    let input = fret_core::TextInput::attributed(
+                        props.rich.text.clone(),
+                        style.clone(),
+                        props.rich.spans.clone(),
+                    );
+                    let metrics = cx.services.text().measure(&input, constraints);
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.measured_scale_factor_bits = Some(scale_bits);
                     self.text_cache.last_text = None;
@@ -737,7 +697,6 @@ impl ElementHostWidget {
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
                     self.text_cache.last_measure_width = Some(measure_width);
-                    self.text_cache.last_theme_revision = Some(theme_revision);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
                     metrics
                 };
@@ -745,7 +704,6 @@ impl ElementHostWidget {
                 clamp_to_constraints(metrics.size, props.layout, cx.available)
             }
             ElementInstance::SelectableText(props) => {
-                let theme_revision = cx.theme().revision();
                 cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
                 let font_stack_key = cx
                     .app
@@ -789,16 +747,17 @@ impl ElementHostWidget {
                     && self.text_cache.last_overflow == Some(props.overflow)
                     && self.text_cache.last_measure_width == Some(measure_width)
                     && self.text_cache.measured_scale_factor_bits == Some(scale_bits)
-                    && self.text_cache.last_theme_revision == Some(theme_revision)
                     && self.text_cache.last_font_stack_key == Some(font_stack_key);
 
                 let metrics = if can_reuse_metrics {
                     self.text_cache.metrics.expect("cached metrics")
                 } else {
-                    let metrics = cx
-                        .services
-                        .text()
-                        .measure_rich(&props.rich, &style, constraints);
+                    let input = fret_core::TextInput::attributed(
+                        props.rich.text.clone(),
+                        style.clone(),
+                        props.rich.spans.clone(),
+                    );
+                    let metrics = cx.services.text().measure(&input, constraints);
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.measured_scale_factor_bits = Some(scale_bits);
                     self.text_cache.last_text = None;
@@ -807,7 +766,6 @@ impl ElementHostWidget {
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
                     self.text_cache.last_measure_width = Some(measure_width);
-                    self.text_cache.last_theme_revision = Some(theme_revision);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
                     metrics
                 };
@@ -882,6 +840,9 @@ impl ElementHostWidget {
             ElementInstance::Image(props) => {
                 clamp_to_constraints(cx.available, props.layout, cx.available)
             }
+            ElementInstance::Canvas(props) => {
+                clamp_to_constraints(cx.available, props.layout, cx.available)
+            }
             ElementInstance::ViewportSurface(props) => {
                 clamp_to_constraints(cx.available, props.layout, cx.available)
             }
@@ -892,7 +853,6 @@ impl ElementHostWidget {
                 clamp_to_constraints(Size::new(Px(16.0), Px(16.0)), props.layout, cx.available)
             }
             ElementInstance::PointerRegion(props) => {
-                #[cfg(feature = "layout-engine-v2")]
                 if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
                     cx,
                     window,
@@ -903,23 +863,19 @@ impl ElementHostWidget {
                 self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::HoverRegion(props) => {
-                #[cfg(feature = "layout-engine-v2")]
+                let has_absolute_child = cx.children.iter().copied().any(|child| {
+                    layout_style_for_node(cx.app, window, child).position
+                        == crate::element::PositionStyle::Absolute
+                });
+                if !has_absolute_child
+                    && let Some(size) =
+                        crate::layout_engine::layout_children_from_engine_if_solved(cx)
                 {
-                    let has_absolute_child = cx.children.iter().copied().any(|child| {
-                        layout_style_for_node(cx.app, window, child).position
-                            == crate::element::PositionStyle::Absolute
-                    });
-                    if !has_absolute_child
-                        && let Some(size) =
-                            crate::layout_engine::layout_children_from_engine_if_solved(cx)
-                    {
-                        return size;
-                    }
+                    return size;
                 }
                 self.layout_hover_region_impl(cx, window, props.layout)
             }
             ElementInstance::WheelRegion(props) => {
-                #[cfg(feature = "layout-engine-v2")]
                 if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
                     cx,
                     window,
@@ -945,7 +901,6 @@ fn probe_constraints_for_size(size: Size) -> LayoutConstraints {
     )
 }
 
-#[cfg(feature = "layout-engine-v2")]
 fn try_layout_children_from_engine_or_manual_absolute<H: UiHost>(
     cx: &mut LayoutCx<'_, H>,
     window: AppWindowId,
@@ -960,7 +915,6 @@ fn try_layout_children_from_engine_or_manual_absolute<H: UiHost>(
     try_layout_children_from_engine_with_manual_absolute(cx, window, base_for_absolute)
 }
 
-#[cfg(feature = "layout-engine-v2")]
 fn try_layout_children_from_engine_with_manual_absolute<H: UiHost>(
     cx: &mut LayoutCx<'_, H>,
     window: AppWindowId,

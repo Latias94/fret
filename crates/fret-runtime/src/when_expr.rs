@@ -1,7 +1,7 @@
 use crate::InputContext;
 use crate::capabilities::{CapabilityValueKind, capability_key_kind};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct WhenExpr(Expr);
 
 impl WhenExpr {
@@ -54,7 +54,7 @@ pub enum WhenExprValidationError {
     },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum Expr {
     Bool(bool),
     Str(String),
@@ -65,7 +65,7 @@ enum Expr {
     Eq(Value, Value, bool /* is_equal */),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum Value {
     Bool(bool),
     Str(String),

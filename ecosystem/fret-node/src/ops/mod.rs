@@ -5,12 +5,13 @@ mod build;
 mod fragment;
 mod history;
 mod normalize;
+mod tx_sanity;
 
 use serde::{Deserialize, Serialize};
 
 use crate::core::{
     CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Group, GroupId, Node, NodeId,
-    Port, PortId, StickyNote, StickyNoteId, Symbol, SymbolId,
+    NodeKindKey, Port, PortId, StickyNote, StickyNoteId, Symbol, SymbolId,
 };
 
 pub use apply::{ApplyError, apply_op, apply_transaction};
@@ -18,6 +19,7 @@ pub use build::GraphOpBuilderExt;
 pub use fragment::{GraphFragment, IdRemapSeed, IdRemapper, PasteTuning};
 pub use history::{DEFAULT_HISTORY_LIMIT, GraphHistory, invert_transaction};
 pub(crate) use normalize::normalize_transaction;
+pub(crate) use tx_sanity::{find_invalid_size_in_tx, find_non_finite_in_tx};
 
 /// Edge endpoint pair (from/to ports).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -52,6 +54,14 @@ pub enum GraphOp {
         from: CanvasPoint,
         to: CanvasPoint,
     },
+    /// Sets a node kind identifier.
+    SetNodeKind {
+        id: NodeId,
+        from: NodeKindKey,
+        to: NodeKindKey,
+    },
+    /// Sets a node kind version (for per-kind migrations).
+    SetNodeKindVersion { id: NodeId, from: u32, to: u32 },
     /// Sets a node parent container (group frame).
     SetNodeParent {
         id: NodeId,
