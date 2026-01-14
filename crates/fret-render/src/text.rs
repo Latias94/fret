@@ -2818,6 +2818,88 @@ mod tests {
     }
 
     #[test]
+    fn cjk_glyphs_populate_mask_or_subpixel_atlas_when_cjk_lite_font_is_available() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .chain(fret_fonts::cjk_lite_fonts().iter())
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let family = "Noto Sans CJK SC";
+        assert!(
+            text.all_font_names()
+                .iter()
+                .any(|n| n.eq_ignore_ascii_case(family)),
+            "expected {family} to be present after loading cjk-lite fonts"
+        );
+
+        let style = TextStyle {
+            font: fret_core::FontId::family(family),
+            size: Px(24.0),
+            ..Default::default()
+        };
+        let constraints = TextConstraints {
+            max_width: Some(Px(360.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+
+        let cases = [
+            ("你好，世界！", "basic"),
+            ("这是一段用于验证换行与标点处理的文本。", "wrapping"),
+            ("数字 12345 与符号（）《》“”……", "punctuation"),
+        ];
+
+        for (text_str, label) in cases {
+            let (blob_id, _metrics) = text.prepare(text_str, &style, constraints);
+            let blob = text.blob(blob_id).expect("text blob");
+
+            let glyphs = blob.shape.glyphs.as_ref();
+            assert!(
+                !glyphs.is_empty(),
+                "expected shaped glyphs for CJK case {label}"
+            );
+
+            let mut non_color: Vec<super::GlyphKey> = Vec::new();
+            for g in glyphs {
+                match g.kind() {
+                    super::GlyphQuadKind::Mask | super::GlyphQuadKind::Subpixel => {
+                        non_color.push(g.key);
+                    }
+                    super::GlyphQuadKind::Color => {}
+                }
+            }
+
+            assert!(
+                !non_color.is_empty(),
+                "expected at least one mask/subpixel glyph for CJK case {label}"
+            );
+
+            let epoch = 1;
+            for key in non_color {
+                text.ensure_glyph_in_atlas(key, epoch);
+                match key.kind {
+                    super::GlyphQuadKind::Mask => assert!(
+                        text.mask_atlas.get(key, epoch).is_some(),
+                        "expected mask glyph to be present in mask atlas after ensure ({label})"
+                    ),
+                    super::GlyphQuadKind::Subpixel => assert!(
+                        text.subpixel_atlas.get(key, epoch).is_some(),
+                        "expected subpixel glyph to be present in subpixel atlas after ensure ({label})"
+                    ),
+                    super::GlyphQuadKind::Color => {}
+                }
+            }
+        }
+    }
+
+    #[test]
     fn span_fingerprints_split_shaping_and_paint() {
         let constraints = TextConstraints {
             max_width: Some(Px(200.0)),
