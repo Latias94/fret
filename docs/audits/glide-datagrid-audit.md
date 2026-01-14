@@ -127,6 +127,19 @@ Summary (last rolling window, 240 samples):
 | 1m × 200 (fixed) | 0.004 / 0.005 | 4.740 | 33060 |
 | 1m × 200 (variable) | 0.006 / 0.008 | 4.120 | 24095 |
 
+Updated baseline (stable, 3 iterations, median; output moved off repo disk):
+
+- Script defaults to `G:\\bench\\canvas-datagrid\\...` when `SCCACHE_DIR` is set.
+- Commit: `fd4cae9f539ada0d8c4a1d4caad760dcba3931a4`
+- Output: `G:\\bench\\canvas-datagrid\\20260115-001530\\summary_agg.csv`
+
+| Case | Visible (rows×cols/cells) | Grid compute median (ms) | Renderer `prepare_text` median (ms) | Renderer `draws` median |
+| --- | --- | --- | --- | --- |
+| 200k × 200 (fixed) | 39×14 / 546 | 0.006 | 10.600 | 33611 |
+| 200k × 200 (variable) | 30×13 / 390 | 0.008 | 8.420 | 23700 |
+| 1m × 200 (fixed) | 39×14 / 546 | 0.005 | 10.290 | 33060 |
+| 1m × 200 (variable) | 30×13 / 390 | 0.009 | 9.610 | 23700 |
+
 Interpretation:
 
 - Grid viewport/visible list math is already “in the noise” on high-end hardware.
