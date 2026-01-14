@@ -109,7 +109,7 @@ pub fn register_droppable_rect<H: UiHost>(
     disabled: bool,
 ) {
     let frame_id = app.frame_id();
-    with_dnd_mut(app, |svc, app| {
+    with_dnd_mut(app, |svc, _app| {
         let snapshot = svc.registry.snapshot_mut_for_frame(window, frame_id);
         snapshot.droppables.push(Droppable {
             id,
@@ -117,7 +117,6 @@ pub fn register_droppable_rect<H: UiHost>(
             disabled,
             z_index,
         });
-        let _ = app;
     });
 }
 
@@ -128,10 +127,9 @@ pub fn register_draggable_rect<H: UiHost>(
     rect: Rect,
 ) {
     let frame_id = app.frame_id();
-    with_dnd_mut(app, |svc, app| {
+    with_dnd_mut(app, |svc, _app| {
         let snapshot = svc.registry.snapshot_mut_for_frame(window, frame_id);
         snapshot.draggables.push(Draggable { id, rect });
-        let _ = app;
     });
 }
 
