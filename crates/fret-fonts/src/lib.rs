@@ -4,29 +4,102 @@
 //! - Web/WASM cannot access system fonts, so applications must provide font bytes.
 //! - This crate provides a small default font to bootstrap demos and simple apps.
 
+#[cfg(feature = "bootstrap-full")]
+const BOOTSTRAP_FONTS: &[&[u8]] = &[
+    include_bytes!("../assets/Inter-roman.ttf"),
+    include_bytes!("../assets/Inter-italic.ttf"),
+    include_bytes!("../assets/JetBrainsMono-roman.ttf"),
+    include_bytes!("../assets/JetBrainsMono-italic.ttf"),
+    include_bytes!("../assets/FiraMono-subset.ttf"),
+];
+
+#[cfg(all(feature = "bootstrap-subset", not(feature = "bootstrap-full")))]
+const BOOTSTRAP_FONTS: &[&[u8]] = &[
+    include_bytes!("../assets/Inter-roman-subset.ttf"),
+    include_bytes!("../assets/Inter-italic-subset.ttf"),
+    include_bytes!("../assets/JetBrainsMono-roman-subset.ttf"),
+    include_bytes!("../assets/JetBrainsMono-italic-subset.ttf"),
+    include_bytes!("../assets/FiraMono-subset.ttf"),
+];
+
+#[cfg(all(not(feature = "bootstrap-subset"), not(feature = "bootstrap-full")))]
+const BOOTSTRAP_FONTS: &[&[u8]] = &[include_bytes!("../assets/FiraMono-subset.ttf")];
+
+#[cfg(all(feature = "emoji", feature = "bootstrap-full"))]
+const DEFAULT_FONTS: &[&[u8]] = &[
+    include_bytes!("../assets/NotoColorEmoji.ttf"),
+    include_bytes!("../assets/Inter-roman.ttf"),
+    include_bytes!("../assets/Inter-italic.ttf"),
+    include_bytes!("../assets/JetBrainsMono-roman.ttf"),
+    include_bytes!("../assets/JetBrainsMono-italic.ttf"),
+    include_bytes!("../assets/FiraMono-subset.ttf"),
+];
+
+#[cfg(all(not(feature = "emoji"), feature = "bootstrap-full"))]
+const DEFAULT_FONTS: &[&[u8]] = &[
+    include_bytes!("../assets/Inter-roman.ttf"),
+    include_bytes!("../assets/Inter-italic.ttf"),
+    include_bytes!("../assets/JetBrainsMono-roman.ttf"),
+    include_bytes!("../assets/JetBrainsMono-italic.ttf"),
+    include_bytes!("../assets/FiraMono-subset.ttf"),
+];
+
+#[cfg(all(
+    feature = "emoji",
+    feature = "bootstrap-subset",
+    not(feature = "bootstrap-full")
+))]
+const DEFAULT_FONTS: &[&[u8]] = &[
+    include_bytes!("../assets/NotoColorEmoji.ttf"),
+    include_bytes!("../assets/Inter-roman-subset.ttf"),
+    include_bytes!("../assets/Inter-italic-subset.ttf"),
+    include_bytes!("../assets/JetBrainsMono-roman-subset.ttf"),
+    include_bytes!("../assets/JetBrainsMono-italic-subset.ttf"),
+    include_bytes!("../assets/FiraMono-subset.ttf"),
+];
+
+#[cfg(all(
+    not(feature = "emoji"),
+    feature = "bootstrap-subset",
+    not(feature = "bootstrap-full")
+))]
+const DEFAULT_FONTS: &[&[u8]] = &[
+    include_bytes!("../assets/Inter-roman-subset.ttf"),
+    include_bytes!("../assets/Inter-italic-subset.ttf"),
+    include_bytes!("../assets/JetBrainsMono-roman-subset.ttf"),
+    include_bytes!("../assets/JetBrainsMono-italic-subset.ttf"),
+    include_bytes!("../assets/FiraMono-subset.ttf"),
+];
+
+#[cfg(all(
+    feature = "emoji",
+    not(feature = "bootstrap-subset"),
+    not(feature = "bootstrap-full")
+))]
+const DEFAULT_FONTS: &[&[u8]] = &[
+    include_bytes!("../assets/NotoColorEmoji.ttf"),
+    include_bytes!("../assets/FiraMono-subset.ttf"),
+];
+
+#[cfg(all(
+    not(feature = "emoji"),
+    not(feature = "bootstrap-subset"),
+    not(feature = "bootstrap-full")
+))]
+const DEFAULT_FONTS: &[&[u8]] = &[include_bytes!("../assets/FiraMono-subset.ttf")];
+
 /// Returns the default font bytes (TTF/OTF/TTC) that can be fed to `Effect::TextAddFonts`.
 pub fn default_fonts() -> &'static [&'static [u8]] {
-    &[
-        #[cfg(feature = "emoji")]
-        include_bytes!("../assets/NotoColorEmoji.ttf"),
-        #[cfg(feature = "bootstrap-full")]
-        include_bytes!("../assets/Inter-roman.ttf"),
-        #[cfg(feature = "bootstrap-full")]
-        include_bytes!("../assets/Inter-italic.ttf"),
-        #[cfg(feature = "bootstrap-full")]
-        include_bytes!("../assets/JetBrainsMono-roman.ttf"),
-        #[cfg(feature = "bootstrap-full")]
-        include_bytes!("../assets/JetBrainsMono-italic.ttf"),
-        #[cfg(all(feature = "bootstrap-subset", not(feature = "bootstrap-full")))]
-        include_bytes!("../assets/Inter-roman-subset.ttf"),
-        #[cfg(all(feature = "bootstrap-subset", not(feature = "bootstrap-full")))]
-        include_bytes!("../assets/Inter-italic-subset.ttf"),
-        #[cfg(all(feature = "bootstrap-subset", not(feature = "bootstrap-full")))]
-        include_bytes!("../assets/JetBrainsMono-roman-subset.ttf"),
-        #[cfg(all(feature = "bootstrap-subset", not(feature = "bootstrap-full")))]
-        include_bytes!("../assets/JetBrainsMono-italic-subset.ttf"),
-        include_bytes!("../assets/FiraMono-subset.ttf"),
-    ]
+    DEFAULT_FONTS
+}
+
+pub fn bootstrap_fonts() -> &'static [&'static [u8]] {
+    BOOTSTRAP_FONTS
+}
+
+#[cfg(feature = "emoji")]
+pub fn emoji_fonts() -> &'static [&'static [u8]] {
+    &[include_bytes!("../assets/NotoColorEmoji.ttf")]
 }
 
 #[cfg(test)]
