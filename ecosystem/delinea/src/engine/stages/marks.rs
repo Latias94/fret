@@ -5,8 +5,8 @@ use crate::engine::ChartState;
 use crate::engine::lod::{
     BoundsAccum, BoundsCursor, DataBounds, LodScratch, MinMaxPerPixelCursor,
     compute_bounds_step_selection, compute_bounds_step_selection_with, finalize_bounds,
-    minmax_per_pixel_finalize, minmax_per_pixel_step_segmented_with, minmax_per_pixel_step_selection,
-    minmax_per_pixel_step_selection_with,
+    minmax_per_pixel_finalize, minmax_per_pixel_step_segmented_with,
+    minmax_per_pixel_step_selection, minmax_per_pixel_step_selection_with,
 };
 use crate::engine::model::ChartModel;
 use crate::engine::window::{DataWindow, DataWindowX, DataWindowY};
