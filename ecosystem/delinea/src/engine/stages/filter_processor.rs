@@ -216,8 +216,7 @@ impl FilterProcessorStage {
         data_views: &DataViewStage,
     ) -> FilterProcessorResult {
         let mut xy_weak_filter_pending = false;
-        let mut xy_weak_filter_applied = false;
-        let mut y_filter_applied = false;
+        let mut view_changed = false;
 
         const MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN: usize = 200_000;
 
@@ -361,21 +360,87 @@ impl FilterProcessorStage {
                 let series_view = &mut view.series[series_view_index];
                 if series_view.selection != sel {
                     series_view.selection = sel;
-                    xy_weak_filter_applied = true;
+                    view_changed = true;
                 }
                 if series_view.x_policy.filter != Default::default() {
                     series_view.x_policy.filter = Default::default();
-                    xy_weak_filter_applied = true;
+                    view_changed = true;
                 }
             } else {
                 xy_weak_filter_pending = true;
             }
         }
 
-        if xy_weak_filter_applied {
-            view.revision.bump();
-            for series_view in &mut view.series {
-                series_view.revision = view.revision;
+        // X indices materialization: for large non-monotonic views, `DataViewStage` can build an indices-backed
+        // selection as an optimization carrier. When available, apply it to the live view so downstream
+        // consumers can iterate the filtered space without consulting the X predicate.
+        //
+        // ADR 1150:
+        // - `Filter` / `WeakFilter` may use indices views as an optimization carrier.
+        // - `Empty` must preserve a stable row/index space (avoid indices-backed selections).
+        for series_id in &model.series_order {
+            let Some(series) = model.series.get(series_id) else {
+                continue;
+            };
+            if !series.visible {
+                continue;
+            }
+
+            let Some(series_view_index) = view.series.iter().position(|v| v.series == *series_id)
+            else {
+                continue;
+            };
+            let series_view = &mut view.series[series_view_index];
+
+            if !matches!(
+                series_view.x_filter_mode,
+                crate::spec::FilterMode::Filter | crate::spec::FilterMode::WeakFilter
+            ) {
+                continue;
+            }
+
+            if matches!(series_view.selection, RowSelection::Indices(_)) {
+                continue;
+            }
+
+            let x_filter = series_view.x_policy.filter;
+            if x_filter.min.is_none() && x_filter.max.is_none() {
+                continue;
+            }
+
+            let Some(table) = datasets.dataset(series.dataset) else {
+                continue;
+            };
+            let Some(dataset) = model.datasets.get(&series.dataset) else {
+                continue;
+            };
+            let Some(x_col) = dataset.fields.get(&series.encode.x).copied() else {
+                continue;
+            };
+
+            let selection_range = series_view.selection.as_range(table.row_count);
+            let selection_range = crate::transform::RowRange {
+                start: selection_range.start,
+                end: selection_range.end,
+            };
+
+            let Some(sel) = data_views.selection_for(
+                series.dataset,
+                x_col,
+                selection_range,
+                x_filter,
+                table.revision,
+            ) else {
+                continue;
+            };
+
+            if series_view.selection != sel {
+                series_view.selection = sel;
+                view_changed = true;
+            }
+            if series_view.x_policy.filter != Default::default() {
+                series_view.x_policy.filter = Default::default();
+                view_changed = true;
             }
         }
 
@@ -505,10 +570,10 @@ impl FilterProcessorStage {
             if series_view.x_policy.filter != Default::default() {
                 series_view.x_policy.filter = Default::default();
             }
-            y_filter_applied = true;
+            view_changed = true;
         }
 
-        if y_filter_applied {
+        if view_changed {
             view.revision.bump();
             for series_view in &mut view.series {
                 series_view.revision = view.revision;
