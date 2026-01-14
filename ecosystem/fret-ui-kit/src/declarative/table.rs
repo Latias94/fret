@@ -118,6 +118,10 @@ pub struct TableViewProps {
     pub overscan: usize,
     pub default_column_width: Px,
     pub min_column_width: Px,
+    /// When `true`, clicking a sortable header updates `TableState.sorting`.
+    ///
+    /// This is a UI-side interaction toggle; sorting math still lives in the headless engine.
+    pub enable_sorting: bool,
     pub enable_column_resizing: bool,
     pub column_resize_mode: ColumnResizeMode,
     pub column_resize_direction: ColumnResizeDirection,
@@ -125,6 +129,11 @@ pub struct TableViewProps {
     pub grouped_column_mode: GroupedColumnMode,
     pub enable_row_selection: bool,
     pub single_row_selection: bool,
+    /// When `false`, the table does not render an outer border/radius frame.
+    ///
+    /// This is useful when embedding the table inside a higher-level component that owns the
+    /// surrounding chrome (e.g. a shadcn recipe with its own border + radius).
+    pub draw_frame: bool,
     /// When enabled, paints table cell backgrounds/borders in a separate layer from cell content.
     ///
     /// This is a targeted performance knob intended to reduce renderer pipeline switches for
@@ -156,6 +165,7 @@ impl Default for TableViewProps {
             overscan: 2,
             default_column_width: Px(160.0),
             min_column_width: Px(40.0),
+            enable_sorting: true,
             enable_column_resizing: true,
             column_resize_mode: ColumnResizeMode::OnEnd,
             column_resize_direction: ColumnResizeDirection::Ltr,
@@ -163,6 +173,7 @@ impl Default for TableViewProps {
             grouped_column_mode: GroupedColumnMode::Reorder,
             enable_row_selection: true,
             single_row_selection: true,
+            draw_frame: true,
             optimize_paint_order: false,
             optimize_grid_lines: false,
         }
@@ -722,9 +733,17 @@ pub fn table_virtualized<H: UiHost, TData>(
                         layout
                     },
                     background: Some(table_bg),
-                    border: Edges::all(Px(1.0)),
-                    border_color: Some(border),
-                    corner_radii: Corners::all(radius),
+                    border: if props.draw_frame {
+                        Edges::all(Px(1.0))
+                    } else {
+                        Edges::all(Px(0.0))
+                    },
+                    border_color: if props.draw_frame { Some(border) } else { None },
+                    corner_radii: if props.draw_frame {
+                        Corners::all(radius)
+                    } else {
+                        Corners::all(Px(0.0))
+                    },
                     ..Default::default()
                 },
                 |cx| {
@@ -822,8 +841,8 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                             |cx| {
                                                                                 let mut pieces = Vec::new();
 
-                                                                                let enabled =
-                                                                                    col.sort_cmp.is_some();
+                                                                                let enabled = props.enable_sorting
+                                                                                    && col.sort_cmp.is_some();
                                                                                 let col_id = col.id.clone();
                                                                                 let state_model =
                                                                                     state.clone();
@@ -864,15 +883,8 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                             );
                                                                                         }
 
-                                                                                        let mut cell =
+                                                                                        let cell =
                                                                                             render_header_cell(cx, col, sort_state);
-                                                                                        if let Some(desc) = sort_state {
-                                                                                            cell.push(cx.text(if desc {
-                                                                                                " ▼"
-                                                                                            } else {
-                                                                                                " ▲"
-                                                                                            }));
-                                                                                        }
                                                                                         vec![cx.container(
                                                                                             ContainerProps {
                                                                                                 padding: Edges::symmetric(

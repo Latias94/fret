@@ -615,13 +615,20 @@ impl WinitAppDriver for TableStressDriver {
                                                         ..Default::default()
                                                     },
                                                     |_row| None,
-                                                    |cx, col, _sort| {
-                                                        let label: Arc<str> = match col.id.as_ref() {
+                                                    |cx, col, sort_state| {
+                                                        let label_base: Arc<str> = match col.id.as_ref() {
                                                             "id" => col_label_id.clone(),
                                                             "name" => col_label_name.clone(),
                                                             "role" => col_label_role.clone(),
                                                             "score" => col_label_score.clone(),
                                                             _ => Arc::from(col.id.as_ref()),
+                                                        };
+                                                        let label: Arc<str> = if let Some(desc) = sort_state {
+                                                            let mut s = label_base.to_string();
+                                                            s.push_str(if desc { " ▼" } else { " ▲" });
+                                                            Arc::from(s)
+                                                        } else {
+                                                            label_base
                                                         };
                                                         vec![cx.text(label)]
                                                     },

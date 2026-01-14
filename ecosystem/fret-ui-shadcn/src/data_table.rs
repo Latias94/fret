@@ -1,41 +1,39 @@
 use std::sync::Arc;
 
 use fret_core::geometry::Edges;
-use fret_core::{Color, Px};
+use fret_core::{Axis, Color, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
-use fret_ui::action::OnActivate;
-use fret_ui::element::{
-    AnyElement, ColumnProps, GridProps, LayoutStyle, Length, MainAlign, Overflow, PressableProps,
-    ScrollAxis, WheelRegionProps,
-};
+use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, Overflow, TextProps};
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::table::{TableViewProps, table_virtualized};
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius};
 
-use fret_ui_kit::headless::table::{
-    ColumnDef, RowKey, Table, TableState, is_row_selected, toggle_sort_for_column,
-};
-
-use crate::table::{TableCell, TableHead, TableRow};
+use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState};
 
 fn border_color(theme: &Theme) -> Color {
     theme.color_required("border")
 }
 
-fn row_height_px(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("component.table.row_min_h")
-        .unwrap_or(Px(40.0))
-}
+fn table_text_style(theme: &Theme) -> TextStyle {
+    let px = theme
+        .metric_by_key("component.table.text_px")
+        .or_else(|| theme.metric_by_key("font.size"))
+        .unwrap_or_else(|| theme.metric_required("font.size"));
+    let line_height = theme
+        .metric_by_key("component.table.line_height")
+        .or_else(|| theme.metric_by_key("font.line_height"))
+        .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
-fn list_layout_style() -> LayoutStyle {
-    let mut layout = LayoutStyle::default();
-    layout.size.width = Length::Fill;
-    layout.flex.grow = 1.0;
-    layout.flex.shrink = 1.0;
-    layout.flex.basis = Length::Px(Px(0.0));
-    layout
+    TextStyle {
+        font: FontId::default(),
+        size: px,
+        weight: FontWeight::NORMAL,
+        slant: Default::default(),
+        line_height: Some(line_height),
+        letter_spacing_em: None,
+    }
 }
 
 fn mixed_revision(a: u64, b: u64) -> u64 {
@@ -119,42 +117,11 @@ impl DataTable {
 
         let theme = Theme::global(&*cx.app).clone();
         let border = border_color(&theme);
-        let row_height = row_height.unwrap_or_else(|| row_height_px(&theme));
 
-        let state_value = cx
-            .app
-            .models()
-            .read(&state, |v| v.clone())
-            .unwrap_or_default();
         let state_revision = state.revision(&*cx.app).unwrap_or(0);
         let items_revision = mixed_revision(data_revision, state_revision);
 
-        let table = Table::builder(data.as_ref())
-            .columns(columns)
-            .state(state_value)
-            .get_row_key(get_row_key)
-            .build();
-
-        let visible_columns: Arc<[ColumnDef<TData>]> = table
-            .visible_columns()
-            .into_iter()
-            .cloned()
-            .collect::<Vec<_>>()
-            .into();
-        let visible_headers: Arc<[Arc<str>]> = visible_columns
-            .iter()
-            .map(|c| header_label(c))
-            .collect::<Vec<_>>()
-            .into();
-
-        let row_model = table.row_model().clone();
-        let row_keys: Arc<[u64]> = row_model
-            .flat_rows()
-            .iter()
-            .filter_map(|&i| row_model.row(i).map(|r| r.key.0))
-            .collect::<Vec<_>>()
-            .into();
-        let rows = row_keys.len();
+        let columns: Arc<[ColumnDef<TData>]> = columns.into();
 
         let root_chrome = ChromeRefinement::default()
             .rounded(Radius::Lg)
@@ -166,173 +133,90 @@ impl DataTable {
 
         cx.container(root_props, move |cx| {
             let theme = Theme::global(&*cx.app).clone();
-            let border = border_color(&theme);
-
-            let cols = visible_columns.len().max(1) as u16;
             let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
-            let mut options = fret_ui::element::VirtualListOptions::new(row_height, overscan);
-            options.items_revision = items_revision;
-            options.measure_mode = fret_ui::element::VirtualListMeasureMode::Fixed;
-            options.key_cache = fret_ui::element::VirtualListKeyCacheMode::VisibleOnly;
 
-            let state_for_rows = state.clone();
-            let row_model_for_rows = row_model.clone();
-            let cols_for_rows = visible_columns.clone();
+            let header_style = TextStyle {
+                weight: FontWeight::MEDIUM,
+                ..table_text_style(&theme)
+            };
+            let header_fg = theme.color_required("foreground");
+            let sort_fg = theme.color_required("muted-foreground");
+
+            let get_row_key = Arc::new(get_row_key);
+            let header_label = Arc::new(header_label);
             let cell_at = Arc::new(cell_at);
-            let body = cx.virtual_list_keyed_with_layout(
-                list_layout_style(),
-                rows,
-                options,
+
+            let mut view_props = TableViewProps::default();
+            view_props.overscan = overscan;
+            view_props.row_height = row_height;
+            view_props.enable_column_grouping = false;
+            view_props.enable_column_resizing = false;
+            view_props.draw_frame = false;
+
+            let row_key_at = move |d: &TData, index: usize| (get_row_key)(d, index, None);
+
+            let columns = columns.clone();
+            let state = state.clone();
+            let data = data.clone();
+            vec![table_virtualized(
+                cx,
+                data.as_ref(),
+                columns.as_ref(),
+                state,
                 &scroll_handle,
-                {
-                    let row_keys = row_keys.clone();
-                    move |i| row_keys.get(i).copied().unwrap_or(i as u64)
-                },
-                move |cx, i| {
-                    let key_u64 = row_keys.get(i).copied().unwrap_or(i as u64);
-                    let row_key = RowKey(key_u64);
+                items_revision,
+                &row_key_at,
+                view_props,
+                |_row| None,
+                move |cx, col, sort_state| {
+                    let theme = Theme::global(&*cx.app).clone();
+                    let label = (header_label)(col);
+                    let style = header_style.clone();
+                    let header_fg = header_fg;
+                    let sort_fg = sort_fg;
+                    vec![cx.flex(
+                        FlexProps {
+                            layout: decl_style::layout_style(
+                                &theme,
+                                LayoutRefinement::default().w_full().h_full(),
+                            ),
+                            direction: Axis::Horizontal,
+                            gap: Px(0.0),
+                            padding: Edges::all(Px(0.0)),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Center,
+                            wrap: false,
+                        },
+                        move |cx| {
+                            let mut pieces: Vec<AnyElement> = Vec::new();
+                            pieces.push(cx.text_props(TextProps {
+                                layout: Default::default(),
+                                text: label.clone(),
+                                style: Some(style.clone()),
+                                color: Some(header_fg),
+                                wrap: TextWrap::None,
+                                overflow: TextOverflow::Clip,
+                            }));
 
-                    let selected = cx
-                        .app
-                        .models()
-                        .read(&state_for_rows, |st| {
-                            is_row_selected(row_key, &st.row_selection)
-                        })
-                        .unwrap_or(false);
-
-                    let on_activate: OnActivate = {
-                        let state = state_for_rows.clone();
-                        Arc::new(move |host, _acx, _reason| {
-                            let _ = host.models_mut().update(&state, |st| {
-                                if st.row_selection.contains(&row_key) {
-                                    st.row_selection.remove(&row_key);
-                                } else {
-                                    st.row_selection.insert(row_key);
-                                }
-                            });
-                        })
-                    };
-
-                    let is_last = i + 1 == rows;
-                    let row_index = row_model_for_rows.flat_rows().get(i).copied();
-                    let row_data = row_index
-                        .and_then(|ri| row_model_for_rows.row(ri))
-                        .map(|r| r.original);
-
-                    let cells = cols_for_rows
-                        .iter()
-                        .filter_map(|c| {
-                            row_data.map(|d| TableCell::new(cell_at(cx, c, d)).into_element(cx))
-                        })
-                        .collect::<Vec<_>>();
-
-                    TableRow::new(cols, cells)
-                        .selected(selected)
-                        .border_bottom(!is_last)
-                        .on_activate(on_activate)
-                        .into_element(cx)
-                },
-            );
-            let body_id = body.id;
-
-            let header_row = {
-                let header_bg = theme
-                    .color_by_key("muted")
-                    .or_else(|| theme.color_by_key("muted.background"))
-                    .unwrap_or_else(|| theme.color_required("muted.background"));
-                let header_chrome = ChromeRefinement::default()
-                    .bg(ColorRef::Color(header_bg))
-                    .border_1()
-                    .border_color(ColorRef::Color(border));
-                let mut props = decl_style::container_props(
-                    &theme,
-                    header_chrome,
-                    LayoutRefinement::default().w_full(),
-                );
-                props.border = Edges {
-                    top: Px(0.0),
-                    right: Px(0.0),
-                    bottom: Px(1.0),
-                    left: Px(0.0),
-                };
-
-                let state_for_header = state.clone();
-                let header_cells: Vec<AnyElement> = visible_headers
-                    .iter()
-                    .cloned()
-                    .enumerate()
-                    .map(|(idx, label)| {
-                        let state_for_header = state_for_header.clone();
-                        let column_id = visible_columns
-                            .get(idx)
-                            .map(|c| c.id.clone())
-                            .unwrap_or_else(|| Arc::<str>::from(""));
-                        cx.pressable(
-                            PressableProps {
-                                enabled: true,
-                                layout: decl_style::layout_style(
-                                    &theme,
-                                    LayoutRefinement::default().w_full().h_full(),
-                                ),
-                                ..Default::default()
-                            },
-                            move |cx, _state| {
-                                let state = state_for_header.clone();
-                                let column_id = column_id.clone();
-                                cx.pressable_on_activate(Arc::new(move |host, _acx, _reason| {
-                                    let _ = host.models_mut().update(&state, |st| {
-                                        toggle_sort_for_column(
-                                            &mut st.sorting,
-                                            column_id.clone(),
-                                            false,
-                                        );
-                                    });
+                            if let Some(desc) = sort_state {
+                                let indicator: Arc<str> =
+                                    Arc::from(if desc { " ▼" } else { " ▲" });
+                                pieces.push(cx.text_props(TextProps {
+                                    layout: Default::default(),
+                                    text: indicator,
+                                    style: Some(style.clone()),
+                                    color: Some(sort_fg),
+                                    wrap: TextWrap::None,
+                                    overflow: TextOverflow::Clip,
                                 }));
+                            }
 
-                                vec![TableHead::new(label.clone()).into_element(cx)]
-                            },
-                        )
-                    })
-                    .collect();
-
-                let header_theme = theme.clone();
-                let header = cx.container(props, move |cx| {
-                    let grid = GridProps {
-                        cols,
-                        gap: Px(0.0),
-                        padding: Edges::all(Px(0.0)),
-                        justify: MainAlign::Start,
-                        layout: decl_style::layout_style(
-                            &header_theme,
-                            LayoutRefinement::default().w_full(),
-                        ),
-                        ..Default::default()
-                    };
-
-                    let header_cells = header_cells.clone();
-                    vec![cx.grid(grid, move |_cx| header_cells)]
-                });
-
-                cx.wheel_region(
-                    WheelRegionProps {
-                        axis: ScrollAxis::Y,
-                        scroll_target: Some(body_id),
-                        scroll_handle: scroll_handle.base_handle().clone(),
-                        ..Default::default()
-                    },
-                    move |_cx| vec![header],
-                )
-            };
-
-            let col = ColumnProps {
-                layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full()),
-                gap: Px(0.0),
-                padding: Edges::all(Px(0.0)),
-                align: fret_ui::element::CrossAlign::Stretch,
-                justify: MainAlign::Start,
-            };
-
-            vec![cx.column(col, move |_cx| vec![header_row, body])]
+                            pieces
+                        },
+                    )]
+                },
+                move |cx, row, col| vec![(cell_at)(cx, col, row.original)],
+            )]
         })
     }
 }
