@@ -269,23 +269,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .set_global::<fret_render::RendererCapabilities>(renderer_caps.clone());
         self.renderer_caps = Some(renderer_caps);
 
-        let prev_rev = self
-            .app
-            .global::<fret_runtime::FontCatalog>()
-            .map(|c| c.revision)
-            .unwrap_or(0);
-        let revision = prev_rev.saturating_add(1);
-        let families = gfx.renderer.all_font_names();
-        let cache = fret_app::FontCatalogCache::from_families(revision, &families);
-        self.app
-            .set_global::<fret_runtime::FontCatalog>(fret_runtime::FontCatalog {
-                families,
-                revision,
-            });
-        self.app.set_global::<fret_app::FontCatalogCache>(cache);
-
         self.app
             .set_global::<fret_core::TextFontFamilyConfig>(self.config.text_font_families.clone());
+        let _ = gfx
+            .renderer
+            .set_text_font_families(&self.config.text_font_families);
+        let _ = fret_runtime::apply_font_catalog_update(
+            &mut self.app,
+            gfx.renderer.all_font_names(),
+            fret_runtime::FontFamilyDefaultsPolicy::None,
+        );
         self.app
             .set_global::<fret_runtime::TextFontStackKey>(fret_runtime::TextFontStackKey(
                 gfx.renderer.text_font_stack_key(),
@@ -960,11 +953,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         continue;
                     }
 
-                    let families = gfx.renderer.all_font_names();
                     let update = fret_runtime::apply_font_catalog_update(
                         &mut self.app,
-                        families,
-                        fret_runtime::FontFamilyDefaultsPolicy::FillIfEmpty,
+                        gfx.renderer.all_font_names(),
+                        fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyFromCatalogPrefix {
+                            max: 8,
+                        },
                     );
                     let _ = gfx.renderer.set_text_font_families(&update.config);
                     self.app.set_global::<fret_runtime::TextFontStackKey>(

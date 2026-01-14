@@ -3093,12 +3093,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             continue;
                         }
 
-                        let families = renderer.all_font_names();
-                        let _update = fret_runtime::apply_font_catalog_update(
+                        let _ = fret_runtime::apply_font_catalog_update(
                             &mut self.app,
-                            families,
+                            renderer.all_font_names(),
                             fret_runtime::FontFamilyDefaultsPolicy::None,
                         );
+                        if let Some(config) = self.app.global::<fret_core::TextFontFamilyConfig>() {
+                            let _ = renderer.set_text_font_families(config);
+                        }
                         self.app.set_global::<fret_runtime::TextFontStackKey>(
                             fret_runtime::TextFontStackKey(renderer.text_font_stack_key()),
                         );
