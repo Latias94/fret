@@ -8,6 +8,7 @@ use crate::transform::{RowSelection, SeriesXPolicy};
 use crate::view::SeriesEmptyMask;
 use crate::view::ViewState;
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 
 #[derive(Debug, Default, Clone)]
 pub struct FilterProcessorStage;
@@ -217,6 +218,7 @@ impl FilterProcessorStage {
     ) -> FilterProcessorResult {
         let mut xy_weak_filter_pending = false;
         let mut view_changed = false;
+        let mut x_indices_applied: BTreeSet<SeriesId> = BTreeSet::new();
 
         const MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN: usize = 200_000;
 
@@ -442,6 +444,7 @@ impl FilterProcessorStage {
                 series_view.x_policy.filter = Default::default();
                 view_changed = true;
             }
+            x_indices_applied.insert(*series_id);
         }
 
         // Y-driven filtering (v1 subset): when `DataZoomYSpec.filter_mode` is enabled (Filter/WeakFilter),
@@ -503,7 +506,11 @@ impl FilterProcessorStage {
             }
 
             let base_selection = series_view.selection.clone();
-            if matches!(base_selection, RowSelection::Indices(_)) {
+            if matches!(base_selection, RowSelection::Indices(_))
+                && !x_indices_applied.contains(series_id)
+            {
+                // Avoid repeatedly scanning indices selections every frame. The primary order-sensitive
+                // behavior we need is X-before-Y in the same frame when X indices were just applied.
                 continue;
             }
 
