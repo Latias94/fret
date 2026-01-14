@@ -7,8 +7,7 @@ use fret_core::{AppWindowId, Point, PointerId};
 use fret_runtime::{ClipboardToken, TimerToken};
 use fret_runtime::{
     CommandRegistry, CommandsHost, DragHost, DragKindId, DragSession, DragSessionId, Effect,
-    EffectSink,
-    GlobalsHost, ModelHost, ModelId, ModelStore, ModelsHost, TimeHost,
+    EffectSink, GlobalsHost, ModelHost, ModelId, ModelStore, ModelsHost, TimeHost,
 };
 use fret_runtime::{FrameId, TickId};
 
@@ -121,7 +120,14 @@ impl TestHost {
         start: Point,
         payload: T,
     ) {
-        DragHost::begin_cross_window_drag_with_kind(self, pointer_id, kind, source_window, start, payload)
+        DragHost::begin_cross_window_drag_with_kind(
+            self,
+            pointer_id,
+            kind,
+            source_window,
+            start,
+            payload,
+        )
     }
 
     pub(crate) fn advance_frame(&mut self) {
@@ -308,7 +314,14 @@ impl DragHost for TestHost {
         self.next_drag_session_id = self.next_drag_session_id.saturating_add(1);
         self.drags.insert(
             pointer_id,
-            DragSession::new_cross_window(session_id, pointer_id, source_window, kind, start, payload),
+            DragSession::new_cross_window(
+                session_id,
+                pointer_id,
+                source_window,
+                kind,
+                start,
+                payload,
+            ),
         );
     }
 }

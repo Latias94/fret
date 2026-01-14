@@ -20,7 +20,7 @@ pub(super) struct InsertNodeDragPayload {
     pub(super) candidate: InsertNodeCandidate,
 }
 
-const DRAG_KIND_INSERT_NODE: DragKindId = DragKindId(0x4E4F44455F494E53);
+pub(super) const DRAG_KIND_INSERT_NODE: DragKindId = DragKindId(0x4E4F44455F494E53);
 
 fn canvas_to_window(bounds: Rect, pos: Point, pan: crate::core::CanvasPoint, zoom: f32) -> Point {
     let z = if zoom.is_finite() && zoom > 0.0 {

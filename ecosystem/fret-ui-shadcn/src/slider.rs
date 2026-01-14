@@ -1,3 +1,5 @@
+use std::cell::Cell;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{Color, Corners, CursorIcon, Edges, MouseButton, Px};
@@ -7,7 +9,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, LayoutStyle, Length, MainAlign, MarginEdge,
     MarginEdges, Overflow, PointerRegionProps, PositionStyle, RowProps,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
 use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
@@ -288,13 +290,20 @@ pub fn slider<H: UiHost>(
         let drag_index_on_move = drag_index_model.clone();
 
         cx.semantics_with_id(semantics, |cx, semantics_id| {
+            let active_thumb_focus_target: Rc<Cell<Option<GlobalElementId>>> =
+                Rc::new(Cell::new(None));
+            let active_thumb_focus_target_on_down = active_thumb_focus_target.clone();
             let on_down = Arc::new(
                 move |host: &mut dyn UiPointerActionHost, cx: ActionCx, down: PointerDownCx| {
                     if down.button != MouseButton::Left {
                         return false;
                     }
 
-                    host.request_focus(semantics_id);
+                    host.request_focus(
+                        active_thumb_focus_target_on_down
+                            .get()
+                            .unwrap_or(semantics_id),
+                    );
                     host.set_cursor_icon(CursorIcon::Pointer);
                     host.capture_pointer();
 
@@ -359,79 +368,6 @@ pub fn slider<H: UiHost>(
                     host.request_redraw(cx.window);
                     true
                 },
-            );
-
-            let model_on_key = model.clone();
-            let drag_index_on_key = drag_index_model.clone();
-            let min_steps_between_thumbs_value = min_steps_between_thumbs;
-            cx.key_on_key_down_for(
-                semantics_id,
-                Arc::new(move |host, cx, down| {
-                    if down.repeat
-                        || down.modifiers.alt
-                        || down.modifiers.ctrl
-                        || down.modifiers.meta
-                    {
-                        return false;
-                    }
-
-                    let step = if step_value.is_finite() && step_value > 0.0 {
-                        step_value
-                    } else {
-                        1.0
-                    };
-
-                    let mut values = host
-                        .models_mut()
-                        .get_cloned(&model_on_key)
-                        .unwrap_or_else(|| vec![min_value]);
-                    if values.is_empty() {
-                        values.push(min_value);
-                    }
-
-                    let value_index_to_change = host
-                        .models_mut()
-                        .get_cloned(&drag_index_on_key)
-                        .unwrap_or(0)
-                        .min(values.len().saturating_sub(1));
-                    let cur = values
-                        .get(value_index_to_change)
-                        .copied()
-                        .unwrap_or(min_value);
-
-                    let next = match down.key {
-                        fret_core::KeyCode::ArrowLeft | fret_core::KeyCode::ArrowDown => cur - step,
-                        fret_core::KeyCode::ArrowRight | fret_core::KeyCode::ArrowUp => cur + step,
-                        fret_core::KeyCode::Home => min_value,
-                        fret_core::KeyCode::End => max_value,
-                        _ => return false,
-                    };
-
-                    let commit_index = match down.key {
-                        fret_core::KeyCode::Home => 0,
-                        fret_core::KeyCode::End => values.len().saturating_sub(1),
-                        _ => value_index_to_change,
-                    };
-
-                    if let Some(update) = radix_slider::update_multi_thumb_values(
-                        &values,
-                        next,
-                        commit_index,
-                        min_value,
-                        max_value,
-                        step,
-                        min_steps_between_thumbs_value,
-                    ) {
-                        let _ = host
-                            .models_mut()
-                            .update(&model_on_key, |values| *values = update.values);
-                        let _ = host.models_mut().update(&drag_index_on_key, |idx| {
-                            *idx = update.value_index_to_change;
-                        });
-                    }
-                    host.request_redraw(cx.window);
-                    true
-                }),
             );
 
             let track_top = 0.0;
@@ -543,7 +479,7 @@ pub fn slider<H: UiHost>(
 
                     let mut out = vec![track_el];
 
-                    for t in percentages.iter().copied() {
+                    for (thumb_index, t) in percentages.iter().copied().enumerate() {
                         let t = t.clamp(0.0, 1.0);
                         let mut left_layout = flex_segment_layout;
                         left_layout.flex.grow = t;
@@ -592,7 +528,14 @@ pub fn slider<H: UiHost>(
                         };
 
                         let thumb = ContainerProps {
-                            layout: thumb_layout,
+                            layout: LayoutStyle {
+                                size: fret_ui::element::SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Fill,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
                             padding: Edges::all(Px(0.0)),
                             background: Some(style.thumb_background),
                             shadow: None,
@@ -602,9 +545,98 @@ pub fn slider<H: UiHost>(
                         };
 
                         out.push(cx.row(thumb_row, |cx| {
+                            let thumb_value = values_sorted
+                                .get(thumb_index)
+                                .copied()
+                                .unwrap_or(active_value);
+                            let mut thumb_semantics = radix_slider::slider_thumb_semantics(
+                                a11y_label.clone(),
+                                thumb_value,
+                                disabled,
+                            );
+                            thumb_semantics.layout = thumb_layout;
                             vec![
                                 cx.container(left, |_| Vec::new()),
-                                cx.container(thumb, |_| Vec::new()),
+                                cx.semantics_with_id(thumb_semantics, |cx, thumb_semantics_id| {
+                                    let model_on_key = model.clone();
+                                    let drag_index_on_key = drag_index_model.clone();
+                                    let min_steps_between_thumbs_value = min_steps_between_thumbs;
+                                    cx.key_on_key_down_for(
+                                        thumb_semantics_id,
+                                        Arc::new(move |host, cx, down| {
+                                            if down.repeat
+                                                || down.modifiers.alt
+                                                || down.modifiers.ctrl
+                                                || down.modifiers.meta
+                                            {
+                                                return false;
+                                            }
+
+                                            let step = if step_value.is_finite() && step_value > 0.0
+                                            {
+                                                step_value
+                                            } else {
+                                                1.0
+                                            };
+
+                                            let mut values = host
+                                                .models_mut()
+                                                .get_cloned(&model_on_key)
+                                                .unwrap_or_else(|| vec![min_value]);
+                                            if values.is_empty() {
+                                                values.push(min_value);
+                                            }
+
+                                            let value_index_to_change =
+                                                thumb_index.min(values.len().saturating_sub(1));
+                                            let cur = values
+                                                .get(value_index_to_change)
+                                                .copied()
+                                                .unwrap_or(min_value);
+
+                                            let next = match down.key {
+                                                fret_core::KeyCode::ArrowLeft
+                                                | fret_core::KeyCode::ArrowDown => cur - step,
+                                                fret_core::KeyCode::ArrowRight
+                                                | fret_core::KeyCode::ArrowUp => cur + step,
+                                                fret_core::KeyCode::Home => min_value,
+                                                fret_core::KeyCode::End => max_value,
+                                                _ => return false,
+                                            };
+
+                                            if let Some(update) =
+                                                radix_slider::update_multi_thumb_values(
+                                                    &values,
+                                                    next,
+                                                    value_index_to_change,
+                                                    min_value,
+                                                    max_value,
+                                                    step,
+                                                    min_steps_between_thumbs_value,
+                                                )
+                                            {
+                                                let _ = host.models_mut().update(
+                                                    &model_on_key,
+                                                    |values| {
+                                                        *values = update.values;
+                                                    },
+                                                );
+                                                let _ = host.models_mut().update(
+                                                    &drag_index_on_key,
+                                                    |idx| {
+                                                        *idx = update.value_index_to_change;
+                                                    },
+                                                );
+                                            }
+                                            host.request_redraw(cx.window);
+                                            true
+                                        }),
+                                    );
+                                    if thumb_index == active_index {
+                                        active_thumb_focus_target.set(Some(thumb_semantics_id));
+                                    }
+                                    vec![cx.container(thumb, |_| Vec::new())]
+                                }),
                                 cx.container(right, |_| Vec::new()),
                             ]
                         }));
@@ -722,6 +754,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -785,6 +818,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -853,6 +887,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),

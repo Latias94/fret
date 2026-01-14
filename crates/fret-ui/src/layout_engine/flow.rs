@@ -16,7 +16,8 @@ pub(crate) enum ParentLayoutKind {
     Root,
     Flex { direction: fret_core::Axis },
     Grid,
-    PassthroughOverlay,
+    PassthroughOverlayStretch,
+    PassthroughOverlayNoStretch,
     Overlay,
 }
 
@@ -76,6 +77,7 @@ pub(crate) fn build_viewport_flow_subtree<H: UiHost>(
     );
 }
 
+#[stacksafe::stacksafe]
 fn build_flow_subtree_impl<H: UiHost>(
     engine: &mut TaffyLayoutEngine,
     app: &mut H,
@@ -88,7 +90,7 @@ fn build_flow_subtree_impl<H: UiHost>(
 ) {
     let sf = sanitize_scale_factor(scale_factor);
     let _ = engine.request_layout_node(node);
-    if let Some(child) = passthrough_wrapper_child(app, tree, window, node) {
+    if let Some((child, child_parent_kind)) = passthrough_wrapper_child(app, tree, window, node) {
         let mut style = style_for_item_in_parent(
             app,
             window,
@@ -102,27 +104,109 @@ fn build_flow_subtree_impl<H: UiHost>(
         // provide a containing block for percent sizing, but should not impose sizing on their
         // single child.
         //
-        // Using `auto` tracks breaks percent sizing because the containing block is not definite,
-        // yielding "collapsed" layouts where descendants only occupy the left portion of a
-        // stretched wrapper.
+        // In particular, shrink-wrapped wrappers (e.g. a `Pressable` button trigger inside a
+        // larger container) must not stretch to the parent's full width/height just because the
+        // wrapper is modeled as a grid container.
+        //
+        // We therefore default to `auto` tracks (shrink-wrap), and only opt into a `fr(1)` track
+        // when the wrapper is expected to act as a definite containing block (e.g. when the child
+        // is `Fill` in that axis).
+        let wrapper_style = layout_style_for_node(app, window, node);
+
+        // Percent sizing needs a definite containing block. For nested wrapper chains like:
+        // `Semantics -> FocusScope -> ... -> Fill`, we must promote the entire chain so the leaf
+        // can resolve its `Fill` size (and so the wrappers don't collapse to 0).
+        let mut descendant_requests_fill_width = false;
+        let mut descendant_requests_fill_height = false;
+        let mut scan_width = matches!(wrapper_style.size.width, crate::element::Length::Auto);
+        let mut scan_height = matches!(wrapper_style.size.height, crate::element::Length::Auto);
+        let mut probe = child;
+        for _ in 0..32 {
+            let probe_style = layout_style_for_node(app, window, probe);
+
+            if scan_width {
+                match probe_style.size.width {
+                    crate::element::Length::Fill => {
+                        descendant_requests_fill_width = true;
+                        scan_width = false;
+                    }
+                    crate::element::Length::Px(_) => {
+                        scan_width = false;
+                    }
+                    crate::element::Length::Auto => {}
+                }
+            }
+            if scan_height {
+                match probe_style.size.height {
+                    crate::element::Length::Fill => {
+                        descendant_requests_fill_height = true;
+                        scan_height = false;
+                    }
+                    crate::element::Length::Px(_) => {
+                        scan_height = false;
+                    }
+                    crate::element::Length::Auto => {}
+                }
+            }
+
+            if !scan_width && !scan_height {
+                break;
+            }
+
+            let Some((next, _)) = passthrough_wrapper_child(app, tree, window, probe) else {
+                break;
+            };
+            probe = next;
+        }
+
+        let needs_definite_width = descendant_requests_fill_width
+            || matches!(wrapper_style.size.width, crate::element::Length::Fill)
+            || matches!(wrapper_style.size.width, crate::element::Length::Px(_));
         style.grid_template_columns =
-            vec![GridTemplateComponent::Single(taffy::style_helpers::fr(1.0))];
-        style.grid_template_rows =
-            vec![GridTemplateComponent::Single(taffy::style_helpers::auto())];
-        // Prevent wrappers from stretching intrinsic/auto-sized children (e.g. spacers).
-        style.align_items = Some(AlignItems::FlexStart);
-        style.justify_items = Some(AlignItems::FlexStart);
+            vec![GridTemplateComponent::Single(if needs_definite_width {
+                taffy::style_helpers::fr(1.0)
+            } else {
+                taffy::style_helpers::auto()
+            })];
+
+        let needs_definite_height = descendant_requests_fill_height
+            || matches!(wrapper_style.size.height, crate::element::Length::Fill)
+            || matches!(wrapper_style.size.height, crate::element::Length::Px(_));
+        style.grid_template_rows = vec![GridTemplateComponent::Single(if needs_definite_height {
+            taffy::style_helpers::fr(1.0)
+        } else {
+            taffy::style_helpers::auto()
+        })];
+        let child_instance = element_record_for_node(app, window, child).map(|r| r.instance);
+        let child_is_layout_container = matches!(
+            child_instance,
+            Some(ElementInstance::Flex(_))
+                | Some(ElementInstance::RovingFlex(_))
+                | Some(ElementInstance::Stack(_))
+                | Some(ElementInstance::Grid(_))
+        );
+
+        // Prevent wrappers from stretching intrinsic/auto-sized children (e.g. spacers), but still
+        // stretch layout containers (Flex/Grid/Stack/...) when the wrapper provides a definite box.
+        style.align_items = Some(if needs_definite_height && child_is_layout_container {
+            AlignItems::Stretch
+        } else {
+            AlignItems::FlexStart
+        });
+        style.justify_items = Some(if needs_definite_width && child_is_layout_container {
+            AlignItems::Stretch
+        } else {
+            AlignItems::FlexStart
+        });
         style.justify_content = Some(JustifyContent::FlexStart);
 
-        let wrapper_style = layout_style_for_node(app, window, node);
-        let child_style = layout_style_for_node(app, window, child);
         if matches!(wrapper_style.size.width, crate::element::Length::Auto)
-            && matches!(child_style.size.width, crate::element::Length::Fill)
+            && descendant_requests_fill_width
         {
             style.size.width = Dimension::percent(1.0);
         }
         if matches!(wrapper_style.size.height, crate::element::Length::Auto)
-            && matches!(child_style.size.height, crate::element::Length::Fill)
+            && descendant_requests_fill_height
         {
             style.size.height = Dimension::percent(1.0);
         }
@@ -145,15 +229,7 @@ fn build_flow_subtree_impl<H: UiHost>(
         engine.set_style(node, style);
         engine.set_children(node, &[child]);
         engine.set_measured(node, false);
-        build_flow_subtree(
-            engine,
-            app,
-            tree,
-            window,
-            sf,
-            ParentLayoutKind::PassthroughOverlay,
-            child,
-        );
+        build_flow_subtree(engine, app, tree, window, sf, child_parent_kind, child);
         return;
     }
 
@@ -603,28 +679,43 @@ fn style_for_item_in_parent<H: UiHost>(
             style.grid_column = taffy_grid_line(layout_style.grid.column);
             style.grid_row = taffy_grid_line(layout_style.grid.row);
         }
-        ParentLayoutKind::PassthroughOverlay | ParentLayoutKind::Overlay => {
+        ParentLayoutKind::PassthroughOverlayStretch
+        | ParentLayoutKind::PassthroughOverlayNoStretch
+        | ParentLayoutKind::Overlay => {
             style.grid_column = overlay_grid_line();
             style.grid_row = overlay_grid_line();
         }
         ParentLayoutKind::Root => {}
     }
 
-    if matches!(parent_kind, ParentLayoutKind::PassthroughOverlay) {
-        // Passthrough wrappers should remain layout-transparent: their single child should inherit
-        // the wrapper's resolved box when possible, without forcing intrinsic leaves (e.g. Spacer)
-        // to stretch.
-        let instance = element_record_for_node(app, window, node).map(|r| r.instance);
-        match instance {
-            Some(ElementInstance::Spacer(_)) => {
-                style.align_self = Some(AlignSelf::FlexStart);
-                style.justify_self = Some(AlignSelf::FlexStart);
-            }
-            _ => {
-                style.align_self = Some(AlignSelf::Stretch);
-                style.justify_self = Some(AlignSelf::Stretch);
+    match parent_kind {
+        ParentLayoutKind::PassthroughOverlayStretch => {
+            // Passthrough wrappers should remain layout-transparent: their single child should
+            // inherit the wrapper's resolved box when possible, without forcing intrinsic leaves
+            // (e.g. Spacer) to stretch.
+            let instance = element_record_for_node(app, window, node).map(|r| r.instance);
+            match instance {
+                Some(ElementInstance::Spacer(_)) => {
+                    style.align_self = Some(AlignSelf::FlexStart);
+                    style.justify_self = Some(AlignSelf::FlexStart);
+                }
+                _ => {
+                    style.align_self = Some(AlignSelf::Stretch);
+                    style.justify_self = Some(AlignSelf::Stretch);
+                }
             }
         }
+        ParentLayoutKind::PassthroughOverlayNoStretch => {
+            // Behavioral wrappers (Semantics/Opacity/Container/...) should not stretch their
+            // single child; leave sizing to the child so shrink-wrapped widgets (e.g. button
+            // triggers) keep intrinsic bounds.
+            //
+            // Note: per-item stretching is controlled by the wrapper node's `align_items` /
+            // `justify_items` (set in `build_flow_subtree_impl`). Keeping `*_self` unset here lets
+            // the wrapper decide when it's appropriate to stretch layout containers vs. keep
+            // intrinsic sizing.
+        }
+        _ => {}
     }
 
     if let Some(size) = root_override_size {
@@ -649,7 +740,7 @@ fn passthrough_wrapper_child<H: UiHost>(
     tree: &UiTree<H>,
     window: AppWindowId,
     node: NodeId,
-) -> Option<NodeId> {
+) -> Option<(NodeId, ParentLayoutKind)> {
     let layout_style = layout_style_for_node(app, window, node);
     if layout_style.position != crate::element::PositionStyle::Static {
         return None;
@@ -674,17 +765,21 @@ fn passthrough_wrapper_child<H: UiHost>(
 
     let instance = element_record_for_node(app, window, node).map(|r| r.instance)?;
     match instance {
-        ElementInstance::InteractivityGate(gate) if gate.present => Some(child),
+        ElementInstance::InteractivityGate(gate) if gate.present => {
+            Some((child, ParentLayoutKind::PassthroughOverlayNoStretch))
+        }
+        ElementInstance::Pressable(_) => Some((child, ParentLayoutKind::PassthroughOverlayStretch)),
         ElementInstance::Container(_)
         | ElementInstance::PointerRegion(_)
         | ElementInstance::HoverRegion(_)
         | ElementInstance::WheelRegion(_)
-        | ElementInstance::Pressable(_)
         | ElementInstance::Opacity(_)
         | ElementInstance::VisualTransform(_)
         | ElementInstance::RenderTransform(_)
         | ElementInstance::Semantics(_)
-        | ElementInstance::FocusScope(_) => Some(child),
+        | ElementInstance::FocusScope(_) => {
+            Some((child, ParentLayoutKind::PassthroughOverlayNoStretch))
+        }
         _ => None,
     }
 }

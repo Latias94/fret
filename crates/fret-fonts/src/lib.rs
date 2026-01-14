@@ -4,77 +4,111 @@
 //! - Web/WASM cannot access system fonts, so applications must provide font bytes.
 //! - This crate provides a small default font to bootstrap demos and simple apps.
 
+const FIRA_MONO_SUBSET: &[u8] = include_bytes!("../assets/FiraMono-subset.ttf");
+
 #[cfg(feature = "emoji")]
-static EMOJI_FONTS: &[&[u8]] = &[include_bytes!("../assets/NotoColorEmoji.ttf")];
+const NOTO_COLOR_EMOJI: &[u8] = include_bytes!("../assets/NotoColorEmoji.ttf");
 
 #[cfg(feature = "cjk-lite")]
-static CJK_LITE_FONTS: &[&[u8]] = &[include_bytes!(
-    "../assets/NotoSansCJKsc-Regular-cjk-lite-subset.otf"
-)];
+const NOTO_SANS_CJK_SC_LITE_SUBSET: &[u8] =
+    include_bytes!("../assets/NotoSansCJKsc-Regular-cjk-lite-subset.otf");
 
 #[cfg(feature = "bootstrap-full")]
-static BOOTSTRAP_FONTS: &[&[u8]] = &[
+const BOOTSTRAP_FONTS: &[&[u8]] = &[
     include_bytes!("../assets/Inter-roman.ttf"),
     include_bytes!("../assets/Inter-italic.ttf"),
     include_bytes!("../assets/JetBrainsMono-roman.ttf"),
     include_bytes!("../assets/JetBrainsMono-italic.ttf"),
-    include_bytes!("../assets/FiraMono-subset.ttf"),
+    FIRA_MONO_SUBSET,
 ];
 
 #[cfg(all(feature = "bootstrap-subset", not(feature = "bootstrap-full")))]
-static BOOTSTRAP_FONTS: &[&[u8]] = &[
+const BOOTSTRAP_FONTS: &[&[u8]] = &[
     include_bytes!("../assets/Inter-roman-subset.ttf"),
     include_bytes!("../assets/Inter-italic-subset.ttf"),
     include_bytes!("../assets/JetBrainsMono-roman-subset.ttf"),
     include_bytes!("../assets/JetBrainsMono-italic-subset.ttf"),
-    include_bytes!("../assets/FiraMono-subset.ttf"),
+    FIRA_MONO_SUBSET,
 ];
 
-#[cfg(feature = "emoji")]
-static DEFAULT_FONTS: &[&[u8]] = &[
-    include_bytes!("../assets/NotoColorEmoji.ttf"),
+#[cfg(all(not(feature = "bootstrap-subset"), not(feature = "bootstrap-full")))]
+const BOOTSTRAP_FONTS: &[&[u8]] = &[FIRA_MONO_SUBSET];
+
+#[cfg(all(feature = "emoji", feature = "bootstrap-full"))]
+const DEFAULT_FONTS: &[&[u8]] = &[
+    NOTO_COLOR_EMOJI,
     #[cfg(feature = "cjk-lite")]
-    include_bytes!("../assets/NotoSansCJKsc-Regular-cjk-lite-subset.otf"),
-    #[cfg(feature = "bootstrap-full")]
+    NOTO_SANS_CJK_SC_LITE_SUBSET,
     include_bytes!("../assets/Inter-roman.ttf"),
-    #[cfg(feature = "bootstrap-full")]
     include_bytes!("../assets/Inter-italic.ttf"),
-    #[cfg(feature = "bootstrap-full")]
     include_bytes!("../assets/JetBrainsMono-roman.ttf"),
-    #[cfg(feature = "bootstrap-full")]
     include_bytes!("../assets/JetBrainsMono-italic.ttf"),
-    #[cfg(all(feature = "bootstrap-subset", not(feature = "bootstrap-full")))]
-    include_bytes!("../assets/Inter-roman-subset.ttf"),
-    #[cfg(all(feature = "bootstrap-subset", not(feature = "bootstrap-full")))]
-    include_bytes!("../assets/Inter-italic-subset.ttf"),
-    #[cfg(all(feature = "bootstrap-subset", not(feature = "bootstrap-full")))]
-    include_bytes!("../assets/JetBrainsMono-roman-subset.ttf"),
-    #[cfg(all(feature = "bootstrap-subset", not(feature = "bootstrap-full")))]
-    include_bytes!("../assets/JetBrainsMono-italic-subset.ttf"),
-    include_bytes!("../assets/FiraMono-subset.ttf"),
+    FIRA_MONO_SUBSET,
 ];
 
-#[cfg(not(feature = "emoji"))]
-static DEFAULT_FONTS: &[&[u8]] = &[
+#[cfg(all(not(feature = "emoji"), feature = "bootstrap-full"))]
+const DEFAULT_FONTS: &[&[u8]] = &[
     #[cfg(feature = "cjk-lite")]
-    include_bytes!("../assets/NotoSansCJKsc-Regular-cjk-lite-subset.otf"),
-    #[cfg(feature = "bootstrap-full")]
+    NOTO_SANS_CJK_SC_LITE_SUBSET,
     include_bytes!("../assets/Inter-roman.ttf"),
-    #[cfg(feature = "bootstrap-full")]
     include_bytes!("../assets/Inter-italic.ttf"),
-    #[cfg(feature = "bootstrap-full")]
     include_bytes!("../assets/JetBrainsMono-roman.ttf"),
-    #[cfg(feature = "bootstrap-full")]
     include_bytes!("../assets/JetBrainsMono-italic.ttf"),
-    #[cfg(all(feature = "bootstrap-subset", not(feature = "bootstrap-full")))]
+    FIRA_MONO_SUBSET,
+];
+
+#[cfg(all(
+    feature = "emoji",
+    feature = "bootstrap-subset",
+    not(feature = "bootstrap-full")
+))]
+const DEFAULT_FONTS: &[&[u8]] = &[
+    NOTO_COLOR_EMOJI,
+    #[cfg(feature = "cjk-lite")]
+    NOTO_SANS_CJK_SC_LITE_SUBSET,
     include_bytes!("../assets/Inter-roman-subset.ttf"),
-    #[cfg(all(feature = "bootstrap-subset", not(feature = "bootstrap-full")))]
     include_bytes!("../assets/Inter-italic-subset.ttf"),
-    #[cfg(all(feature = "bootstrap-subset", not(feature = "bootstrap-full")))]
     include_bytes!("../assets/JetBrainsMono-roman-subset.ttf"),
-    #[cfg(all(feature = "bootstrap-subset", not(feature = "bootstrap-full")))]
     include_bytes!("../assets/JetBrainsMono-italic-subset.ttf"),
-    include_bytes!("../assets/FiraMono-subset.ttf"),
+    FIRA_MONO_SUBSET,
+];
+
+#[cfg(all(
+    not(feature = "emoji"),
+    feature = "bootstrap-subset",
+    not(feature = "bootstrap-full")
+))]
+const DEFAULT_FONTS: &[&[u8]] = &[
+    #[cfg(feature = "cjk-lite")]
+    NOTO_SANS_CJK_SC_LITE_SUBSET,
+    include_bytes!("../assets/Inter-roman-subset.ttf"),
+    include_bytes!("../assets/Inter-italic-subset.ttf"),
+    include_bytes!("../assets/JetBrainsMono-roman-subset.ttf"),
+    include_bytes!("../assets/JetBrainsMono-italic-subset.ttf"),
+    FIRA_MONO_SUBSET,
+];
+
+#[cfg(all(
+    feature = "emoji",
+    not(feature = "bootstrap-subset"),
+    not(feature = "bootstrap-full")
+))]
+const DEFAULT_FONTS: &[&[u8]] = &[
+    NOTO_COLOR_EMOJI,
+    #[cfg(feature = "cjk-lite")]
+    NOTO_SANS_CJK_SC_LITE_SUBSET,
+    FIRA_MONO_SUBSET,
+];
+
+#[cfg(all(
+    not(feature = "emoji"),
+    not(feature = "bootstrap-subset"),
+    not(feature = "bootstrap-full")
+))]
+const DEFAULT_FONTS: &[&[u8]] = &[
+    #[cfg(feature = "cjk-lite")]
+    NOTO_SANS_CJK_SC_LITE_SUBSET,
+    FIRA_MONO_SUBSET,
 ];
 
 /// Returns the default font bytes (TTF/OTF/TTC) that can be fed to `Effect::TextAddFonts`.
@@ -88,12 +122,12 @@ pub fn bootstrap_fonts() -> &'static [&'static [u8]] {
 
 #[cfg(feature = "emoji")]
 pub fn emoji_fonts() -> &'static [&'static [u8]] {
-    EMOJI_FONTS
+    &[NOTO_COLOR_EMOJI]
 }
 
 #[cfg(feature = "cjk-lite")]
 pub fn cjk_lite_fonts() -> &'static [&'static [u8]] {
-    CJK_LITE_FONTS
+    &[NOTO_SANS_CJK_SC_LITE_SUBSET]
 }
 
 #[cfg(test)]
@@ -142,25 +176,73 @@ mod tests {
     fn default_fonts_total_size_is_reasonable() {
         let total: usize = super::default_fonts().iter().map(|b| b.len()).sum();
 
-        #[cfg(all(not(feature = "emoji"), not(feature = "cjk-lite")))]
+        #[cfg(all(
+            not(feature = "emoji"),
+            not(feature = "cjk-lite"),
+            feature = "bootstrap-full"
+        ))]
+        assert!(
+            total < 8_000_000,
+            "default fonts too large (expected full bootstrap): {total}"
+        );
+
+        #[cfg(all(
+            not(feature = "emoji"),
+            not(feature = "cjk-lite"),
+            not(feature = "bootstrap-full")
+        ))]
         assert!(
             total < 2_000_000,
             "default fonts too large (expected subset bootstrap): {total}"
         );
 
-        #[cfg(all(feature = "emoji", not(feature = "cjk-lite")))]
+        #[cfg(all(feature = "emoji", not(feature = "cjk-lite"), feature = "bootstrap-full"))]
+        assert!(
+            total < 20_000_000,
+            "default fonts too large (emoji + full bootstrap enabled): {total}"
+        );
+
+        #[cfg(all(
+            feature = "emoji",
+            not(feature = "cjk-lite"),
+            not(feature = "bootstrap-full")
+        ))]
         assert!(
             total < 15_000_000,
             "default fonts too large (emoji bundle enabled): {total}"
         );
 
-        #[cfg(all(not(feature = "emoji"), feature = "cjk-lite"))]
+        #[cfg(all(
+            not(feature = "emoji"),
+            feature = "cjk-lite",
+            feature = "bootstrap-full"
+        ))]
+        assert!(
+            total < 15_000_000,
+            "default fonts too large (cjk-lite + full bootstrap enabled): {total}"
+        );
+
+        #[cfg(all(
+            not(feature = "emoji"),
+            feature = "cjk-lite",
+            not(feature = "bootstrap-full")
+        ))]
         assert!(
             total < 12_000_000,
             "default fonts too large (cjk-lite bundle enabled): {total}"
         );
 
-        #[cfg(all(feature = "emoji", feature = "cjk-lite"))]
+        #[cfg(all(feature = "emoji", feature = "cjk-lite", feature = "bootstrap-full"))]
+        assert!(
+            total < 30_000_000,
+            "default fonts too large (emoji + cjk-lite + full bootstrap enabled): {total}"
+        );
+
+        #[cfg(all(
+            feature = "emoji",
+            feature = "cjk-lite",
+            not(feature = "bootstrap-full")
+        ))]
         assert!(
             total < 25_000_000,
             "default fonts too large (emoji + cjk-lite bundles enabled): {total}"

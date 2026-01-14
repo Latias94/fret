@@ -414,6 +414,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -425,6 +426,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -488,6 +490,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -499,6 +502,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),

@@ -10,16 +10,16 @@ homepage.workspace = true
 documentation.workspace = true
 
 [features]
-default = []
+default = ["layout-engine-v2"]
+layout-engine-v2 = []
 compat-policy-shortcuts = []
 unstable-retained-bridge = []
-layout-engine-v2 = ["dep:stacksafe"]
 
 [dependencies]
 fret-core = { path = "../fret-core" }
 fret-runtime = { path = "../fret-runtime" }
 slotmap.workspace = true
-stacksafe = { workspace = true, optional = true }
+stacksafe.workspace = true
 tracing.workspace = true
 serde.workspace = true
 serde_json.workspace = true

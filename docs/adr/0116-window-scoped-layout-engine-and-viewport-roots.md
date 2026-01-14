@@ -55,11 +55,10 @@ This ADR is intended to refine and extend existing accepted contracts, not contr
   flow layout, and docking/splits/scroll/virtualization remain explicit systems.
 - ADR 0005 (layout writes bounds) remains true: the engine's "apply" step is part of layout and
   writes authoritative bounds into the retained UI tree before paint/hit-test.
-- ADR 0076 (persistent container-owned Taffy trees) remains the accepted performance hardening
-  guidance for the **container-owned** integration shape; this ADR proposes a later evolution that
-  generalizes the same persistence/incremental update principles into a single window-scoped
-  engine. If ADR 0116 is accepted, it becomes the preferred *integration shape* for declarative
-  flow layout, while ADR 0076's caching/invalidation guidance remains applicable.
+- ADR 0076 (persistent container-owned Taffy trees) documents a historical performance hardening
+  strategy. The repository now defaults to the window-scoped engine described by ADR 0116, carrying
+  forward the same persistence/incremental update principles (stable identity + bounded measurement)
+  at the window boundary rather than the container boundary.
 - Terminology: "viewport" in this ADR refers to docking-defined layout roots (multi-viewport UI).
   "ViewportSurface" refers to engine integration surfaces (ADR 0007).
 

@@ -9,9 +9,9 @@ use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
-    PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis, ScrollProps, SizeStyle,
-    TextProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
+    Overflow, PositionStyle, PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis,
+    ScrollProps, SizeStyle, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -773,7 +773,7 @@ impl DropdownMenu {
             align: DropdownMenuAlign::default(),
             side: DropdownMenuSide::default(),
             side_offset: Px(4.0),
-            window_margin: Px(8.0),
+            window_margin: Px(0.0),
             typeahead_timeout_ticks: 30,
             min_width: Px(128.0),
             arrow: false,
@@ -1030,11 +1030,12 @@ impl DropdownMenu {
 
                     let border = theme.color_required("border");
                     let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
+                    let radius_md = MetricRef::radius(Radius::Md).resolve(&theme);
                     // new-york-v4:
                     // - `DropdownMenuContent`: `shadow-md`
                     // - `DropdownMenuSubContent`: `shadow-lg`
-                    let shadow = decl_style::shadow_md(&theme, radius_sm);
-                    let shadow_submenu = decl_style::shadow_lg(&theme, radius_sm);
+                    let shadow = decl_style::shadow_md(&theme, radius_md);
+                    let shadow_submenu = decl_style::shadow_lg(&theme, radius_md);
                     let ring = decl_style::focus_ring(&theme, radius_sm);
                     // new-york-v4: item rows use `px-2`.
                     let pad_x = MetricRef::space(Space::N2).resolve(&theme);
@@ -1053,12 +1054,26 @@ impl DropdownMenu {
                     let submenu_for_content = submenu.clone();
                     let submenu_for_panel = submenu.clone();
 
-                    let content_layout = {
-                        let mut layout = LayoutStyle::default();
-                        layout.size.width = Length::Fill;
-                        layout.size.height = Length::Fill;
-                        layout
+                    // Match Radix: `role=menu` is on the content panel element (not a fullscreen
+                    // wrapper). We keep the popper wrapper for arrow hit-test expansion, but
+                    // position it locally inside the menu semantics node.
+                    let content_layout = LayoutStyle {
+                        position: PositionStyle::Absolute,
+                        inset: InsetStyle {
+                            left: Some(placed.origin.x),
+                            top: Some(placed.origin.y),
+                            ..Default::default()
+                        },
+                        size: SizeStyle {
+                            width: Length::Px(placed.size.width),
+                            height: Length::Px(placed.size.height),
+                            ..Default::default()
+                        },
+                        overflow: Overflow::Visible,
+                        ..Default::default()
                     };
+
+                    let placed_local = Rect::new(Point::new(Px(0.0), Px(0.0)), placed.size);
 
                     let (_content_id, content) = menu::content_panel::menu_content_semantics_with_id(
                         cx,
@@ -1066,7 +1081,7 @@ impl DropdownMenu {
                         move |cx| {
                             vec![popper_content::popper_wrapper_at(
                                 cx,
-                                placed,
+                                placed_local,
                                 wrapper_insets,
                                 move |cx| {
                                     let arrow_el = arrow
@@ -1095,7 +1110,7 @@ impl DropdownMenu {
                                             shadow: Some(shadow),
                                             border: Edges::all(Px(1.0)),
                                             border_color: Some(border),
-                                            corner_radii: fret_core::Corners::all(radius_sm),
+                                            corner_radii: fret_core::Corners::all(radius_md),
                                         },
                                         move |cx| {
                                     let scroll_layout = LayoutStyle {
@@ -1783,7 +1798,7 @@ impl DropdownMenu {
                         cx,
                         submenu_is_open,
                         overlay_motion::SHADCN_MOTION_TICKS_100,
-                        overlay_motion::SHADCN_MOTION_TICKS_100,
+                        0,
                         0.95,
                         1.0,
                         overlay_motion::shadcn_ease,
@@ -2404,6 +2419,7 @@ impl DropdownMenu {
                                                         },
                                                         submenu_labels_arc.clone(),
                                                         typeahead_timeout_ticks,
+                                                        submenu_models_for_panel.clone(),
                                                         move |_cx| rows.clone(),
                                                     );
                                                     vec![roving]
@@ -3400,6 +3416,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position: outside,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3411,6 +3428,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position: outside,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3676,6 +3694,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3687,6 +3706,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3796,6 +3816,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3807,6 +3828,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3880,6 +3902,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3995,6 +4018,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: rect_center(more_bounds),
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),
@@ -4092,6 +4116,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(390.0), Px(10.0)),
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),
@@ -4237,6 +4262,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: rect_center(more_bounds),
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),
@@ -4334,6 +4360,7 @@ mod tests {
                 &mut app,
                 &mut services,
                 &Event::Pointer(PointerEvent::Wheel {
+                    pointer_id: fret_core::PointerId(0),
                     position: wheel_pos,
                     delta: fret_core::Point::new(Px(0.0), Px(-80.0)),
                     modifiers: Modifiers::default(),
@@ -4344,7 +4371,9 @@ mod tests {
 
         ui.request_semantics_snapshot();
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
-        let snap = ui.semantics_snapshot().expect("semantics snapshot after wheel (no rerender)");
+        let snap = ui
+            .semantics_snapshot()
+            .expect("semantics snapshot after wheel (no rerender)");
         let last = snap
             .nodes
             .iter()
@@ -4470,6 +4499,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: rect_center(more_bounds),
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),
@@ -4612,6 +4642,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: safe_point,
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),

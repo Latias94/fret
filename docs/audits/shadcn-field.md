@@ -45,7 +45,7 @@ This audit compares Fret’s shadcn-aligned Field primitives against the upstrea
 ## Validation
 
 - Web layout gate:
-  `cargo nextest run -p fret-ui-shadcn -F fret-ui/layout-engine-v2 --test web_vs_fret_layout`
+  `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
   (`web_vs_fret_layout_field_input_geometry`, `web_vs_fret_layout_field_checkbox_geometry`,
   `web_vs_fret_layout_field_group_geometry`, `web_vs_fret_layout_field_fieldset_geometry`,
   `web_vs_fret_layout_field_choice_card_geometry`,

@@ -130,6 +130,39 @@ It complements (but does not replace) ADRs:
   - Current: `UiAppDriver` closes windows by default on `Event::WindowCloseRequested`, with an opt-out for "unsaved changes" prompts.
   - Current: documented in `docs/examples/todo-app-golden-path.md`.
 
+## P0 - Radix/shadcn Overlay Conformance (Goldens + Downshift)
+
+- **Downshift hover-overlay intent drivers into `fret-ui-kit::headless`**
+  - Problem: hover-driven overlays (Tooltip/HoverCard) currently contain substantial state/intent logic in shadcn recipes, which makes long-term 1:1 Radix matching harder (logic drift is easy when it is not shared/reused).
+  - ADRs: `docs/adr/0090-radix-aligned-headless-primitives-in-fret-components-ui.md`, `docs/adr/0074-component-owned-interaction-policy-and-runtime-action-hooks.md`
+  - Targets (examples to audit/move):
+    - `ecosystem/fret-ui-shadcn/src/hover_card.rs` (`HoverCardIntentDriverState`, frame-tick fallback, close suppression heuristics).
+    - `ecosystem/fret-ui-shadcn/src/tooltip.rs` (pointermove gating + suppress-after-pointerdown/focus heuristics).
+  - Approach:
+    - keep wiring in shadcn recipes, but move the deterministic state machine and timers into `ecosystem/fret-ui-kit/src/headless/*` (or extend existing headless primitives like `hover_intent`).
+    - add unit tests at the headless layer for the intent driver (open/close timing, suppression edges), then keep only "wiring smoke" in shadcn.
+
+- **Expand overlay goldens to cover submenu and non-click open paths**
+  - Goal: lock down the highest-drift overlay behaviors (submenu grace corridor, delayed opens, focus transfer) with upstream web goldens.
+  - Upstream references:
+    - `repo-ref/primitives/packages/react/menu/src/menu.tsx` (submenu pointer grace + focus transfer rules).
+  - Current:
+    - Added dropdown-menu submenu hover-open + select timeline: `goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-hover-select.light.json`.
+    - Added Fret gate covering submenu open + close-on-select: `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs`.
+    - Added context-menu submenu hover-open + select timeline: `goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-hover-select.light.json`.
+    - Added menubar submenu hover-open + select timeline: `goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-hover-select.light.json`.
+    - Added submenu pointer-grace corridor timelines:
+      - `goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-grace-corridor.light.json`
+      - `goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-grace-corridor.light.json`
+      - `goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-grace-corridor.light.json`
+    - Added Fret gates covering pointer-grace corridor staying open: `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs`.
+  - Goldens to expand:
+    - `goldens/radix-web/v4/radix-vega/*` timelines: add submenu scenarios for `dropdown-menu`, `context-menu`, `menubar`.
+    - `goldens/shadcn-web/v4/new-york-v4/*.open.json`: add open snapshots for pages that require non-click input and/or submenu open states.
+  - Fret gates to add:
+    - behavior/semantics sequence parity: `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` (new scenarios).
+    - placement/chrome parity: extend `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_*` to cover submenu content and multi-layer placement.
+
 ## P0 - Docking / Overlays / Viewport Capture
 
 - **Dock host keep-alive and early submission**
@@ -194,6 +227,14 @@ It complements (but does not replace) ADRs:
 - **Prefer `cargo nextest` for workspace tests**
   - Goal: make it easy to run conformance tests consistently.
   - Docs: `docs/README.md`, `docs/adr/README.md`
+
+- **Harden radix-web golden extraction (determinism + Windows dev loop)**
+  - Problem: upstream examples can include external images (e.g. avatar images), which makes DOM
+    timelines nondeterministic when the image load races snapshots; Windows shell semantics can
+    also break parallel dev scripts (e.g. `&` not backgrounding).
+  - Tooling: `goldens/radix-web/scripts/extract-behavior.mts`, `goldens/radix-web/README.md`
+  - TODO: keep extractor deterministic (block images / settle timing), and document a known-good
+    Windows command sequence for starting the preview server + regenerating goldens.
 
 ## P1 - Core Contract Drift
 

@@ -120,11 +120,8 @@ function writeIfChanged(filePath: string, json: unknown, update: boolean) {
   fs.writeFileSync(filePath, data, "utf8")
 }
 
-const SETTLE_MS = 250
-
 async function sleep(ms: number) {
-  const next = ms === 50 ? SETTLE_MS : ms
-  await new Promise((r) => setTimeout(r, next))
+  await new Promise((r) => setTimeout(r, ms))
 }
 
 function resolveBrowserExecutablePath(): string | undefined {
@@ -366,10 +363,146 @@ async function clickFirstByText(
   throw new Error(`no element for ${selector} containing text: ${containsText}`)
 }
 
+async function findFirstByText(
+  page: puppeteer.Page,
+  selector: string,
+  containsText: string
+) {
+  const handles = await page.$$(selector)
+  for (const handle of handles) {
+    const text = await handle.evaluate((el) => (el.textContent || "").trim())
+    if (text.includes(containsText)) return handle
+  }
+  throw new Error(`no element for ${selector} containing text: ${containsText}`)
+}
+
+async function centerOf(handle: puppeteer.ElementHandle<Element>) {
+  return await handle.evaluate((el) => {
+    const r = el.getBoundingClientRect()
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
+  })
+}
+
+async function moveMouseTo(handle: puppeteer.ElementHandle<Element>, page: puppeteer.Page) {
+  const { x, y } = await centerOf(handle)
+  await page.mouse.move(x, y)
+}
+
 async function clickFirst(page: puppeteer.Page, selector: string) {
   const handle = await page.$(selector)
   if (!handle) throw new Error(`missing element: ${selector}`)
   await handle.click()
+}
+
+async function hoverFirstByText(
+  page: puppeteer.Page,
+  selector: string,
+  containsText: string
+) {
+  const handles = await page.$$(selector)
+  for (const handle of handles) {
+    const text = await handle.evaluate((el) => (el.textContent || "").trim())
+    if (text.includes(containsText)) {
+      await handle.hover()
+      return
+    }
+  }
+  throw new Error(`no element for ${selector} containing text: ${containsText}`)
+}
+
+async function findExampleByTitle(page: puppeteer.Page, title: string) {
+  const examples = await page.$$('[data-slot="example"]')
+  for (const example of examples) {
+    const titleText = await example.evaluate((el) =>
+      (el.firstElementChild?.textContent || "").trim()
+    )
+    if (titleText === title) return example
+  }
+  throw new Error(`missing example title=${title}`)
+}
+
+async function clickExampleTrigger(
+  page: puppeteer.Page,
+  title: string,
+  triggerSelector: string
+) {
+  const example = await findExampleByTitle(page, title)
+  const trigger = await example.$(triggerSelector)
+  if (!trigger) {
+    throw new Error(
+      `missing trigger selector=${triggerSelector} for example title=${title}`
+    )
+  }
+  await trigger.click()
+}
+
+async function focusExampleTrigger(
+  page: puppeteer.Page,
+  title: string,
+  triggerSelector: string
+) {
+  const example = await findExampleByTitle(page, title)
+  const trigger = await example.$(triggerSelector)
+  if (!trigger) {
+    throw new Error(
+      `missing trigger selector=${triggerSelector} for example title=${title}`
+    )
+  }
+  await trigger.focus()
+}
+
+async function rightClickExampleTrigger(
+  page: puppeteer.Page,
+  title: string,
+  triggerSelector: string
+) {
+  const example = await findExampleByTitle(page, title)
+  const trigger = await example.$(triggerSelector)
+  if (!trigger) {
+    throw new Error(
+      `missing trigger selector=${triggerSelector} for example title=${title}`
+    )
+  }
+  await trigger.click({ button: "right" })
+}
+
+async function clickExampleWithinSelectorByText(
+  page: puppeteer.Page,
+  title: string,
+  itemSelector: string,
+  containsText: string
+) {
+  const example = await findExampleByTitle(page, title)
+  const items = await example.$$(itemSelector)
+  for (const item of items) {
+    const text = await item.evaluate((el) => (el.textContent || "").trim())
+    if (!text.includes(containsText)) continue
+    await item.click()
+    return
+  }
+  throw new Error(
+    `no element for selector=${itemSelector} in example title=${title} containing text: ${containsText}`
+  )
+}
+
+async function clickWithinSelectorByText(
+  page: puppeteer.Page,
+  containerSelector: string,
+  itemSelector: string,
+  containsText: string
+) {
+  const container = await page.$(containerSelector)
+  if (!container) throw new Error(`missing container: ${containerSelector}`)
+  const items = await container.$$(itemSelector)
+  for (const item of items) {
+    const text = await item.evaluate((el) => (el.textContent || "").trim())
+    if (!text.includes(containsText)) continue
+    await item.click()
+    return
+  }
+  throw new Error(
+    `no element in ${containerSelector} for ${itemSelector} containing text: ${containsText}`
+  )
 }
 
 async function press(page: puppeteer.Page, key: string) {
@@ -575,6 +708,188 @@ const scenarios: Scenario[] = [
     },
   },
   {
+    primitive: "dropdown-menu",
+    scenario: "submenu-hover-select",
+    item: "dropdown-menu-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+
+      await clickExampleTrigger(
+        ctx.page,
+        "With Submenu",
+        '[data-slot="dropdown-menu-trigger"]'
+      )
+      await sleep(50)
+      await waitForSelectorPresent(ctx.page, '[data-slot="dropdown-menu-content"]', true, ctx.timeoutMs).catch(
+        (err) => {
+          throw new Error(`submenu-hover-select: menu content did not appear: ${String(err)}`)
+        }
+      )
+      await pushStep(ctx, { kind: "click", target: "dropdown-menu:with-submenu" })
+
+      await hoverFirstByText(
+        ctx.page,
+        '[data-slot="dropdown-menu-sub-trigger"]',
+        "Invite users"
+      )
+      await sleep(50)
+      await waitForSelectorPresent(ctx.page, '[data-slot="dropdown-menu-sub-content"]', true, ctx.timeoutMs).catch(
+        (err) => {
+          throw new Error(`submenu-hover-select: submenu content did not appear: ${String(err)}`)
+        }
+      )
+      await pushStep(ctx, { kind: "hover", target: "dropdown-menu-sub-trigger:Invite users" })
+
+      const content = await ctx.page.$('[data-slot="dropdown-menu-sub-content"]')
+      if (!content) throw new Error("missing dropdown-menu-sub-content after hover")
+      await content.hover()
+      await sleep(50)
+      await waitForSelectorPresent(ctx.page, '[data-slot="dropdown-menu-sub-content"]', true, ctx.timeoutMs)
+      await pushStep(ctx, { kind: "hover", target: "dropdown-menu-sub-content" })
+
+      await clickWithinSelectorByText(
+        ctx.page,
+        '[data-slot="dropdown-menu-sub-content"]',
+        '[role="menuitem"]',
+        "Email"
+      )
+      await sleep(50)
+      await waitForRole(ctx.page, "menu", false, Math.min(15000, ctx.timeoutMs)).catch(
+        (err) => {
+          throw new Error(`submenu-hover-select: menu did not close after select: ${String(err)}`)
+        }
+      )
+      await pushStep(ctx, { kind: "click", target: "dropdown-menu-sub-item:Email" })
+    },
+  },
+  {
+    primitive: "dropdown-menu",
+    scenario: "submenu-grace-corridor",
+    item: "dropdown-menu-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+
+      await clickExampleTrigger(
+        ctx.page,
+        "With Submenu",
+        '[data-slot="dropdown-menu-trigger"]'
+      )
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="dropdown-menu-content"]',
+        true,
+        ctx.timeoutMs
+      ).catch((err) => {
+        throw new Error(
+          `submenu-grace-corridor: menu content did not appear: ${String(err)}`
+        )
+      })
+      await pushStep(ctx, { kind: "click", target: "dropdown-menu:with-submenu" })
+
+      const subTrigger = await findFirstByText(
+        ctx.page,
+        '[data-slot="dropdown-menu-sub-trigger"]',
+        "Invite users"
+      )
+      await moveMouseTo(subTrigger, ctx.page)
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="dropdown-menu-sub-content"]',
+        true,
+        ctx.timeoutMs
+      ).catch((err) => {
+        throw new Error(
+          `submenu-grace-corridor: submenu content did not appear: ${String(err)}`
+        )
+      })
+      await pushStep(ctx, {
+        kind: "hover",
+        target: "dropdown-menu-sub-trigger:Invite users",
+      })
+
+      const subContent = await ctx.page.$('[data-slot="dropdown-menu-sub-content"]')
+      if (!subContent) throw new Error("missing dropdown-menu-sub-content after hover")
+
+      const { x: fromX, y: fromY } = await centerOf(subTrigger)
+      const { x: toX, y: toY } = await centerOf(subContent)
+      const mid = { x: (fromX + toX) / 2, y: (fromY + toY) / 2 }
+
+      await ctx.page.mouse.move(mid.x, mid.y)
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="dropdown-menu-sub-content"]',
+        true,
+        ctx.timeoutMs
+      )
+      await pushStep(ctx, { kind: "hover", target: "submenu-grace:mid" })
+
+      await ctx.page.mouse.move(toX, toY)
+      await sleep(200)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="dropdown-menu-sub-content"]',
+        true,
+        ctx.timeoutMs
+      ).catch((err) => {
+        throw new Error(
+          `submenu-grace-corridor: submenu content disappeared: ${String(err)}`
+        )
+      })
+      await pushStep(ctx, { kind: "hover", target: "submenu-grace:inside" })
+
+      await clickWithinSelectorByText(
+        ctx.page,
+        '[data-slot="dropdown-menu-sub-content"]',
+        '[role="menuitem"]',
+        "Email"
+      )
+      await sleep(50)
+      await waitForRole(ctx.page, "menu", false, Math.min(15000, ctx.timeoutMs))
+      await pushStep(ctx, { kind: "click", target: "dropdown-menu-sub-item:Email" })
+    },
+  },
+  {
+    primitive: "dropdown-menu",
+    scenario: "submenu-keyboard-open-close",
+    item: "dropdown-menu-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+
+      await focusExampleTrigger(
+        ctx.page,
+        "With Submenu",
+        '[data-slot="dropdown-menu-trigger"]'
+      )
+      await press(ctx.page, "ArrowDown")
+      await sleep(50)
+      await waitForRole(ctx.page, "menu", true, Math.min(15000, ctx.timeoutMs))
+      await pushStep(ctx, { kind: "press", key: "ArrowDown" })
+
+      await pressChord(ctx.page, ["ArrowDown", "ArrowRight"])
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="dropdown-menu-sub-content"]',
+        true,
+        ctx.timeoutMs
+      )
+      await pushStep(ctx, { kind: "press", key: "ArrowDown,ArrowRight" })
+
+      await press(ctx.page, "ArrowLeft")
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="dropdown-menu-sub-content"]',
+        false,
+        ctx.timeoutMs
+      )
+      await pushStep(ctx, { kind: "press", key: "ArrowLeft" })
+    },
+  },
+  {
     primitive: "context-menu",
     scenario: "context-open-close",
     item: "context-menu-example",
@@ -594,6 +909,152 @@ const scenarios: Scenario[] = [
       await sleep(50)
       await waitForRole(ctx.page, "menu", false, Math.min(15000, ctx.timeoutMs))
       await pushStep(ctx, { kind: "press", key: "Escape" })
+    },
+  },
+  {
+    primitive: "context-menu",
+    scenario: "submenu-hover-select",
+    item: "context-menu-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+
+      await rightClickExampleTrigger(
+        ctx.page,
+        "With Submenu",
+        '[data-slot="context-menu-trigger"]'
+      )
+      await sleep(50)
+      await waitForRole(ctx.page, "menu", true, Math.min(15000, ctx.timeoutMs)).catch(
+        (err) => {
+          throw new Error(
+            `submenu-hover-select: context menu content did not appear: ${String(err)}`
+          )
+        }
+      )
+      await pushStep(ctx, { kind: "click", target: "context-menu:with-submenu" })
+
+      await hoverFirstByText(
+        ctx.page,
+        '[data-slot="context-menu-sub-trigger"]',
+        "More Tools"
+      )
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="context-menu-sub-content"]',
+        true,
+        ctx.timeoutMs
+      ).catch((err) => {
+        throw new Error(
+          `submenu-hover-select: context submenu content did not appear: ${String(err)}`
+        )
+      })
+      await pushStep(ctx, { kind: "hover", target: "context-menu-sub-trigger:More Tools" })
+
+      await clickWithinSelectorByText(
+        ctx.page,
+        '[data-slot="context-menu-sub-content"]',
+        '[role="menuitem"]',
+        "Save Page"
+      )
+      await sleep(50)
+      await waitForRole(ctx.page, "menu", false, Math.min(15000, ctx.timeoutMs)).catch(
+        (err) => {
+          throw new Error(
+            `submenu-hover-select: context menu did not close after select: ${String(err)}`
+          )
+        }
+      )
+      await pushStep(ctx, { kind: "click", target: "context-menu-sub-item:Save Page" })
+    },
+  },
+  {
+    primitive: "context-menu",
+    scenario: "submenu-grace-corridor",
+    item: "context-menu-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+
+      await rightClickExampleTrigger(
+        ctx.page,
+        "With Submenu",
+        '[data-slot="context-menu-trigger"]'
+      )
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="context-menu-content"]',
+        true,
+        ctx.timeoutMs
+      ).catch((err) => {
+        throw new Error(
+          `submenu-grace-corridor: context menu content did not appear: ${String(err)}`
+        )
+      })
+      await pushStep(ctx, { kind: "click", target: "context-menu:with-submenu" })
+
+      const subTrigger = await findFirstByText(
+        ctx.page,
+        '[data-slot="context-menu-sub-trigger"]',
+        "More Tools"
+      )
+      await moveMouseTo(subTrigger, ctx.page)
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="context-menu-sub-content"]',
+        true,
+        ctx.timeoutMs
+      ).catch((err) => {
+        throw new Error(
+          `submenu-grace-corridor: context submenu content did not appear: ${String(err)}`
+        )
+      })
+      await pushStep(ctx, {
+        kind: "hover",
+        target: "context-menu-sub-trigger:More Tools",
+      })
+
+      const subContent = await ctx.page.$('[data-slot="context-menu-sub-content"]')
+      if (!subContent) throw new Error("missing context-menu-sub-content after hover")
+
+      const { x: fromX, y: fromY } = await centerOf(subTrigger)
+      const { x: toX, y: toY } = await centerOf(subContent)
+      const mid = { x: (fromX + toX) / 2, y: (fromY + toY) / 2 }
+
+      await ctx.page.mouse.move(mid.x, mid.y)
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="context-menu-sub-content"]',
+        true,
+        ctx.timeoutMs
+      )
+      await pushStep(ctx, { kind: "hover", target: "submenu-grace:mid" })
+
+      await ctx.page.mouse.move(toX, toY)
+      await sleep(200)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="context-menu-sub-content"]',
+        true,
+        ctx.timeoutMs
+      ).catch((err) => {
+        throw new Error(
+          `submenu-grace-corridor: context submenu content disappeared: ${String(err)}`
+        )
+      })
+      await pushStep(ctx, { kind: "hover", target: "submenu-grace:inside" })
+
+      await clickWithinSelectorByText(
+        ctx.page,
+        '[data-slot="context-menu-sub-content"]',
+        '[role="menuitem"]',
+        "Save Page"
+      )
+      await sleep(50)
+      await waitForRole(ctx.page, "menu", false, Math.min(15000, ctx.timeoutMs))
+      await pushStep(ctx, { kind: "click", target: "context-menu-sub-item:Save Page" })
     },
   },
   {
@@ -792,6 +1253,162 @@ const scenarios: Scenario[] = [
     },
   },
   {
+    primitive: "menubar",
+    scenario: "submenu-hover-select",
+    item: "menubar-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+
+      await clickExampleWithinSelectorByText(
+        ctx.page,
+        "With Submenu",
+        '[data-slot="menubar-trigger"]',
+        "File"
+      )
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="menubar-content"]',
+        true,
+        Math.min(15000, ctx.timeoutMs)
+      ).catch((err) => {
+        throw new Error(
+          `submenu-hover-select: menubar content did not appear: ${String(err)}`
+        )
+      })
+      await pushStep(ctx, { kind: "click", target: "menubar:with-submenu:file" })
+
+      await hoverFirstByText(
+        ctx.page,
+        '[data-slot="menubar-sub-trigger"]',
+        "Share"
+      )
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="menubar-sub-content"]',
+        true,
+        ctx.timeoutMs
+      ).catch((err) => {
+        throw new Error(
+          `submenu-hover-select: menubar submenu content did not appear: ${String(err)}`
+        )
+      })
+      await pushStep(ctx, { kind: "hover", target: "menubar-sub-trigger:Share" })
+
+      await clickWithinSelectorByText(
+        ctx.page,
+        '[data-slot="menubar-sub-content"]',
+        '[role="menuitem"]',
+        "Email link"
+      )
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="menubar-content"]',
+        false,
+        Math.min(15000, ctx.timeoutMs)
+      ).catch((err) => {
+        throw new Error(
+          `submenu-hover-select: menubar did not close after select: ${String(err)}`
+        )
+      })
+      await pushStep(ctx, { kind: "click", target: "menubar-sub-item:Email link" })
+    },
+  },
+  {
+    primitive: "menubar",
+    scenario: "submenu-grace-corridor",
+    item: "menubar-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+
+      await clickExampleWithinSelectorByText(
+        ctx.page,
+        "With Submenu",
+        '[data-slot="menubar-trigger"]',
+        "File"
+      )
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="menubar-content"]',
+        true,
+        Math.min(15000, ctx.timeoutMs)
+      ).catch((err) => {
+        throw new Error(
+          `submenu-grace-corridor: menubar content did not appear: ${String(err)}`
+        )
+      })
+      await pushStep(ctx, { kind: "click", target: "menubar:with-submenu:file" })
+
+      const subTrigger = await findFirstByText(
+        ctx.page,
+        '[data-slot="menubar-sub-trigger"]',
+        "Share"
+      )
+      await moveMouseTo(subTrigger, ctx.page)
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="menubar-sub-content"]',
+        true,
+        ctx.timeoutMs
+      ).catch((err) => {
+        throw new Error(
+          `submenu-grace-corridor: menubar submenu content did not appear: ${String(err)}`
+        )
+      })
+      await pushStep(ctx, { kind: "hover", target: "menubar-sub-trigger:Share" })
+
+      const subContent = await ctx.page.$('[data-slot="menubar-sub-content"]')
+      if (!subContent) throw new Error("missing menubar-sub-content after hover")
+
+      const { x: fromX, y: fromY } = await centerOf(subTrigger)
+      const { x: toX, y: toY } = await centerOf(subContent)
+      const mid = { x: (fromX + toX) / 2, y: (fromY + toY) / 2 }
+
+      await ctx.page.mouse.move(mid.x, mid.y)
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="menubar-sub-content"]',
+        true,
+        ctx.timeoutMs
+      )
+      await pushStep(ctx, { kind: "hover", target: "submenu-grace:mid" })
+
+      await ctx.page.mouse.move(toX, toY)
+      await sleep(200)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="menubar-sub-content"]',
+        true,
+        ctx.timeoutMs
+      ).catch((err) => {
+        throw new Error(
+          `submenu-grace-corridor: menubar submenu content disappeared: ${String(err)}`
+        )
+      })
+      await pushStep(ctx, { kind: "hover", target: "submenu-grace:inside" })
+
+      await clickWithinSelectorByText(
+        ctx.page,
+        '[data-slot="menubar-sub-content"]',
+        '[role="menuitem"]',
+        "Email link"
+      )
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="menubar-content"]',
+        false,
+        Math.min(15000, ctx.timeoutMs)
+      )
+      await pushStep(ctx, { kind: "click", target: "menubar-sub-item:Email link" })
+    },
+  },
+  {
     primitive: "alert-dialog",
     scenario: "open-cancel",
     item: "alert-dialog-example",
@@ -865,6 +1482,11 @@ async function loadPuppeteer(): Promise<typeof import("puppeteer")> {
 
 const { flags, names } = parseArgs(process.argv.slice(2))
 
+if (process.env.DEBUG_ARGS === "1") {
+  console.log("?? argv debug")
+  console.log({ flags, names })
+}
+
 const baseUrl =
   (typeof flags.baseUrl === "string" ? flags.baseUrl : undefined) ??
   process.env.BASE_URL ??
@@ -907,7 +1529,14 @@ function selectedScenarios(): Scenario[] {
         ].includes(s.item)
       )
     }
-    return scenarios.filter((s) => wanted.has(s.item) || wanted.has(s.primitive))
+    return scenarios.filter((s) => {
+      if (wanted.has(s.item) || wanted.has(s.primitive)) return true
+      const full = `${s.item}.${s.primitive}.${s.scenario}`
+      if (wanted.has(full)) return true
+      const short = `${s.primitive}.${s.scenario}`
+      if (wanted.has(short)) return true
+      return false
+    })
   }
   return scenarios
 }
@@ -1024,6 +1653,18 @@ async function main() {
 
       const page = await browser.newPage()
       page.setDefaultTimeout(timeoutMs)
+
+      // Behavior goldens should be deterministic. External images add timing and network
+      // nondeterminism (e.g. Radix Avatar conditionally mounting <img/> only once loaded), so we
+      // abort image requests and rely on fallbacks.
+      await page.setRequestInterception(true)
+      page.on("request", (req) => {
+        if (req.resourceType() === "image") {
+          void req.abort()
+          return
+        }
+        void req.continue()
+      })
 
       // Ensure theme is stable.
       await page.evaluateOnNewDocument((theme) => {

@@ -115,6 +115,7 @@ fn resizable_panel_group_drag_updates_fractions_model() {
             button: MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -126,6 +127,7 @@ fn resizable_panel_group_drag_updates_fractions_model() {
             position: Point::new(Px(center + 30.0), Px(20.0)),
             buttons: fret_core::MouseButtons::default(),
             modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -137,6 +139,7 @@ fn resizable_panel_group_drag_updates_fractions_model() {
             button: MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -208,6 +211,7 @@ fn resizable_panel_group_pushes_growth_through_following_panels() {
             button: MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -220,6 +224,7 @@ fn resizable_panel_group_pushes_growth_through_following_panels() {
             position: Point::new(Px(center + 250.0), Px(20.0)),
             buttons: fret_core::MouseButtons::default(),
             modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -231,6 +236,7 @@ fn resizable_panel_group_pushes_growth_through_following_panels() {
             button: MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -314,6 +320,7 @@ fn resizable_panel_group_shrink_clamps_to_min_px() {
             button: MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -326,6 +333,7 @@ fn resizable_panel_group_shrink_clamps_to_min_px() {
             position: Point::new(Px(center - 250.0), Px(20.0)),
             buttons: fret_core::MouseButtons::default(),
             modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -337,6 +345,7 @@ fn resizable_panel_group_shrink_clamps_to_min_px() {
             button: MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );

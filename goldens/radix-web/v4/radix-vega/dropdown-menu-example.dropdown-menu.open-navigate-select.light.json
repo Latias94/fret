@@ -809,7 +809,7 @@
                                           },
                                           "children": [
                                             {
-                                              "tag": "span",
+                                              "tag": "img",
                                               "path": [
                                                 2,
                                                 3,
@@ -822,7 +822,7 @@
                                                 0
                                               ],
                                               "attrs": {
-                                                "data-slot": "avatar-fallback"
+                                                "data-slot": "avatar-image"
                                               },
                                               "children": [],
                                               "rect": {
@@ -830,8 +830,7 @@
                                                 "y": 887,
                                                 "w": 32,
                                                 "h": 32
-                                              },
-                                              "text": "CN"
+                                              }
                                             }
                                           ],
                                           "rect": {
@@ -839,8 +838,7 @@
                                             "y": 887,
                                             "w": 32,
                                             "h": 32
-                                          },
-                                          "text": "CN"
+                                          }
                                         }
                                       ],
                                       "rect": {
@@ -849,7 +847,7 @@
                                         "w": 200,
                                         "h": 48
                                       },
-                                      "text": "CNshadcnshadcn@example.com"
+                                      "text": "shadcnshadcn@example.com"
                                     },
                                     {
                                       "tag": "button",
@@ -886,7 +884,7 @@
                                           },
                                           "children": [
                                             {
-                                              "tag": "span",
+                                              "tag": "img",
                                               "path": [
                                                 2,
                                                 3,
@@ -899,7 +897,7 @@
                                                 0
                                               ],
                                               "attrs": {
-                                                "data-slot": "avatar-fallback"
+                                                "data-slot": "avatar-image"
                                               },
                                               "children": [],
                                               "rect": {
@@ -907,8 +905,7 @@
                                                 "y": 887,
                                                 "w": 32,
                                                 "h": 32
-                                              },
-                                              "text": "LR"
+                                              }
                                             }
                                           ],
                                           "rect": {
@@ -916,8 +913,7 @@
                                             "y": 887,
                                             "w": 32,
                                             "h": 32
-                                          },
-                                          "text": "LR"
+                                          }
                                         }
                                       ],
                                       "rect": {
@@ -925,8 +921,7 @@
                                         "y": 885,
                                         "w": 36,
                                         "h": 36
-                                      },
-                                      "text": "LR"
+                                      }
                                     }
                                   ],
                                   "rect": {
@@ -935,7 +930,7 @@
                                     "w": 398,
                                     "h": 48
                                   },
-                                  "text": "CNshadcnshadcn@example.comLR"
+                                  "text": "shadcnshadcn@example.com"
                                 }
                               ],
                               "rect": {
@@ -944,7 +939,7 @@
                                 "w": 448,
                                 "h": 98
                               },
-                              "text": "CNshadcnshadcn@example.comLR"
+                              "text": "shadcnshadcn@example.com"
                             }
                           ],
                           "rect": {
@@ -953,7 +948,7 @@
                             "w": 448,
                             "h": 134
                           },
-                          "text": "With AvatarCNshadcnshadcn@example.comLR"
+                          "text": "With Avatarshadcnshadcn@example.com"
                         },
                         {
                           "tag": "div",
@@ -1179,12 +1174,12 @@
             },
             {
               "role": "button",
-              "name": "CN shadcn shadcn@example.com",
+              "name": "Shadcn shadcn shadcn@example.com",
               "haspopup": "menu"
             },
             {
               "role": "button",
-              "name": "LR",
+              "name": "shadcn",
               "haspopup": "menu"
             },
             {
@@ -1213,7 +1208,7 @@
         "focus": {
           "tag": "div",
           "path": [
-            27,
+            18,
             0
           ],
           "attrs": {
@@ -2308,7 +2303,7 @@
             {
               "tag": "next-route-announcer",
               "path": [
-                26
+                17
               ],
               "attrs": {
                 "aria-hidden": "true"
@@ -2324,14 +2319,14 @@
             {
               "tag": "div",
               "path": [
-                27
+                18
               ],
               "attrs": {},
               "children": [
                 {
                   "tag": "div",
                   "path": [
-                    27,
+                    18,
                     0
                   ],
                   "attrs": {
@@ -2349,7 +2344,7 @@
                     {
                       "tag": "div",
                       "path": [
-                        27,
+                        18,
                         0,
                         0
                       ],
@@ -2361,7 +2356,7 @@
                         {
                           "tag": "div",
                           "path": [
-                            27,
+                            18,
                             0,
                             0,
                             0
@@ -2381,7 +2376,7 @@
                         {
                           "tag": "div",
                           "path": [
-                            27,
+                            18,
                             0,
                             0,
                             1
@@ -2405,7 +2400,7 @@
                         {
                           "tag": "div",
                           "path": [
-                            27,
+                            18,
                             0,
                             0,
                             2
@@ -2429,7 +2424,7 @@
                         {
                           "tag": "div",
                           "path": [
-                            27,
+                            18,
                             0,
                             0,
                             3
@@ -2462,7 +2457,7 @@
                     {
                       "tag": "div",
                       "path": [
-                        27,
+                        18,
                         0,
                         1
                       ],
@@ -2482,7 +2477,7 @@
                     {
                       "tag": "div",
                       "path": [
-                        27,
+                        18,
                         0,
                         2
                       ],
@@ -2494,7 +2489,7 @@
                         {
                           "tag": "div",
                           "path": [
-                            27,
+                            18,
                             0,
                             2,
                             0
@@ -2518,7 +2513,7 @@
                         {
                           "tag": "div",
                           "path": [
-                            27,
+                            18,
                             0,
                             2,
                             1
@@ -2542,7 +2537,7 @@
                         {
                           "tag": "div",
                           "path": [
-                            27,
+                            18,
                             0,
                             2,
                             2
@@ -2595,7 +2590,7 @@
             {
               "tag": "span",
               "path": [
-                28
+                19
               ],
               "attrs": {
                 "tabindex": "0",

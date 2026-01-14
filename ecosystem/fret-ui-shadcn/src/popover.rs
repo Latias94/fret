@@ -6,8 +6,8 @@ use fret_core::{FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextS
 use fret_runtime::Model;
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
-    AnyElement, ContainerProps, InteractivityGateProps, LayoutStyle, Length, OpacityProps,
-    Overflow, SemanticsProps, TextProps, VisualTransformProps,
+    AnyElement, ContainerProps, ElementKind, InteractivityGateProps, LayoutStyle, Length,
+    OpacityProps, Overflow, SemanticsProps, TextProps, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -25,6 +25,34 @@ use fret_ui_kit::{
 
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
+
+fn fixed_size_hint_px(element: &AnyElement) -> Option<Size> {
+    fn visit(node: &AnyElement, best: &mut Option<Size>) {
+        if let ElementKind::Container(ContainerProps { layout, .. }) = &node.kind {
+            if let Length::Px(w) = layout.size.width {
+                let h = match layout.size.height {
+                    Length::Px(h) => h,
+                    _ => Px(160.0),
+                };
+                let candidate = Size::new(w, h);
+                if best
+                    .map(|cur| candidate.width.0 > cur.width.0)
+                    .unwrap_or(true)
+                {
+                    *best = Some(candidate);
+                }
+            }
+        }
+
+        for child in &node.children {
+            visit(child, best);
+        }
+    }
+
+    let mut best: Option<Size> = None;
+    visit(element, &mut best);
+    best
+}
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum PopoverAlign {
@@ -283,7 +311,7 @@ impl Popover {
                 let window_margin = self.window_margin_override.unwrap_or_else(|| {
                     theme
                         .metric_by_key("component.popover.window_margin")
-                        .unwrap_or(Px(8.0))
+                        .unwrap_or(Px(0.0))
                 });
                 let arrow = self.arrow;
                 let arrow_size = self.arrow_size_override.unwrap_or_else(|| {
@@ -322,11 +350,15 @@ impl Popover {
                         return Vec::new();
                     }
 
-                    let inner_id = std::cell::Cell::new(None);
+                    let inner_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+                        Rc::new(Cell::new(None));
                     let inner_id_for_scope = inner_id.clone();
+                    let inner_size_hint: Rc<Cell<Option<Size>>> = Rc::new(Cell::new(None));
+                    let inner_size_hint_for_scope = inner_size_hint.clone();
                     let content = radix_popover::popover_dialog_wrapper(cx, None, move |cx| {
                         let inner = content(cx, anchor_fallback.unwrap_or_default());
                         inner_id_for_scope.set(Some(inner.id));
+                        inner_size_hint_for_scope.set(fixed_size_hint_px(&inner));
                         vec![inner]
                     });
                     dialog_id_for_trigger.set(Some(content.id));
@@ -334,7 +366,10 @@ impl Popover {
                     let measure_id = inner_id.get().unwrap_or(content.id);
                     let last_content_size = cx.last_bounds_for_element(measure_id).map(|r| r.size);
                     let estimated = Size::new(Px(288.0), Px(160.0));
-                    let content_size = last_content_size.unwrap_or(estimated);
+                    let content_size = inner_size_hint
+                        .get()
+                        .or(last_content_size)
+                        .unwrap_or(estimated);
 
                     let align = match align {
                         PopoverAlign::Start => Align::Start,
@@ -354,6 +389,7 @@ impl Popover {
                     let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
                     let placement =
                         popper::PopperContentPlacement::new(direction, side, align, side_offset)
+                            .with_shift_cross_axis(true)
                             .with_align_offset(align_offset)
                             .with_arrow(arrow_options, arrow_protrusion)
                             .with_hide_when_detached(hide_when_detached);
@@ -1019,6 +1055,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position: underlay_point,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -1030,6 +1067,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position: underlay_point,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -1141,6 +1179,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position: underlay_point,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -1152,6 +1191,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position: underlay_point,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -1224,6 +1264,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -1235,6 +1276,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -1422,6 +1464,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -1433,6 +1476,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -1480,6 +1524,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position: click,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -1491,6 +1536,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position: click,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -1577,6 +1623,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position: click_point,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -1588,6 +1635,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position: click_point,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -1684,6 +1732,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -1695,6 +1744,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -1747,6 +1797,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position: click,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -1758,6 +1809,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position: click,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -1879,6 +1931,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(12.0), Px(12.0)),
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -1890,6 +1943,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(12.0), Px(12.0)),
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -2007,6 +2061,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(12.0), Px(12.0)),
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -2018,6 +2073,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(12.0), Px(12.0)),
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -2037,6 +2093,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(245.0), Px(125.0)),
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -2171,6 +2228,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position: underlay_point,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -2182,6 +2240,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position: underlay_point,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -2313,6 +2372,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position: underlay_point,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -2324,6 +2384,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position: underlay_point,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),

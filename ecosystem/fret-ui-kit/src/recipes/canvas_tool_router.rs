@@ -472,7 +472,7 @@ mod tests {
     use fret_core::{
         AppWindowId, Modifiers, PathCommand, PathConstraints, PathId, PathMetrics, PathService,
         PathStyle, Point, PointerType, Px, Rect, Scene, Size, SvgId, SvgService, TextBlobId,
-        TextConstraints, TextMetrics, TextService, TextStyle,
+        TextConstraints, TextInput, TextMetrics, TextService,
     };
     use fret_runtime::{FrameId, TickId};
     use fret_ui::UiTree;
@@ -483,8 +483,7 @@ mod tests {
     impl TextService for FakeServices {
         fn prepare(
             &mut self,
-            _text: &str,
-            _style: &TextStyle,
+            _input: &TextInput,
             _constraints: TextConstraints,
         ) -> (TextBlobId, TextMetrics) {
             (
@@ -614,6 +613,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: Modifiers::default(),
                 click_count: 1,
+                pointer_id: fret_core::PointerId(0),
                 pointer_type: PointerType::Mouse,
             }),
         );
@@ -628,6 +628,7 @@ mod tests {
                     ..Default::default()
                 },
                 modifiers: Modifiers::default(),
+                pointer_id: fret_core::PointerId(0),
                 pointer_type: PointerType::Mouse,
             }),
         );
@@ -640,6 +641,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: Modifiers::default(),
                 click_count: 1,
+                pointer_id: fret_core::PointerId(0),
                 pointer_type: PointerType::Mouse,
             }),
         );

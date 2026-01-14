@@ -32,7 +32,7 @@ This audit compares Fret’s shadcn-aligned `Slider` against the upstream shadcn
 ## Validation
 
 - `cargo test -p fret-ui-shadcn --lib slider`
-- Web layout gate: `cargo nextest run -p fret-ui-shadcn -F fret-ui/layout-engine-v2 --test web_vs_fret_layout`
+- Web layout gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
   (`web_vs_fret_layout_slider_demo_geometry`).
 
 ## Follow-ups (recommended)

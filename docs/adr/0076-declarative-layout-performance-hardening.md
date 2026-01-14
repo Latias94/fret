@@ -2,14 +2,15 @@
 
 Status: Accepted (incremental rollout; steps 1–3 implemented)
 
-Update (2026-01-08):
+Update (2026-01-13):
 
 - ADR 0115 introduces constraint-correct `AvailableSpace` and a non-reentrant intrinsic measurement path, so Taffy
   measure callbacks must not re-enter subtree layout.
-- ADR 0116 proposes evolving from “container-owned Taffy islands” to a window-scoped layout engine with per-viewport
-  roots (for multi-viewport docking).
-- This ADR remains the accepted performance hardening guidance for the **container-owned** integration shape, and its
-  incremental-update and caching principles still apply to the window-scoped engine end-state.
+- ADR 0116 describes a window-scoped layout engine with per-viewport roots (for multi-viewport docking) and is enabled
+  by default in this repository.
+- The repository no longer implements the container-owned persistent `TaffyTree` integration shape described here by
+  default. This ADR is retained for historical context; its incremental-update and caching principles still apply to the
+  window-scoped engine end-state.
 
 ## Context
 

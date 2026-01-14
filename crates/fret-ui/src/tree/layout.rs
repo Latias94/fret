@@ -1,16 +1,11 @@
 use super::*;
 use std::any::TypeId;
 
-#[cfg(feature = "layout-engine-v2")]
 use crate::layout_constraints::LayoutSize;
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints};
-#[cfg(feature = "layout-engine-v2")]
 use crate::layout_engine::TaffyLayoutEngine;
-#[cfg(feature = "layout-engine-v2")]
-use crate::layout_engine::{ParentLayoutKind, build_flow_subtree, build_viewport_flow_subtree};
+use crate::layout_engine::build_viewport_flow_subtree;
 use crate::layout_pass::LayoutPassKind;
-#[cfg(feature = "layout-engine-v2")]
-use taffy::Style as TaffyStyle;
 
 impl<H: UiHost> UiTree<H> {
     pub fn layout_all(
@@ -38,6 +33,7 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.layout_nodes_performed = 0;
             self.debug_stats.layout_engine_solves = 0;
             self.debug_stats.layout_engine_solve_time = Duration::default();
+            self.debug_stats.layout_engine_widget_fallback_solves = 0;
             self.debug_stats.focus = self.focus;
             self.debug_stats.captured = self.captured_for(fret_core::PointerId(0));
         }
@@ -47,7 +43,6 @@ impl<H: UiHost> UiTree<H> {
             .map(|layer| self.layers[layer].root)
             .collect();
 
-        #[cfg(feature = "layout-engine-v2")]
         let (layout_engine_solves_start, layout_engine_solve_time_start) = {
             self.begin_layout_engine_frame(app);
             if self.debug_enabled {
@@ -60,10 +55,8 @@ impl<H: UiHost> UiTree<H> {
             }
         };
 
-        #[cfg(feature = "layout-engine-v2")]
         let mut viewport_cursor: usize = 0;
 
-        #[cfg(feature = "layout-engine-v2")]
         self.request_build_window_roots_if_final(
             app,
             services,
@@ -77,7 +70,6 @@ impl<H: UiHost> UiTree<H> {
             let _ =
                 self.layout_in_with_pass_kind(app, services, root, bounds, scale_factor, pass_kind);
 
-            #[cfg(feature = "layout-engine-v2")]
             self.flush_viewport_roots_after_root(
                 app,
                 services,
@@ -98,23 +90,19 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.layout_time = started.elapsed();
         }
 
-        #[cfg(feature = "layout-engine-v2")]
         if pass_kind == LayoutPassKind::Final {
             self.layout_engine.end_frame();
         }
 
         if self.debug_enabled {
-            #[cfg(feature = "layout-engine-v2")]
-            {
-                self.debug_stats.layout_engine_solves = self
-                    .layout_engine
-                    .solve_count()
-                    .saturating_sub(layout_engine_solves_start);
-                self.debug_stats.layout_engine_solve_time = self
-                    .layout_engine
-                    .last_solve_time()
-                    .saturating_sub(layout_engine_solve_time_start);
-            }
+            self.debug_stats.layout_engine_solves = self
+                .layout_engine
+                .solve_count()
+                .saturating_sub(layout_engine_solves_start);
+            self.debug_stats.layout_engine_solve_time = self
+                .layout_engine
+                .last_solve_time()
+                .saturating_sub(layout_engine_solve_time_start);
         }
     }
 
@@ -131,42 +119,34 @@ impl<H: UiHost> UiTree<H> {
             available,
         );
 
-        #[cfg(feature = "layout-engine-v2")]
-        {
-            let mut viewport_cursor: usize = 0;
-            self.begin_layout_engine_frame(app);
-            self.request_build_window_roots_if_final(
-                app,
-                services,
-                std::slice::from_ref(&root),
-                bounds,
-                scale_factor,
-                LayoutPassKind::Final,
-            );
-            let size = self.layout_in_with_pass_kind(
-                app,
-                services,
-                root,
-                bounds,
-                scale_factor,
-                LayoutPassKind::Final,
-            );
-            self.flush_viewport_roots_after_root(
-                app,
-                services,
-                scale_factor,
-                LayoutPassKind::Final,
-                &mut viewport_cursor,
-            );
+        let mut viewport_cursor: usize = 0;
+        self.begin_layout_engine_frame(app);
+        self.request_build_window_roots_if_final(
+            app,
+            services,
+            std::slice::from_ref(&root),
+            bounds,
+            scale_factor,
+            LayoutPassKind::Final,
+        );
+        let size = self.layout_in_with_pass_kind(
+            app,
+            services,
+            root,
+            bounds,
+            scale_factor,
+            LayoutPassKind::Final,
+        );
+        self.flush_viewport_roots_after_root(
+            app,
+            services,
+            scale_factor,
+            LayoutPassKind::Final,
+            &mut viewport_cursor,
+        );
 
-            self.layout_engine.end_frame();
-            size
-        }
-
-        #[cfg(not(feature = "layout-engine-v2"))]
-        {
-            self.layout_in(app, services, root, bounds, scale_factor)
-        }
+        self.layout_engine.end_frame();
+        size
     }
 
     pub fn layout_in(
@@ -177,14 +157,33 @@ impl<H: UiHost> UiTree<H> {
         bounds: Rect,
         scale_factor: f32,
     ) -> Size {
-        self.layout_in_with_pass_kind(
+        let mut viewport_cursor: usize = 0;
+        self.begin_layout_engine_frame(app);
+        self.request_build_window_roots_if_final(
+            app,
+            services,
+            std::slice::from_ref(&root),
+            bounds,
+            scale_factor,
+            LayoutPassKind::Final,
+        );
+        let size = self.layout_in_with_pass_kind(
             app,
             services,
             root,
             bounds,
             scale_factor,
             LayoutPassKind::Final,
-        )
+        );
+        self.flush_viewport_roots_after_root(
+            app,
+            services,
+            scale_factor,
+            LayoutPassKind::Final,
+            &mut viewport_cursor,
+        );
+        self.layout_engine.end_frame();
+        size
     }
 
     pub fn layout_in_with_pass_kind(
@@ -210,13 +209,11 @@ impl<H: UiHost> UiTree<H> {
         self.measure_node(app, services, node, constraints, scale_factor)
     }
 
-    #[cfg(feature = "layout-engine-v2")]
     fn begin_layout_engine_frame(&mut self, app: &mut H) {
         self.layout_engine.begin_frame(app.frame_id());
         self.viewport_roots.clear();
     }
 
-    #[cfg(feature = "layout-engine-v2")]
     fn maybe_dump_taffy_subtree(
         &self,
         app: &mut H,
@@ -351,7 +348,6 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    #[cfg(feature = "layout-engine-v2")]
     fn request_build_window_roots_if_final(
         &mut self,
         app: &mut H,
@@ -420,7 +416,6 @@ impl<H: UiHost> UiTree<H> {
         self.put_layout_engine(engine);
     }
 
-    #[cfg(feature = "layout-engine-v2")]
     fn flush_viewport_roots_after_root(
         &mut self,
         app: &mut H,
@@ -540,8 +535,67 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    #[cfg(feature = "layout-engine-v2")]
-    pub(crate) fn precompute_barrier_flow_root_island(
+    pub(crate) fn record_layout_engine_widget_fallback_solve(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        node: NodeId,
+        widget_kind: &'static str,
+        missing_child: Option<NodeId>,
+    ) {
+        if self.debug_enabled {
+            self.debug_stats.layout_engine_widget_fallback_solves = self
+                .debug_stats
+                .layout_engine_widget_fallback_solves
+                .saturating_add(1);
+        }
+
+        let forbid_fallback_solves =
+            std::env::var_os("FRET_LAYOUT_FORBID_WIDGET_FALLBACK_SOLVES").is_some();
+        let trace_fallback_solves =
+            std::env::var_os("FRET_LAYOUT_TRACE_WIDGET_FALLBACK_SOLVES").is_some();
+
+        if trace_fallback_solves {
+            let label = crate::declarative::frame::element_record_for_node(app, window, node)
+                .map(|r| r.instance);
+            let missing_label = missing_child.and_then(|child| {
+                crate::declarative::frame::element_record_for_node(app, window, child)
+                    .map(|r| r.instance)
+            });
+
+            tracing::warn!(
+                window = ?self.window,
+                node = ?node,
+                widget_kind,
+                label = ?label,
+                missing_child = ?missing_child,
+                missing_label = ?missing_label,
+                path = ?self.debug_node_path(node),
+                "layout engine child rects missing; falling back to widget-local solve"
+            );
+        }
+
+        if forbid_fallback_solves {
+            let label = crate::declarative::frame::element_record_for_node(app, window, node)
+                .map(|r| format!("{:?}", r.instance))
+                .unwrap_or_default();
+            let missing_label = missing_child
+                .and_then(|child| {
+                    crate::declarative::frame::element_record_for_node(app, window, child)
+                })
+                .map(|r| format!("{:?}", r.instance));
+            let path = self.debug_node_path(node);
+            panic!(
+                "layout engine fallback solve ({widget_kind}) for {node:?} {label} missing_child={missing_child:?} missing_label={missing_label:?} path={path:?}"
+            );
+        }
+    }
+
+    /// Internal barrier bridge: prefer calling via `LayoutCx::solve_barrier_child_root(...)`.
+    ///
+    /// Only explicit layout barriers (scroll, virtualization, resizable splits, etc.) should solve
+    /// child roots "out of band" like this, and only during `LayoutPassKind::Final`.
+    pub(crate) fn solve_barrier_flow_root(
         &mut self,
         app: &mut H,
         services: &mut dyn UiServices,
@@ -580,8 +634,8 @@ impl<H: UiHost> UiTree<H> {
         self.put_layout_engine(engine);
     }
 
-    #[cfg(feature = "layout-engine-v2")]
-    pub(crate) fn precompute_barrier_flow_root_island_if_needed(
+    /// Internal barrier bridge: prefer calling via `LayoutCx::solve_barrier_child_root_if_needed(...)`.
+    pub(crate) fn solve_barrier_flow_root_if_needed(
         &mut self,
         app: &mut H,
         services: &mut dyn UiServices,
@@ -606,59 +660,85 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
-        self.precompute_barrier_flow_root_island(app, services, root, root_bounds, scale_factor);
+        self.solve_barrier_flow_root(app, services, root, root_bounds, scale_factor);
     }
 
-    #[cfg(feature = "layout-engine-v2")]
-    pub(crate) fn solve_flow_island_with_root_style(
+    /// Internal barrier bridge: batch variant of `solve_barrier_flow_root_if_needed`.
+    ///
+    /// This exists to reduce `take_layout_engine()` / `put_layout_engine()` churn when a barrier
+    /// needs to solve many child roots (e.g. virtualized lists).
+    pub(crate) fn solve_barrier_flow_roots_if_needed(
         &mut self,
         app: &mut H,
         services: &mut dyn UiServices,
-        window: AppWindowId,
-        root: NodeId,
-        root_style: TaffyStyle,
-        children: &[NodeId],
-        child_parent_kind: ParentLayoutKind,
-        available: LayoutSize<AvailableSpace>,
+        roots: &[(NodeId, Rect)],
         scale_factor: f32,
-    ) -> (Rect, Vec<(NodeId, Rect)>) {
+    ) {
+        let Some(window) = self.window else {
+            return;
+        };
+        if roots.is_empty() {
+            return;
+        }
+
+        let mut batch: Vec<(NodeId, Rect)> = Vec::new();
+        batch.reserve(roots.len());
+        for &(root, root_bounds) in roots {
+            let Some(node) = self.nodes.get(root) else {
+                continue;
+            };
+
+            let needs_layout = node.invalidation.layout || node.bounds != root_bounds;
+            if !needs_layout {
+                continue;
+            }
+
+            let is_translation_only = !node.invalidation.layout
+                && node.bounds.size == root_bounds.size
+                && node.bounds.origin != root_bounds.origin
+                && node.measured_size != Size::default();
+            if is_translation_only {
+                continue;
+            }
+
+            batch.push((root, root_bounds));
+        }
+
+        if batch.is_empty() {
+            return;
+        }
+
         let mut engine = self.take_layout_engine();
-
-        let root_id = engine.request_layout_node(root);
-        engine.set_style(root, root_style);
-        engine.set_children(root, children);
-
-        for &child in children {
-            build_flow_subtree(
+        for &(root, root_bounds) in &batch {
+            crate::layout_engine::build_viewport_flow_subtree(
                 &mut engine,
                 app,
                 &*self,
                 window,
                 scale_factor,
-                child_parent_kind,
-                child,
+                root,
+                root_bounds.size,
             );
         }
 
         let sf = scale_factor;
-        let _ =
-            engine.compute_root_for_node_with_measure_if_needed(root, available, sf, |node, c| {
-                self.measure_in(app, services, node, c, sf)
-            });
+        for &(root, root_bounds) in &batch {
+            let available = LayoutSize::new(
+                AvailableSpace::Definite(root_bounds.size.width),
+                AvailableSpace::Definite(root_bounds.size.height),
+            );
 
-        let mut child_layouts: Vec<(NodeId, Rect)> = Vec::with_capacity(children.len());
-        for &child in children {
-            let Some(id) = engine.layout_id_for_node(child) else {
-                continue;
-            };
-            child_layouts.push((child, engine.layout_rect(id)));
+            let _ =
+                engine.compute_root_for_node_with_measure_if_needed(root, available, sf, |n, c| {
+                    self.measure_in(app, services, n, c, sf)
+                });
+
+            self.maybe_dump_taffy_subtree(app, window, &engine, root, root_bounds, sf);
         }
 
-        let root_layout = engine.layout_rect(root_id);
         self.put_layout_engine(engine);
-
-        (root_layout, child_layouts)
     }
+
     fn layout_node(
         &mut self,
         app: &mut H,
@@ -694,7 +774,6 @@ impl<H: UiHost> UiTree<H> {
                 bounds.origin.y - prev_bounds.origin.y,
             );
             if delta.x.0 != 0.0 || delta.y.0 != 0.0 {
-                #[cfg(feature = "layout-engine-v2")]
                 self.layout_engine.mark_seen_if_present(node);
 
                 let window = self.window;
@@ -714,7 +793,6 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 while let Some(id) = stack.pop() {
-                    #[cfg(feature = "layout-engine-v2")]
                     self.layout_engine.mark_seen_if_present(id);
 
                     let Some(n) = self.nodes.get_mut(id) else {

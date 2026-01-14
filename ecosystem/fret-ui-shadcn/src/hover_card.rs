@@ -4,7 +4,9 @@ use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_core::{Px, Size};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerDownCx, PointerUpCx, UiPointerActionHost};
-use fret_ui::element::{AnyElement, HoverRegionProps, Overflow, PointerRegionProps};
+use fret_ui::element::{
+    AnyElement, ContainerProps, ElementKind, HoverRegionProps, Length, Overflow, PointerRegionProps,
+};
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::ModelWatchExt as _;
@@ -25,6 +27,34 @@ use crate::overlay_motion;
 const HOVER_CARD_DEFAULT_OPEN_DELAY_FRAMES: u32 =
     (overlay_motion::SHADCN_MOTION_TICKS_500 + overlay_motion::SHADCN_MOTION_TICKS_200) as u32;
 const HOVER_CARD_DEFAULT_CLOSE_DELAY_FRAMES: u32 = overlay_motion::SHADCN_MOTION_TICKS_300 as u32;
+
+fn fixed_size_hint_px(element: &AnyElement) -> Option<Size> {
+    fn visit(node: &AnyElement, best: &mut Option<Size>) {
+        if let ElementKind::Container(ContainerProps { layout, .. }) = &node.kind {
+            if let Length::Px(w) = layout.size.width {
+                let h = match layout.size.height {
+                    Length::Px(h) => h,
+                    _ => Px(120.0),
+                };
+                let candidate = Size::new(w, h);
+                if best
+                    .map(|cur| candidate.width.0 > cur.width.0)
+                    .unwrap_or(true)
+                {
+                    *best = Some(candidate);
+                }
+            }
+        }
+
+        for child in &node.children {
+            visit(child, best);
+        }
+    }
+
+    let mut best: Option<Size> = None;
+    visit(element, &mut best);
+    best
+}
 
 fn hover_card_content_chrome(theme: &Theme) -> ChromeRefinement {
     let bg = theme.color_required("popover");
@@ -234,7 +264,7 @@ impl HoverCard {
         let window_margin = self.window_margin_override.unwrap_or_else(|| {
             theme
                 .metric_by_key("component.hover_card.window_margin")
-                .unwrap_or(Px(8.0))
+                .unwrap_or(Px(0.0))
         });
 
         let align = self.align;
@@ -260,6 +290,7 @@ impl HoverCard {
             .default_open(self.default_open);
         let trigger = self.trigger;
         let content = self.content;
+        let content_size_hint = fixed_size_hint_px(&content);
         let trigger_id = trigger.id;
         let content_id = content.id;
         let anchor_id = self.anchor_override.unwrap_or(trigger_id);
@@ -440,7 +471,9 @@ impl HoverCard {
 
                 let last_content_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
                 let estimated_size = Size::new(Px(256.0), Px(120.0));
-                let content_size = last_content_size.unwrap_or(estimated_size);
+                let content_size = content_size_hint
+                    .or(last_content_size)
+                    .unwrap_or(estimated_size);
 
                 let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
 
@@ -470,6 +503,7 @@ impl HoverCard {
                         align,
                         side_offset,
                     )
+                    .with_shift_cross_axis(true)
                     .with_arrow(arrow_options, arrow_protrusion),
                 );
 
@@ -859,6 +893,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(12.0), Px(12.0)),
                 buttons: MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),
@@ -1166,6 +1201,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(2000.0), Px(2000.0)),
                 buttons: MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),
@@ -1292,6 +1328,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(12.0), Px(12.0)),
                 buttons: MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),
@@ -1354,6 +1391,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position: down_pos,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -1366,6 +1404,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: outside,
                 buttons: MouseButtons {
                     left: true,
@@ -1391,6 +1430,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position: outside,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -1411,6 +1451,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: down_pos,
                 buttons: MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),
@@ -1424,6 +1465,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: outside,
                 buttons: MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),
@@ -1545,6 +1587,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(12.0), Px(12.0)),
                 buttons: MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),
@@ -1585,6 +1628,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position: select_pos,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -1609,6 +1653,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: outside,
                 buttons: MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),

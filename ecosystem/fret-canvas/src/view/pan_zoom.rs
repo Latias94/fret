@@ -1,5 +1,29 @@
 use fret_core::{Point, Px, Rect, Transform2D};
 
+/// Default zoom base used by canvas wheel zoom curves (ADR 0159).
+pub const DEFAULT_WHEEL_ZOOM_BASE: f32 = 1.18;
+
+/// Default wheel delta step used by canvas wheel zoom curves (ADR 0159).
+pub const DEFAULT_WHEEL_ZOOM_STEP: f32 = 120.0;
+
+/// Computes the wheel zoom factor for a given vertical wheel delta (screen px).
+///
+/// This matches ADR 0159's deterministic exponential zoom curve:
+/// `base.powf((-delta_y / step) * speed)`.
+pub fn wheel_zoom_factor(delta_y_screen_px: f32, base: f32, step: f32, speed: f32) -> Option<f32> {
+    if !delta_y_screen_px.is_finite() || delta_y_screen_px.abs() <= 1.0e-9 {
+        return None;
+    }
+    if !base.is_finite() || base <= 0.0 {
+        return None;
+    }
+    if !step.is_finite() || step.abs() <= 1.0e-9 {
+        return None;
+    }
+    let speed = if speed.is_finite() { speed } else { 1.0 };
+    Some(base.powf((-delta_y_screen_px / step) * speed))
+}
+
 /// A simple 2D pan/zoom view model suitable for "infinite canvas" widgets.
 ///
 /// Coordinate conventions match the common retained-canvas pattern:
@@ -87,6 +111,22 @@ impl PanZoom2D {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn wheel_zoom_factor_matches_default_step() {
+        let got = wheel_zoom_factor(
+            -120.0,
+            DEFAULT_WHEEL_ZOOM_BASE,
+            DEFAULT_WHEEL_ZOOM_STEP,
+            1.0,
+        )
+        .unwrap();
+        assert!((got - 1.18).abs() <= 1.0e-6);
+        let got_out =
+            wheel_zoom_factor(120.0, DEFAULT_WHEEL_ZOOM_BASE, DEFAULT_WHEEL_ZOOM_STEP, 1.0)
+                .unwrap();
+        assert!((got_out - (1.0 / 1.18)).abs() <= 1.0e-6);
+    }
 
     #[test]
     fn zoom_about_keeps_center_stable() {

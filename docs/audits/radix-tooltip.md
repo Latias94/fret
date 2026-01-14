@@ -84,4 +84,4 @@ Fret models Radix tooltip outcomes by composing:
 - `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs` validates tooltip placement (popper
   gap + cross-axis delta) against the Radix Vega web golden
   (`goldens/radix-web/v4/radix-vega/tooltip-example.tooltip.hover-show-hide.light.json`).
-- Run (layout engine v2): `cargo nextest run -p fret-ui-shadcn -F fret-ui/layout-engine-v2 --test radix_web_overlay_geometry`
+- Run: `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`

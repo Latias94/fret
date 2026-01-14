@@ -80,7 +80,6 @@ pub struct LightRadiusGizmoState {
 pub struct LightRadiusGizmoPlugin {
     pub config: LightRadiusGizmoConfig,
     pub state: LightRadiusGizmoState,
-    radii: HashMap<GizmoTargetId, f32>,
 }
 
 impl Default for LightRadiusGizmoPlugin {
@@ -88,7 +87,6 @@ impl Default for LightRadiusGizmoPlugin {
         Self {
             config: LightRadiusGizmoConfig::default(),
             state: LightRadiusGizmoState::default(),
-            radii: HashMap::new(),
         }
     }
 }
@@ -102,17 +100,12 @@ impl LightRadiusGizmoPlugin {
         HandleId::from_parts(Self::PLUGIN_ID, Self::RING_HANDLE_LOCAL)
     }
 
-    pub fn set_radius_world(&mut self, target: GizmoTargetId, radius: f32) {
-        let radius = if radius.is_finite() {
-            radius.max(self.config.min_radius_world.max(0.0))
-        } else {
-            self.config.default_radius_world
-        };
-        self.radii.insert(target, radius);
-    }
-
-    pub fn radius_world(&self, target: GizmoTargetId) -> Option<f32> {
-        self.radii.get(&target).copied()
+    fn radius_world_from_properties(
+        ctx: GizmoPluginContext<'_>,
+        target: GizmoTargetId,
+    ) -> Option<f32> {
+        ctx.properties
+            .and_then(|p| p.read_scalar(target, Self::PROPERTY_RADIUS))
     }
 
     fn active_origin(active_target: GizmoTargetId, targets: &[GizmoTarget3d]) -> Vec3 {
@@ -186,15 +179,15 @@ impl LightRadiusGizmoPlugin {
         total_world
     }
 
-    fn radius_for_target(&self, target: GizmoTargetId) -> f32 {
-        self.radius_world(target)
+    fn radius_for_target(&self, ctx: GizmoPluginContext<'_>, target: GizmoTargetId) -> f32 {
+        Self::radius_world_from_properties(ctx, target)
             .unwrap_or(self.config.default_radius_world)
             .max(self.config.min_radius_world.max(0.0))
     }
 
     fn begin_drag(
         &mut self,
-        ctx: GizmoPluginContext,
+        ctx: GizmoPluginContext<'_>,
         active_target: GizmoTargetId,
         targets: &[GizmoTarget3d],
     ) -> Option<GizmoUpdate> {
@@ -220,7 +213,7 @@ impl LightRadiusGizmoPlugin {
         self.state.drag_total_applied.clear();
 
         for t in targets {
-            let r0 = self.radius_for_target(t.id);
+            let r0 = self.radius_for_target(ctx, t.id);
             self.state.drag_start_radii.insert(t.id, r0);
             self.state.drag_total_applied.insert(t.id, 0.0);
         }
@@ -263,12 +256,11 @@ impl LightRadiusGizmoPlugin {
         let mut active_value = None;
 
         for t in targets {
-            let start = self
-                .state
-                .drag_start_radii
-                .get(&t.id)
-                .copied()
-                .unwrap_or_else(|| self.radius_for_target(t.id));
+            let start = self.state.drag_start_radii.get(&t.id).copied().unwrap_or(
+                self.config
+                    .default_radius_world
+                    .max(self.config.min_radius_world.max(0.0)),
+            );
             let prev_total = self
                 .state
                 .drag_total_applied
@@ -292,7 +284,6 @@ impl LightRadiusGizmoPlugin {
                 _ => return None,
             };
 
-            self.radii.insert(t.id, value);
             self.state.drag_total_applied.insert(t.id, total);
 
             if t.id == active_target {
@@ -330,7 +321,7 @@ impl GizmoPlugin for LightRadiusGizmoPlugin {
 
     fn draw(
         &mut self,
-        ctx: GizmoPluginContext,
+        ctx: GizmoPluginContext<'_>,
         active_target: GizmoTargetId,
         targets: &[GizmoTarget3d],
     ) -> GizmoDrawList3d {
@@ -371,7 +362,7 @@ impl GizmoPlugin for LightRadiusGizmoPlugin {
             self.config.fill_color
         };
 
-        let radius_world = self.radius_for_target(active_target);
+        let radius_world = self.radius_for_target(ctx, active_target);
         if !radius_world.is_finite() || radius_world <= 1e-6 {
             return GizmoDrawList3d::default();
         }
@@ -413,7 +404,7 @@ impl GizmoPlugin for LightRadiusGizmoPlugin {
 
     fn pick_items(
         &mut self,
-        ctx: GizmoPluginContext,
+        ctx: GizmoPluginContext<'_>,
         active_target: GizmoTargetId,
         targets: &[GizmoTarget3d],
         out: &mut Vec<GizmoPickItem>,
@@ -442,7 +433,7 @@ impl GizmoPlugin for LightRadiusGizmoPlugin {
             return;
         }
 
-        let radius_world = self.radius_for_target(active_target);
+        let radius_world = self.radius_for_target(ctx, active_target);
         if !radius_world.is_finite() || radius_world <= 1e-6 {
             return;
         }
@@ -490,7 +481,7 @@ impl GizmoPlugin for LightRadiusGizmoPlugin {
 
     fn update(
         &mut self,
-        ctx: GizmoPluginContext,
+        ctx: GizmoPluginContext<'_>,
         phase: GizmoPhase,
         active_target: GizmoTargetId,
         targets: &[GizmoTarget3d],
@@ -531,12 +522,11 @@ impl GizmoPlugin for LightRadiusGizmoPlugin {
                 let mut active_value = None;
 
                 for t in targets {
-                    let start = self
-                        .state
-                        .drag_start_radii
-                        .get(&t.id)
-                        .copied()
-                        .unwrap_or_else(|| self.radius_for_target(t.id));
+                    let start = self.state.drag_start_radii.get(&t.id).copied().unwrap_or(
+                        self.config
+                            .default_radius_world
+                            .max(self.config.min_radius_world.max(0.0)),
+                    );
                     let desired_value =
                         (start + desired_total_world).max(self.config.min_radius_world.max(0.0));
                     let total = desired_value - start;
@@ -548,7 +538,6 @@ impl GizmoPlugin for LightRadiusGizmoPlugin {
                         .unwrap_or(0.0);
                     let delta = total - prev_total;
                     self.state.drag_total_applied.insert(t.id, total);
-                    self.radii.insert(t.id, desired_value);
 
                     if t.id == active_target {
                         active_delta = delta;
@@ -587,6 +576,17 @@ impl GizmoPlugin for LightRadiusGizmoPlugin {
 mod tests {
     use super::*;
 
+    #[derive(Default)]
+    struct TestProperties {
+        scalars: HashMap<(GizmoPropertyKey, GizmoTargetId), f32>,
+    }
+
+    impl crate::GizmoPropertySource for TestProperties {
+        fn read_scalar(&self, target: GizmoTargetId, key: GizmoPropertyKey) -> Option<f32> {
+            self.scalars.get(&(key, target)).copied()
+        }
+    }
+
     fn test_view_projection(viewport_px: (f32, f32)) -> Mat4 {
         let aspect = viewport_px.0.max(1.0) / viewport_px.1.max(1.0);
         let eye = Vec3::new(3.0, 2.0, 4.0);
@@ -601,9 +601,13 @@ mod tests {
         let mut mgr = crate::GizmoPluginManager::new(crate::GizmoPluginManagerConfig {
             drag_start_threshold_px: 0.0,
         });
-        let mut plugin = LightRadiusGizmoPlugin::default();
-        plugin.set_radius_world(GizmoTargetId(1), 2.0);
-        mgr.register(Box::new(plugin));
+        mgr.register(Box::new(LightRadiusGizmoPlugin::default()));
+
+        let mut properties = TestProperties::default();
+        properties.scalars.insert(
+            (LightRadiusGizmoPlugin::PROPERTY_RADIUS, GizmoTargetId(1)),
+            2.0,
+        );
 
         let targets = vec![GizmoTarget3d {
             id: GizmoTargetId(1),
@@ -642,6 +646,7 @@ mod tests {
             },
             targets[0].id,
             &targets,
+            Some(&properties),
         );
         let u0 = u0.expect("begin update");
         assert_eq!(u0.phase, GizmoPhase::Begin);
@@ -662,6 +667,7 @@ mod tests {
             },
             targets[0].id,
             &targets,
+            Some(&properties),
         );
         let u1 = u1.expect("update");
         assert_eq!(u1.phase, GizmoPhase::Update);

@@ -77,11 +77,9 @@ pub fn render<H: UiHost>(
         (focus_lost, resized)
     });
 
-    let dock_drag_affects_window = app
-        .drag(fret_core::PointerId(0))
-        .is_some_and(|d| {
-            d.kind == DRAG_KIND_DOCK_PANEL && (d.source_window == window || d.current_window == window)
-        });
+    let dock_drag_affects_window = app.drag(fret_core::PointerId(0)).is_some_and(|d| {
+        d.kind == DRAG_KIND_DOCK_PANEL && (d.source_window == window || d.current_window == window)
+    });
 
     let (
         modal_requests,
