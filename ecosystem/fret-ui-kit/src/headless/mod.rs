@@ -6,6 +6,7 @@ pub mod dismissible_layer;
 pub mod easing;
 pub mod focus_scope;
 pub mod form_state;
+pub mod form_validation;
 pub mod grid_viewport;
 pub mod hover_intent;
 pub mod menu_nav;
