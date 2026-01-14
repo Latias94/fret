@@ -473,7 +473,7 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 
 ## Known Gaps vs ECharts (High Value)
 
-- Order-sensitive multi-dimensional filtering semantics (ECharts `dataZoomProcessor` ordering, per-axis composition) (S2).
+- Order-sensitive multi-dimensional filtering semantics beyond the current v1 subset (ECharts `dataZoomProcessor` ordering, per-axis composition) (S2).
 - General transform graph with cached node outputs + derived columns (ECharts-class dataset transforms).
 - Multi-grid layout (multiple independent grids in one chart).
 - Category axis indexing under zoom for non-bar series (S4).
@@ -484,7 +484,7 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 
 ## Recommended Next Steps (P0 -> P1)
 
-1. P0: Add a dedicated “filter processor” stage that owns order-sensitive multi-dim composition (ECharts `dataZoomProcessor` analogue) and emits a unified participation contract (selection + masks) (S2).
+1. P0: Expand the existing “filter processor” stage (ECharts `dataZoomProcessor` analogue) to cover the remaining order-sensitive multi-dim composition gaps and to emit a unified participation contract (selection + masks) (S2).
 2. P0: Add a general transform graph (cached nodes + derived columns) and migrate DataZoom/filtering to it incrementally (ECharts-class dataset transforms).
 3. P0: Multi-grid layout + deterministic routing rules (UI adapter + engine layout) (ADR 1134 follow-ups).
 4. P0/P1: Incremental dataset updates + stable partial recompute (append/update + cache invalidation boundaries) (S9 / ADR 1149).

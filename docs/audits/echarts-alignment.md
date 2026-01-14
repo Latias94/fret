@@ -27,7 +27,7 @@ Status symbols:
 
 - `option` (JSON) -> `fret-chart::echarts` adapter -> `delinea::ChartSpec` + datasets (`DataTable`)
 - `ecModel`/`SeriesModel`/`ComponentModel` -> `delinea::ChartModel` (validated spec graph)
-- `AxisProxy` + `dataZoomProcessor` -> `delinea` staged pipeline (future: a dedicated filter processor stage)
+- `AxisProxy` + `dataZoomProcessor` -> `delinea` staged pipeline (`FilterProcessorStage`)
 - `DataStore` raw index identity -> `RowSelection` + `get_raw_index`
 - `zrender` display list -> `delinea::MarksOutput` -> `fret-chart` scene ops (`SceneOp::{Path,Quad,Text}`)
 
@@ -39,7 +39,7 @@ Status symbols:
 - `[x]` Stable raw-index identity across transforms (`RowSelection`) (ADR 1137 / ADR 1140)
 - `[~]` Minimal ECharts option JSON adapter (v1 subset) producing `ChartSpec` + datasets (not schema parity)
 - `[~]` DataZoom filter modes (`Filter`/`None`/`WeakFilter`/`Empty`) with a v1 multi-dim subset (ADR 1129 / ADR 1150)
-- `[~]` Order-sensitive multi-dim filtering (ECharts “filter X then reset/filter Y”) (planned; needs processor stage)
+- `[~]` Order-sensitive multi-dim filtering (ECharts “filter X then reset/filter Y”) (v1 subset; processor stage exists, parity incomplete)
 - `[ ]` General transform graph with cached node outputs + derived columns (ECharts-class dataset transforms)
 - `[ ]` Dataset transform operators (filter/map/sort/aggregate) as first-class nodes (beyond dataZoom)
 
@@ -88,8 +88,9 @@ Status symbols:
 
 ## Recommended Next Steps (ECharts Replica Workstream)
 
-1. P0: Add a dedicated “filter processor” stage (ECharts `dataZoomProcessor` analogue) that owns ordering-sensitive
-   composition (X-before-Y) and outputs a unified per-series participation contract (selection + masks).
+1. P0: Finish the “filter processor” stage (ECharts `dataZoomProcessor` analogue): cover remaining order-sensitive
+   composition (X-before-Y beyond the current subset), and converge on a single per-series participation contract
+   (selection + masks) consumed by marks + hit-test + tooltip.
 2. P0: Add a general transform graph with cached node outputs + derived columns (ECharts-class dataset transforms).
 3. P0: Multi-grid layout (engine layout + UI adapter routing) and a conformance harness that locks routing invariants.
 4. P1: Extend `Empty` parity beyond line-family (scatter/bar mark emission + tests), keeping tooltip/axisPointer/hit-test
@@ -97,8 +98,8 @@ Status symbols:
 5. P1: Expand conformance coverage in `apps/fret-examples/src/chart_multi_axis_demo.rs` and lock regression tests for:
    - 2D dataZoom ordering rules,
    - visualMap + tooltip/axisPointer interactions.
-6. P1: Add a smoke demo that loads a small ECharts option JSON and renders it via `fret-chart::echarts`, so the
-   adapter surface stays honest while the engine and UI evolve.
+6. P1: Expand the smoke demo that loads a small ECharts option JSON and renders it via `fret-chart::echarts`, so the
+   adapter surface stays honest while the engine and UI evolve (multi-series, multiple grids, more components).
 
 ## Evidence Anchors
 
@@ -109,3 +110,5 @@ Status symbols:
   - View participation: `ecosystem/delinea/src/view/mod.rs`
   - UI adapter: `ecosystem/fret-chart/src/retained/canvas.rs`
   - ECharts option adapter (feature-gated): `ecosystem/fret-chart/src/echarts/mod.rs`
+  - ECharts smoke demo: `apps/fret-examples/src/echarts_demo.rs`
+  - Order-sensitive regressions: `ecosystem/delinea/src/engine/tests.rs`
