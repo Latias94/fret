@@ -1054,6 +1054,7 @@ fn web_vs_fret_context_menu_demo_overlay_placement_matches() {
                 app,
                 services,
                 &Event::Pointer(PointerEvent::Down {
+                    pointer_id: fret_core::PointerId::default(),
                     position: Point::new(Px(point.x), Px(point.y)),
                     button: MouseButton::Right,
                     modifiers: Modifiers::default(),
@@ -1065,6 +1066,7 @@ fn web_vs_fret_context_menu_demo_overlay_placement_matches() {
                 app,
                 services,
                 &Event::Pointer(PointerEvent::Up {
+                    pointer_id: fret_core::PointerId::default(),
                     position: Point::new(Px(point.x), Px(point.y)),
                     button: MouseButton::Right,
                     modifiers: Modifiers::default(),

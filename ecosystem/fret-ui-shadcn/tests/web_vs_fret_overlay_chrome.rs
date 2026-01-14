@@ -567,6 +567,7 @@ fn hover_open_at(
         app,
         services,
         &Event::Pointer(PointerEvent::Move {
+            pointer_id: fret_core::PointerId::default(),
             position,
             buttons: MouseButtons::default(),
             modifiers: Modifiers::default(),
