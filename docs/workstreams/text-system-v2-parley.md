@@ -66,6 +66,9 @@ Current:
 - Manual emoji conformance harness exists: `apps/fret-examples/src/emoji_conformance_demo.rs`.
   - Web runner supports `?demo=emoji_conformance_demo` and optional bundled emoji fonts via
     `apps/fret-demo-web` feature `emoji-fonts`.
+- Automated conformance (unit): color emoji glyphs produce `GlyphQuadKind::Color` and populate the
+  `color_atlas` when a color emoji font is available (`cargo nextest run -p fret-render`;
+  `crates/fret-render/src/text.rs`).
 
 ## Acceptance Checklist (what “done” means)
 
@@ -183,6 +186,7 @@ Legend:
 - [ ] Unit tests: span invariant validation and clamping behavior.
 - [ ] Unit tests: ellipsis truncation caret/hit-test mapping.
 - [ ] Unit tests: wrap boundaries across span boundaries.
+- [x] Unit conformance: color emoji glyphs populate `color_atlas` when a bundled color emoji font is present.
 - [ ] Integration demo: mixed-script + emoji + IME preedit smoke (deterministic snapshot).
 
 ## Risks / Open Questions
@@ -211,3 +215,4 @@ Legend:
 - 2026-01-13: B7.2: add subpixel atlas + shader/pipeline and platform subpixel policy (commit `8282cf1`).
 - 2026-01-13: B7.3: add stable `FontFaceKey` registry (commit `9a7f81a`).
 - 2026-01-13: Align `TextService` to `prepare(&TextInput, ...)` and introduce `TextInputRef<'_>` for shaping-only codepaths.
+- 2026-01-14: Add automated color emoji atlas conformance test in `fret-render` (commit `26ddc6d`).
