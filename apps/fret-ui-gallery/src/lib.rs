@@ -9,6 +9,7 @@ use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::SemanticsProps;
 use fret_ui::{Invalidation, Theme, UiTree};
+use fret_ui_kit::OverlayController;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -172,6 +173,8 @@ impl UiGalleryDriver {
         state: &mut UiGalleryWindowState,
         bounds: fret_core::Rect,
     ) {
+        OverlayController::begin_frame(app, window);
+
         let selected_page = state.selected_page.clone();
         let nav_query = state.nav_query.clone();
         let content_tab = state.content_tab.clone();
@@ -238,6 +241,8 @@ impl UiGalleryDriver {
                     )]
                 });
 
+        state.ui.set_root(root);
+        OverlayController::render(&mut state.ui, app, services, window, bounds);
         state.root = Some(root);
     }
 }

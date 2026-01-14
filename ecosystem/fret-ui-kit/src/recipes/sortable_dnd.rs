@@ -134,16 +134,6 @@ pub fn sortable_reorder_list<H: UiHost>(
         let items_on_up = items.clone();
 
         let el = cx.keyed(id.0, |cx| {
-            let element = cx.root_id();
-            if let Some(rect) = cx.last_visual_bounds_for_element(element) {
-                droppables.push(Droppable {
-                    id,
-                    rect,
-                    disabled: false,
-                    z_index: 0,
-                });
-            }
-
             let mut pr = PointerRegionProps::default();
             pr.layout.size.width = Length::Fill;
             pr.layout.size.height = Length::Px(row_height);
@@ -292,6 +282,16 @@ pub fn sortable_reorder_list<H: UiHost>(
             };
 
             cx.pointer_region(pr, |cx| {
+                let element = cx.root_id();
+                if let Some(rect) = cx.last_visual_bounds_for_element(element) {
+                    droppables.push(Droppable {
+                        id,
+                        rect,
+                        disabled: false,
+                        z_index: 0,
+                    });
+                }
+
                 cx.pointer_region_on_pointer_down(on_down);
                 cx.pointer_region_on_pointer_move(on_move);
                 cx.pointer_region_on_pointer_up(on_up);
