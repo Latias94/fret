@@ -197,6 +197,29 @@ impl<T: Copy + Eq + Hash> GridIndexWithBackrefs<T> {
         self.item_cells.insert(item, entries);
     }
 
+    pub fn update_aabb(&mut self, item: T, min_x: f32, min_y: f32, max_x: f32, max_y: f32) {
+        let Some(existing) = self.item_cells.get(&item) else {
+            self.insert_aabb(item, min_x, min_y, max_x, max_y);
+            return;
+        };
+
+        let (cx0, cx1, cy0, cy1) = cell_range_for_aabb(min_x, min_y, max_x, max_y, self.cell_size);
+        let mut keys = Vec::new();
+        for y in cy0..=cy1 {
+            for x in cx0..=cx1 {
+                keys.push(cell_key(Cell { x, y }));
+            }
+        }
+
+        let same =
+            existing.len() == keys.len() && existing.iter().map(|e| e.0).eq(keys.iter().copied());
+        if same {
+            return;
+        }
+
+        self.insert_aabb(item, min_x, min_y, max_x, max_y);
+    }
+
     pub fn insert_rect(&mut self, item: T, rect: Rect) {
         let min_x = rect.origin.x.0.min(rect.origin.x.0 + rect.size.width.0);
         let min_y = rect.origin.y.0.min(rect.origin.y.0 + rect.size.height.0);
@@ -206,7 +229,11 @@ impl<T: Copy + Eq + Hash> GridIndexWithBackrefs<T> {
     }
 
     pub fn update_rect(&mut self, item: T, rect: Rect) {
-        self.insert_rect(item, rect);
+        let min_x = rect.origin.x.0.min(rect.origin.x.0 + rect.size.width.0);
+        let min_y = rect.origin.y.0.min(rect.origin.y.0 + rect.size.height.0);
+        let max_x = rect.origin.x.0.max(rect.origin.x.0 + rect.size.width.0);
+        let max_y = rect.origin.y.0.max(rect.origin.y.0 + rect.size.height.0);
+        self.update_aabb(item, min_x, min_y, max_x, max_y);
     }
 
     pub fn remove(&mut self, item: T) -> bool {
@@ -383,5 +410,23 @@ mod tests {
         assert!(!out.contains(&2));
         idx.query_radius(Point::new(Px(102.0), Px(102.0)), 1.0, &mut out);
         assert!(out.contains(&2));
+    }
+
+    #[test]
+    fn grid_index_with_backrefs_update_is_noop_when_cells_do_not_change() {
+        let mut idx = GridIndexWithBackrefs::new(10.0);
+        idx.insert_rect(
+            1u32,
+            Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(5.0), Px(5.0))),
+        );
+
+        // Still in the same cell (0,0) => update should not disturb removal bookkeeping.
+        idx.update_rect(
+            1u32,
+            Rect::new(Point::new(Px(1.0), Px(1.0)), Size::new(Px(5.0), Px(5.0))),
+        );
+
+        assert!(idx.remove(1));
+        assert!(!idx.remove(1));
     }
 }
