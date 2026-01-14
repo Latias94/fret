@@ -4547,6 +4547,7 @@ fn scroll_translation_does_not_force_layout_engine_solves() {
             position: wheel_pos,
             delta: fret_core::Point::new(Px(0.0), Px(-10.0)),
             modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
