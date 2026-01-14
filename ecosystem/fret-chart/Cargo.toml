@@ -3,6 +3,10 @@ name = "fret-chart"
 version.workspace = true
 edition.workspace = true
 
+[features]
+default = []
+echarts = ["dep:serde", "dep:serde_json"]
+
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
 fret-ui = { path = "../../crates/fret-ui", features = ["unstable-retained-bridge"] }
@@ -10,6 +14,8 @@ fret-runtime = { path = "../../crates/fret-runtime" }
 fret-canvas = { path = "../fret-canvas" }
 fret-ui-kit = { path = "../fret-ui-kit", features = ["recipes"] }
 delinea = { path = "../delinea" }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
 
 [dev-dependencies]
 fret-app = { path = "../../crates/fret-app" }

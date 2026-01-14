@@ -5,6 +5,8 @@
 //! - mapping UI input into `delinea` actions/patches
 
 pub mod declarative;
+#[cfg(feature = "echarts")]
+pub mod echarts;
 pub mod input_map;
 pub mod retained;
 
