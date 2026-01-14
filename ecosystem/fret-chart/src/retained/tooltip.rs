@@ -337,7 +337,9 @@ impl TooltipFormatter for DefaultTooltipFormatter {
                 };
                 if spec.axis_line_template == "{label}: {value}" {
                     lines.push(
-                        TooltipTextLine::columns(x_label, x_value).with_missing(x_is_missing),
+                        TooltipTextLine::columns(x_label, x_value)
+                            .with_kind(TooltipTextLineKind::AxisHeader)
+                            .with_missing(x_is_missing),
                     );
                 } else {
                     lines.push(TooltipTextLine {
@@ -348,7 +350,7 @@ impl TooltipFormatter for DefaultTooltipFormatter {
                             &x_value,
                         ),
                         columns: None,
-                        kind: TooltipTextLineKind::Body,
+                        kind: TooltipTextLineKind::AxisHeader,
                         value_emphasis: false,
                         is_missing: x_is_missing,
                     });
@@ -1113,7 +1115,7 @@ mod tests {
 
         assert_eq!(lines.len(), 2);
         assert_eq!(lines[0].source_series, None);
-        assert_eq!(lines[0].kind, TooltipTextLineKind::Body);
+        assert_eq!(lines[0].kind, TooltipTextLineKind::AxisHeader);
         assert!(lines[0].value_emphasis);
         assert!(!lines[0].is_missing);
         assert_eq!(
