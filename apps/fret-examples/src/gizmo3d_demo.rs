@@ -1177,9 +1177,7 @@ fn view_gizmo_tool_handle_event(
 }
 
 fn view_gizmo_tool_cancel(model: &mut Gizmo3dDemoModel) {
-    model.view_gizmo.state.drag_active = false;
-    model.view_gizmo.state.drag_orbiting = false;
-    view_gizmo_tool_set_hot(model, false);
+    model.view_gizmo.cancel();
 }
 
 fn transform_gizmo_tool_hit_test(model: &mut Gizmo3dDemoModel, cx: ViewportToolCx<'_>) -> bool {
