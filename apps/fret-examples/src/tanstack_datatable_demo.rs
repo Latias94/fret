@@ -15,7 +15,9 @@ use fret_ui_kit::OverlayController;
 use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState, create_column_helper};
 use fret_ui_shadcn::button::{Button, ButtonSize, ButtonVariant};
 use fret_ui_shadcn::stack;
-use fret_ui_shadcn::{DataTable, DataTablePagination, DataTableToolbar, Space};
+use fret_ui_shadcn::{
+    DataTable, DataTablePagination, DataTableToolbar, DataTableViewOutput, Space,
+};
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -30,6 +32,7 @@ struct DemoRow {
 struct DemoWindowState {
     ui: UiTree<App>,
     table_state: Model<TableState>,
+    table_output: Model<DataTableViewOutput>,
     rows: Arc<[DemoRow]>,
     started_at: Instant,
     frame: u64,
@@ -61,6 +64,7 @@ impl TanstackDataTableDemoDriver {
         let mut table_state = TableState::default();
         table_state.pagination.page_size = 50;
         let table_state = app.models_mut().insert(table_state);
+        let table_output = app.models_mut().insert(DataTableViewOutput::default());
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -68,6 +72,7 @@ impl TanstackDataTableDemoDriver {
         DemoWindowState {
             ui,
             table_state,
+            table_output,
             rows,
             started_at: Instant::now(),
             frame: 0,
@@ -183,10 +188,12 @@ impl WinitAppDriver for TanstackDataTableDemoDriver {
 
         let rows = Arc::clone(&state.rows);
         let table_state = state.table_state.clone();
+        let table_output = state.table_output.clone();
         let root =
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
                 .render_root("tanstack-datatable-demo", move |cx| {
                     cx.observe_model(&table_state, Invalidation::Layout);
+                    cx.observe_model(&table_output, Invalidation::Layout);
 
                     let theme = Theme::global(&*cx.app).clone();
                     let padding = theme.metric_required("metric.padding.md");
@@ -270,35 +277,39 @@ impl WinitAppDriver for TanstackDataTableDemoDriver {
                         },
                     )
                     .into_element(cx);
-                    let pagination = DataTablePagination::new(table_state.clone()).into_element(cx);
+                    let pagination =
+                        DataTablePagination::new(table_state.clone(), table_output.clone())
+                            .into_element(cx);
 
-                    let data_table = DataTable::new().into_element(
-                        cx,
-                        Arc::clone(&rows),
-                        1,
-                        table_state.clone(),
-                        Arc::clone(&columns),
-                        |row, _i, _parent| RowKey(row.id),
-                        move |col| {
-                            columns_for_header
-                                .iter()
-                                .find_map(|(id, label)| {
-                                    if id.as_ref() == col.id.as_ref() {
-                                        Some(Arc::clone(label))
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .unwrap_or_else(|| Arc::clone(&col.id))
-                        },
-                        |cx, col, row| match col.id.as_ref() {
-                            "id" => cx.text(Arc::from(row.id.to_string())),
-                            "name" => cx.text(Arc::clone(&row.name)),
-                            "role" => cx.text(Arc::clone(&row.role)),
-                            "score" => cx.text(Arc::from(row.score.to_string())),
-                            _ => cx.text(Arc::from("")),
-                        },
-                    );
+                    let data_table = DataTable::new()
+                        .output_model(table_output.clone())
+                        .into_element(
+                            cx,
+                            Arc::clone(&rows),
+                            1,
+                            table_state.clone(),
+                            Arc::clone(&columns),
+                            |row, _i, _parent| RowKey(row.id),
+                            move |col| {
+                                columns_for_header
+                                    .iter()
+                                    .find_map(|(id, label)| {
+                                        if id.as_ref() == col.id.as_ref() {
+                                            Some(Arc::clone(label))
+                                        } else {
+                                            None
+                                        }
+                                    })
+                                    .unwrap_or_else(|| Arc::clone(&col.id))
+                            },
+                            |cx, col, row| match col.id.as_ref() {
+                                "id" => cx.text(Arc::from(row.id.to_string())),
+                                "name" => cx.text(Arc::clone(&row.name)),
+                                "role" => cx.text(Arc::clone(&row.role)),
+                                "score" => cx.text(Arc::from(row.score.to_string())),
+                                _ => cx.text(Arc::from("")),
+                            },
+                        );
 
                     vec![cx.container(
                         ContainerProps {

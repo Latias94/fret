@@ -8,6 +8,7 @@ use fret_ui::element::{AnyElement, LayoutStyle, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack::{HStackProps, hstack};
+use fret_ui_kit::declarative::table::TableViewOutput;
 use fret_ui_kit::headless::table::{ColumnDef, ColumnId, TableState};
 use fret_ui_kit::{LayoutRefinement, Space};
 
@@ -279,6 +280,7 @@ struct DataTablePaginationState {
 #[derive(Clone)]
 pub struct DataTablePagination {
     state: Model<TableState>,
+    output: Model<TableViewOutput>,
     page_sizes: Arc<[usize]>,
 }
 
@@ -291,9 +293,10 @@ impl std::fmt::Debug for DataTablePagination {
 }
 
 impl DataTablePagination {
-    pub fn new(state: Model<TableState>) -> Self {
+    pub fn new(state: Model<TableState>, output: Model<TableViewOutput>) -> Self {
         Self {
             state,
+            output,
             page_sizes: Arc::from([10usize, 20, 50, 100]),
         }
     }
@@ -306,6 +309,11 @@ impl DataTablePagination {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let state_value = cx
             .watch_model(&self.state)
+            .layout()
+            .cloned()
+            .unwrap_or_default();
+        let output_value = cx
+            .watch_model(&self.output)
             .layout()
             .cloned()
             .unwrap_or_default();
@@ -369,7 +377,8 @@ impl DataTablePagination {
             }
         }
 
-        let prev_enabled = state_value.pagination.page_index > 0;
+        let prev_enabled = output_value.pagination.can_prev;
+        let next_enabled = output_value.pagination.can_next;
         let prev_on_activate: OnActivate = {
             let state = self.state.clone();
             Arc::new(move |host, _acx, _reason| {
@@ -387,8 +396,15 @@ impl DataTablePagination {
             })
         };
 
-        let page_label: Arc<str> =
-            Arc::from(format!("Page {}", state_value.pagination.page_index + 1));
+        let page_label: Arc<str> = if output_value.pagination.page_count == 0 {
+            Arc::from("Page 0 / 0")
+        } else {
+            Arc::from(format!(
+                "Page {} / {}",
+                output_value.pagination.page_index + 1,
+                output_value.pagination.page_count
+            ))
+        };
 
         let page_sizes = Arc::clone(&self.page_sizes);
         let page_size_menu = DropdownMenu::new(page_size_open).into_element(
@@ -432,6 +448,7 @@ impl DataTablePagination {
                     Button::new("Next")
                         .variant(ButtonVariant::Outline)
                         .size(ButtonSize::Sm)
+                        .disabled(!next_enabled)
                         .on_activate(next_on_activate.clone())
                         .into_element(cx),
                     page_size_menu,

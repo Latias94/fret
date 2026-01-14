@@ -642,6 +642,7 @@ impl WinitAppDriver for TableStressDriver {
                                                         };
                                                         vec![cx.text(text)]
                                                     },
+                                                    None,
                                                 )]
                                             },
                                         ),

@@ -220,8 +220,8 @@ preserving specialized variants and performance ceilings.
 
 ### Follow-ups (to fully “close” the DataTable recipe)
 
-- Recipe-level controls exist (`DataTableToolbar` + `DataTablePagination`), but pagination still needs a
-  filtered row-count output surface to properly clamp/disable “Next”.
+- Profile and validate pagination + filtering at scale (now that we have a `TableViewOutput` contract for bounds),
+  and confirm it behaves well under rapid filter input.
 - Profile and validate large-table performance:
   - stable `items_revision` and cache invalidation behavior,
   - overscan defaults for typical inspector/admin tables,

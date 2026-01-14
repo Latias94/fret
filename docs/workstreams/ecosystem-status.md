@@ -91,7 +91,7 @@ The following areas are the most “high leverage” gaps for editor-grade apps 
 Gap:
 
 - The core headless-backed `DataTable` recipe exists (incl. toolbar + pagination), but it still needs
-  large-table profiling/validation and better pagination semantics (page bounds require filtered row count output).
+  large-table profiling/validation (especially variable-size row/col constraints and caching behavior).
 
 Why it matters:
 

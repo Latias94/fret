@@ -7,7 +7,7 @@ use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, Overflow, T
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::declarative::table::{TableViewProps, table_virtualized};
+use fret_ui_kit::declarative::table::{TableViewOutput, TableViewProps, table_virtualized};
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius};
 
 use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState};
@@ -56,6 +56,7 @@ pub struct DataTable {
     row_height: Option<Px>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    output: Option<Model<TableViewOutput>>,
 }
 
 impl Default for DataTable {
@@ -65,6 +66,7 @@ impl Default for DataTable {
             row_height: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            output: None,
         }
     }
 }
@@ -94,6 +96,11 @@ impl DataTable {
         self
     }
 
+    pub fn output_model(mut self, output: Model<TableViewOutput>) -> Self {
+        self.output = Some(output);
+        self
+    }
+
     pub fn into_element<H: UiHost, TData>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -113,6 +120,7 @@ impl DataTable {
             row_height,
             chrome,
             layout,
+            output,
         } = self;
 
         let theme = Theme::global(&*cx.app).clone();
@@ -216,6 +224,7 @@ impl DataTable {
                     )]
                 },
                 move |cx, row, col| vec![(cell_at)(cx, col, row.original)],
+                output,
             )]
         })
     }

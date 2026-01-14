@@ -639,6 +639,7 @@ impl WinitAppDriver for TableDemoDriver {
                                                         };
                                                         vec![cx.text(text)]
                                                     },
+                                                    None,
                                                 )]
                                             },
                                         ),
