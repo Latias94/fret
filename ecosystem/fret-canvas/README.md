@@ -70,3 +70,11 @@ available via the `rstar` feature:
 - Enable: `fret-canvas/rstar`
 - Call sites should prefer `fret_canvas::spatial::DefaultIndexWithBackrefs<T>` so the backend can
   be swapped without refactors.
+
+## Optional: kurbo backend
+
+For robust 2D geometry operations (Bezier refinement, path hit-testing, intersection helpers),
+`fret-canvas` can optionally use `kurbo` (ADR 0167).
+
+- Enable: `fret-canvas/kurbo`
+- Current scope: Bezier wire refinement (`bezier_wire_distance2`, `closest_point_on_bezier_wire`).

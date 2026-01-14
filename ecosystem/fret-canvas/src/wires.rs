@@ -9,6 +9,9 @@
 
 use fret_core::{Point, Px, Rect, Size};
 
+#[cfg(feature = "kurbo")]
+use kurbo::{CubicBez, ParamCurve, ParamCurveNearest};
+
 fn sanitize_zoom(zoom: f32) -> f32 {
     if zoom.is_finite() && zoom > 0.0 {
         zoom
@@ -21,6 +24,26 @@ fn sanitize_zoom(zoom: f32) -> f32 {
 ///
 /// This matches the historical node-graph behavior and is a good conservative baseline.
 pub const DEFAULT_BEZIER_HIT_TEST_STEPS: usize = 24;
+
+#[cfg(feature = "kurbo")]
+fn kurbo_point(p: Point) -> kurbo::Point {
+    kurbo::Point::new(p.x.0 as f64, p.y.0 as f64)
+}
+
+#[cfg(feature = "kurbo")]
+fn fret_point(p: kurbo::Point) -> Point {
+    Point::new(Px(p.x as f32), Px(p.y as f32))
+}
+
+#[cfg(feature = "kurbo")]
+fn kurbo_accuracy_canvas_units(zoom: f32, steps: usize) -> f64 {
+    let z = sanitize_zoom(zoom).max(1.0e-6);
+    let steps = steps.max(1) as f32;
+    let base_steps = DEFAULT_BEZIER_HIT_TEST_STEPS as f32;
+    let ratio = (base_steps / steps).clamp(0.25, 4.0);
+    let accuracy_screen_px = 0.5 * ratio;
+    (accuracy_screen_px / z) as f64
+}
 
 /// Default cubic Bezier control points for a "wire" connecting `from` -> `to`.
 ///
@@ -82,6 +105,7 @@ pub fn normal_from_tangent(tangent: Point) -> Point {
     Point::new(Px(nx), Px(ny))
 }
 
+#[cfg(not(feature = "kurbo"))]
 fn dist2_point_to_segment(p: Point, a: Point, b: Point) -> f32 {
     let apx = p.x.0 - a.x.0;
     let apy = p.y.0 - a.y.0;
@@ -101,6 +125,7 @@ fn dist2_point_to_segment(p: Point, a: Point, b: Point) -> f32 {
     dx * dx + dy * dy
 }
 
+#[cfg(not(feature = "kurbo"))]
 fn closest_point_on_segment(p: Point, a: Point, b: Point) -> (Point, f32) {
     let apx = p.x.0 - a.x.0;
     let apy = p.y.0 - a.y.0;
@@ -125,19 +150,37 @@ fn closest_point_on_segment(p: Point, a: Point, b: Point) -> (Point, f32) {
 ///
 /// The curve is subdivided into line segments; higher `steps` improves accuracy but costs more.
 pub fn bezier_wire_distance2(p: Point, from: Point, to: Point, zoom: f32, steps: usize) -> f32 {
-    let steps = steps.max(1);
-    let (c1, c2) = wire_ctrl_points(from, to, zoom);
-
-    let mut best = f32::INFINITY;
-    let mut prev = from;
-    for i in 1..=steps {
-        let t = i as f32 / steps as f32;
-        let cur = cubic_bezier(from, c1, c2, to, t);
-        best = best.min(dist2_point_to_segment(p, prev, cur));
-        prev = cur;
+    #[cfg(feature = "kurbo")]
+    {
+        let (c1, c2) = wire_ctrl_points(from, to, zoom);
+        let curve = CubicBez::new(
+            kurbo_point(from),
+            kurbo_point(c1),
+            kurbo_point(c2),
+            kurbo_point(to),
+        );
+        let accuracy = kurbo_accuracy_canvas_units(zoom, steps);
+        let nearest = curve.nearest(kurbo_point(p), accuracy);
+        let d2 = nearest.distance_sq as f32;
+        return if d2.is_finite() { d2 } else { f32::INFINITY };
     }
 
-    best
+    #[cfg(not(feature = "kurbo"))]
+    {
+        let steps = steps.max(1);
+        let (c1, c2) = wire_ctrl_points(from, to, zoom);
+
+        let mut best = f32::INFINITY;
+        let mut prev = from;
+        for i in 1..=steps {
+            let t = i as f32 / steps as f32;
+            let cur = cubic_bezier(from, c1, c2, to, t);
+            best = best.min(dist2_point_to_segment(p, prev, cur));
+            prev = cur;
+        }
+
+        best
+    }
 }
 
 /// Approximate the closest point from `p` to the default wire Bezier curve `from -> to`.
@@ -150,22 +193,39 @@ pub fn closest_point_on_bezier_wire(
     zoom: f32,
     steps: usize,
 ) -> Point {
-    let steps = steps.max(1);
-    let (c1, c2) = wire_ctrl_points(from, to, zoom);
-
-    let mut best = (from, f32::INFINITY);
-    let mut prev = from;
-    for i in 1..=steps {
-        let t = i as f32 / steps as f32;
-        let cur = cubic_bezier(from, c1, c2, to, t);
-        let cand = closest_point_on_segment(p, prev, cur);
-        if cand.1 < best.1 {
-            best = cand;
-        }
-        prev = cur;
+    #[cfg(feature = "kurbo")]
+    {
+        let (c1, c2) = wire_ctrl_points(from, to, zoom);
+        let curve = CubicBez::new(
+            kurbo_point(from),
+            kurbo_point(c1),
+            kurbo_point(c2),
+            kurbo_point(to),
+        );
+        let accuracy = kurbo_accuracy_canvas_units(zoom, steps);
+        let nearest = curve.nearest(kurbo_point(p), accuracy);
+        return fret_point(curve.eval(nearest.t));
     }
 
-    best.0
+    #[cfg(not(feature = "kurbo"))]
+    {
+        let steps = steps.max(1);
+        let (c1, c2) = wire_ctrl_points(from, to, zoom);
+
+        let mut best = (from, f32::INFINITY);
+        let mut prev = from;
+        for i in 1..=steps {
+            let t = i as f32 / steps as f32;
+            let cur = cubic_bezier(from, c1, c2, to, t);
+            let cand = closest_point_on_segment(p, prev, cur);
+            if cand.1 < best.1 {
+                best = cand;
+            }
+            prev = cur;
+        }
+
+        best.0
+    }
 }
 
 /// Computes a conservative axis-aligned bounding box for the default wire curve `from -> to`.
