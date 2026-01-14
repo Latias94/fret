@@ -18,11 +18,14 @@ Status symbols:
 ## Scope
 
 - Primary focus: ECharts-class 2D cartesian charts (dataset/encode, dataZoom, axisPointer/tooltip, legend, brush).
-- Non-goals: option-schema parity, HTML/rich text rendering parity, and the full ECharts plugin ecosystem.
+- Non-goals: full option-schema parity, HTML/rich text rendering parity, and the full ECharts plugin ecosystem.
+  - We do maintain a small, feature-gated option adapter for basic cartesian charts to improve developer ergonomics
+    and enable “ECharts JSON -> Fret chart” demos, but it is intentionally a strict v1 subset.
 - 3D: out of scope here (ECharts 3D lives in `echarts-gl`); track Plot3D parity separately.
 
 ## Architecture Mapping (ECharts -> Fret)
 
+- `option` (JSON) -> `fret-chart::echarts` adapter -> `delinea::ChartSpec` + datasets (`DataTable`)
 - `ecModel`/`SeriesModel`/`ComponentModel` -> `delinea::ChartModel` (validated spec graph)
 - `AxisProxy` + `dataZoomProcessor` -> `delinea` staged pipeline (future: a dedicated filter processor stage)
 - `DataStore` raw index identity -> `RowSelection` + `get_raw_index`
@@ -34,6 +37,7 @@ Status symbols:
 
 - `[x]` Dataset/field indirection + `encode` mapping (ADR 1128 / ADR 1140)
 - `[x]` Stable raw-index identity across transforms (`RowSelection`) (ADR 1137 / ADR 1140)
+- `[~]` Minimal ECharts option JSON adapter (v1 subset) producing `ChartSpec` + datasets (not schema parity)
 - `[~]` DataZoom filter modes (`Filter`/`None`/`WeakFilter`/`Empty`) with a v1 multi-dim subset (ADR 1129 / ADR 1150)
 - `[~]` Order-sensitive multi-dim filtering (ECharts “filter X then reset/filter Y”) (planned; needs processor stage)
 - `[ ]` General transform graph with cached node outputs + derived columns (ECharts-class dataset transforms)
@@ -93,6 +97,8 @@ Status symbols:
 5. P1: Expand conformance coverage in `apps/fret-examples/src/chart_multi_axis_demo.rs` and lock regression tests for:
    - 2D dataZoom ordering rules,
    - visualMap + tooltip/axisPointer interactions.
+6. P1: Add a smoke demo that loads a small ECharts option JSON and renders it via `fret-chart::echarts`, so the
+   adapter surface stays honest while the engine and UI evolve.
 
 ## Evidence Anchors
 
@@ -102,3 +108,4 @@ Status symbols:
   - Engine stages: `ecosystem/delinea/src/engine/stages/`
   - View participation: `ecosystem/delinea/src/view/mod.rs`
   - UI adapter: `ecosystem/fret-chart/src/retained/canvas.rs`
+  - ECharts option adapter (feature-gated): `ecosystem/fret-chart/src/echarts/mod.rs`
