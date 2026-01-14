@@ -215,6 +215,31 @@ preserving specialized variants and performance ceilings.
 2) **A11y semantics:** `DataTable` uses `Table` semantics, `DataGrid(Canvas)` uses `Grid` semantics (recommended),
    but we should confirm this against our current semantics mapping support (ADR 0033 + ADR 0073).
 
+### Migration steps (if we repoint `DataTable`)
+
+This is the preferred convergence path, but it is a breaking change unless we keep a compatibility alias.
+
+1) Introduce explicit type names:
+   - `DataTable` (headless-backed default; currently `DataTableTanstack`)
+   - `DataTableSimple` (current first-pass table; old `DataTable`)
+2) Keep a temporary re-export alias for one release window:
+   - `pub type DataTableTanstack = DataTable;` (or a `#[deprecated]` alias if we want hard migration pressure)
+3) Update demos and docs:
+   - ensure the “default” demo uses `DataTable` (headless-backed)
+   - keep a “simple table” demo only if it still serves a distinct use case
+4) After the deprecation window:
+   - remove/redirect `DataTableTanstack` alias
+   - remove any “new code” references to `DataTableSimple` unless explicitly intended
+
+### Definition of done (consolidation)
+
+- Docs: users can answer “which table do I use?” in < 30 seconds:
+  - `DataTable` (headless-backed) vs `DataGridCanvas` (performance ceiling) vs `DataGrid` (rich cell UI).
+- API: public exports are stable and consistent (`lib.rs` tells the truth).
+- Demos: at least one end-to-end demo validates:
+  - sorting, filtering, pagination, selection, column visibility
+  - virtualization is bounded (no unbounded children/layout blowups)
+
 ## Variable Size Support (Why v1 likely needs it)
 
 Markdown-like cell content often implies:
