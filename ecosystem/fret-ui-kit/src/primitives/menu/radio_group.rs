@@ -219,6 +219,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 click_count: 1,
+                pointer_id: fret_core::PointerId(0),
                 pointer_type: Default::default(),
             }),
         );
@@ -230,6 +231,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 click_count: 1,
+                pointer_id: fret_core::PointerId(0),
                 pointer_type: Default::default(),
             }),
         );
@@ -273,6 +275,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 click_count: 1,
+                pointer_id: fret_core::PointerId(0),
                 pointer_type: Default::default(),
             }),
         );
@@ -284,6 +287,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 click_count: 1,
+                pointer_id: fret_core::PointerId(0),
                 pointer_type: Default::default(),
             }),
         );

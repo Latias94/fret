@@ -45,6 +45,7 @@ fn pointer_move_is_forwarded_to_previous_hover_target() {
         position: Point::new(Px(10.0), Px(10.0)),
         buttons: fret_core::MouseButtons::default(),
         modifiers: fret_core::Modifiers::default(),
+        pointer_id: fret_core::PointerId(0),
         pointer_type: fret_core::PointerType::Mouse,
     });
     ui.dispatch_event(&mut app, &mut services, &move_left);
@@ -55,6 +56,7 @@ fn pointer_move_is_forwarded_to_previous_hover_target() {
         position: Point::new(Px(90.0), Px(10.0)),
         buttons: fret_core::MouseButtons::default(),
         modifiers: fret_core::Modifiers::default(),
+        pointer_id: fret_core::PointerId(0),
         pointer_type: fret_core::PointerType::Mouse,
     });
     ui.dispatch_event(&mut app, &mut services, &move_right);
@@ -68,6 +70,7 @@ fn pointer_move_is_forwarded_to_previous_hover_target() {
         position: Point::new(Px(80.0), Px(10.0)),
         buttons: fret_core::MouseButtons::default(),
         modifiers: fret_core::Modifiers::default(),
+        pointer_id: fret_core::PointerId(0),
         pointer_type: fret_core::PointerType::Mouse,
     });
     ui.dispatch_event(&mut app, &mut services, &move_right_again);
