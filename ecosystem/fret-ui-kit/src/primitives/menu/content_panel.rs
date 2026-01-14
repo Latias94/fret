@@ -7,7 +7,7 @@
 //! Wrappers (DropdownMenu, ContextMenu, Menubar, etc) should provide styling and inner structure
 //! (scroll, roving focus group, items) via closures.
 
-use fret_core::{Rect, SemanticsRole};
+use fret_core::{Point, Px, Rect, SemanticsRole};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
     SemanticsProps, SizeStyle,
@@ -82,8 +82,30 @@ pub fn menu_panel_at<H: UiHost>(
     build_container: impl FnOnce(LayoutStyle) -> ContainerProps,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
-    menu_content_semantics_with_id(cx, LayoutStyle::default(), move |cx| {
-        vec![menu_panel_container_at(cx, placed, build_container, f)]
+    let layout = LayoutStyle {
+        position: PositionStyle::Absolute,
+        inset: InsetStyle {
+            left: Some(placed.origin.x),
+            top: Some(placed.origin.y),
+            ..Default::default()
+        },
+        size: SizeStyle {
+            width: Length::Px(placed.size.width),
+            height: Length::Px(placed.size.height),
+            ..Default::default()
+        },
+        overflow: Overflow::Clip,
+        ..Default::default()
+    };
+
+    let local_placed = Rect::new(Point::new(Px(0.0), Px(0.0)), placed.size);
+    menu_content_semantics_with_id(cx, layout, move |cx| {
+        vec![menu_panel_container_at(
+            cx,
+            local_placed,
+            build_container,
+            f,
+        )]
     })
     .1
 }
