@@ -9,6 +9,7 @@ thread_local! {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Demo {
+    UiGallery,
     ComponentsGallery,
     EmojiConformanceDemo,
     CjkConformanceDemo,
@@ -45,6 +46,9 @@ fn select_demo() -> Demo {
     let hash = location.hash().unwrap_or_default();
     let search = location.search().unwrap_or_default();
 
+    if hash.contains("ui_gallery") || search.contains("demo=ui_gallery") {
+        return Demo::UiGallery;
+    }
     if hash.contains("chart_demo") || search.contains("demo=chart_demo") {
         return Demo::ChartDemo;
     }
@@ -127,6 +131,13 @@ pub fn start() -> Result<(), JsValue> {
     let demo = select_demo();
 
     let handle = match demo {
+        Demo::UiGallery => {
+            let app = fret_ui_gallery::build_app();
+            let mut config = fret_ui_gallery::build_runner_config();
+            config.main_window_title = "fret-ui-gallery (web)".to_string();
+            let driver = fret_ui_gallery::build_driver();
+            fret_launch::run_app_with_handle(config, app, driver)
+        }
         Demo::ComponentsGallery => {
             let app = fret_examples::components_gallery::build_app();
             let mut config = fret_examples::components_gallery::build_runner_config();

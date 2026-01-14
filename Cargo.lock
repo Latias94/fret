@@ -1030,6 +1030,7 @@ dependencies = [
  "console_error_panic_hook",
  "fret-examples",
  "fret-launch",
+ "fret-ui-gallery",
  "js-sys",
  "wasm-bindgen",
  "web-sys",
@@ -1412,6 +1413,25 @@ dependencies = [
  "fret-core",
  "fret-runtime",
  "slotmap",
+]
+
+[[package]]
+name = "fret-ui-gallery"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "fret-app",
+ "fret-bootstrap",
+ "fret-core",
+ "fret-launch",
+ "fret-markdown",
+ "fret-runtime",
+ "fret-ui",
+ "fret-ui-kit",
+ "fret-ui-shadcn",
+ "tracing",
+ "tracing-subscriber",
+ "winit",
 ]
 
 [[package]]
