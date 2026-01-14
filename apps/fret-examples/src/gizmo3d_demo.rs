@@ -9,8 +9,8 @@ use fret_core::{
 use fret_gizmo::{
     Aabb3, DepthMode, DepthRange, Gizmo, GizmoConfig, GizmoCustomEdit, GizmoDrawList3d, GizmoInput,
     GizmoMode, GizmoOps, GizmoOrientation, GizmoPhase, GizmoPivotMode, GizmoPluginManager,
-    GizmoPluginManagerConfig, GizmoPropertyKey, GizmoResult, GizmoSizePolicy, GizmoTarget3d,
-    GizmoTargetId, GizmoVisualPreset, Grid3d, HandleId, LightRadiusGizmoPlugin,
+    GizmoPluginManagerConfig, GizmoPropertyKey, GizmoPropertySource, GizmoResult, GizmoSizePolicy,
+    GizmoTarget3d, GizmoTargetId, GizmoVisualPreset, Grid3d, HandleId, LightRadiusGizmoPlugin,
     RingScaleGizmoPlugin, Transform3d, TransformGizmoPlugin, ViewGizmo, ViewGizmoAnchor,
     ViewGizmoConfig, ViewGizmoProjection, ViewGizmoUpdate, ViewGizmoVisualPreset, ViewportRect,
     ViewportToolInput,
@@ -50,6 +50,16 @@ enum GizmoOpMaskPreset {
 }
 
 type CustomScalarKey = (GizmoPropertyKey, GizmoTargetId);
+
+struct DemoGizmoPropertySource<'a> {
+    scalars: &'a HashMap<CustomScalarKey, f32>,
+}
+
+impl GizmoPropertySource for DemoGizmoPropertySource<'_> {
+    fn read_scalar(&self, target: GizmoTargetId, key: GizmoPropertyKey) -> Option<f32> {
+        self.scalars.get(&(key, target)).copied()
+    }
+}
 
 impl GizmoOpMaskPreset {
     const ALL: [Self; 6] = [
@@ -1006,19 +1016,6 @@ impl Gizmo3dDemoModel {
         &mut self.transform_plugin_mut().gizmo
     }
 
-    fn sync_light_radius_plugin(&mut self, targets: &[GizmoTarget3d]) {
-        let Some(plugin) = self.gizmo_mgr.plugin_mut::<LightRadiusGizmoPlugin>() else {
-            return;
-        };
-
-        for t in targets {
-            let key = (LightRadiusGizmoPlugin::PROPERTY_RADIUS, t.id);
-            if let Some(radius) = self.custom_scalar_values.get(&key).copied() {
-                plugin.set_radius_world(t.id, radius);
-            }
-        }
-    }
-
     fn capture_custom_scalar_drag_start(&mut self, edits: &[GizmoCustomEdit]) {
         if edits.is_empty() {
             return;
@@ -1133,7 +1130,9 @@ impl Gizmo3dDemoModel {
             .filter(|t| self.selection.contains(&t.id))
             .collect();
 
-        self.sync_light_radius_plugin(&selected);
+        let properties = DemoGizmoPropertySource {
+            scalars: &self.custom_scalar_values,
+        };
         let update = self.gizmo_mgr.update(
             view_projection,
             viewport.viewport,
@@ -1141,6 +1140,7 @@ impl Gizmo3dDemoModel {
             input,
             self.active_target,
             &selected,
+            Some(&properties),
         );
 
         if matches!(update.as_ref().map(|u| u.phase), Some(GizmoPhase::Cancel)) {
@@ -3375,7 +3375,9 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                             cancel: false,
                             precision,
                         };
-                        m.sync_light_radius_plugin(&selected);
+                        let properties = DemoGizmoPropertySource {
+                            scalars: &m.custom_scalar_values,
+                        };
                         let _ = m.gizmo_mgr.update(
                             view_projection,
                             viewport,
@@ -3383,6 +3385,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                             hover_input,
                             m.active_target,
                             &selected,
+                            Some(&properties),
                         );
 
                         let over_handle = m.gizmo_mgr.state.hovered.is_some();
@@ -3572,7 +3575,9 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     }
                 };
 
-            m.sync_light_radius_plugin(&selected);
+            let properties = DemoGizmoPropertySource {
+                scalars: &m.custom_scalar_values,
+            };
             if let Some(update) = m.gizmo_mgr.update(
                 view_projection,
                 viewport,
@@ -3580,6 +3585,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 m.input,
                 m.active_target,
                 &selected,
+                Some(&properties),
             ) {
                 m.hud.last = Some(GizmoHudLastUpdate {
                     phase: update.phase,
@@ -3757,7 +3763,9 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         .copied()
                         .filter(|t| selection.contains(&t.id))
                         .collect();
-                    m.sync_light_radius_plugin(&gizmo_targets);
+                    let properties = DemoGizmoPropertySource {
+                        scalars: &m.custom_scalar_values,
+                    };
                     m.gizmo_mgr.draw(
                         view_proj,
                         viewport,
@@ -3765,6 +3773,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         active_target,
                         &gizmo_targets,
                         m.input,
+                        Some(&properties),
                     )
                 };
                 if marquee.is_none() {
