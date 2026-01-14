@@ -211,7 +211,13 @@ pub(crate) fn tooltip_overlay_tool(
             let mut total_h = 0.0f32;
 
             for (i, line) in state.lines.iter().enumerate() {
-                if let Some((left, right)) = split_tooltip_text_for_columns(&line.text) {
+                let columns = line
+                    .columns
+                    .as_ref()
+                    .map(|(left, right)| (left.as_str(), right.as_str()))
+                    .or_else(|| split_tooltip_text_for_columns(&line.text));
+
+                if let Some((left, right)) = columns {
                     let left: Arc<str> = left.into();
                     let right: Arc<str> = right.into();
 

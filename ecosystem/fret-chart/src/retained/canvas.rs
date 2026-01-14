@@ -4791,9 +4791,13 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             let mut total_h = 0.0f32;
 
             for line in &tooltip_lines {
-                if let Some((left, right)) =
-                    crate::tooltip_layout::split_tooltip_text_for_columns(&line.text)
-                {
+                let columns = line
+                    .columns
+                    .as_ref()
+                    .map(|(left, right)| (left.as_str(), right.as_str()))
+                    .or_else(|| crate::tooltip_layout::split_tooltip_text_for_columns(&line.text));
+
+                if let Some((left, right)) = columns {
                     let left_prepared =
                         self.tooltip_text
                             .prepare(cx.services, left, &text_style, constraints);

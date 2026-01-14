@@ -8,6 +8,7 @@ use delinea::{AxisId, ChartEngine, SeriesId};
 pub struct TooltipTextLine {
     pub source_series: Option<SeriesId>,
     pub text: String,
+    pub columns: Option<(String, String)>,
 }
 
 impl TooltipTextLine {
@@ -15,6 +16,7 @@ impl TooltipTextLine {
         Self {
             source_series: None,
             text: text.into(),
+            columns: None,
         }
     }
 
@@ -22,6 +24,31 @@ impl TooltipTextLine {
         Self {
             source_series: Some(series),
             text: text.into(),
+            columns: None,
+        }
+    }
+
+    pub fn columns(left: impl Into<String>, right: impl Into<String>) -> Self {
+        let left = left.into();
+        let right = right.into();
+        Self {
+            source_series: None,
+            text: format!("{left}: {right}"),
+            columns: Some((left, right)),
+        }
+    }
+
+    pub fn columns_for_series(
+        series: SeriesId,
+        left: impl Into<String>,
+        right: impl Into<String>,
+    ) -> Self {
+        let left = left.into();
+        let right = right.into();
+        Self {
+            source_series: Some(series),
+            text: format!("{left}: {right}"),
+            columns: Some((left, right)),
         }
     }
 }
@@ -260,14 +287,20 @@ impl TooltipFormatter for DefaultTooltipFormatter {
                 let mut lines = Vec::with_capacity(3);
                 let series_value = Self::series_label(model, item.series);
                 let series_override = Self::series_override(spec, item.series);
-                lines.push(TooltipTextLine {
-                    source_series: Some(item.series),
-                    text: Self::apply_line_template(
-                        Self::effective_series_line_template(spec, series_override),
+                let series_template = Self::effective_series_line_template(spec, series_override);
+                if series_template == "{label}: {value}" {
+                    lines.push(TooltipTextLine::columns_for_series(
+                        item.series,
                         "series",
-                        &series_value,
-                    ),
-                });
+                        series_value,
+                    ));
+                } else {
+                    lines.push(TooltipTextLine {
+                        source_series: Some(item.series),
+                        text: Self::apply_line_template(series_template, "series", &series_value),
+                        columns: None,
+                    });
+                }
 
                 let x_window = axis_windows.get(&item.x_axis).copied().unwrap_or_default();
                 let x_label = Self::axis_label(model, item.x_axis);
@@ -278,10 +311,19 @@ impl TooltipFormatter for DefaultTooltipFormatter {
                     item.x_value,
                     spec,
                 );
-                lines.push(TooltipTextLine {
-                    source_series: None,
-                    text: Self::apply_line_template(&spec.axis_line_template, &x_label, &x_value),
-                });
+                if spec.axis_line_template == "{label}: {value}" {
+                    lines.push(TooltipTextLine::columns(x_label, x_value));
+                } else {
+                    lines.push(TooltipTextLine {
+                        source_series: None,
+                        text: Self::apply_line_template(
+                            &spec.axis_line_template,
+                            &x_label,
+                            &x_value,
+                        ),
+                        columns: None,
+                    });
+                }
 
                 let y_window = axis_windows.get(&item.y_axis).copied().unwrap_or_default();
                 let y_label = Self::axis_label(model, item.y_axis);
@@ -292,10 +334,19 @@ impl TooltipFormatter for DefaultTooltipFormatter {
                     item.y_value,
                     spec,
                 );
-                lines.push(TooltipTextLine {
-                    source_series: None,
-                    text: Self::apply_line_template(&spec.axis_line_template, &y_label, &y_value),
-                });
+                if spec.axis_line_template == "{label}: {value}" {
+                    lines.push(TooltipTextLine::columns(y_label, y_value));
+                } else {
+                    lines.push(TooltipTextLine {
+                        source_series: None,
+                        text: Self::apply_line_template(
+                            &spec.axis_line_template,
+                            &y_label,
+                            &y_value,
+                        ),
+                        columns: None,
+                    });
+                }
 
                 lines
             }
@@ -310,18 +361,25 @@ impl TooltipFormatter for DefaultTooltipFormatter {
                     axis.axis_value,
                     spec,
                 );
-                lines.push(TooltipTextLine {
-                    source_series: None,
-                    text: Self::apply_line_template(
-                        &spec.axis_line_template,
-                        &axis_label,
-                        &axis_value,
-                    ),
-                });
+                if spec.axis_line_template == "{label}: {value}" {
+                    lines.push(TooltipTextLine::columns(axis_label, axis_value));
+                } else {
+                    lines.push(TooltipTextLine {
+                        source_series: None,
+                        text: Self::apply_line_template(
+                            &spec.axis_line_template,
+                            &axis_label,
+                            &axis_value,
+                        ),
+                        columns: None,
+                    });
+                }
 
                 for entry in &axis.series {
                     let label = Self::series_label(model, entry.series);
                     let series_override = Self::series_override(spec, entry.series);
+                    let series_template =
+                        Self::effective_series_line_template(spec, series_override);
                     let window = axis_windows
                         .get(&entry.value_axis)
                         .copied()
@@ -366,14 +424,19 @@ impl TooltipFormatter for DefaultTooltipFormatter {
                         }
                     };
 
-                    lines.push(TooltipTextLine {
-                        source_series: Some(entry.series),
-                        text: Self::apply_line_template(
-                            Self::effective_series_line_template(spec, series_override),
-                            &label,
-                            &value,
-                        ),
-                    });
+                    if series_template == "{label}: {value}" {
+                        lines.push(TooltipTextLine::columns_for_series(
+                            entry.series,
+                            label,
+                            value,
+                        ));
+                    } else {
+                        lines.push(TooltipTextLine {
+                            source_series: Some(entry.series),
+                            text: Self::apply_line_template(series_template, &label, &value),
+                            columns: None,
+                        });
+                    }
                 }
 
                 lines
@@ -540,10 +603,31 @@ mod tests {
         assert_eq!(lines.len(), 3);
         assert_eq!(lines[0].source_series, None);
         assert_eq!(lines[0].text, "x (Time): 0.5");
+        assert_eq!(
+            lines[0]
+                .columns
+                .as_ref()
+                .map(|(l, r)| (l.as_str(), r.as_str())),
+            Some(("x (Time)", "0.5"))
+        );
         assert_eq!(lines[1].source_series, Some(series_a));
         assert_eq!(lines[1].text, "A: 0.5");
+        assert_eq!(
+            lines[1]
+                .columns
+                .as_ref()
+                .map(|(l, r)| (l.as_str(), r.as_str())),
+            Some(("A", "0.5"))
+        );
         assert_eq!(lines[2].source_series, Some(series_b));
         assert_eq!(lines[2].text, "B: 1");
+        assert_eq!(
+            lines[2]
+                .columns
+                .as_ref()
+                .map(|(l, r)| (l.as_str(), r.as_str())),
+            Some(("B", "1"))
+        );
     }
 
     #[test]
@@ -691,10 +775,13 @@ mod tests {
         assert_eq!(lines.len(), 3);
         assert_eq!(lines[0].source_series, None);
         assert_eq!(lines[0].text, "0.50 @ x (Time)");
+        assert_eq!(lines[0].columns, None);
         assert_eq!(lines[1].source_series, Some(series_a));
         assert_eq!(lines[1].text, "[A]=0.50");
+        assert_eq!(lines[1].columns, None);
         assert_eq!(lines[2].source_series, Some(series_b));
         assert_eq!(lines[2].text, "[B]=1.00");
+        assert_eq!(lines[2].columns, None);
     }
 
     #[test]
@@ -849,10 +936,19 @@ mod tests {
         assert_eq!(lines.len(), 3);
         assert_eq!(lines[0].source_series, None);
         assert_eq!(lines[0].text, "x (Time): 0.50");
+        assert_eq!(
+            lines[0]
+                .columns
+                .as_ref()
+                .map(|(l, r)| (l.as_str(), r.as_str())),
+            Some(("x (Time)", "0.50"))
+        );
         assert_eq!(lines[1].source_series, Some(series_a));
         assert_eq!(lines[1].text, "A=0.50");
+        assert_eq!(lines[1].columns, None);
         assert_eq!(lines[2].source_series, Some(series_b));
         assert_eq!(lines[2].text, "B only: 1");
+        assert_eq!(lines[2].columns, None);
     }
 
     #[test]
