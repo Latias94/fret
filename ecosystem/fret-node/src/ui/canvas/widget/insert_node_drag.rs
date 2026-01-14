@@ -1,8 +1,10 @@
 use std::sync::Arc;
 
-use fret_core::{InternalDragEvent, InternalDragKind, MouseButtons, Point, PointerId, Px, Rect};
+use fret_core::{InternalDragEvent, InternalDragKind, MouseButtons, Point, Px, Rect};
 use fret_runtime::DragKindId;
 use fret_ui::UiHost;
+use fret_ui_kit::dnd as ui_dnd;
+use ui_dnd::{ActivationConstraint, AutoScrollConfig, CollisionStrategy, DndItemId, SensorOutput};
 
 use crate::REROUTE_KIND;
 use crate::core::{CanvasPoint, EdgeId};
@@ -11,7 +13,6 @@ use crate::rules::ConnectDecision;
 use crate::ui::presenter::InsertNodeCandidate;
 
 use super::super::state::{InsertNodeDragPreview, ViewSnapshot};
-use super::threshold::exceeds_drag_threshold;
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
 /// Payload type for "drag a node from the palette/searcher into the canvas".
@@ -21,8 +22,9 @@ pub(super) struct InsertNodeDragPayload {
 }
 
 pub(super) const DRAG_KIND_INSERT_NODE: DragKindId = DragKindId(0x4E4F44455F494E53);
+const DND_DROP_CANVAS: DndItemId = DndItemId(0x4E4F44455F43414E);
 
-fn canvas_to_window(bounds: Rect, pos: Point, pan: crate::core::CanvasPoint, zoom: f32) -> Point {
+fn canvas_to_window(bounds: Rect, pos: Point, pan: CanvasPoint, zoom: f32) -> Point {
     let z = if zoom.is_finite() && zoom > 0.0 {
         zoom
     } else {
@@ -45,8 +47,20 @@ pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M: NodeGraphCanvas
         return false;
     };
 
+    let Some(pointer_id) = cx.pointer_id else {
+        canvas.interaction.pending_insert_node_drag = None;
+        cx.release_pointer_capture();
+        return false;
+    };
+    if pending.pointer_id != pointer_id {
+        return false;
+    }
+
     if !buttons.left {
         canvas.interaction.pending_insert_node_drag = None;
+        if let Some(window) = cx.window {
+            ui_dnd::clear_pending_pointer(cx.app, window, DRAG_KIND_INSERT_NODE, pointer_id);
+        }
         cx.release_pointer_capture();
         return false;
     }
@@ -58,19 +72,31 @@ pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M: NodeGraphCanvas
         return false;
     }
 
-    // Use a screen-space threshold, but positions are in canvas space (scaled by `1/zoom`).
-    let threshold_screen = 6.0;
-    if !exceeds_drag_threshold(pending.start_pos, position, threshold_screen, zoom) {
-        return false;
-    }
-
     let Some(window) = cx.window else {
         return false;
     };
     let start_window = canvas_to_window(cx.bounds, pending.start_pos, snapshot.pan, zoom);
+    let current_window = canvas_to_window(cx.bounds, position, snapshot.pan, zoom);
+
+    ui_dnd::register_droppable_rect(cx.app, window, DND_DROP_CANVAS, cx.bounds, 0, false);
+    let update = ui_dnd::update_pending_drag_move(
+        cx.app,
+        window,
+        DRAG_KIND_INSERT_NODE,
+        pointer_id,
+        pending.start_tick,
+        start_window,
+        current_window,
+        ActivationConstraint::Distance { px: 6.0 },
+        CollisionStrategy::PointerWithin,
+        Some((cx.bounds, AutoScrollConfig::default())),
+    );
+    if !matches!(update.sensor, SensorOutput::DragStart { .. }) {
+        return false;
+    }
 
     cx.app.begin_cross_window_drag_with_kind(
-        PointerId(0),
+        pointer_id,
         DRAG_KIND_INSERT_NODE,
         window,
         start_window,
@@ -78,7 +104,8 @@ pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M: NodeGraphCanvas
             candidate: pending.candidate.clone(),
         },
     );
-    if let Some(drag) = cx.app.drag_mut(PointerId(0))
+    ui_dnd::clear_pending_pointer(cx.app, window, DRAG_KIND_INSERT_NODE, pointer_id);
+    if let Some(drag) = cx.app.drag_mut(pointer_id)
         && drag.payload::<InsertNodeDragPayload>().is_some()
     {
         drag.dragging = true;

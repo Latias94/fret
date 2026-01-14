@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use fret_core::{AppWindowId, Px, Rect};
+use fret_runtime::ModelsHost as _;
 use fret_ui::UiTree;
 use fret_ui::element::SemanticsProps;
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
@@ -97,6 +98,8 @@ fn portal_subtree_resets_state_on_node_kind_change() {
         let node = g.nodes.get_mut(&node_id).expect("node exists");
         node.kind = NodeKindKey::new("test.kind.b");
     });
+    let changed = host.take_changed_models();
+    ui.propagate_model_changes(&mut host, &changed);
 
     ui.layout_all(&mut host, &mut services, bounds(), 1.0);
     let third = last_instance.load(Ordering::SeqCst);

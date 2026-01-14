@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 
-use fret_core::{ClipboardToken, Modifiers, MouseButton, Point, Rect};
-use fret_runtime::TimerToken;
+use fret_core::{ClipboardToken, Modifiers, MouseButton, Point, PointerId, Rect};
+use fret_runtime::{TickId, TimerToken};
 
 use crate::core::{CanvasPoint, EdgeId, GroupId, NodeId as GraphNodeId, NodeKindKey, PortId};
 use crate::rules::{DiagnosticSeverity, EdgeEndpoint};
@@ -216,6 +216,8 @@ pub(crate) struct SearcherState {
 pub(crate) struct PendingInsertNodeDrag {
     pub(crate) candidate: InsertNodeCandidate,
     pub(crate) start_pos: Point,
+    pub(crate) pointer_id: PointerId,
+    pub(crate) start_tick: TickId,
 }
 
 #[derive(Debug, Clone)]
