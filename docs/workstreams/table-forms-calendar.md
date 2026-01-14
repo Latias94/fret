@@ -107,7 +107,8 @@ As of the initial audit:
   - `ecosystem/fret-ui-shadcn/src/form.rs` is a taxonomy facade over field primitives; it is not a headless form state engine.
   - No dedicated headless form state module exists in `fret-ui-kit` yet (to be implemented).
 - Calendar / Date Picker
-  - No `Calendar` / `DatePicker` module exists in `fret-ui-shadcn` yet (matches the shadcn progress tracker).
+  - A shadcn-aligned `Calendar` is being added in `ecosystem/fret-ui-shadcn/src/calendar.rs` (WIP).
+  - `DatePicker` (Popover + Calendar recipe) is the next step and should live in `ecosystem/fret-ui-shadcn/src/date_picker.rs`.
 
 ## Milestones
 
@@ -123,7 +124,8 @@ As of the initial audit:
 - [ ] Audit the existing `fret-ui-kit` headless engine (`headless::table`) for ADR 0101 parity gaps.
 - [ ] Lock the minimal v1 public API surface (types + invariants) and add/adjust unit tests as needed.
 - [ ] Validate stable row keys + selection + sorting tie-breakers + column visibility semantics with tests.
-- [ ] Ensure the feature gate story is correct (`fret-ui-kit/table` stays default-off until widely used).
+- [x] Decide the feature gate story:
+  - `headless::table` has no heavy deps, so it is now always available; the `table` feature is kept as a no-op compatibility flag.
 
 ### M2 — DataTable UI Surface (shadcn-aligned)
 
@@ -141,7 +143,7 @@ As of the initial audit:
 ### M4 — Calendar / Date Picker
 
 - [x] Calendar date math core (month grid + month navigation).
-- [ ] shadcn `Calendar` surface + `DatePicker` recipe (`Popover` + `Calendar`).
+- [ ] shadcn `Calendar` surface + `DatePicker` recipe (`Popover` + `Calendar`) (in progress).
 - [ ] Keyboard/a11y outcomes review against APG; add targeted tests where feasible.
 
 ### M5 — CanvasDataGrid (performance ceiling)
@@ -245,3 +247,5 @@ Likely next optimizations (if we need “million-row spreadsheet” class perfor
 - 2026-01-13: Added `DataTableTanstack` native demo (`apps/fret-examples/src/tanstack_datatable_demo.rs`).
 - 2026-01-13: Extended `headless::grid_viewport` to support “count + key_fn” axes (no need to allocate a `Vec<K>` for fixed/identity-key axes).
 - 2026-01-13: Refactored `fret-ui-shadcn` `DataGrid` prototype to use `Scroll` + `headless::grid_viewport` (single range computation per frame; absolute-positioned visible cells).
+- 2026-01-14: Started implementing shadcn `Calendar` + `DatePicker` (Calendar WIP; `time` dependency added to `fret-ui-shadcn`).
+- 2026-01-14: Removed the long-lived `fret-ui-kit` `table` feature gate (kept the feature as a no-op compatibility flag) and updated ADR/docs accordingly.

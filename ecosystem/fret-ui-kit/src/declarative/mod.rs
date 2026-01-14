@@ -24,7 +24,6 @@ pub mod scroll_area_visibility;
 pub mod slider;
 pub mod stack;
 pub mod style;
-#[cfg(feature = "table")]
 pub mod table;
 pub mod text;
 pub mod transition;

@@ -36,12 +36,12 @@ Reference implementation and terminology:
 
 ## Decision
 
-### 1) Put the headless table engine in `ecosystem/fret-ui-kit` (feature-gated)
+### 1) Put the headless table engine in `ecosystem/fret-ui-kit` (always available)
 
 We will implement a TanStack-aligned headless table engine under:
 
 - `ecosystem/fret-ui-kit/src/headless/table/` (module name: `headless::table`)
-- Cargo feature: `table` (default-off unless/until it becomes widely used)
+- Cargo feature: `table` (compatibility flag; no longer gates compilation)
 
 The headless engine:
 
@@ -215,7 +215,7 @@ backend; see ADR 0033 and platform conformance work).
 
 - We gain a reusable, testable headless table layer aligned with shadcn/TanStack expectations.
 - `fret-ui-shadcn` can ship “guide-level” table recipes without becoming a monolithic data grid.
-- We increase the scope of `fret-ui-kit`; feature-gating mitigates footprint.
+- We increase the scope of `fret-ui-kit`; the table surface is now always available (no heavy deps).
 
 ## Implementation Plan (Phased)
 
