@@ -12,3 +12,9 @@ are not available.
 The canonical API is `fret_fonts::default_fonts()`, intended to be fed into
 `Effect::TextAddFonts`.
 
+## Size strategy (WASM)
+
+The default feature set uses **subset fonts** to reduce WASM payload size:
+
+- `bootstrap-subset` (default): uses `*-subset.ttf` for Inter/JetBrains Mono.
+- `bootstrap-full`: uses the full font files (much larger).
