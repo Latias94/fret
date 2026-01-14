@@ -29,6 +29,13 @@ Emoji:
 
 - `emoji`: includes `assets/NotoColorEmoji.ttf` (large; intended as an explicit opt-in).
 
+## CJK lite (WASM bootstrap)
+
+- `cjk-lite`: includes a subset of `Noto Sans CJK SC` as
+  `assets/NotoSansCJKsc-Regular-cjk-lite-subset.otf` (generated via `fonttools`/`pyftsubset`).
+  Intended to cover a practical baseline of CJK glyphs for bootstrap UI on Web/WASM without pulling
+  in the full font payload.
+
 ## Recommended bundles
 
 For a general-purpose app shell:

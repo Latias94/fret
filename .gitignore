@@ -3,6 +3,7 @@
 /repo-ref
 .DS_Store
 /local
+crates/fret-fonts/assets/_sources/
 /.fret/**
 !/.fret/
 !/.fret/settings.json
