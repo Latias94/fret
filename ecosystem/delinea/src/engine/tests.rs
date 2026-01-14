@@ -5387,7 +5387,13 @@ fn data_zoom_x_filter_mode_none_vs_filter_vs_empty_y_axis_window_semantics() {
         let n = 100usize;
         let xs: Vec<f64> = (0..n).map(|i| i as f64).collect();
         let ys: Vec<f64> = (0..n)
-            .map(|i| if (20..=40).contains(&i) { i as f64 } else { 1000.0 })
+            .map(|i| {
+                if (20..=40).contains(&i) {
+                    i as f64
+                } else {
+                    1000.0
+                }
+            })
             .collect();
         table.push_column(Column::F64(xs));
         table.push_column(Column::F64(ys));
@@ -5421,7 +5427,10 @@ fn data_zoom_x_filter_mode_none_vs_filter_vs_empty_y_axis_window_semantics() {
     // - `empty`: also scope Y bounds to the X window (bounds ignore missing), while keeping a
     //   stable row space.
     let y_none = y_window_for_filter_mode(FilterMode::None);
-    assert!(y_none.max > 900.0, "expected global Y bounds under none: {y_none:?}");
+    assert!(
+        y_none.max > 900.0,
+        "expected global Y bounds under none: {y_none:?}"
+    );
 
     let y_filter = y_window_for_filter_mode(FilterMode::Filter);
     assert!(
