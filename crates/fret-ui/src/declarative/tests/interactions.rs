@@ -198,6 +198,7 @@ fn declarative_pointer_region_can_capture_and_receive_move_up() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -212,6 +213,7 @@ fn declarative_pointer_region_can_capture_and_receive_move_up() {
                 ..Default::default()
             },
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -224,6 +226,7 @@ fn declarative_pointer_region_can_capture_and_receive_move_up() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -286,6 +289,7 @@ fn declarative_pointer_region_can_handle_wheel() {
             position: inside,
             delta: Point::new(Px(0.0), Px(10.0)),
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -349,6 +353,7 @@ fn declarative_pointer_region_can_handle_pinch_gesture() {
             position: inside,
             delta: 0.5,
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -441,6 +446,7 @@ fn selectable_text_drag_autoscrolls_scroll_container() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -454,6 +460,7 @@ fn selectable_text_drag_autoscrolls_scroll_container() {
                 ..Default::default()
             },
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -559,6 +566,7 @@ fn selectable_text_drag_autoscrolls_horizontal_scroll_container() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -572,6 +580,7 @@ fn selectable_text_drag_autoscrolls_horizontal_scroll_container() {
                 ..Default::default()
             },
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -627,6 +636,7 @@ fn selectable_text_double_and_triple_click_select() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 2,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -648,6 +658,7 @@ fn selectable_text_double_and_triple_click_select() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 2,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -660,6 +671,7 @@ fn selectable_text_double_and_triple_click_select() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 3,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -714,6 +726,7 @@ fn selectable_text_sets_active_text_selection() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 2,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -823,6 +836,7 @@ fn declarative_pointer_region_hook_can_request_focus_for_other_element() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -907,6 +921,7 @@ fn dismissible_layer_pointer_move_observer_does_not_break_click_through() {
             position: p,
             buttons: MouseButtons::default(),
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -920,6 +935,7 @@ fn dismissible_layer_pointer_move_observer_does_not_break_click_through() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -993,6 +1009,7 @@ fn declarative_resizable_panel_group_updates_model_on_drag() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -1003,6 +1020,7 @@ fn declarative_resizable_panel_group_updates_model_on_drag() {
             position: Point::new(Px(128.0), Px(20.0)),
             buttons: MouseButtons::default(),
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -1014,6 +1032,7 @@ fn declarative_resizable_panel_group_updates_model_on_drag() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -1177,6 +1196,7 @@ fn pressable_on_activate_hook_runs_on_pointer_activation() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -1188,6 +1208,7 @@ fn pressable_on_activate_hook_runs_on_pointer_activation() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -1249,6 +1270,7 @@ fn pressable_on_hover_change_hook_runs_on_pointer_move() {
             position: inside,
             buttons: MouseButtons::default(),
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -1262,6 +1284,7 @@ fn pressable_on_hover_change_hook_runs_on_pointer_move() {
             position: Point::new(Px(pressable_bounds.origin.x.0 + 200.0), Px(2.0)),
             buttons: MouseButtons::default(),
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -1444,6 +1467,7 @@ fn dismissible_on_dismiss_request_hook_runs_on_outside_press_observer() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
