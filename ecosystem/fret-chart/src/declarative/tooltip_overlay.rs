@@ -12,9 +12,16 @@ use crate::retained::ChartStyle;
 use crate::tooltip_layout::split_tooltip_text_for_columns;
 use crate::{TooltipTextLine, TooltipTextLineKind};
 
+#[derive(Debug, Clone)]
+pub(crate) struct AxisPointerLabelOverlay {
+    pub axis_kind: delinea::AxisKind,
+    pub text: Arc<str>,
+}
+
 #[derive(Debug, Default)]
 pub(crate) struct TooltipOverlayState {
     pub axis_pointer: Option<AxisPointerOutput>,
+    pub axis_pointer_label: Option<AxisPointerLabelOverlay>,
     pub lines: Vec<TooltipTextLine>,
     pub series_rank_by_id: BTreeMap<SeriesId, usize>,
 }
@@ -133,6 +140,81 @@ pub(crate) fn tooltip_overlay_tool(
                         width: style.crosshair_width,
                     }),
                     style.crosshair_color,
+                    paint_cx.raster_scale_factor,
+                );
+            }
+
+            if let Some(label) = state.axis_pointer_label.as_ref()
+                && matches!(&axis_pointer.tooltip, delinea::TooltipOutput::Axis(_))
+            {
+                let label_scope = painter.key_scope(&"fret-chart.declarative.axis_pointer.label");
+                let text: Arc<str> = label.text.clone();
+
+                let text_style = fret_core::TextStyle {
+                    size: Px(11.0),
+                    weight: fret_core::FontWeight::MEDIUM,
+                    ..fret_core::TextStyle::default()
+                };
+                let constraints = CanvasTextConstraints {
+                    max_width: None,
+                    wrap: fret_core::TextWrap::None,
+                    overflow: fret_core::TextOverflow::Clip,
+                };
+
+                let kind_key: u8 = match label.axis_kind {
+                    delinea::AxisKind::X => 0,
+                    delinea::AxisKind::Y => 1,
+                };
+                let key: u64 = painter
+                    .child_key(label_scope, &("label", kind_key, text.as_ref()))
+                    .into();
+                let metrics = painter.text(
+                    key,
+                    DrawOrder(0),
+                    Point::new(Px(0.0), Px(0.0)),
+                    text.clone(),
+                    text_style.clone(),
+                    Color::TRANSPARENT,
+                    constraints,
+                    paint_cx.raster_scale_factor,
+                );
+
+                let pad_x = 6.0f32;
+                let pad_y = 3.0f32;
+                let w = (metrics.size.width.0 + 2.0 * pad_x).max(1.0);
+                let h = (metrics.size.height.0 + 2.0 * pad_y).max(1.0);
+
+                let bx0 = bounds.origin.x.0;
+                let by0 = bounds.origin.y.0;
+                let bx1 = bx0 + bounds.size.width.0;
+                let by1 = by0 + bounds.size.height.0;
+
+                let (mut box_x, mut box_y) = match label.axis_kind {
+                    delinea::AxisKind::X => {
+                        (crosshair.x.0 - 0.5 * w, by0 + bounds.size.height.0 - h)
+                    }
+                    delinea::AxisKind::Y => (bx0, crosshair.y.0 - 0.5 * h),
+                };
+                box_x = box_x.clamp(bx0, (bx1 - w).max(bx0));
+                box_y = box_y.clamp(by0, (by1 - h).max(by0));
+
+                let label_order = DrawOrder(style.draw_order.0.saturating_add(9_020));
+                painter.scene().push(fret_core::SceneOp::Quad {
+                    order: label_order,
+                    rect: Rect::new(Point::new(Px(box_x), Px(box_y)), Size::new(Px(w), Px(h))),
+                    background: style.tooltip_background,
+                    border: Edges::all(style.tooltip_border_width),
+                    border_color: style.tooltip_border_color,
+                    corner_radii: Corners::all(Px(4.0)),
+                });
+                let _ = painter.text(
+                    key,
+                    DrawOrder(label_order.0.saturating_add(1)),
+                    Point::new(Px(box_x + pad_x), Px(box_y + pad_y)),
+                    text,
+                    text_style,
+                    style.tooltip_text_color,
+                    constraints,
                     paint_cx.raster_scale_factor,
                 );
             }
