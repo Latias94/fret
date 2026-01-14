@@ -217,6 +217,7 @@ impl FilterProcessorStage {
     ) -> FilterProcessorResult {
         let mut xy_weak_filter_pending = false;
         let mut xy_weak_filter_applied = false;
+        let mut y_filter_applied = false;
 
         const MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN: usize = 200_000;
 
@@ -372,6 +373,142 @@ impl FilterProcessorStage {
         }
 
         if xy_weak_filter_applied {
+            view.revision.bump();
+            for series_view in &mut view.series {
+                series_view.revision = view.revision;
+            }
+        }
+
+        // Y-driven filtering (v1 subset): when `DataZoomYSpec.filter_mode` is enabled (Filter/WeakFilter),
+        // materialize an indices-backed selection that respects both the current X filter predicate
+        // (when active) and the Y window predicate. This makes the behavior stable for non-monotonic X
+        // inputs where X-only range slicing cannot represent the window.
+        //
+        // Note: stacked-series Y filtering remains intentionally disabled (ADR 1150).
+        const MAX_Y_FILTER_VIEW_LEN: usize = 200_000;
+        for series_id in &model.series_order {
+            let Some(series) = model.series.get(series_id) else {
+                continue;
+            };
+            if !series.visible || series.stack.is_some() {
+                continue;
+            }
+            if !matches!(
+                series.kind,
+                crate::spec::SeriesKind::Scatter
+                    | crate::spec::SeriesKind::Line
+                    | crate::spec::SeriesKind::Area
+            ) {
+                continue;
+            }
+
+            let y_filter_mode = model
+                .data_zoom_y_by_axis
+                .get(&series.y_axis)
+                .and_then(|id| model.data_zoom_y.get(id))
+                .map(|z| z.filter_mode)
+                .unwrap_or(crate::spec::FilterMode::None);
+            if !matches!(
+                y_filter_mode,
+                crate::spec::FilterMode::Filter | crate::spec::FilterMode::WeakFilter
+            ) {
+                continue;
+            }
+
+            // Multi-dimensional weakFilter (v1 subset) is handled separately (indices view) and must
+            // not be replaced by a simple intersection filter.
+            if y_filter_mode == crate::spec::FilterMode::WeakFilter
+                && state.data_zoom_x.get(&series.x_axis).is_some_and(|s| {
+                    s.filter_mode == crate::spec::FilterMode::WeakFilter && s.window.is_some()
+                })
+                && state.data_window_y.get(&series.y_axis).is_some()
+            {
+                continue;
+            }
+
+            let Some(series_view_index) = view.series.iter().position(|v| v.series == *series_id)
+            else {
+                continue;
+            };
+            let series_view = &mut view.series[series_view_index];
+
+            let y_filter = series_view.y_filter;
+            if y_filter.min.is_none() && y_filter.max.is_none() {
+                continue;
+            }
+
+            let base_selection = series_view.selection.clone();
+            if matches!(base_selection, RowSelection::Indices(_)) {
+                continue;
+            }
+
+            let Some(table) = datasets.dataset(series.dataset) else {
+                continue;
+            };
+            let Some(dataset) = model.datasets.get(&series.dataset) else {
+                continue;
+            };
+            let Some(x_col) = dataset.fields.get(&series.encode.x).copied() else {
+                continue;
+            };
+            let Some(y_col) = dataset.fields.get(&series.encode.y).copied() else {
+                continue;
+            };
+            let Some(x) = table.column_f64(x_col) else {
+                continue;
+            };
+            let Some(y) = table.column_f64(y_col) else {
+                continue;
+            };
+
+            let len = x.len().min(y.len());
+            let view_len = base_selection.view_len(len);
+            if view_len == 0 {
+                continue;
+            }
+            if view_len > MAX_Y_FILTER_VIEW_LEN {
+                continue;
+            }
+
+            // Apply X filter predicate when it is active (non-monotonic X case keeps a broad range).
+            let x_filter = series_view.x_policy.filter;
+            let x_filter_active = x_filter.min.is_some() || x_filter.max.is_some();
+
+            let mut indices: Vec<u32> = Vec::new();
+            indices.reserve(view_len.min(4096));
+
+            let mut kept = 0usize;
+            for view_index in 0..view_len {
+                let Some(raw_index) = base_selection.get_raw_index(len, view_index) else {
+                    continue;
+                };
+                let xi = x.get(raw_index).copied().unwrap_or(f64::NAN);
+                let yi = y.get(raw_index).copied().unwrap_or(f64::NAN);
+                if !xi.is_finite() || !yi.is_finite() {
+                    continue;
+                }
+                if x_filter_active && !x_filter.contains(xi) {
+                    continue;
+                }
+                if !y_filter.contains(yi) {
+                    continue;
+                }
+                indices.push(raw_index.min(u32::MAX as usize) as u32);
+                kept += 1;
+            }
+
+            if kept == view_len {
+                continue;
+            }
+
+            series_view.selection = RowSelection::Indices(indices.into());
+            if series_view.x_policy.filter != Default::default() {
+                series_view.x_policy.filter = Default::default();
+            }
+            y_filter_applied = true;
+        }
+
+        if y_filter_applied {
             view.revision.bump();
             for series_view in &mut view.series {
                 series_view.revision = view.revision;

@@ -227,6 +227,10 @@ impl ChartEngine {
         &self.view
     }
 
+    pub fn participation(&self) -> &crate::engine::stages::ParticipationState {
+        &self.participation
+    }
+
     pub fn stats(&self) -> &EngineStats {
         &self.stats
     }
@@ -879,9 +883,6 @@ impl ChartEngine {
         if view_changed {
             self.view.rebuild(&self.model, &self.datasets, &self.state);
         }
-        self.participation
-            .rebuild_from_view(&self.model, &self.view);
-
         if self.state.link.group.is_some()
             && self.brush_link_cache.last_brush != self.state.brush_selection_2d
         {
@@ -894,41 +895,6 @@ impl ChartEngine {
         }
 
         let hover_px = self.state.hover_px;
-
-        self.ordinal_index_stage.begin_frame();
-        if self
-            .model
-            .axis_pointer
-            .as_ref()
-            .is_some_and(|p| p.enabled && p.trigger == AxisPointerTrigger::Axis)
-        {
-            request_ordinal_indices_for_axis_pointer(
-                &mut self.ordinal_index_stage,
-                &self.model,
-                &self.datasets,
-                &self.participation,
-            );
-        }
-        self.ordinal_index_stage.prepare_requests(&self.datasets);
-        let ordinal_indices_done = self.ordinal_index_stage.step(&self.datasets, &mut budget);
-
-        self.nearest_x_index_stage.begin_frame();
-        if hover_px.is_some()
-            && self
-                .model
-                .axis_pointer
-                .as_ref()
-                .is_some_and(|p| p.enabled && p.trigger == AxisPointerTrigger::Axis)
-        {
-            request_nearest_x_indices_for_axis_pointer(
-                &mut self.nearest_x_index_stage,
-                &self.model,
-                &self.datasets,
-                &self.participation,
-            );
-        }
-        self.nearest_x_index_stage.prepare_requests(&self.datasets);
-        let nearest_x_done = self.nearest_x_index_stage.step(&self.datasets, &mut budget);
 
         self.stack_dims_stage.begin_frame();
         self.stack_dims_stage
@@ -971,6 +937,41 @@ impl ChartEngine {
 
         self.participation
             .rebuild_from_view(&self.model, &self.view);
+
+        self.ordinal_index_stage.begin_frame();
+        if self
+            .model
+            .axis_pointer
+            .as_ref()
+            .is_some_and(|p| p.enabled && p.trigger == AxisPointerTrigger::Axis)
+        {
+            request_ordinal_indices_for_axis_pointer(
+                &mut self.ordinal_index_stage,
+                &self.model,
+                &self.datasets,
+                &self.participation,
+            );
+        }
+        self.ordinal_index_stage.prepare_requests(&self.datasets);
+        let ordinal_indices_done = self.ordinal_index_stage.step(&self.datasets, &mut budget);
+
+        self.nearest_x_index_stage.begin_frame();
+        if hover_px.is_some()
+            && self
+                .model
+                .axis_pointer
+                .as_ref()
+                .is_some_and(|p| p.enabled && p.trigger == AxisPointerTrigger::Axis)
+        {
+            request_nearest_x_indices_for_axis_pointer(
+                &mut self.nearest_x_index_stage,
+                &self.model,
+                &self.datasets,
+                &self.participation,
+            );
+        }
+        self.nearest_x_index_stage.prepare_requests(&self.datasets);
+        let nearest_x_done = self.nearest_x_index_stage.step(&self.datasets, &mut budget);
 
         // Brush selection is an output-only interaction (ADR 1144). We compute the derived X-only
         // row range output after the participation contract has been updated so the output is

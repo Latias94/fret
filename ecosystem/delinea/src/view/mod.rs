@@ -259,33 +259,6 @@ impl ViewState {
             if xy_weak_filter_active {
                 selection = RowSelection::Range(base_range);
                 x_window.x_policy.filter = Default::default();
-            } else if series.stack.is_none()
-                && matches!(
-                    series.kind,
-                    crate::spec::SeriesKind::Scatter
-                        | crate::spec::SeriesKind::Line
-                        | crate::spec::SeriesKind::Area
-                )
-                && y_filter_mode != FilterMode::None
-                && matches!(
-                    selection,
-                    RowSelection::All | RowSelection::Range(_) | RowSelection::Indices(_)
-                )
-            {
-                if let Some(y_col) = dataset.fields.get(&series.encode.y).copied()
-                    && let Some(y) = table.column_f64(y_col)
-                {
-                    let y_axis_range = model
-                        .axes
-                        .get(&series.y_axis)
-                        .map(|a| a.range)
-                        .unwrap_or_default();
-                    let node = data_zoom_y_node(model, state, series.y_axis, y_axis_range);
-                    const MAX_VIEW_LEN: usize = 200_000;
-                    if let Some(next) = node.apply_y_filter_indices(y, &selection, MAX_VIEW_LEN) {
-                        selection = next;
-                    }
-                }
             }
 
             self.series.push(SeriesView {

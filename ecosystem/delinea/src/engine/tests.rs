@@ -2033,10 +2033,10 @@ fn data_zoom_y_filter_mode_filters_scatter_selection_by_y_window_after_x_selecti
         .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
         .unwrap();
 
-    let Some(view) = engine.view().series_view(series_id) else {
-        panic!("expected series view");
+    let Some(participation) = engine.participation().series_participation(series_id) else {
+        panic!("expected series participation");
     };
-    let RowSelection::Indices(indices) = &view.selection else {
+    let RowSelection::Indices(indices) = &participation.selection else {
         panic!("expected RowSelection::Indices for y-filtered scatter selection");
     };
     assert_eq!(&indices[..], &[5, 6, 7]);
