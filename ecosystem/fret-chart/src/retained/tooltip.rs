@@ -21,6 +21,7 @@ pub struct TooltipTextLine {
     pub text: String,
     pub columns: Option<(String, String)>,
     pub kind: TooltipTextLineKind,
+    pub value_emphasis: bool,
 }
 
 impl TooltipTextLine {
@@ -30,6 +31,7 @@ impl TooltipTextLine {
             text: text.into(),
             columns: None,
             kind: TooltipTextLineKind::Body,
+            value_emphasis: false,
         }
     }
 
@@ -39,6 +41,7 @@ impl TooltipTextLine {
             text: text.into(),
             columns: None,
             kind: TooltipTextLineKind::SeriesRow,
+            value_emphasis: false,
         }
     }
 
@@ -50,6 +53,7 @@ impl TooltipTextLine {
             text: format!("{left}: {right}"),
             columns: Some((left, right)),
             kind: TooltipTextLineKind::Body,
+            value_emphasis: true,
         }
     }
 
@@ -65,11 +69,17 @@ impl TooltipTextLine {
             text: format!("{left}: {right}"),
             columns: Some((left, right)),
             kind: TooltipTextLineKind::SeriesRow,
+            value_emphasis: true,
         }
     }
 
     pub fn with_kind(mut self, kind: TooltipTextLineKind) -> Self {
         self.kind = kind;
+        self
+    }
+
+    pub fn with_value_emphasis(mut self, value_emphasis: bool) -> Self {
+        self.value_emphasis = value_emphasis;
         self
     }
 }
@@ -321,6 +331,7 @@ impl TooltipFormatter for DefaultTooltipFormatter {
                         text: Self::apply_line_template(series_template, "series", &series_value),
                         columns: None,
                         kind: TooltipTextLineKind::SeriesRow,
+                        value_emphasis: false,
                     });
                 }
 
@@ -345,6 +356,7 @@ impl TooltipFormatter for DefaultTooltipFormatter {
                         ),
                         columns: None,
                         kind: TooltipTextLineKind::Body,
+                        value_emphasis: false,
                     });
                 }
 
@@ -369,6 +381,7 @@ impl TooltipFormatter for DefaultTooltipFormatter {
                         ),
                         columns: None,
                         kind: TooltipTextLineKind::Body,
+                        value_emphasis: false,
                     });
                 }
 
@@ -400,6 +413,7 @@ impl TooltipFormatter for DefaultTooltipFormatter {
                         ),
                         columns: None,
                         kind: TooltipTextLineKind::AxisHeader,
+                        value_emphasis: false,
                     });
                 }
 
@@ -464,6 +478,7 @@ impl TooltipFormatter for DefaultTooltipFormatter {
                             text: Self::apply_line_template(series_template, &label, &value),
                             columns: None,
                             kind: TooltipTextLineKind::SeriesRow,
+                            value_emphasis: false,
                         });
                     }
                 }
@@ -640,6 +655,7 @@ mod tests {
             Some(("x (Time)", "0.5"))
         );
         assert_eq!(lines[0].kind, TooltipTextLineKind::AxisHeader);
+        assert!(lines[0].value_emphasis);
         assert_eq!(lines[1].source_series, Some(series_a));
         assert_eq!(lines[1].text, "A: 0.5");
         assert_eq!(
@@ -650,6 +666,7 @@ mod tests {
             Some(("A", "0.5"))
         );
         assert_eq!(lines[1].kind, TooltipTextLineKind::SeriesRow);
+        assert!(lines[1].value_emphasis);
         assert_eq!(lines[2].source_series, Some(series_b));
         assert_eq!(lines[2].text, "B: 1");
         assert_eq!(
@@ -660,6 +677,7 @@ mod tests {
             Some(("B", "1"))
         );
         assert_eq!(lines[2].kind, TooltipTextLineKind::SeriesRow);
+        assert!(lines[2].value_emphasis);
     }
 
     #[test]
@@ -809,14 +827,17 @@ mod tests {
         assert_eq!(lines[0].text, "0.50 @ x (Time)");
         assert_eq!(lines[0].columns, None);
         assert_eq!(lines[0].kind, TooltipTextLineKind::AxisHeader);
+        assert!(!lines[0].value_emphasis);
         assert_eq!(lines[1].source_series, Some(series_a));
         assert_eq!(lines[1].text, "[A]=0.50");
         assert_eq!(lines[1].columns, None);
         assert_eq!(lines[1].kind, TooltipTextLineKind::SeriesRow);
+        assert!(!lines[1].value_emphasis);
         assert_eq!(lines[2].source_series, Some(series_b));
         assert_eq!(lines[2].text, "[B]=1.00");
         assert_eq!(lines[2].columns, None);
         assert_eq!(lines[2].kind, TooltipTextLineKind::SeriesRow);
+        assert!(!lines[2].value_emphasis);
     }
 
     #[test]
@@ -979,14 +1000,17 @@ mod tests {
             Some(("x (Time)", "0.50"))
         );
         assert_eq!(lines[0].kind, TooltipTextLineKind::AxisHeader);
+        assert!(lines[0].value_emphasis);
         assert_eq!(lines[1].source_series, Some(series_a));
         assert_eq!(lines[1].text, "A=0.50");
         assert_eq!(lines[1].columns, None);
         assert_eq!(lines[1].kind, TooltipTextLineKind::SeriesRow);
+        assert!(!lines[1].value_emphasis);
         assert_eq!(lines[2].source_series, Some(series_b));
         assert_eq!(lines[2].text, "B only: 1");
         assert_eq!(lines[2].columns, None);
         assert_eq!(lines[2].kind, TooltipTextLineKind::SeriesRow);
+        assert!(!lines[2].value_emphasis);
     }
 
     #[test]
@@ -1106,5 +1130,6 @@ mod tests {
         assert_eq!(lines.len(), 1);
         assert!(lines[0].text.contains("axis="));
         assert_eq!(lines[0].kind, TooltipTextLineKind::Body);
+        assert!(!lines[0].value_emphasis);
     }
 }
