@@ -152,7 +152,7 @@ impl GizmoPlugin for RingScaleGizmoPlugin {
 
     fn draw(
         &mut self,
-        ctx: GizmoPluginContext,
+        ctx: GizmoPluginContext<'_>,
         active_target: GizmoTargetId,
         targets: &[GizmoTarget3d],
     ) -> GizmoDrawList3d {
@@ -216,7 +216,7 @@ impl GizmoPlugin for RingScaleGizmoPlugin {
 
     fn pick_items(
         &mut self,
-        ctx: GizmoPluginContext,
+        ctx: GizmoPluginContext<'_>,
         active_target: GizmoTargetId,
         targets: &[GizmoTarget3d],
         out: &mut Vec<GizmoPickItem>,
@@ -285,7 +285,7 @@ impl GizmoPlugin for RingScaleGizmoPlugin {
 
     fn update(
         &mut self,
-        ctx: GizmoPluginContext,
+        ctx: GizmoPluginContext<'_>,
         phase: GizmoPhase,
         active_target: GizmoTargetId,
         targets: &[GizmoTarget3d],
@@ -467,6 +467,7 @@ mod tests {
             },
             targets[0].id,
             &targets,
+            None,
         );
         assert!(u0.is_some());
         assert_eq!(u0.unwrap().phase, GizmoPhase::Begin);
@@ -486,6 +487,7 @@ mod tests {
             },
             targets[0].id,
             &targets,
+            None,
         );
         assert!(u1.is_some());
         let u1 = u1.unwrap();
@@ -506,6 +508,7 @@ mod tests {
             },
             targets[0].id,
             &targets,
+            None,
         );
         assert!(u2.is_some());
         let u2 = u2.unwrap();
@@ -531,6 +534,7 @@ mod tests {
             },
             targets[0].id,
             &targets,
+            None,
         );
         assert!(u3.is_some());
         assert_eq!(u3.unwrap().phase, GizmoPhase::Commit);

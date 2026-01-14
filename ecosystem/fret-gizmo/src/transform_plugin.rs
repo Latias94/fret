@@ -34,7 +34,7 @@ impl GizmoPlugin for TransformGizmoPlugin {
 
     fn draw(
         &mut self,
-        ctx: GizmoPluginContext,
+        ctx: GizmoPluginContext<'_>,
         active_target: GizmoTargetId,
         targets: &[GizmoTarget3d],
     ) -> GizmoDrawList3d {
@@ -52,7 +52,7 @@ impl GizmoPlugin for TransformGizmoPlugin {
 
     fn pick_items(
         &mut self,
-        ctx: GizmoPluginContext,
+        ctx: GizmoPluginContext<'_>,
         active_target: GizmoTargetId,
         targets: &[GizmoTarget3d],
         out: &mut Vec<GizmoPickItem>,
@@ -88,7 +88,7 @@ impl GizmoPlugin for TransformGizmoPlugin {
 
     fn update(
         &mut self,
-        ctx: GizmoPluginContext,
+        ctx: GizmoPluginContext<'_>,
         phase: GizmoPhase,
         active_target: GizmoTargetId,
         targets: &[GizmoTarget3d],
@@ -241,6 +241,7 @@ mod tests {
                 cancel: false,
                 precision: 1.0,
             },
+            properties: None,
             drag_start_cursor_px: start,
             hovered: Some(active_handle),
             active: Some(active_handle),

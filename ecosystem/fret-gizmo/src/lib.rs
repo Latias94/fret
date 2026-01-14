@@ -47,7 +47,7 @@ pub use picking::{
 };
 pub use plugin::{
     GizmoPickHit, GizmoPickItem, GizmoPickShape2d, GizmoPlugin, GizmoPluginContext,
-    GizmoPluginManager, GizmoPluginManagerConfig, GizmoPluginManagerState,
+    GizmoPluginManager, GizmoPluginManagerConfig, GizmoPluginManagerState, GizmoPropertySource,
 };
 pub use ring_scale_plugin::{RingScaleGizmoConfig, RingScaleGizmoPlugin, RingScaleGizmoState};
 pub use style::{
