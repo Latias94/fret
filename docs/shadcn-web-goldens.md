@@ -55,7 +55,14 @@ Extract *all* routable new-york-v4 pages (defaults match `/view/[style]/[name]`:
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts --all --update --baseUrl=http://localhost:4020`
 
-On the current setup, `--all` generates `362` JSON files under `goldens/shadcn-web/v4/new-york-v4/`.
+On the current setup, `--all` (default `--modes=closed`) generates `362` JSON files under
+`goldens/shadcn-web/v4/new-york-v4/`.
+
+If you also extract open overlay states (`--modes=open` or `--open`), you will get additional
+`*.open.json` files alongside the base closed-mode goldens. In this repo, the current snapshot is:
+
+- `362` closed-mode files (`*.json`, excluding `*.open.json`)
+- `6` open-mode files (`*.open.json`)
 
 If the extracted `computedStyle` looks like browser defaults (e.g. `<button>` has `display:
 inline-block`, `borderTopWidth: 2px`), your dev server is likely not producing Tailwind utilities.

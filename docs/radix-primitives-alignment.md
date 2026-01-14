@@ -84,4 +84,7 @@ concepts and Fret building blocks they depend on.
 - DropdownMenu submenu ergonomics: safe-hover close corridor now wired via `DismissibleLayer` pointer-move observers; remaining: intent heuristics + focus transfer closure.
 - (Done) cmdk-style filtering/scoring headless primitive: `fret-ui-kit::headless::cmdk_score`.
 - Hover overlays (Tooltip/HoverCard): consolidate intent/timer state machines into `fret-ui-kit::headless` so shadcn recipes remain mostly wiring + styling, and add headless unit tests to prevent drift.
-- Golden conformance expansion: add `radix-web` timeline scenarios for submenu interactions (menubar/context-menu/dropdown-menu) and extend shadcn-web open snapshots for non-click open paths.
+- Golden conformance expansion:
+  - (Done) `radix-web` timeline scenarios now cover submenu keyboard open/close for
+    dropdown-menu/context-menu/menubar (in addition to hover-open + grace corridor).
+  - (Next) extend `shadcn-web` open snapshots for pages that require non-click input and/or nested submenu open states beyond the current demo set.

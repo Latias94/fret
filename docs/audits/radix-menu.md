@@ -1,4 +1,4 @@
-# Radix Primitives Audit — Menu
+# Radix Primitives Audit: Menu
 
 This audit compares Fret's Radix-aligned menu substrate against the upstream Radix
 `@radix-ui/react-menu` implementation pinned in `repo-ref/primitives`.
@@ -101,6 +101,10 @@ composing:
   golden
   (`goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-keyboard-open-close.light.json`).
 - `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates context-menu submenu
+  keyboard open/close (ArrowRight open, ArrowLeft close + focus restore) against the Radix Vega web
+  golden
+  (`goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-keyboard-open-close.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates context-menu submenu
   hover-open + item select closes the root menu against the Radix Vega web golden
   (`goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-hover-select.light.json`).
 - `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates context-menu submenu
@@ -119,4 +123,8 @@ composing:
 - `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs` validates menubar menu placement
   (menu popper gap + cross-axis delta) against the Radix Vega web golden
   (`goldens/radix-web/v4/radix-vega/menubar-example.menubar.open-navigate-close.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates menubar submenu
+  keyboard open/close (ArrowRight open, ArrowLeft close + focus restore) against the Radix Vega web
+  golden
+  (`goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-keyboard-open-close.light.json`).
 - Run: `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
