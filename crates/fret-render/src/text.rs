@@ -3039,6 +3039,123 @@ mod tests {
     }
 
     #[test]
+    fn emoji_fallback_uses_bundled_color_font_without_explicit_family_when_system_fonts_are_absent()
+    {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
+        text.font_system = cosmic_text::FontSystem::new_with_locale_and_db_and_fallback(
+            "en-US".to_string(),
+            cosmic_text::fontdb::Database::new(),
+            super::FretFallback,
+        );
+        text.parley_shaper =
+            crate::text_v2::parley_shaper::ParleyShaper::new_without_system_fonts();
+        text.font_db_revision = 0;
+        text.font_stack_key = super::font_stack_cache_key(
+            text.font_system.locale(),
+            text.font_system.db(),
+            text.font_db_revision,
+        );
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .chain(fret_fonts::emoji_fonts().iter())
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let family_inter = "Inter";
+        assert!(
+            text.all_font_names()
+                .iter()
+                .any(|n| n.eq_ignore_ascii_case(family_inter)),
+            "expected {family_inter} to be present after loading bootstrap fonts"
+        );
+
+        let family_emoji = "Noto Color Emoji";
+        assert!(
+            text.all_font_names()
+                .iter()
+                .any(|n| n.eq_ignore_ascii_case(family_emoji)),
+            "expected {family_emoji} to be present after loading emoji fonts"
+        );
+
+        let mut config = fret_core::TextFontFamilyConfig::default();
+        config.ui_sans = vec![family_inter.to_string()];
+        let _ = text.set_font_families(&config);
+
+        let emoji_blob_id = super::stable_font_blob_id(fret_fonts::emoji_fonts()[0]);
+
+        let style = TextStyle {
+            font: fret_core::FontId::ui(),
+            size: Px(32.0),
+            ..Default::default()
+        };
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+
+        let cases = [
+            ("\u{1F600}", "single emoji"),
+            ("\u{2708}\u{FE0F}", "vs16 emoji presentation"),
+            ("1\u{FE0F}\u{20E3}", "keycap sequence"),
+            ("\u{1F1FA}\u{1F1F8}", "flag sequence"),
+            (
+                "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}\u{200D}\u{1F466}",
+                "zwj family sequence",
+            ),
+        ];
+
+        for (text_str, label) in cases {
+            let (blob_id, _metrics) = text.prepare(text_str, &style, constraints);
+
+            let glyph_keys: Vec<super::GlyphKey> = {
+                let blob = text.blob(blob_id).expect("text blob");
+                blob.shape.glyphs.iter().map(|g| g.key).collect()
+            };
+            assert!(
+                !glyph_keys.is_empty(),
+                "expected shaped glyphs for emoji case {label}"
+            );
+
+            let emoji_keys: Vec<super::GlyphKey> = glyph_keys
+                .iter()
+                .copied()
+                .filter(|k| k.font.blob_id == emoji_blob_id)
+                .collect();
+            assert!(
+                !emoji_keys.is_empty(),
+                "expected bundled emoji font to be selected for {label} under the UI sans stack when system fonts are absent"
+            );
+
+            let color_keys: Vec<super::GlyphKey> = emoji_keys
+                .iter()
+                .copied()
+                .filter(|k| k.kind == super::GlyphQuadKind::Color)
+                .collect();
+            assert!(
+                !color_keys.is_empty(),
+                "expected at least one color emoji glyph quad for {label}"
+            );
+
+            let epoch = 1;
+            for key in color_keys {
+                text.ensure_glyph_in_atlas(key, epoch);
+                assert!(
+                    text.color_atlas.get(key, epoch).is_some(),
+                    "expected ensured emoji glyph to be present in the color atlas ({label})"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn span_fingerprints_split_shaping_and_paint() {
         let constraints = TextConstraints {
             max_width: Some(Px(200.0)),
