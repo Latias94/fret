@@ -16,7 +16,8 @@ use crate::scene::Color;
 /// Notes:
 /// - Entries are treated as ordered "try this first" candidates; backends will pick the first
 ///   installed family name and ignore unknown ones.
-/// - This does not attempt to model per-script fallback chains yet (ADR 0029).
+/// - This does not attempt to model per-script fallback chains yet (ADR 0029); for now, we expose
+///   a single `common_fallback` list for cross-script "no tofu" baseline behavior.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TextFontFamilyConfig {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -25,6 +26,12 @@ pub struct TextFontFamilyConfig {
     pub ui_serif: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub ui_mono: Vec<String>,
+    /// Additional family candidates appended to the framework fallback stack.
+    ///
+    /// This list is intended to cover "missing glyph" cases for mixed-script UIs (CJK + emoji +
+    /// RTL) without requiring per-span font selection.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub common_fallback: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

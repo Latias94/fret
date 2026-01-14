@@ -199,7 +199,12 @@ fn default_serif_candidates() -> &'static [&'static str] {
     }
 }
 
-fn font_stack_cache_key(locale: &str, db: &cosmic_text::fontdb::Database, db_revision: u64) -> u64 {
+fn font_stack_cache_key(
+    locale: &str,
+    db: &cosmic_text::fontdb::Database,
+    db_revision: u64,
+    common_fallback_config: &[String],
+) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     locale.hash(&mut hasher);
 
@@ -209,6 +214,7 @@ fn font_stack_cache_key(locale: &str, db: &cosmic_text::fontdb::Database, db_rev
 
     // Include the framework-level fallback policy so changing it can't reuse stale blobs.
     <FretFallback as cosmic_text::Fallback>::common_fallback(&FretFallback).hash(&mut hasher);
+    common_fallback_config.hash(&mut hasher);
     <cosmic_text::PlatformFallback as cosmic_text::Fallback>::forbidden_fallback(
         &cosmic_text::PlatformFallback,
     )
@@ -1005,6 +1011,7 @@ pub struct TextSystem {
     parley_scale: parley::swash::scale::ScaleContext,
     font_stack_key: u64,
     font_db_revision: u64,
+    common_fallback_config: Vec<String>,
 
     blobs: SlotMap<TextBlobId, TextBlob>,
     blob_cache: HashMap<TextBlobKey, TextBlobId>,
@@ -1081,6 +1088,7 @@ impl TextSystem {
                 self.font_system.locale(),
                 self.font_system.db(),
                 self.font_db_revision,
+                &self.common_fallback_config,
             );
             self.blobs.clear();
             self.blob_cache.clear();
@@ -1185,7 +1193,9 @@ impl TextSystem {
         }
 
         let font_db_revision = 0u64;
-        let font_stack_key = font_stack_cache_key(&locale, &db, font_db_revision);
+        let common_fallback_config = Vec::new();
+        let font_stack_key =
+            font_stack_cache_key(&locale, &db, font_db_revision, &common_fallback_config);
         let font_system = FontSystem::new_with_locale_and_db_and_fallback(locale, db, FretFallback);
 
         let mut parley_shaper = crate::text_v2::parley_shaper::ParleyShaper::new();
@@ -1203,14 +1213,21 @@ impl TextSystem {
             let _ = parley_shaper.set_generic_family_name(ParleyGenericFamily::UiMonospace, mono);
         }
 
-        // Align Parley generic fallback ordering with the framework-level fallback chain so that
-        // Web/WASM (no system fonts) can resolve mixed-script text without per-span font selection.
+        // Align Parley generic fallback ordering with the framework fallback chain so that Web/WASM
+        // (no system fonts) can resolve mixed-script text without per-span font selection.
+        let generics = [
+            ParleyGenericFamily::SansSerif,
+            ParleyGenericFamily::Serif,
+            ParleyGenericFamily::Monospace,
+            ParleyGenericFamily::SystemUi,
+            ParleyGenericFamily::UiSansSerif,
+            ParleyGenericFamily::UiSerif,
+            ParleyGenericFamily::UiMonospace,
+        ];
         for &family in <FretFallback as cosmic_text::Fallback>::common_fallback(&FretFallback) {
-            let _ =
-                parley_shaper.append_generic_family_name(ParleyGenericFamily::SansSerif, family);
-            let _ = parley_shaper.append_generic_family_name(ParleyGenericFamily::SystemUi, family);
-            let _ =
-                parley_shaper.append_generic_family_name(ParleyGenericFamily::UiSansSerif, family);
+            for &generic in &generics {
+                let _ = parley_shaper.append_generic_family_name(generic, family);
+            }
         }
 
         Self {
@@ -1219,6 +1236,7 @@ impl TextSystem {
             parley_scale: parley::swash::scale::ScaleContext::new(),
             font_stack_key,
             font_db_revision,
+            common_fallback_config,
 
             blobs: SlotMap::with_key(),
             blob_cache: HashMap::new(),
@@ -1245,6 +1263,9 @@ impl TextSystem {
         let mut parley_changed = false;
         let common_fallback =
             <FretFallback as cosmic_text::Fallback>::common_fallback(&FretFallback);
+        let config_fallback_changed = self.common_fallback_config != config.common_fallback;
+        self.common_fallback_config
+            .clone_from(&config.common_fallback);
 
         let pick =
             |overrides: &[String], defaults: &'static [&'static str]| -> Option<Cow<'_, str>> {
@@ -1296,24 +1317,37 @@ impl TextSystem {
             }
         }
 
+        let generics = [
+            ParleyGenericFamily::SansSerif,
+            ParleyGenericFamily::Serif,
+            ParleyGenericFamily::Monospace,
+            ParleyGenericFamily::SystemUi,
+            ParleyGenericFamily::UiSansSerif,
+            ParleyGenericFamily::UiSerif,
+            ParleyGenericFamily::UiMonospace,
+        ];
+        for family in &self.common_fallback_config {
+            for &generic in &generics {
+                parley_changed |= self
+                    .parley_shaper
+                    .append_generic_family_name(generic, family);
+            }
+        }
         for &family in common_fallback {
-            parley_changed |= self
-                .parley_shaper
-                .append_generic_family_name(ParleyGenericFamily::SansSerif, family);
-            parley_changed |= self
-                .parley_shaper
-                .append_generic_family_name(ParleyGenericFamily::SystemUi, family);
-            parley_changed |= self
-                .parley_shaper
-                .append_generic_family_name(ParleyGenericFamily::UiSansSerif, family);
+            for &generic in &generics {
+                parley_changed |= self
+                    .parley_shaper
+                    .append_generic_family_name(generic, family);
+            }
         }
 
         let mut new_key = font_stack_cache_key(
             self.font_system.locale(),
             self.font_system.db(),
             self.font_db_revision,
+            &self.common_fallback_config,
         );
-        if new_key == old_key && parley_changed {
+        if new_key == old_key && (parley_changed || config_fallback_changed) {
             // Fontique generic family changes do not participate in the cosmic-text key, so we
             // bump the revision to ensure caches cannot reuse stale Parley shaping results.
             self.font_db_revision = self.font_db_revision.saturating_add(1);
@@ -1321,6 +1355,7 @@ impl TextSystem {
                 self.font_system.locale(),
                 self.font_system.db(),
                 self.font_db_revision,
+                &self.common_fallback_config,
             );
         }
         if new_key == old_key {
@@ -2959,6 +2994,7 @@ mod tests {
             text.font_system.locale(),
             text.font_system.db(),
             text.font_db_revision,
+            &text.common_fallback_config,
         );
 
         let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
@@ -3057,6 +3093,7 @@ mod tests {
             text.font_system.locale(),
             text.font_system.db(),
             text.font_db_revision,
+            &text.common_fallback_config,
         );
 
         let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
