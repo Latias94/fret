@@ -108,7 +108,8 @@ Why it matters:
 
 Gap:
 
-- There is no canonical `FormState`/field registry, dirty/touched, submit lifecycle, sync/async validation contract.
+- A form value binding + validation contract exists (`FormState` + `FormRegistry`), but it still needs broader shadcn integration
+  beyond `Input` (e.g. `Select`, `Textarea`, `Checkbox` groups) and async validation ergonomics.
 
 Why it matters:
 
@@ -157,4 +158,3 @@ Why it matters:
 
 - Add a headless form state layer in `fret-ui-kit` and shadcn recipes in `fret-ui-shadcn`.
 - Implement `Calendar` + `DatePicker` using overlay primitives (Popover + Calendar recipe).
-

@@ -135,7 +135,7 @@ As of the initial audit:
 ### M3 — Forms (headless + shadcn wrappers)
 
 - [x] Headless `FormState` core (dirty/touched/errors/submitting).
-- [ ] Validation hooks (sync/async), error aggregation, schema adapters.
+- [x] Validation hooks (sync v1): field registry + submit lifecycle + revalidate-on-change glue (`fret-ui-kit::declarative::form::FormRegistry`).
 - [ ] shadcn wrappers (`Form`, `FormField`, integration with `Input`, `Textarea`, `Select`).
 
 ### M4 — Calendar / Date Picker
