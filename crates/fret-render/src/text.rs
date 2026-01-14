@@ -2751,12 +2751,13 @@ mod tests {
     }
 
     #[test]
-    fn emoji_glyphs_use_color_quads_when_color_font_is_available() {
+    fn emoji_sequences_use_color_quads_when_color_font_is_available() {
         let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
         let mut text = super::TextSystem::new(&ctx.device);
 
-        let fonts: Vec<Vec<u8>> = fret_fonts::default_fonts()
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
             .iter()
+            .chain(fret_fonts::emoji_fonts().iter())
             .map(|b| b.to_vec())
             .collect();
         let added = text.add_fonts(fonts);
@@ -2774,28 +2775,45 @@ mod tests {
             scale_factor: 1.0,
         };
 
-        let (blob_id, _metrics) = text.prepare("😀", &style, constraints);
-        let blob = text.blob(blob_id).expect("text blob");
+        let cases = [
+            ("\u{1F600}", "single emoji"),
+            ("\u{2708}\u{FE0F}", "vs16 emoji presentation"),
+            ("1\u{FE0F}\u{20E3}", "keycap sequence"),
+            ("\u{1F1FA}\u{1F1F8}", "flag sequence"),
+            (
+                "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}\u{200D}\u{1F466}",
+                "zwj family sequence",
+            ),
+            (
+                "\u{1F3F3}\u{FE0F}\u{200D}\u{1F308}",
+                "zwj rainbow flag sequence",
+            ),
+        ];
 
-        let mut color_glyphs: Vec<super::GlyphKey> = Vec::new();
-        for g in blob.shape.glyphs.as_ref() {
-            if matches!(g.kind(), super::GlyphQuadKind::Color) {
-                color_glyphs.push(g.key);
+        for (text_str, label) in cases {
+            let (blob_id, _metrics) = text.prepare(text_str, &style, constraints);
+            let blob = text.blob(blob_id).expect("text blob");
+
+            let mut color_glyphs: Vec<super::GlyphKey> = Vec::new();
+            for g in blob.shape.glyphs.as_ref() {
+                if matches!(g.kind(), super::GlyphQuadKind::Color) {
+                    color_glyphs.push(g.key);
+                }
             }
-        }
 
-        assert!(
-            !color_glyphs.is_empty(),
-            "expected at least one color glyph quad for the emoji when Noto Color Emoji is present"
-        );
-
-        let epoch = 1;
-        for key in color_glyphs {
-            text.ensure_glyph_in_atlas(key, epoch);
             assert!(
-                text.color_atlas.get(key, epoch).is_some(),
-                "expected color glyph to be present in color atlas after ensure"
+                !color_glyphs.is_empty(),
+                "expected at least one color glyph quad for {label} when Noto Color Emoji is present"
             );
+
+            let epoch = 1;
+            for key in color_glyphs {
+                text.ensure_glyph_in_atlas(key, epoch);
+                assert!(
+                    text.color_atlas.get(key, epoch).is_some(),
+                    "expected color glyph to be present in color atlas after ensure ({label})"
+                );
+            }
         }
     }
 
