@@ -112,9 +112,54 @@ fn build_flow_subtree_impl<H: UiHost>(
         // when the wrapper is expected to act as a definite containing block (e.g. when the child
         // is `Fill` in that axis).
         let wrapper_style = layout_style_for_node(app, window, node);
-        let child_style = layout_style_for_node(app, window, child);
 
-        let needs_definite_width = matches!(child_style.size.width, crate::element::Length::Fill)
+        // Percent sizing needs a definite containing block. For nested wrapper chains like:
+        // `Semantics -> FocusScope -> ... -> Fill`, we must promote the entire chain so the leaf
+        // can resolve its `Fill` size (and so the wrappers don't collapse to 0).
+        let mut descendant_requests_fill_width = false;
+        let mut descendant_requests_fill_height = false;
+        let mut scan_width = matches!(wrapper_style.size.width, crate::element::Length::Auto);
+        let mut scan_height = matches!(wrapper_style.size.height, crate::element::Length::Auto);
+        let mut probe = child;
+        for _ in 0..32 {
+            let probe_style = layout_style_for_node(app, window, probe);
+
+            if scan_width {
+                match probe_style.size.width {
+                    crate::element::Length::Fill => {
+                        descendant_requests_fill_width = true;
+                        scan_width = false;
+                    }
+                    crate::element::Length::Px(_) => {
+                        scan_width = false;
+                    }
+                    crate::element::Length::Auto => {}
+                }
+            }
+            if scan_height {
+                match probe_style.size.height {
+                    crate::element::Length::Fill => {
+                        descendant_requests_fill_height = true;
+                        scan_height = false;
+                    }
+                    crate::element::Length::Px(_) => {
+                        scan_height = false;
+                    }
+                    crate::element::Length::Auto => {}
+                }
+            }
+
+            if !scan_width && !scan_height {
+                break;
+            }
+
+            let Some((next, _)) = passthrough_wrapper_child(app, tree, window, probe) else {
+                break;
+            };
+            probe = next;
+        }
+
+        let needs_definite_width = descendant_requests_fill_width
             || matches!(wrapper_style.size.width, crate::element::Length::Fill)
             || matches!(wrapper_style.size.width, crate::element::Length::Px(_));
         style.grid_template_columns =
@@ -124,7 +169,7 @@ fn build_flow_subtree_impl<H: UiHost>(
                 taffy::style_helpers::auto()
             })];
 
-        let needs_definite_height = matches!(child_style.size.height, crate::element::Length::Fill)
+        let needs_definite_height = descendant_requests_fill_height
             || matches!(wrapper_style.size.height, crate::element::Length::Fill)
             || matches!(wrapper_style.size.height, crate::element::Length::Px(_));
         style.grid_template_rows = vec![GridTemplateComponent::Single(if needs_definite_height {
@@ -132,18 +177,36 @@ fn build_flow_subtree_impl<H: UiHost>(
         } else {
             taffy::style_helpers::auto()
         })];
-        // Prevent wrappers from stretching intrinsic/auto-sized children (e.g. spacers).
-        style.align_items = Some(AlignItems::FlexStart);
-        style.justify_items = Some(AlignItems::FlexStart);
+        let child_instance = element_record_for_node(app, window, child).map(|r| r.instance);
+        let child_is_layout_container = matches!(
+            child_instance,
+            Some(ElementInstance::Flex(_))
+                | Some(ElementInstance::RovingFlex(_))
+                | Some(ElementInstance::Stack(_))
+                | Some(ElementInstance::Grid(_))
+        );
+
+        // Prevent wrappers from stretching intrinsic/auto-sized children (e.g. spacers), but still
+        // stretch layout containers (Flex/Grid/Stack/...) when the wrapper provides a definite box.
+        style.align_items = Some(if needs_definite_height && child_is_layout_container {
+            AlignItems::Stretch
+        } else {
+            AlignItems::FlexStart
+        });
+        style.justify_items = Some(if needs_definite_width && child_is_layout_container {
+            AlignItems::Stretch
+        } else {
+            AlignItems::FlexStart
+        });
         style.justify_content = Some(JustifyContent::FlexStart);
 
         if matches!(wrapper_style.size.width, crate::element::Length::Auto)
-            && matches!(child_style.size.width, crate::element::Length::Fill)
+            && descendant_requests_fill_width
         {
             style.size.width = Dimension::percent(1.0);
         }
         if matches!(wrapper_style.size.height, crate::element::Length::Auto)
-            && matches!(child_style.size.height, crate::element::Length::Fill)
+            && descendant_requests_fill_height
         {
             style.size.height = Dimension::percent(1.0);
         }
@@ -646,8 +709,11 @@ fn style_for_item_in_parent<H: UiHost>(
             // Behavioral wrappers (Semantics/Opacity/Container/...) should not stretch their
             // single child; leave sizing to the child so shrink-wrapped widgets (e.g. button
             // triggers) keep intrinsic bounds.
-            style.align_self = Some(AlignSelf::FlexStart);
-            style.justify_self = Some(AlignSelf::FlexStart);
+            //
+            // Note: per-item stretching is controlled by the wrapper node's `align_items` /
+            // `justify_items` (set in `build_flow_subtree_impl`). Keeping `*_self` unset here lets
+            // the wrapper decide when it's appropriate to stretch layout containers vs. keep
+            // intrinsic sizing.
         }
         _ => {}
     }
