@@ -1,5 +1,7 @@
 use glam::{Mat4, Vec2, Vec3};
 
+pub use fret_viewport_tooling::{ScreenPoint, ViewportRect};
+
 #[cfg(not(feature = "f64-math"))]
 use glam::Vec4;
 
@@ -20,26 +22,6 @@ impl Default for DepthRange {
         Self::ZeroToOne
     }
 }
-
-/// Viewport rectangle in logical or physical pixels (caller-defined).
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct ViewportRect {
-    pub min: Vec2,
-    pub size: Vec2,
-}
-
-impl ViewportRect {
-    pub fn new(min: Vec2, size: Vec2) -> Self {
-        Self { min, size }
-    }
-
-    pub fn max(self) -> Vec2 {
-        self.min + self.size
-    }
-}
-
-/// A 2D point in viewport coordinates (top-left origin).
-pub type ScreenPoint = Vec2;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ProjectedPoint {

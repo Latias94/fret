@@ -1,5 +1,5 @@
 [package]
-name = "fret-gizmo"
+name = "fret-viewport-tooling"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,12 +9,7 @@ repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
 
-[features]
-default = []
-# Use f64 for internal projection/unprojection math to improve large-world stability.
-f64-math = []
-
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
-fret-viewport-tooling = { path = "../fret-viewport-tooling" }
 glam.workspace = true
+

@@ -23,8 +23,8 @@ mod ring_scale_plugin;
 mod style;
 mod transform_plugin;
 mod view_gizmo;
-mod viewport_input;
 
+pub use fret_viewport_tooling::ViewportToolInput;
 pub use gizmo::{
     Aabb3, BUILTIN_HANDLE_GROUP_ROTATE, BUILTIN_HANDLE_GROUP_SCALE, BUILTIN_HANDLE_GROUP_TRANSLATE,
     DepthMode, Gizmo, GizmoConfig, GizmoCustomEdit, GizmoDrawList3d, GizmoHandedness, GizmoInput,
@@ -58,4 +58,3 @@ pub use view_gizmo::{
     ViewGizmo, ViewGizmoAnchor, ViewGizmoConfig, ViewGizmoFace, ViewGizmoInput, ViewGizmoLabel,
     ViewGizmoProjection, ViewGizmoSnap, ViewGizmoState, ViewGizmoUpdate,
 };
-pub use viewport_input::ViewportToolInput;

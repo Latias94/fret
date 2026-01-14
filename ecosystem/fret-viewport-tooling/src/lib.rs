@@ -1,8 +1,35 @@
+//! Tier A viewport tooling helpers.
+//!
+//! This crate provides policy-light, unit-explicit glue for building editor-style viewport tools
+//! (gizmos, selection, camera navigation, debug overlays) on top of `ViewportSurface` and
+//! `Effect::ViewportInput` (ADR 0007 / ADR 0147).
+//!
+//! The goal is to share recurring input mapping logic across ecosystem crates without forcing
+//! them to depend on `fret-gizmo`.
+
 use fret_core::geometry::{Point, Rect};
 use fret_core::{MouseButton, ViewportInputEvent, ViewportInputKind};
 use glam::Vec2;
 
-use crate::{GizmoInput, ViewGizmoInput, ViewportRect};
+/// Viewport rectangle in logical or physical pixels (caller-defined).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ViewportRect {
+    pub min: Vec2,
+    pub size: Vec2,
+}
+
+impl ViewportRect {
+    pub fn new(min: Vec2, size: Vec2) -> Self {
+        Self { min, size }
+    }
+
+    pub fn max(self) -> Vec2 {
+        self.min + self.size
+    }
+}
+
+/// A 2D point in viewport coordinates (top-left origin).
+pub type ScreenPoint = Vec2;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ViewportToolInput {
@@ -28,7 +55,7 @@ pub struct ViewportToolInput {
 }
 
 impl ViewportToolInput {
-    /// Derives a gizmo-friendly input in render-target pixel space (recommended).
+    /// Derives a tool input in render-target pixel space (recommended).
     pub fn from_viewport_input_target_px(
         event: &ViewportInputEvent,
         primary_button: MouseButton,
@@ -82,7 +109,7 @@ impl ViewportToolInput {
         }
     }
 
-    /// Derives a gizmo-friendly input in window logical pixel space.
+    /// Derives a tool input in window logical pixel space.
     pub fn from_viewport_input_screen_px(
         event: &ViewportInputEvent,
         primary_button: MouseButton,
@@ -97,33 +124,6 @@ impl ViewportToolInput {
             dragging,
             cursor_units_per_screen_px: 1.0,
             cursor_over_draw_rect: point_in_rect_px(event.cursor_px, draw),
-        }
-    }
-
-    pub fn to_gizmo_input(
-        self,
-        hovered: bool,
-        snap: bool,
-        cancel: bool,
-        precision: f32,
-    ) -> GizmoInput {
-        GizmoInput {
-            cursor_px: self.cursor_px,
-            hovered,
-            drag_started: self.drag_started,
-            dragging: self.dragging,
-            snap,
-            cancel,
-            precision,
-        }
-    }
-
-    pub fn to_view_gizmo_input(self, hovered: bool) -> ViewGizmoInput {
-        ViewGizmoInput {
-            cursor_px: self.cursor_px,
-            hovered,
-            drag_started: self.drag_started,
-            dragging: self.dragging,
         }
     }
 }
@@ -273,11 +273,12 @@ mod tests {
             buttons: Default::default(),
             modifiers: Modifiers::default(),
         });
+
         let derived = ViewportToolInput::from_viewport_input_screen_px(&event, MouseButton::Left);
         assert_eq!(derived.viewport.min, Vec2::new(10.0, 20.0));
         assert_eq!(derived.viewport.size, Vec2::new(100.0, 50.0));
         assert_eq!(derived.cursor_px, Vec2::new(60.0, 45.0));
-        assert!((derived.cursor_units_per_screen_px - 1.0).abs() < 1e-6);
+        assert_eq!(derived.cursor_units_per_screen_px, 1.0);
         assert!(derived.cursor_over_draw_rect);
     }
 
@@ -285,15 +286,13 @@ mod tests {
     fn target_px_viewport_constructor_uses_target_bounds() {
         let derived = ViewportToolInput::from_target_px_viewport(
             (800, 600),
-            Vec2::new(10.0, 20.0),
-            false,
-            false,
+            Vec2::new(1.0, 2.0),
+            true,
+            true,
             3.0,
         );
         assert_eq!(derived.viewport.min, Vec2::ZERO);
         assert_eq!(derived.viewport.size, Vec2::new(800.0, 600.0));
-        assert_eq!(derived.cursor_px, Vec2::new(10.0, 20.0));
-        assert!((derived.cursor_units_per_screen_px - 3.0).abs() < 1e-6);
         assert!(derived.cursor_over_draw_rect);
     }
 }

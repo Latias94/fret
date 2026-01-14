@@ -1098,6 +1098,7 @@ name = "fret-gizmo"
 version = "0.1.0"
 dependencies = [
  "fret-core",
+ "fret-viewport-tooling",
  "glam",
 ]
 
@@ -1430,6 +1431,14 @@ version = "0.1.0"
 dependencies = [
  "fret-core",
  "slotmap",
+]
+
+[[package]]
+name = "fret-viewport-tooling"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "glam",
 ]
 
 [[package]]

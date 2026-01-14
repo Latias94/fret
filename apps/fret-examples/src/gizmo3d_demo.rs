@@ -12,8 +12,8 @@ use fret_gizmo::{
     GizmoPluginManagerConfig, GizmoPropertyKey, GizmoPropertySource, GizmoResult, GizmoSizePolicy,
     GizmoTarget3d, GizmoTargetId, GizmoVisualPreset, Grid3d, HandleId, LightRadiusGizmoPlugin,
     RingScaleGizmoPlugin, Transform3d, TransformGizmoPlugin, ViewGizmo, ViewGizmoAnchor,
-    ViewGizmoConfig, ViewGizmoProjection, ViewGizmoUpdate, ViewGizmoVisualPreset, ViewportRect,
-    ViewportToolInput,
+    ViewGizmoConfig, ViewGizmoInput, ViewGizmoProjection, ViewGizmoUpdate, ViewGizmoVisualPreset,
+    ViewportRect, ViewportToolInput,
 };
 use fret_launch::{
     EngineFrameUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService,
@@ -3221,7 +3221,12 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             let viewport = tool_input.viewport;
 
             let view_gizmo_drag_started = tool_input.drag_started;
-            let view_gizmo_input = tool_input.to_view_gizmo_input(hovered);
+            let view_gizmo_input = ViewGizmoInput {
+                cursor_px: tool_input.cursor_px,
+                hovered,
+                drag_started: tool_input.drag_started,
+                dragging: tool_input.dragging,
+            };
             let view_gizmo_update =
                 m.view_gizmo
                     .update(view_projection, viewport, view_gizmo_input);
