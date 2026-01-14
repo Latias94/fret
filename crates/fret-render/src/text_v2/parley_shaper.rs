@@ -51,6 +51,18 @@ impl ParleyShaper {
         Self::default()
     }
 
+    #[cfg(test)]
+    pub fn new_without_system_fonts() -> Self {
+        let mut out = Self::default();
+        out.fcx.collection =
+            parley::fontique::Collection::new(parley::fontique::CollectionOptions {
+                shared: false,
+                system_fonts: false,
+            });
+        out.fcx.source_cache = parley::fontique::SourceCache::default();
+        out
+    }
+
     pub fn add_fonts(&mut self, fonts: impl IntoIterator<Item = Vec<u8>>) -> usize {
         let mut added = 0usize;
         for data in fonts {
@@ -78,6 +90,30 @@ impl ParleyShaper {
         self.fcx
             .collection
             .set_generic_families(generic, std::iter::once(id));
+        true
+    }
+
+    pub fn append_generic_family_name(
+        &mut self,
+        generic: parley::fontique::GenericFamily,
+        family_name: &str,
+    ) -> bool {
+        let Some(id) = self.fcx.collection.family_id(family_name) else {
+            return false;
+        };
+
+        if self
+            .fcx
+            .collection
+            .generic_families(generic)
+            .any(|existing| existing == id)
+        {
+            return false;
+        }
+
+        self.fcx
+            .collection
+            .append_generic_families(generic, std::iter::once(id));
         true
     }
 

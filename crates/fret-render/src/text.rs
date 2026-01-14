@@ -46,9 +46,12 @@ impl cosmic_text::Fallback for FretFallback {
                 "Meiryo UI",
                 "Meiryo",
                 "Nirmala UI",
+                // Bundled/portable fallbacks (if available)
+                "Noto Sans CJK SC",
                 // Emoji
                 "Segoe UI Emoji",
                 "Segoe UI Symbol",
+                "Noto Color Emoji",
             ]
         }
         #[cfg(target_os = "macos")]
@@ -1200,6 +1203,16 @@ impl TextSystem {
             let _ = parley_shaper.set_generic_family_name(ParleyGenericFamily::UiMonospace, mono);
         }
 
+        // Align Parley generic fallback ordering with the framework-level fallback chain so that
+        // Web/WASM (no system fonts) can resolve mixed-script text without per-span font selection.
+        for &family in <FretFallback as cosmic_text::Fallback>::common_fallback(&FretFallback) {
+            let _ =
+                parley_shaper.append_generic_family_name(ParleyGenericFamily::SansSerif, family);
+            let _ = parley_shaper.append_generic_family_name(ParleyGenericFamily::SystemUi, family);
+            let _ =
+                parley_shaper.append_generic_family_name(ParleyGenericFamily::UiSansSerif, family);
+        }
+
         Self {
             font_system,
             parley_shaper,
@@ -1230,6 +1243,8 @@ impl TextSystem {
         let installed = build_installed_family_set(self.font_system.db());
         let old_key = self.font_stack_key;
         let mut parley_changed = false;
+        let common_fallback =
+            <FretFallback as cosmic_text::Fallback>::common_fallback(&FretFallback);
 
         let pick =
             |overrides: &[String], defaults: &'static [&'static str]| -> Option<Cow<'_, str>> {
@@ -1279,6 +1294,18 @@ impl TextSystem {
                     .parley_shaper
                     .set_generic_family_name(ParleyGenericFamily::UiMonospace, mono.as_ref());
             }
+        }
+
+        for &family in common_fallback {
+            parley_changed |= self
+                .parley_shaper
+                .append_generic_family_name(ParleyGenericFamily::SansSerif, family);
+            parley_changed |= self
+                .parley_shaper
+                .append_generic_family_name(ParleyGenericFamily::SystemUi, family);
+            parley_changed |= self
+                .parley_shaper
+                .append_generic_family_name(ParleyGenericFamily::UiSansSerif, family);
         }
 
         let mut new_key = font_stack_cache_key(
@@ -2910,6 +2937,103 @@ mod tests {
                     ),
                     super::GlyphQuadKind::Color => {}
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn cjk_fallback_uses_cjk_lite_font_without_explicit_family_when_system_fonts_are_absent() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
+        text.font_system = cosmic_text::FontSystem::new_with_locale_and_db_and_fallback(
+            "en-US".to_string(),
+            cosmic_text::fontdb::Database::new(),
+            super::FretFallback,
+        );
+        text.parley_shaper =
+            crate::text_v2::parley_shaper::ParleyShaper::new_without_system_fonts();
+        text.font_db_revision = 0;
+        text.font_stack_key = super::font_stack_cache_key(
+            text.font_system.locale(),
+            text.font_system.db(),
+            text.font_db_revision,
+        );
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .chain(fret_fonts::cjk_lite_fonts().iter())
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let family_inter = "Inter";
+        assert!(
+            text.all_font_names()
+                .iter()
+                .any(|n| n.eq_ignore_ascii_case(family_inter)),
+            "expected {family_inter} to be present after loading bootstrap fonts"
+        );
+
+        let family_cjk = "Noto Sans CJK SC";
+        assert!(
+            text.all_font_names()
+                .iter()
+                .any(|n| n.eq_ignore_ascii_case(family_cjk)),
+            "expected {family_cjk} to be present after loading cjk-lite fonts"
+        );
+
+        let mut config = fret_core::TextFontFamilyConfig::default();
+        config.ui_sans = vec![family_inter.to_string()];
+        let _ = text.set_font_families(&config);
+
+        let noto_blob_id = super::stable_font_blob_id(fret_fonts::cjk_lite_fonts()[0]);
+
+        let style = TextStyle {
+            font: fret_core::FontId::ui(),
+            size: Px(24.0),
+            ..Default::default()
+        };
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+
+        let (blob_id, _metrics) = text.prepare("你", &style, constraints);
+        let glyph_keys: Vec<super::GlyphKey> = {
+            let blob = text.blob(blob_id).expect("text blob");
+            blob.shape.glyphs.iter().map(|g| g.key).collect()
+        };
+
+        assert!(!glyph_keys.is_empty(), "expected shaped glyphs for CJK");
+
+        let used_cjk_lite = glyph_keys.iter().any(|k| k.font.blob_id == noto_blob_id);
+        assert!(
+            used_cjk_lite,
+            "expected cjk-lite font to be selected for CJK glyphs under the UI sans stack when system fonts are absent"
+        );
+
+        let epoch = 1;
+        for key in glyph_keys {
+            if key.font.blob_id != noto_blob_id {
+                continue;
+            }
+
+            text.ensure_glyph_in_atlas(key, epoch);
+            match key.kind {
+                super::GlyphQuadKind::Mask => assert!(
+                    text.mask_atlas.get(key, epoch).is_some(),
+                    "expected ensured CJK glyph to be present in the mask atlas"
+                ),
+                super::GlyphQuadKind::Subpixel => assert!(
+                    text.subpixel_atlas.get(key, epoch).is_some(),
+                    "expected ensured CJK glyph to be present in the subpixel atlas"
+                ),
+                super::GlyphQuadKind::Color => {}
             }
         }
     }
