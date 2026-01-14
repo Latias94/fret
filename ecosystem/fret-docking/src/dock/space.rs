@@ -532,11 +532,24 @@ impl<H: UiHost> Widget<H> for DockSpace {
             (root, dock_bounds)
         }
 
-        let dock_drag = cx.app.drag().and_then(|d| {
+        let pointer_id: fret_core::PointerId = match event {
+            fret_core::Event::Pointer(fret_core::PointerEvent::Move { pointer_id, .. })
+            | fret_core::Event::Pointer(fret_core::PointerEvent::Down { pointer_id, .. })
+            | fret_core::Event::Pointer(fret_core::PointerEvent::Up { pointer_id, .. })
+            | fret_core::Event::Pointer(fret_core::PointerEvent::Wheel { pointer_id, .. })
+            | fret_core::Event::Pointer(fret_core::PointerEvent::PinchGesture { pointer_id, .. }) => {
+                *pointer_id
+            }
+            fret_core::Event::PointerCancel(e) => e.pointer_id,
+            fret_core::Event::InternalDrag(e) => e.pointer_id,
+            _ => fret_core::PointerId(0),
+        };
+
+        let dock_drag = cx.app.drag(pointer_id).and_then(|d| {
             d.payload::<DockPanelDragPayload>()
                 .map(|p| DockDragSnapshot {
                     source_window: d.source_window,
-                    start: d.start,
+                    start: d.start_position,
                     dragging: d.dragging,
                     panel: p.panel.clone(),
                     grab_offset: p.grab_offset,
@@ -546,7 +559,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
         // While a dock drag session exists (even before it crosses the drag threshold), we must
         // not forward pointer moves/wheel to embedded viewports in this window. Docking owns the
         // interaction until the session ends (ADR 0072).
-        let allow_viewport_hover = dock_drag.is_none() && cx.app.drag().is_none_or(|d| !d.dragging);
+        let allow_viewport_hover =
+            dock_drag.is_none() && cx.app.drag(pointer_id).is_none_or(|d| !d.dragging);
         let docking_interaction_settings = cx
             .app
             .global::<fret_runtime::DockingInteractionSettings>()
@@ -572,7 +586,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
         {
             cx.app
                 .with_global_mut(InternalDragRouteService::default, |routes, _app| {
-                    routes.set(self.window, DragKind::DockPanel, cx.node);
+                    routes.set(self.window, fret_runtime::DRAG_KIND_DOCK_PANEL, cx.node);
                 });
             let Some(dock) = cx.app.global_mut::<DockManager>() else {
                 return;
@@ -1623,7 +1637,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
         if let Some((start, panel, grab_offset)) = begin_drag {
             cx.app.begin_cross_window_drag_with_kind(
-                DragKind::DockPanel,
+                pointer_id,
+                fret_runtime::DRAG_KIND_DOCK_PANEL,
                 self.window,
                 start,
                 DockPanelDragPayload {
@@ -1642,7 +1657,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
         }
 
         if let Some((position, dragging)) = update_drag
-            && let Some(drag) = cx.app.drag_mut()
+            && let Some(drag) = cx.app.drag_mut(pointer_id)
             && drag.payload::<DockPanelDragPayload>().is_some()
         {
             drag.position = position;
@@ -1657,11 +1672,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
         if end_dock_drag
             && cx
                 .app
-                .drag()
+                .drag(pointer_id)
                 .and_then(|d| d.payload::<DockPanelDragPayload>())
                 .is_some()
         {
-            cx.app.cancel_drag();
+            cx.app.cancel_drag(pointer_id);
         }
 
         if let Some(node) = request_focus {
@@ -1718,7 +1733,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
         cx.app
             .with_global_mut(InternalDragRouteService::default, |routes, _app| {
-                routes.set(self.window, DragKind::DockPanel, cx.node);
+                routes.set(self.window, fret_runtime::DRAG_KIND_DOCK_PANEL, cx.node);
             });
         if let Some(dock) = cx.app.global_mut::<DockManager>() {
             dock.register_dock_space_node(self.window, cx.node);

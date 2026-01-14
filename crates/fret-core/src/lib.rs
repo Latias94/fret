@@ -36,7 +36,7 @@ pub use geometry::{Corners, Edges, Point, Px, Rect, RectPx, Size, Transform2D};
 pub use ids::{
     AppWindowId, ClipboardToken, DockNodeId, ExternalDropToken, FileDialogToken, FontId, FrameId,
     ImageId, ImageUpdateToken, ImageUploadToken, NodeId, PathId, RenderTargetId, SvgId, TextBlobId,
-    TimerToken,
+    PointerId, TimerToken,
 };
 pub use image::{
     AlphaMode, ChromaSiting, ColorPrimaries, ColorRange, ImageColorInfo, ImageColorSpace,

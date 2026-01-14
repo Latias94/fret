@@ -4,11 +4,10 @@ use std::{
     panic::{AssertUnwindSafe, catch_unwind, resume_unwind},
 };
 
-use fret_core::{AppWindowId, NodeId};
+use fret_core::{AppWindowId, NodeId, PointerId};
 use fret_runtime::{ClipboardToken, FrameId, ImageUploadToken, TickId, TimerToken};
 
-use crate::drag::DragKind;
-use crate::drag::DragSession;
+use crate::drag::{DragKindId, DragSession, DragSessionId};
 use fret_runtime::{
     BindingV1, CommandRegistry, Effect, KeySpecV1, Keymap, KeymapFileV1, KeymapService, ModelHost,
     ModelId, ModelStore,
@@ -28,7 +27,8 @@ pub struct App {
     commands: CommandRegistry,
     redraw_requests: HashSet<AppWindowId>,
     effects: Vec<Effect>,
-    drag: Option<DragSession>,
+    drags: HashMap<PointerId, DragSession>,
+    next_drag_session_id: u64,
     tick_id: TickId,
     frame_id: FrameId,
     next_timer_token: u64,
@@ -52,7 +52,8 @@ impl App {
             commands: CommandRegistry::default(),
             redraw_requests: HashSet::new(),
             effects: Vec::new(),
-            drag: None,
+            drags: HashMap::new(),
+            next_drag_session_id: 1,
             tick_id: TickId::default(),
             frame_id: FrameId::default(),
             next_timer_token: 1,
@@ -190,54 +191,52 @@ impl App {
         self.models.take_changed_models()
     }
 
-    pub fn begin_drag<T: Any>(
-        &mut self,
-        source_window: AppWindowId,
-        start: fret_core::Point,
-        payload: T,
-    ) {
-        self.begin_drag_with_kind(DragKind::Custom, source_window, start, payload);
-    }
-
     pub fn begin_drag_with_kind<T: Any>(
         &mut self,
-        kind: DragKind,
+        pointer_id: PointerId,
+        kind: DragKindId,
         source_window: AppWindowId,
         start: fret_core::Point,
         payload: T,
     ) {
-        self.drag = Some(DragSession::new(source_window, kind, start, payload));
+        let session_id = DragSessionId(self.next_drag_session_id);
+        self.next_drag_session_id = self.next_drag_session_id.saturating_add(1);
+        self.drags.insert(
+            pointer_id,
+            DragSession::new(session_id, pointer_id, source_window, kind, start, payload),
+        );
     }
 
     pub fn begin_cross_window_drag_with_kind<T: Any>(
         &mut self,
-        kind: DragKind,
+        pointer_id: PointerId,
+        kind: DragKindId,
         source_window: AppWindowId,
         start: fret_core::Point,
         payload: T,
     ) {
-        self.drag = Some(DragSession::new_cross_window(
-            source_window,
-            kind,
-            start,
-            payload,
-        ));
+        let session_id = DragSessionId(self.next_drag_session_id);
+        self.next_drag_session_id = self.next_drag_session_id.saturating_add(1);
+        self.drags.insert(
+            pointer_id,
+            DragSession::new_cross_window(session_id, pointer_id, source_window, kind, start, payload),
+        );
     }
 
-    pub fn drag(&self) -> Option<&DragSession> {
-        self.drag.as_ref()
+    pub fn drag(&self, pointer_id: PointerId) -> Option<&DragSession> {
+        self.drags.get(&pointer_id)
     }
 
-    pub fn drag_mut(&mut self) -> Option<&mut DragSession> {
-        self.drag.as_mut()
+    pub fn drag_mut(&mut self, pointer_id: PointerId) -> Option<&mut DragSession> {
+        self.drags.get_mut(&pointer_id)
     }
 
-    pub fn end_drag(&mut self) -> Option<DragSession> {
-        self.drag.take()
+    pub fn end_drag(&mut self, pointer_id: PointerId) -> Option<DragSession> {
+        self.drags.remove(&pointer_id)
     }
 
-    pub fn cancel_drag(&mut self) {
-        self.drag = None;
+    pub fn cancel_drag(&mut self, pointer_id: PointerId) {
+        self.drags.remove(&pointer_id);
     }
 
     /// Request a window redraw (one-shot).

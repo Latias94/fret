@@ -18,10 +18,10 @@ pub use font_catalog_cache::FontCatalogCache;
 pub use fret_runtime::{
     CommandId, CommandMeta, CommandRegistry, CommandScope, CreateWindowKind, CreateWindowRequest,
     DefaultKeybinding, DockDragInversionModifier, DockDragInversionPolicy,
-    DockDragInversionSettings, DockingInteractionSettings, DragKind, DragSession, Effect,
-    InputContext, KeyChord, Keymap, KeymapService, Menu, MenuBar, MenuItem, Model, ModelCx,
-    ModelId, ModelStore, ModelUpdateError, Platform, PlatformFilter, WhenExpr, WindowRequest,
-    format_chord, format_sequence,
+    DockDragInversionSettings, DockingInteractionSettings, DragKindId, DragPhase, DragSession,
+    DragSessionId, DRAG_KIND_DOCK_PANEL, Effect, InputContext, KeyChord, Keymap, KeymapService,
+    Menu, MenuBar, MenuItem, Model, ModelCx, ModelId, ModelStore, ModelUpdateError, Platform,
+    PlatformFilter, WhenExpr, WindowRequest, format_chord, format_sequence,
 };
 
 pub use keymap::KeymapError;

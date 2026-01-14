@@ -1,7 +1,7 @@
 use crate::{
     AppWindowId, ClipboardToken, ExternalDropToken, FileDialogDataEvent, FileDialogSelection,
-    ImageId, ImageUpdateToken, ImageUploadToken, Rect, RenderTargetId, TimerToken, ViewportFit,
-    ViewportMapping, WindowLogicalPosition,
+    ImageId, ImageUpdateToken, ImageUploadToken, PointerId, Rect, RenderTargetId, TimerToken,
+    ViewportFit, ViewportMapping, WindowLogicalPosition,
     geometry::{Point, Px},
 };
 
@@ -107,12 +107,14 @@ pub enum ImeEvent {
 #[derive(Debug, Clone, PartialEq)]
 pub enum PointerEvent {
     Move {
+        pointer_id: PointerId,
         position: Point,
         buttons: MouseButtons,
         modifiers: Modifiers,
         pointer_type: PointerType,
     },
     Down {
+        pointer_id: PointerId,
         position: Point,
         button: MouseButton,
         modifiers: Modifiers,
@@ -124,6 +126,7 @@ pub enum PointerEvent {
         pointer_type: PointerType,
     },
     Up {
+        pointer_id: PointerId,
         position: Point,
         button: MouseButton,
         modifiers: Modifiers,
@@ -134,6 +137,7 @@ pub enum PointerEvent {
         pointer_type: PointerType,
     },
     Wheel {
+        pointer_id: PointerId,
         position: Point,
         delta: Point,
         modifiers: Modifiers,
@@ -144,6 +148,7 @@ pub enum PointerEvent {
     /// `delta` is positive for magnification (zoom in) and negative for shrinking (zoom out).
     /// This value may be NaN depending on the platform backend; callers should guard accordingly.
     PinchGesture {
+        pointer_id: PointerId,
         position: Point,
         delta: f32,
         modifiers: Modifiers,
@@ -159,6 +164,7 @@ pub enum PointerCancelReason {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PointerCancelEvent {
+    pub pointer_id: PointerId,
     /// When provided by the platform, this is the last known pointer position (logical pixels).
     pub position: Option<Point>,
     pub buttons: MouseButtons,
@@ -239,6 +245,7 @@ pub enum InternalDragKind {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct InternalDragEvent {
+    pub pointer_id: PointerId,
     pub position: Point,
     pub kind: InternalDragKind,
     pub modifiers: Modifiers,

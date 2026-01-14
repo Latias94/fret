@@ -6,7 +6,7 @@
 //! particular drag kind.
 
 use fret_core::{AppWindowId, NodeId};
-use fret_runtime::DragKind;
+use fret_runtime::DragKindId;
 use std::collections::HashMap;
 
 /// Per-window internal drag routing table (mechanism-only).
@@ -15,19 +15,19 @@ use std::collections::HashMap;
 /// use it as the dispatch root for internal drag events when appropriate.
 #[derive(Debug, Default)]
 pub struct InternalDragRouteService {
-    routes: HashMap<(AppWindowId, DragKind), NodeId>,
+    routes: HashMap<(AppWindowId, DragKindId), NodeId>,
 }
 
 impl InternalDragRouteService {
-    pub fn set(&mut self, window: AppWindowId, kind: DragKind, node: NodeId) {
+    pub fn set(&mut self, window: AppWindowId, kind: DragKindId, node: NodeId) {
         self.routes.insert((window, kind), node);
     }
 
-    pub fn remove(&mut self, window: AppWindowId, kind: DragKind) {
+    pub fn remove(&mut self, window: AppWindowId, kind: DragKindId) {
         self.routes.remove(&(window, kind));
     }
 
-    pub fn route(&self, window: AppWindowId, kind: DragKind) -> Option<NodeId> {
+    pub fn route(&self, window: AppWindowId, kind: DragKindId) -> Option<NodeId> {
         self.routes.get(&(window, kind)).copied()
     }
 

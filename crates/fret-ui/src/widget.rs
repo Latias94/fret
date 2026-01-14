@@ -22,6 +22,7 @@ pub struct EventCx<'a, H: UiHost> {
     pub services: &'a mut dyn UiServices,
     pub node: NodeId,
     pub window: Option<AppWindowId>,
+    pub pointer_id: Option<fret_core::PointerId>,
     pub input_ctx: InputContext,
     pub children: &'a [NodeId],
     pub focus: Option<NodeId>,
@@ -59,10 +60,16 @@ impl<'a, H: UiHost> EventCx<'a, H> {
     }
 
     pub fn capture_pointer(&mut self, node: NodeId) {
+        if self.pointer_id.is_none() {
+            return;
+        }
         self.requested_capture = Some(Some(node));
     }
 
     pub fn release_pointer_capture(&mut self) {
+        if self.pointer_id.is_none() {
+            return;
+        }
         self.requested_capture = Some(None);
     }
 

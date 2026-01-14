@@ -71,6 +71,16 @@ impl<H: UiHost> UiTree<H> {
         start: NodeId,
         event: &Event,
     ) -> bool {
+        let pointer_id_for_capture: Option<fret_core::PointerId> = match event {
+            Event::Pointer(PointerEvent::Move { pointer_id, .. })
+            | Event::Pointer(PointerEvent::Down { pointer_id, .. })
+            | Event::Pointer(PointerEvent::Up { pointer_id, .. })
+            | Event::Pointer(PointerEvent::Wheel { pointer_id, .. })
+            | Event::Pointer(PointerEvent::PinchGesture { pointer_id, .. }) => Some(*pointer_id),
+            Event::PointerCancel(e) => Some(e.pointer_id),
+            _ => None,
+        };
+
         let (active_roots, _barrier_root) = self.active_input_layers();
         if event_position(event).is_some() {
             let chain = self.build_mapped_event_chain(start, event);
@@ -87,10 +97,12 @@ impl<H: UiHost> UiTree<H> {
                             services: &mut *services,
                             node: node_id,
                             window: tree.window,
+                            pointer_id: pointer_id_for_capture,
                             input_ctx: input_ctx.clone(),
                             children,
                             focus: tree.focus,
-                            captured: tree.captured,
+                            captured: pointer_id_for_capture
+                                .and_then(|p| tree.captured.get(&p).copied()),
                             bounds,
                             invalidations: Vec::new(),
                             requested_focus: None,
@@ -124,10 +136,21 @@ impl<H: UiHost> UiTree<H> {
                 if let Some(capture) = requested_capture
                     && capture.is_none_or(|n| self.node_in_any_layer(n, &active_roots))
                 {
-                    self.captured = capture;
+                    if let Some(pointer_id) = pointer_id_for_capture {
+                        match capture {
+                            Some(node) => {
+                                self.captured.insert(pointer_id, node);
+                            }
+                            None => {
+                                self.captured.remove(&pointer_id);
+                            }
+                        }
+                    }
                 }
 
-                if self.captured.is_some() || stop_propagation {
+                let captured_now = pointer_id_for_capture
+                    .and_then(|p| self.captured.get(&p).copied());
+                if captured_now.is_some() || stop_propagation {
                     return true;
                 }
             }
@@ -149,10 +172,12 @@ impl<H: UiHost> UiTree<H> {
                         services: &mut *services,
                         node: node_id,
                         window: tree.window,
+                        pointer_id: pointer_id_for_capture,
                         input_ctx: input_ctx.clone(),
                         children,
                         focus: tree.focus,
-                        captured: tree.captured,
+                        captured: pointer_id_for_capture
+                            .and_then(|p| tree.captured.get(&p).copied()),
                         bounds,
                         invalidations: Vec::new(),
                         requested_focus: None,
@@ -187,10 +212,20 @@ impl<H: UiHost> UiTree<H> {
             if let Some(capture) = requested_capture
                 && capture.is_none_or(|n| self.node_in_any_layer(n, &active_roots))
             {
-                self.captured = capture;
+                if let Some(pointer_id) = pointer_id_for_capture {
+                    match capture {
+                        Some(node) => {
+                            self.captured.insert(pointer_id, node);
+                        }
+                        None => {
+                            self.captured.remove(&pointer_id);
+                        }
+                    }
+                }
             }
 
-            if self.captured.is_some() || stop_propagation {
+            let captured_now = pointer_id_for_capture.and_then(|p| self.captured.get(&p).copied());
+            if captured_now.is_some() || stop_propagation {
                 return true;
             }
 
@@ -214,11 +249,13 @@ impl<H: UiHost> UiTree<H> {
         let (active_layers, barrier_root) = self.active_input_layers();
         self.enforce_modal_barrier_scope(&active_layers);
 
-        if self
+        let to_remove: Vec<fret_core::PointerId> = self
             .captured
-            .is_some_and(|n| !self.node_in_any_layer(n, &active_layers))
-        {
-            self.captured = None;
+            .iter()
+            .filter_map(|(p, n)| (!self.node_in_any_layer(*n, &active_layers)).then_some(*p))
+            .collect();
+        for p in to_remove {
+            self.captured.remove(&p);
         }
         if self
             .focus
@@ -395,19 +432,26 @@ impl<H: UiHost> UiTree<H> {
 
         // Pointer capture only affects pointer events. Drag-and-drop style events
         // (external/internal) must continue to follow the cursor for correct cross-window UX.
-        let captured = match event {
-            Event::Pointer(_) | Event::PointerCancel(_) => self.captured,
+        let event_pointer_id_for_capture: Option<fret_core::PointerId> = match event {
+            Event::Pointer(PointerEvent::Move { pointer_id, .. })
+            | Event::Pointer(PointerEvent::Down { pointer_id, .. })
+            | Event::Pointer(PointerEvent::Up { pointer_id, .. })
+            | Event::Pointer(PointerEvent::Wheel { pointer_id, .. })
+            | Event::Pointer(PointerEvent::PinchGesture { pointer_id, .. }) => Some(*pointer_id),
+            Event::PointerCancel(e) => Some(e.pointer_id),
             _ => None,
         };
+
+        let captured = event_pointer_id_for_capture.and_then(|p| self.captured.get(&p).copied());
 
         // Internal drag overrides may need to route events to a stable "anchor" node, even if
         // hit-testing fails or the cursor is over an unrelated widget (e.g. docking tear-off).
         let internal_drag_target = (|| {
-            if !matches!(event, Event::InternalDrag(_)) {
+            let Event::InternalDrag(e) = event else {
                 return None;
-            }
+            };
             let window = self.window?;
-            let drag = app.drag()?;
+            let drag = app.drag(e.pointer_id)?;
             if !drag.cross_window_hover {
                 return None;
             }
@@ -730,10 +774,12 @@ impl<H: UiHost> UiTree<H> {
                         services: &mut *services,
                         node: node_id,
                         window: tree.window,
+                        pointer_id: event_pointer_id_for_capture,
                         input_ctx: input_ctx.clone(),
                         children,
                         focus: tree.focus,
-                        captured: tree.captured,
+                        captured: event_pointer_id_for_capture
+                            .and_then(|p| tree.captured.get(&p).copied()),
                         bounds,
                         invalidations: Vec::new(),
                         requested_focus: None,
@@ -773,7 +819,16 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 if let Some(capture) = requested_capture {
-                    self.captured = capture;
+                    if let Some(pointer_id) = event_pointer_id_for_capture {
+                        match capture {
+                            Some(node) => {
+                                self.captured.insert(pointer_id, node);
+                            }
+                            None => {
+                                self.captured.remove(&pointer_id);
+                            }
+                        }
+                    }
                 }
 
                 if requested_cursor.is_some() && cursor_choice.is_none() {
@@ -787,7 +842,9 @@ impl<H: UiHost> UiTree<H> {
                     }
                 }
 
-                if self.captured.is_some() || stop_propagation {
+                let captured_now = event_pointer_id_for_capture
+                    .and_then(|p| self.captured.get(&p).copied());
+                if captured_now.is_some() || stop_propagation {
                     break;
                 }
             }
@@ -812,10 +869,12 @@ impl<H: UiHost> UiTree<H> {
                         services: &mut *services,
                         node: node_id,
                         window: tree.window,
+                        pointer_id: event_pointer_id_for_capture,
                         input_ctx: input_ctx.clone(),
                         children,
                         focus: tree.focus,
-                        captured: tree.captured,
+                        captured: event_pointer_id_for_capture
+                            .and_then(|p| tree.captured.get(&p).copied()),
                         bounds,
                         invalidations: Vec::new(),
                         requested_focus: None,
@@ -856,7 +915,16 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 if let Some(capture) = requested_capture {
-                    self.captured = capture;
+                    if let Some(pointer_id) = event_pointer_id_for_capture {
+                        match capture {
+                            Some(node) => {
+                                self.captured.insert(pointer_id, node);
+                            }
+                            None => {
+                                self.captured.remove(&pointer_id);
+                            }
+                        }
+                    }
                 };
 
                 if requested_cursor.is_some() && cursor_choice.is_none() {
@@ -870,7 +938,9 @@ impl<H: UiHost> UiTree<H> {
                     }
                 }
 
-                if self.captured.is_some() || stop_propagation {
+                let captured_now = event_pointer_id_for_capture
+                    .and_then(|p| self.captured.get(&p).copied());
+                if captured_now.is_some() || stop_propagation {
                     break;
                 }
 
@@ -1000,8 +1070,10 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        if matches!(event, Event::PointerCancel(_)) {
-            self.captured = None;
+        if matches!(event, Event::PointerCancel(_))
+            && let Some(pointer_id) = event_pointer_id_for_capture
+        {
+            self.captured.remove(&pointer_id);
         }
 
         if defer_keydown_shortcuts_until_after_dispatch
@@ -1097,6 +1169,16 @@ impl<H: UiHost> UiTree<H> {
         start: NodeId,
         event: &Event,
     ) {
+        let pointer_id_for_capture: Option<fret_core::PointerId> = match event {
+            Event::Pointer(PointerEvent::Move { pointer_id, .. })
+            | Event::Pointer(PointerEvent::Down { pointer_id, .. })
+            | Event::Pointer(PointerEvent::Up { pointer_id, .. })
+            | Event::Pointer(PointerEvent::Wheel { pointer_id, .. })
+            | Event::Pointer(PointerEvent::PinchGesture { pointer_id, .. }) => Some(*pointer_id),
+            Event::PointerCancel(e) => Some(e.pointer_id),
+            _ => None,
+        };
+
         if event_position(event).is_some() {
             let chain = self.build_mapped_event_chain(start, event);
             for (node_id, event_for_node) in chain {
@@ -1114,10 +1196,12 @@ impl<H: UiHost> UiTree<H> {
                         services: &mut *services,
                         node: node_id,
                         window: tree.window,
+                        pointer_id: pointer_id_for_capture,
                         input_ctx: observer_ctx,
                         children,
                         focus: tree.focus,
-                        captured: tree.captured,
+                        captured: pointer_id_for_capture
+                            .and_then(|p| tree.captured.get(&p).copied()),
                         bounds,
                         invalidations: Vec::new(),
                         requested_focus: None,
@@ -1155,10 +1239,12 @@ impl<H: UiHost> UiTree<H> {
                     services: &mut *services,
                     node: node_id,
                     window: tree.window,
+                    pointer_id: pointer_id_for_capture,
                     input_ctx: observer_ctx,
                     children,
                     focus: tree.focus,
-                    captured: tree.captured,
+                    captured: pointer_id_for_capture
+                        .and_then(|p| tree.captured.get(&p).copied()),
                     bounds,
                     invalidations: Vec::new(),
                     requested_focus: None,
@@ -1193,23 +1279,27 @@ impl<H: UiHost> UiTree<H> {
             Event::Pointer(e) => {
                 let e = match e {
                     PointerEvent::Move {
+                        pointer_id,
                         buttons,
                         modifiers,
                         pointer_type,
                         ..
                     } => PointerEvent::Move {
+                        pointer_id: *pointer_id,
                         position,
                         buttons: *buttons,
                         modifiers: *modifiers,
                         pointer_type: *pointer_type,
                     },
                     PointerEvent::Down {
+                        pointer_id,
                         button,
                         modifiers,
                         click_count,
                         pointer_type,
                         ..
                     } => PointerEvent::Down {
+                        pointer_id: *pointer_id,
                         position,
                         button: *button,
                         modifiers: *modifiers,
@@ -1217,12 +1307,14 @@ impl<H: UiHost> UiTree<H> {
                         pointer_type: *pointer_type,
                     },
                     PointerEvent::Up {
+                        pointer_id,
                         button,
                         modifiers,
                         click_count,
                         pointer_type,
                         ..
                     } => PointerEvent::Up {
+                        pointer_id: *pointer_id,
                         position,
                         button: *button,
                         modifiers: *modifiers,
@@ -1230,21 +1322,25 @@ impl<H: UiHost> UiTree<H> {
                         pointer_type: *pointer_type,
                     },
                     PointerEvent::Wheel {
+                        pointer_id,
                         modifiers,
                         pointer_type,
                         ..
                     } => PointerEvent::Wheel {
+                        pointer_id: *pointer_id,
                         position,
                         delta: delta.unwrap_or(Point::new(Px(0.0), Px(0.0))),
                         modifiers: *modifiers,
                         pointer_type: *pointer_type,
                     },
                     PointerEvent::PinchGesture {
+                        pointer_id,
                         delta,
                         modifiers,
                         pointer_type,
                         ..
                     } => PointerEvent::PinchGesture {
+                        pointer_id: *pointer_id,
                         position,
                         delta: *delta,
                         modifiers: *modifiers,
@@ -1258,6 +1354,7 @@ impl<H: UiHost> UiTree<H> {
                 kind: e.kind.clone(),
             }),
             Event::InternalDrag(e) => Event::InternalDrag(fret_core::InternalDragEvent {
+                pointer_id: e.pointer_id,
                 position,
                 kind: e.kind.clone(),
                 modifiers: e.modifiers,

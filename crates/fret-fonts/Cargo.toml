@@ -11,3 +11,7 @@ documentation.workspace = true
 
 [dependencies]
 
+[features]
+default = []
+emoji = []
+

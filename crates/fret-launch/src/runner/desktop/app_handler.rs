@@ -68,7 +68,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         _device_id: Option<winit::event::DeviceId>,
         event: DeviceEvent,
     ) {
-        if !self.app.drag().is_some_and(|d| d.cross_window_hover)
+        if !self
+            .app
+            .drag(fret_core::PointerId(0))
+            .is_some_and(|d| d.cross_window_hover)
             && self.dock_tearoff_follow.is_none()
         {
             return;
@@ -125,10 +128,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 // `WindowEvent::MouseInput` to the source window. Use device events to still
                 // terminate cross-window dock drags (Unity/ImGui-style tear-off).
                 let (source_window, current_window, dragging) = {
-                    let Some(drag) = self.app.drag() else {
+                    let Some(drag) = self.app.drag(fret_core::PointerId(0)) else {
                         return;
                     };
-                    if drag.kind != fret_app::DragKind::DockPanel {
+                    if drag.kind != fret_app::DRAG_KIND_DOCK_PANEL {
                         return;
                     }
                     (drag.source_window, drag.current_window, drag.dragging)
@@ -143,8 +146,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     if self.saw_left_mouse_release_this_turn || macos_is_left_mouse_down() {
                         return;
                     }
-                    if let Some(d) = self.app.drag_mut()
-                        && d.kind == fret_app::DragKind::DockPanel
+                    if let Some(d) = self.app.drag_mut(fret_core::PointerId(0))
+                        && d.kind == fret_app::DRAG_KIND_DOCK_PANEL
                     {
                         d.dragging = true;
                     }
@@ -156,8 +159,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         source_window
                     ));
                 }
-                if self.app.drag().is_some_and(|d| d.cross_window_hover) {
-                    self.app.cancel_drag();
+                if self
+                    .app
+                    .drag(fret_core::PointerId(0))
+                    .is_some_and(|d| d.cross_window_hover)
+                {
+                    self.app.cancel_drag(fret_core::PointerId(0));
                     let _ = self.clear_internal_drag_hover_if_needed();
                 }
                 // When a floating dock window is following the cursor, a mouse release may occur
@@ -343,8 +350,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     );
                 }
 
-                if self.app.drag().is_some_and(|d| {
-                    d.cross_window_hover && d.kind == fret_app::DragKind::DockPanel
+                if self.app.drag(fret_core::PointerId(0)).is_some_and(|d| {
+                    d.cross_window_hover && d.kind == fret_app::DRAG_KIND_DOCK_PANEL
                 }) {
                     self.route_internal_drag_hover_from_cursor();
                     self.drain_effects(event_loop);
@@ -621,8 +628,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     self.stop_dock_tearoff_follow(Instant::now(), true);
                     // Cross-window drags are runner-routed (Enter/Over/Drop), so ensure the
                     // drag session cannot get "stuck" if no widget ends it.
-                    if self.app.drag().is_some_and(|d| d.cross_window_hover) {
-                        self.app.cancel_drag();
+                    if self
+                        .app
+                        .drag(fret_core::PointerId(0))
+                        .is_some_and(|d| d.cross_window_hover)
+                    {
+                        self.app.cancel_drag(fret_core::PointerId(0));
                         let _ = self.clear_internal_drag_hover_if_needed();
                     }
                 }
@@ -901,10 +912,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             ..
                         }
                     )
-                }) && self.app.drag().is_some_and(|d| {
-                    d.cross_window_hover && d.kind == fret_app::DragKind::DockPanel
+                }) && self.app.drag(fret_core::PointerId(0)).is_some_and(|d| {
+                    d.cross_window_hover && d.kind == fret_app::DRAG_KIND_DOCK_PANEL
                 }) {
-                    self.app.cancel_drag();
+                    self.app.cancel_drag(fret_core::PointerId(0));
                     let _ = self.clear_internal_drag_hover_if_needed();
                     if self.dock_tearoff_follow.is_some() {
                         self.stop_dock_tearoff_follow(Instant::now(), true);
@@ -1079,7 +1090,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             }
         }
 
-        let drag_poll = self.app.drag().is_some_and(|d| d.cross_window_hover);
+        let drag_poll = self
+            .app
+            .drag(fret_core::PointerId(0))
+            .is_some_and(|d| d.cross_window_hover);
         let follow_poll = self.dock_tearoff_follow.is_some();
         let wants_poll = drag_poll || follow_poll;
 

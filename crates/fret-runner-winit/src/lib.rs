@@ -2,7 +2,7 @@ use fret_core::time::Instant;
 use fret_core::{
     CursorIcon, Event, ExternalDragFile, ExternalDragFiles, ExternalDropToken, KeyCode, Modifiers,
     MouseButton, MouseButtons, Point, PointerCancelEvent, PointerCancelReason, PointerEvent,
-    PointerType, Px, Rect,
+    PointerId, PointerType, Px, Rect,
 };
 use std::time::Duration;
 use winit::dpi::{LogicalPosition, LogicalSize, PhysicalPosition};
@@ -519,6 +519,7 @@ impl WinitInputState {
                 self.cursor_pos = Point::new(Px(logical.x), Px(logical.y));
                 self.click.update_move(self.cursor_pos);
                 out.push(Event::Pointer(PointerEvent::Move {
+                    pointer_id: PointerId(0),
                     position: self.cursor_pos,
                     buttons: self.pressed_buttons,
                     modifiers: self.modifiers,
@@ -548,6 +549,7 @@ impl WinitInputState {
 
                 let buttons = self.pressed_buttons;
                 out.push(Event::PointerCancel(PointerCancelEvent {
+                    pointer_id: PointerId(0),
                     position: pos,
                     buttons,
                     modifiers: self.modifiers,
@@ -584,6 +586,7 @@ impl WinitInputState {
                 let evt = if pressed {
                     let click_count = self.click.begin_press(mapped_button, self.cursor_pos);
                     PointerEvent::Down {
+                        pointer_id: PointerId(0),
                         position: self.cursor_pos,
                         button: mapped_button,
                         modifiers: self.modifiers,
@@ -593,6 +596,7 @@ impl WinitInputState {
                 } else {
                     let click_count = self.click.end_press(mapped_button, self.cursor_pos);
                     PointerEvent::Up {
+                        pointer_id: PointerId(0),
                         position: self.cursor_pos,
                         button: mapped_button,
                         modifiers: self.modifiers,
@@ -605,6 +609,7 @@ impl WinitInputState {
             WindowEvent::MouseWheel { delta, .. } => {
                 let scroll = map_wheel_delta(*delta, window_scale_factor, wheel);
                 out.push(Event::Pointer(PointerEvent::Wheel {
+                    pointer_id: PointerId(0),
                     position: self.cursor_pos,
                     delta: scroll,
                     modifiers: self.modifiers,
@@ -616,6 +621,7 @@ impl WinitInputState {
                     return;
                 }
                 out.push(Event::Pointer(PointerEvent::PinchGesture {
+                    pointer_id: PointerId(0),
                     position: self.cursor_pos,
                     delta: *delta as f32,
                     modifiers: self.modifiers,
@@ -657,6 +663,7 @@ impl WinitInputState {
 
         if changed {
             out.push(Event::Pointer(PointerEvent::Move {
+                pointer_id: PointerId(0),
                 position: self.cursor_pos,
                 buttons: self.pressed_buttons,
                 modifiers: self.modifiers,

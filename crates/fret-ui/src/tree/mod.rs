@@ -5,8 +5,9 @@ use crate::{
 };
 use fret_core::time::{Duration, Instant};
 use fret_core::{
-    AppWindowId, Corners, Event, KeyCode, NodeId, Point, PointerEvent, Px, Rect, Scene, SceneOp,
-    SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, Transform2D, UiServices,
+    AppWindowId, Corners, Event, KeyCode, NodeId, Point, PointerEvent, PointerId, Px, Rect, Scene,
+    SceneOp, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, Transform2D,
+    UiServices,
 };
 use fret_runtime::{
     CommandId, Effect, FrameId, InputContext, InputDispatchPhase, KeyChord, KeymapService, ModelId,
@@ -391,7 +392,7 @@ pub struct UiTree<H: UiHost> {
     root_to_layer: HashMap<NodeId, UiLayerId>,
     base_layer: Option<UiLayerId>,
     focus: Option<NodeId>,
-    captured: Option<NodeId>,
+    captured: HashMap<PointerId, NodeId>,
     last_pointer_move_hit: Option<NodeId>,
     last_internal_drag_target: Option<NodeId>,
     window: Option<AppWindowId>,
@@ -433,7 +434,7 @@ impl<H: UiHost> Default for UiTree<H> {
             root_to_layer: HashMap::new(),
             base_layer: None,
             focus: None,
-            captured: None,
+            captured: HashMap::new(),
             last_pointer_move_hit: None,
             last_internal_drag_target: None,
             window: None,
@@ -551,11 +552,13 @@ impl<H: UiHost> UiTree<H> {
         {
             self.focus = None;
         }
-        if self
+        let to_remove: Vec<PointerId> = self
             .captured
-            .is_some_and(|n| !self.node_in_any_layer(n, active_roots))
-        {
-            self.captured = None;
+            .iter()
+            .filter_map(|(p, n)| (!self.node_in_any_layer(*n, active_roots)).then_some(*p))
+            .collect();
+        for p in to_remove {
+            self.captured.remove(&p);
         }
     }
 
@@ -579,6 +582,10 @@ impl<H: UiHost> UiTree<H> {
 
     pub fn debug_stats(&self) -> UiDebugFrameStats {
         self.debug_stats
+    }
+
+    pub fn captured_for(&self, pointer_id: PointerId) -> Option<NodeId> {
+        self.captured.get(&pointer_id).copied()
     }
 
     pub fn set_paint_cache_policy(&mut self, policy: PaintCachePolicy) {
@@ -644,7 +651,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub fn captured(&self) -> Option<NodeId> {
-        self.captured
+        self.captured_for(PointerId(0))
     }
 
     pub fn debug_node_bounds(&self, node: NodeId) -> Option<Rect> {
@@ -849,9 +856,7 @@ impl<H: UiHost> UiTree<H> {
         if self.focus == Some(node) {
             self.focus = None;
         }
-        if self.captured == Some(node) {
-            self.captured = None;
-        }
+        self.captured.retain(|_, n| *n != node);
 
         self.cleanup_subtree_inner(services, node);
         self.nodes.remove(node);
@@ -1406,7 +1411,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let focus = self.focus;
-        let captured = self.captured;
+        let captured = self.captured_for(PointerId(0));
 
         let mut nodes: Vec<SemanticsNode> = Vec::with_capacity(self.nodes.len());
 

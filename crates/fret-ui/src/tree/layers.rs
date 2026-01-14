@@ -117,11 +117,13 @@ impl<H: UiHost> UiTree<H> {
         l.visible = visible;
 
         if !visible {
-            if self
+            let to_remove: Vec<fret_core::PointerId> = self
                 .captured
-                .is_some_and(|n| self.node_layer(n).is_some_and(|lid| lid == layer))
-            {
-                self.captured = None;
+                .iter()
+                .filter_map(|(p, n)| (self.node_layer(*n).is_some_and(|lid| lid == layer)).then_some(*p))
+                .collect();
+            for p in to_remove {
+                self.captured.remove(&p);
             }
             if self
                 .focus
@@ -139,11 +141,13 @@ impl<H: UiHost> UiTree<H> {
         l.hit_testable = hit_testable;
 
         if !hit_testable {
-            if self
+            let to_remove: Vec<fret_core::PointerId> = self
                 .captured
-                .is_some_and(|n| self.node_layer(n).is_some_and(|lid| lid == layer))
-            {
-                self.captured = None;
+                .iter()
+                .filter_map(|(p, n)| (self.node_layer(*n).is_some_and(|lid| lid == layer)).then_some(*p))
+                .collect();
+            for p in to_remove {
+                self.captured.remove(&p);
             }
             if self
                 .focus

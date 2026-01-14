@@ -4342,6 +4342,30 @@ mod tests {
             );
         }
 
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot after wheel (no rerender)");
+        let last = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Sub 39"))
+            .expect("last submenu item");
+        let last_id_before_rerender = last.id;
+        let last_bounds = ui
+            .debug_node_visual_bounds(last.id)
+            .or_else(|| ui.debug_node_bounds(last.id))
+            .expect("last bounds");
+
+        let menu_top = viewport_bounds.origin.y.0;
+        let menu_bottom = viewport_bounds.origin.y.0 + viewport_bounds.size.height.0;
+        let last_top = last_bounds.origin.y.0;
+        let last_bottom = last_bounds.origin.y.0 + last_bounds.size.height.0;
+
+        assert!(
+            last_bottom > menu_top + 0.01 && last_top < menu_bottom - 0.01,
+            "expected last submenu item to be visible after wheel scrolling without rerender; menu={viewport_bounds:?} last={last_bounds:?}"
+        );
+
         let _ = render_frame(
             &mut ui,
             &mut app,
@@ -4360,6 +4384,7 @@ mod tests {
             .iter()
             .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Sub 39"))
             .expect("last submenu item");
+        let last_id_after_rerender = last.id;
         let last_bounds = ui
             .debug_node_visual_bounds(last.id)
             .or_else(|| ui.debug_node_bounds(last.id))
@@ -4372,7 +4397,7 @@ mod tests {
 
         assert!(
             last_bottom > menu_top + 0.01 && last_top < menu_bottom - 0.01,
-            "expected last submenu item to be visible after wheel scrolling; menu={viewport_bounds:?} last={last_bounds:?}"
+            "expected last submenu item to be visible after wheel scrolling; menu={viewport_bounds:?} last={last_bounds:?} ids=({last_id_before_rerender:?} -> {last_id_after_rerender:?})"
         );
     }
 
