@@ -50,12 +50,14 @@ pub struct ViewportToolArbitrator {
     tools: Vec<Box<dyn ViewportTool>>,
     hot: Option<ViewportToolId>,
     active: Option<ViewportToolId>,
+    active_button: Option<MouseButton>,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct ViewportToolRouterState {
     pub hot: Option<ViewportToolId>,
     pub active: Option<ViewportToolId>,
+    pub active_button: Option<MouseButton>,
 }
 
 pub struct ViewportToolEntry<T> {
@@ -77,12 +79,13 @@ pub fn route_viewport_tools<T>(
     if tools.is_empty() {
         state.hot = None;
         state.active = None;
+        state.active_button = None;
         return false;
     }
 
     tools.sort_by_key(|t| Reverse(t.priority.0));
 
-    let input = derive_input(config, event);
+    let input = derive_input(config, state.active_button, event);
     let cx = ViewportToolCx { event, input };
 
     if let Some(active) = state.active {
@@ -95,6 +98,7 @@ pub fn route_viewport_tools<T>(
 
         if !cx.input.dragging {
             state.active = None;
+            state.active_button = None;
         }
         return handled;
     }
@@ -117,16 +121,26 @@ pub fn route_viewport_tools<T>(
 
 fn derive_input(
     config: ViewportToolArbitratorConfig,
+    active_button: Option<MouseButton>,
     event: &ViewportInputEvent,
 ) -> ViewportToolInput {
-    match config.coordinate_space {
+    let primary_button = active_button.unwrap_or(config.primary_button);
+    let mut input = match config.coordinate_space {
         ViewportToolCoordinateSpace::TargetPx => {
-            ViewportToolInput::from_viewport_input_target_px(event, config.primary_button)
+            ViewportToolInput::from_viewport_input_target_px(event, primary_button)
         }
         ViewportToolCoordinateSpace::ScreenPx => {
-            ViewportToolInput::from_viewport_input_screen_px(event, config.primary_button)
+            ViewportToolInput::from_viewport_input_screen_px(event, primary_button)
         }
+    };
+
+    // Some platforms can produce inconsistent `buttons` state for move events. When a tool is
+    // active we want to keep it latched until an explicit `PointerUp` arrives.
+    if active_button.is_some() && matches!(event.kind, ViewportInputKind::PointerMove { .. }) {
+        input.dragging = true;
     }
+
+    input
 }
 
 fn call_set_hot<T>(host: &mut T, entry: &mut ViewportToolEntry<T>, hot: bool) {
@@ -198,6 +212,10 @@ fn dispatch_pointer_down<T>(
     tools: &mut [ViewportToolEntry<T>],
     cx: ViewportToolCx<'_>,
 ) -> bool {
+    let down_button = match cx.event.kind {
+        ViewportInputKind::PointerDown { button, .. } => Some(button),
+        _ => None,
+    };
     for tool in tools.iter_mut() {
         let id = tool.id;
         let hot = state.hot == Some(id);
@@ -208,6 +226,7 @@ fn dispatch_pointer_down<T>(
 
         if res.capture {
             state.active = Some(id);
+            state.active_button = down_button;
             force_hot(state, host, tools, id);
         }
         return true;
@@ -264,6 +283,7 @@ impl ViewportToolArbitrator {
             tools: Vec::new(),
             hot: None,
             active: None,
+            active_button: None,
         }
     }
 
@@ -284,12 +304,14 @@ impl ViewportToolArbitrator {
         self.tools = tools;
         self.hot = None;
         self.active = None;
+        self.active_button = None;
     }
 
     pub fn clear_tools(&mut self) {
         self.tools.clear();
         self.hot = None;
         self.active = None;
+        self.active_button = None;
     }
 
     pub fn cancel_active(&mut self) {
@@ -299,12 +321,14 @@ impl ViewportToolArbitrator {
             self.tools[idx].cancel();
         }
         self.active = None;
+        self.active_button = None;
     }
 
     pub fn handle_event(&mut self, event: &ViewportInputEvent) -> bool {
         if self.tools.is_empty() {
             self.hot = None;
             self.active = None;
+            self.active_button = None;
             return false;
         }
 
@@ -321,6 +345,7 @@ impl ViewportToolArbitrator {
 
             if !cx.input.dragging {
                 self.active = None;
+                self.active_button = None;
             }
             return handled;
         }
@@ -344,14 +369,25 @@ impl ViewportToolArbitrator {
     }
 
     fn derive_input(&self, event: &ViewportInputEvent) -> ViewportToolInput {
-        match self.config.coordinate_space {
+        let primary_button = self.active_button.unwrap_or(self.config.primary_button);
+        let mut input = match self.config.coordinate_space {
             ViewportToolCoordinateSpace::TargetPx => {
-                ViewportToolInput::from_viewport_input_target_px(event, self.config.primary_button)
+                ViewportToolInput::from_viewport_input_target_px(event, primary_button)
             }
             ViewportToolCoordinateSpace::ScreenPx => {
-                ViewportToolInput::from_viewport_input_screen_px(event, self.config.primary_button)
+                ViewportToolInput::from_viewport_input_screen_px(event, primary_button)
             }
+        };
+
+        // Some platforms can produce inconsistent `buttons` state for move events. When a tool is
+        // active we want to keep it latched until an explicit `PointerUp` arrives.
+        if self.active_button.is_some()
+            && matches!(event.kind, ViewportInputKind::PointerMove { .. })
+        {
+            input.dragging = true;
         }
+
+        input
     }
 
     fn index_of(&self, id: ViewportToolId) -> Option<usize> {
@@ -404,6 +440,10 @@ impl ViewportToolArbitrator {
     }
 
     fn dispatch_pointer_down(&mut self, cx: ViewportToolCx<'_>) -> bool {
+        let down_button = match cx.event.kind {
+            ViewportInputKind::PointerDown { button, .. } => Some(button),
+            _ => None,
+        };
         for tool in &mut self.tools {
             let id = tool.id();
             let hot = self.hot == Some(id);
@@ -414,6 +454,7 @@ impl ViewportToolArbitrator {
 
             if res.capture {
                 self.active = Some(id);
+                self.active_button = down_button;
                 self.force_hot(id);
             }
             return true;
