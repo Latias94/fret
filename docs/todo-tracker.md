@@ -38,23 +38,32 @@ It complements (but does not replace) ADRs:
 
 - **Make the default font semantic (system UI font alias)**
   - Problem: relying on `FontId::default()` without a defined font family causes platform-dependent tofu and IME provisional-state breakage.
-  - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0006-text-system.md`
+  - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0006-text-system.md`, `docs/adr/0162-font-stack-bootstrap-and-textfontstackkey-v1.md`
   - Code: `crates/fret-ui/src/theme.rs`, `crates/fret-render/src/text.rs`
-  - Current: `crates/fret-render/src/text.rs` configures `cosmic-text`'s `fontdb` generic families at startup (preferring platform UI font families when present), so `Family::SansSerif` is no longer an implicit "Open Sans" placeholder.
-  - Current: `TextStyle.font` now maps to `cosmic-text` generic families (`FontId::default()` -> sans, `FontId::serif()` -> serif, `FontId::monospace()` -> mono).
-  - TODO: expose the default font stack at the theme/settings layer (and decide how user font loading maps to stable `FontId` values).
+  - Current: `crates/fret-render/src/text.rs` configures both `cosmic-text` fontdb generics and Parley/fontique generic families (keep backend behavior aligned as we converge the font source of truth).
+  - Current: `TextStyle.font` is a semantic `FontId` (`Ui/Serif/Monospace/Family(name)`) and maps to generic stacks (`sans-serif`/`serif`/`monospace`) for shaping.
+  - TODO: expose a curated default font stack at the theme/settings layer (and decide how user font loading maps to stable `FontId` values).
+
+- **Web/WASM bootstrap fonts are insufficient** (done)
+  - Problem: `fret-fonts` currently bundles a mono subset only; general UI text needs a UI sans baseline (and eventually emoji).
+  - ADRs: `docs/adr/0162-font-stack-bootstrap-and-textfontstackkey-v1.md`
+  - Code: `crates/fret-fonts/src/lib.rs`, `crates/fret-launch/src/runner/web.rs`
+  - Current: `fret-fonts` bundles a UI sans + monospace baseline for wasm (`Inter` + `JetBrains Mono` subsets).
+  - Current: optional `emoji` font bundle is available (`Noto Color Emoji`), gated behind `fret-fonts/emoji`.
+  - Current: web runner seeds `TextFontFamilyConfig` from curated defaults when empty, and bumps `TextFontStackKey` via `apply_font_catalog_update` after font injection.
 
 - **Fallback list participates in `TextBlobId` caching / invalidation**
   - Problem: changing configured fallbacks or font DB state must invalidate cached shaping/rasterization results.
-  - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
+  - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0162-font-stack-bootstrap-and-textfontstackkey-v1.md`
   - Code: `crates/fret-render/src/text.rs`
   - Current: `crates/fret-render/src/text.rs` includes a `font_stack_key` (derived from locale + configured generic families + fallback policy) in the `TextBlobKey` cache key.
-  - TODO: when runtime font configuration becomes user-editable, add an explicit invalidation path that bumps the `font_stack_key` and clears cached blobs.
+  - Current: runner font/config mutations go through `fret_runtime::apply_font_catalog_update`, which bumps `TextFontStackKey` to prevent stale layout/raster cache reuse.
 
 - **Emoji / variation selectors policy**
   - Goal: define baseline behavior for emoji fonts and variation selectors, and add a smoke test string that exercises it.
   - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
   - Code: `crates/fret-render/src/text.rs`
+  - Current: optional wasm emoji font bundle (`fret-fonts/emoji` -> `Noto Color Emoji`) and a dedicated conformance demo (`apps/fret-examples/src/emoji_conformance_demo.rs`).
 
 - **Center baseline within the line box across font swaps**
   - Symptom: switching the UI font in `fret-demo` to fonts with unusual metrics (e.g. Nerd Fonts like "Agave NF") can make text look slightly "up/right" in controls that visually expect centered labels.
@@ -121,6 +130,39 @@ It complements (but does not replace) ADRs:
   - Current: `UiAppDriver` closes windows by default on `Event::WindowCloseRequested`, with an opt-out for "unsaved changes" prompts.
   - Current: documented in `docs/examples/todo-app-golden-path.md`.
 
+## P0 - Radix/shadcn Overlay Conformance (Goldens + Downshift)
+
+- **Downshift hover-overlay intent drivers into `fret-ui-kit::headless`**
+  - Problem: hover-driven overlays (Tooltip/HoverCard) currently contain substantial state/intent logic in shadcn recipes, which makes long-term 1:1 Radix matching harder (logic drift is easy when it is not shared/reused).
+  - ADRs: `docs/adr/0090-radix-aligned-headless-primitives-in-fret-components-ui.md`, `docs/adr/0074-component-owned-interaction-policy-and-runtime-action-hooks.md`
+  - Targets (examples to audit/move):
+    - `ecosystem/fret-ui-shadcn/src/hover_card.rs` (`HoverCardIntentDriverState`, frame-tick fallback, close suppression heuristics).
+    - `ecosystem/fret-ui-shadcn/src/tooltip.rs` (pointermove gating + suppress-after-pointerdown/focus heuristics).
+  - Approach:
+    - keep wiring in shadcn recipes, but move the deterministic state machine and timers into `ecosystem/fret-ui-kit/src/headless/*` (or extend existing headless primitives like `hover_intent`).
+    - add unit tests at the headless layer for the intent driver (open/close timing, suppression edges), then keep only "wiring smoke" in shadcn.
+
+- **Expand overlay goldens to cover submenu and non-click open paths**
+  - Goal: lock down the highest-drift overlay behaviors (submenu grace corridor, delayed opens, focus transfer) with upstream web goldens.
+  - Upstream references:
+    - `repo-ref/primitives/packages/react/menu/src/menu.tsx` (submenu pointer grace + focus transfer rules).
+  - Current:
+    - Added dropdown-menu submenu hover-open + select timeline: `goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-hover-select.light.json`.
+    - Added Fret gate covering submenu open + close-on-select: `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs`.
+    - Added context-menu submenu hover-open + select timeline: `goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-hover-select.light.json`.
+    - Added menubar submenu hover-open + select timeline: `goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-hover-select.light.json`.
+    - Added submenu pointer-grace corridor timelines:
+      - `goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-grace-corridor.light.json`
+      - `goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-grace-corridor.light.json`
+      - `goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-grace-corridor.light.json`
+    - Added Fret gates covering pointer-grace corridor staying open: `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs`.
+  - Goldens to expand:
+    - `goldens/radix-web/v4/radix-vega/*` timelines: add submenu scenarios for `dropdown-menu`, `context-menu`, `menubar`.
+    - `goldens/shadcn-web/v4/new-york-v4/*.open.json`: add open snapshots for pages that require non-click input and/or submenu open states.
+  - Fret gates to add:
+    - behavior/semantics sequence parity: `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` (new scenarios).
+    - placement/chrome parity: extend `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_*` to cover submenu content and multi-layer placement.
+
 ## P0 - Docking / Overlays / Viewport Capture
 
 - **Dock host keep-alive and early submission**
@@ -185,6 +227,14 @@ It complements (but does not replace) ADRs:
 - **Prefer `cargo nextest` for workspace tests**
   - Goal: make it easy to run conformance tests consistently.
   - Docs: `docs/README.md`, `docs/adr/README.md`
+
+- **Harden radix-web golden extraction (determinism + Windows dev loop)**
+  - Problem: upstream examples can include external images (e.g. avatar images), which makes DOM
+    timelines nondeterministic when the image load races snapshots; Windows shell semantics can
+    also break parallel dev scripts (e.g. `&` not backgrounding).
+  - Tooling: `goldens/radix-web/scripts/extract-behavior.mts`, `goldens/radix-web/README.md`
+  - TODO: keep extractor deterministic (block images / settle timing), and document a known-good
+    Windows command sequence for starting the preview server + regenerating goldens.
 
 ## P1 - Core Contract Drift
 

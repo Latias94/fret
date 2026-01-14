@@ -5,8 +5,9 @@ use crate::{
 };
 use fret_core::time::{Duration, Instant};
 use fret_core::{
-    AppWindowId, Corners, Event, KeyCode, NodeId, Point, PointerEvent, Px, Rect, Scene, SceneOp,
-    SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, Transform2D, UiServices,
+    AppWindowId, Corners, Event, KeyCode, NodeId, Point, PointerEvent, PointerId, Px, Rect, Scene,
+    SceneOp, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, Transform2D,
+    UiServices,
 };
 use fret_runtime::{
     CommandId, Effect, FrameId, InputContext, InputDispatchPhase, KeyChord, KeymapService, ModelId,
@@ -121,6 +122,13 @@ pub struct UiDebugFrameStats {
     pub layout_engine_solves: u64,
     /// Total time spent in layout engine solves during the current frame.
     pub layout_engine_solve_time: Duration,
+    /// Number of "widget-local" layout engine solves triggered as a fallback when a widget cannot
+    /// consume already-solved engine child rects.
+    ///
+    /// The goal for v2 is to keep this at `0` for normal UI trees by ensuring explicit layout
+    /// barriers (scroll/virtualization/splits/...) register viewport roots or explicitly solve
+    /// their child roots.
+    pub layout_engine_widget_fallback_solves: u64,
     pub focus: Option<NodeId>,
     pub captured: Option<NodeId>,
 }
@@ -391,7 +399,7 @@ pub struct UiTree<H: UiHost> {
     root_to_layer: HashMap<NodeId, UiLayerId>,
     base_layer: Option<UiLayerId>,
     focus: Option<NodeId>,
-    captured: Option<NodeId>,
+    captured: HashMap<PointerId, NodeId>,
     last_pointer_move_hit: Option<NodeId>,
     last_internal_drag_target: Option<NodeId>,
     window: Option<AppWindowId>,
@@ -406,10 +414,7 @@ pub struct UiTree<H: UiHost> {
     observed_globals_in_paint: GlobalObservationIndex,
     measure_stack: Vec<MeasureStackKey>,
     measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics,
-
-    #[cfg(feature = "layout-engine-v2")]
     layout_engine: crate::layout_engine::TaffyLayoutEngine,
-    #[cfg(feature = "layout-engine-v2")]
     viewport_roots: Vec<(NodeId, Rect)>,
 
     debug_enabled: bool,
@@ -433,7 +438,7 @@ impl<H: UiHost> Default for UiTree<H> {
             root_to_layer: HashMap::new(),
             base_layer: None,
             focus: None,
-            captured: None,
+            captured: HashMap::new(),
             last_pointer_move_hit: None,
             last_internal_drag_target: None,
             window: None,
@@ -448,9 +453,7 @@ impl<H: UiHost> Default for UiTree<H> {
             observed_globals_in_paint: GlobalObservationIndex::default(),
             measure_stack: Vec::new(),
             measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics::default(),
-            #[cfg(feature = "layout-engine-v2")]
             layout_engine: crate::layout_engine::TaffyLayoutEngine::default(),
-            #[cfg(feature = "layout-engine-v2")]
             viewport_roots: Vec::new(),
             debug_enabled: false,
             debug_stats: UiDebugFrameStats::default(),
@@ -512,22 +515,18 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    #[cfg(feature = "layout-engine-v2")]
     pub(crate) fn take_layout_engine(&mut self) -> crate::layout_engine::TaffyLayoutEngine {
         std::mem::take(&mut self.layout_engine)
     }
 
-    #[cfg(feature = "layout-engine-v2")]
     pub(crate) fn put_layout_engine(&mut self, engine: crate::layout_engine::TaffyLayoutEngine) {
         self.layout_engine = engine;
     }
 
-    #[cfg(feature = "layout-engine-v2")]
     pub(crate) fn register_viewport_root(&mut self, root: NodeId, bounds: Rect) {
         self.viewport_roots.push((root, bounds));
     }
 
-    #[cfg(feature = "layout-engine-v2")]
     #[allow(dead_code)]
     pub(crate) fn viewport_roots(&self) -> &[(NodeId, Rect)] {
         &self.viewport_roots
@@ -551,11 +550,13 @@ impl<H: UiHost> UiTree<H> {
         {
             self.focus = None;
         }
-        if self
+        let to_remove: Vec<PointerId> = self
             .captured
-            .is_some_and(|n| !self.node_in_any_layer(n, active_roots))
-        {
-            self.captured = None;
+            .iter()
+            .filter_map(|(p, n)| (!self.node_in_any_layer(*n, active_roots)).then_some(*p))
+            .collect();
+        for p in to_remove {
+            self.captured.remove(&p);
         }
     }
 
@@ -579,6 +580,10 @@ impl<H: UiHost> UiTree<H> {
 
     pub fn debug_stats(&self) -> UiDebugFrameStats {
         self.debug_stats
+    }
+
+    pub fn captured_for(&self, pointer_id: PointerId) -> Option<NodeId> {
+        self.captured.get(&pointer_id).copied()
     }
 
     pub fn set_paint_cache_policy(&mut self, policy: PaintCachePolicy) {
@@ -644,7 +649,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub fn captured(&self) -> Option<NodeId> {
-        self.captured
+        self.captured_for(PointerId(0))
     }
 
     pub fn debug_node_bounds(&self, node: NodeId) -> Option<Rect> {
@@ -672,7 +677,6 @@ impl<H: UiHost> UiTree<H> {
         Some(rect_aabb_transformed(bounds, transform))
     }
 
-    #[cfg(feature = "layout-engine-v2")]
     pub(crate) fn layout_engine_child_local_rect(
         &self,
         parent: NodeId,
@@ -682,7 +686,6 @@ impl<H: UiHost> UiTree<H> {
             .child_layout_rect_if_solved(parent, child)
     }
 
-    #[cfg(feature = "layout-engine-v2")]
     #[allow(dead_code)]
     pub(crate) fn flow_subtree_is_engine_backed(&self, root: NodeId) -> bool {
         let Some(&child) = self.children(root).first() else {
@@ -691,7 +694,7 @@ impl<H: UiHost> UiTree<H> {
         self.layout_engine_child_local_rect(root, child).is_some()
     }
 
-    #[cfg(all(feature = "layout-engine-v2", test))]
+    #[cfg(test)]
     pub(crate) fn layout_engine_has_node(&self, node: NodeId) -> bool {
         self.layout_engine.layout_id_for_node(node).is_some()
     }
@@ -849,9 +852,7 @@ impl<H: UiHost> UiTree<H> {
         if self.focus == Some(node) {
             self.focus = None;
         }
-        if self.captured == Some(node) {
-            self.captured = None;
-        }
+        self.captured.retain(|_, n| *n != node);
 
         self.cleanup_subtree_inner(services, node);
         self.nodes.remove(node);
@@ -1406,7 +1407,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let focus = self.focus;
-        let captured = self.captured;
+        let captured = self.captured_for(PointerId(0));
 
         let mut nodes: Vec<SemanticsNode> = Vec::with_capacity(self.nodes.len());
 

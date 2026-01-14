@@ -1,9 +1,9 @@
 use std::any::Any;
 
 use crate::{ClipboardToken, FrameId, ImageUploadToken, TickId, TimerToken};
-use fret_core::{AppWindowId, Point};
+use fret_core::{AppWindowId, Point, PointerId};
 
-use crate::{CommandRegistry, DragKind, DragSession, Effect, ModelHost, ModelId};
+use crate::{CommandRegistry, DragKindId, DragSession, Effect, ModelHost, ModelId};
 
 pub trait GlobalsHost {
     fn set_global<T: Any>(&mut self, value: T);
@@ -39,13 +39,14 @@ pub trait TimeHost {
 }
 
 pub trait DragHost {
-    fn drag(&self) -> Option<&DragSession>;
-    fn drag_mut(&mut self) -> Option<&mut DragSession>;
-    fn cancel_drag(&mut self);
+    fn drag(&self, pointer_id: PointerId) -> Option<&DragSession>;
+    fn drag_mut(&mut self, pointer_id: PointerId) -> Option<&mut DragSession>;
+    fn cancel_drag(&mut self, pointer_id: PointerId);
 
     fn begin_drag_with_kind<T: Any>(
         &mut self,
-        kind: DragKind,
+        pointer_id: PointerId,
+        kind: DragKindId,
         source_window: AppWindowId,
         start: Point,
         payload: T,
@@ -53,7 +54,8 @@ pub trait DragHost {
 
     fn begin_cross_window_drag_with_kind<T: Any>(
         &mut self,
-        kind: DragKind,
+        pointer_id: PointerId,
+        kind: DragKindId,
         source_window: AppWindowId,
         start: Point,
         payload: T,

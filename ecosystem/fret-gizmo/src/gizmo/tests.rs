@@ -2077,8 +2077,10 @@ fn rotate_view_ring_does_not_steal_axis_ring_when_both_hit() {
     config.show_arcball = false;
     // Force the view ring to coincide with the most camera-facing axis ring so we can
     // deterministically hit both at the same cursor point.
-    config.view_axis_ring_radius_scale = 1.0;
-    let gizmo = Gizmo::new(config);
+    let mut gizmo = Gizmo::new(config);
+    let mut pv = gizmo.part_visuals();
+    pv.rotate_view_ring_radius_scale = 1.0;
+    gizmo.set_part_visuals(pv);
 
     let mut axis_only_cfg = config;
     axis_only_cfg.show_view_axis_ring = false;
@@ -2086,7 +2088,10 @@ fn rotate_view_ring_does_not_steal_axis_ring_when_both_hit() {
 
     let mut view_only_cfg = config;
     view_only_cfg.axis_mask = [true; 3];
-    let view_only = Gizmo::new(view_only_cfg);
+    let mut view_only = Gizmo::new(view_only_cfg);
+    let mut pv = view_only.part_visuals();
+    pv.rotate_view_ring_radius_scale = 1.0;
+    view_only.set_part_visuals(pv);
 
     let axes = gizmo.axis_dirs(&Transform3d::default());
     let radius_world = axis_length_world(
@@ -2242,6 +2247,46 @@ fn arcball_drag_returns_to_identity_when_cursor_returns() {
         back_angle.abs() < 5e-3,
         "angle={back_angle} total={back_total:?}"
     );
+}
+
+#[test]
+fn rotate_axis_ring_is_pickable_when_partially_behind_camera() {
+    let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+    // Put the camera extremely close to the origin so a large axis ring can wrap behind it.
+    let view_proj = test_view_projection_fov((800.0, 600.0), 60.0, Vec3::new(0.20, 0.0, 0.20));
+    let origin = Vec3::ZERO;
+
+    let mut config = GizmoConfig::default();
+    config.mode = GizmoMode::Rotate;
+    config.depth_range = DepthRange::ZeroToOne;
+    config.pick_radius_px = 18.0;
+    config.drag_start_threshold_px = 0.0;
+    config.allow_axis_flip = false;
+    config.axis_fade_px = (f32::NAN, f32::NAN);
+    config.plane_fade_px2 = (f32::NAN, f32::NAN);
+    config.show_view_axis_ring = false;
+    config.show_arcball = false;
+    // Only enable the X axis ring so the expected handle is deterministic.
+    config.axis_mask = [false, true, true];
+    let gizmo = Gizmo::new(config);
+
+    let axes = gizmo.axis_dirs(&Transform3d::default());
+
+    // Make the ring radius larger than the camera distance so some ring points are behind the
+    // camera (project_point returns None), while the opposite arc remains in front.
+    let radius_world = 1.0;
+    let front = project_point(
+        view_proj,
+        vp,
+        origin + Vec3::new(0.0, 0.0, -radius_world),
+        gizmo.config.depth_range,
+    )
+    .unwrap();
+
+    let hit = gizmo
+        .pick_rotate_axis(view_proj, vp, origin, front.screen, axes, radius_world)
+        .expect("expected visible arc of the X axis ring to remain pickable");
+    assert_eq!(hit.handle, RotateHandle::AxisX.id());
 }
 
 #[test]
@@ -3245,6 +3290,13 @@ fn universal_picks_scale_on_end_box() {
     let end_world = origin + axes[0] * length_world;
     let end = project_point(view_proj, vp, end_world, gizmo.config.depth_range).unwrap();
 
+    assert!(
+        gizmo
+            .pick_rotate_axis(view_proj, vp, origin, end.screen, axes, length_world)
+            .is_some(),
+        "expected rotate rings to be pickable near the scale end box in this projection"
+    );
+
     let (hit, kind) = gizmo
         .pick_universal_handle(view_proj, vp, origin, end.screen, axes, length_world)
         .unwrap();
@@ -3371,6 +3423,496 @@ fn universal_translate_tip_intent_works_in_orthographic() {
 }
 
 #[test]
+fn universal_translate_tip_intent_works_with_wide_fov() {
+    let mut gizmo = base_gizmo(GizmoMode::Universal);
+    assert!(gizmo.config.universal_includes_scale);
+
+    // Keep the gizmo reasonably small so the overlap window between rotate rings and translate
+    // arrow tips stays within the default pick radius at very wide FOV.
+    gizmo.config.size_px = 48.0;
+    // Wide FOV projections can spread sub-handles in screen space. Inflate the pick radius so the
+    // rotate ring is still considered near the translate tip, ensuring the universal overlap
+    // policy is exercised in this projection.
+    gizmo.config.pick_radius_px = 64.0;
+
+    let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+    let view_proj = test_view_projection_fov((800.0, 600.0), 160.0, Vec3::new(0.8, 0.6, 1.2));
+    let origin = Vec3::ZERO;
+    let axes = gizmo.axis_dirs(&Transform3d::default());
+
+    let length_world = axis_length_world(
+        view_proj,
+        vp,
+        origin,
+        gizmo.config.depth_range,
+        gizmo.config.size_px,
+    )
+    .unwrap();
+
+    let tip_world = origin + axes[0] * (length_world * Gizmo::UNIVERSAL_TRANSLATE_TIP_SCALE);
+    let tip = project_point(view_proj, vp, tip_world, gizmo.config.depth_range).unwrap();
+
+    assert!(
+        gizmo
+            .pick_rotate_axis(view_proj, vp, origin, tip.screen, axes, length_world)
+            .is_some(),
+        "expected rotate rings to be considered near the translate tip at wide FOV"
+    );
+
+    let (hit, kind) = gizmo
+        .pick_universal_handle(view_proj, vp, origin, tip.screen, axes, length_world)
+        .unwrap();
+    assert_eq!(kind, GizmoMode::Translate);
+    assert_eq!(hit.handle, TranslateHandle::AxisX.id());
+}
+
+#[test]
+fn universal_translate_tip_intent_works_with_close_camera_near_plane() {
+    let mut gizmo = base_gizmo(GizmoMode::Universal);
+    assert!(gizmo.config.universal_includes_scale);
+
+    // When the camera is very close to the gizmo origin, tiny projection changes can make
+    // overlap windows narrower. Increase pick radius so this test exercises the overlap
+    // resolution rather than "did we happen to land on the ring polyline".
+    gizmo.config.pick_radius_px = 48.0;
+
+    let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+    // Eye is close to origin, but still in front of the near plane used by `test_view_projection_fov`.
+    let view_proj = test_view_projection_fov((800.0, 600.0), 75.0, Vec3::new(0.0, 0.0, 0.20));
+    let origin = Vec3::ZERO;
+    let axes = gizmo.axis_dirs(&Transform3d::default());
+
+    let length_world = axis_length_world(
+        view_proj,
+        vp,
+        origin,
+        gizmo.config.depth_range,
+        gizmo.config.size_px,
+    )
+    .unwrap();
+
+    let tip_world = origin + axes[0] * (length_world * Gizmo::UNIVERSAL_TRANSLATE_TIP_SCALE);
+    let tip = project_point(view_proj, vp, tip_world, gizmo.config.depth_range).unwrap();
+
+    assert!(
+        gizmo
+            .pick_rotate_axis(view_proj, vp, origin, tip.screen, axes, length_world)
+            .is_some(),
+        "expected rotate rings to remain pickable near the translate tip with a close camera"
+    );
+
+    // At very close camera distances, projected planes can overlap axis tips. Universal is
+    // expected to keep translate planes "protected" over rotate rings in these cases.
+    let translate = gizmo
+        .pick_translate_handle(
+            view_proj,
+            vp,
+            origin,
+            tip.screen,
+            axes,
+            length_world,
+            true,
+            true,
+            true,
+            false,
+        )
+        .expect("expected some translate handle at this cursor position");
+
+    let (hit, kind) = gizmo
+        .pick_universal_handle(view_proj, vp, origin, tip.screen, axes, length_world)
+        .unwrap();
+    assert_eq!(kind, GizmoMode::Translate);
+    assert_eq!(hit.handle, translate.handle);
+}
+
+#[test]
+fn universal_translate_tip_intent_works_in_orthographic_with_close_camera() {
+    let mut gizmo = base_gizmo(GizmoMode::Universal);
+    assert!(gizmo.config.universal_includes_scale);
+    gizmo.config.pick_radius_px = 48.0;
+
+    let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+    let view_proj = test_view_projection_ortho((800.0, 600.0), Vec3::new(0.0, 0.0, 0.20));
+    let origin = Vec3::ZERO;
+    let axes = gizmo.axis_dirs(&Transform3d::default());
+
+    let length_world = axis_length_world(
+        view_proj,
+        vp,
+        origin,
+        gizmo.config.depth_range,
+        gizmo.config.size_px,
+    )
+    .unwrap();
+
+    // Ensure the rotate ring sampling encounters near-plane / behind-camera clipping in this
+    // orthographic + close camera setup (i.e. not all ring points are inside the clip volume).
+    let sample = project_point(
+        view_proj,
+        vp,
+        origin + Vec3::Z * length_world,
+        gizmo.config.depth_range,
+    );
+    assert!(
+        sample.is_none() || !sample.unwrap().inside_clip,
+        "expected some rotate ring points to be clipped near the camera in this setup"
+    );
+
+    let tip_world = origin + axes[0] * (length_world * Gizmo::UNIVERSAL_TRANSLATE_TIP_SCALE);
+    let tip = project_point(view_proj, vp, tip_world, gizmo.config.depth_range).unwrap();
+
+    assert!(
+        gizmo
+            .pick_rotate_axis(view_proj, vp, origin, tip.screen, axes, length_world)
+            .is_some(),
+        "expected rotate rings to remain pickable near the translate tip with a close orthographic camera"
+    );
+
+    let translate = gizmo
+        .pick_translate_handle(
+            view_proj,
+            vp,
+            origin,
+            tip.screen,
+            axes,
+            length_world,
+            true,
+            true,
+            true,
+            false,
+        )
+        .expect("expected some translate handle at this cursor position");
+
+    let (hit, kind) = gizmo
+        .pick_universal_handle(view_proj, vp, origin, tip.screen, axes, length_world)
+        .unwrap();
+    assert_eq!(kind, GizmoMode::Translate);
+    assert_eq!(hit.handle, translate.handle);
+}
+
+#[test]
+fn universal_translate_tip_intent_protects_against_view_ring_overlap() {
+    let mut gizmo = base_gizmo(GizmoMode::Universal);
+    assert!(gizmo.config.universal_includes_scale);
+
+    // Axis-aligned view so the view ring basis aligns with world X/Y.
+    let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+    let view_proj = test_view_projection_fov((800.0, 600.0), 60.0, Vec3::new(0.0, 0.0, 5.0));
+    let origin = Vec3::ZERO;
+    let axes = gizmo.axis_dirs(&Transform3d::default());
+
+    // Force the view ring to pass through the translate arrow tip position so picking overlaps.
+    let mut pv = gizmo.part_visuals();
+    pv.rotate_view_ring_radius_scale = Gizmo::UNIVERSAL_TRANSLATE_TIP_SCALE;
+    gizmo.set_part_visuals(pv);
+
+    let length_world = axis_length_world(
+        view_proj,
+        vp,
+        origin,
+        gizmo.config.depth_range,
+        gizmo.config.size_px,
+    )
+    .unwrap();
+
+    let tip_world = origin + axes[0] * (length_world * Gizmo::UNIVERSAL_TRANSLATE_TIP_SCALE);
+    let tip = project_point(view_proj, vp, tip_world, gizmo.config.depth_range).unwrap();
+
+    assert_eq!(
+        gizmo
+            .pick_rotate_axis(view_proj, vp, origin, tip.screen, axes, length_world)
+            .unwrap()
+            .handle,
+        RotateHandle::View.id(),
+        "expected view ring to overlap the translate arrow tip in this configuration"
+    );
+
+    let translate = gizmo
+        .pick_translate_handle(
+            view_proj,
+            vp,
+            origin,
+            tip.screen,
+            axes,
+            length_world,
+            true,
+            true,
+            true,
+            false,
+        )
+        .expect("expected some translate handle at this cursor position");
+
+    let (hit, kind) = gizmo
+        .pick_universal_handle(view_proj, vp, origin, tip.screen, axes, length_world)
+        .unwrap();
+    assert_eq!(kind, GizmoMode::Translate);
+    assert_eq!(hit.handle, translate.handle);
+}
+
+#[test]
+fn universal_translate_tip_intent_protects_against_view_ring_overlap_in_orthographic() {
+    let mut gizmo = base_gizmo(GizmoMode::Universal);
+    assert!(gizmo.config.universal_includes_scale);
+
+    // Disable axis rings so rotate picking deterministically returns the view ring hit.
+    gizmo.config.rotate_ring_fade_dot = (1.10, 1.20);
+    gizmo.config.universal_includes_rotate_view_ring = true;
+    gizmo.config.universal_includes_arcball = false;
+
+    // Axis-aligned orthographic view so the view ring basis aligns with world X/Y.
+    let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+    let view_proj = test_view_projection_ortho((800.0, 600.0), Vec3::new(0.0, 0.0, 0.20));
+    let origin = Vec3::ZERO;
+    let axes = gizmo.axis_dirs(&Transform3d::default());
+
+    // Force the view ring to pass through the translate arrow tip position so picking overlaps.
+    let mut pv = gizmo.part_visuals();
+    pv.rotate_view_ring_radius_scale = Gizmo::UNIVERSAL_TRANSLATE_TIP_SCALE;
+    gizmo.set_part_visuals(pv);
+
+    let length_world = axis_length_world(
+        view_proj,
+        vp,
+        origin,
+        gizmo.config.depth_range,
+        gizmo.config.size_px,
+    )
+    .unwrap();
+
+    let tip_world = origin + axes[0] * (length_world * Gizmo::UNIVERSAL_TRANSLATE_TIP_SCALE);
+    let tip = project_point(view_proj, vp, tip_world, gizmo.config.depth_range).unwrap();
+
+    assert_eq!(
+        gizmo
+            .pick_rotate_axis(view_proj, vp, origin, tip.screen, axes, length_world)
+            .unwrap()
+            .handle,
+        RotateHandle::View.id(),
+        "expected view ring to overlap the translate arrow tip in this orthographic projection"
+    );
+
+    let translate = gizmo
+        .pick_translate_handle(
+            view_proj,
+            vp,
+            origin,
+            tip.screen,
+            axes,
+            length_world,
+            true,
+            true,
+            true,
+            false,
+        )
+        .expect("expected some translate handle at this cursor position");
+
+    let (hit, kind) = gizmo
+        .pick_universal_handle(view_proj, vp, origin, tip.screen, axes, length_world)
+        .unwrap();
+    assert_eq!(kind, GizmoMode::Translate);
+    assert_eq!(hit.handle, translate.handle);
+}
+
+#[test]
+fn universal_translate_screen_handle_wins_over_arcball_at_origin() {
+    let mut gizmo = base_gizmo(GizmoMode::Universal);
+    gizmo.config.universal_includes_arcball = true;
+    gizmo.config.universal_includes_rotate_view_ring = false;
+
+    // Hide axis rotation rings so rotate picking can fall through to arcball.
+    gizmo.config.rotate_ring_fade_dot = (1.10, 1.20);
+
+    let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+    let view_proj = test_view_projection_fov((800.0, 600.0), 60.0, Vec3::new(0.0, 0.0, 5.0));
+    let origin = Vec3::ZERO;
+    let axes = gizmo.axis_dirs(&Transform3d::default());
+
+    let length_world = axis_length_world(
+        view_proj,
+        vp,
+        origin,
+        gizmo.config.depth_range,
+        gizmo.config.size_px,
+    )
+    .unwrap();
+
+    let center = project_point(view_proj, vp, origin, gizmo.config.depth_range)
+        .unwrap()
+        .screen;
+
+    assert_eq!(
+        gizmo
+            .pick_rotate_axis(view_proj, vp, origin, center, axes, length_world)
+            .unwrap()
+            .handle,
+        RotateHandle::Arcball.id(),
+        "expected arcball to be pickable at the origin when axis rings and view ring are disabled"
+    );
+
+    let (hit, kind) = gizmo
+        .pick_universal_handle(view_proj, vp, origin, center, axes, length_world)
+        .unwrap();
+    assert_eq!(kind, GizmoMode::Translate);
+    assert_eq!(hit.handle, TranslateHandle::Screen.id());
+}
+
+#[test]
+fn universal_view_ring_overlap_is_stable_with_pixels_clamped_size_policy() {
+    let mut gizmo = base_gizmo(GizmoMode::Universal);
+    assert!(gizmo.config.universal_includes_scale);
+
+    gizmo.config.size_policy = GizmoSizePolicy::PixelsClampedBySelectionBounds {
+        min_fraction_of_max_extent: 0.01,
+        max_fraction_of_max_extent: 0.02,
+    };
+
+    // Disable axis rings so rotate picking deterministically returns the view ring hit.
+    gizmo.config.rotate_ring_fade_dot = (1.10, 1.20);
+    gizmo.config.universal_includes_rotate_view_ring = true;
+    gizmo.config.universal_includes_arcball = false;
+
+    let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+    let view_proj = test_view_projection_fov((800.0, 600.0), 60.0, Vec3::new(0.0, 0.0, 5.0));
+    let origin = Vec3::ZERO;
+    let axes = gizmo.axis_dirs(&Transform3d::default());
+
+    // Tiny selection bounds force the size policy to clamp down hard.
+    let targets = [GizmoTarget3d {
+        id: GizmoTargetId(1),
+        transform: Transform3d::default(),
+        local_bounds: Some(Aabb3 {
+            min: Vec3::splat(-0.5),
+            max: Vec3::splat(0.5),
+        }),
+    }];
+
+    // Force the view ring to pass through the translate arrow tip position so picking overlaps.
+    let mut pv = gizmo.part_visuals();
+    pv.rotate_view_ring_radius_scale = Gizmo::UNIVERSAL_TRANSLATE_TIP_SCALE;
+    gizmo.set_part_visuals(pv);
+
+    let length_world = gizmo.size_length_world_or_one(view_proj, vp, origin, &targets);
+    assert!(length_world.is_finite() && length_world > 0.0);
+
+    let tip_world = origin + axes[0] * (length_world * Gizmo::UNIVERSAL_TRANSLATE_TIP_SCALE);
+    let tip = project_point(view_proj, vp, tip_world, gizmo.config.depth_range).unwrap();
+
+    assert_eq!(
+        gizmo
+            .pick_rotate_axis(view_proj, vp, origin, tip.screen, axes, length_world)
+            .unwrap()
+            .handle,
+        RotateHandle::View.id(),
+        "expected view ring to overlap the translate arrow tip under clamped size policy"
+    );
+
+    let translate = gizmo
+        .pick_translate_handle(
+            view_proj,
+            vp,
+            origin,
+            tip.screen,
+            axes,
+            length_world,
+            true,
+            true,
+            true,
+            false,
+        )
+        .expect("expected some translate handle at this cursor position");
+
+    let (hit, kind) = gizmo
+        .pick_universal_handle(view_proj, vp, origin, tip.screen, axes, length_world)
+        .unwrap();
+    assert_eq!(kind, GizmoMode::Translate);
+    assert_eq!(hit.handle, translate.handle);
+}
+
+#[test]
+fn universal_arcball_overlap_is_stable_with_selection_bounds_size_policy() {
+    let mut gizmo = base_gizmo(GizmoMode::Universal);
+    gizmo.config.size_policy = GizmoSizePolicy::SelectionBounds {
+        fraction_of_max_extent: 0.25,
+    };
+    gizmo.config.universal_includes_arcball = true;
+    gizmo.config.universal_includes_rotate_view_ring = false;
+
+    // Hide axis rings so rotate picking can fall through to arcball, even when the size is
+    // derived from bounds instead of pixels.
+    gizmo.config.rotate_ring_fade_dot = (1.10, 1.20);
+
+    let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+    let view_proj = test_view_projection_fov((800.0, 600.0), 60.0, Vec3::new(0.0, 0.0, 5.0));
+    let origin = Vec3::ZERO;
+    let axes = gizmo.axis_dirs(&Transform3d::default());
+
+    let targets = [GizmoTarget3d {
+        id: GizmoTargetId(1),
+        transform: Transform3d::default(),
+        local_bounds: Some(Aabb3 {
+            min: Vec3::splat(-2.0),
+            max: Vec3::splat(2.0),
+        }),
+    }];
+
+    let length_world = gizmo.size_length_world_or_one(view_proj, vp, origin, &targets);
+    assert!(length_world.is_finite() && length_world > 0.0);
+
+    let center = project_point(view_proj, vp, origin, gizmo.config.depth_range)
+        .unwrap()
+        .screen;
+
+    assert_eq!(
+        gizmo
+            .pick_rotate_axis(view_proj, vp, origin, center, axes, length_world)
+            .unwrap()
+            .handle,
+        RotateHandle::Arcball.id(),
+        "expected arcball to be pickable at the origin when axis rings and view ring are disabled"
+    );
+
+    let (hit, kind) = gizmo
+        .pick_universal_handle(view_proj, vp, origin, center, axes, length_world)
+        .unwrap();
+    assert_eq!(kind, GizmoMode::Translate);
+    assert_eq!(hit.handle, TranslateHandle::Screen.id());
+}
+
+#[test]
+fn universal_can_pick_translate_plane_xy_inside() {
+    let gizmo = base_gizmo(GizmoMode::Universal);
+
+    let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+    let view_proj = test_view_projection((800.0, 600.0));
+    let origin = Vec3::ZERO;
+    let axes = gizmo.axis_dirs(&Transform3d::default());
+
+    let length_world = axis_length_world(
+        view_proj,
+        vp,
+        origin,
+        gizmo.config.depth_range,
+        gizmo.config.size_px,
+    )
+    .unwrap();
+
+    let pv = gizmo.part_visuals();
+    let off = length_world * pv.translate_plane_offset_fraction.max(0.0);
+    let size = length_world * pv.translate_plane_size_fraction.max(0.0);
+    let quad_world = translate_plane_quad_world(origin, axes[0], axes[1], off, size);
+    let quad = project_quad(view_proj, vp, quad_world, gizmo.config.depth_range).unwrap();
+
+    // Pick at the center of the plane quad.
+    let center = (quad[0] + quad[2]) * 0.5;
+
+    let (hit, kind) = gizmo
+        .pick_universal_handle(view_proj, vp, origin, center, axes, length_world)
+        .unwrap();
+    assert_eq!(kind, GizmoMode::Translate);
+    assert_eq!(hit.handle, TranslateHandle::PlaneXY.id());
+}
+
+#[test]
 fn universal_is_not_pickable_when_origin_is_behind_camera() {
     let gizmo = base_gizmo(GizmoMode::Universal);
     let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
@@ -3385,6 +3927,41 @@ fn universal_is_not_pickable_when_origin_is_behind_camera() {
             .pick_universal_handle(view_proj, vp, origin, cursor, axes, 1.0)
             .is_none()
     );
+}
+
+#[test]
+fn universal_effective_ops_respects_universal_rotate_toggles() {
+    let mut gizmo = base_gizmo(GizmoMode::Universal);
+    gizmo.config.operation_mask = None;
+
+    // Default: include rotate view ring, exclude arcball.
+    let ops = gizmo.effective_ops();
+    assert!(ops.contains(GizmoOps::rotate_view()));
+    assert!(!ops.contains(GizmoOps::rotate_arcball()));
+
+    gizmo.config.universal_includes_rotate_view_ring = false;
+    gizmo.config.universal_includes_arcball = true;
+    let ops = gizmo.effective_ops();
+    assert!(!ops.contains(GizmoOps::rotate_view()));
+    assert!(ops.contains(GizmoOps::rotate_arcball()));
+}
+
+#[test]
+fn rotate_effective_ops_ignores_universal_rotate_toggles() {
+    let mut gizmo = base_gizmo(GizmoMode::Rotate);
+    gizmo.config.operation_mask = None;
+
+    // Rotate mode uses the rotate-specific toggles.
+    gizmo.config.show_view_axis_ring = false;
+    gizmo.config.show_arcball = false;
+
+    // Flip the universal toggles; rotate mode should ignore them.
+    gizmo.config.universal_includes_rotate_view_ring = true;
+    gizmo.config.universal_includes_arcball = true;
+
+    let ops = gizmo.effective_ops();
+    assert!(!ops.contains(GizmoOps::rotate_view()));
+    assert!(!ops.contains(GizmoOps::rotate_arcball()));
 }
 
 #[test]

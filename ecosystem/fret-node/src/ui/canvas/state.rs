@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -251,6 +252,9 @@ pub(crate) struct NodeDrag {
     pub(crate) primary: GraphNodeId,
     pub(crate) node_ids: Vec<GraphNodeId>,
     pub(crate) nodes: Vec<(GraphNodeId, CanvasPoint)>,
+    pub(crate) current_nodes: Vec<(GraphNodeId, CanvasPoint)>,
+    pub(crate) current_groups: Vec<(GroupId, crate::core::CanvasRect)>,
+    pub(crate) preview_rev: u64,
     pub(crate) grab_offset: Point,
     pub(crate) start_pos: Point,
 }
@@ -268,6 +272,9 @@ pub(crate) struct GroupDrag {
     pub(crate) start_pos: Point,
     pub(crate) start_rect: crate::core::CanvasRect,
     pub(crate) nodes: Vec<(GraphNodeId, CanvasPoint)>,
+    pub(crate) current_rect: crate::core::CanvasRect,
+    pub(crate) current_nodes: Vec<(GraphNodeId, CanvasPoint)>,
+    pub(crate) preview_rev: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -282,6 +289,8 @@ pub(crate) struct GroupResize {
     pub(crate) group: crate::core::GroupId,
     pub(crate) start_pos: Point,
     pub(crate) start_rect: crate::core::CanvasRect,
+    pub(crate) current_rect: crate::core::CanvasRect,
+    pub(crate) preview_rev: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -302,6 +311,10 @@ pub(crate) struct NodeResize {
     pub(crate) start_node_pos: CanvasPoint,
     pub(crate) start_size: crate::core::CanvasSize,
     pub(crate) start_size_opt: Option<crate::core::CanvasSize>,
+    pub(crate) current_node_pos: CanvasPoint,
+    pub(crate) current_size_opt: Option<crate::core::CanvasSize>,
+    pub(crate) current_groups: Vec<(GroupId, crate::core::CanvasRect)>,
+    pub(crate) preview_rev: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -475,6 +488,26 @@ pub(crate) struct GeometryCache {
     pub(crate) key: Option<GeometryCacheKey>,
     pub(crate) geom: Arc<super::geometry::CanvasGeometry>,
     pub(crate) index: Arc<super::spatial::CanvasSpatialIndex>,
+    pub(crate) drag_preview: Option<DragPreviewCache>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DragPreviewKind {
+    NodeDrag,
+    GroupDrag,
+    NodeResize,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct DragPreviewCache {
+    pub(crate) kind: DragPreviewKind,
+    pub(crate) base_key: GeometryCacheKey,
+    pub(crate) preview_rev: u64,
+    pub(crate) geom: Arc<super::geometry::CanvasGeometry>,
+    pub(crate) index: Arc<super::spatial::CanvasSpatialIndex>,
+    pub(crate) node_positions: HashMap<GraphNodeId, CanvasPoint>,
+    pub(crate) node_rects: HashMap<GraphNodeId, Rect>,
+    pub(crate) node_ports: HashMap<GraphNodeId, Vec<PortId>>,
 }
 
 #[derive(Debug, Clone)]

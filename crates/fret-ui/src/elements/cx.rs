@@ -1040,6 +1040,20 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn key_prepend_on_key_down_for(&mut self, element: GlobalElementId, handler: OnKeyDown) {
+        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+            hooks.on_key_down = match hooks.on_key_down.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, down| {
+                        next(host, cx, down) || prev(host, cx, down)
+                    }))
+                }
+            };
+        });
+    }
+
     pub fn key_clear_on_key_down_for(&mut self, element: GlobalElementId) {
         self.with_state_for(element, KeyActionHooks::default, |hooks| {
             hooks.on_key_down = None;
@@ -1198,6 +1212,32 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn roving_on_key_down(&mut self, handler: OnKeyDown) {
+        self.with_state(RovingActionHooks::default, |hooks| {
+            hooks.on_key_down = Some(handler);
+        });
+    }
+
+    pub fn roving_add_on_key_down(&mut self, handler: OnKeyDown) {
+        self.with_state(RovingActionHooks::default, |hooks| {
+            hooks.on_key_down = match hooks.on_key_down.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, down| {
+                        prev(host, cx, down) || next(host, cx, down)
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn roving_clear_on_key_down(&mut self) {
+        self.with_state(RovingActionHooks::default, |hooks| {
+            hooks.on_key_down = None;
+        });
+    }
+
     /// Register a component-owned roving navigation handler for the current roving element.
     ///
     /// This is invoked for key down events that bubble through the roving container so component
@@ -1300,7 +1340,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn styled_text(&mut self, rich: fret_core::RichText) -> AnyElement {
+    pub fn styled_text(&mut self, rich: fret_core::AttributedText) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
             AnyElement::new(
@@ -1320,7 +1360,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn selectable_text(&mut self, rich: fret_core::RichText) -> AnyElement {
+    pub fn selectable_text(&mut self, rich: fret_core::AttributedText) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
             AnyElement::new(

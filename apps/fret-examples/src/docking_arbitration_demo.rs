@@ -106,7 +106,7 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
 
                 let drag_state = cx
                     .app
-                    .drag()
+                    .drag(fret_core::PointerId(0))
                     .map(|d| format!("drag(kind={:?}, dragging={})", d.kind, d.dragging))
                     .unwrap_or_else(|| "drag(<none>)".to_string());
 

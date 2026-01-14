@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use fret_core::{InternalDragEvent, InternalDragKind, MouseButtons, Point, Px, Rect};
-use fret_runtime::DragKind;
+use fret_core::{InternalDragEvent, InternalDragKind, MouseButtons, Point, PointerId, Px, Rect};
+use fret_runtime::DragKindId;
 use fret_ui::UiHost;
 
 use crate::REROUTE_KIND;
@@ -19,6 +19,8 @@ use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 pub(super) struct InsertNodeDragPayload {
     pub(super) candidate: InsertNodeCandidate,
 }
+
+pub(super) const DRAG_KIND_INSERT_NODE: DragKindId = DragKindId(0x4E4F44455F494E53);
 
 fn canvas_to_window(bounds: Rect, pos: Point, pan: crate::core::CanvasPoint, zoom: f32) -> Point {
     let z = if zoom.is_finite() && zoom > 0.0 {
@@ -68,14 +70,15 @@ pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M: NodeGraphCanvas
     let start_window = canvas_to_window(cx.bounds, pending.start_pos, snapshot.pan, zoom);
 
     cx.app.begin_cross_window_drag_with_kind(
-        DragKind::Custom,
+        PointerId(0),
+        DRAG_KIND_INSERT_NODE,
         window,
         start_window,
         InsertNodeDragPayload {
             candidate: pending.candidate.clone(),
         },
     );
-    if let Some(drag) = cx.app.drag_mut()
+    if let Some(drag) = cx.app.drag_mut(PointerId(0))
         && drag.payload::<InsertNodeDragPayload>().is_some()
     {
         drag.dragging = true;
@@ -96,9 +99,10 @@ pub(super) fn handle_internal_drag_event<H: UiHost, M: NodeGraphCanvasMiddleware
     event: &InternalDragEvent,
     zoom: f32,
 ) -> bool {
+    let pointer_id = event.pointer_id;
     let payload = cx
         .app
-        .drag()
+        .drag(pointer_id)
         .and_then(|d| d.payload::<InsertNodeDragPayload>())
         .cloned();
     let Some(payload) = payload else {

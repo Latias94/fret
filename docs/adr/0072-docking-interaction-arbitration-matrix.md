@@ -6,6 +6,13 @@ title: "ADR 0072: Docking Interaction Arbitration Matrix (Docking vs Overlays vs
 
 Status: Accepted
 
+## Update: Multi-pointer and pointer identity (2026-01)
+
+This ADR was originally authored with a “single pointer” mental model. Fret’s input contracts are evolving to
+support multi-pointer interaction via explicit `PointerId` (ADR 0165) and pointer-keyed drag sessions (ADR 0166).
+
+This section locks the arbitration rules in the presence of multiple concurrent pointers.
+
 ## Implementation Status (as of 2025-12-29)
 
 This ADR is implemented for the non-modal overlay stack and docking drags:
@@ -76,6 +83,44 @@ Notes:
   down. The initial hit target decides which interaction claims the session.
 - Pointer-transparent overlays must not block docking or viewport interaction.
 
+### 2.1) Multi-pointer arbitration (pointer-keyed routing + window-global locks)
+
+This section applies when multiple pointers (mouse/touch/pen contacts) are active concurrently.
+
+Definitions:
+
+- **Pointer identity**: Each pointer stream has a stable `PointerId` for the duration of the contact (ADR 0165).
+- **Per-pointer capture**: capture is stored per `PointerId` (ADR 0165).
+- **Per-pointer session ownership**: for a given `PointerId`, at most one subsystem owns the “active session”
+  (docking drag, viewport capture, or normal hit-tested interaction).
+
+Rules:
+
+1) **Arbitration is evaluated per `PointerId`**:
+   - Pointer events for a given `PointerId` route according to the order in §2, but interpreting “capture”, “dock
+     drag session”, and “viewport tool capture” as *per-pointer* states.
+   - A pointer cannot be simultaneously captured by two subsystems; capture ownership follows the winning session.
+
+2) **Modal barriers are window-global**:
+   - If a modal barrier is visible (`blocks_underlay_input = true`), it constrains routing for **all pointers**
+     in the window (not just the pointer that opened the modal).
+
+3) **Docking drag is window-exclusive (P0)**:
+   - While any docking drag session is active in a window, a second docking drag session must not start in that
+     same window, even from a different `PointerId`.
+   - While docking drag is active, starting competing viewport capture sessions in the same window is disallowed
+     (to prevent split ownership and inconsistent overlay/focus outcomes).
+
+4) **Viewport capture may be per-pointer**:
+   - Viewport capture is allowed to be active for one pointer while another pointer performs normal hit-tested
+     interaction, as long as no window-exclusive lock (modal barrier, docking drag) blocks it.
+
+5) **Overlay suppression scope**:
+   - Starting a docking drag closes/suspends non-modal dismissable overlays for the **entire window** (all pointers),
+     consistent with §3 (“Dock drag start policy”).
+   - Viewport capture may suppress incidental hover-driven overlays for the owning pointer only (editor policy),
+     but must not forcibly close unrelated overlays unless explicitly desired by the app policy.
+
 ### 3) Dock drag start policy (interaction hygiene)
 
 When a dock drag session starts:
@@ -140,3 +185,5 @@ Implementation note (current):
 - `docs/adr/0013-docking-ops-and-persistence.md`
 - `docs/adr/0025-viewport-input-forwarding.md`
 - `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
+- `docs/adr/0165-pointer-identity-and-multi-pointer-capture.md`
+- `docs/adr/0166-multi-pointer-drag-sessions-and-routing-keys.md`

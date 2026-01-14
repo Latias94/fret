@@ -1697,7 +1697,13 @@ impl MarksStage {
                 return false;
             }
 
-            if filter_mode == crate::spec::FilterMode::Empty {
+            if matches!(
+                series.kind,
+                crate::spec::SeriesKind::Line
+                    | crate::spec::SeriesKind::Area
+                    | crate::spec::SeriesKind::Band
+            ) {
+                let break_on_out_of_window = filter_mode == crate::spec::FilterMode::Empty;
                 if self.segmented_series != Some(series.id) {
                     self.segmented_series = Some(series.id);
                     self.segmented_cursor =
@@ -1706,18 +1712,13 @@ impl MarksStage {
                     scratch.reset_buckets();
                 }
 
-                let row_range = selection.as_range(table.row_count);
-                let mut row_end = row_range.end.min(x.len()).min(y0.len());
-                if let Some(y1) = y1 {
-                    row_end = row_end.min(y1.len());
-                }
-                let row_range = row_range.start.min(row_end)..row_end;
+                let end_limit = selection.view_len(x.len());
 
                 let stroke = Some((crate::ids::PaintId(0), StrokeStyleV2::default()));
                 let base_order = self.series_index as u32;
 
                 loop {
-                    if self.segmented_cursor.next_index >= row_range.end {
+                    if self.segmented_cursor.next_index >= end_limit {
                         break;
                     }
 
@@ -1736,15 +1737,14 @@ impl MarksStage {
                             x,
                             &bounds,
                             viewport,
-                            row_range.clone(),
+                            &selection,
                             points_budget,
                             &mut marks.arena.points,
                             &mut marks.arena.data_indices,
                             |i| y0.get(i).copied().unwrap_or(f64::NAN),
                             |i, xi, _yi| {
-                                view_x_filter.contains(xi)
-                                    && y0.get(i).copied().unwrap_or(f64::NAN).is_finite()
-                                    && y1.get(i).copied().unwrap_or(f64::NAN).is_finite()
+                                (break_on_out_of_window && !view_x_filter.contains(xi))
+                                    || !y1.get(i).copied().unwrap_or(f64::NAN).is_finite()
                             },
                         )
                     } else if series.kind == crate::spec::SeriesKind::Area && series.stack.is_some()
@@ -1758,14 +1758,14 @@ impl MarksStage {
                             x,
                             &bounds,
                             viewport,
-                            row_range.clone(),
+                            &selection,
                             points_budget,
                             &mut marks.arena.points,
                             &mut marks.arena.data_indices,
                             |i| arrays.stacked.get(i).copied().unwrap_or(f64::NAN),
                             |i, xi, _yi| {
-                                view_x_filter.contains(xi)
-                                    && arrays.base.get(i).copied().unwrap_or(f64::NAN).is_finite()
+                                (break_on_out_of_window && !view_x_filter.contains(xi))
+                                    || !arrays.base.get(i).copied().unwrap_or(f64::NAN).is_finite()
                             },
                         )
                     } else if let Some(arrays) = stack_arrays.as_ref() {
@@ -1775,12 +1775,12 @@ impl MarksStage {
                             x,
                             &bounds,
                             viewport,
-                            row_range.clone(),
+                            &selection,
                             points_budget,
                             &mut marks.arena.points,
                             &mut marks.arena.data_indices,
                             |i| arrays.stacked.get(i).copied().unwrap_or(f64::NAN),
-                            |_, xi, _yi| view_x_filter.contains(xi),
+                            |_, xi, _yi| break_on_out_of_window && !view_x_filter.contains(xi),
                         )
                     } else {
                         minmax_per_pixel_step_segmented_with(
@@ -1789,12 +1789,12 @@ impl MarksStage {
                             x,
                             &bounds,
                             viewport,
-                            row_range.clone(),
+                            &selection,
                             points_budget,
                             &mut marks.arena.points,
                             &mut marks.arena.data_indices,
                             |i| y0.get(i).copied().unwrap_or(f64::NAN),
-                            |_, xi, _yi| view_x_filter.contains(xi),
+                            |_, xi, _yi| break_on_out_of_window && !view_x_filter.contains(xi),
                         )
                     };
 

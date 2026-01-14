@@ -115,6 +115,7 @@ fn size_canvas_to_px(size_canvas: (f32, f32), zoom: f32) -> CanvasSize {
 
 fn apply_resize_handle(
     handle: NodeResizeHandle,
+    keep_aspect_ratio: bool,
     start_node_pos: crate::core::CanvasPoint,
     start_size_px: CanvasSize,
     start_pointer: Point,
@@ -180,6 +181,34 @@ fn apply_resize_handle(
         }
         if handle.affects_bottom() {
             bottom = snap(bottom, gy);
+        }
+    }
+
+    let keep_aspect_ratio = keep_aspect_ratio
+        && (handle.affects_left() || handle.affects_right())
+        && (handle.affects_top() || handle.affects_bottom());
+    if keep_aspect_ratio && start_h_canvas.is_finite() && start_h_canvas > 1.0e-6 {
+        let aspect_ratio = start_w_canvas / start_h_canvas;
+        if aspect_ratio.is_finite() && aspect_ratio > 1.0e-6 {
+            let mut w = (right - left).max(0.0);
+            let mut h = (bottom - top).max(0.0);
+
+            let width_drives = dx.abs() >= dy.abs();
+            if width_drives {
+                h = (w / aspect_ratio).max(0.0);
+                if handle.affects_top() && !handle.affects_bottom() {
+                    top = bottom - h;
+                } else {
+                    bottom = top + h;
+                }
+            } else {
+                w = (h * aspect_ratio).max(0.0);
+                if handle.affects_left() && !handle.affects_right() {
+                    left = right - w;
+                } else {
+                    right = left + w;
+                }
+            }
         }
     }
 
@@ -279,10 +308,10 @@ pub(super) fn handle_node_resize_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,
-    _modifiers: Modifiers,
+    modifiers: Modifiers,
     zoom: f32,
 ) -> bool {
-    let Some(resize) = canvas.interaction.node_resize.clone() else {
+    let Some(mut resize) = canvas.interaction.node_resize.clone() else {
         return false;
     };
 
@@ -350,6 +379,7 @@ pub(super) fn handle_node_resize_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
     let (new_pos, new_size_px) = apply_resize_handle(
         resize.handle,
+        modifiers.shift,
         resize.start_node_pos,
         resize.start_size,
         resize.start_pos,
@@ -364,18 +394,23 @@ pub(super) fn handle_node_resize_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
             .then_some(snapshot.interaction.snap_grid),
     );
 
-    let _ = canvas.graph.update(cx.app, |g, _cx| {
-        let Some(node) = g.nodes.get_mut(&resize.node) else {
-            return;
-        };
-        node.pos = new_pos;
-        node.size = Some(new_size_px);
-
-        let expand_parent = node.expand_parent.unwrap_or(false);
-        if expand_parent
-            && let Some(parent) = node.parent
-            && let Some(group) = g.groups.get_mut(&parent)
-        {
+    let current_size_opt = Some(new_size_px);
+    let current_groups: Vec<(crate::core::GroupId, CanvasRect)> = canvas
+        .graph
+        .read_ref(cx.app, |g| {
+            let Some(node) = g.nodes.get(&resize.node) else {
+                return Vec::new();
+            };
+            let expand_parent = node.expand_parent.unwrap_or(false);
+            let Some(parent) = node.parent else {
+                return Vec::new();
+            };
+            if !expand_parent {
+                return Vec::new();
+            }
+            let Some(group) = g.groups.get(&parent) else {
+                return Vec::new();
+            };
             let z = zoom.max(1.0e-6);
             let child_rect = CanvasRect {
                 origin: new_pos,
@@ -384,12 +419,22 @@ pub(super) fn handle_node_resize_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
                     height: (new_size_px.height / z).max(0.0),
                 },
             };
-            group.rect = canvas_rect_union(group.rect, child_rect);
-        }
-    });
+            vec![(parent, canvas_rect_union(group.rect, child_rect))]
+        })
+        .ok()
+        .unwrap_or_default();
 
-    // Invalidate derived geometry caches that depend on node bounds.
-    canvas.geometry.key = None;
+    if resize.current_node_pos != new_pos
+        || resize.current_size_opt != current_size_opt
+        || resize.current_groups != current_groups
+    {
+        resize.current_node_pos = new_pos;
+        resize.current_size_opt = current_size_opt;
+        resize.current_groups = current_groups;
+        resize.preview_rev = resize.preview_rev.wrapping_add(1);
+    }
+    canvas.interaction.node_resize = Some(resize);
+
     cx.request_redraw();
     cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
     true
@@ -418,6 +463,7 @@ mod tests {
 
         let (pos, size) = apply_resize_handle(
             NodeResizeHandle::Right,
+            false,
             start_pos,
             start_size_px,
             start_pointer,
@@ -450,6 +496,7 @@ mod tests {
 
         let (pos, size) = apply_resize_handle(
             NodeResizeHandle::Left,
+            false,
             start_pos,
             start_size_px,
             start_pointer,
@@ -490,6 +537,7 @@ mod tests {
 
         let (_pos, size) = apply_resize_handle(
             NodeResizeHandle::Right,
+            false,
             start_pos,
             start_size_px,
             start_pointer,
@@ -524,6 +572,7 @@ mod tests {
 
         let (_pos, size) = apply_resize_handle(
             NodeResizeHandle::Right,
+            false,
             start_pos,
             start_size_px,
             start_pointer,
@@ -558,6 +607,7 @@ mod tests {
 
         let (_pos, size) = apply_resize_handle(
             NodeResizeHandle::BottomRight,
+            false,
             start_pos,
             start_size_px,
             start_pointer,
@@ -570,5 +620,38 @@ mod tests {
         );
         assert_eq!(size.width, 120.0);
         assert_eq!(size.height, 80.0);
+    }
+
+    #[test]
+    fn resize_keeps_aspect_ratio_for_corner_handles() {
+        let start_pos = CanvasPoint { x: 10.0, y: 20.0 };
+        let start_size_px = CanvasSize {
+            width: 100.0,
+            height: 50.0,
+        };
+        let start_pointer = Point::new(Px(0.0), Px(0.0));
+        let pointer = Point::new(Px(20.0), Px(10.0)); // dx dominates -> width drives.
+        let zoom = 1.0;
+        let min = CanvasSize {
+            width: 1.0,
+            height: 1.0,
+        };
+
+        let (pos, size) = apply_resize_handle(
+            NodeResizeHandle::BottomRight,
+            true,
+            start_pos,
+            start_size_px,
+            start_pointer,
+            pointer,
+            zoom,
+            min,
+            None,
+            None,
+            None,
+        );
+        assert_eq!(pos, start_pos);
+        assert_eq!(size.width, 120.0);
+        assert_eq!(size.height, 60.0);
     }
 }

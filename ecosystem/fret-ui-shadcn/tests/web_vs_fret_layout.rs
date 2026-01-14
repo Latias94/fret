@@ -233,8 +233,7 @@ struct FakeServices;
 impl fret_core::TextService for FakeServices {
     fn prepare(
         &mut self,
-        _text: &str,
-        _style: &fret_core::TextStyle,
+        _input: &fret_core::TextInput,
         _constraints: fret_core::TextConstraints,
     ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
         (
@@ -281,10 +280,23 @@ struct StyleAwareServices;
 impl fret_core::TextService for StyleAwareServices {
     fn prepare(
         &mut self,
-        text: &str,
-        style: &fret_core::TextStyle,
+        input: &fret_core::TextInput,
         constraints: fret_core::TextConstraints,
     ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+        let (text, style) = match input {
+            fret_core::TextInput::Plain { text, style } => (text.as_ref(), style),
+            fret_core::TextInput::Attributed { text, base, .. } => (text.as_ref(), base),
+            _ => {
+                debug_assert!(false, "unsupported TextInput variant");
+                return (
+                    fret_core::TextBlobId::default(),
+                    fret_core::TextMetrics {
+                        size: CoreSize::new(Px(0.0), Px(0.0)),
+                        baseline: Px(0.0),
+                    },
+                );
+            }
+        };
         let line_height = style
             .line_height
             .unwrap_or(Px((style.size.0 * 1.4).max(0.0)));
@@ -958,9 +970,13 @@ fn web_vs_fret_layout_slider_demo_geometry() {
         )]
     });
 
-    let slider = find_semantics(&snap, SemanticsRole::Slider, Some("Slider"))
+    let thumb = find_semantics(&snap, SemanticsRole::Slider, Some("Slider"))
         .or_else(|| find_semantics(&snap, SemanticsRole::Slider, None))
-        .expect("fret slider semantics");
+        .expect("fret slider thumb semantics");
+    let slider = thumb
+        .parent
+        .and_then(|parent| snap.nodes.iter().find(|n| n.id == parent))
+        .unwrap_or(thumb);
 
     assert_close_px(
         "slider layout width",

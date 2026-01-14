@@ -16,7 +16,7 @@ Related constraints and boundaries:
 
 - Hybrid layout boundary + explicit barriers: `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`
 - Declarative Flex semantics and defaults: `docs/adr/0057-declarative-layout-style-and-flex-semantics.md`
-- Container-owned persistent Taffy trees (current perf hardening): `docs/adr/0076-declarative-layout-performance-hardening.md`
+- Container-owned persistent Taffy trees (historical; superseded by the window-scoped engine): `docs/adr/0076-declarative-layout-performance-hardening.md`
 - Virtualization boundary: `docs/adr/0042-virtualization-and-large-lists.md`
 - Viewport surfaces (RenderTargetId): `docs/adr/0007-viewport-surfaces.md`
 
@@ -50,7 +50,7 @@ GPUI reference (implementation, not contract):
 ## Current Progress Snapshot
 
 - P1: `AvailableSpace` + non-reentrant `measure_in`. (**Done**; merged.)
-- P2: window-scoped engine skeleton behind `fret-ui/layout-engine-v2`. (**In progress**; iterating in `wt-layout-engine2`.)
+- P2: window-scoped engine skeleton (layout engine v2; enabled by default in-repo). (**In progress**; iterating in `wt-layout-engine2`.)
 - P3: multi-viewport roots + engine-backed flow migration. (**In progress**; viewport-root plumbing + conformance tests landed; Flex/Grid v2 root solves are centralized and redundant precompute is guarded when subtrees are already engine-backed; viewport-root coverage now locks wrapper + region nodes (Pressable/Semantics/FocusScope/Opacity/VisualTransform/InteractivityGate/PointerRegion/WheelRegion), including absolute-only children that must still fill the region; host widget v2 "engine fast path" checks are deduped via `try_layout_children_from_engine_or_manual_absolute`.)
 
 Update this section by editing this file (avoid scattering progress notes across ADRs).
@@ -74,12 +74,13 @@ Acceptance:
 
 ## P2: Window-Scoped Layout Engine Skeleton + Two-Phase Protocol (ADR 0116)
 
-Goal: introduce a per-window `TaffyLayoutEngine` without changing behavior by default, and enforce
-the separation between "build/request" and "compute/apply".
+Goal: introduce a per-window `TaffyLayoutEngine` and enforce the separation between "build/request"
+and "compute/apply" (layout engine v2 is enabled by default in-repo; the feature flag remains for
+downstream compatibility).
 
 Deliverables:
 
-- Feature flag: `fret-ui/layout-engine-v2` (default off).
+- Feature flag: `fret-ui/layout-engine-v2` (default on in-repo; retained for compatibility).
 - One engine instance per window, persistent across frames.
 - Stable `NodeId -> LayoutId` mapping and incremental updates (`mark_dirty` on invalidation).
 - APIs:
@@ -93,8 +94,7 @@ Deliverables:
 
 Acceptance:
 
-- With feature off: no behavior change; tests pass.
-- With feature on: empty graphs and small trees solve; tests pass.
+- Tests pass and deep trees remain stacksafe.
 
 ## P3: Multi-Viewport Roots + Flow Migration (End-State Convergence)
 
@@ -114,7 +114,7 @@ Acceptance:
 
 - Conformance test: no cross-viewport coupling for percent/flex distribution.
 - Docking demos behave consistently across DPI scales (bounds stable within rounding policy).
-- Dogfood demo (manual): `cargo run -p fret-demo --features layout-engine-v2 --bin todo_demo` matches the shadcn-style composition (Card + Input + Tabs + ScrollArea + hover-only actions) without re-entrant layout or stack growth.
+- Dogfood demo (manual): `cargo run -p fret-demo --bin todo_demo` matches the shadcn-style composition (Card + Input + Tabs + ScrollArea + hover-only actions) without re-entrant layout or stack growth.
 
 ## Open Decisions (Track Here)
 
@@ -141,10 +141,16 @@ Acceptance:
 To keep solve counts stable and avoid accidental re-introduction of re-entrant layout patterns, v2
 code should follow these rules:
 
-1. Treat barrier precompute as an escape hatch: do not call it from normal wrappers/flow containers.
-   Only explicit barriers (e.g. Scroll/VirtualList/ResizableSplit) may call
-   `precompute_barrier_flow_root_island_if_needed(...)`. The `_if_needed` helper skips work when the
-   subtree is clean, and avoids engine solves for translation-only changes (size stable, origin shifts).
+1. Treat barrier solves as an escape hatch: do not call them from normal wrappers/flow containers.
+   Only explicit barriers may call `LayoutCx::solve_barrier_child_root_if_needed(...)`.
+   Direct calls into `UiTree::solve_barrier_flow_root(_if_needed)` are considered internal-only
+   plumbing (useful for tests), and should not be used by general-purpose wrappers/flow containers.
+
+   Allowed call sites:
+   - Scroll / VirtualList: `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`
+   - ResizableSplit: `crates/fret-ui/src/resizable_split/widget.rs`
+   The `_if_needed` helper skips work when the subtree is clean, and avoids engine solves for translation-only changes
+   (size stable, origin shifts).
 2. Keep solve stats per-call and use them to detect regressions.
 3. Translation-only bounds shifts must still keep existing engine nodes "alive" for stable identity
    and incremental updates (do not let `end_frame` prune large subtrees during scrolling/panning).
@@ -153,4 +159,4 @@ Regression tests that lock these behaviors:
 
 - Scroll translation does not trigger engine solves: `declarative::tests::layout::scroll_translation_does_not_force_layout_engine_solves`.
 - Viewport root flush only lays out invalidated roots: `declarative::tests::layout::viewport_root_flush_only_lays_out_invalidated_roots`.
-- Translation-only precompute gating: `declarative::tests::layout::precompute_flow_root_island_if_needed_skips_translation_only_bounds_changes`.
+- Translation-only precompute gating: `declarative::tests::layout::solve_barrier_flow_root_if_needed_skips_translation_only_bounds_changes`.

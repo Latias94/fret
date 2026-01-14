@@ -61,6 +61,11 @@ pub struct PopperContentPlacement {
     pub align_offset: Px,
     pub arrow: Option<ArrowOptions>,
     pub arrow_protrusion: Px,
+    /// Whether to enable cross-axis shifting while resolving collisions.
+    ///
+    /// Radix typically uses Floating UI's `shift({ crossAxis: false })` by default, but some
+    /// primitives opt into cross-axis shifting for better clamping behavior.
+    pub shift_cross_axis: bool,
     pub collision_padding: Edges,
     pub collision_boundary: Option<Rect>,
     pub hide_when_detached: bool,
@@ -77,6 +82,7 @@ impl PopperContentPlacement {
             align_offset: Px(0.0),
             arrow: None,
             arrow_protrusion: Px(0.0),
+            shift_cross_axis: false,
             collision_padding: Edges::all(Px(0.0)),
             collision_boundary: None,
             hide_when_detached: false,
@@ -92,6 +98,11 @@ impl PopperContentPlacement {
     pub fn with_arrow(mut self, arrow: Option<ArrowOptions>, arrow_protrusion: Px) -> Self {
         self.arrow = arrow;
         self.arrow_protrusion = arrow_protrusion;
+        self
+    }
+
+    pub fn with_shift_cross_axis(mut self, cross_axis: bool) -> Self {
+        self.shift_cross_axis = cross_axis;
         self
     }
 
@@ -141,6 +152,7 @@ impl PopperContentPlacement {
             self.align_offset,
             self.arrow,
         );
+        options.shift.cross_axis = self.shift_cross_axis;
         options.collision = CollisionOptions {
             padding: self.collision_padding,
             boundary: self.collision_boundary,

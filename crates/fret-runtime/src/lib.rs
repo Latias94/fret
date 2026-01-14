@@ -28,7 +28,7 @@ pub use docking_settings::{
     DockDragInversionModifier, DockDragInversionPolicy, DockDragInversionSettings,
     DockingInteractionSettings,
 };
-pub use drag::{DragKind, DragSession};
+pub use drag::{DRAG_KIND_DOCK_PANEL, DragKindId, DragPhase, DragSession, DragSessionId};
 pub use effect::{CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
 pub use font_bootstrap::{FontCatalogUpdate, FontFamilyDefaultsPolicy, apply_font_catalog_update};
 pub use font_catalog::{FontCatalog, TextFontStackKey};

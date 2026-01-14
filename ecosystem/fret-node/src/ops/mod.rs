@@ -5,6 +5,7 @@ mod build;
 mod fragment;
 mod history;
 mod normalize;
+mod tx_sanity;
 
 use serde::{Deserialize, Serialize};
 
@@ -18,6 +19,7 @@ pub use build::GraphOpBuilderExt;
 pub use fragment::{GraphFragment, IdRemapSeed, IdRemapper, PasteTuning};
 pub use history::{DEFAULT_HISTORY_LIMIT, GraphHistory, invert_transaction};
 pub(crate) use normalize::normalize_transaction;
+pub(crate) use tx_sanity::{find_invalid_size_in_tx, find_non_finite_in_tx};
 
 /// Edge endpoint pair (from/to ports).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

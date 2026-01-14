@@ -32,6 +32,10 @@ pub(super) fn handle_pending_node_resize_move<H: UiHost, M: NodeGraphCanvasMiddl
         start_node_pos: pending.start_node_pos,
         start_size: pending.start_size,
         start_size_opt: pending.start_size_opt,
+        current_node_pos: pending.start_node_pos,
+        current_size_opt: pending.start_size_opt,
+        current_groups: Vec::new(),
+        preview_rev: 0,
     });
 
     false

@@ -1,6 +1,6 @@
 # Text System v2 (Parley) — Workstream Roadmap & TODO Tracker
 
-Status: Active (design locked by ADR 0157; implementation in progress on `feat/text-system-v2-parley`)
+Status: Active (design proposed in ADR 0157; implementation TBD)
 
 This document is a living, implementation-focused tracker. It is intentionally non-authoritative;
 the normative contract is `docs/adr/0157-text-system-v2-parley-attributed-spans-and-quality-baseline.md`.
@@ -32,6 +32,10 @@ Exit criteria:
 - `TextService` has a single entry point for `TextInput`.
 - `fret-ui` compiles with the new API (adaptation layer allowed, but no shaping leaks).
 
+Status:
+
+- Not started on `main` (work will continue in a dedicated worktree branch).
+
 ### M1 — Renderer text system v2 (Parley + wrapper + atlas)
 
 Exit criteria:
@@ -57,6 +61,15 @@ Exit criteria:
 - Shader-side gamma/contrast correction is present and tuneable via settings.
 - Add at least one conformance harness/demo snapshot for mixed-script + emoji + IME preedit.
 
+Current:
+
+- Manual emoji conformance harness exists: `apps/fret-examples/src/emoji_conformance_demo.rs`.
+  - Web runner supports `?demo=emoji_conformance_demo` and optional bundled emoji fonts via
+    `apps/fret-demo-web` feature `emoji-fonts`.
+- Automated conformance (unit): emoji sequences (VS16/ZWJ/flags/keycaps) produce
+  `GlyphQuadKind::Color` and populate the `color_atlas` when a bundled color emoji font is available
+  (`cargo nextest run -p fret-render`; `crates/fret-render/src/text.rs`).
+
 ## Acceptance Checklist (what “done” means)
 
 ### Correctness
@@ -65,8 +78,8 @@ Exit criteria:
   - `caret_rect` and `hit_test_point` behave consistently across multiline wraps (affinity rules).
   - `selection_rects` are stable and do not “drift” across span boundaries.
 - Ellipsis:
-  - truncation does not produce out-of-bounds indices.
-  - caret/hit-test around the truncation boundary is representable and deterministic.
+  - Truncation does not produce out-of-bounds indices.
+  - Caret/hit-test around the truncation boundary is representable and deterministic.
 - Span invariants:
   - invalid spans are handled deterministically (debug assert + release clamp strategy).
 
@@ -97,32 +110,65 @@ Legend:
 
 ### A) `fret-core` contract changes
 
-- [ ] Replace `RichText`/`TextRun` with `TextInput`/`TextSpan` (migrate call sites).
-- [ ] Define `TextShapingStyle` vs `TextPaintStyle` types and persistence strategy (settings).
-- [ ] Enforce span invariants:
+- [x] Replace `RichText`/`TextRun` with `TextInput`/`TextSpan` (migrate call sites).
+- [x] Define `TextShapingStyle` vs `TextPaintStyle` types and serialization strategy (settings persistence).
+- [x] Enforce span invariants:
   - sum(len) == text.len()
   - boundaries are UTF-8 char boundaries
-- [ ] Update `TextService` to:
-  - `prepare(TextInput<'_>, TextConstraints) -> (TextBlobId, TextMetrics)`
-  - `measure(TextInput<'_>, TextConstraints) -> TextMetrics`
+- [x] Update `TextService` to:
+  - `prepare(&TextInput, TextConstraints) -> (TextBlobId, TextMetrics)`
+  - `measure(&TextInput, TextConstraints) -> TextMetrics`
+  - keep a borrowed helper `TextInputRef<'_>` for renderer shaping paths.
+  - [x] Update ADR 0006 references if signatures change (keep the boundary semantics stable).
 
 ### B) `fret-render` text system v2 implementation
 
-- [ ] Integrate Parley shaping for a single line/chunk with attributed spans.
-- [ ] Implement wrapper layer:
-  - `wrap=None` + `TextOverflow::Ellipsis` (single-line)
-  - `wrap=Word` (multi-line)
+**B0 — Legacy backend hardening (pre-Parley)**
+- [x] Split shaping vs paint cache keys (geometry reuse across theme-only changes).
+- [x] Keep per-span paint as a palette (no paint baked into glyph quads / shaping outputs).
+
+**B1 — Font + fallback + stable keys**
+- [ ] Define a “font stack key” / revision model that invalidates caches on font DB changes.
+- [ ] Implement family overrides (`TextFontFamilyConfig`) in the new system.
+
+**B2 — Shaper (Parley)**
+- [x] Integrate Parley shaping for a single line/chunk with attributed spans.
 - [ ] Produce glyph/cluster mapping sufficient for:
   - caret stops
   - hit-testing
   - span-aware paint assignment
-- [ ] Replace append-only atlas packing with multi-page free-rect packing (e.g. `etagere`).
-- [ ] Split atlas by texture kind:
+
+**B3 — Wrapper (wrap + truncation)**
+- [x] Implement `wrap=None` using a wrapper layer that drives shaping on slices.
+- [x] Implement `TextOverflow::Ellipsis` per ADR 0059 (single-line, wired for `TextWrap::None` + `Ellipsis`):
+  - stable ellipsis glyph sequence
+  - caret/selection mapping rules at truncation boundary
+- [x] Implement `wrap=Word` using the wrapper layer (multi-line slicing + caret mapping).
+
+**B4 — Raster + atlas**
+- [x] Replace append-only “pen” atlas packing with multi-page free-rect packing (e.g. `etagere`).
+- [x] Split atlas by texture kind:
   - monochrome (coverage)
   - polychrome (emoji / color glyphs)
-- [ ] Implement quality baseline:
-  - `SUBPIXEL_VARIANTS_X = 4`, `Y = 1/4` (platform policy)
-  - shader gamma/contrast correction uniforms (GPUI-aligned)
+  - optional: subpixel (if multi-channel is adopted)
+- [x] Add eviction policy + explicit rebuild knob for debugging.
+
+**B5 — Quality baseline**
+- [ ] Implement `SUBPIXEL_VARIANTS_X = 4`, `Y = 1/4` (platform policy).
+- [ ] Add shader gamma/contrast correction uniforms (GPUI-aligned).
+- [ ] Ensure quality knobs participate in cache keys (layout/raster).
+
+**B6 — Cache boundary refactor (ADR 0158)**
+- [x] Split “layout cache” from “glyph residency cache” (no UVs embedded in `TextShape`).
+- [x] Add a frame-driven `TextSystem::prepare_for_scene(...)` that runs even when scene encoding is cached.
+- [x] Move atlas allocation/uploads out of `prepare(...)` and into the scene-driven ensure step.
+- [x] Define eviction semantics based on “last used frame” and document in-flight safety constraints.
+
+**B7 — Unified glyph key + subpixel policy (ADR 0160)**
+- [x] Introduce renderer-owned `GlyphKey` and remove backend-specific glyph keys.
+- [x] Introduce a stable `FontFaceKey` registry (decouple from Parley fontique IDs; reserve variable font support).
+- [x] Add `GlyphKind::Subpixel` (atlas + shader) and lock `SUBPIXEL_VARIANTS_X/Y` as a platform policy.
+- [x] Converge shaping/layout to Parley-only and remove the legacy shaping backend gate.
 
 ### C) `fret-ui` integration surface
 
@@ -140,11 +186,35 @@ Legend:
 - [ ] Unit tests: span invariant validation and clamping behavior.
 - [ ] Unit tests: ellipsis truncation caret/hit-test mapping.
 - [ ] Unit tests: wrap boundaries across span boundaries.
+- [x] Unit conformance: color emoji glyphs populate `color_atlas` when a bundled color emoji font is present.
 - [ ] Integration demo: mixed-script + emoji + IME preedit smoke (deterministic snapshot).
 
-## Notes
+## Risks / Open Questions
 
-- Zed/GPUI is a useful reference decomposition:
-  - `repo-ref/zed/crates/gpui/src/text_system/line_wrapper.rs`
-  - `repo-ref/zed/crates/gpui/src/text_system/line_layout.rs`
+- Ellipsis glyph choice: keep current `"…"` vs legacy placeholder; ensure fallback is stable across platforms.
+- Parley cluster/index semantics: ensure we can map to UTF-8 byte offsets with correct clamping.
+- Atlas eviction determinism: ensure eviction does not cause flicker without explicit rebuild strategy.
 
+## Progress Log (append-only)
+
+- 2026-01-13: ADR 0157 added (design locked), worktree created.
+- 2026-01-13: ADR 0158 added (layout cache boundary + glyph residency direction).
+- 2026-01-13: M0 contract landed (commit `3bb0fc8`).
+- 2026-01-13: M1 started: add Parley dependency + single-line shaper prototype in `crates/fret-render/src/text_v2/mod.rs`.
+- 2026-01-13: M1.1: split shaping/paint caches in the current text backend (`TextShapeKey` + per-span palette; theme-only changes no longer force reshaping).
+- 2026-01-13: M1.2: add `text_v2` wrapper prototype for `wrap=None + Ellipsis` with cluster-based hit-test mapping (unit tests only; not integrated yet).
+- 2026-01-13: M1.3: wire Parley `wrap=None + Ellipsis` through `TextSystem::prepare_*` (renders via swash into the existing atlases; still missing fractional positioning + font config integration).
+- 2026-01-13: M1.4: align Parley rasterization with cosmic-text subpixel binning + wire `add_fonts` and `set_font_families` into Parley fontique generics (reduces drift across backends).
+- 2026-01-13: M1.5: add Parley word wrap + multiline layout (commit `12e0aa2`), then extend wrapping across newlines (commit `63a00be`).
+- 2026-01-13: M1.6: add multipage glyph atlas budget + plumb atlas page through draws (commit `c29a866`).
+- 2026-01-13: M1.7: evict unreferenced glyph atlas pages (commit `eac5619`).
+- 2026-01-13: M1.8: evict unused glyphs from the atlas via per-glyph live refs (commit `2983e98`).
+- 2026-01-13: B6: decouple text layout from glyph atlas residency + add `prepare_for_scene` and atlas revision cache key (commit `4885937`).
+- 2026-01-13: ADR 0160 added: unify glyph identity (`GlyphKey`) + subpixel rendering policy (commit `d56a8be`).
+- 2026-01-13: B7.1: unify glyph key and switch `prepare` to Parley-only (commit `797fe93`).
+- 2026-01-13: B7.2: add subpixel atlas + shader/pipeline and platform subpixel policy (commit `8282cf1`).
+- 2026-01-13: B7.3: add stable `FontFaceKey` registry (commit `9a7f81a`).
+- 2026-01-13: Align `TextService` to `prepare(&TextInput, ...)` and introduce `TextInputRef<'_>` for shaping-only codepaths.
+- 2026-01-14: Add automated color emoji atlas conformance test in `fret-render` (commit `26ddc6d`).
+- 2026-01-14: Expose `fret-fonts` bootstrap/emoji bundles (commit `84b8a65`).
+- 2026-01-14: Expand emoji sequence conformance (VS16/ZWJ/flags/keycaps) in `fret-render` (commit `dbc5a89`).

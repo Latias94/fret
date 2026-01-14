@@ -27,7 +27,7 @@ The UI layer (`fret-ui`) must not perform shaping, atlas allocation, or GPU uplo
 
 The renderer side (`fret-render`) owns the implementation details:
 
-- shaping backend (eventually `cosmic-text`),
+- shaping backend (implementation-defined; currently Parley),
 - glyph atlas and uploads,
 - caching keyed by text/style/constraints,
 - resource lifetime for `TextBlobId`.

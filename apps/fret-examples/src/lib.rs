@@ -39,6 +39,7 @@ pub mod chart_demo;
 pub mod chart_multi_axis_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod chart_stress_demo;
+pub mod cjk_conformance_demo;
 pub mod components_gallery;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod docking_arbitration_demo;
@@ -47,6 +48,7 @@ pub mod docking_demo;
 pub mod drag_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod effects_demo;
+pub mod emoji_conformance_demo;
 pub mod error_bars_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod first_frame_smoke_demo;

@@ -46,6 +46,9 @@ composing:
   - `modal=false` -> `OverlayRequest::dismissible_popover(...)` (click-through).
 - Pass: Submenu pointer grace intent is available as a reusable pointer-move observer:
   `submenu_pointer_move_handler(...)`.
+- Pass: Submenu close via keyboard uses the Radix key boundary (ArrowLeft / ArrowRight depending on
+  `dir`) and explicitly restores focus to the submenu trigger (matching the upstream
+  `MenuSubContent` behavior).
 - Pass: Dismissals can be intercepted (Radix `DismissableLayer` "preventDefault" outcome) by
   providing an `OnDismissRequest` handler on the overlay request via
   `dismissible_menu_request_with_dismiss_handler(...)` (or
@@ -66,6 +69,14 @@ composing:
 
 ## Gaps / intentional differences
 
+- Fret models submenu "safe hover" with an explicit close-delay timer driven by pointer-move events
+  (`pointer_grace_intent::drive_close_timer_on_pointer_move`). Radix does not use an explicit close
+  timer in `@radix-ui/react-menu`; it prevents default on certain pointer transitions while a
+  pointer-grace intent is active. The intended observable outcome should match, but this needs
+  conformance coverage beyond "open + select".
+- Radix behavior goldens treat submenu closure (e.g. ArrowLeft) as an immediate unmount. In Fret we
+  currently align this by disabling close animation ticks for submenu content, even when the root
+  menu content uses motion.
 - Focus trap and outside scroll lock are modeled indirectly for `modal=true` menus via the overlay
   substrate: `OverlayRequest::dismissible_menu(...)` enables `disableOutsidePointerEvents`, which
   installs a modal barrier scope while the menu is open. This prevents focus traversal and wheel
@@ -79,11 +90,33 @@ composing:
 - `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs` validates dropdown-menu placement
   (menu popper gap + cross-axis delta) against the Radix Vega web golden
   (`goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.open-navigate-select.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates dropdown-menu submenu
+  hover-open + item select closes the root menu against the Radix Vega web golden
+  (`goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-hover-select.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates dropdown-menu submenu
+  pointer grace corridor keeps the submenu open against the Radix Vega web golden
+  (`goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-grace-corridor.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates dropdown-menu submenu
+  keyboard open/close (ArrowRight open, ArrowLeft close + focus restore) against the Radix Vega web
+  golden
+  (`goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-keyboard-open-close.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates context-menu submenu
+  hover-open + item select closes the root menu against the Radix Vega web golden
+  (`goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-hover-select.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates context-menu submenu
+  pointer grace corridor keeps the submenu open against the Radix Vega web golden
+  (`goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-grace-corridor.light.json`).
 - `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs` validates context-menu placement
   (menu popper gap + cross-axis delta, anchored to the right-click point) against the Radix Vega web
   golden
   (`goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.context-open-close.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates menubar submenu
+  hover-open + item select closes the root menu against the Radix Vega web golden
+  (`goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-hover-select.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates menubar submenu
+  pointer grace corridor keeps the submenu open against the Radix Vega web golden
+  (`goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-grace-corridor.light.json`).
 - `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs` validates menubar menu placement
   (menu popper gap + cross-axis delta) against the Radix Vega web golden
   (`goldens/radix-web/v4/radix-vega/menubar-example.menubar.open-navigate-close.light.json`).
-- Run (layout engine v2): `cargo nextest run -p fret-ui-shadcn -F fret-ui/layout-engine-v2 --test radix_web_overlay_geometry`
+- Run: `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`

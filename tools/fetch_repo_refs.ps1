@@ -55,17 +55,17 @@ function Ensure-RepoCheckout {
 
   $gitDir = Join-Path $path ".git"
   if (-not (Test-Path $gitDir)) {
-    Write-Warning "Skipping ${Name}: $path exists but is not a git repo."
+    Write-Warning "Skipping ${Name}: ${path} exists but is not a git repo."
     Write-Warning "If this is a checkout you manage manually, keep it; otherwise delete the folder and re-run."
     return
   }
 
   $origin = (& git -C $path remote get-url origin 2>$null)
   $head = (& git -C $path rev-parse --short=12 HEAD 2>$null)
-  Write-Host "Found ${Name}: origin=$origin head=$head"
+  Write-Host "Found ${Name}: origin=${origin} head=${head}"
 
   if ($Force -and $origin -ne $Url) {
-    Write-Host "Updating ${Name} origin -> $Url"
+    Write-Host "Updating ${Name} origin -> ${Url}"
     git -C $path remote set-url origin $Url | Out-Null
   }
 
@@ -74,7 +74,7 @@ function Ensure-RepoCheckout {
 
   # Accept short SHAs (as recorded in docs) and full SHAs.
   $target = $Commit
-  Write-Host "Checking out ${Name} @ $target"
+  Write-Host "Checking out ${Name} @ ${target}"
   git -C $path checkout $target | Out-Null
 }
 

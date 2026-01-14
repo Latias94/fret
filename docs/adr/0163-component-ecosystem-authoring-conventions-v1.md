@@ -1,4 +1,4 @@
-# ADR 0158: Component Ecosystem Authoring Conventions (v1)
+# ADR 0163: Component Ecosystem Authoring Conventions (v1)
 
 Status: Proposed
 

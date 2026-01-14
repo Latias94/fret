@@ -1,5 +1,7 @@
+use std::collections::HashMap;
+
 use fret_canvas::scale::canvas_units_from_screen_px;
-use fret_core::{Modifiers, MouseButton, Point};
+use fret_core::{Modifiers, MouseButton, Point, Rect};
 use fret_ui::UiHost;
 
 use crate::core::GroupId;
@@ -83,16 +85,8 @@ pub(super) fn handle_pointer_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
     if let Some(resize) = canvas.interaction.node_resize.take() {
         canvas.interaction.pending_node_resize = None;
 
-        let (end_pos, end_size) = canvas
-            .graph
-            .read_ref(cx.app, |g| {
-                g.nodes
-                    .get(&resize.node)
-                    .map(|n| (n.pos, n.size))
-                    .unwrap_or((resize.start_node_pos, resize.start_size_opt))
-            })
-            .ok()
-            .unwrap_or((resize.start_node_pos, resize.start_size_opt));
+        let end_pos = resize.current_node_pos;
+        let end_size = resize.current_size_opt;
 
         let mut ops: Vec<GraphOp> = Vec::new();
         if resize.start_node_pos != end_pos {
@@ -110,6 +104,26 @@ pub(super) fn handle_pointer_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
             });
         }
 
+        let group_rect_ops: Vec<GraphOp> = canvas
+            .graph
+            .read_ref(cx.app, |graph| {
+                resize
+                    .current_groups
+                    .iter()
+                    .filter_map(|(id, to)| {
+                        let from = graph.groups.get(id).map(|g| g.rect)?;
+                        (from != *to).then_some(GraphOp::SetGroupRect {
+                            id: *id,
+                            from,
+                            to: *to,
+                        })
+                    })
+                    .collect()
+            })
+            .ok()
+            .unwrap_or_default();
+        ops.extend(group_rect_ops);
+
         if !ops.is_empty() {
             let _ = canvas.commit_ops(cx.app, cx.window, Some("Resize Node"), ops);
         }
@@ -123,15 +137,8 @@ pub(super) fn handle_pointer_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
     if let Some(resize) = canvas.interaction.group_resize.take() {
         canvas.interaction.pending_group_resize = None;
 
-        let end = canvas
-            .graph
-            .read_ref(cx.app, |g| g.groups.get(&resize.group).map(|gr| gr.rect))
-            .ok()
-            .flatten();
-
-        if let Some(end) = end
-            && end != resize.start_rect
-        {
+        let end = resize.current_rect;
+        if end != resize.start_rect {
             let _ = canvas.commit_ops(
                 cx.app,
                 cx.window,
@@ -153,16 +160,9 @@ pub(super) fn handle_pointer_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
     if let Some(drag) = canvas.interaction.group_drag.take() {
         canvas.interaction.pending_group_drag = None;
 
-        let end_rect = canvas
-            .graph
-            .read_ref(cx.app, |g| g.groups.get(&drag.group).map(|gr| gr.rect))
-            .ok()
-            .flatten();
-
         let mut ops: Vec<GraphOp> = Vec::new();
-        if let Some(end_rect) = end_rect
-            && end_rect != drag.start_rect
-        {
+        let end_rect = drag.current_rect;
+        if end_rect != drag.start_rect {
             ops.push(GraphOp::SetGroupRect {
                 id: drag.group,
                 from: drag.start_rect,
@@ -170,24 +170,21 @@ pub(super) fn handle_pointer_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
             });
         }
 
-        let mut node_ops = canvas
-            .graph
-            .read_ref(cx.app, |g| {
-                drag.nodes
-                    .iter()
-                    .filter_map(|(id, start)| {
-                        let end = g.nodes.get(id).map(|n| n.pos)?;
-                        (end != *start).then_some(GraphOp::SetNodePos {
-                            id: *id,
-                            from: *start,
-                            to: end,
-                        })
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .ok()
-            .unwrap_or_default();
-        ops.append(&mut node_ops);
+        for (id, start) in &drag.nodes {
+            let end = drag
+                .current_nodes
+                .iter()
+                .find(|(node_id, _)| node_id == id)
+                .map(|(_, p)| *p)
+                .unwrap_or(*start);
+            if end != *start {
+                ops.push(GraphOp::SetNodePos {
+                    id: *id,
+                    from: *start,
+                    to: end,
+                });
+            }
+        }
 
         if !ops.is_empty() {
             let _ = canvas.commit_ops(cx.app, cx.window, Some("Move Group"), ops);
@@ -201,6 +198,17 @@ pub(super) fn handle_pointer_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
     if let Some(drag) = canvas.interaction.node_drag.take() {
         let geom = canvas.canvas_geometry(&*cx.app, snapshot);
+        let end_positions: HashMap<crate::core::NodeId, crate::core::CanvasPoint> = drag
+            .current_nodes
+            .iter()
+            .copied()
+            .collect::<HashMap<_, _>>();
+        let group_overrides: HashMap<GroupId, crate::core::CanvasRect> = drag
+            .current_groups
+            .iter()
+            .copied()
+            .collect::<HashMap<_, _>>();
+
         let parent_changes: Vec<(crate::core::NodeId, Option<GroupId>, Option<GroupId>)> = canvas
             .graph
             .read_ref(cx.app, |graph| {
@@ -214,8 +222,14 @@ pub(super) fn handle_pointer_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
                     let Some(node_geom) = geom.nodes.get(node_id) else {
                         continue;
                     };
+                    let Some(pos) = end_positions.get(node_id).copied() else {
+                        continue;
+                    };
 
-                    let rect = node_geom.rect;
+                    let rect = Rect::new(
+                        fret_core::Point::new(fret_core::Px(pos.x), fret_core::Px(pos.y)),
+                        node_geom.rect.size,
+                    );
                     let rect_min_x = rect.origin.x.0;
                     let rect_min_y = rect.origin.y.0;
                     let rect_max_x = rect.origin.x.0 + rect.size.width.0;
@@ -223,17 +237,19 @@ pub(super) fn handle_pointer_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
                     let mut best: Option<(GroupId, f32)> = None;
                     for (group_id, group) in &graph.groups {
-                        let gx0 = group.rect.origin.x;
-                        let gy0 = group.rect.origin.y;
-                        let gx1 = group.rect.origin.x + group.rect.size.width;
-                        let gy1 = group.rect.origin.y + group.rect.size.height;
+                        let group_rect =
+                            group_overrides.get(group_id).copied().unwrap_or(group.rect);
+                        let gx0 = group_rect.origin.x;
+                        let gy0 = group_rect.origin.y;
+                        let gx1 = group_rect.origin.x + group_rect.size.width;
+                        let gy1 = group_rect.origin.y + group_rect.size.height;
                         if rect_min_x >= gx0
                             && rect_min_y >= gy0
                             && rect_max_x <= gx1
                             && rect_max_y <= gy1
                         {
-                            let area = (group.rect.size.width.max(0.0))
-                                * (group.rect.size.height.max(0.0));
+                            let area = (group_rect.size.width.max(0.0))
+                                * (group_rect.size.height.max(0.0));
                             match best {
                                 Some((_id, best_area)) if best_area <= area => {}
                                 _ => best = Some((*group_id, area)),
@@ -252,33 +268,19 @@ pub(super) fn handle_pointer_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
             .ok()
             .unwrap_or_default();
 
-        if !parent_changes.is_empty() {
-            let _ = canvas.graph.update(cx.app, |graph, _cx| {
-                for (node_id, _from, to) in &parent_changes {
-                    if let Some(node) = graph.nodes.get_mut(node_id) {
-                        node.parent = *to;
-                    }
-                }
-            });
+        let mut ops: Vec<GraphOp> = Vec::new();
+        for (id, start) in &drag.nodes {
+            let Some(end) = end_positions.get(id).copied() else {
+                continue;
+            };
+            if end != *start {
+                ops.push(GraphOp::SetNodePos {
+                    id: *id,
+                    from: *start,
+                    to: end,
+                });
+            }
         }
-
-        let mut ops = canvas
-            .graph
-            .read_ref(cx.app, |g| {
-                drag.nodes
-                    .iter()
-                    .filter_map(|(id, start)| {
-                        let end = g.nodes.get(id).map(|n| n.pos)?;
-                        (end != *start).then_some(GraphOp::SetNodePos {
-                            id: *id,
-                            from: *start,
-                            to: end,
-                        })
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .ok()
-            .unwrap_or_default();
 
         for (node_id, from, to) in &parent_changes {
             ops.push(GraphOp::SetNodeParent {
@@ -287,6 +289,22 @@ pub(super) fn handle_pointer_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
                 to: *to,
             });
         }
+
+        let group_rect_ops: Vec<GraphOp> = canvas
+            .graph
+            .read_ref(cx.app, |graph| {
+                group_overrides
+                    .iter()
+                    .filter_map(|(&id, &to)| {
+                        let from = graph.groups.get(&id).map(|g| g.rect)?;
+                        (from != to).then_some(GraphOp::SetGroupRect { id, from, to })
+                    })
+                    .collect()
+            })
+            .ok()
+            .unwrap_or_default();
+        ops.extend(group_rect_ops);
+
         let drag_outcome = if ops.is_empty() {
             NodeDragEndOutcome::NoOp
         } else {

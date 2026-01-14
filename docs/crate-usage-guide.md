@@ -60,7 +60,7 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 
 **Use it when:** you are rendering UI (apps or portable component libraries).
 
-**Notes:** feature flags include `unstable-retained-bridge` (compat retained widgets) and `layout-engine-v2`.
+**Notes:** feature flags include `unstable-retained-bridge` (compat retained widgets). The window-scoped layout engine v2 is enabled by default in this repository; `layout-engine-v2` is retained as a compatibility feature for downstream crates that explicitly enable it.
 
 ### `fret-app`
 
@@ -204,6 +204,10 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 **What it is:** editor-grade 3D gizmo logic for engine viewports (rendered by the engine; Fret composites the viewport).
 
 **Use it when:** you need transform gizmos, pick policies, and viewport-space tool math (unit-explicit via the viewport input contract).
+
+**Start here:** `docs/gizmo-viewport-integration.md` (end-to-end reference: `apps/fret-examples/src/gizmo3d_demo.rs`).
+
+**Notes:** custom gizmos are supported via `GizmoPlugin` and host read-only domain values via `GizmoPropertySource` (ADR 0155/0167). For large-world picking stability, enable the optional `fret-gizmo/f64-math` feature (projection/unprojection runs in f64; public API stays f32).
 
 ### `fret-markdown` / `fret-code-view` / `fret-syntax`
 

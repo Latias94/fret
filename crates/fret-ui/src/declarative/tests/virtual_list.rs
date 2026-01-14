@@ -392,6 +392,7 @@ fn virtual_list_shared_scroll_handle_invalidates_other_bound_lists() {
             position: fret_core::Point::new(Px(5.0), Px(5.0)),
             delta: fret_core::Point::new(Px(-20.0), Px(0.0)),
             modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );

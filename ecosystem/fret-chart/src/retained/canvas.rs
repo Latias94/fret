@@ -156,6 +156,7 @@ pub struct ChartCanvas {
     style_source: ChartStyleSource,
     last_theme_revision: u64,
     force_uncached_paint: bool,
+    text_cache_prune: ChartTextCachePruneTuning,
     tooltip_formatter: Box<dyn TooltipFormatter>,
     input_map: ChartInputMap,
     last_bounds: Rect,
@@ -193,6 +194,21 @@ pub struct ChartCanvas {
     output: ChartCanvasOutput,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct ChartTextCachePruneTuning {
+    pub max_age_frames: u64,
+    pub max_entries: usize,
+}
+
+impl Default for ChartTextCachePruneTuning {
+    fn default() -> Self {
+        Self {
+            max_age_frames: 1_200,
+            max_entries: 4_096,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChartStyleSource {
     Theme,
@@ -224,6 +240,7 @@ impl ChartCanvas {
             style_source: ChartStyleSource::Theme,
             last_theme_revision: 0,
             force_uncached_paint: true,
+            text_cache_prune: ChartTextCachePruneTuning::default(),
             tooltip_formatter: Box::new(DefaultTooltipFormatter::default()),
             input_map: ChartInputMap::default(),
             last_bounds: Rect::default(),
@@ -260,6 +277,10 @@ impl ChartCanvas {
             output_model: None,
             output: ChartCanvasOutput::default(),
         })
+    }
+
+    pub fn set_text_cache_prune_tuning(&mut self, tuning: ChartTextCachePruneTuning) {
+        self.text_cache_prune = tuning;
     }
 
     pub fn engine(&self) -> &ChartEngine {
@@ -3949,6 +3970,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             self.sync_viewport(self.last_layout.plot);
         }
 
+        // Advance per-frame counters for optional cache pruning.
+        self.axis_text.begin_frame();
+        self.legend_text.begin_frame();
+
         let mut measurer = NullTextMeasurer::default();
 
         // P0: run the engine synchronously, but allow multiple internal steps per paint so that
@@ -5068,6 +5093,15 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         }
 
         self.draw_axes(cx);
+
+        // Conservative hygiene: long-lived charts should not grow text caches unbounded.
+        let t = self.text_cache_prune;
+        if t.max_entries > 0 && t.max_age_frames > 0 {
+            self.axis_text
+                .prune(cx.services, t.max_age_frames, t.max_entries);
+            self.legend_text
+                .prune(cx.services, t.max_age_frames, t.max_entries);
+        }
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {

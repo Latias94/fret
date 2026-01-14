@@ -487,10 +487,10 @@ impl<H: UiHost> Widget<H> for TextInput {
             overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
-        let metrics = cx
-            .services
-            .text()
-            .measure(&self.text, &self.style, base_constraints);
+        let metrics =
+            cx.services
+                .text()
+                .measure_str(self.text.as_str(), &self.style, base_constraints);
         self.text_metrics = Some(metrics);
 
         let base_h = self.text_metrics.map(|m| m.size.height.0).unwrap_or(0.0);
@@ -550,10 +550,10 @@ impl<H: UiHost> Widget<H> for TextInput {
         }
 
         if self.text_blob.is_none() {
-            let (blob, metrics) = cx
-                .services
-                .text()
-                .prepare(&self.text, &self.style, constraints);
+            let (blob, metrics) =
+                cx.services
+                    .text()
+                    .prepare_str(self.text.as_str(), &self.style, constraints);
             self.text_blob = Some(blob);
             self.text_metrics = Some(metrics);
             cx.services.caret_stops(blob, &mut self.caret_stops);
@@ -564,10 +564,10 @@ impl<H: UiHost> Widget<H> for TextInput {
             && self.placeholder.as_ref().is_some_and(|s| !s.is_empty());
         if show_placeholder && self.placeholder_blob.is_none() {
             let placeholder = self.placeholder.as_ref().expect("checked above").as_ref();
-            let (blob, metrics) = cx
-                .services
-                .text()
-                .prepare(placeholder, &self.style, constraints);
+            let (blob, metrics) =
+                cx.services
+                    .text()
+                    .prepare_str(placeholder, &self.style, constraints);
             self.placeholder_blob = Some(blob);
             self.placeholder_metrics = Some(metrics);
         }
@@ -583,7 +583,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 let (blob, metrics) =
                     cx.services
                         .text()
-                        .prepare(&self.text, &self.style, constraints);
+                        .prepare_str(self.text.as_str(), &self.style, constraints);
                 self.text_blob = Some(blob);
                 self.text_metrics = Some(metrics);
                 cx.services.caret_stops(blob, &mut self.caret_stops);
@@ -596,10 +596,10 @@ impl<H: UiHost> Widget<H> for TextInput {
             self.queue_release_all_text_blobs();
             self.flush_pending_releases(cx.services);
 
-            let (blob, metrics) = cx
-                .services
-                .text()
-                .prepare(&self.text, &self.style, constraints);
+            let (blob, metrics) =
+                cx.services
+                    .text()
+                    .prepare_str(self.text.as_str(), &self.style, constraints);
             self.text_blob = Some(blob);
             self.text_metrics = Some(metrics);
             cx.services.caret_stops(blob, &mut self.caret_stops);
@@ -607,15 +607,15 @@ impl<H: UiHost> Widget<H> for TextInput {
             let (prefix_blob, prefix_metrics) =
                 cx.services
                     .text()
-                    .prepare(&self.text[..self.caret], &self.style, constraints);
+                    .prepare_str(&self.text[..self.caret], &self.style, constraints);
             let (suffix_blob, suffix_metrics) =
                 cx.services
                     .text()
-                    .prepare(&self.text[self.caret..], &self.style, constraints);
+                    .prepare_str(&self.text[self.caret..], &self.style, constraints);
             let (pre_blob, pre_metrics) =
                 cx.services
                     .text()
-                    .prepare(&self.preedit, &self.style, constraints);
+                    .prepare_str(self.preedit.as_str(), &self.style, constraints);
 
             self.prefix_blob = Some(prefix_blob);
             self.prefix_metrics = Some(prefix_metrics);

@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use fret_canvas::view::PanZoom2D;
+use fret_canvas::view::{
+    DEFAULT_WHEEL_ZOOM_BASE, DEFAULT_WHEEL_ZOOM_STEP, PanZoom2D, wheel_zoom_factor,
+};
 use fret_core::{Modifiers, MouseButton, Point, Px};
 use fret_runtime::Model;
 use fret_ui::action::{OnPinchGesture, OnPointerDown, OnPointerMove, OnPointerUp, OnWheel};
@@ -46,8 +48,8 @@ pub struct PanZoomWheelZoomConfig {
 impl Default for PanZoomWheelZoomConfig {
     fn default() -> Self {
         Self {
-            base: 1.18,
-            step: 120.0,
+            base: DEFAULT_WHEEL_ZOOM_BASE,
+            step: DEFAULT_WHEEL_ZOOM_STEP,
             speed: 1.0,
         }
     }
@@ -121,24 +123,6 @@ fn zoom_modifier_active(preset: PanZoomInputPreset, modifiers: Modifiers) -> boo
         PanZoomInputPreset::DefaultSafe => modifiers.ctrl || modifiers.meta,
         PanZoomInputPreset::DesktopCanvasCad => true,
     }
-}
-
-fn wheel_zoom_factor(delta_y: f32, cfg: PanZoomWheelZoomConfig) -> Option<f32> {
-    if !delta_y.is_finite() || delta_y.abs() <= 1.0e-9 {
-        return None;
-    }
-    if !cfg.base.is_finite() || cfg.base <= 0.0 {
-        return None;
-    }
-    if !cfg.step.is_finite() || cfg.step.abs() <= 1.0e-9 {
-        return None;
-    }
-    let speed = if cfg.speed.is_finite() {
-        cfg.speed
-    } else {
-        1.0
-    };
-    Some(cfg.base.powf((-delta_y / cfg.step) * speed))
 }
 
 #[track_caller]
@@ -255,7 +239,12 @@ pub fn pan_zoom_canvas_surface_panel<H: UiHost>(
                 return false;
             }
 
-            let Some(factor) = wheel_zoom_factor(wheel.delta.y.0, wheel_zoom) else {
+            let Some(factor) = wheel_zoom_factor(
+                wheel.delta.y.0,
+                wheel_zoom.base,
+                wheel_zoom.step,
+                wheel_zoom.speed,
+            ) else {
                 return false;
             };
 

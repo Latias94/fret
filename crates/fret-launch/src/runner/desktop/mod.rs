@@ -2208,7 +2208,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         ));
 
         // Cancel any in-flight drag to avoid leaving the runner in an inconsistent state.
-        self.app.cancel_drag();
+        self.app.cancel_drag(fret_core::PointerId(0));
 
         {
             let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
@@ -2461,9 +2461,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             self.internal_drag_hover_pos = None;
         }
 
-        if let Some(drag) = self.app.drag_mut() {
+        if let Some(drag) = self.app.drag_mut(fret_core::PointerId(0)) {
             if drag.source_window == window {
-                self.app.cancel_drag();
+                self.app.cancel_drag(fret_core::PointerId(0));
             } else if drag.current_window == window {
                 drag.current_window = drag.source_window;
             }
@@ -3093,12 +3093,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             continue;
                         }
 
-                        let families = renderer.all_font_names();
-                        let _update = fret_runtime::apply_font_catalog_update(
+                        let _ = fret_runtime::apply_font_catalog_update(
                             &mut self.app,
-                            families,
+                            renderer.all_font_names(),
                             fret_runtime::FontFamilyDefaultsPolicy::None,
                         );
+                        if let Some(config) = self.app.global::<fret_core::TextFontFamilyConfig>() {
+                            let _ = renderer.set_text_font_families(config);
+                        }
                         self.app.set_global::<fret_runtime::TextFontStackKey>(
                             fret_runtime::TextFontStackKey(renderer.text_font_stack_key()),
                         );
@@ -3821,11 +3823,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     #[cfg(target_os = "macos")]
     fn maybe_finish_dock_drag_released_outside(&mut self) -> bool {
         let (source_window, current_window, dragging) = {
-            let Some(drag) = self.app.drag() else {
+            let Some(drag) = self.app.drag(fret_core::PointerId(0)) else {
                 return false;
             };
             if !drag.cross_window_hover
-                || drag.kind != fret_app::DragKind::DockPanel
+                || drag.kind != fret_app::DRAG_KIND_DOCK_PANEL
                 || macos_is_left_mouse_down()
                 || self.saw_left_mouse_release_this_turn
             {
@@ -3842,8 +3844,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         // If the mouse was released outside any window, winit may not deliver a `MouseInput`
         // event to any window. Use the regular cursor-based drop routing so docking back into an
         // existing window still works (ImGui-style).
-        if let Some(d) = self.app.drag_mut()
-            && d.kind == fret_app::DragKind::DockPanel
+        if let Some(d) = self.app.drag_mut(fret_core::PointerId(0))
+            && d.kind == fret_app::DRAG_KIND_DOCK_PANEL
         {
             d.dragging = true;
         }
@@ -3854,8 +3856,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             source_window
         ));
 
-        if self.app.drag().is_some_and(|d| d.cross_window_hover) {
-            self.app.cancel_drag();
+        if self
+            .app
+            .drag(fret_core::PointerId(0))
+            .is_some_and(|d| d.cross_window_hover)
+        {
+            self.app.cancel_drag(fret_core::PointerId(0));
             let _ = self.clear_internal_drag_hover_if_needed();
         }
 
@@ -3881,6 +3887,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 state: &mut state.user,
             },
             &Event::InternalDrag(InternalDragEvent {
+                pointer_id: fret_core::PointerId(0),
                 position,
                 kind,
                 modifiers,
@@ -3892,7 +3899,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(window) = self.internal_drag_hover_window else {
             return false;
         };
-        if self.app.drag().is_some_and(|d| d.cross_window_hover) {
+        if self
+            .app
+            .drag(fret_core::PointerId(0))
+            .is_some_and(|d| d.cross_window_hover)
+        {
             return false;
         }
         self.internal_drag_hover_window = None;
@@ -3902,7 +3913,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     }
 
     fn route_internal_drag_hover_from_cursor(&mut self) -> bool {
-        let Some(drag) = self.app.drag() else {
+        let Some(drag) = self.app.drag(fret_core::PointerId(0)) else {
             return self.clear_internal_drag_hover_if_needed();
         };
         if !drag.cross_window_hover {
@@ -3918,7 +3929,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         // window (ImGui-style).
         let prefer_not = self
             .dock_tearoff_follow
-            .filter(|_| drag.kind == fret_app::DragKind::DockPanel)
+            .filter(|_| drag.kind == fret_app::DRAG_KIND_DOCK_PANEL)
             .map(|f| f.window);
 
         // Prefer the window we already hovered, if the cursor is still inside it. This makes
@@ -3931,7 +3942,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let hovered = hovered.or_else(|| {
             // For dock tear-off, keep delivering `InternalDrag::Over` to the source window even
             // when the cursor is outside all windows so the UI can react before mouse-up.
-            (drag.kind == fret_app::DragKind::DockPanel)
+            (drag.kind == fret_app::DRAG_KIND_DOCK_PANEL)
                 .then_some(drag.source_window)
                 .filter(|w| self.windows.contains_key(*w))
         });
@@ -3956,7 +3967,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return false;
         };
 
-        if let Some(d) = self.app.drag_mut() {
+        if let Some(d) = self.app.drag_mut(fret_core::PointerId(0)) {
             d.current_window = current;
             d.position = pos;
         }
@@ -3967,7 +3978,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     }
 
     fn route_internal_drag_drop_from_cursor(&mut self) -> bool {
-        let Some(drag) = self.app.drag() else {
+        let Some(drag) = self.app.drag(fret_core::PointerId(0)) else {
             return false;
         };
         if !drag.cross_window_hover {
@@ -3983,7 +3994,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         let prefer_not = self
             .dock_tearoff_follow
-            .filter(|_| drag.kind == fret_app::DragKind::DockPanel)
+            .filter(|_| drag.kind == fret_app::DRAG_KIND_DOCK_PANEL)
             .map(|f| f.window);
 
         // Prefer the last hovered window if possible; window overlap makes hit-testing ambiguous.
@@ -4007,7 +4018,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return false;
         };
 
-        if drag.kind == fret_app::DragKind::DockPanel
+        if drag.kind == fret_app::DRAG_KIND_DOCK_PANEL
             && target != drag.source_window
             && let Some(runtime) = self.windows.get(target)
         {
@@ -4027,7 +4038,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         self.internal_drag_hover_window = Some(target);
         self.internal_drag_hover_pos = Some(pos);
 
-        if let Some(d) = self.app.drag_mut() {
+        if let Some(d) = self.app.drag_mut(fret_core::PointerId(0)) {
             d.current_window = target;
             d.position = pos;
         }

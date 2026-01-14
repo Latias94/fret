@@ -1,8 +1,8 @@
 use std::any::Any;
 
-use fret_core::{AppWindowId, Point};
+use fret_core::{AppWindowId, Point, PointerId};
 use fret_runtime::{
-    CommandsHost, DragHost, DragKind, DragSession, Effect, EffectSink, GlobalsHost, ModelsHost,
+    CommandsHost, DragHost, DragKindId, DragSession, Effect, EffectSink, GlobalsHost, ModelsHost,
     TimeHost,
 };
 
@@ -75,35 +75,44 @@ impl TimeHost for App {
 }
 
 impl DragHost for App {
-    fn drag(&self) -> Option<&DragSession> {
-        App::drag(self)
+    fn drag(&self, pointer_id: PointerId) -> Option<&DragSession> {
+        App::drag(self, pointer_id)
     }
 
-    fn drag_mut(&mut self) -> Option<&mut DragSession> {
-        App::drag_mut(self)
+    fn drag_mut(&mut self, pointer_id: PointerId) -> Option<&mut DragSession> {
+        App::drag_mut(self, pointer_id)
     }
 
-    fn cancel_drag(&mut self) {
-        App::cancel_drag(self)
+    fn cancel_drag(&mut self, pointer_id: PointerId) {
+        App::cancel_drag(self, pointer_id)
     }
 
     fn begin_drag_with_kind<T: Any>(
         &mut self,
-        kind: DragKind,
+        pointer_id: PointerId,
+        kind: DragKindId,
         source_window: AppWindowId,
         start: Point,
         payload: T,
     ) {
-        App::begin_drag_with_kind(self, kind, source_window, start, payload)
+        App::begin_drag_with_kind(self, pointer_id, kind, source_window, start, payload)
     }
 
     fn begin_cross_window_drag_with_kind<T: Any>(
         &mut self,
-        kind: DragKind,
+        pointer_id: PointerId,
+        kind: DragKindId,
         source_window: AppWindowId,
         start: Point,
         payload: T,
     ) {
-        App::begin_cross_window_drag_with_kind(self, kind, source_window, start, payload)
+        App::begin_cross_window_drag_with_kind(
+            self,
+            pointer_id,
+            kind,
+            source_window,
+            start,
+            payload,
+        )
     }
 }

@@ -376,7 +376,7 @@ mod tests {
     use fret_core::{PathCommand, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Point, Px, Rect, Size};
-    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
+    use fret_core::{TextBlobId, TextConstraints, TextInput, TextMetrics, TextService};
     use fret_ui::UiTree;
     use fret_ui::element::{ContainerProps, ElementKind, LayoutStyle, Length, PressableProps};
     use fret_ui::elements::GlobalElementId;
@@ -387,8 +387,7 @@ mod tests {
     impl TextService for FakeServices {
         fn prepare(
             &mut self,
-            _text: &str,
-            _style: &TextStyle,
+            _input: &TextInput,
             _constraints: TextConstraints,
         ) -> (TextBlobId, TextMetrics) {
             (
@@ -669,6 +668,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 click_count: 1,
+                pointer_id: fret_core::PointerId(0),
                 pointer_type: Default::default(),
             }),
         );
@@ -680,6 +680,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 click_count: 1,
+                pointer_id: fret_core::PointerId(0),
                 pointer_type: Default::default(),
             }),
         );
@@ -765,6 +766,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 click_count: 1,
+                pointer_id: fret_core::PointerId(0),
                 pointer_type: Default::default(),
             }),
         );
@@ -776,6 +778,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 click_count: 1,
+                pointer_id: fret_core::PointerId(0),
                 pointer_type: Default::default(),
             }),
         );

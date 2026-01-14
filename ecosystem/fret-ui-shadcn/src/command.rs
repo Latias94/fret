@@ -2413,8 +2413,7 @@ mod tests {
     impl TextService for FakeServices {
         fn prepare(
             &mut self,
-            _text: &str,
-            _style: &TextStyle,
+            _input: &fret_core::TextInput,
             _constraints: TextConstraints,
         ) -> (TextBlobId, TextMetrics) {
             (
@@ -2517,6 +2516,7 @@ mod tests {
             app,
             services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position: at,
                 button: fret_core::MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -2528,6 +2528,7 @@ mod tests {
             app,
             services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position: at,
                 button: fret_core::MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3054,6 +3055,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(
                     Px(beta_bounds.origin.x.0 + 1.0),
                     Px(beta_bounds.origin.y.0 + 1.0),

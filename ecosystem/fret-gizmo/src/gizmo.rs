@@ -64,10 +64,10 @@ impl Gizmo {
             }
             GizmoMode::Universal => {
                 let mut ops = GizmoOps::translate_all() | GizmoOps::rotate_axis();
-                if self.config.show_view_axis_ring {
+                if self.config.universal_includes_rotate_view_ring {
                     ops |= GizmoOps::rotate_view();
                 }
-                if self.config.show_arcball {
+                if self.config.universal_includes_arcball {
                     ops |= GizmoOps::rotate_arcball();
                 }
                 if self.config.universal_includes_scale {

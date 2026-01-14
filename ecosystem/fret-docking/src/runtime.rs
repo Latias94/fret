@@ -334,8 +334,8 @@ pub fn handle_dock_window_created<H: UiHost>(
             return false;
         }
 
-        if let Some(drag) = app.drag_mut()
-            && drag.kind == fret_runtime::DragKind::DockPanel
+        if let Some(drag) = app.drag_mut(fret_core::PointerId(0))
+            && drag.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
             && drag.source_window == *source_window
         {
             drag.source_window = new_window;
@@ -580,7 +580,8 @@ mod tests {
         });
 
         app.begin_cross_window_drag_with_kind(
-            fret_runtime::DragKind::DockPanel,
+            fret_core::PointerId(0),
+            fret_runtime::DRAG_KIND_DOCK_PANEL,
             window_a,
             fret_core::Point::default(),
             (),
@@ -604,7 +605,9 @@ mod tests {
 
         assert!(handle_dock_window_created(&mut app, &create, window_b));
 
-        let drag = app.drag().expect("expected active drag session");
+        let drag = app
+            .drag(fret_core::PointerId(0))
+            .expect("expected active drag session");
         assert_eq!(drag.source_window, window_b);
         assert_eq!(drag.current_window, window_b);
     }
@@ -703,7 +706,8 @@ mod tests {
         });
 
         app.begin_cross_window_drag_with_kind(
-            fret_runtime::DragKind::DockPanel,
+            fret_core::PointerId(0),
+            fret_runtime::DRAG_KIND_DOCK_PANEL,
             window_a,
             fret_core::Point::default(),
             (),
@@ -735,7 +739,9 @@ mod tests {
 
         assert!(handle_dock_window_created(&mut app, &create, window_b));
 
-        let drag = app.drag().expect("expected active drag session");
+        let drag = app
+            .drag(fret_core::PointerId(0))
+            .expect("expected active drag session");
         assert_eq!(drag.source_window, window_a);
         assert_eq!(drag.current_window, window_a);
     }

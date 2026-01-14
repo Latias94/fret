@@ -13,7 +13,7 @@ pub(super) fn handle_group_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     modifiers: Modifiers,
     _zoom: f32,
 ) -> bool {
-    let Some(drag) = canvas.interaction.group_drag.clone() else {
+    let Some(mut drag) = canvas.interaction.group_drag.clone() else {
         return false;
     };
 
@@ -46,26 +46,33 @@ pub(super) fn handle_group_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
         };
     }
 
-    let _ = canvas.graph.update(cx.app, |g, _cx| {
-        let Some(group) = g.groups.get_mut(&drag.group) else {
-            return;
-        };
-
-        group.rect.origin = CanvasPoint {
+    let next_rect = crate::core::CanvasRect {
+        origin: CanvasPoint {
             x: drag.start_rect.origin.x + delta.x,
             y: drag.start_rect.origin.y + delta.y,
-        };
+        },
+        size: drag.start_rect.size,
+    };
+    let next_nodes: Vec<(crate::core::NodeId, CanvasPoint)> = drag
+        .nodes
+        .iter()
+        .map(|(node_id, start)| {
+            (
+                *node_id,
+                CanvasPoint {
+                    x: start.x + delta.x,
+                    y: start.y + delta.y,
+                },
+            )
+        })
+        .collect();
 
-        for (node_id, start) in &drag.nodes {
-            let Some(node) = g.nodes.get_mut(node_id) else {
-                continue;
-            };
-            node.pos = CanvasPoint {
-                x: start.x + delta.x,
-                y: start.y + delta.y,
-            };
-        }
-    });
+    if drag.current_rect != next_rect || drag.current_nodes != next_nodes {
+        drag.current_rect = next_rect;
+        drag.current_nodes = next_nodes;
+        drag.preview_rev = drag.preview_rev.wrapping_add(1);
+    }
+    canvas.interaction.group_drag = Some(drag);
 
     if auto_pan_delta.x != 0.0 || auto_pan_delta.y != 0.0 {
         canvas.update_view_state(cx.app, |s| {

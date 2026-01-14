@@ -17,11 +17,14 @@ impl Gizmo {
                     mask.contains(GizmoOps::rotate_arcball()),
                 )
             } else {
-                (
-                    true,
-                    self.config.show_view_axis_ring,
-                    self.config.show_arcball,
-                )
+                let (view, arcball) = match self.config.mode {
+                    GizmoMode::Universal => (
+                        self.config.universal_includes_rotate_view_ring,
+                        self.config.universal_includes_arcball,
+                    ),
+                    _ => (self.config.show_view_axis_ring, self.config.show_arcball),
+                };
+                (true, view, arcball)
             };
 
         let radius_world = size_length_world;
@@ -47,7 +50,9 @@ impl Gizmo {
                                   radius_world: f32,
                                   color: Color,
                                   depth: DepthMode,
-                                  allow_ghost: bool| {
+                                  allow_ghost: bool,
+                                  thickness_scale: f32| {
+            let thickness_world = (thickness_world * thickness_scale.max(0.0)).max(0.0);
             let half = (thickness_world * 0.55)
                 .clamp(radius_world * 0.010, radius_world * 0.075)
                 .max(1e-6);
@@ -113,6 +118,7 @@ impl Gizmo {
                     c,
                     self.config.depth_mode,
                     pv.occlusion.rotate_axis_rings,
+                    1.0,
                 );
             }
         }
@@ -125,20 +131,22 @@ impl Gizmo {
             if axis_dir.length_squared() > 0.0 {
                 let (u, v) = plane_basis(axis_dir);
                 let handle = RotateHandle::View.id();
-                let r = (radius_world * self.config.view_axis_ring_radius_scale).max(1e-6);
-                let base = Color {
-                    r: 0.9,
-                    g: 0.9,
-                    b: 0.9,
-                    a: 0.8,
-                };
+                let r = (radius_world * pv.rotate_view_ring_radius_scale).max(1e-6);
                 let c = if self.is_handle_highlighted(GizmoMode::Rotate, handle) {
                     self.config.hover_color
                 } else {
-                    base
+                    pv.rotate_view_ring_color
                 };
 
-                push_ring_band(u, v, r, c, DepthMode::Always, pv.occlusion.rotate_view_ring);
+                push_ring_band(
+                    u,
+                    v,
+                    r,
+                    c,
+                    DepthMode::Always,
+                    pv.occlusion.rotate_view_ring,
+                    pv.rotate_view_ring_thickness_scale,
+                );
             }
         }
 
@@ -152,16 +160,13 @@ impl Gizmo {
                 let r = (radius_world * self.config.arcball_radius_scale).max(1e-6);
 
                 let handle = RotateHandle::Arcball.id();
-                let base = Color {
-                    r: 1.0,
-                    g: 1.0,
-                    b: 1.0,
-                    a: 0.12,
-                };
                 let c = if self.is_handle_highlighted(GizmoMode::Rotate, handle) {
-                    mix_alpha(self.config.hover_color, 0.55)
+                    mix_alpha(
+                        self.config.hover_color,
+                        pv.rotate_arcball_ring_hover_alpha.clamp(0.0, 1.0),
+                    )
                 } else {
-                    base
+                    pv.rotate_arcball_ring_color
                 };
                 push_ring_band(
                     u,
@@ -170,6 +175,7 @@ impl Gizmo {
                     c,
                     DepthMode::Always,
                     pv.occlusion.rotate_arcball_ring,
+                    pv.rotate_arcball_ring_thickness_scale,
                 );
             }
         }
@@ -239,7 +245,7 @@ impl Gizmo {
 
         let base_radius_world = size_length_world.max(1e-6);
         let radius_world = if active == Self::ROTATE_VIEW_HANDLE {
-            (base_radius_world * self.config.view_axis_ring_radius_scale).max(1e-6)
+            (base_radius_world * pv.rotate_view_ring_radius_scale).max(1e-6)
         } else {
             base_radius_world
         };

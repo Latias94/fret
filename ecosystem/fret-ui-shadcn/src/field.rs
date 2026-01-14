@@ -206,7 +206,7 @@ impl FieldSet {
             let legend_is_variant_legend = is_field_legend_variant_legend(&legend);
             let rest_children = children;
             let legend_gap = MetricRef::space(Space::N3).resolve(&theme);
-            let outer_gap = match &legend.kind {
+            let outer_gap = match &peel_semantics_wrappers(&legend).kind {
                 ElementKind::Container(props) if matches!(props.layout.margin.bottom, fret_ui::element::MarginEdge::Px(px) if (px.0 - legend_gap.0).abs() <= 0.5) => {
                     Px(0.0)
                 }

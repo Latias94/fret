@@ -36,6 +36,7 @@ impl Renderer {
         self.ensure_pipeline(device, format);
         self.ensure_text_pipeline(device, format);
         self.ensure_text_color_pipeline(device, format);
+        self.ensure_text_subpixel_pipeline(device, format);
         self.ensure_mask_pipeline(device, format);
         self.ensure_path_pipeline(device, format);
         let path_samples = self.effective_path_msaa_samples(format);
@@ -46,6 +47,7 @@ impl Renderer {
         }
 
         let text_prepare_start = perf_enabled.then(Instant::now);
+        self.text_system.prepare_for_scene(scene, frame_index);
         self.text_system.flush_uploads(queue);
         if let Some(text_prepare_start) = text_prepare_start {
             frame_perf.prepare_text += text_prepare_start.elapsed();
@@ -75,6 +77,7 @@ impl Renderer {
             scene_ops_len: scene.ops_len(),
             render_targets_generation: self.render_targets_generation,
             images_generation: self.images_generation,
+            text_atlas_revision: self.text_system.atlas_revision(),
         };
 
         let cache_hit = self.scene_encoding_cache_key == Some(key);
@@ -513,6 +516,7 @@ impl Renderer {
                             Viewport,
                             TextMask,
                             TextColor,
+                            TextSubpixel,
                             Mask,
                             Path,
                         }
@@ -533,6 +537,10 @@ impl Renderer {
                             .text_color_pipeline
                             .as_ref()
                             .expect("text color pipeline must exist");
+                        let text_subpixel_pipeline = self
+                            .text_subpixel_pipeline
+                            .as_ref()
+                            .expect("text subpixel pipeline must exist");
                         let mask_pipeline = self
                             .mask_pipeline
                             .as_ref()
@@ -543,6 +551,7 @@ impl Renderer {
                             .expect("path pipeline must exist");
 
                         let mut active_pipeline = ActivePipeline::None;
+                        let mut active_text_page: Option<u16> = None;
 
                         fn begin_main_pass<'a>(
                             encoder: &'a mut wgpu::CommandEncoder,
@@ -889,7 +898,8 @@ impl Renderer {
                                                 );
                                                 pass.set_bind_group(
                                                     1,
-                                                    self.text_system.mask_atlas_bind_group(),
+                                                    self.text_system
+                                                        .mask_atlas_bind_group(draw.atlas_page),
                                                     &[],
                                                 );
                                                 if perf_enabled {
@@ -902,6 +912,24 @@ impl Renderer {
                                                             .saturating_add(1);
                                                 }
                                                 active_pipeline = ActivePipeline::TextMask;
+                                                active_text_page = Some(draw.atlas_page);
+                                            } else if active_text_page != Some(draw.atlas_page) {
+                                                pass.set_bind_group(
+                                                    1,
+                                                    self.text_system
+                                                        .mask_atlas_bind_group(draw.atlas_page),
+                                                    &[],
+                                                );
+                                                if perf_enabled {
+                                                    frame_perf.bind_group_switches = frame_perf
+                                                        .bind_group_switches
+                                                        .saturating_add(1);
+                                                    frame_perf.texture_bind_group_switches =
+                                                        frame_perf
+                                                            .texture_bind_group_switches
+                                                            .saturating_add(1);
+                                                }
+                                                active_text_page = Some(draw.atlas_page);
                                             }
                                         }
                                         TextDrawKind::Color => {
@@ -923,7 +951,8 @@ impl Renderer {
                                                 );
                                                 pass.set_bind_group(
                                                     1,
-                                                    self.text_system.color_atlas_bind_group(),
+                                                    self.text_system
+                                                        .color_atlas_bind_group(draw.atlas_page),
                                                     &[],
                                                 );
                                                 if perf_enabled {
@@ -936,6 +965,79 @@ impl Renderer {
                                                             .saturating_add(1);
                                                 }
                                                 active_pipeline = ActivePipeline::TextColor;
+                                                active_text_page = Some(draw.atlas_page);
+                                            } else if active_text_page != Some(draw.atlas_page) {
+                                                pass.set_bind_group(
+                                                    1,
+                                                    self.text_system
+                                                        .color_atlas_bind_group(draw.atlas_page),
+                                                    &[],
+                                                );
+                                                if perf_enabled {
+                                                    frame_perf.bind_group_switches = frame_perf
+                                                        .bind_group_switches
+                                                        .saturating_add(1);
+                                                    frame_perf.texture_bind_group_switches =
+                                                        frame_perf
+                                                            .texture_bind_group_switches
+                                                            .saturating_add(1);
+                                                }
+                                                active_text_page = Some(draw.atlas_page);
+                                            }
+                                        }
+                                        TextDrawKind::Subpixel => {
+                                            if !matches!(
+                                                active_pipeline,
+                                                ActivePipeline::TextSubpixel
+                                            ) {
+                                                pass.set_pipeline(text_subpixel_pipeline);
+                                                if perf_enabled {
+                                                    frame_perf.pipeline_switches = frame_perf
+                                                        .pipeline_switches
+                                                        .saturating_add(1);
+                                                    frame_perf.pipeline_switches_text_subpixel =
+                                                        frame_perf
+                                                            .pipeline_switches_text_subpixel
+                                                            .saturating_add(1);
+                                                }
+                                                pass.set_vertex_buffer(
+                                                    0,
+                                                    text_vertex_buffer.slice(..),
+                                                );
+                                                pass.set_bind_group(
+                                                    1,
+                                                    self.text_system
+                                                        .subpixel_atlas_bind_group(draw.atlas_page),
+                                                    &[],
+                                                );
+                                                if perf_enabled {
+                                                    frame_perf.bind_group_switches = frame_perf
+                                                        .bind_group_switches
+                                                        .saturating_add(1);
+                                                    frame_perf.texture_bind_group_switches =
+                                                        frame_perf
+                                                            .texture_bind_group_switches
+                                                            .saturating_add(1);
+                                                }
+                                                active_pipeline = ActivePipeline::TextSubpixel;
+                                                active_text_page = Some(draw.atlas_page);
+                                            } else if active_text_page != Some(draw.atlas_page) {
+                                                pass.set_bind_group(
+                                                    1,
+                                                    self.text_system
+                                                        .subpixel_atlas_bind_group(draw.atlas_page),
+                                                    &[],
+                                                );
+                                                if perf_enabled {
+                                                    frame_perf.bind_group_switches = frame_perf
+                                                        .bind_group_switches
+                                                        .saturating_add(1);
+                                                    frame_perf.texture_bind_group_switches =
+                                                        frame_perf
+                                                            .texture_bind_group_switches
+                                                            .saturating_add(1);
+                                                }
+                                                active_text_page = Some(draw.atlas_page);
                                             }
                                         }
                                     }
@@ -2427,6 +2529,10 @@ impl Renderer {
                 .perf
                 .pipeline_switches_text_color
                 .saturating_add(frame_perf.pipeline_switches_text_color);
+            self.perf.pipeline_switches_text_subpixel = self
+                .perf
+                .pipeline_switches_text_subpixel
+                .saturating_add(frame_perf.pipeline_switches_text_subpixel);
             self.perf.pipeline_switches_path = self
                 .perf
                 .pipeline_switches_path
