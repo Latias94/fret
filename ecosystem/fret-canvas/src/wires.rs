@@ -7,7 +7,7 @@
 //! The default control point heuristic matches common node-editor conventions (XyFlow/ImGui-style):
 //! the curve bends primarily along the X axis with a screen-space clamp that is made zoom-safe.
 
-use fret_core::{Point, Px};
+use fret_core::{Point, Px, Rect, Size};
 
 fn sanitize_zoom(zoom: f32) -> f32 {
     if zoom.is_finite() && zoom > 0.0 {
@@ -168,6 +168,39 @@ pub fn closest_point_on_bezier_wire(
     best.0
 }
 
+/// Computes a conservative axis-aligned bounding box for the default wire curve `from -> to`.
+///
+/// This is intended for coarse culling and spatial indexing. The box is computed from the Bezier
+/// end points and the default control points, then expanded by `pad` (canvas units).
+pub fn wire_aabb(from: Point, to: Point, zoom: f32, pad: f32) -> Rect {
+    let (c1, c2) = wire_ctrl_points(from, to, zoom);
+    let mut min_x = from.x.0.min(to.x.0).min(c1.x.0).min(c2.x.0);
+    let mut max_x = from.x.0.max(to.x.0).max(c1.x.0).max(c2.x.0);
+    let mut min_y = from.y.0.min(to.y.0).min(c1.y.0).min(c2.y.0);
+    let mut max_y = from.y.0.max(to.y.0).max(c1.y.0).max(c2.y.0);
+
+    if !min_x.is_finite()
+        || !max_x.is_finite()
+        || !min_y.is_finite()
+        || !max_y.is_finite()
+        || min_x > max_x
+        || min_y > max_y
+    {
+        return Rect::new(from, Size::new(Px(0.0), Px(0.0)));
+    }
+
+    let pad = if pad.is_finite() { pad.max(0.0) } else { 0.0 };
+    min_x -= pad;
+    min_y -= pad;
+    max_x += pad;
+    max_y += pad;
+
+    Rect::new(
+        Point::new(Px(min_x), Px(min_y)),
+        Size::new(Px((max_x - min_x).max(0.0)), Px((max_y - min_y).max(0.0))),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -190,5 +223,32 @@ mod tests {
         let d2 = bezier_wire_distance2(p, from, to, 1.0, 0);
         assert!(d2.is_finite());
         let _ = closest_point_on_bezier_wire(p, from, to, 1.0, 0);
+    }
+
+    #[test]
+    fn wire_aabb_is_conservative_and_pad_expands() {
+        let from = Point::new(Px(0.0), Px(10.0));
+        let to = Point::new(Px(200.0), Px(30.0));
+        let a0 = wire_aabb(from, to, 1.0, 0.0);
+        assert!(a0.size.width.0 >= 200.0);
+        assert!(a0.origin.x.0 <= 0.0);
+        assert!(a0.origin.y.0 <= 10.0.min(30.0));
+
+        let a1 = wire_aabb(from, to, 1.0, 10.0);
+        assert!(a1.origin.x.0 <= a0.origin.x.0 - 9.9);
+        assert!(a1.origin.y.0 <= a0.origin.y.0 - 9.9);
+        assert!(a1.size.width.0 >= a0.size.width.0 + 19.9);
+        assert!(a1.size.height.0 >= a0.size.height.0 + 19.9);
+    }
+
+    #[test]
+    fn wire_aabb_handles_non_finite_inputs() {
+        let from = Point::new(Px(f32::NAN), Px(0.0));
+        let to = Point::new(Px(10.0), Px(10.0));
+        let rect = wire_aabb(from, to, 1.0, 0.0);
+        assert!(rect.origin.x.0.is_finite());
+        assert!(rect.origin.y.0.is_finite());
+        assert!(rect.size.width.0.is_finite());
+        assert!(rect.size.height.0.is_finite());
     }
 }

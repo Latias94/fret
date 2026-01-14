@@ -5,31 +5,12 @@
 
 use fret_canvas::spatial::GridIndexWithBackrefs;
 use fret_canvas::wires as canvas_wires;
-use fret_core::{Point, Px, Rect, Size};
+use fret_core::{Point, Rect};
 use std::collections::HashMap;
 
 use crate::core::{EdgeId, Graph, NodeId, PortId};
 
 use super::geometry::CanvasGeometry;
-
-fn wire_aabb(from: Point, to: Point, zoom: f32, pad: f32) -> Rect {
-    let (c1, c2) = canvas_wires::wire_ctrl_points(from, to, zoom);
-    let mut min_x = from.x.0.min(to.x.0).min(c1.x.0).min(c2.x.0);
-    let mut max_x = from.x.0.max(to.x.0).max(c1.x.0).max(c2.x.0);
-    let mut min_y = from.y.0.min(to.y.0).min(c1.y.0).min(c2.y.0);
-    let mut max_y = from.y.0.max(to.y.0).max(c1.y.0).max(c2.y.0);
-
-    let pad = if pad.is_finite() { pad.max(0.0) } else { 0.0 };
-    min_x -= pad;
-    min_y -= pad;
-    max_x += pad;
-    max_y += pad;
-
-    Rect::new(
-        Point::new(Px(min_x), Px(min_y)),
-        Size::new(Px((max_x - min_x).max(0.0)), Px((max_y - min_y).max(0.0))),
-    )
-}
 
 /// Coarse grid index for ports and edges (canvas space).
 #[derive(Debug, Clone)]
@@ -108,7 +89,7 @@ impl CanvasSpatialIndex {
             let Some(to) = geom.port_center(edge.to) else {
                 continue;
             };
-            let rect = wire_aabb(from, to, zoom, pad);
+            let rect = canvas_wires::wire_aabb(from, to, zoom, pad);
             edges.insert_rect(edge_id, rect);
         }
 
@@ -142,7 +123,7 @@ impl CanvasSpatialIndex {
     }
 
     pub(crate) fn edge_aabb(&self, from: Point, to: Point, zoom: f32) -> Rect {
-        wire_aabb(from, to, zoom, self.edge_aabb_pad_canvas)
+        canvas_wires::wire_aabb(from, to, zoom, self.edge_aabb_pad_canvas)
     }
 
     pub(crate) fn edges_for_port(&self, port: PortId) -> Option<&[EdgeId]> {
