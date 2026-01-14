@@ -1,0 +1,119 @@
+# Glide Data Grid Audit (DataGridCanvas)
+
+Status: Draft
+
+This audit compares Fret’s canvas-backed data grid surface with Glide Data Grid to guide a
+“performance ceiling” implementation direction.
+
+## Scope
+
+- Fret surface: `fret-ui-shadcn::DataGrid` (alias for `DataGridCanvas`)
+  - Implementation: `ecosystem/fret-ui-shadcn/src/data_grid_canvas.rs`
+  - Headless axis math: `ecosystem/fret-ui-headless/src/grid_viewport.rs`
+- Reference: Glide Data Grid (repo-ref)
+  - Checkout: `repo-ref/glide-data-grid` @ `ab7042389afd`
+
+Non-goals for this doc:
+
+- Full spreadsheet engine (formulas, merge cells, pivots)
+- Editing UX parity (we only capture perf-relevant hooks)
+
+## What We Have Today (Fret)
+
+### Rendering model
+
+- Canvas rendering: backgrounds, grid lines, and text are drawn in a small number of paint passes.
+- Visible cell list is derived from a 2D viewport computation (`compute_grid_viewport_2d`), then rendered in a nested
+  loop over visible rows × visible columns.
+- Text draw uses a stable `cache_key` derived from `(row_key, col_key)` (see `DataGridCanvas.cell_text` key scope).
+
+### Virtualization model (2D)
+
+- Row/column axes are modeled as independent 1D virtualizers (`GridAxisMetrics`) with:
+  - Fixed sizing (constant estimate per item)
+  - Measured sizing (estimate + measurement write-back, keyed by stable axis key)
+- A `GridViewport2D` binds those into a visible window via scroll offsets and viewport size.
+
+## What Glide Suggests (When Pushing “Spreadsheet Scale”)
+
+Glide’s core architectural idea is: keep per-cell UI node count ~constant by rendering dense regions via canvas,
+and push “rich UI” to lightweight overlays (selection rects, editor popovers).
+
+Key reference anchors:
+
+- Render pipeline helpers:
+  - `repo-ref/glide-data-grid/packages/core/src/internal/data-grid/render/data-grid-render.cells.ts`
+  - `repo-ref/glide-data-grid/packages/core/src/internal/data-grid/render/data-grid-render.walk.ts`
+- Public “on-demand cell” contract:
+  - `repo-ref/glide-data-grid/packages/core/src/docs/01-getting-started.stories.tsx` (`getCellContent`)
+
+## Gap List (Fret vs Glide) — Performance-Critical
+
+### 1) Render pipeline granularity (dirty rect / partial redraw)
+
+Glide has a more explicit render pipeline (walkers, draw helpers, and separation between lines/headers/cells).
+Fret currently repaints the visible grid region each frame the element is painted.
+
+Follow-up direction:
+
+- Introduce an explicit “render plan” object for the grid region:
+  - inputs: viewport + visible axis items + selection state + theme
+  - outputs: a compact list of draw ops (or at least a measured timing breakdown)
+- Consider incremental redraw (dirty rect) once selection/editing overlays exist.
+
+### 2) Cell renderers / prep cache
+
+Glide has a cell renderer system (including “prep” steps and per-renderer caches) to avoid redoing expensive work.
+Fret currently draws only text via a callback and relies on the painter cache key.
+
+Follow-up direction:
+
+- Define a `CellRenderer`-like contract for canvas cells:
+  - `draw(ctx, rect, cell, theme, state)`
+  - optional `prep` hook for caching per cell type
+- Keep the core grid contract `rows + cols + get_cell(row, col)` to make this pluggable.
+
+### 3) Large scroll handling (precision / scaling)
+
+Glide’s walkers and sizing management emphasize stable geometry under large scroll offsets.
+Fret scales `Px` into integer units in `GridAxisMetrics`, which is good, but we do not yet have a dedicated
+“large scroll scaling” layer for extreme totals (multi-million rows/cols).
+
+Follow-up direction:
+
+- Add an explicit scaling strategy (similar to “scale virtualization math into a stable range”) once we measure
+  total sizes large enough to trigger precision issues.
+
+### 4) Variable sizing contract (source vs measured)
+
+Fret supports variable row/col sizing via measurement write-back (`GridAxisMetrics::measure`) and also supports
+caller-provided sizes via `DataGridCanvasAxis::size_override`.
+
+The missing piece is a stable, explicit contract for:
+
+- when sizes are authoritative (data-driven) vs best-effort (UI-measured),
+- how invalidation works when widths change (text reflow changes height),
+- how measurement caches are reset (revision semantics).
+
+## Immediate P0 Fixes Implemented
+
+These are small reductions in per-frame overhead without changing behavior:
+
+- Avoid the “pre-viewport compute” pass when no size overrides are configured.
+- Avoid per-frame allocation of index vectors for the visible range (iterate by start/end directly).
+
+Implementation: `ecosystem/fret-ui-shadcn/src/data_grid_canvas.rs`
+
+## Next P0/P1 Tasks (Recommended Order)
+
+P0 (fast, low risk):
+
+- Add cheap instrumentation hooks (counts + timings) to the stress demo:
+  - visible rows/cols/cells, time spent computing viewport, time spent drawing text.
+- Add an opt-in “cell text cache policy” so large grids can avoid shaping churn when data changes rapidly.
+
+P1 (medium scope):
+
+- Introduce a canvas cell renderer registry (text, number, bool, pill/tag, etc.) with optional prep caching.
+- Add overlay layers (selection rect, caret, editor popover) without increasing per-cell node count.
+
