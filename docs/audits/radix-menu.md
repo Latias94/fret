@@ -66,6 +66,11 @@ composing:
 
 ## Gaps / intentional differences
 
+- Fret models submenu "safe hover" with an explicit close-delay timer driven by pointer-move events
+  (`pointer_grace_intent::drive_close_timer_on_pointer_move`). Radix does not use an explicit close
+  timer in `@radix-ui/react-menu`; it prevents default on certain pointer transitions while a
+  pointer-grace intent is active. The intended observable outcome should match, but this needs
+  conformance coverage beyond "open + select".
 - Focus trap and outside scroll lock are modeled indirectly for `modal=true` menus via the overlay
   substrate: `OverlayRequest::dismissible_menu(...)` enables `disableOutsidePointerEvents`, which
   installs a modal barrier scope while the menu is open. This prevents focus traversal and wheel
@@ -79,6 +84,9 @@ composing:
 - `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs` validates dropdown-menu placement
   (menu popper gap + cross-axis delta) against the Radix Vega web golden
   (`goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.open-navigate-select.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates dropdown-menu submenu
+  hover-open + item select closes the root menu against the Radix Vega web golden
+  (`goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-hover-select.light.json`).
 - `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs` validates context-menu placement
   (menu popper gap + cross-axis delta, anchored to the right-click point) against the Radix Vega web
   golden

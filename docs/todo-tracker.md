@@ -115,6 +115,9 @@ It complements (but does not replace) ADRs:
   - Goal: lock down the highest-drift overlay behaviors (submenu grace corridor, delayed opens, focus transfer) with upstream web goldens.
   - Upstream references:
     - `repo-ref/primitives/packages/react/menu/src/menu.tsx` (submenu pointer grace + focus transfer rules).
+  - Current:
+    - Added dropdown-menu submenu hover-open + select timeline: `goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-hover-select.light.json`.
+    - Added Fret gate covering submenu open + close-on-select: `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs`.
   - Goldens to expand:
     - `goldens/radix-web/v4/radix-vega/*` timelines: add submenu scenarios for `dropdown-menu`, `context-menu`, `menubar`.
     - `goldens/shadcn-web/v4/new-york-v4/*.open.json`: add open snapshots for pages that require non-click input and/or submenu open states.
