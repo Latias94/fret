@@ -956,9 +956,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     let update = fret_runtime::apply_font_catalog_update(
                         &mut self.app,
                         gfx.renderer.all_font_names(),
-                        fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyFromCatalogPrefix {
-                            max: 8,
-                        },
+                        fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
                     );
                     let _ = gfx.renderer.set_text_font_families(&update.config);
                     self.app.set_global::<fret_runtime::TextFontStackKey>(
