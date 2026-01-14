@@ -20,3 +20,4 @@ tools/_clippy*.txt
 /apps/fret-demo-web/dist/
 tmp*
 *.rej
+/.bench/
