@@ -16,6 +16,7 @@ use crate::runtime::events::{
     NodeGraphStoreEvent, NodeGraphStoreSnapshot, SubscriptionToken, ViewChange,
 };
 use crate::runtime::lookups::NodeGraphLookups;
+use crate::runtime::middleware::NodeGraphStoreMiddleware;
 
 /// Dispatch outcome for store actions.
 #[derive(Debug, Clone)]
@@ -42,6 +43,7 @@ pub struct NodeGraphStore {
     view_state: NodeGraphViewState,
     history: GraphHistory,
     profile: Option<Box<dyn GraphProfile>>,
+    middleware: Option<Box<dyn NodeGraphStoreMiddleware>>,
     lookups: NodeGraphLookups,
 
     next_subscription: u64,
@@ -91,6 +93,7 @@ impl NodeGraphStore {
             view_state,
             history: GraphHistory::default(),
             profile: None,
+            middleware: None,
             lookups,
             next_subscription: 1,
             event_subscriptions: Vec::new(),
@@ -112,11 +115,17 @@ impl NodeGraphStore {
             view_state,
             history: GraphHistory::default(),
             profile: Some(profile),
+            middleware: None,
             lookups,
             next_subscription: 1,
             event_subscriptions: Vec::new(),
             selector_subscriptions: Vec::new(),
         }
+    }
+
+    pub fn with_middleware(mut self, middleware: impl NodeGraphStoreMiddleware) -> Self {
+        self.middleware = Some(Box::new(middleware));
+        self
     }
 
     /// Subscribes to store events (graph commits + view-state changes).
@@ -406,7 +415,29 @@ impl NodeGraphStore {
         &mut self,
         tx: &GraphTransaction,
     ) -> Result<DispatchOutcome, DispatchError> {
-        let tx = crate::ops::normalize_transaction(tx.clone());
+        let mut tx = crate::ops::normalize_transaction(tx.clone());
+        if tx.is_empty() {
+            return Ok(DispatchOutcome {
+                committed: tx,
+                changes: NodeGraphChanges::default(),
+            });
+        }
+        if let Some((key, message)) = crate::ops::find_non_finite_in_tx(&tx) {
+            return Err(DispatchError::Apply(Self::reject_tx(key, message)));
+        }
+        if let Some((key, message)) = crate::ops::find_invalid_size_in_tx(&tx) {
+            return Err(DispatchError::Apply(Self::reject_tx(key, message)));
+        }
+
+        if let Some(middleware) = self.middleware.as_deref_mut() {
+            let snapshot = NodeGraphStoreSnapshot {
+                graph: &self.graph,
+                view_state: &self.view_state,
+                history: &self.history,
+            };
+            middleware.before_dispatch(snapshot, &mut tx)?;
+        }
+        tx = crate::ops::normalize_transaction(tx);
         if tx.is_empty() {
             return Ok(DispatchOutcome {
                 committed: tx,
@@ -433,6 +464,16 @@ impl NodeGraphStore {
         self.lookups.apply_transaction(&self.graph, &committed);
         self.history.record(committed.clone());
         let changes = NodeGraphChanges::from_transaction(&committed);
+
+        if let Some(middleware) = self.middleware.as_deref_mut() {
+            let snapshot = NodeGraphStoreSnapshot {
+                graph: &self.graph,
+                view_state: &self.view_state,
+                history: &self.history,
+            };
+            middleware.after_dispatch(snapshot, &committed, &changes);
+        }
+
         self.emit(NodeGraphStoreEvent::GraphCommitted {
             committed: &committed,
             changes: &changes,
@@ -449,7 +490,29 @@ impl NodeGraphStore {
         tx: &GraphTransaction,
         profile: &mut dyn GraphProfile,
     ) -> Result<DispatchOutcome, ApplyPipelineError> {
-        let tx = crate::ops::normalize_transaction(tx.clone());
+        let mut tx = crate::ops::normalize_transaction(tx.clone());
+        if tx.is_empty() {
+            return Ok(DispatchOutcome {
+                committed: tx,
+                changes: NodeGraphChanges::default(),
+            });
+        }
+        if let Some((key, message)) = crate::ops::find_non_finite_in_tx(&tx) {
+            return Err(Self::reject_tx(key, message));
+        }
+        if let Some((key, message)) = crate::ops::find_invalid_size_in_tx(&tx) {
+            return Err(Self::reject_tx(key, message));
+        }
+
+        if let Some(middleware) = self.middleware.as_deref_mut() {
+            let snapshot = NodeGraphStoreSnapshot {
+                graph: &self.graph,
+                view_state: &self.view_state,
+                history: &self.history,
+            };
+            middleware.before_dispatch(snapshot, &mut tx)?;
+        }
+        tx = crate::ops::normalize_transaction(tx);
         if tx.is_empty() {
             return Ok(DispatchOutcome {
                 committed: tx,
@@ -476,6 +539,16 @@ impl NodeGraphStore {
         self.lookups.apply_transaction(&self.graph, &committed);
         self.history.record(committed.clone());
         let changes = NodeGraphChanges::from_transaction(&committed);
+
+        if let Some(middleware) = self.middleware.as_deref_mut() {
+            let snapshot = NodeGraphStoreSnapshot {
+                graph: &self.graph,
+                view_state: &self.view_state,
+                history: &self.history,
+            };
+            middleware.after_dispatch(snapshot, &committed, &changes);
+        }
+
         self.emit(NodeGraphStoreEvent::GraphCommitted {
             committed: &committed,
             changes: &changes,
