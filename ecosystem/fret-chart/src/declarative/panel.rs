@@ -310,6 +310,12 @@ pub fn chart_canvas_panel<H: UiHost>(
             if let Some(pointer_model) = engine.model().axis_pointer.as_ref()
                 && pointer_model.label.show
             {
+                let default_tooltip_spec = delinea::TooltipSpecV1::default();
+                let tooltip_spec = engine
+                    .model()
+                    .tooltip
+                    .as_ref()
+                    .unwrap_or(&default_tooltip_spec);
                 let template = pointer_model.label.template.as_str();
 
                 let mut push_label_for_axis =
@@ -326,12 +332,16 @@ pub fn chart_canvas_panel<H: UiHost>(
                             .get(&axis_id)
                             .and_then(|a| a.name.as_deref())
                             .unwrap_or("");
-                        let value_text = delinea::engine::axis::format_value_for(
-                            engine.model(),
-                            axis_id,
-                            axis_window,
-                            axis_value,
-                        );
+                        let value_text = if axis_value.is_finite() {
+                            delinea::engine::axis::format_value_for(
+                                engine.model(),
+                                axis_id,
+                                axis_window,
+                                axis_value,
+                            )
+                        } else {
+                            tooltip_spec.missing_value.clone()
+                        };
                         let label_text = if template == "{value}" {
                             value_text
                         } else {

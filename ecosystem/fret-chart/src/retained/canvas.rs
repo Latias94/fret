@@ -4473,6 +4473,13 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                             .and_then(|a| a.name.as_deref())
                             .unwrap_or("");
 
+                        let default_tooltip_spec = delinea::TooltipSpecV1::default();
+                        let tooltip_spec = self
+                            .engine
+                            .model()
+                            .tooltip
+                            .as_ref()
+                            .unwrap_or(&default_tooltip_spec);
                         let value_text = if axis_value.is_finite() {
                             delinea::engine::axis::format_value_for(
                                 self.engine.model(),
@@ -4481,7 +4488,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                 axis_value,
                             )
                         } else {
-                            "-".to_string()
+                            tooltip_spec.missing_value.clone()
                         };
 
                         let label_text = if axis_pointer_label_template == "{value}" {

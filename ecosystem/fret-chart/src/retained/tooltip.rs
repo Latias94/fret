@@ -1131,25 +1131,13 @@ mod tests {
         let lines =
             formatter.format_axis_pointer(&engine, &engine.output().axis_windows, &axis_pointer);
 
-        assert_eq!(lines.len(), 2);
-        assert_eq!(lines[0].source_series, None);
-        assert_eq!(lines[0].kind, TooltipTextLineKind::AxisHeader);
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].source_series, Some(series_a));
+        assert_eq!(lines[0].kind, TooltipTextLineKind::SeriesRow);
         assert!(lines[0].value_emphasis);
         assert!(!lines[0].is_missing);
         assert_eq!(
             lines[0]
-                .columns
-                .as_ref()
-                .map(|(l, r)| (l.as_str(), r.as_str())),
-            Some(("x (Time)", "0.5"))
-        );
-
-        assert_eq!(lines[1].source_series, Some(series_a));
-        assert_eq!(lines[1].kind, TooltipTextLineKind::SeriesRow);
-        assert!(lines[1].value_emphasis);
-        assert!(!lines[1].is_missing);
-        assert_eq!(
-            lines[1]
                 .columns
                 .as_ref()
                 .map(|(l, r)| (l.as_str(), r.as_str())),
@@ -1269,17 +1257,17 @@ mod tests {
         let lines =
             formatter.format_axis_pointer(&engine, &engine.output().axis_windows, &axis_pointer);
 
-        assert_eq!(lines.len(), 2);
-        assert_eq!(lines[1].source_series, Some(series_a));
-        assert_eq!(lines[1].text, "A: -");
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].source_series, Some(series_a));
+        assert_eq!(lines[0].text, "A: -");
         assert_eq!(
-            lines[1]
+            lines[0]
                 .columns
                 .as_ref()
                 .map(|(l, r)| (l.as_str(), r.as_str())),
             Some(("A", "-"))
         );
-        assert!(lines[1].is_missing);
+        assert!(lines[0].is_missing);
     }
 
     #[test]
