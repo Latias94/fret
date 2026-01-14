@@ -120,6 +120,11 @@ It complements (but does not replace) ADRs:
     - Added Fret gate covering submenu open + close-on-select: `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs`.
     - Added context-menu submenu hover-open + select timeline: `goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-hover-select.light.json`.
     - Added menubar submenu hover-open + select timeline: `goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-hover-select.light.json`.
+    - Added submenu pointer-grace corridor timelines:
+      - `goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-grace-corridor.light.json`
+      - `goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-grace-corridor.light.json`
+      - `goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-grace-corridor.light.json`
+    - Added Fret gates covering pointer-grace corridor staying open: `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs`.
   - Goldens to expand:
     - `goldens/radix-web/v4/radix-vega/*` timelines: add submenu scenarios for `dropdown-menu`, `context-menu`, `menubar`.
     - `goldens/shadcn-web/v4/new-york-v4/*.open.json`: add open snapshots for pages that require non-click input and/or submenu open states.

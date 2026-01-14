@@ -87,9 +87,15 @@ composing:
 - `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates dropdown-menu submenu
   hover-open + item select closes the root menu against the Radix Vega web golden
   (`goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-hover-select.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates dropdown-menu submenu
+  pointer grace corridor keeps the submenu open against the Radix Vega web golden
+  (`goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-grace-corridor.light.json`).
 - `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates context-menu submenu
   hover-open + item select closes the root menu against the Radix Vega web golden
   (`goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-hover-select.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates context-menu submenu
+  pointer grace corridor keeps the submenu open against the Radix Vega web golden
+  (`goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-grace-corridor.light.json`).
 - `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs` validates context-menu placement
   (menu popper gap + cross-axis delta, anchored to the right-click point) against the Radix Vega web
   golden
@@ -97,6 +103,9 @@ composing:
 - `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates menubar submenu
   hover-open + item select closes the root menu against the Radix Vega web golden
   (`goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-hover-select.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates menubar submenu
+  pointer grace corridor keeps the submenu open against the Radix Vega web golden
+  (`goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-grace-corridor.light.json`).
 - `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs` validates menubar menu placement
   (menu popper gap + cross-axis delta) against the Radix Vega web golden
   (`goldens/radix-web/v4/radix-vega/menubar-example.menubar.open-navigate-close.light.json`).
