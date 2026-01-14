@@ -207,7 +207,7 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 
 **Start here:** `docs/gizmo-viewport-integration.md` (end-to-end reference: `apps/fret-examples/src/gizmo3d_demo.rs`).
 
-**Notes:** for large-world picking stability, enable the optional `fret-gizmo/f64-math` feature (projection/unprojection runs in f64; public API stays f32).
+**Notes:** custom gizmos are supported via `GizmoPlugin` and host read-only domain values via `GizmoPropertySource` (ADR 0155/0167). For large-world picking stability, enable the optional `fret-gizmo/f64-math` feature (projection/unprojection runs in f64; public API stays f32).
 
 ### `fret-markdown` / `fret-code-view` / `fret-syntax`
 
