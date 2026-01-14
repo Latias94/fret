@@ -3,8 +3,8 @@ use std::sync::Arc;
 
 use fret_core::{
     AppWindowId, NodeId as UiNodeId, PathCommand, PathConstraints, PathId, PathMetrics, PathStyle,
-    Point, Px, Rect, Scene, Size, SvgId, TextBlobId, TextConstraints, TextMetrics, TextService,
-    TextStyle, Transform2D,
+    Point, Px, Rect, Scene, Size, SvgId, TextBlobId, TextConstraints, TextInput, TextMetrics,
+    TextService, Transform2D,
 };
 use fret_runtime::ModelId;
 use fret_ui::Invalidation;
@@ -31,11 +31,11 @@ struct CountingServices {
 impl TextService for CountingServices {
     fn prepare(
         &mut self,
-        text: &str,
-        _style: &TextStyle,
+        input: &TextInput,
         _constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics) {
         self.text_prepare += 1;
+        let text = input.text();
         (
             TextBlobId::default(),
             TextMetrics {
