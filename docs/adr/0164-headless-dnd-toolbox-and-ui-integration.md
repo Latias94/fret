@@ -82,6 +82,33 @@ It must not depend on `fret-ui` or runner crates.
 
 This keeps the runtime clean while making the common integrations easy.
 
+### 2.1) Lock a canonical coordinate space for the registry snapshot
+
+The integration registry (whether stored app-scoped or component-scoped) uses **window-local logical pixels**
+as its canonical space (ADR 0017):
+
+- droppable/draggable rects are expressed in window-local logical px,
+- pointer positions fed into sensors/collision are window-local logical px,
+- higher-level surfaces (canvas, 3D viewports) must perform their own mapping to/from their internal spaces.
+
+Rationale:
+
+- window-local logical px is already the stable cross-window routing coordinate for editor-grade input,
+- it keeps the toolbox independent from any particular scene graph / transform stack,
+- it avoids “hidden” DPI coupling in policy code.
+
+### 2.2) Activation delay is expressed in deterministic ticks
+
+Activation delay is defined in terms of **monotonic ticks** (`TickId`, runner-owned), not wall-clock time:
+
+- `ActivationConstraint::DelayTicks { ticks: u64 }` is evaluated against `TickId` deltas,
+- distance thresholds are evaluated in window-local logical px.
+
+This keeps drag activation deterministic and testable across runners/platforms.
+
+Note: component-owned pointer hooks must expose `pointer_id` and `tick_id` so policy code can be written
+without coupling to a concrete `UiHost` implementation.
+
 ### 3) Treat internal drag routing as mechanism-only; toolbox owns policy
 
 The runtime continues to route `Event::InternalDrag` using hit-testing and the existing internal-drag anchor override
@@ -185,6 +212,15 @@ interaction at that moment.
    - richer modifiers,
    - auto-scroll implementation hooks,
    - exposing stable public surfaces in `fret-ui-kit`.
+
+## Current Implementation (MVP)
+
+- Headless toolbox: `ecosystem/fret-dnd/` (activation constraints, collision strategies, modifiers, auto-scroll).
+- UI integration glue (initial): `ecosystem/fret-ui-kit/src/dnd.rs` (window-scoped registry snapshot + per-kind sensors).
+- Use-case A (canvas/node graph): insert-node drag wiring in
+  `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag.rs`.
+- Use-case B (sortable/reorder): minimal declarative recipe in
+  `ecosystem/fret-ui-kit/src/recipes/sortable_dnd.rs`.
 
 ## Open Questions
 
