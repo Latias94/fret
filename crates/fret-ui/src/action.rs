@@ -1,8 +1,8 @@
 use crate::UiHost;
 use fret_core::{
-    AppWindowId, Axis, CursorIcon, KeyCode, Modifiers, MouseButton, Point, PointerType,
+    AppWindowId, Axis, CursorIcon, KeyCode, Modifiers, MouseButton, Point, PointerId, PointerType,
 };
-use fret_runtime::{CommandId, Effect, Model, ModelStore, TimerToken, WeakModel};
+use fret_runtime::{CommandId, Effect, Model, ModelStore, TickId, TimerToken, WeakModel};
 use std::any::Any;
 use std::sync::Arc;
 
@@ -48,7 +48,9 @@ pub enum DismissReason {
 /// Pointer down payload for component-owned pointer handlers.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PointerDownCx {
+    pub pointer_id: PointerId,
     pub position: Point,
+    pub tick_id: TickId,
     /// Pixels-per-point (a.k.a. window scale factor) for `position`.
     ///
     /// This is required for DPI-stable interactions (e.g. viewport tools, gizmos).
@@ -63,7 +65,9 @@ pub struct PointerDownCx {
 /// Pointer move payload for component-owned pointer handlers.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PointerMoveCx {
+    pub pointer_id: PointerId,
     pub position: Point,
+    pub tick_id: TickId,
     /// Pixels-per-point (a.k.a. window scale factor) for `position`.
     pub pixels_per_point: f32,
     pub buttons: fret_core::MouseButtons,
@@ -74,7 +78,9 @@ pub struct PointerMoveCx {
 /// Wheel payload for component-owned wheel handlers.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct WheelCx {
+    pub pointer_id: PointerId,
     pub position: Point,
+    pub tick_id: TickId,
     /// Pixels-per-point (a.k.a. window scale factor) for `position`.
     pub pixels_per_point: f32,
     pub delta: Point,
@@ -84,7 +90,9 @@ pub struct WheelCx {
 /// Pinch (magnify) gesture payload for component-owned pinch handlers.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PinchGestureCx {
+    pub pointer_id: PointerId,
     pub position: Point,
+    pub tick_id: TickId,
     /// Pixels-per-point (a.k.a. window scale factor) for `position`.
     pub pixels_per_point: f32,
     /// Positive for magnification (zoom in) and negative for shrinking (zoom out).
@@ -98,7 +106,9 @@ pub struct PinchGestureCx {
 /// Pointer up payload for component-owned pointer handlers.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PointerUpCx {
+    pub pointer_id: PointerId,
     pub position: Point,
+    pub tick_id: TickId,
     /// Pixels-per-point (a.k.a. window scale factor) for `position`.
     pub pixels_per_point: f32,
     pub button: MouseButton,

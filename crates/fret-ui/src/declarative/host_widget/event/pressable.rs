@@ -28,6 +28,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                 modifiers,
                 pointer_type,
                 click_count,
+                pointer_id,
                 ..
             } => {
                 let hook = crate::elements::with_element_state(
@@ -126,7 +127,9 @@ pub(super) fn handle_pressable<H: UiHost>(
                     }
 
                     let down = action::PointerDownCx {
+                        pointer_id: *pointer_id,
                         position: *position,
+                        tick_id: cx.app.tick_id(),
                         pixels_per_point,
                         button: *button,
                         modifiers: *modifiers,

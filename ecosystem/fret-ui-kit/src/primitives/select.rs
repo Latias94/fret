@@ -1814,7 +1814,9 @@ mod tests {
                 target: GlobalElementId(1),
             },
             PointerDownCx {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(10.0), Px(12.0)),
+                tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
                 button: fret_core::MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -1846,7 +1848,9 @@ mod tests {
                 target: GlobalElementId(1),
             },
             PointerDownCx {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(10.0), Px(12.0)),
+                tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
                 button: fret_core::MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -1865,7 +1869,9 @@ mod tests {
                 target: GlobalElementId(1),
             },
             PointerUpCx {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(13.0), Px(15.0)),
+                tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
                 button: fret_core::MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -1897,7 +1903,9 @@ mod tests {
                 target: GlobalElementId(1),
             },
             PointerDownCx {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(10.0), Px(12.0)),
+                tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
                 button: fret_core::MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -1914,7 +1922,9 @@ mod tests {
                 target: GlobalElementId(1),
             },
             PointerMoveCx {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(40.0), Px(12.0)),
+                tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
                 buttons: fret_core::MouseButtons {
                     left: true,
@@ -1932,7 +1942,9 @@ mod tests {
                 target: GlobalElementId(1),
             },
             PointerUpCx {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(40.0), Px(12.0)),
+                tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
                 button: fret_core::MouseButton::Left,
                 modifiers: Modifiers::default(),
