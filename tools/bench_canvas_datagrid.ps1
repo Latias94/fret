@@ -278,7 +278,7 @@ if ($Iterations -gt 1) {
     $avgOut = $(if ($null -ne $avgMed) { "{0:N3}" -f $avgMed } else { "" })
     $p95Out = $(if ($null -ne $p95Med) { "{0:N3}" -f $p95Med } else { "" })
     $prepOut = $(if ($null -ne $prepMed) { "{0:N3}" -f $prepMed } else { "" })
-    $drawsOut = $(if ($null -ne $drawsMed) { "{0:N0}" -f $drawsMed } else { "" })
+    $drawsOut = $(if ($null -ne $drawsMed) { "{0:0}" -f $drawsMed } else { "" })
 
     "$($first.case),$($first.rows),$($first.cols),$($first.variable),$profile,$Iterations,$vrOut,$vcOut,$vcellOut,$avgOut,$p95Out,$prepOut,$drawsOut" | Out-File -FilePath $aggPath -Append -Encoding utf8
   }
