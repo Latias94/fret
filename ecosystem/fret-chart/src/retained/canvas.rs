@@ -4321,6 +4321,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         } else {
             None
         };
+        let mut axis_pointer_label_rect: Option<Rect> = None;
 
         if let Some(axis_pointer) = axis_pointer.as_ref() {
             let pos = axis_pointer.crosshair_px;
@@ -4512,6 +4513,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     let by1 = by0 + band.rect.size.height.0;
                     box_x = box_x.clamp(bx0, (bx1 - w).max(bx0));
                     box_y = box_y.clamp(by0, (by1 - h).max(by0));
+                    axis_pointer_label_rect = Some(Rect::new(
+                        Point::new(Px(box_x), Px(box_y)),
+                        Size::new(Px(w), Px(h)),
+                    ));
 
                     let label_order = DrawOrder(self.style.draw_order.0.saturating_add(9_020));
                     cx.scene.push(SceneOp::Quad {
@@ -4873,10 +4878,6 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             let h = (total_h + pad.top.0 + pad.bottom.0).max(1.0);
 
             let bounds = self.last_layout.bounds;
-            let x0 = bounds.origin.x.0;
-            let y0 = bounds.origin.y.0;
-            let x1 = x0 + bounds.size.width.0;
-            let y1 = y0 + bounds.size.height.0;
 
             let anchor = match &axis_pointer.tooltip {
                 delinea::TooltipOutput::Axis(_) => axis_pointer.crosshair_px,
@@ -4887,26 +4888,15 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             };
 
             let offset = 10.0f32;
-            let mut tip_x = anchor.x.0 + offset;
-            let mut tip_y = anchor.y.0 - h - offset;
-
-            if tip_x + w > x1 {
-                tip_x = anchor.x.0 - w - offset;
-            }
-            if tip_y < y0 {
-                tip_y = anchor.y.0 + offset;
-            }
-
-            if w < bounds.size.width.0 {
-                tip_x = tip_x.clamp(x0, x1 - w);
-            } else {
-                tip_x = x0;
-            }
-            if h < bounds.size.height.0 {
-                tip_y = tip_y.clamp(y0, y1 - h);
-            } else {
-                tip_y = y0;
-            }
+            let tooltip_rect = crate::tooltip_layout::place_tooltip_rect(
+                bounds,
+                anchor,
+                Size::new(Px(w), Px(h)),
+                offset,
+                axis_pointer_label_rect,
+            );
+            let tip_x = tooltip_rect.origin.x.0;
+            let tip_y = tooltip_rect.origin.y.0;
 
             let tooltip_order = DrawOrder(self.style.draw_order.0.saturating_add(9_100));
             cx.scene.push(SceneOp::Quad {
