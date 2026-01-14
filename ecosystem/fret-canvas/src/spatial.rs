@@ -257,8 +257,8 @@ impl<T: Copy + Eq + Hash> GridIndexWithBackrefs<T> {
                         }
                     }
                 }
-                debug_assert_eq!(
-                    removed, item,
+                debug_assert!(
+                    removed == item,
                     "spatial index backrefs must remove the intended item"
                 );
                 if items.is_empty() {
@@ -305,7 +305,7 @@ impl<T: Copy + Eq + Hash> GridIndexWithBackrefs<T> {
 /// - default: uniform grid (`GridIndexWithBackrefs`)
 /// - `fret-canvas/rstar`: R-tree (`RStarIndexWithBackrefs`)
 #[derive(Debug, Clone)]
-pub struct DefaultIndexWithBackrefs<T> {
+pub struct DefaultIndexWithBackrefs<T: Copy> {
     #[cfg(feature = "rstar")]
     inner: RStarIndexWithBackrefs<T>,
     #[cfg(not(feature = "rstar"))]
@@ -322,6 +322,17 @@ impl<T: Copy + Eq + Hash> DefaultIndexWithBackrefs<T> {
             },
             #[cfg(not(feature = "rstar"))]
             inner: GridIndexWithBackrefs::new(cell_size),
+        }
+    }
+
+    pub fn backend_name(&self) -> &'static str {
+        #[cfg(feature = "rstar")]
+        {
+            "rstar"
+        }
+        #[cfg(not(feature = "rstar"))]
+        {
+            "grid"
         }
     }
 

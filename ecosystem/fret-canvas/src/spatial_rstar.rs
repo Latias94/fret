@@ -12,7 +12,7 @@ use fret_core::{Point, Rect};
 use rstar::{AABB, RTree, RTreeObject};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-struct Entry<T> {
+struct Entry<T: Copy> {
     item: T,
     envelope: AABB<[f32; 2]>,
 }
@@ -67,7 +67,7 @@ fn aabb_for_radius(pos: Point, radius: f32) -> Option<AABB<[f32; 2]>> {
 /// - Updates are `remove + insert` (log N) and may be slower for heavy drag workloads with many
 ///   moving items each frame.
 #[derive(Debug, Clone)]
-pub struct RStarIndexWithBackrefs<T> {
+pub struct RStarIndexWithBackrefs<T: Copy> {
     tree: RTree<Entry<T>>,
     item_envelopes: HashMap<T, AABB<[f32; 2]>>,
 }

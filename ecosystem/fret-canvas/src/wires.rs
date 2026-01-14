@@ -232,7 +232,7 @@ mod tests {
         let a0 = wire_aabb(from, to, 1.0, 0.0);
         assert!(a0.size.width.0 >= 200.0);
         assert!(a0.origin.x.0 <= 0.0);
-        assert!(a0.origin.y.0 <= 10.0.min(30.0));
+        assert!(a0.origin.y.0 <= 10.0_f32.min(30.0));
 
         let a1 = wire_aabb(from, to, 1.0, 10.0);
         assert!(a1.origin.x.0 <= a0.origin.x.0 - 9.9);
