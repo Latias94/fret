@@ -185,7 +185,7 @@ single “at a glance” view of:
     - for very large non-monotonic X views, the engine can build a budgeted "nearest X" index to recover near-O(log n) sampling (`NearestXIndexStage`).
       The stage supports append-only resume and prefix reuse when the request end grows.
 - Missing vs ECharts:
-  - ECharts formatter parity (callback-style formatting, rich text/HTML markers, per-series overrides),
+  - ECharts formatter parity (rich text/HTML markers, richer structural layout). Callback-style formatting is available via adapter hooks (`TooltipFormatter`, retained + declarative), and per-series overrides exist in `TooltipSpecV1`,
   - richer tooltip layout (structural columns, rich text/HTML) and additional snapping policies,
   - formatter parity across adapters (retained + declarative hooks exist; still missing rich text/HTML parity).
 

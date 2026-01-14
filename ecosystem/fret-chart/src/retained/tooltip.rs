@@ -10,6 +10,22 @@ pub struct TooltipTextLine {
     pub text: String,
 }
 
+impl TooltipTextLine {
+    pub fn plain(text: impl Into<String>) -> Self {
+        Self {
+            source_series: None,
+            text: text.into(),
+        }
+    }
+
+    pub fn for_series(series: SeriesId, text: impl Into<String>) -> Self {
+        Self {
+            source_series: Some(series),
+            text: text.into(),
+        }
+    }
+}
+
 pub trait TooltipFormatter: Send + Sync {
     fn format_axis_pointer(
         &self,
@@ -17,6 +33,51 @@ pub trait TooltipFormatter: Send + Sync {
         axis_windows: &BTreeMap<AxisId, DataWindow>,
         axis_pointer: &AxisPointerOutput,
     ) -> Vec<TooltipTextLine>;
+}
+
+#[derive(Clone, Copy)]
+pub struct TooltipFormatContext<'a> {
+    pub engine: &'a ChartEngine,
+    pub axis_windows: &'a BTreeMap<AxisId, DataWindow>,
+    pub axis_pointer: &'a AxisPointerOutput,
+}
+
+impl<'a> TooltipFormatContext<'a> {
+    pub fn model(&self) -> &ChartModel {
+        self.engine.model()
+    }
+
+    pub fn tooltip(&self) -> &'a delinea::TooltipOutput {
+        &self.axis_pointer.tooltip
+    }
+}
+
+pub struct TooltipFormatterFn<F> {
+    f: F,
+}
+
+impl<F> TooltipFormatterFn<F> {
+    pub fn new(f: F) -> Self {
+        Self { f }
+    }
+}
+
+impl<F> TooltipFormatter for TooltipFormatterFn<F>
+where
+    F: for<'a> Fn(&TooltipFormatContext<'a>) -> Vec<TooltipTextLine> + Send + Sync,
+{
+    fn format_axis_pointer(
+        &self,
+        engine: &ChartEngine,
+        axis_windows: &BTreeMap<AxisId, DataWindow>,
+        axis_pointer: &AxisPointerOutput,
+    ) -> Vec<TooltipTextLine> {
+        (self.f)(&TooltipFormatContext {
+            engine,
+            axis_windows,
+            axis_pointer,
+        })
+    }
 }
 
 #[derive(Debug, Default)]
@@ -792,5 +853,123 @@ mod tests {
         assert_eq!(lines[1].text, "A=0.50");
         assert_eq!(lines[2].source_series, Some(series_b));
         assert_eq!(lines[2].text, "B only: 1");
+    }
+
+    #[test]
+    fn closure_formatter_can_render_axis_trigger_tooltip() {
+        let dataset_id = delinea::DatasetId::new(1);
+        let grid_id = delinea::GridId::new(1);
+        let x_axis = delinea::AxisId::new(1);
+        let y_axis = delinea::AxisId::new(2);
+        let series = delinea::SeriesId::new(1);
+        let x_field = delinea::FieldId::new(1);
+        let y_field = delinea::FieldId::new(2);
+
+        let spec = ChartSpec {
+            id: delinea::ChartId::new(1),
+            viewport: Some(Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(100.0), Px(100.0)),
+            )),
+            datasets: vec![DatasetSpec {
+                id: dataset_id,
+                fields: vec![
+                    FieldSpec {
+                        id: x_field,
+                        column: 0,
+                    },
+                    FieldSpec {
+                        id: y_field,
+                        column: 1,
+                    },
+                ],
+            }],
+            grids: vec![GridSpec { id: grid_id }],
+            axes: vec![
+                delinea::AxisSpec {
+                    id: x_axis,
+                    name: Some("Time".to_string()),
+                    kind: AxisKind::X,
+                    grid: grid_id,
+                    position: None,
+                    scale: Default::default(),
+                    range: None,
+                },
+                delinea::AxisSpec {
+                    id: y_axis,
+                    name: Some("Value".to_string()),
+                    kind: AxisKind::Y,
+                    grid: grid_id,
+                    position: None,
+                    scale: Default::default(),
+                    range: None,
+                },
+            ],
+            data_zoom_x: vec![],
+            data_zoom_y: vec![],
+            tooltip: None,
+            axis_pointer: Some(delinea::AxisPointerSpec {
+                enabled: true,
+                trigger: delinea::AxisPointerTrigger::Axis,
+                pointer_type: delinea::AxisPointerType::Line,
+                label: Default::default(),
+                snap: true,
+                trigger_distance_px: 10_000.0,
+                throttle_px: 0.0,
+            }),
+            visual_maps: vec![],
+            series: vec![SeriesSpec {
+                id: series,
+                name: Some("A".to_string()),
+                kind: SeriesKind::Line,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+            }],
+        };
+
+        let mut engine = ChartEngine::new(spec).unwrap();
+        let mut table = delinea::data::DataTable::default();
+        table.push_column(delinea::data::Column::F64(vec![0.0, 1.0, 2.0]));
+        table.push_column(delinea::data::Column::F64(vec![10.0, 20.0, 30.0]));
+        engine.datasets_mut().insert(dataset_id, table);
+
+        engine.apply_action(delinea::Action::HoverAt {
+            point: Point::new(Px(50.0), Px(50.0)),
+        });
+
+        let mut measurer = NullTextMeasurer::default();
+        let step = engine
+            .step(&mut measurer, WorkBudget::new(262_144, 0, 32))
+            .unwrap();
+        assert!(!step.unfinished);
+
+        let axis_pointer = engine.output().axis_pointer.as_ref().unwrap();
+        let axis_windows = &engine.output().axis_windows;
+
+        let formatter = TooltipFormatterFn::new(|cx: &TooltipFormatContext<'_>| {
+            let delinea::TooltipOutput::Axis(axis) = cx.tooltip() else {
+                return vec![];
+            };
+            vec![TooltipTextLine::plain(format!(
+                "axis={} value={} series={}",
+                axis.axis.0,
+                axis.axis_value,
+                axis.series.len()
+            ))]
+        });
+
+        let lines = formatter.format_axis_pointer(&engine, axis_windows, axis_pointer);
+        assert_eq!(lines.len(), 1);
+        assert!(lines[0].text.contains("axis="));
     }
 }
