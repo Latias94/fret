@@ -59,3 +59,14 @@ Fret now provides a declarative canvas element in `crates/fret-ui` (ADR 0156).
 
 This crate intentionally stays focused on reusable retained-canvas helpers that remain useful even
 when the high-level authoring style is declarative.
+
+## Optional: rstar backend
+
+`fret-canvas` ships with a uniform-grid spatial index by default.
+
+For experiments and large graphs with highly non-uniform distributions, an opt-in R-tree backend is
+available via the `rstar` feature:
+
+- Enable: `fret-canvas/rstar`
+- Call sites should prefer `fret_canvas::spatial::DefaultIndexWithBackrefs<T>` so the backend can
+  be swapped without refactors.

@@ -27,6 +27,9 @@ default = ["fret-ui", "kit"]
 # Enables integration helpers for `crates/fret-ui` (canvas widget, action hooks, styling surfaces).
 fret-ui = ["dep:fret-ui", "dep:fret-runtime", "dep:fret-canvas"]
 
+# Opt into the `rstar` spatial index backend for large graphs.
+canvas-rstar = ["fret-ui", "fret-canvas/rstar"]
+
 # Convenience surfaces (profiles + common recipes) built on top of the substrate.
 #
 # This is headless-safe: it must not depend on `fret-ui`.
