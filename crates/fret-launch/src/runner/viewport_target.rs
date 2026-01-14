@@ -211,6 +211,14 @@ impl ViewportRenderTargetWithDepth {
         self.color.id()
     }
 
+    pub fn color_format(&self) -> wgpu::TextureFormat {
+        self.color.format()
+    }
+
+    pub fn depth_format(&self) -> wgpu::TextureFormat {
+        self.depth_format
+    }
+
     pub fn size(&self) -> (u32, u32) {
         self.color.size()
     }
