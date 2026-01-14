@@ -36,12 +36,28 @@ fn fret_point(p: kurbo::Point) -> Point {
 }
 
 #[cfg(feature = "kurbo")]
-fn kurbo_accuracy_canvas_units(zoom: f32, steps: usize) -> f64 {
+fn kurbo_accuracy_canvas_units(from: Point, to: Point, zoom: f32, steps: usize) -> f64 {
     let z = sanitize_zoom(zoom).max(1.0e-6);
     let steps = steps.max(1) as f32;
     let base_steps = DEFAULT_BEZIER_HIT_TEST_STEPS as f32;
-    let ratio = (base_steps / steps).clamp(0.25, 4.0);
-    let accuracy_screen_px = 0.5 * ratio;
+
+    let dx_screen = (to.x.0 - from.x.0) * z;
+    let dy_screen = (to.y.0 - from.y.0) * z;
+    let chord_len_screen = (dx_screen * dx_screen + dy_screen * dy_screen)
+        .sqrt()
+        .max(1.0);
+    let segment_len_screen = (chord_len_screen / steps).max(1.0);
+
+    // Kurbo's `nearest()` uses a subdivision scheme controlled by an `accuracy` parameter.
+    // We map our historical "polyline subdivision steps" to a similar error budget in screen px.
+    //
+    // Heuristic:
+    // - use a fraction of the implied segment length (so long wires can afford looser accuracy),
+    // - scale by `sqrt(base_steps/steps)` so higher step counts request higher precision,
+    // - clamp to a reasonable range so we don't under-refine near the hit threshold.
+    let step_scale = (base_steps / steps).sqrt().clamp(0.5, 2.0);
+    let accuracy_screen_px = (segment_len_screen * 0.35 * step_scale).clamp(0.75, 6.0);
+
     (accuracy_screen_px / z) as f64
 }
 
@@ -159,7 +175,7 @@ pub fn bezier_wire_distance2(p: Point, from: Point, to: Point, zoom: f32, steps:
             kurbo_point(c2),
             kurbo_point(to),
         );
-        let accuracy = kurbo_accuracy_canvas_units(zoom, steps);
+        let accuracy = kurbo_accuracy_canvas_units(from, to, zoom, steps);
         let nearest = curve.nearest(kurbo_point(p), accuracy);
         let d2 = nearest.distance_sq as f32;
         return if d2.is_finite() { d2 } else { f32::INFINITY };
@@ -202,7 +218,7 @@ pub fn closest_point_on_bezier_wire(
             kurbo_point(c2),
             kurbo_point(to),
         );
-        let accuracy = kurbo_accuracy_canvas_units(zoom, steps);
+        let accuracy = kurbo_accuracy_canvas_units(from, to, zoom, steps);
         let nearest = curve.nearest(kurbo_point(p), accuracy);
         return fret_point(curve.eval(nearest.t));
     }
