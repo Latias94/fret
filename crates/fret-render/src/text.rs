@@ -1,7 +1,4 @@
-use cosmic_text::{
-    Attrs, AttrsList, Family, FontSystem, Hinting, Metrics, ShapeBuffer, ShapeLine, Shaping,
-    Style as CosmicStyle, Weight,
-};
+use cosmic_text::{Family, FontSystem};
 use fret_core::scene::{Scene, SceneOp};
 use fret_core::{
     AttributedText, CaretAffinity, HitTestResult, Point, Rect, Size, TextBlobId, TextConstraints,
@@ -988,7 +985,6 @@ pub struct TextSystem {
     font_system: FontSystem,
     parley_shaper: crate::text_v2::parley_shaper::ParleyShaper,
     parley_scale: parley::swash::scale::ScaleContext,
-    scratch: ShapeBuffer,
     font_stack_key: u64,
     font_db_revision: u64,
 
@@ -1010,16 +1006,29 @@ pub struct TextSystem {
     font_face_key_by_fontique: HashMap<(u64, u32), FontFaceKey>,
 }
 
-fn family_for_font_id(font: &fret_core::FontId) -> Family<'_> {
-    match font {
-        fret_core::FontId::Ui => Family::SansSerif,
-        fret_core::FontId::Serif => Family::Serif,
-        fret_core::FontId::Monospace => Family::Monospace,
-        fret_core::FontId::Family(name) => Family::Name(name.as_str()),
+pub type TextFontFamilyConfig = fret_core::TextFontFamilyConfig;
+
+fn metrics_from_wrapped_lines(
+    lines: &[crate::text_v2::parley_shaper::ShapedLineLayout],
+    scale: f32,
+) -> TextMetrics {
+    let first_baseline_px = lines.first().map(|l| l.baseline.max(0.0)).unwrap_or(0.0);
+
+    let mut max_w_px = 0.0_f32;
+    let mut total_h_px = 0.0_f32;
+    for line in lines {
+        max_w_px = max_w_px.max(line.width.max(0.0));
+        total_h_px += line.line_height.max(0.0);
+    }
+
+    TextMetrics {
+        size: Size::new(
+            Px((max_w_px / scale).max(0.0)),
+            Px((total_h_px / scale).max(0.0)),
+        ),
+        baseline: Px((first_baseline_px / scale).max(0.0)),
     }
 }
-
-pub type TextFontFamilyConfig = fret_core::TextFontFamilyConfig;
 
 impl TextSystem {
     /// Returns a sorted list of available font family names.
@@ -1180,7 +1189,6 @@ impl TextSystem {
             font_system,
             parley_shaper,
             parley_scale: parley::swash::scale::ScaleContext::new(),
-            scratch: ShapeBuffer::default(),
             font_stack_key,
             font_db_revision,
 
@@ -1615,20 +1623,7 @@ impl TextSystem {
                     .map(|l| l.baseline.max(0.0))
                     .unwrap_or(0.0);
 
-                let mut max_w_px = 0.0_f32;
-                let mut total_h_px = 0.0_f32;
-                for line in &wrapped.lines {
-                    max_w_px = max_w_px.max(line.width.max(0.0));
-                    total_h_px += line.line_height.max(0.0);
-                }
-
-                let metrics = TextMetrics {
-                    size: Size::new(
-                        Px((max_w_px / scale).max(0.0)),
-                        Px((total_h_px / scale).max(0.0)),
-                    ),
-                    baseline: Px((first_baseline_px / scale).max(0.0)),
-                };
+                let metrics = metrics_from_wrapped_lines(&wrapped.lines, scale);
 
                 let mut glyphs: Vec<GlyphInstance> = Vec::new();
                 let mut lines: Vec<TextLine> = Vec::with_capacity(wrapped.lines.len().max(1));
@@ -1813,39 +1808,12 @@ impl TextSystem {
         }
 
         let scale = constraints.scale_factor.max(1.0);
-        let font_size_px = (style.size.0 * scale).max(1.0);
-
-        let mut attrs = Attrs::new().family(family_for_font_id(&style.font));
-        attrs = attrs.weight(Weight(style.weight.0));
-        attrs = match style.slant {
-            TextSlant::Normal => attrs,
-            TextSlant::Italic => attrs.style(CosmicStyle::Italic),
-            TextSlant::Oblique => attrs.style(CosmicStyle::Oblique),
-        };
-        if let Some(letter_spacing_em) = style.letter_spacing_em
-            && letter_spacing_em != 0.0
-            && letter_spacing_em.is_finite()
-        {
-            attrs = attrs.letter_spacing(letter_spacing_em);
-        }
-        if let Some(line_height) = style.line_height {
-            let line_height_px = (line_height.0 * scale).max(font_size_px);
-            if line_height_px.is_finite() {
-                attrs = attrs.metrics(Metrics::new(font_size_px, line_height_px));
-            }
-        }
-        let metrics = layout_text(
-            &mut self.font_system,
-            &mut self.scratch,
-            text,
-            &attrs,
-            None,
-            font_size_px,
+        let wrapped = crate::text_v2::wrapper::wrap_with_constraints(
+            &mut self.parley_shaper,
+            TextInputRef::plain(text, style),
             constraints,
-            scale,
-        )
-        .0
-        .metrics;
+        );
+        let metrics = metrics_from_wrapped_lines(&wrapped.lines, scale);
 
         let bucket = self.measure_cache.entry(key).or_default();
         bucket.push_back(TextMeasureEntry {
@@ -1888,40 +1856,16 @@ impl TextSystem {
         }
 
         let scale = constraints.scale_factor.max(1.0);
-        let font_size_px = (base_style.size.0 * scale).max(1.0);
-
-        let mut attrs = Attrs::new().family(family_for_font_id(&base_style.font));
-        attrs = attrs.weight(Weight(base_style.weight.0));
-        attrs = match base_style.slant {
-            TextSlant::Normal => attrs,
-            TextSlant::Italic => attrs.style(CosmicStyle::Italic),
-            TextSlant::Oblique => attrs.style(CosmicStyle::Oblique),
-        };
-        if let Some(letter_spacing_em) = base_style.letter_spacing_em
-            && letter_spacing_em != 0.0
-            && letter_spacing_em.is_finite()
-        {
-            attrs = attrs.letter_spacing(letter_spacing_em);
-        }
-        if let Some(line_height) = base_style.line_height {
-            let line_height_px = (line_height.0 * scale).max(font_size_px);
-            if line_height_px.is_finite() {
-                attrs = attrs.metrics(Metrics::new(font_size_px, line_height_px));
-            }
-        }
-
-        let metrics = layout_text(
-            &mut self.font_system,
-            &mut self.scratch,
-            rich.text.as_ref(),
-            &attrs,
-            Some(rich.spans.as_ref()),
-            font_size_px,
+        let wrapped = crate::text_v2::wrapper::wrap_with_constraints(
+            &mut self.parley_shaper,
+            TextInputRef::Attributed {
+                text: rich.text.as_ref(),
+                base: base_style,
+                spans: rich.spans.as_ref(),
+            },
             constraints,
-            scale,
-        )
-        .0
-        .metrics;
+        );
+        let metrics = metrics_from_wrapped_lines(&wrapped.lines, scale);
 
         let bucket = self.measure_cache.entry(key).or_default();
         bucket.push_back(TextMeasureEntry {
@@ -2046,6 +1990,7 @@ impl TextSystem {
     }
 }
 
+#[cfg(any())]
 #[derive(Debug, Clone)]
 struct PreparedLayout {
     metrics: TextMetrics,
@@ -2062,10 +2007,6 @@ struct ResolvedSpan {
     end: usize,
     slot: u16,
     fg: Option<fret_core::Color>,
-    font: Option<fret_core::FontId>,
-    weight: Option<fret_core::FontWeight>,
-    slant: Option<TextSlant>,
-    letter_spacing_em: Option<f32>,
 }
 
 fn resolve_spans_for_text(text: &str, spans: &[TextSpan]) -> Option<Vec<ResolvedSpan>> {
@@ -2090,10 +2031,6 @@ fn resolve_spans_for_text(text: &str, spans: &[TextSpan]) -> Option<Vec<Resolved
                 end,
                 slot,
                 fg: span.paint.fg,
-                font: span.shaping.font.clone(),
-                weight: span.shaping.weight,
-                slant: span.shaping.slant,
-                letter_spacing_em: span.shaping.letter_spacing_em,
             });
         }
         offset = end;
@@ -2105,6 +2042,7 @@ fn resolve_spans_for_text(text: &str, spans: &[TextSpan]) -> Option<Vec<Resolved
     Some(out)
 }
 
+#[cfg(any())]
 fn paint_span_for_glyph(
     spans: &[ResolvedSpan],
     base_offset: usize,
@@ -2134,6 +2072,7 @@ fn paint_span_for_text_range(
         .map(|s| s.slot)
 }
 
+#[cfg(any())]
 fn layout_text(
     font_system: &mut FontSystem,
     scratch: &mut ShapeBuffer,
@@ -2476,6 +2415,7 @@ fn caret_stops_for_slice(
     out
 }
 
+#[cfg(any())]
 fn build_line_caret_stops(
     base_offset: usize,
     boundaries_local: &[usize],
@@ -2646,12 +2586,13 @@ fn selection_rects_from_lines(lines: &[TextLine], range: (usize, usize), out: &m
 #[cfg(test)]
 mod tests {
     use super::{
-        TextBlobKey, TextShapeKey, collect_font_names, layout_text, spans_paint_fingerprint,
+        TextBlobKey, TextShapeKey, collect_font_names, spans_paint_fingerprint,
         spans_shaping_fingerprint, subpixel_mask_to_alpha,
     };
-    use cosmic_text::{Attrs, Family};
+    use cosmic_text::Family;
     use fret_core::{
-        Color, FontWeight, Px, TextConstraints, TextOverflow, TextSpan, TextStyle, TextWrap,
+        Color, FontWeight, Px, TextConstraints, TextInputRef, TextOverflow, TextSpan, TextStyle,
+        TextWrap,
     };
     use std::sync::Arc;
 
@@ -2787,29 +2728,7 @@ mod tests {
     }
 
     #[test]
-    fn font_id_maps_to_cosmic_text_family() {
-        assert_eq!(
-            super::family_for_font_id(&fret_core::FontId::ui()),
-            Family::SansSerif
-        );
-        assert_eq!(
-            super::family_for_font_id(&fret_core::FontId::serif()),
-            Family::Serif
-        );
-        assert_eq!(
-            super::family_for_font_id(&fret_core::FontId::monospace()),
-            Family::Monospace
-        );
-    }
-
-    #[test]
     fn ellipsis_overflow_truncates_single_line_layout() {
-        let mut font_system = cosmic_text::FontSystem::new();
-        let mut scratch = cosmic_text::ShapeBuffer::default();
-
-        let mut attrs = Attrs::new().family(Family::SansSerif);
-        attrs = attrs.weight(cosmic_text::Weight(FontWeight::NORMAL.0));
-
         let text = "This is a long line that should truncate";
         let constraints = TextConstraints {
             max_width: Some(Px(80.0)),
@@ -2818,20 +2737,17 @@ mod tests {
             scale_factor: 1.0,
         };
 
-        let (layout, _) = layout_text(
-            &mut font_system,
-            &mut scratch,
-            text,
-            &attrs,
-            None,
-            13.0,
+        let mut shaper = crate::text_v2::parley_shaper::ParleyShaper::new();
+        let base = TextStyle::default();
+        let wrapped = crate::text_v2::wrapper::wrap_with_constraints(
+            &mut shaper,
+            TextInputRef::plain(text, &base),
             constraints,
-            1.0,
         );
 
-        assert_eq!(layout.lines.len(), 1);
-        assert!(layout.local_ends[0] < text.len());
-        assert!(layout.lines[0].w <= 80.0 + 0.01);
+        assert_eq!(wrapped.lines.len(), 1);
+        assert!(wrapped.kept_end < text.len());
+        assert!(wrapped.lines[0].width <= 80.0 + 0.5);
     }
 
     #[test]
