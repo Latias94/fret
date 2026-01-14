@@ -205,6 +205,7 @@ pub(crate) fn tooltip_overlay_tool(
                 source_series: Option<SeriesId>,
                 kind: TooltipTextLineKind,
                 value_emphasis: bool,
+                is_missing: bool,
                 layout: TooltipLineLayout,
             }
 
@@ -245,11 +246,15 @@ pub(crate) fn tooltip_overlay_tool(
                         TooltipTextLineKind::SeriesRow => 2,
                     };
                     let emphasis_key: u8 = line.value_emphasis as u8;
+                    let missing_key: u8 = line.is_missing as u8;
                     let left_key: u64 = painter
                         .child_key(scope, &("l", kind_key, emphasis_key, i, left.as_ref()))
                         .into();
                     let right_key: u64 = painter
-                        .child_key(scope, &("r", kind_key, emphasis_key, i, right.as_ref()))
+                        .child_key(
+                            scope,
+                            &("r", kind_key, emphasis_key, missing_key, i, right.as_ref()),
+                        )
                         .into();
 
                     let left_metrics = painter.text(
@@ -286,6 +291,7 @@ pub(crate) fn tooltip_overlay_tool(
                         source_series: line.source_series,
                         kind: line.kind,
                         value_emphasis: line.value_emphasis,
+                        is_missing: line.is_missing,
                         layout: TooltipLineLayout::Columns {
                             left_key,
                             left_metrics,
@@ -303,8 +309,12 @@ pub(crate) fn tooltip_overlay_tool(
                         TooltipTextLineKind::SeriesRow => 2,
                     };
                     let emphasis_key: u8 = line.value_emphasis as u8;
+                    let missing_key: u8 = line.is_missing as u8;
                     let key: u64 = painter
-                        .child_key(scope, &("s", kind_key, emphasis_key, i, text.as_ref()))
+                        .child_key(
+                            scope,
+                            &("s", kind_key, emphasis_key, missing_key, i, text.as_ref()),
+                        )
                         .into();
                     let metrics = painter.text(
                         key,
@@ -322,6 +332,7 @@ pub(crate) fn tooltip_overlay_tool(
                         source_series: line.source_series,
                         kind: line.kind,
                         value_emphasis: line.value_emphasis,
+                        is_missing: line.is_missing,
                         layout: TooltipLineLayout::Single { key, metrics, text },
                     });
                 }
@@ -381,6 +392,10 @@ pub(crate) fn tooltip_overlay_tool(
             });
 
             let mut y = tip_y + pad.top.0;
+            let missing_text_color = Color {
+                a: (style.tooltip_text_color.a * 0.55).clamp(0.0, 1.0),
+                ..style.tooltip_text_color
+            };
             for (i, line) in prepared_lines.into_iter().enumerate() {
                 let order_base = tooltip_order
                     .0
@@ -436,13 +451,18 @@ pub(crate) fn tooltip_overlay_tool(
                         } else {
                             text_style.clone()
                         };
+                        let color = if line.is_missing {
+                            missing_text_color
+                        } else {
+                            style.tooltip_text_color
+                        };
                         let _ = painter.text(
                             key,
                             DrawOrder(order_base.saturating_add(1)),
                             Point::new(Px(text_x0), Px(y)),
                             text,
                             label_style_for_line,
-                            style.tooltip_text_color,
+                            color,
                             constraints,
                             paint_cx.raster_scale_factor,
                         );
@@ -489,13 +509,18 @@ pub(crate) fn tooltip_overlay_tool(
                             constraints,
                             paint_cx.raster_scale_factor,
                         );
+                        let value_color = if line.is_missing {
+                            missing_text_color
+                        } else {
+                            style.tooltip_text_color
+                        };
                         let _ = painter.text(
                             right_key,
                             DrawOrder(order_base.saturating_add(2)),
                             Point::new(Px(value_x), Px(y)),
                             right,
                             value_style_for_line,
-                            style.tooltip_text_color,
+                            value_color,
                             constraints,
                             paint_cx.raster_scale_factor,
                         );

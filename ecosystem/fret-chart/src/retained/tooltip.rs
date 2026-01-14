@@ -22,6 +22,7 @@ pub struct TooltipTextLine {
     pub columns: Option<(String, String)>,
     pub kind: TooltipTextLineKind,
     pub value_emphasis: bool,
+    pub is_missing: bool,
 }
 
 impl TooltipTextLine {
@@ -32,6 +33,7 @@ impl TooltipTextLine {
             columns: None,
             kind: TooltipTextLineKind::Body,
             value_emphasis: false,
+            is_missing: false,
         }
     }
 
@@ -42,6 +44,7 @@ impl TooltipTextLine {
             columns: None,
             kind: TooltipTextLineKind::SeriesRow,
             value_emphasis: false,
+            is_missing: false,
         }
     }
 
@@ -54,6 +57,7 @@ impl TooltipTextLine {
             columns: Some((left, right)),
             kind: TooltipTextLineKind::Body,
             value_emphasis: true,
+            is_missing: false,
         }
     }
 
@@ -70,6 +74,7 @@ impl TooltipTextLine {
             columns: Some((left, right)),
             kind: TooltipTextLineKind::SeriesRow,
             value_emphasis: true,
+            is_missing: false,
         }
     }
 
@@ -80,6 +85,11 @@ impl TooltipTextLine {
 
     pub fn with_value_emphasis(mut self, value_emphasis: bool) -> Self {
         self.value_emphasis = value_emphasis;
+        self
+    }
+
+    pub fn with_missing(mut self, is_missing: bool) -> Self {
+        self.is_missing = is_missing;
         self
     }
 }
@@ -332,6 +342,7 @@ impl TooltipFormatter for DefaultTooltipFormatter {
                         columns: None,
                         kind: TooltipTextLineKind::SeriesRow,
                         value_emphasis: false,
+                        is_missing: false,
                     });
                 }
 
@@ -357,6 +368,7 @@ impl TooltipFormatter for DefaultTooltipFormatter {
                         columns: None,
                         kind: TooltipTextLineKind::Body,
                         value_emphasis: false,
+                        is_missing: false,
                     });
                 }
 
@@ -382,6 +394,7 @@ impl TooltipFormatter for DefaultTooltipFormatter {
                         columns: None,
                         kind: TooltipTextLineKind::Body,
                         value_emphasis: false,
+                        is_missing: false,
                     });
                 }
 
@@ -414,6 +427,7 @@ impl TooltipFormatter for DefaultTooltipFormatter {
                         columns: None,
                         kind: TooltipTextLineKind::AxisHeader,
                         value_emphasis: false,
+                        is_missing: false,
                     });
                 }
 
@@ -427,8 +441,10 @@ impl TooltipFormatter for DefaultTooltipFormatter {
                         .copied()
                         .unwrap_or_default();
 
+                    let mut is_missing = false;
                     let value = match &entry.value {
                         delinea::TooltipSeriesValue::Missing => {
+                            is_missing = true;
                             Self::effective_missing_value(spec, series_override).to_string()
                         }
                         delinea::TooltipSeriesValue::Scalar(v) => {
@@ -467,11 +483,10 @@ impl TooltipFormatter for DefaultTooltipFormatter {
                     };
 
                     if series_template == "{label}: {value}" {
-                        lines.push(TooltipTextLine::columns_for_series(
-                            entry.series,
-                            label,
-                            value,
-                        ));
+                        lines.push(
+                            TooltipTextLine::columns_for_series(entry.series, label, value)
+                                .with_missing(is_missing),
+                        );
                     } else {
                         lines.push(TooltipTextLine {
                             source_series: Some(entry.series),
@@ -479,6 +494,7 @@ impl TooltipFormatter for DefaultTooltipFormatter {
                             columns: None,
                             kind: TooltipTextLineKind::SeriesRow,
                             value_emphasis: false,
+                            is_missing,
                         });
                     }
                 }
@@ -656,6 +672,7 @@ mod tests {
         );
         assert_eq!(lines[0].kind, TooltipTextLineKind::AxisHeader);
         assert!(lines[0].value_emphasis);
+        assert!(!lines[0].is_missing);
         assert_eq!(lines[1].source_series, Some(series_a));
         assert_eq!(lines[1].text, "A: 0.5");
         assert_eq!(
@@ -667,6 +684,7 @@ mod tests {
         );
         assert_eq!(lines[1].kind, TooltipTextLineKind::SeriesRow);
         assert!(lines[1].value_emphasis);
+        assert!(!lines[1].is_missing);
         assert_eq!(lines[2].source_series, Some(series_b));
         assert_eq!(lines[2].text, "B: 1");
         assert_eq!(
@@ -678,6 +696,155 @@ mod tests {
         );
         assert_eq!(lines[2].kind, TooltipTextLineKind::SeriesRow);
         assert!(lines[2].value_emphasis);
+        assert!(!lines[2].is_missing);
+    }
+
+    #[test]
+    fn default_formatter_marks_missing_axis_values() {
+        let dataset_id = delinea::DatasetId::new(1);
+        let grid_id = delinea::GridId::new(1);
+        let x_axis = delinea::AxisId::new(1);
+        let y_axis = delinea::AxisId::new(2);
+        let series_a = delinea::SeriesId::new(1);
+        let series_b = delinea::SeriesId::new(2);
+        let x_field = delinea::FieldId::new(1);
+        let y_a_field = delinea::FieldId::new(2);
+        let y_b_field = delinea::FieldId::new(3);
+
+        let spec = ChartSpec {
+            id: delinea::ChartId::new(1),
+            viewport: Some(Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(100.0), Px(100.0)),
+            )),
+            datasets: vec![DatasetSpec {
+                id: dataset_id,
+                fields: vec![
+                    FieldSpec {
+                        id: x_field,
+                        column: 0,
+                    },
+                    FieldSpec {
+                        id: y_a_field,
+                        column: 1,
+                    },
+                    FieldSpec {
+                        id: y_b_field,
+                        column: 2,
+                    },
+                ],
+            }],
+            grids: vec![GridSpec { id: grid_id }],
+            axes: vec![
+                delinea::AxisSpec {
+                    id: x_axis,
+                    name: Some("Time".to_string()),
+                    kind: AxisKind::X,
+                    grid: grid_id,
+                    position: None,
+                    scale: Default::default(),
+                    range: None,
+                },
+                delinea::AxisSpec {
+                    id: y_axis,
+                    name: Some("Value".to_string()),
+                    kind: AxisKind::Y,
+                    grid: grid_id,
+                    position: None,
+                    scale: Default::default(),
+                    range: None,
+                },
+            ],
+            data_zoom_x: vec![],
+            data_zoom_y: vec![],
+            tooltip: None,
+            axis_pointer: Some(delinea::AxisPointerSpec {
+                enabled: true,
+                trigger: delinea::AxisPointerTrigger::Axis,
+                pointer_type: delinea::AxisPointerType::Line,
+                label: Default::default(),
+                snap: false,
+                trigger_distance_px: 0.0,
+                throttle_px: 0.0,
+            }),
+            visual_maps: vec![],
+            series: vec![
+                SeriesSpec {
+                    id: series_a,
+                    name: Some("A".to_string()),
+                    kind: SeriesKind::Line,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_a_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis,
+                    stack: None,
+                    stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
+                    area_baseline: None,
+                },
+                SeriesSpec {
+                    id: series_b,
+                    name: Some("B".to_string()),
+                    kind: SeriesKind::Line,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_b_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis,
+                    stack: None,
+                    stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
+                    area_baseline: None,
+                },
+            ],
+        };
+
+        let mut engine = ChartEngine::new(spec).unwrap();
+        let mut table = delinea::data::DataTable::default();
+        table.push_column(delinea::data::Column::F64(vec![0.0, 1.0]));
+        table.push_column(delinea::data::Column::F64(vec![0.0, 1.0]));
+        table.push_column(delinea::data::Column::F64(vec![0.0, f64::NAN]));
+        engine.datasets_mut().insert(dataset_id, table);
+
+        let mut measurer = NullTextMeasurer::default();
+        let step = engine
+            .step(&mut measurer, WorkBudget::new(262_144, 0, 32))
+            .unwrap();
+        assert!(!step.unfinished);
+
+        engine.apply_action(delinea::Action::HoverAt {
+            point: Point::new(Px(50.0), Px(50.0)),
+        });
+        let step = engine
+            .step(&mut measurer, WorkBudget::new(32_768, 0, 8))
+            .unwrap();
+        assert!(!step.unfinished);
+
+        let axis_pointer = engine.output().axis_pointer.as_ref().unwrap();
+        let formatter = DefaultTooltipFormatter::default();
+        let lines =
+            formatter.format_axis_pointer(&engine, &engine.output().axis_windows, axis_pointer);
+
+        assert_eq!(lines.len(), 3);
+        assert_eq!(lines[2].source_series, Some(series_b));
+        assert_eq!(lines[2].text, "B: -");
+        assert_eq!(
+            lines[2]
+                .columns
+                .as_ref()
+                .map(|(l, r)| (l.as_str(), r.as_str())),
+            Some(("B", "-"))
+        );
+        assert_eq!(lines[2].kind, TooltipTextLineKind::SeriesRow);
+        assert!(lines[2].value_emphasis);
+        assert!(lines[2].is_missing);
     }
 
     #[test]

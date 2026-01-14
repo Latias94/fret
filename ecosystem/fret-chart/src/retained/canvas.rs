@@ -4785,6 +4785,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
             struct PreparedTooltipLine {
                 source_series: Option<delinea::SeriesId>,
+                is_missing: bool,
                 layout: TooltipLineLayout,
             }
 
@@ -4836,6 +4837,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
                     prepared_lines.push(PreparedTooltipLine {
                         source_series: line.source_series,
+                        is_missing: line.is_missing,
                         layout: TooltipLineLayout::Columns {
                             left_blob,
                             left_metrics,
@@ -4856,6 +4858,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     total_h += metrics.size.height.0.max(1.0);
                     prepared_lines.push(PreparedTooltipLine {
                         source_series: line.source_series,
+                        is_missing: line.is_missing,
                         layout: TooltipLineLayout::Single { blob, metrics },
                     });
                 }
@@ -4916,6 +4919,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             });
 
             let mut y = tip_y + pad.top.0;
+            let missing_text_color = Color {
+                a: (self.style.tooltip_text_color.a * 0.55).clamp(0.0, 1.0),
+                ..self.style.tooltip_text_color
+            };
             for (i, line) in prepared_lines.into_iter().enumerate() {
                 let order_base = tooltip_order
                     .0
@@ -4957,11 +4964,16 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
                 match line.layout {
                     TooltipLineLayout::Single { blob, metrics } => {
+                        let color = if line.is_missing {
+                            missing_text_color
+                        } else {
+                            self.style.tooltip_text_color
+                        };
                         cx.scene.push(SceneOp::Text {
                             order: DrawOrder(order_base.saturating_add(1)),
                             origin: Point::new(Px(text_x0), Px(y)),
                             text: blob,
-                            color: self.style.tooltip_text_color,
+                            color,
                         });
                         y += metrics.size.height.0.max(1.0);
                     }
@@ -4988,11 +5000,16 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                             text: left_blob,
                             color: self.style.tooltip_text_color,
                         });
+                        let value_color = if line.is_missing {
+                            missing_text_color
+                        } else {
+                            self.style.tooltip_text_color
+                        };
                         cx.scene.push(SceneOp::Text {
                             order: DrawOrder(order_base.saturating_add(2)),
                             origin: Point::new(Px(value_x), Px(y)),
                             text: right_blob,
-                            color: self.style.tooltip_text_color,
+                            color: value_color,
                         });
 
                         y += line_height;
