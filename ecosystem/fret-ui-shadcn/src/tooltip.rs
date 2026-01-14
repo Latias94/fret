@@ -345,7 +345,7 @@ impl Tooltip {
         let window_margin = self.window_margin_override.unwrap_or_else(|| {
             theme
                 .metric_by_key("component.tooltip.window_margin")
-                .unwrap_or(Px(8.0))
+                .unwrap_or(Px(0.0))
         });
         let arrow = self.arrow;
         let arrow_size = self.arrow_size_override.unwrap_or_else(|| {
@@ -478,6 +478,7 @@ impl Tooltip {
                     anchor,
                     content_size,
                     popper::PopperContentPlacement::new(direction, side, align, side_offset)
+                        .with_shift_cross_axis(true)
                         .with_arrow(arrow_options, arrow_protrusion),
                 );
 
@@ -672,6 +673,7 @@ impl Tooltip {
 
                 let placement =
                     popper::PopperContentPlacement::new(direction, side, align, side_offset)
+                        .with_shift_cross_axis(true)
                         .with_arrow(arrow_options, arrow_protrusion)
                         .with_hide_when_detached(hide_when_detached);
                 let reference_hidden = placement.reference_hidden(outer, anchor);

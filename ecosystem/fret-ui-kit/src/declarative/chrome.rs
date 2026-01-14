@@ -50,13 +50,27 @@ where
         let parent_size = pressable_props.layout.size;
         let child_size = &mut chrome_props.layout.size;
 
+        // If the pressable has an explicit outer box size, the chrome should fill that box.
+        //
+        // This keeps border-box alignment intuitive for fixed-size controls (e.g. Checkbox,
+        // Switch) and matches the browser mental model where border/padding live inside the same
+        // border-box dimensions.
+        let chrome_fill_w = matches!(parent_size.width, Length::Px(_) | Length::Fill);
+        let chrome_fill_h = matches!(parent_size.height, Length::Px(_) | Length::Fill);
+        if chrome_fill_w {
+            child_size.width = Length::Fill;
+        }
+        if chrome_fill_h {
+            child_size.height = Length::Fill;
+        }
+
         if let Some(min_h) = parent_size.min_height {
             child_size.min_height = Some(shrink_px(min_h, inset_y));
         }
         if let Some(max_h) = parent_size.max_height {
             child_size.max_height = Some(shrink_px(max_h, inset_y));
         }
-        if let Length::Px(h) = parent_size.height {
+        if !chrome_fill_h && let Length::Px(h) = parent_size.height {
             child_size.height = Length::Px(shrink_px(h, inset_y));
         }
 
@@ -66,7 +80,7 @@ where
         if let Some(max_w) = parent_size.max_width {
             child_size.max_width = Some(shrink_px(max_w, inset_x));
         }
-        if let Length::Px(w) = parent_size.width {
+        if !chrome_fill_w && let Length::Px(w) = parent_size.width {
             child_size.width = Length::Px(shrink_px(w, inset_x));
         }
 

@@ -7,8 +7,8 @@ use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
-    PointerRegionProps, PointerRegionState, PressableProps, RovingFlexProps, RovingFocusProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
+    Overflow, PointerRegionProps, PositionStyle, PressableProps, RovingFlexProps, RovingFocusProps,
     ScrollAxis, ScrollProps, SizeStyle, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
@@ -1314,13 +1314,45 @@ impl ContextMenu {
             let on_dismiss_request = self.on_dismiss_request.clone();
             let pointer_policy = menu::context_menu_pointer_down_policy(open.clone());
 
+            #[derive(Default)]
+            struct PointerDownPointState {
+                model: Option<Model<Option<Point>>>,
+            }
+
+            let last_down_point =
+                cx.with_state(PointerDownPointState::default, |st| st.model.clone());
+            let last_down_point = if let Some(model) = last_down_point {
+                model
+            } else {
+                let model = cx.app.models_mut().insert(None);
+                cx.with_state(PointerDownPointState::default, |st| {
+                    st.model = Some(model.clone());
+                });
+                model
+            };
+
+            let pointer_policy_for_region = pointer_policy.clone();
+            let last_down_point_for_region = last_down_point.clone();
             let trigger = cx.pointer_region(PointerRegionProps::default(), move |cx| {
-                cx.pointer_region_on_pointer_down(pointer_policy);
+                let pointer_policy_for_region = pointer_policy_for_region.clone();
+                let last_down_point_for_region = last_down_point_for_region.clone();
+                cx.pointer_region_on_pointer_down(Arc::new(
+                    move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                          cx: fret_ui::action::ActionCx,
+                          down: fret_ui::action::PointerDownCx| {
+                        let _ = host.models_mut().update(&last_down_point_for_region, |v| {
+                            *v = Some(down.position);
+                        });
+                        pointer_policy_for_region(host, cx, down)
+                    },
+                ));
                 vec![trigger]
             });
 
-            let pointer_down = cx.with_state(PointerRegionState::default, |st| st.last_down);
-            let anchor_point = pointer_down.map(|it| it.position);
+            let anchor_point = cx
+                .watch_model(&last_down_point)
+                .copied()
+                .unwrap_or(None);
             let submenu_cfg = menu::sub::MenuSubmenuConfig::default();
             let submenu = cx.with_root_name(&overlay_root_name, |cx| {
                 menu::root::sync_root_open_and_ensure_submenu(cx, is_open, cx.root_id(), submenu_cfg)
@@ -1485,13 +1517,34 @@ impl ContextMenu {
                     let submenu_for_content = submenu.clone();
                     let submenu_for_panel = submenu.clone();
 
+                    // Match Radix: `role=menu` is on the content panel element (not a fullscreen
+                    // wrapper). We keep the popper wrapper for arrow hit-test expansion, but
+                    // position it locally inside the menu semantics node.
+                    let content_layout = LayoutStyle {
+                        position: PositionStyle::Absolute,
+                        inset: InsetStyle {
+                            left: Some(placed.origin.x),
+                            top: Some(placed.origin.y),
+                            ..Default::default()
+                        },
+                        size: SizeStyle {
+                            width: Length::Px(placed.size.width),
+                            height: Length::Px(placed.size.height),
+                            ..Default::default()
+                        },
+                        overflow: Overflow::Visible,
+                        ..Default::default()
+                    };
+
+                    let placed_local = Rect::new(Point::new(Px(0.0), Px(0.0)), placed.size);
+
                     let (_content_id, content) = menu::content_panel::menu_content_semantics_with_id(
                         cx,
-                        LayoutStyle::default(),
+                        content_layout,
                         move |cx| {
                             vec![popper_content::popper_wrapper_at(
                                 cx,
-                                placed,
+                                placed_local,
                                 wrapper_insets,
                                 move |cx| {
                                     let arrow_el = arrow

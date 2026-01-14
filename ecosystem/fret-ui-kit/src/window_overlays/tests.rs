@@ -11,7 +11,7 @@ use fret_core::PointerId;
 use fret_core::{PathCommand, SvgId, SvgService};
 use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
 use fret_core::{
-    Point, Px, Rect, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle,
+    Point, Px, Rect, TextBlobId, TextConstraints, TextInput, TextMetrics, TextService,
 };
 use fret_runtime::Model;
 use fret_ui::UiTree;
@@ -28,7 +28,7 @@ struct FakeServices;
 impl TextService for FakeServices {
     fn prepare(
         &mut self,
-        _input: &fret_core::TextInput,
+        _input: &TextInput,
         _constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics) {
         (

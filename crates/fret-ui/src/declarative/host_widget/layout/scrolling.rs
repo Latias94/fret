@@ -240,6 +240,7 @@ impl ElementHostWidget {
         }
         offset = clamped;
 
+        let mut child_rects: Vec<(NodeId, Rect)> = Vec::with_capacity(measured_updates.len());
         for (child, idx, measured_extent) in &measured_updates {
             let start = metrics.offset_for_index(*idx);
             let origin = match axis {
@@ -260,23 +261,15 @@ impl ElementHostWidget {
                     Rect::new(origin, Size::new(*measured_extent, size.height))
                 }
             };
+            child_rects.push((*child, child_bounds));
+        }
 
-            #[cfg(feature = "layout-engine-v2")]
-            if !is_probe_layout {
-                let sf = cx.scale_factor;
-                let app = &mut *cx.app;
-                let services = &mut *cx.services;
-                let tree = &mut *cx.tree;
-                tree.precompute_barrier_flow_root_island_if_needed(
-                    app,
-                    services,
-                    *child,
-                    child_bounds,
-                    sf,
-                );
-            }
+        if !is_probe_layout {
+            cx.solve_barrier_child_roots_if_needed(&child_rects);
+        }
 
-            let _ = cx.layout_in(*child, child_bounds);
+        for (child, child_bounds) in &child_rects {
+            let _ = cx.layout_in(*child, *child_bounds);
         }
 
         crate::elements::with_element_state(
@@ -407,17 +400,9 @@ impl ElementHostWidget {
             Size::new(content_w, content_h),
         );
 
-        #[cfg(feature = "layout-engine-v2")]
         if !is_probe_layout {
-            let sf = cx.scale_factor;
-            let app = &mut *cx.app;
-            let services = &mut *cx.services;
-            let tree = &mut *cx.tree;
-            for &child in cx.children {
-                tree.precompute_barrier_flow_root_island_if_needed(
-                    app, services, child, shifted, sf,
-                );
-            }
+            let roots: Vec<(NodeId, Rect)> = cx.children.iter().map(|&c| (c, shifted)).collect();
+            cx.solve_barrier_child_roots_if_needed(&roots);
         }
 
         for &child in cx.children {

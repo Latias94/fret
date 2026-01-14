@@ -240,39 +240,60 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
     }
 
     pub fn layout_engine_child_bounds(&mut self, child: NodeId) -> Option<Rect> {
-        #[cfg(feature = "layout-engine-v2")]
-        {
-            let local = self.tree.layout_engine_child_local_rect(self.node, child)?;
-            Some(Rect::new(
-                Point::new(
-                    fret_core::Px(self.bounds.origin.x.0 + local.origin.x.0),
-                    fret_core::Px(self.bounds.origin.y.0 + local.origin.y.0),
-                ),
-                local.size,
-            ))
-        }
-
-        #[cfg(not(feature = "layout-engine-v2"))]
-        {
-            let _ = child;
-            None
-        }
+        let local = self.tree.layout_engine_child_local_rect(self.node, child)?;
+        Some(Rect::new(
+            Point::new(
+                fret_core::Px(self.bounds.origin.x.0 + local.origin.x.0),
+                fret_core::Px(self.bounds.origin.y.0 + local.origin.y.0),
+            ),
+            local.size,
+        ))
     }
 
     pub fn layout_viewport_root(&mut self, child: NodeId, bounds: Rect) -> Size {
-        #[cfg(feature = "layout-engine-v2")]
-        {
-            if self.pass_kind == LayoutPassKind::Probe {
-                return bounds.size;
-            }
-            self.tree.register_viewport_root(child, bounds);
-            bounds.size
+        if self.pass_kind == LayoutPassKind::Probe {
+            return bounds.size;
         }
+        self.tree.register_viewport_root(child, bounds);
+        bounds.size
+    }
 
-        #[cfg(not(feature = "layout-engine-v2"))]
-        {
-            self.layout_in(child, bounds)
+    pub fn solve_barrier_child_root(&mut self, child: NodeId, bounds: Rect) {
+        if self.pass_kind != LayoutPassKind::Final {
+            return;
         }
+        self.tree.solve_barrier_flow_root(
+            self.app,
+            self.services,
+            child,
+            bounds,
+            self.scale_factor,
+        );
+    }
+
+    pub fn solve_barrier_child_root_if_needed(&mut self, child: NodeId, bounds: Rect) {
+        if self.pass_kind != LayoutPassKind::Final {
+            return;
+        }
+        self.tree.solve_barrier_flow_root_if_needed(
+            self.app,
+            self.services,
+            child,
+            bounds,
+            self.scale_factor,
+        );
+    }
+
+    pub fn solve_barrier_child_roots_if_needed(&mut self, roots: &[(NodeId, Rect)]) {
+        if self.pass_kind != LayoutPassKind::Final {
+            return;
+        }
+        self.tree.solve_barrier_flow_roots_if_needed(
+            self.app,
+            self.services,
+            roots,
+            self.scale_factor,
+        );
     }
     pub fn measure_in(&mut self, child: NodeId, constraints: LayoutConstraints) -> Size {
         self.tree.measure_in(

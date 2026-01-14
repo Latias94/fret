@@ -13,7 +13,7 @@ use super::{
 use crate::test_host::TestHost;
 use fret_core::{
     AppWindowId, Event, InternalDragEvent, InternalDragKind, Modifiers, Point, Px, Scene, SceneOp,
-    Size, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle, UiServices,
+    Size, TextBlobId, TextConstraints, TextInput, TextMetrics, TextService, UiServices,
 };
 use fret_runtime::DRAG_KIND_DOCK_PANEL;
 use fret_runtime::PlatformCapabilities;
@@ -42,7 +42,7 @@ struct FakeTextService;
 impl TextService for FakeTextService {
     fn prepare(
         &mut self,
-        _input: &fret_core::TextInput,
+        _input: &TextInput,
         _constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics) {
         (

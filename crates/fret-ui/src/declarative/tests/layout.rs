@@ -799,7 +799,7 @@ fn viewport_root_request_build_keeps_engine_nodes_alive_when_skipped() {
 
 #[cfg(feature = "layout-engine-v2")]
 #[test]
-fn precompute_flow_root_island_reuses_solved_root_even_after_other_solves() {
+fn solve_barrier_flow_root_reuses_solved_root_even_after_other_solves() {
     struct PrecomputesSameRootTwice {
         a: NodeId,
         b: NodeId,
@@ -808,14 +808,9 @@ fn precompute_flow_root_island_reuses_solved_root_even_after_other_solves() {
 
     impl<H: UiHost> Widget<H> for PrecomputesSameRootTwice {
         fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
-            let sf = cx.scale_factor;
-            let app = &mut *cx.app;
-            let services = &mut *cx.services;
-            let tree = &mut *cx.tree;
-
-            tree.precompute_barrier_flow_root_island(app, services, self.a, self.rect, sf);
-            tree.precompute_barrier_flow_root_island(app, services, self.b, self.rect, sf);
-            tree.precompute_barrier_flow_root_island(app, services, self.a, self.rect, sf);
+            cx.solve_barrier_child_root(self.a, self.rect);
+            cx.solve_barrier_child_root(self.b, self.rect);
+            cx.solve_barrier_child_root(self.a, self.rect);
 
             cx.available
         }
@@ -871,7 +866,7 @@ fn precompute_flow_root_island_reuses_solved_root_even_after_other_solves() {
 
 #[cfg(feature = "layout-engine-v2")]
 #[test]
-fn precompute_flow_root_island_if_needed_skips_translation_only_bounds_changes() {
+fn solve_barrier_flow_root_if_needed_skips_translation_only_bounds_changes() {
     struct PrecomputeThenTranslate {
         child: NodeId,
         rect_a: Rect,
@@ -881,28 +876,11 @@ fn precompute_flow_root_island_if_needed_skips_translation_only_bounds_changes()
 
     impl<H: UiHost> Widget<H> for PrecomputeThenTranslate {
         fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
-            let sf = cx.scale_factor;
-            let app = &mut *cx.app;
-            let services = &mut *cx.services;
-            let tree = &mut *cx.tree;
-
             let rect = if self.calls == 0 {
-                tree.precompute_barrier_flow_root_island(
-                    app,
-                    services,
-                    self.child,
-                    self.rect_a,
-                    sf,
-                );
+                cx.solve_barrier_child_root(self.child, self.rect_a);
                 self.rect_a
             } else {
-                tree.precompute_barrier_flow_root_island_if_needed(
-                    app,
-                    services,
-                    self.child,
-                    self.rect_b,
-                    sf,
-                );
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
                 self.rect_b
             };
             self.calls = self.calls.saturating_add(1);
@@ -5239,6 +5217,81 @@ fn flex_child_negative_margin_shifts_layout() {
 
     assert_eq!(a_bounds.origin.x, Px(0.0));
     assert_eq!(b_bounds.origin.x, Px(5.0));
+}
+
+#[test]
+fn fixed_split_registers_viewport_roots_to_avoid_widget_fallback_solves() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let left = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "fixed-split-left",
+        |cx| {
+            vec![cx.flex(
+                crate::element::FlexProps {
+                    direction: fret_core::Axis::Horizontal,
+                    gap: Px(0.0),
+                    layout: {
+                        let mut l = crate::element::LayoutStyle::default();
+                        l.size.width = Length::Fill;
+                        l.size.height = Length::Fill;
+                        l
+                    },
+                    ..Default::default()
+                },
+                |cx| vec![cx.text("left")],
+            )]
+        },
+    );
+
+    let right = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "fixed-split-right",
+        |cx| {
+            vec![cx.grid(
+                crate::element::GridProps {
+                    cols: 1,
+                    layout: {
+                        let mut l = crate::element::LayoutStyle::default();
+                        l.size.width = Length::Fill;
+                        l.size.height = Length::Fill;
+                        l
+                    },
+                    ..Default::default()
+                },
+                |cx| vec![cx.text("right")],
+            )]
+        },
+    );
+
+    let split = crate::FixedSplit::create_node_with_children(
+        &mut ui,
+        crate::FixedSplit::horizontal(0.5),
+        left,
+        right,
+    );
+    ui.set_root(split);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(ui.debug_stats().layout_engine_widget_fallback_solves, 0);
 }
 
 #[test]

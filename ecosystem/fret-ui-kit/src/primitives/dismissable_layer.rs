@@ -134,8 +134,8 @@ mod tests {
     use fret_app::App;
     use fret_core::{
         AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
-        Point, Px, Rect, Size, SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics,
-        TextService, TextStyle,
+        Point, Px, Rect, Size, SvgId, SvgService, TextBlobId, TextConstraints, TextInput,
+        TextMetrics, TextService,
     };
     use fret_ui::element::{LayoutStyle, Length, PressableProps, SemanticsProps};
 
@@ -145,7 +145,7 @@ mod tests {
     impl TextService for FakeServices {
         fn prepare(
             &mut self,
-            _input: &fret_core::TextInput,
+            _input: &TextInput,
             _constraints: TextConstraints,
         ) -> (TextBlobId, TextMetrics) {
             (

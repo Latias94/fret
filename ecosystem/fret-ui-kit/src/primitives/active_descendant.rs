@@ -14,7 +14,7 @@ mod tests {
     use fret_core::{
         AppWindowId, NodeId, PathCommand, PathConstraints, PathId, PathMetrics, PathService,
         PathStyle, Point, Px, Rect, SemanticsRole, SvgId, SvgService, TextBlobId, TextConstraints,
-        TextMetrics, TextService, TextStyle,
+        TextInput, TextMetrics, TextService,
     };
     use fret_ui::element::{
         ContainerProps, FlexProps, LayoutStyle, Length, MainAlign, Overflow, PressableA11y,
@@ -33,7 +33,7 @@ mod tests {
     impl TextService for FakeServices {
         fn prepare(
             &mut self,
-            _input: &fret_core::TextInput,
+            _input: &TextInput,
             _constraints: TextConstraints,
         ) -> (TextBlobId, TextMetrics) {
             (

@@ -376,7 +376,7 @@ mod tests {
     use fret_core::{PathCommand, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Point, Px, Rect, Size};
-    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
+    use fret_core::{TextBlobId, TextConstraints, TextInput, TextMetrics, TextService};
     use fret_ui::UiTree;
     use fret_ui::element::{ContainerProps, ElementKind, LayoutStyle, Length, PressableProps};
     use fret_ui::elements::GlobalElementId;
@@ -387,7 +387,7 @@ mod tests {
     impl TextService for FakeServices {
         fn prepare(
             &mut self,
-            _input: &fret_core::TextInput,
+            _input: &TextInput,
             _constraints: TextConstraints,
         ) -> (TextBlobId, TextMetrics) {
             (

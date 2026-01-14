@@ -601,8 +601,8 @@ mod tests {
     use super::*;
     use fret_app::App;
     use fret_core::{
-        Event, KeyCode, Modifiers, Point, Px, Rect, TextBlobId, TextConstraints, TextMetrics,
-        TextService, TextStyle,
+        Event, KeyCode, Modifiers, Point, Px, Rect, TextBlobId, TextConstraints, TextInput,
+        TextMetrics, TextService,
     };
     use fret_core::{PathCommand, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
@@ -616,7 +616,7 @@ mod tests {
     impl TextService for FakeServices {
         fn prepare(
             &mut self,
-            _input: &fret_core::TextInput,
+            _input: &TextInput,
             _constraints: TextConstraints,
         ) -> (TextBlobId, TextMetrics) {
             (
