@@ -1036,6 +1036,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-dnd"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "serde",
+]
+
+[[package]]
 name = "fret-docking"
 version = "0.1.0"
 dependencies = [
@@ -1454,6 +1462,7 @@ dependencies = [
  "fret-icons",
  "fret-runtime",
  "fret-ui",
+ "fret-ui-headless",
  "fret-ui-kit",
  "serde",
  "serde_json",
