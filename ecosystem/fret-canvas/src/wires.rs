@@ -334,11 +334,7 @@ pub fn bezier_wire_distance2_kurbo(
     let accuracy = kurbo_accuracy_canvas_units(from, to, zoom, steps);
     let nearest = curve.nearest(kurbo_point(p), accuracy);
     let d2 = nearest.distance_sq as f32;
-    if d2.is_finite() {
-        d2
-    } else {
-        f32::INFINITY
-    }
+    if d2.is_finite() { d2 } else { f32::INFINITY }
 }
 
 pub fn bezier_wire_distance2(p: Point, from: Point, to: Point, zoom: f32, steps: usize) -> f32 {
