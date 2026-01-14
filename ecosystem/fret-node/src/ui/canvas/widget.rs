@@ -8585,9 +8585,14 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                         ViewportMoveKind::ZoomWheel,
                     );
                     let speed = snapshot.interaction.zoom_on_scroll_speed.max(0.0);
-                    let delta_screen_y = delta.y.0 * zoom * speed;
-                    let zoom_speed = 0.0015;
-                    let factor = (1.0 + (-delta_screen_y * zoom_speed)).clamp(0.2, 5.0);
+                    let delta_screen_y = delta.y.0 * zoom;
+                    let factor = fret_canvas::view::wheel_zoom_factor(
+                        delta_screen_y,
+                        fret_canvas::view::DEFAULT_WHEEL_ZOOM_BASE,
+                        fret_canvas::view::DEFAULT_WHEEL_ZOOM_STEP,
+                        speed,
+                    )
+                    .unwrap_or(1.0);
                     self.zoom_about_pointer_factor(*position, factor);
                     let pan = self.cached_pan;
                     let zoom = self.cached_zoom;
