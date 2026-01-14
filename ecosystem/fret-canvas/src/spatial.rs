@@ -155,7 +155,7 @@ impl<T: Copy> Default for GridIndex<T> {
 pub struct GridIndexWithBackrefs<T> {
     cell_size: f32,
     cells: HashMap<u64, Vec<T>>,
-    item_cells: HashMap<T, Vec<u64>>,
+    item_cells: HashMap<T, Vec<(u64, usize)>>,
 }
 
 impl<T: Copy + Eq + Hash> GridIndexWithBackrefs<T> {
@@ -184,15 +184,17 @@ impl<T: Copy + Eq + Hash> GridIndexWithBackrefs<T> {
         self.remove(item);
 
         let (cx0, cx1, cy0, cy1) = cell_range_for_aabb(min_x, min_y, max_x, max_y, self.cell_size);
-        let mut keys = Vec::new();
+        let mut entries = Vec::new();
         for y in cy0..=cy1 {
             for x in cx0..=cx1 {
                 let key = cell_key(Cell { x, y });
-                self.cells.entry(key).or_default().push(item);
-                keys.push(key);
+                let cell = self.cells.entry(key).or_default();
+                let index = cell.len();
+                cell.push(item);
+                entries.push((key, index));
             }
         }
-        self.item_cells.insert(item, keys);
+        self.item_cells.insert(item, entries);
     }
 
     pub fn insert_rect(&mut self, item: T, rect: Rect) {
@@ -208,12 +210,27 @@ impl<T: Copy + Eq + Hash> GridIndexWithBackrefs<T> {
     }
 
     pub fn remove(&mut self, item: T) -> bool {
-        let Some(keys) = self.item_cells.remove(&item) else {
+        let Some(entries) = self.item_cells.remove(&item) else {
             return false;
         };
-        for key in keys {
+        for (key, index) in entries {
             if let Some(items) = self.cells.get_mut(&key) {
-                items.retain(|v| *v != item);
+                if index >= items.len() {
+                    continue;
+                }
+                let removed = items.swap_remove(index);
+                if index < items.len() {
+                    let moved = items[index];
+                    if let Some(moved_entries) = self.item_cells.get_mut(&moved) {
+                        if let Some(entry) = moved_entries.iter_mut().find(|e| e.0 == key) {
+                            entry.1 = index;
+                        }
+                    }
+                }
+                debug_assert_eq!(
+                    removed, item,
+                    "spatial index backrefs must remove the intended item"
+                );
                 if items.is_empty() {
                     self.cells.remove(&key);
                 }
@@ -332,5 +349,39 @@ mod tests {
             &mut out,
         );
         assert!(out.is_empty());
+    }
+
+    #[test]
+    fn grid_index_with_backrefs_remove_does_not_corrupt_other_items() {
+        let mut idx = GridIndexWithBackrefs::new(10.0);
+        // Put both items into the same cell so removal triggers swap_remove behavior.
+        idx.insert_rect(
+            1u32,
+            Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(5.0), Px(5.0))),
+        );
+        idx.insert_rect(
+            2u32,
+            Rect::new(Point::new(Px(1.0), Px(1.0)), Size::new(Px(5.0), Px(5.0))),
+        );
+
+        assert!(idx.remove(1));
+
+        let mut out = Vec::new();
+        idx.query_radius(Point::new(Px(2.0), Px(2.0)), 1.0, &mut out);
+        assert!(out.contains(&2));
+        assert!(!out.contains(&1));
+
+        // Move the remaining item to ensure its backrefs were updated correctly.
+        idx.update_rect(
+            2u32,
+            Rect::new(
+                Point::new(Px(100.0), Px(100.0)),
+                Size::new(Px(5.0), Px(5.0)),
+            ),
+        );
+        idx.query_radius(Point::new(Px(2.0), Px(2.0)), 1.0, &mut out);
+        assert!(!out.contains(&2));
+        idx.query_radius(Point::new(Px(102.0), Px(102.0)), 1.0, &mut out);
+        assert!(out.contains(&2));
     }
 }
