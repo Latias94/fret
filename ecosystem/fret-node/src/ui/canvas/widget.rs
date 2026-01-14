@@ -2817,8 +2817,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     moved_nodes.insert(*id);
                 }
 
-                let multi_move = moved_nodes.len() > 1;
-                if multi_move && let Some(extent) = snapshot.interaction.node_extent {
+                let shared_move = !selected_groups.is_empty() || moved_nodes.len() > 1;
+
+                if shared_move && let Some(extent) = snapshot.interaction.node_extent {
                     let mut min_x: f32 = f32::INFINITY;
                     let mut min_y: f32 = f32::INFINITY;
                     let mut max_x: f32 = f32::NEG_INFINITY;
@@ -2826,13 +2827,28 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     let mut any = false;
 
                     for node_id in moved_nodes.iter().copied() {
-                        let Some(node_geom) = geom_for_extent.nodes.get(&node_id) else {
+                        let Some(node) = g.nodes.get(&node_id) else {
                             continue;
                         };
-                        let x0 = node_geom.rect.origin.x.0;
-                        let y0 = node_geom.rect.origin.y.0;
-                        let w = node_geom.rect.size.width.0.max(0.0);
-                        let h = node_geom.rect.size.height.0.max(0.0);
+
+                        let (x0, y0, w, h) =
+                            if let Some(node_geom) = geom_for_extent.nodes.get(&node_id) {
+                                (
+                                    node_geom.rect.origin.x.0,
+                                    node_geom.rect.origin.y.0,
+                                    node_geom.rect.size.width.0.max(0.0),
+                                    node_geom.rect.size.height.0.max(0.0),
+                                )
+                            } else if let Some(size) = node.size {
+                                (
+                                    node.pos.x,
+                                    node.pos.y,
+                                    size.width.max(0.0),
+                                    size.height.max(0.0),
+                                )
+                            } else {
+                                continue;
+                            };
                         if !x0.is_finite() || !y0.is_finite() || !w.is_finite() || !h.is_finite() {
                             continue;
                         }
@@ -2876,6 +2892,71 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     }
                 }
 
+                if shared_move {
+                    let mut min_dx: f32 = f32::NEG_INFINITY;
+                    let mut max_dx: f32 = f32::INFINITY;
+                    let mut min_dy: f32 = f32::NEG_INFINITY;
+                    let mut max_dy: f32 = f32::INFINITY;
+                    let mut any_x = false;
+                    let mut any_y = false;
+
+                    for node_id in moved_nodes.iter().copied() {
+                        let Some(node) = g.nodes.get(&node_id) else {
+                            continue;
+                        };
+                        let Some(crate::core::NodeExtent::Rect { rect }) = node.extent else {
+                            continue;
+                        };
+
+                        let node_size = if let Some(node_geom) = geom_for_extent.nodes.get(&node_id)
+                        {
+                            Some(CanvasSize {
+                                width: node_geom.rect.size.width.0,
+                                height: node_geom.rect.size.height.0,
+                            })
+                        } else {
+                            node.size
+                        };
+                        let Some(node_size) = node_size else {
+                            continue;
+                        };
+                        let node_w = node_size.width.max(0.0);
+                        let node_h = node_size.height.max(0.0);
+                        if !node_w.is_finite() || !node_h.is_finite() {
+                            continue;
+                        }
+
+                        let min_x = rect.origin.x;
+                        let max_x = rect.origin.x + (rect.size.width - node_w).max(0.0);
+                        if min_x.is_finite() && max_x.is_finite() && node.pos.x.is_finite() {
+                            any_x = true;
+                            min_dx = min_dx.max(min_x - node.pos.x);
+                            max_dx = max_dx.min(max_x - node.pos.x);
+                        }
+
+                        let min_y = rect.origin.y;
+                        let max_y = rect.origin.y + (rect.size.height - node_h).max(0.0);
+                        if min_y.is_finite() && max_y.is_finite() && node.pos.y.is_finite() {
+                            any_y = true;
+                            min_dy = min_dy.max(min_y - node.pos.y);
+                            max_dy = max_dy.min(max_y - node.pos.y);
+                        }
+                    }
+
+                    if any_x && min_dx.is_finite() && max_dx.is_finite() {
+                        if max_dx < min_dx {
+                            max_dx = min_dx;
+                        }
+                        delta.x = delta.x.clamp(min_dx, max_dx);
+                    }
+                    if any_y && min_dy.is_finite() && max_dy.is_finite() {
+                        if max_dy < min_dy {
+                            max_dy = min_dy;
+                        }
+                        delta.y = delta.y.clamp(min_dy, max_dy);
+                    }
+                }
+
                 let mut groups_sorted = selected_groups.clone();
                 groups_sorted.sort();
                 for group_id in groups_sorted {
@@ -2910,17 +2991,35 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     };
 
                     if !moved_by_group.contains(&node_id) {
-                        let Some(node_geom) = geom_for_extent.nodes.get(&node_id) else {
+                        let node_size = if let Some(node_geom) = geom_for_extent.nodes.get(&node_id)
+                        {
+                            Some(CanvasSize {
+                                width: node_geom.rect.size.width.0,
+                                height: node_geom.rect.size.height.0,
+                            })
+                        } else {
+                            node.size
+                        };
+                        let Some(node_size) = node_size else {
                             continue;
                         };
-                        let node_w = node_geom.rect.size.width.0;
-                        let node_h = node_geom.rect.size.height.0;
+                        let node_w = node_size.width;
+                        let node_h = node_size.height;
 
-                        if !multi_move && let Some(extent) = snapshot.interaction.node_extent {
+                        if !shared_move && let Some(extent) = snapshot.interaction.node_extent {
                             let min_x = extent.origin.x;
                             let min_y = extent.origin.y;
                             let max_x = extent.origin.x + (extent.size.width - node_w).max(0.0);
                             let max_y = extent.origin.y + (extent.size.height - node_h).max(0.0);
+                            to.x = to.x.clamp(min_x, max_x);
+                            to.y = to.y.clamp(min_y, max_y);
+                        }
+
+                        if let Some(crate::core::NodeExtent::Rect { rect }) = node.extent {
+                            let min_x = rect.origin.x;
+                            let min_y = rect.origin.y;
+                            let max_x = rect.origin.x + (rect.size.width - node_w).max(0.0);
+                            let max_y = rect.origin.y + (rect.size.height - node_h).max(0.0);
                             to.x = to.x.clamp(min_x, max_x);
                             to.y = to.y.clamp(min_y, max_y);
                         }
@@ -3366,6 +3465,70 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         y: base.y + shift.y,
                     };
 
+                    if delta.x.abs() > 1.0e-9 || delta.y.abs() > 1.0e-9 {
+                        let mut min_dx: f32 = f32::NEG_INFINITY;
+                        let mut max_dx: f32 = f32::INFINITY;
+                        let mut min_dy: f32 = f32::NEG_INFINITY;
+                        let mut max_dy: f32 = f32::INFINITY;
+                        let mut any_x = false;
+                        let mut any_y = false;
+
+                        for (&node_id, node) in &g.nodes {
+                            if node.parent != Some(group_id) {
+                                continue;
+                            }
+                            let Some(crate::core::NodeExtent::Rect { rect }) = node.extent else {
+                                continue;
+                            };
+
+                            let node_size = if let Some(node_geom) = geom.nodes.get(&node_id) {
+                                Some(CanvasSize {
+                                    width: node_geom.rect.size.width.0,
+                                    height: node_geom.rect.size.height.0,
+                                })
+                            } else {
+                                node.size
+                            };
+                            let Some(node_size) = node_size else {
+                                continue;
+                            };
+                            let node_w = node_size.width.max(0.0);
+                            let node_h = node_size.height.max(0.0);
+                            if !node_w.is_finite() || !node_h.is_finite() {
+                                continue;
+                            }
+
+                            let min_x = rect.origin.x;
+                            let max_x = rect.origin.x + (rect.size.width - node_w).max(0.0);
+                            if min_x.is_finite() && max_x.is_finite() && node.pos.x.is_finite() {
+                                any_x = true;
+                                min_dx = min_dx.max(min_x - node.pos.x);
+                                max_dx = max_dx.min(max_x - node.pos.x);
+                            }
+
+                            let min_y = rect.origin.y;
+                            let max_y = rect.origin.y + (rect.size.height - node_h).max(0.0);
+                            if min_y.is_finite() && max_y.is_finite() && node.pos.y.is_finite() {
+                                any_y = true;
+                                min_dy = min_dy.max(min_y - node.pos.y);
+                                max_dy = max_dy.min(max_y - node.pos.y);
+                            }
+                        }
+
+                        if any_x && min_dx.is_finite() && max_dx.is_finite() {
+                            if max_dx < min_dx {
+                                max_dx = min_dx;
+                            }
+                            delta.x = delta.x.clamp(min_dx, max_dx);
+                        }
+                        if any_y && min_dy.is_finite() && max_dy.is_finite() {
+                            if max_dy < min_dy {
+                                max_dy = min_dy;
+                            }
+                            delta.y = delta.y.clamp(min_dy, max_dy);
+                        }
+                    }
+
                     if !aligns
                         && (delta.x.abs() > 1.0e-9 || delta.y.abs() > 1.0e-9)
                         && let Some(extent) = snapshot.interaction.node_extent
@@ -3380,13 +3543,24 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             if node.parent != Some(group_id) {
                                 continue;
                             }
-                            let Some(node_geom) = geom.nodes.get(&node_id) else {
+
+                            let (x0, y0, w, h) = if let Some(node_geom) = geom.nodes.get(&node_id) {
+                                (
+                                    node_geom.rect.origin.x.0,
+                                    node_geom.rect.origin.y.0,
+                                    node_geom.rect.size.width.0.max(0.0),
+                                    node_geom.rect.size.height.0.max(0.0),
+                                )
+                            } else if let Some(size) = node.size {
+                                (
+                                    node.pos.x,
+                                    node.pos.y,
+                                    size.width.max(0.0),
+                                    size.height.max(0.0),
+                                )
+                            } else {
                                 continue;
                             };
-                            let x0 = node_geom.rect.origin.x.0;
-                            let y0 = node_geom.rect.origin.y.0;
-                            let w = node_geom.rect.size.width.0.max(0.0);
-                            let h = node_geom.rect.size.height.0.max(0.0);
                             if !x0.is_finite()
                                 || !y0.is_finite()
                                 || !w.is_finite()
@@ -3506,9 +3680,18 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     };
 
                     // Reuse the same extent constraints as drag/nudge.
-                    if let Some(node_geom) = geom.nodes.get(&node_id) {
-                        let node_w = node_geom.rect.size.width.0;
-                        let node_h = node_geom.rect.size.height.0;
+                    let node_size = if let Some(node_geom) = geom.nodes.get(&node_id) {
+                        Some(CanvasSize {
+                            width: node_geom.rect.size.width.0,
+                            height: node_geom.rect.size.height.0,
+                        })
+                    } else {
+                        node.size
+                    };
+
+                    if let Some(node_size) = node_size {
+                        let node_w = node_size.width;
+                        let node_h = node_size.height;
 
                         if moved
                             && !skip_node_extent_clamp
@@ -3518,6 +3701,15 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             let min_y = extent.origin.y;
                             let max_x = extent.origin.x + (extent.size.width - node_w).max(0.0);
                             let max_y = extent.origin.y + (extent.size.height - node_h).max(0.0);
+                            to.x = to.x.clamp(min_x, max_x);
+                            to.y = to.y.clamp(min_y, max_y);
+                        }
+
+                        if moved && let Some(crate::core::NodeExtent::Rect { rect }) = node.extent {
+                            let min_x = rect.origin.x;
+                            let min_y = rect.origin.y;
+                            let max_x = rect.origin.x + (rect.size.width - node_w).max(0.0);
+                            let max_y = rect.origin.y + (rect.size.height - node_h).max(0.0);
                             to.x = to.x.clamp(min_x, max_x);
                             to.y = to.y.clamp(min_y, max_y);
                         }
@@ -11231,10 +11423,10 @@ mod tests {
     use crate::rules::EdgeEndpoint;
     use crate::ui::commands::{
         CMD_NODE_GRAPH_ACTIVATE, CMD_NODE_GRAPH_ALIGN_CENTER_X, CMD_NODE_GRAPH_ALIGN_LEFT,
-        CMD_NODE_GRAPH_DELETE_SELECTION, CMD_NODE_GRAPH_DISTRIBUTE_X, CMD_NODE_GRAPH_FOCUS_NEXT,
-        CMD_NODE_GRAPH_FOCUS_NEXT_PORT, CMD_NODE_GRAPH_FOCUS_PORT_LEFT,
+        CMD_NODE_GRAPH_ALIGN_RIGHT, CMD_NODE_GRAPH_DELETE_SELECTION, CMD_NODE_GRAPH_DISTRIBUTE_X,
+        CMD_NODE_GRAPH_FOCUS_NEXT, CMD_NODE_GRAPH_FOCUS_NEXT_PORT, CMD_NODE_GRAPH_FOCUS_PORT_LEFT,
         CMD_NODE_GRAPH_FOCUS_PORT_RIGHT, CMD_NODE_GRAPH_FOCUS_PREV, CMD_NODE_GRAPH_FOCUS_PREV_PORT,
-        CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_SELECT_ALL,
+        CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_NUDGE_RIGHT_FAST, CMD_NODE_GRAPH_SELECT_ALL,
     };
 
     use super::super::state::{NodeDrag, ViewSnapshot, WireDrag, WireDragKind};
@@ -11246,7 +11438,7 @@ mod tests {
     impl fret_core::TextService for NullServices {
         fn prepare(
             &mut self,
-            _input: fret_core::TextInput<'_>,
+            _input: &fret_core::TextInput,
             _constraints: fret_core::TextConstraints,
         ) -> (TextBlobId, fret_core::TextMetrics) {
             (
@@ -12203,6 +12395,63 @@ mod tests {
     }
 
     #[test]
+    fn nudge_respects_per_node_extent_rect() {
+        let mut host = TestUiHostImpl::default();
+
+        let mut graph_value = Graph::new(GraphId::new());
+        let node_id = NodeId::new();
+        graph_value.nodes.insert(
+            node_id,
+            Node {
+                kind: NodeKindKey::new("test.node"),
+                kind_version: 1,
+                pos: CanvasPoint { x: 0.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: Some(crate::core::NodeExtent::Rect {
+                    rect: CanvasRect {
+                        origin: CanvasPoint { x: 0.0, y: 0.0 },
+                        size: CanvasSize {
+                            width: 45.0,
+                            height: 100.0,
+                        },
+                    },
+                }),
+                expand_parent: None,
+                size: Some(CanvasSize {
+                    width: 40.0,
+                    height: 20.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+        canvas.sync_view_state(&mut host);
+
+        view.update(&mut host, |s, _cx| {
+            s.selected_nodes = vec![node_id];
+        })
+        .unwrap();
+
+        let mut services = NullServices::default();
+        let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
+        let mut cx = command_cx(&mut host, &mut services, &mut tree);
+
+        assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_NUDGE_RIGHT_FAST)));
+        assert_eq!(canvas.history.undo_len(), 1);
+        assert_eq!(read_node_pos(&mut host, &graph, node_id).x, 5.0);
+    }
+
+    #[test]
     fn select_all_selects_nodes_groups_and_edges_and_respects_edge_selectable() {
         let mut host = TestUiHostImpl::default();
 
@@ -12504,6 +12753,89 @@ mod tests {
             read_node_pos(&mut host, &graph, b),
             CanvasPoint { x: 10.0, y: 5.0 }
         );
+    }
+
+    #[test]
+    fn align_right_respects_per_node_extent_rect() {
+        let mut host = TestUiHostImpl::default();
+
+        let mut graph_value = Graph::new(GraphId::new());
+        let kind = NodeKindKey::new("test.node");
+
+        let a = NodeId::new();
+        let b = NodeId::new();
+        graph_value.nodes.insert(
+            a,
+            Node {
+                kind: kind.clone(),
+                kind_version: 1,
+                pos: CanvasPoint { x: 0.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: Some(crate::core::NodeExtent::Rect {
+                    rect: CanvasRect {
+                        origin: CanvasPoint { x: 0.0, y: 0.0 },
+                        size: CanvasSize {
+                            width: 40.0,
+                            height: 100.0,
+                        },
+                    },
+                }),
+                expand_parent: None,
+                size: Some(CanvasSize {
+                    width: 10.0,
+                    height: 20.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+        graph_value.nodes.insert(
+            b,
+            Node {
+                kind,
+                kind_version: 1,
+                pos: CanvasPoint { x: 20.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: Some(CanvasSize {
+                    width: 40.0,
+                    height: 20.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+        canvas.sync_view_state(&mut host);
+
+        view.update(&mut host, |s, _cx| {
+            s.selected_nodes = vec![a, b];
+        })
+        .unwrap();
+
+        let mut services = NullServices::default();
+        let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
+        let mut cx = command_cx(&mut host, &mut services, &mut tree);
+
+        assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_ALIGN_RIGHT)));
+        assert_eq!(canvas.history.undo_len(), 1);
+        assert_eq!(read_node_pos(&mut host, &graph, a).x, 30.0);
+        assert_eq!(read_node_pos(&mut host, &graph, b).x, 20.0);
     }
 
     #[test]
@@ -12856,6 +13188,139 @@ mod tests {
 
         // The group's desired shift would move the child to x=80. Node extent clamps to max_x=60.
         assert_eq!(read_node_pos(&mut host, &graph, child).x, 60.0);
+        let group_origin_x = graph
+            .read_ref(&mut host, |g| {
+                g.groups.get(&group_id).map(|gr| gr.rect.origin.x)
+            })
+            .ok()
+            .flatten()
+            .unwrap_or_default();
+        assert_eq!(group_origin_x, 20.0);
+    }
+
+    #[test]
+    fn distribute_x_clamps_selected_group_children_to_node_extent_rect_from_node_extents() {
+        let mut host = TestUiHostImpl::default();
+
+        let mut graph_value = Graph::new(GraphId::new());
+        let kind = NodeKindKey::new("test.node");
+
+        let left = NodeId::new();
+        let right = NodeId::new();
+        let child = NodeId::new();
+
+        let group_id = GroupId::new();
+        graph_value.groups.insert(
+            group_id,
+            Group {
+                title: "G".to_string(),
+                rect: CanvasRect {
+                    origin: CanvasPoint { x: 10.0, y: 0.0 },
+                    size: CanvasSize {
+                        width: 20.0,
+                        height: 20.0,
+                    },
+                },
+                color: None,
+            },
+        );
+
+        graph_value.nodes.insert(
+            left,
+            Node {
+                kind: kind.clone(),
+                kind_version: 1,
+                pos: CanvasPoint { x: 0.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: Some(CanvasSize {
+                    width: 10.0,
+                    height: 20.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+        graph_value.nodes.insert(
+            right,
+            Node {
+                kind: kind.clone(),
+                kind_version: 1,
+                pos: CanvasPoint { x: 90.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: Some(CanvasSize {
+                    width: 10.0,
+                    height: 20.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+
+        graph_value.nodes.insert(
+            child,
+            Node {
+                kind,
+                kind_version: 1,
+                pos: CanvasPoint { x: 50.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: Some(group_id),
+                extent: Some(crate::core::NodeExtent::Rect {
+                    rect: CanvasRect {
+                        origin: CanvasPoint { x: 40.0, y: 0.0 },
+                        size: CanvasSize {
+                            width: 60.0,
+                            height: 100.0,
+                        },
+                    },
+                }),
+                expand_parent: None,
+                size: Some(CanvasSize {
+                    width: 40.0,
+                    height: 20.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+        canvas.sync_view_state(&mut host);
+
+        view.update(&mut host, |s, _cx| {
+            s.selected_nodes = vec![left, right];
+            s.selected_groups = vec![group_id];
+        })
+        .unwrap();
+
+        let mut services = NullServices::default();
+        let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
+        let mut cx = command_cx(&mut host, &mut services, &mut tree);
+
+        assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_DISTRIBUTE_X)));
+        assert_eq!(canvas.history.undo_len(), 1);
+        assert_eq!(read_node_pos(&mut host, &graph, child).x, 60.0);
+
         let group_origin_x = graph
             .read_ref(&mut host, |g| {
                 g.groups.get(&group_id).map(|gr| gr.rect.origin.x)
