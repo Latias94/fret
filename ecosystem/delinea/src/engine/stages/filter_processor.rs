@@ -92,6 +92,15 @@ impl ParticipationState {
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct FilterProcessorResult {
     pub xy_weak_filter_pending: bool,
+    pub plan_grids: u32,
+    pub plan_steps_run: u32,
+    pub xy_weak_filter_applied_series: u32,
+    pub xy_weak_filter_pending_series: u32,
+    pub xy_weak_filter_skipped_view_len_cap_series: u32,
+    pub x_indices_applied_series: u32,
+    pub y_indices_applied_series: u32,
+    pub y_indices_skipped_view_len_cap_series: u32,
+    pub y_indices_skipped_indices_scan_avoid_series: u32,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -238,6 +247,14 @@ impl FilterProcessorStage {
         let mut view_changed = false;
         let mut x_indices_applied: BTreeSet<SeriesId> = BTreeSet::new();
 
+        let mut xy_weak_filter_applied_series = 0u32;
+        let mut xy_weak_filter_pending_series = 0u32;
+        let mut xy_weak_filter_skipped_view_len_cap_series = 0u32;
+        let mut x_indices_applied_series = 0u32;
+        let mut y_indices_applied_series = 0u32;
+        let mut y_indices_skipped_view_len_cap_series = 0u32;
+        let mut y_indices_skipped_indices_scan_avoid_series = 0u32;
+
         // ECharts `dataZoomProcessor` applies transforms in an order-sensitive way per grid (e.g. X
         // before Y). We currently only allow one dataZoom per axis, but structuring this stage by
         // grid provides a stable footing for a future general transform plan.
@@ -284,6 +301,9 @@ impl FilterProcessorStage {
         const MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN: usize = 200_000;
         const MAX_Y_FILTER_VIEW_LEN: usize = 200_000;
 
+        let plan_grids = grid_plans.len().min(u32::MAX as usize) as u32;
+        let plan_steps_run = plan_steps.len().min(u32::MAX as usize) as u32;
+
         for step in &plan_steps {
             let Some(plan) = grid_plans.get(&step.grid) else {
                 continue;
@@ -301,6 +321,9 @@ impl FilterProcessorStage {
                     MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN,
                     &mut xy_weak_filter_pending,
                     &mut view_changed,
+                    &mut xy_weak_filter_applied_series,
+                    &mut xy_weak_filter_pending_series,
+                    &mut xy_weak_filter_skipped_view_len_cap_series,
                 ),
                 FilterPlanStepKind::XIndices => apply_x_indices_for_grid(
                     model,
@@ -311,6 +334,7 @@ impl FilterProcessorStage {
                     &plan.series,
                     &mut view_changed,
                     &mut x_indices_applied,
+                    &mut x_indices_applied_series,
                 ),
                 FilterPlanStepKind::YIndices => apply_y_indices_for_grid(
                     model,
@@ -322,6 +346,9 @@ impl FilterProcessorStage {
                     MAX_Y_FILTER_VIEW_LEN,
                     &x_indices_applied,
                     &mut view_changed,
+                    &mut y_indices_applied_series,
+                    &mut y_indices_skipped_view_len_cap_series,
+                    &mut y_indices_skipped_indices_scan_avoid_series,
                 ),
             }
         }
@@ -335,6 +362,15 @@ impl FilterProcessorStage {
 
         FilterProcessorResult {
             xy_weak_filter_pending,
+            plan_grids,
+            plan_steps_run,
+            xy_weak_filter_applied_series,
+            xy_weak_filter_pending_series,
+            xy_weak_filter_skipped_view_len_cap_series,
+            x_indices_applied_series,
+            y_indices_applied_series,
+            y_indices_skipped_view_len_cap_series,
+            y_indices_skipped_indices_scan_avoid_series,
         }
     }
 }
@@ -350,6 +386,9 @@ fn apply_xy_weak_filter_for_grid(
     max_view_len: usize,
     xy_weak_filter_pending: &mut bool,
     view_changed: &mut bool,
+    xy_weak_filter_applied_series: &mut u32,
+    xy_weak_filter_pending_series: &mut u32,
+    xy_weak_filter_skipped_view_len_cap_series: &mut u32,
 ) {
     for series_id in series {
         let Some(series_model) = model.series.get(series_id) else {
@@ -434,6 +473,8 @@ fn apply_xy_weak_filter_for_grid(
             });
         let base_len = base_range.end.saturating_sub(base_range.start);
         if base_len > max_view_len {
+            *xy_weak_filter_skipped_view_len_cap_series =
+                xy_weak_filter_skipped_view_len_cap_series.saturating_add(1);
             continue;
         }
 
@@ -487,6 +528,7 @@ fn apply_xy_weak_filter_for_grid(
         };
 
         if let Some(sel) = sel {
+            *xy_weak_filter_applied_series = xy_weak_filter_applied_series.saturating_add(1);
             let series_view = &mut view.series[series_view_index];
             if series_view.selection != sel {
                 series_view.selection = sel;
@@ -498,6 +540,7 @@ fn apply_xy_weak_filter_for_grid(
             }
         } else {
             *xy_weak_filter_pending = true;
+            *xy_weak_filter_pending_series = xy_weak_filter_pending_series.saturating_add(1);
         }
     }
 }
@@ -511,6 +554,7 @@ fn apply_x_indices_for_grid(
     series: &[SeriesId],
     view_changed: &mut bool,
     x_indices_applied: &mut BTreeSet<SeriesId>,
+    x_indices_applied_series: &mut u32,
 ) {
     for series_id in series {
         let Some(series_model) = model.series.get(series_id) else {
@@ -567,6 +611,7 @@ fn apply_x_indices_for_grid(
             continue;
         };
 
+        *x_indices_applied_series = x_indices_applied_series.saturating_add(1);
         if series_view.selection != sel {
             series_view.selection = sel;
             *view_changed = true;
@@ -589,6 +634,9 @@ fn apply_y_indices_for_grid(
     max_view_len: usize,
     x_indices_applied: &BTreeSet<SeriesId>,
     view_changed: &mut bool,
+    y_indices_applied_series: &mut u32,
+    y_indices_skipped_view_len_cap_series: &mut u32,
+    y_indices_skipped_indices_scan_avoid_series: &mut u32,
 ) {
     for series_id in series {
         let Some(series_model) = model.series.get(series_id) else {
@@ -649,6 +697,8 @@ fn apply_y_indices_for_grid(
         {
             // Avoid repeatedly scanning indices selections every frame. The primary order-sensitive
             // behavior we need is X-before-Y in the same frame when X indices were just applied.
+            *y_indices_skipped_indices_scan_avoid_series =
+                y_indices_skipped_indices_scan_avoid_series.saturating_add(1);
             continue;
         }
 
@@ -677,6 +727,8 @@ fn apply_y_indices_for_grid(
             continue;
         }
         if view_len > max_view_len {
+            *y_indices_skipped_view_len_cap_series =
+                y_indices_skipped_view_len_cap_series.saturating_add(1);
             continue;
         }
 
@@ -718,6 +770,7 @@ fn apply_y_indices_for_grid(
             continue;
         }
 
+        *y_indices_applied_series = y_indices_applied_series.saturating_add(1);
         series_view.selection = RowSelection::Indices(indices.into());
         if x_filter_should_cull_selection && series_view.x_policy.filter != Default::default() {
             series_view.x_policy.filter = Default::default();

@@ -935,6 +935,23 @@ impl ChartEngine {
         );
         let xy_weak_filter_pending = filter_result.xy_weak_filter_pending;
 
+        self.stats.filter_plan_runs += 1;
+        self.stats.filter_plan_grids += filter_result.plan_grids as u64;
+        self.stats.filter_plan_steps_run += filter_result.plan_steps_run as u64;
+        self.stats.filter_xy_weakfilter_applied_series +=
+            filter_result.xy_weak_filter_applied_series as u64;
+        self.stats.filter_xy_weakfilter_pending_series +=
+            filter_result.xy_weak_filter_pending_series as u64;
+        self.stats.filter_xy_weakfilter_skipped_view_len_cap_series +=
+            filter_result.xy_weak_filter_skipped_view_len_cap_series as u64;
+        self.stats.filter_x_indices_applied_series += filter_result.x_indices_applied_series as u64;
+        self.stats.filter_y_indices_applied_series += filter_result.y_indices_applied_series as u64;
+        self.stats.filter_y_indices_skipped_view_len_cap_series +=
+            filter_result.y_indices_skipped_view_len_cap_series as u64;
+        self.stats
+            .filter_y_indices_skipped_indices_scan_avoid_series +=
+            filter_result.y_indices_skipped_indices_scan_avoid_series as u64;
+
         self.participation
             .rebuild_from_view(&self.model, &self.view);
 
