@@ -2751,6 +2751,55 @@ mod tests {
     }
 
     #[test]
+    fn emoji_glyphs_use_color_quads_when_color_font_is_available() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::default_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let style = TextStyle {
+            font: fret_core::FontId::family("Noto Color Emoji"),
+            size: Px(32.0),
+            ..Default::default()
+        };
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+
+        let (blob_id, _metrics) = text.prepare("😀", &style, constraints);
+        let blob = text.blob(blob_id).expect("text blob");
+
+        let mut color_glyphs: Vec<super::GlyphKey> = Vec::new();
+        for g in blob.shape.glyphs.as_ref() {
+            if matches!(g.kind(), super::GlyphQuadKind::Color) {
+                color_glyphs.push(g.key);
+            }
+        }
+
+        assert!(
+            !color_glyphs.is_empty(),
+            "expected at least one color glyph quad for the emoji when Noto Color Emoji is present"
+        );
+
+        let epoch = 1;
+        for key in color_glyphs {
+            text.ensure_glyph_in_atlas(key, epoch);
+            assert!(
+                text.color_atlas.get(key, epoch).is_some(),
+                "expected color glyph to be present in color atlas after ensure"
+            );
+        }
+    }
+
+    #[test]
     fn span_fingerprints_split_shaping_and_paint() {
         let constraints = TextConstraints {
             max_width: Some(Px(200.0)),

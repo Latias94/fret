@@ -1245,6 +1245,7 @@ dependencies = [
  "cosmic-text",
  "etagere",
  "fret-core",
+ "fret-fonts",
  "glam",
  "lyon",
  "naga",
