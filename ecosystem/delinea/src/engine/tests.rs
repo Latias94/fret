@@ -2043,6 +2043,61 @@ fn data_zoom_y_filter_mode_filters_scatter_selection_by_y_window_after_x_selecti
 }
 
 #[test]
+fn engine_stats_track_y_filter_indices_materialization() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let series_id = crate::ids::SeriesId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+
+    let mut spec = basic_spec();
+    spec.viewport = Some(Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(120.0)),
+    ));
+    spec.series[0].kind = SeriesKind::Scatter;
+    spec.data_zoom_y.push(DataZoomYSpec {
+        id: crate::ids::DataZoomId::new(1),
+        axis: y_axis,
+        filter_mode: FilterMode::Filter,
+        min_value_span: None,
+        max_value_span: None,
+    });
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let mut table = DataTable::default();
+    table.push_column(Column::F64((0..=9).map(|v| v as f64).collect()));
+    table.push_column(Column::F64((0..=9).map(|v| v as f64).collect()));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    engine.apply_action(Action::SetDataWindowY {
+        axis: y_axis,
+        window: Some(DataWindow { min: 2.0, max: 4.0 }),
+    });
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(1_000_000, 0, 256))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let Some(participation) = engine.participation().series_participation(series_id) else {
+        panic!("expected series participation");
+    };
+    let RowSelection::Indices(indices) = &participation.selection else {
+        panic!("expected RowSelection::Indices after y filter materialization");
+    };
+    assert_eq!(&indices[..], &[2, 3, 4]);
+
+    let stats = engine.stats();
+    assert_eq!(stats.filter_plan_runs, 1);
+    assert_eq!(stats.filter_plan_grids, 1);
+    assert_eq!(stats.filter_plan_steps_run, 3);
+    assert_eq!(stats.filter_y_indices_applied_series, 1);
+    assert_eq!(stats.filter_x_indices_applied_series, 0);
+    assert_eq!(stats.filter_xy_weakfilter_applied_series, 0);
+}
+
+#[test]
 fn set_data_window_applies_axis_range_lock_min() {
     let mut spec = basic_spec();
     let x_axis = spec.axes[0].id;
@@ -5098,6 +5153,85 @@ fn data_zoom_y_filter_mode_empty_breaks_line_into_segments_for_interleaved_out_o
         let actual = &marks.arena.data_indices[range.clone()];
         assert_eq!(actual, &indices[..]);
     }
+}
+
+#[test]
+fn data_zoom_y_filter_mode_empty_sets_empty_mask_without_culling_row_selection() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+
+    let mut spec = basic_spec();
+    spec.viewport = Some(Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(160.0)),
+    ));
+    spec.series[0].kind = SeriesKind::Line;
+    spec.series[0].stack = None;
+    spec.data_zoom_x.push(DataZoomXSpec {
+        id: crate::ids::DataZoomId::new(1),
+        axis: x_axis,
+        filter_mode: FilterMode::Filter,
+        min_value_span: None,
+        max_value_span: None,
+    });
+    spec.data_zoom_y.push(DataZoomYSpec {
+        id: crate::ids::DataZoomId::new(2),
+        axis: y_axis,
+        filter_mode: FilterMode::Empty,
+        min_value_span: None,
+        max_value_span: None,
+    });
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let xs: Vec<f64> = (0..=7).map(|v| v as f64).collect();
+    let ys: Vec<f64> = vec![1.0, 2.0, 100.0, 3.0, 4.0, 200.0, 5.0, 6.0];
+
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(xs.clone()));
+    table.push_column(Column::F64(ys.clone()));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x_axis,
+        window: Some(DataWindow { min: 1.0, max: 5.0 }),
+    });
+    engine.apply_action(Action::SetDataWindowY {
+        axis: y_axis,
+        window: Some(DataWindow {
+            min: 0.0,
+            max: 10.0,
+        }),
+    });
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let Some(participation) = engine.participation().series_participation(series_id) else {
+        panic!("expected series participation");
+    };
+    assert!(
+        matches!(participation.selection, RowSelection::Range(_)),
+        "expected Y Empty to preserve the row selection space (no indices materialization)"
+    );
+    assert_eq!(participation.x_filter_mode, FilterMode::Filter);
+    assert_eq!(participation.y_filter_mode, FilterMode::Empty);
+
+    let mask = participation.empty_mask;
+    assert!(
+        !mask.x_active,
+        "expected X Filter not to activate empty masking"
+    );
+    assert!(mask.y_active, "expected Y Empty to activate empty masking");
+    assert!(mask.allows_raw_index(1, &xs, &ys, None));
+    assert!(!mask.allows_raw_index(2, &xs, &ys, None));
+    assert!(mask.allows_raw_index(3, &xs, &ys, None));
+    assert!(!mask.allows_raw_index(5, &xs, &ys, None));
 }
 
 #[test]
