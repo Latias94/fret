@@ -6,6 +6,10 @@
 //! - Fret composites the viewport via `SceneOp::ViewportSurface` (or `fret-ui`'s declarative
 //!   `ViewportSurface` element) (ADR 0139).
 //! - Optional screen-space affordances (labels/HUD) may be rendered as regular UI overlays.
+//!
+//! Optional feature:
+//! - `f64-math`: uses f64 internally for projection/unprojection and ray construction to improve
+//!   picking stability in very large worlds (public API remains f32).
 
 #![allow(clippy::too_many_arguments)]
 

@@ -74,6 +74,15 @@ It derives:
 
 The end-to-end example uses this helper: `apps/fret-examples/src/gizmo3d_demo.rs`.
 
+#### Optional: `f64-math` for large-world picking stability
+
+`fret-gizmo` is f32-first, but you can enable `fret-gizmo/f64-math` to use f64 internally for
+projection/unprojection and ray construction (picking-critical math). This helps when your world
+coordinates are very large (or very far from the origin) and f32 loses near/far separation.
+
+Note: most gizmo update math still runs in f32; long-term "large world" support likely needs a
+broader scene-units/rebasing policy in the host.
+
 ### Strategy B: drive gizmos in window logical pixels
 
 This is sometimes convenient if you want tooling math to live entirely in UI/input space.
