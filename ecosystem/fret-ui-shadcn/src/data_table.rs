@@ -100,7 +100,7 @@ impl DataTable {
         data: Arc<[TData]>,
         data_revision: u64,
         state: Model<TableState>,
-        columns: Vec<ColumnDef<TData>>,
+        columns: impl Into<Arc<[ColumnDef<TData>]>>,
         get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static,
         header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static,
         cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static,

@@ -28,6 +28,7 @@ pub mod data_grid;
 pub mod data_grid_canvas;
 pub mod data_table;
 mod data_table_controls;
+mod data_table_recipes;
 pub mod date_picker;
 pub mod dialog;
 pub mod drawer;
@@ -114,6 +115,7 @@ pub use data_table_controls::{
     DataTableColumnOption, DataTableGlobalFilterInput, DataTableRowState, DataTableViewOptionItem,
     DataTableViewOptions,
 };
+pub use data_table_recipes::{DataTablePagination, DataTableToolbar};
 pub use date_picker::DatePicker;
 pub use dialog::{
     Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
