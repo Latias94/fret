@@ -99,6 +99,19 @@ struct GridFilterPlan {
     series: Vec<SeriesId>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FilterPlanStepKind {
+    XYWeakFilter,
+    XIndices,
+    YIndices,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct FilterPlanStep {
+    grid: GridId,
+    kind: FilterPlanStepKind,
+}
+
 impl FilterProcessorStage {
     pub fn request_data_views(
         &mut self,
@@ -250,9 +263,32 @@ impl FilterProcessorStage {
             .map(|(i, v)| (v.series, i))
             .collect();
 
+        let mut plan_steps: Vec<FilterPlanStep> = Vec::new();
+        plan_steps.reserve(grid_plans.len() * 3);
+        for grid in grid_plans.keys().copied() {
+            plan_steps.push(FilterPlanStep {
+                grid,
+                kind: FilterPlanStepKind::XYWeakFilter,
+            });
+            plan_steps.push(FilterPlanStep {
+                grid,
+                kind: FilterPlanStepKind::XIndices,
+            });
+            plan_steps.push(FilterPlanStep {
+                grid,
+                kind: FilterPlanStepKind::YIndices,
+            });
+        }
+
         const MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN: usize = 200_000;
 
-        for (_grid, plan) in &grid_plans {
+        for step in plan_steps
+            .iter()
+            .filter(|s| s.kind == FilterPlanStepKind::XYWeakFilter)
+        {
+            let Some(plan) = grid_plans.get(&step.grid) else {
+                continue;
+            };
             for series_id in &plan.series {
                 let Some(series) = model.series.get(series_id) else {
                     continue;
@@ -411,7 +447,13 @@ impl FilterProcessorStage {
         // ADR 1150:
         // - `Filter` / `WeakFilter` may use indices views as an optimization carrier.
         // - `Empty` must preserve a stable row/index space (avoid indices-backed selections).
-        for (_grid, plan) in &grid_plans {
+        for step in plan_steps
+            .iter()
+            .filter(|s| s.kind == FilterPlanStepKind::XIndices)
+        {
+            let Some(plan) = grid_plans.get(&step.grid) else {
+                continue;
+            };
             for series_id in &plan.series {
                 let Some(series) = model.series.get(series_id) else {
                     continue;
@@ -486,7 +528,13 @@ impl FilterProcessorStage {
         //
         // Note: stacked-series Y filtering remains intentionally disabled (ADR 1150).
         const MAX_Y_FILTER_VIEW_LEN: usize = 200_000;
-        for (_grid, plan) in &grid_plans {
+        for step in plan_steps
+            .iter()
+            .filter(|s| s.kind == FilterPlanStepKind::YIndices)
+        {
+            let Some(plan) = grid_plans.get(&step.grid) else {
+                continue;
+            };
             for series_id in &plan.series {
                 let Some(series) = model.series.get(series_id) else {
                     continue;
