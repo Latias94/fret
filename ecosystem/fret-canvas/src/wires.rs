@@ -25,6 +25,12 @@ fn sanitize_zoom(zoom: f32) -> f32 {
 /// This matches the historical node-graph behavior and is a good conservative baseline.
 pub const DEFAULT_BEZIER_HIT_TEST_STEPS: usize = 24;
 
+/// Default screen-space tolerance (in px) for adaptive polyline flattening.
+///
+/// This is not a hit slop. It is the approximation error budget used when converting a Bezier
+/// curve to line segments for distance checks.
+pub const DEFAULT_BEZIER_FLATTEN_TOLERANCE_SCREEN_PX: f32 = 2.0;
+
 #[cfg(feature = "kurbo")]
 fn kurbo_point(p: Point) -> kurbo::Point {
     kurbo::Point::new(p.x.0 as f64, p.y.0 as f64)
@@ -160,6 +166,105 @@ fn closest_point_on_segment(p: Point, a: Point, b: Point) -> (Point, f32) {
     (Point::new(Px(cx), Px(cy)), dx * dx + dy * dy)
 }
 
+fn dist_point_to_line(p: Point, a: Point, b: Point) -> f32 {
+    let abx = b.x.0 - a.x.0;
+    let aby = b.y.0 - a.y.0;
+    let len = (abx * abx + aby * aby).sqrt();
+    if !len.is_finite() || len <= 1.0e-6 {
+        let dx = p.x.0 - a.x.0;
+        let dy = p.y.0 - a.y.0;
+        return (dx * dx + dy * dy).sqrt();
+    }
+    let apx = p.x.0 - a.x.0;
+    let apy = p.y.0 - a.y.0;
+    ((apx * aby - apy * abx).abs() / len).max(0.0)
+}
+
+fn midpoint(a: Point, b: Point) -> Point {
+    Point::new(Px(0.5 * (a.x.0 + b.x.0)), Px(0.5 * (a.y.0 + b.y.0)))
+}
+
+fn cubic_flat_enough(p0: Point, p1: Point, p2: Point, p3: Point, tol: f32) -> bool {
+    let tol = if tol.is_finite() { tol.max(0.0) } else { 0.0 };
+    if tol <= 1.0e-6 {
+        return false;
+    }
+    dist_point_to_line(p1, p0, p3) <= tol && dist_point_to_line(p2, p0, p3) <= tol
+}
+
+fn cubic_subdivide_half(
+    p0: Point,
+    p1: Point,
+    p2: Point,
+    p3: Point,
+) -> (Point, Point, Point, Point, Point, Point, Point, Point) {
+    let p01 = midpoint(p0, p1);
+    let p12 = midpoint(p1, p2);
+    let p23 = midpoint(p2, p3);
+    let p012 = midpoint(p01, p12);
+    let p123 = midpoint(p12, p23);
+    let p0123 = midpoint(p012, p123);
+
+    (p0, p01, p012, p0123, p0123, p123, p23, p3)
+}
+
+fn bezier_distance2_polyline_adaptive(
+    p: Point,
+    p0: Point,
+    p1: Point,
+    p2: Point,
+    p3: Point,
+    tol: f32,
+    max_depth: u8,
+) -> f32 {
+    let mut best = f32::INFINITY;
+    let mut stack: Vec<(Point, Point, Point, Point, u8)> = Vec::with_capacity(32);
+    stack.push((p0, p1, p2, p3, max_depth));
+
+    while let Some((a, b, c, d, depth)) = stack.pop() {
+        if depth == 0 || cubic_flat_enough(a, b, c, d, tol) {
+            best = best.min(dist2_point_to_segment(p, a, d));
+            continue;
+        }
+
+        let (l0, l1, l2, l3, r0, r1, r2, r3) = cubic_subdivide_half(a, b, c, d);
+        stack.push((r0, r1, r2, r3, depth - 1));
+        stack.push((l0, l1, l2, l3, depth - 1));
+    }
+
+    best
+}
+
+fn bezier_closest_point_polyline_adaptive(
+    p: Point,
+    p0: Point,
+    p1: Point,
+    p2: Point,
+    p3: Point,
+    tol: f32,
+    max_depth: u8,
+) -> Point {
+    let mut best = (p0, f32::INFINITY);
+    let mut stack: Vec<(Point, Point, Point, Point, u8)> = Vec::with_capacity(32);
+    stack.push((p0, p1, p2, p3, max_depth));
+
+    while let Some((a, b, c, d, depth)) = stack.pop() {
+        if depth == 0 || cubic_flat_enough(a, b, c, d, tol) {
+            let cand = closest_point_on_segment(p, a, d);
+            if cand.1 < best.1 {
+                best = cand;
+            }
+            continue;
+        }
+
+        let (l0, l1, l2, l3, r0, r1, r2, r3) = cubic_subdivide_half(a, b, c, d);
+        stack.push((r0, r1, r2, r3, depth - 1));
+        stack.push((l0, l1, l2, l3, depth - 1));
+    }
+
+    best.0
+}
+
 /// Approximate the squared distance from `p` to the default wire Bezier curve `from -> to`.
 ///
 /// The curve is subdivided into line segments; higher `steps` improves accuracy but costs more.
@@ -185,6 +290,32 @@ pub fn bezier_wire_distance2_polyline(
     best
 }
 
+/// Approximate the squared distance from `p` to the default wire curve using adaptive flattening.
+///
+/// `tolerance_screen_px` is an approximation error budget (not hit slop) in screen pixels.
+pub fn bezier_wire_distance2_polyline_adaptive(
+    p: Point,
+    from: Point,
+    to: Point,
+    zoom: f32,
+    tolerance_screen_px: f32,
+) -> f32 {
+    let zoom = sanitize_zoom(zoom);
+    let tol_screen = if tolerance_screen_px.is_finite() {
+        tolerance_screen_px.max(0.0)
+    } else {
+        DEFAULT_BEZIER_FLATTEN_TOLERANCE_SCREEN_PX
+    };
+    let tol_canvas = if zoom > 1.0e-6 {
+        tol_screen / zoom
+    } else {
+        tol_screen
+    };
+
+    let (c1, c2) = wire_ctrl_points(from, to, zoom);
+    bezier_distance2_polyline_adaptive(p, from, c1, c2, to, tol_canvas, 10)
+}
+
 #[cfg(feature = "kurbo")]
 pub fn bezier_wire_distance2_kurbo(
     p: Point,
@@ -203,7 +334,11 @@ pub fn bezier_wire_distance2_kurbo(
     let accuracy = kurbo_accuracy_canvas_units(from, to, zoom, steps);
     let nearest = curve.nearest(kurbo_point(p), accuracy);
     let d2 = nearest.distance_sq as f32;
-    if d2.is_finite() { d2 } else { f32::INFINITY }
+    if d2.is_finite() {
+        d2
+    } else {
+        f32::INFINITY
+    }
 }
 
 pub fn bezier_wire_distance2(p: Point, from: Point, to: Point, zoom: f32, steps: usize) -> f32 {
@@ -258,6 +393,32 @@ pub fn closest_point_on_bezier_wire_polyline(
     }
 
     best.0
+}
+
+/// Approximate the closest point from `p` to the default wire curve using adaptive flattening.
+///
+/// `tolerance_screen_px` is an approximation error budget (not hit slop) in screen pixels.
+pub fn closest_point_on_bezier_wire_polyline_adaptive(
+    p: Point,
+    from: Point,
+    to: Point,
+    zoom: f32,
+    tolerance_screen_px: f32,
+) -> Point {
+    let zoom = sanitize_zoom(zoom);
+    let tol_screen = if tolerance_screen_px.is_finite() {
+        tolerance_screen_px.max(0.0)
+    } else {
+        DEFAULT_BEZIER_FLATTEN_TOLERANCE_SCREEN_PX
+    };
+    let tol_canvas = if zoom > 1.0e-6 {
+        tol_screen / zoom
+    } else {
+        tol_screen
+    };
+
+    let (c1, c2) = wire_ctrl_points(from, to, zoom);
+    bezier_closest_point_polyline_adaptive(p, from, c1, c2, to, tol_canvas, 10)
 }
 
 #[cfg(feature = "kurbo")]

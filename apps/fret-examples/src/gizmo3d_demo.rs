@@ -1211,17 +1211,18 @@ fn transform_gizmo_tool_hit_test(model: &mut Gizmo3dDemoModel, cx: ViewportToolC
     let properties = DemoGizmoPropertySource {
         scalars: &model.custom_scalar_values,
     };
-    let _ = model.gizmo_mgr.update(
-        view_projection,
-        cx.input.viewport,
-        model.gizmo().config.depth_range,
-        hover_input,
-        model.active_target,
-        &selected,
-        Some(&properties),
-    );
-
-    model.gizmo_mgr.state.hovered.is_some()
+    model
+        .gizmo_mgr
+        .pick_hovered_handle(
+            view_projection,
+            cx.input.viewport,
+            model.gizmo().config.depth_range,
+            hover_input,
+            model.active_target,
+            &selected,
+            Some(&properties),
+        )
+        .is_some()
 }
 
 fn transform_gizmo_tool_handle_event(
@@ -3671,12 +3672,21 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 || m.pending_selection.is_some()
                 || m.marquee.is_some();
 
-            let wants_transform_update = !is_selecting
-                && (m.viewport_tool_router.active == Some(TOOL_ID_TRANSFORM_GIZMO)
-                    || m.gizmo_mgr.state.active.is_some()
-                    || m.input.dragging);
+            let transform_hot = m.viewport_tool_router.hot == Some(TOOL_ID_TRANSFORM_GIZMO);
+            let transform_active = m.viewport_tool_router.active == Some(TOOL_ID_TRANSFORM_GIZMO)
+                || m.gizmo_mgr.state.active.is_some()
+                || m.input.dragging;
 
-            let (drag_started, dragging) = if wants_transform_update {
+            let wants_transform_update = !is_selecting
+                && matches!(
+                    event.kind,
+                    ViewportInputKind::PointerMove { .. }
+                        | ViewportInputKind::PointerDown { .. }
+                        | ViewportInputKind::PointerUp { .. }
+                )
+                && (transform_hot || transform_active);
+
+            let (drag_started, dragging) = if transform_active {
                 match event.kind {
                     ViewportInputKind::PointerDown {
                         button: fret_core::MouseButton::Left,
