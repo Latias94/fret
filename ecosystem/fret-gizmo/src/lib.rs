@@ -24,7 +24,10 @@ mod style;
 mod transform_plugin;
 mod view_gizmo;
 
-pub use fret_viewport_tooling::ViewportToolInput;
+pub use fret_viewport_tooling::{
+    ViewportTool, ViewportToolCx, ViewportToolId, ViewportToolInput, ViewportToolPriority,
+    ViewportToolResult,
+};
 pub use gizmo::{
     Aabb3, BUILTIN_HANDLE_GROUP_ROTATE, BUILTIN_HANDLE_GROUP_SCALE, BUILTIN_HANDLE_GROUP_TRANSLATE,
     DepthMode, Gizmo, GizmoConfig, GizmoCustomEdit, GizmoDrawList3d, GizmoHandedness, GizmoInput,

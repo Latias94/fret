@@ -11,6 +11,91 @@ use fret_core::geometry::{Point, Rect};
 use fret_core::{MouseButton, ViewportInputEvent, ViewportInputKind};
 use glam::Vec2;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ViewportToolId(pub u64);
+
+impl ViewportToolId {
+    pub const fn new(value: u64) -> Self {
+        Self(value)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct ViewportToolPriority(pub i32);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ViewportToolResult {
+    pub handled: bool,
+    /// When true, the router should grant this tool exclusive ownership of subsequent pointer
+    /// events until the primary button is released (or cancelled).
+    pub capture: bool,
+}
+
+impl ViewportToolResult {
+    pub const fn unhandled() -> Self {
+        Self {
+            handled: false,
+            capture: false,
+        }
+    }
+
+    pub const fn handled() -> Self {
+        Self {
+            handled: true,
+            capture: false,
+        }
+    }
+
+    pub const fn handled_and_capture() -> Self {
+        Self {
+            handled: true,
+            capture: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct ViewportToolCx<'a> {
+    pub event: &'a ViewportInputEvent,
+    pub input: ViewportToolInput,
+}
+
+/// A viewport tool protocol for editor-style affordances (gizmo, selection, camera navigation).
+///
+/// This is intentionally policy-light: tool priority and tool activation/capture are decisions
+/// made by the host router (see ADR 0168).
+pub trait ViewportTool {
+    fn id(&self) -> ViewportToolId;
+
+    fn priority(&self) -> ViewportToolPriority {
+        ViewportToolPriority::default()
+    }
+
+    /// Updates hot/hover affordances (optional).
+    fn set_hot(&mut self, _hot: bool) {}
+
+    /// Whether this tool is a hit-test candidate at the current cursor position.
+    ///
+    /// Routers typically use this to select a single "hot" tool for hover feedback.
+    fn hit_test(&mut self, _cx: ViewportToolCx<'_>) -> bool {
+        false
+    }
+
+    /// Handles an input event. `hot` indicates the current hover winner and `active` indicates
+    /// the router has granted this tool exclusive ownership of the interaction.
+    fn handle_event(
+        &mut self,
+        _cx: ViewportToolCx<'_>,
+        _hot: bool,
+        _active: bool,
+    ) -> ViewportToolResult {
+        ViewportToolResult::unhandled()
+    }
+
+    /// Cancels an in-progress interaction, if any.
+    fn cancel(&mut self) {}
+}
+
 /// Viewport rectangle in logical or physical pixels (caller-defined).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ViewportRect {

@@ -1427,6 +1427,7 @@ dependencies = [
  "fret-ui",
  "fret-ui-headless",
  "fret-ui-primitives",
+ "fret-viewport-tooling",
  "serde",
  "serde_json",
  "time",
