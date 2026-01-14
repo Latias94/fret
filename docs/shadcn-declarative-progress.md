@@ -123,7 +123,7 @@ These are shadcn-style surfaces referenced by docs/demos but not part of the `re
 | --- | --- | --- | --- | --- |
 | combobox | `combobox` | Present | In review | Now implemented as `Popover` + `CommandPalette` recipe; audit: `docs/audits/shadcn-combobox.md` |
 | date picker | `date_picker` | Present | Unreviewed | `Popover` + `Calendar` recipe; v1 is single-date selection |
-| data table / datagrid | `data_table` | Present | Unreviewed | Extension surface (not a `registry:ui` item upstream); enabled by default |
+| data table / datagrid | `data_table` | Present | Unreviewed | Extension surface (not a `registry:ui` item upstream); `DataGrid` defaults to canvas; use `DataGridElement` for rich per-cell UI |
 | toast | `toast` | Skip | Unreviewed | Upstream `toast` is deprecated in favor of `sonner`; this repo ships `sonner` |
 | typography | `typography` | Skip | Unreviewed | Upstream typography page is docs-only and not shipped as a component |
 

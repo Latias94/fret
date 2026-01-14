@@ -15,6 +15,7 @@ fret-app = { path = "../../crates/fret-app", optional = true }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime", optional = true }
 fret-ui = { path = "../../crates/fret-ui", optional = true, features = ["unstable-retained-bridge"] }
+fret-ui-kit = { path = "../fret-ui-kit", optional = true, default-features = false, features = ["dnd"] }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
@@ -25,7 +26,7 @@ tracing.workspace = true
 default = ["fret-ui", "kit"]
 
 # Enables integration helpers for `crates/fret-ui` (canvas widget, action hooks, styling surfaces).
-fret-ui = ["dep:fret-ui", "dep:fret-runtime", "dep:fret-canvas"]
+fret-ui = ["dep:fret-ui", "dep:fret-runtime", "dep:fret-canvas", "dep:fret-ui-kit"]
 
 # Opt into the `rstar` spatial index backend for large graphs.
 canvas-rstar = ["fret-ui", "fret-canvas/rstar"]

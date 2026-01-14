@@ -150,6 +150,11 @@ Recommended host pattern:
   `fret_ui_kit::viewport_tooling::route_viewport_tools(...)`.
 - Use `ViewportToolRouterState` (`hot` / `active` / captured button) as the stable “tool session”
   state you store in your model.
+- If you need a pure “am I over a handle?” check for routing, prefer the side-effect-free pick helper:
+  - `GizmoPluginManager::pick_hovered_handle(...)` (no state updates; see ADR 0168 hit-test rule)
+- When handling `Esc` / cancel commands, cancel the active tool session via the routing helpers:
+  - callback router: `cancel_active_viewport_tools(...)`
+  - trait-object router: `ViewportToolArbitrator::cancel_active_and_clear_hot()`
 
 End-to-end reference:
 
@@ -197,6 +202,18 @@ and render the returned draw list in the engine pass (typically after scene geom
 explicit depth mode in the draw data. This ensures correct depth occlusion and avoids treating gizmo
 geometry as UI `SceneOp`s.
 
+### Engine-pass overlay hook wiring (recommended)
+
+The runner provides an engine-pass hook point (`ViewportOverlay3dHooksService`) that the host can
+use to record gizmos/debug overlays into an existing viewport render pass.
+
+To reduce boilerplate for Tier A integrations, prefer the shared immediate overlay helpers in
+`fret-launch`:
+
+- install once (e.g. in `WinitAppDriver::init`): `install_viewport_overlay_3d_immediate(app)`
+- upload per frame: `upload_viewport_overlay_3d_immediate(...) -> Overlay3dPipelines`
+- record inside the pass: `record_viewport_overlay_3d(app, window, target_id, &mut pass, &ctx)`
+
 ## Declarative UI integration (GPUI-style mental model)
 
 Even though gizmo logic is updated imperatively, the *hosting* can remain declarative:
@@ -217,12 +234,12 @@ The core boundary remains host-driven (ADR 0139 / ADR 0147), but common glue is 
 - Default host routing/arbitration helpers: `ecosystem/fret-ui-kit/src/viewport_tooling.rs`
   - `ViewportToolArbitrator` (trait-object tools)
   - `ViewportToolRouterState` + `route_viewport_tools` (callback router, easy for demos/apps)
+- Engine-pass overlay wiring helpers: `crates/fret-launch`
+  - `install_viewport_overlay_3d_immediate`, `upload_viewport_overlay_3d_immediate`
 
 `fret-gizmo` re-exports the tool protocol types so apps that only use gizmos can depend on a single
 crate in v1.
 
 ### Remaining gaps (v1)
 
-- Standard engine overlay wiring helper beyond demo patterns (hook registration + per-frame record).
-- A standardized keyboard cancel / escape contract routed through the tool helpers (currently host-specific).
 - Multi-pointer / touch tooling sessions (router is single-pointer-first in v1).

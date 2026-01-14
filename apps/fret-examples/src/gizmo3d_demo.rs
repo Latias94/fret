@@ -17,14 +17,15 @@ use fret_gizmo::{
 };
 use fret_gizmo::{ViewportToolCx, ViewportToolId, ViewportToolPriority, ViewportToolResult};
 use fret_launch::{
-    EngineFrameUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService,
-    ViewportRenderTargetWithDepth, WinitAppDriver, WinitCommandContext, WinitEventContext,
-    WinitRenderContext, WinitRunnerConfig, WinitWindowContext, record_viewport_overlay_3d,
+    EngineFrameUpdate, ViewportRenderTargetWithDepth, WinitAppDriver, WinitCommandContext,
+    WinitEventContext, WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
+    install_viewport_overlay_3d_immediate, record_viewport_overlay_3d,
+    upload_viewport_overlay_3d_immediate,
 };
 use fret_plot3d::retained::{Plot3dCanvas, Plot3dModel, Plot3dStyle, Plot3dViewport};
 use fret_render::viewport_overlay::{
-    Overlay3dCache, Overlay3dCpuBuilder, Overlay3dPipelines, Overlay3dUniforms, Overlay3dVertex,
-    ViewportOverlay3dContext, push_thick_line_quad, push_triangle,
+    Overlay3dCpuBuilder, Overlay3dUniforms, Overlay3dVertex, ViewportOverlay3dContext,
+    push_thick_line_quad, push_triangle,
 };
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
@@ -32,7 +33,8 @@ use fret_ui::UiTree;
 use fret_ui::{Theme, ThemeConfig};
 use fret_ui_kit::viewport_tooling::{
     ViewportToolArbitratorConfig, ViewportToolCoordinateSpace, ViewportToolEntry,
-    ViewportToolRouterState, route_viewport_tools,
+    ViewportToolRouterState, cancel_active_viewport_tools as cancel_active_viewport_tools_router,
+    route_viewport_tools,
 };
 use fret_undo::{CoalesceKey, DocumentId, UndoRecord, UndoService, ValueTx};
 use glam::{Mat4, Quat, Vec2, Vec3};
@@ -40,7 +42,6 @@ use std::any::TypeId;
 use std::collections::HashMap;
 use std::fmt::Write as _;
 use std::fs;
-use std::sync::Arc;
 use std::time::Instant;
 use wgpu::util::DeviceExt as _;
 
@@ -1175,6 +1176,10 @@ fn view_gizmo_tool_handle_event(
     }
 }
 
+fn view_gizmo_tool_cancel(model: &mut Gizmo3dDemoModel) {
+    model.view_gizmo.cancel();
+}
+
 fn transform_gizmo_tool_hit_test(model: &mut Gizmo3dDemoModel, cx: ViewportToolCx<'_>) -> bool {
     if model.camera.orbiting || model.camera.panning {
         return false;
@@ -1211,17 +1216,18 @@ fn transform_gizmo_tool_hit_test(model: &mut Gizmo3dDemoModel, cx: ViewportToolC
     let properties = DemoGizmoPropertySource {
         scalars: &model.custom_scalar_values,
     };
-    let _ = model.gizmo_mgr.update(
-        view_projection,
-        cx.input.viewport,
-        model.gizmo().config.depth_range,
-        hover_input,
-        model.active_target,
-        &selected,
-        Some(&properties),
-    );
-
-    model.gizmo_mgr.state.hovered.is_some()
+    model
+        .gizmo_mgr
+        .pick_hovered_handle(
+            view_projection,
+            cx.input.viewport,
+            model.gizmo().config.depth_range,
+            hover_input,
+            model.active_target,
+            &selected,
+            Some(&properties),
+        )
+        .is_some()
 }
 
 fn transform_gizmo_tool_handle_event(
@@ -1250,6 +1256,10 @@ fn transform_gizmo_tool_handle_event(
         } if active => ViewportToolResult::handled(),
         _ => ViewportToolResult::unhandled(),
     }
+}
+
+fn transform_gizmo_tool_cancel(model: &mut Gizmo3dDemoModel) {
+    let _ = model.cancel_in_progress_interaction();
 }
 
 fn selection_tool_hit_test(model: &mut Gizmo3dDemoModel, cx: ViewportToolCx<'_>) -> bool {
@@ -1412,6 +1422,10 @@ fn selection_tool_handle_event(
     }
 }
 
+fn selection_tool_cancel(model: &mut Gizmo3dDemoModel) {
+    let _ = model.cancel_in_progress_interaction();
+}
+
 impl Gizmo3dDemoModel {
     fn transform_plugin(&self) -> &TransformGizmoPlugin {
         self.gizmo_mgr
@@ -1507,7 +1521,41 @@ impl Gizmo3dDemoModel {
         };
     }
 
-    fn cancel_in_progress_interaction(&mut self, viewport_px: (u32, u32)) -> bool {
+    fn cancel_active_viewport_tool_interaction(&mut self) -> bool {
+        let mut tools = [
+            ViewportToolEntry {
+                id: TOOL_ID_VIEW_GIZMO,
+                priority: ViewportToolPriority(1000),
+                set_hot: Some(view_gizmo_tool_set_hot),
+                hit_test: view_gizmo_tool_hit_test,
+                handle_event: view_gizmo_tool_handle_event,
+                cancel: Some(view_gizmo_tool_cancel),
+            },
+            ViewportToolEntry {
+                id: TOOL_ID_TRANSFORM_GIZMO,
+                priority: ViewportToolPriority(500),
+                set_hot: Some(transform_gizmo_tool_set_hot),
+                hit_test: transform_gizmo_tool_hit_test,
+                handle_event: transform_gizmo_tool_handle_event,
+                cancel: Some(transform_gizmo_tool_cancel),
+            },
+            ViewportToolEntry {
+                id: TOOL_ID_SELECTION,
+                priority: ViewportToolPriority(0),
+                set_hot: None,
+                hit_test: selection_tool_hit_test,
+                handle_event: selection_tool_handle_event,
+                cancel: Some(selection_tool_cancel),
+            },
+        ];
+
+        let mut router = self.viewport_tool_router;
+        let cancelled = cancel_active_viewport_tools_router(&mut router, self, &mut tools);
+        self.viewport_tool_router = router;
+        cancelled
+    }
+
+    fn cancel_in_progress_interaction(&mut self) -> bool {
         let is_gizmo_dragging = self.input.dragging || self.gizmo_mgr.state.active.is_some();
         let is_selecting = self.pending_selection.is_some() || self.marquee.is_some();
 
@@ -1528,7 +1576,7 @@ impl Gizmo3dDemoModel {
             return true;
         }
 
-        let viewport_px = (viewport_px.0.max(1), viewport_px.1.max(1));
+        let viewport_px = (self.viewport_px.0.max(1), self.viewport_px.1.max(1));
         let view_projection = camera_view_projection(viewport_px, self.camera);
         let viewport = ViewportToolInput::from_target_px_viewport(
             viewport_px,
@@ -1913,72 +1961,6 @@ fn apply_viewport_gizmo_theme(theme: &Theme, model: &mut Gizmo3dDemoModel) {
 #[derive(Default)]
 struct Gizmo3dDemoService {
     per_window: HashMap<AppWindowId, fret_runtime::Model<Gizmo3dDemoModel>>,
-}
-
-struct Gizmo3dDemoViewportOverlayService {
-    cache: Overlay3dCache<(AppWindowId, RenderTargetId)>,
-}
-
-impl Default for Gizmo3dDemoViewportOverlayService {
-    fn default() -> Self {
-        Self {
-            cache: Overlay3dCache::new(
-                wgpu::TextureFormat::Bgra8UnormSrgb,
-                wgpu::TextureFormat::Depth24Plus,
-            ),
-        }
-    }
-}
-
-impl Gizmo3dDemoViewportOverlayService {
-    fn upload(
-        &mut self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        window: AppWindowId,
-        target: RenderTargetId,
-        uniforms: Uniforms,
-        cpu: &Overlay3dCpuBuilder,
-    ) -> Overlay3dPipelines {
-        let entry = self.cache.ensure(device, (window, target));
-        entry.update_uniform(queue, &uniforms);
-        entry.batch.upload(
-            device,
-            queue,
-            cpu.solid_test(),
-            cpu.solid_ghost(),
-            cpu.solid_always(),
-            cpu.line_test(),
-            cpu.line_ghost(),
-            cpu.line_always(),
-        );
-        entry.overlay.clone()
-    }
-
-    fn record(&self, window: AppWindowId, target: RenderTargetId, pass: &mut wgpu::RenderPass<'_>) {
-        let Some(entry) = self.cache.get(&(window, target)) else {
-            return;
-        };
-        entry.batch.record(&entry.overlay, pass);
-    }
-}
-
-struct Gizmo3dDemoViewportOverlayHooks;
-
-impl ViewportOverlay3dHooks for Gizmo3dDemoViewportOverlayHooks {
-    fn record(
-        &self,
-        app: &mut App,
-        window: AppWindowId,
-        target: RenderTargetId,
-        pass: &mut wgpu::RenderPass<'_>,
-        _ctx: &ViewportOverlay3dContext,
-    ) {
-        let Some(svc) = app.global::<Gizmo3dDemoViewportOverlayService>() else {
-            return;
-        };
-        svc.record(window, target, pass);
-    }
 }
 
 struct Gizmo3dDemoWindowState {
@@ -2476,13 +2458,11 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
         let mut did_apply = false;
 
         // Always cancel in-progress viewport interactions before applying undo/redo.
-        let viewport_px = state
-            .plot
-            .read(app, |_app, m| m.viewport.target_px_size)
-            .unwrap_or((960, 540));
         let did_cancel = state
             .demo
-            .update(app, |m, _cx| m.cancel_in_progress_interaction(viewport_px))
+            .update(app, |m, _cx| {
+                m.cancel_active_viewport_tool_interaction() || m.cancel_in_progress_interaction()
+            })
             .unwrap_or(false);
 
         let mut applied_transform = false;
@@ -2778,9 +2758,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
     type WindowState = Gizmo3dDemoWindowState;
 
     fn init(&mut self, app: &mut App, _main_window: AppWindowId) {
-        app.with_global_mut(ViewportOverlay3dHooksService::default, |svc, _app| {
-            svc.set(Arc::new(Gizmo3dDemoViewportOverlayHooks));
-        });
+        install_viewport_overlay_3d_immediate(app);
     }
 
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
@@ -2838,13 +2816,12 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 key: fret_core::KeyCode::Escape,
                 ..
             } => {
-                let viewport_px = state
-                    .plot
-                    .read(app, |_app, m| m.viewport.target_px_size)
-                    .unwrap_or((960, 540));
                 let did_cancel = state
                     .demo
-                    .update(app, |m, _cx| m.cancel_in_progress_interaction(viewport_px))
+                    .update(app, |m, _cx| {
+                        m.cancel_active_viewport_tool_interaction()
+                            || m.cancel_in_progress_interaction()
+                    })
                     .unwrap_or(false);
 
                 if did_cancel {
@@ -3671,12 +3648,21 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 || m.pending_selection.is_some()
                 || m.marquee.is_some();
 
-            let wants_transform_update = !is_selecting
-                && (m.viewport_tool_router.active == Some(TOOL_ID_TRANSFORM_GIZMO)
-                    || m.gizmo_mgr.state.active.is_some()
-                    || m.input.dragging);
+            let transform_hot = m.viewport_tool_router.hot == Some(TOOL_ID_TRANSFORM_GIZMO);
+            let transform_active = m.viewport_tool_router.active == Some(TOOL_ID_TRANSFORM_GIZMO)
+                || m.gizmo_mgr.state.active.is_some()
+                || m.input.dragging;
 
-            let (drag_started, dragging) = if wants_transform_update {
+            let wants_transform_update = !is_selecting
+                && matches!(
+                    event.kind,
+                    ViewportInputKind::PointerMove { .. }
+                        | ViewportInputKind::PointerDown { .. }
+                        | ViewportInputKind::PointerUp { .. }
+                )
+                && (transform_hot || transform_active);
+
+            let (drag_started, dragging) = if transform_active {
                 match event.kind {
                     ViewportInputKind::PointerDown {
                         button: fret_core::MouseButton::Left,
@@ -4087,17 +4073,17 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             }
         }
 
-        let overlay =
-            app.with_global_mut(Gizmo3dDemoViewportOverlayService::default, |svc, _app| {
-                svc.upload(
-                    &context.device,
-                    &context.queue,
-                    window,
-                    target_id,
-                    uniforms,
-                    cpu,
-                )
-            });
+        let overlay = upload_viewport_overlay_3d_immediate(
+            app,
+            &context.device,
+            &context.queue,
+            window,
+            target_id,
+            state.target.color_format(),
+            state.target.depth_format(),
+            uniforms,
+            cpu,
+        );
 
         let clear = wgpu::Color {
             r: 0.08,

@@ -94,20 +94,24 @@ As of the initial audit:
     `ecosystem/fret-ui-shadcn/src/data_table.rs` -> `ecosystem/fret-ui-kit/src/declarative/table.rs::table_virtualized`.
     - It provides: fixed header + vertical virtualization + the headless pipeline (sorting/filtering/pagination/selection/visibility).
     - `DataTableTanstack` is kept as a compatibility alias (`pub type DataTableTanstack = DataTable;`).
-  - `DataGrid` prototype exists at `ecosystem/fret-ui-shadcn/src/data_grid.rs`.
-    - It explores 2D virtualization (rows + columns) and custom scrollbars.
-  - `DataGridCanvas` exists at `ecosystem/fret-ui-shadcn/src/data_grid_canvas.rs` as a performance-ceiling prototype.
+  - `DataGrid` is the recommended performance-ceiling surface (canvas-backed):
+    - API alias: `fret-ui-shadcn::DataGrid` -> `DataGridCanvas` (see `ecosystem/fret-ui-shadcn/src/lib.rs`).
+    - Implementation: `ecosystem/fret-ui-shadcn/src/data_grid_canvas.rs`.
+  - `DataGridElement` prototype exists at `ecosystem/fret-ui-shadcn/src/data_grid.rs`.
+    - It explores element-based 2D virtualization (rows + columns) and custom scrollbars.
   - `DataTable` and `DataGrid` used to be behind the `datagrid` crate feature; the gate has been removed because it had no heavy deps.
 - `ecosystem/fret-ui-kit`
   - TanStack-inspired headless engine already exists (always available; `table` is a no-op compatibility flag):
-    - `ecosystem/fret-ui-kit/src/headless/table/*`
+    - Implementation: `ecosystem/fret-ui-headless/src/table/*` (crate: `ecosystem/fret-ui-headless`)
+    - Re-export surface: `ecosystem/fret-ui-kit/src/headless/mod.rs` (`pub use fret_ui_headless::table;`)
     - `fret-ui-kit` Cargo feature: `table` (retained for compatibility; does not gate compilation).
   - There is also a substantial declarative table view implementation (also always available):
     - `ecosystem/fret-ui-kit/src/declarative/table.rs` (uses `headless::table` and `fret-ui` primitives).
 - Forms
   - `ecosystem/fret-ui-shadcn/src/form.rs` is a taxonomy facade over field primitives; it is not a headless form state engine.
-  - A dedicated headless form state module exists in `fret-ui-kit`:
-    - `ecosystem/fret-ui-kit/src/headless/form_state.rs` + `ecosystem/fret-ui-kit/src/headless/form_validation.rs`
+  - A dedicated headless form state module exists in `fret-ui-headless` (re-exported via `fret-ui-kit::headless`):
+    - Implementation: `ecosystem/fret-ui-headless/src/form_state.rs` + `ecosystem/fret-ui-headless/src/form_validation.rs`
+    - Re-export surface: `ecosystem/fret-ui-kit/src/headless/mod.rs` (`pub use fret_ui_headless::form_state;` / `form_validation;`)
     - Declarative registry/wiring: `ecosystem/fret-ui-kit/src/declarative/form.rs`
 - Calendar / Date Picker
   - A shadcn-aligned `Calendar` + `DatePicker` exist in `ecosystem/fret-ui-shadcn/src/{calendar,date_picker}.rs`.
@@ -179,12 +183,12 @@ Glide’s renderer architecture is a useful reference for “spreadsheet scale�
 
 We will pursue a Glide-style architecture for the “upper bound” DataGrid:
 
-- Headless: 2D viewport/range computation (rows + columns) as a pure algorithm module in `fret-ui-kit`.
+- Headless: 2D viewport/range computation (rows + columns) as a pure algorithm module in `fret-ui-headless` (re-exported via `fret-ui-kit::headless`).
 - Rendering: a canvas-backed grid that draws the visible cell region in a small number of paint passes (background, grid lines, text).
 - Interaction: selection/focus/caret/drag handles as lightweight overlay layers; in-place editing via a single floating editor (popover/portal).
 - API: `rows + columns + get_cell(row, col)` contract for on-demand data, with explicit revision/invalidation hooks.
 
-We keep the existing element-based `DataTable`/`DataGrid` for “rich cell UI” scenarios and as a correctness reference.
+We keep the existing element-based `DataTable`/`DataGridElement` for “rich cell UI” scenarios and as a correctness reference.
 
 ## Consolidation Plan (Table/DataGrid Surfaces)
 
@@ -210,8 +214,8 @@ preserving specialized variants and performance ceilings.
   denies `deprecated`, so we keep this as a non-deprecated alias for now).
 - **Simple preset:** the older “simple table” surface is not kept as a separate public type; any “simple” usage
   should be expressed as a `DataTable` preset/config (keeps the public surface small and forces configurability).
-- **Performance ceiling grid:** `DataGridCanvas` remains the “spreadsheet scale” path.
-- **Element-based 2D grid:** `DataGrid` remains for rich cell UI and as a correctness/reference surface.
+- **Default grid (performance ceiling):** `DataGrid` is an alias for `DataGridCanvas` (canvas-rendered; spreadsheet scale).
+- **Element-based 2D grid:** `DataGridElement` remains for rich cell UI and as a correctness/reference surface.
 
 ### Remaining decision gates
 
@@ -230,7 +234,7 @@ preserving specialized variants and performance ceilings.
 ### Definition of done (consolidation)
 
 - Docs: users can answer “which table do I use?” in < 30 seconds:
-  - `DataTable` (headless-backed) vs `DataGridCanvas` (performance ceiling) vs `DataGrid` (rich cell UI).
+  - `DataTable` (headless-backed) vs `DataGrid` (canvas performance ceiling) vs `DataGridElement` (rich cell UI).
 - API: public exports are stable and consistent (`lib.rs` tells the truth).
 - Demos: at least one end-to-end demo validates:
   - sorting, filtering, pagination, selection, column visibility
@@ -260,8 +264,9 @@ For our v1, we should explicitly support both sizing strategies:
 
 Implementation anchor (headless algorithm surface):
 
-- `ecosystem/fret-ui-kit/src/headless/grid_viewport.rs` (`GridAxisMetrics`, `GridAxisMeasureMode`, `GridAxisRange`,
-  `compute_grid_viewport_2d`)
+- Algorithm: `ecosystem/fret-ui-headless/src/grid_viewport.rs` (`GridAxisMetrics`, `GridAxisMeasureMode`,
+  `GridAxisRange`, `compute_grid_viewport_2d`).
+- Re-export surface: `ecosystem/fret-ui-kit/src/headless/mod.rs` (`pub use fret_ui_headless::grid_viewport;`).
 
 ## Performance Review (Initial)
 
@@ -271,8 +276,8 @@ Baseline observations (what we already have):
   - `fret-ui` provides `VirtualList` with fixed-measure support and visible-only key caching.
   - `fret-ui-kit`’s `declarative::table` configures fixed row height (`VirtualListMeasureMode::Fixed`) and uses `VirtualListKeyCacheMode::VisibleOnly`.
 - A TanStack-aligned headless engine already exists (`fret-ui-kit/headless::table`) and is memoized/unit-testable.
-- `fret-ui-shadcn`’s `DataGrid` prototype performs 2D virtualization (rows + columns) by computing
-  visible ranges once per frame (via `fret-ui-kit/headless::grid_viewport`) and only instantiating
+- `fret-ui-shadcn`’s `DataGridElement` prototype performs 2D virtualization (rows + columns) by computing
+  visible ranges once per frame (via `fret-ui-kit::headless::grid_viewport`) and only instantiating
   visible cells (no per-row nested `VirtualList`).
 
 What Glide Data Grid suggests (when pushing to “spreadsheet scale”):

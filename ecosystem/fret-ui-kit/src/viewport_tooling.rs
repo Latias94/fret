@@ -69,6 +69,37 @@ pub struct ViewportToolEntry<T> {
     pub cancel: Option<fn(&mut T)>,
 }
 
+/// Cancels the active tool interaction (if any) and clears router hot/active state.
+///
+/// This is intended for keyboard-driven cancellation (e.g. Escape) or host-driven teardown
+/// (switching tool modes, closing a viewport, etc.).
+pub fn cancel_active_viewport_tools<T>(
+    state: &mut ViewportToolRouterState,
+    host: &mut T,
+    tools: &mut [ViewportToolEntry<T>],
+) -> bool {
+    let Some(active) = state.active else {
+        return false;
+    };
+
+    if let Some(entry) = tools.iter_mut().find(|t| t.id == active)
+        && let Some(cancel) = entry.cancel
+    {
+        cancel(host);
+    }
+
+    if let Some(hot) = state.hot
+        && let Some(entry) = tools.iter_mut().find(|t| t.id == hot)
+    {
+        call_set_hot(host, entry, false);
+    }
+
+    state.hot = None;
+    state.active = None;
+    state.active_button = None;
+    true
+}
+
 pub fn route_viewport_tools<T>(
     state: &mut ViewportToolRouterState,
     config: ViewportToolArbitratorConfig,
@@ -324,6 +355,17 @@ impl ViewportToolArbitrator {
         self.active_button = None;
     }
 
+    /// Cancels the active interaction (if any) and clears the hot tool.
+    pub fn cancel_active_and_clear_hot(&mut self) {
+        self.cancel_active();
+        if let Some(hot) = self.hot
+            && let Some(idx) = self.index_of(hot)
+        {
+            self.tools[idx].set_hot(false);
+        }
+        self.hot = None;
+    }
+
     pub fn handle_event(&mut self, event: &ViewportInputEvent) -> bool {
         if self.tools.is_empty() {
             self.hot = None;
@@ -533,6 +575,7 @@ mod tests {
         down_capture: bool,
         down_handled: bool,
         hot: bool,
+        cancelled: bool,
         calls: Vec<&'static str>,
     }
 
@@ -545,6 +588,7 @@ mod tests {
                 down_capture: false,
                 down_handled: false,
                 hot: false,
+                cancelled: false,
                 calls: Vec::new(),
             }
         }
@@ -599,6 +643,11 @@ mod tests {
             }
             ViewportToolResult::unhandled()
         }
+
+        fn cancel(&mut self) {
+            self.cancelled = true;
+            self.calls.push("cancel");
+        }
     }
 
     #[test]
@@ -648,5 +697,83 @@ mod tests {
             click_count: 1,
         }));
         assert_eq!(arb.active_tool(), None);
+    }
+
+    #[test]
+    fn cancel_active_and_clear_hot_resets_state() {
+        let mut a = TestTool::new(1, 10);
+        a.hit = true;
+        a.down_handled = true;
+        a.down_capture = true;
+
+        let mut arb = ViewportToolArbitrator::new(Default::default());
+        arb.set_tools(vec![Box::new(a)]);
+
+        assert!(
+            arb.handle_event(&dummy_event(ViewportInputKind::PointerDown {
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+            }))
+        );
+        assert_eq!(arb.active_tool(), Some(ViewportToolId(1)));
+        assert_eq!(arb.hot_tool(), Some(ViewportToolId(1)));
+
+        arb.cancel_active_and_clear_hot();
+        assert_eq!(arb.active_tool(), None);
+        assert_eq!(arb.hot_tool(), None);
+    }
+
+    #[test]
+    fn callback_router_cancel_clears_active_and_hot() {
+        #[derive(Default)]
+        struct Host {
+            cancelled: bool,
+            hot: bool,
+        }
+
+        fn set_hot(host: &mut Host, hot: bool) {
+            host.hot = hot;
+        }
+
+        fn hit_test(_host: &mut Host, _cx: ViewportToolCx<'_>) -> bool {
+            false
+        }
+
+        fn handle_event(
+            _host: &mut Host,
+            _cx: ViewportToolCx<'_>,
+            _hot: bool,
+            _active: bool,
+        ) -> ViewportToolResult {
+            ViewportToolResult::unhandled()
+        }
+
+        fn cancel(host: &mut Host) {
+            host.cancelled = true;
+        }
+
+        let mut host = Host::default();
+        let mut state = ViewportToolRouterState {
+            hot: Some(ViewportToolId(1)),
+            active: Some(ViewportToolId(1)),
+            active_button: Some(MouseButton::Left),
+        };
+        let mut tools = [ViewportToolEntry {
+            id: ViewportToolId(1),
+            priority: ViewportToolPriority(0),
+            set_hot: Some(set_hot),
+            hit_test,
+            handle_event,
+            cancel: Some(cancel),
+        }];
+
+        let cancelled = cancel_active_viewport_tools(&mut state, &mut host, &mut tools);
+        assert!(cancelled);
+        assert!(host.cancelled);
+        assert!(!host.hot);
+        assert_eq!(state.hot, None);
+        assert_eq!(state.active, None);
+        assert_eq!(state.active_button, None);
     }
 }

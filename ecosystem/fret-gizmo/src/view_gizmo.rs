@@ -317,6 +317,21 @@ impl ViewGizmo {
         }
     }
 
+    /// Cancels an in-progress interaction, if any.
+    ///
+    /// This is intended for host-driven cancellation (e.g. Escape, mode switches, viewport teardown).
+    /// It resets drag state without triggering click actions.
+    pub fn cancel(&mut self) {
+        self.state.drag_active = false;
+        self.state.drag_orbiting = false;
+        self.state.drag_action = None;
+        self.state.drag_start_cursor_px = Vec2::ZERO;
+        self.state.drag_last_cursor_px = Vec2::ZERO;
+        self.state.drag_total_delta_px = Vec2::ZERO;
+        self.state.hovered = None;
+        self.state.hovered_center_button = false;
+    }
+
     pub fn hit_test(&self, view_projection: Mat4, viewport: ViewportRect, cursor_px: Vec2) -> bool {
         let center_radius_px = self.config.center_button_radius_px;
         if center_radius_px > 0.0 {

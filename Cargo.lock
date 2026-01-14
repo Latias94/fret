@@ -1038,6 +1038,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-dnd"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "serde",
+]
+
+[[package]]
 name = "fret-docking"
 version = "0.1.0"
 dependencies = [
@@ -1191,6 +1199,7 @@ dependencies = [
  "fret-core",
  "fret-runtime",
  "fret-ui",
+ "fret-ui-kit",
  "serde",
  "serde_json",
  "thiserror 2.0.17",
@@ -1424,6 +1433,7 @@ dependencies = [
  "fret-app",
  "fret-canvas",
  "fret-core",
+ "fret-dnd",
  "fret-icons",
  "fret-runtime",
  "fret-ui",
@@ -1456,6 +1466,7 @@ dependencies = [
  "fret-icons",
  "fret-runtime",
  "fret-ui",
+ "fret-ui-headless",
  "fret-ui-kit",
  "serde",
  "serde_json",

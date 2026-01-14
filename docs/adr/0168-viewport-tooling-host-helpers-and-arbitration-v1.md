@@ -126,6 +126,19 @@ arrives.
 In v1, this is modeled by storing the captured mouse button in the router state and deriving drag flags from that
 button during the active session (instead of trusting `PointerMove.buttons`).
 
+#### Keyboard cancellation (Escape) is a first-class host helper
+
+Hosts frequently need to cancel the active tool session without any pointer event edge:
+
+- `Esc` / cancel commands,
+- undo/redo (cancel active interaction before mutating state),
+- viewport teardown / tool switching.
+
+In v1, the routing helpers provide explicit cancellation entry points:
+
+- `ViewportToolArbitrator::cancel_active_and_clear_hot()` (trait-object tools)
+- `cancel_active_viewport_tools(...)` (callback tools)
+
 ### 3) Keep engine-pass overlay integration explicit, but provide a recommended wiring shape
 
 Tool rendering is intentionally engine-pass for Tier A:
@@ -135,6 +148,13 @@ Tool rendering is intentionally engine-pass for Tier A:
 
 We keep this boundary explicit but recommend a standard “registration” and “per-frame record” shape so multiple tool
 ecosystems can participate without bespoke boilerplate.
+
+In v1, the runner hook service supports multiple hooks (`ViewportOverlay3dHooksService::push`) and provides a small
+immediate-mode helper for the common "upload + record" overlay pattern:
+
+- install: `install_viewport_overlay_3d_immediate(app)`
+- per-frame upload: `upload_viewport_overlay_3d_immediate(...) -> Overlay3dPipelines`
+- per-pass record: `record_viewport_overlay_3d(...)` (replays all registered hooks)
 
 ### 4) Tool-specific read/write boundaries remain tool-owned
 

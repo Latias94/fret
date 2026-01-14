@@ -545,6 +545,7 @@ fn apply_xy_weak_filter_for_grid(
         };
 
         let series_view = &mut view.series[series_view_index];
+
         if series_view.x_policy.filter != Default::default() {
             series_view.x_policy.filter = Default::default();
             *view_changed = true;
