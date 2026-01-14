@@ -240,7 +240,7 @@ pub fn chart_canvas_panel<H: UiHost>(
     let mut legend_series: Vec<LegendSeriesEntry> = Vec::new();
     let mut series_rank_by_id: BTreeMap<delinea::SeriesId, usize> = BTreeMap::default();
     let mut axis_pointer: Option<delinea::engine::AxisPointerOutput> = None;
-    let mut axis_pointer_label: Option<AxisPointerLabelOverlay> = None;
+    let mut axis_pointer_labels: Vec<AxisPointerLabelOverlay> = Vec::new();
     let mut tooltip_lines: Vec<TooltipTextLine> = Vec::new();
 
     let tooltip_formatter_c = tooltip_formatter.clone();
@@ -298,7 +298,7 @@ pub fn chart_canvas_panel<H: UiHost>(
         }
 
         axis_pointer = engine.output().axis_pointer.clone();
-        axis_pointer_label = None;
+        axis_pointer_labels.clear();
         tooltip_lines.clear();
         if let Some(axis_pointer) = axis_pointer.as_ref() {
             tooltip_lines = tooltip_formatter_c.format_axis_pointer(
@@ -308,46 +308,52 @@ pub fn chart_canvas_panel<H: UiHost>(
             );
 
             if let Some(pointer_model) = engine.model().axis_pointer.as_ref()
-                && matches!(&axis_pointer.tooltip, delinea::TooltipOutput::Axis(_))
                 && pointer_model.label.show
             {
-                let (axis_id, axis_kind, axis_value) = match &axis_pointer.tooltip {
-                    delinea::TooltipOutput::Axis(axis) => {
-                        (axis.axis, axis.axis_kind, axis.axis_value)
-                    }
-                    _ => unreachable!(),
-                };
-
-                let axis_window = engine
-                    .output()
-                    .axis_windows
-                    .get(&axis_id)
-                    .copied()
-                    .unwrap_or_default();
-                let axis_name = engine
-                    .model()
-                    .axes
-                    .get(&axis_id)
-                    .and_then(|a| a.name.as_deref())
-                    .unwrap_or("");
-                let value_text = delinea::engine::axis::format_value_for(
-                    engine.model(),
-                    axis_id,
-                    axis_window,
-                    axis_value,
-                );
                 let template = pointer_model.label.template.as_str();
-                let label_text = if template == "{value}" {
-                    value_text
-                } else {
-                    template
-                        .replace("{value}", &value_text)
-                        .replace("{axis_name}", axis_name)
-                };
-                axis_pointer_label = Some(AxisPointerLabelOverlay {
-                    axis_kind,
-                    text: label_text.into(),
-                });
+
+                let mut push_label_for_axis =
+                    |axis_id: delinea::AxisId, axis_kind: delinea::AxisKind, axis_value: f64| {
+                        let axis_window = engine
+                            .output()
+                            .axis_windows
+                            .get(&axis_id)
+                            .copied()
+                            .unwrap_or_default();
+                        let axis_name = engine
+                            .model()
+                            .axes
+                            .get(&axis_id)
+                            .and_then(|a| a.name.as_deref())
+                            .unwrap_or("");
+                        let value_text = delinea::engine::axis::format_value_for(
+                            engine.model(),
+                            axis_id,
+                            axis_window,
+                            axis_value,
+                        );
+                        let label_text = if template == "{value}" {
+                            value_text
+                        } else {
+                            template
+                                .replace("{value}", &value_text)
+                                .replace("{axis_name}", axis_name)
+                        };
+                        axis_pointer_labels.push(AxisPointerLabelOverlay {
+                            axis_kind,
+                            text: label_text.into(),
+                        });
+                    };
+
+                match &axis_pointer.tooltip {
+                    delinea::TooltipOutput::Axis(axis) => {
+                        push_label_for_axis(axis.axis, axis.axis_kind, axis.axis_value);
+                    }
+                    delinea::TooltipOutput::Item(item) => {
+                        push_label_for_axis(item.x_axis, delinea::AxisKind::X, item.x_value);
+                        push_label_for_axis(item.y_axis, delinea::AxisKind::Y, item.y_value);
+                    }
+                }
             }
         }
     });
@@ -357,7 +363,7 @@ pub fn chart_canvas_panel<H: UiHost>(
     }
     if let Ok(mut st) = tooltip_state.lock() {
         st.axis_pointer = axis_pointer;
-        st.axis_pointer_label = axis_pointer_label;
+        st.axis_pointer_labels = std::mem::take(&mut axis_pointer_labels);
         st.lines = tooltip_lines;
         st.series_rank_by_id = series_rank_by_id;
     }

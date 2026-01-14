@@ -4415,86 +4415,109 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 });
             }
 
-            if matches!(&axis_pointer.tooltip, delinea::TooltipOutput::Axis(_))
-                && axis_pointer_label_enabled
-            {
-                let band = match &axis_pointer.tooltip {
-                    delinea::TooltipOutput::Axis(axis) => match axis.axis_kind {
-                        delinea::AxisKind::X => self
-                            .last_layout
-                            .x_axes
-                            .iter()
-                            .find(|b| b.axis == axis.axis)
-                            .copied(),
-                        delinea::AxisKind::Y => self
-                            .last_layout
-                            .y_axes
-                            .iter()
-                            .find(|b| b.axis == axis.axis)
-                            .copied(),
-                    },
-                    _ => None,
+            if axis_pointer_label_enabled {
+                let union = |a: Rect, b: Rect| -> Rect {
+                    let ax0 = a.origin.x.0;
+                    let ay0 = a.origin.y.0;
+                    let ax1 = ax0 + a.size.width.0;
+                    let ay1 = ay0 + a.size.height.0;
+
+                    let bx0 = b.origin.x.0;
+                    let by0 = b.origin.y.0;
+                    let bx1 = bx0 + b.size.width.0;
+                    let by1 = by0 + b.size.height.0;
+
+                    let x0 = ax0.min(bx0);
+                    let y0 = ay0.min(by0);
+                    let x1 = ax1.max(bx1);
+                    let y1 = ay1.max(by1);
+
+                    Rect::new(
+                        Point::new(Px(x0), Px(y0)),
+                        Size::new(Px((x1 - x0).max(0.0)), Px((y1 - y0).max(0.0))),
+                    )
                 };
-                if let Some(band) = band {
-                    let (axis_id, axis_value) = match &axis_pointer.tooltip {
-                        delinea::TooltipOutput::Axis(axis) => (axis.axis, axis.axis_value),
-                        _ => unreachable!(),
-                    };
-                    let axis_window = self
-                        .engine
-                        .output()
-                        .axis_windows
-                        .get(&axis_id)
-                        .copied()
-                        .unwrap_or_default();
-                    let axis_name = self
-                        .engine
-                        .model()
-                        .axes
-                        .get(&axis_id)
-                        .and_then(|a| a.name.as_deref())
-                        .unwrap_or("");
-                    let value_text = delinea::engine::axis::format_value_for(
-                        self.engine.model(),
-                        axis_id,
-                        axis_window,
-                        axis_value,
-                    );
-                    let label_text = if axis_pointer_label_template == "{value}" {
-                        value_text
-                    } else {
-                        axis_pointer_label_template
-                            .replace("{value}", &value_text)
-                            .replace("{axis_name}", axis_name)
-                    };
 
-                    let text_style = TextStyle {
-                        size: Px(11.0),
-                        weight: FontWeight::MEDIUM,
-                        ..TextStyle::default()
-                    };
-                    let constraints = TextConstraints {
-                        max_width: None,
-                        wrap: TextWrap::None,
-                        overflow: TextOverflow::Clip,
-                        scale_factor: cx.scale_factor,
-                    };
-                    let prepared = self.tooltip_text.prepare(
-                        cx.services,
-                        &label_text,
-                        &text_style,
-                        constraints,
-                    );
-                    let blob = prepared.blob;
-                    let metrics = prepared.metrics;
+                let mut draw_label_for_axis =
+                    |axis_id: delinea::AxisId, axis_kind: delinea::AxisKind, axis_value: f64| {
+                        let band = match axis_kind {
+                            delinea::AxisKind::X => self
+                                .last_layout
+                                .x_axes
+                                .iter()
+                                .find(|b| b.axis == axis_id)
+                                .copied(),
+                            delinea::AxisKind::Y => self
+                                .last_layout
+                                .y_axes
+                                .iter()
+                                .find(|b| b.axis == axis_id)
+                                .copied(),
+                        };
+                        let Some(band) = band else {
+                            return;
+                        };
 
-                    let pad_x = 6.0f32;
-                    let pad_y = 3.0f32;
-                    let w = (metrics.size.width.0 + 2.0 * pad_x).max(1.0);
-                    let h = (metrics.size.height.0 + 2.0 * pad_y).max(1.0);
+                        let axis_window = self
+                            .engine
+                            .output()
+                            .axis_windows
+                            .get(&axis_id)
+                            .copied()
+                            .unwrap_or_default();
+                        let axis_name = self
+                            .engine
+                            .model()
+                            .axes
+                            .get(&axis_id)
+                            .and_then(|a| a.name.as_deref())
+                            .unwrap_or("");
 
-                    let (mut box_x, mut box_y) = match &axis_pointer.tooltip {
-                        delinea::TooltipOutput::Axis(axis) => match axis.axis_kind {
+                        let value_text = if axis_value.is_finite() {
+                            delinea::engine::axis::format_value_for(
+                                self.engine.model(),
+                                axis_id,
+                                axis_window,
+                                axis_value,
+                            )
+                        } else {
+                            "-".to_string()
+                        };
+
+                        let label_text = if axis_pointer_label_template == "{value}" {
+                            value_text
+                        } else {
+                            axis_pointer_label_template
+                                .replace("{value}", &value_text)
+                                .replace("{axis_name}", axis_name)
+                        };
+
+                        let text_style = TextStyle {
+                            size: Px(11.0),
+                            weight: FontWeight::MEDIUM,
+                            ..TextStyle::default()
+                        };
+                        let constraints = TextConstraints {
+                            max_width: None,
+                            wrap: TextWrap::None,
+                            overflow: TextOverflow::Clip,
+                            scale_factor: cx.scale_factor,
+                        };
+                        let prepared = self.tooltip_text.prepare(
+                            cx.services,
+                            &label_text,
+                            &text_style,
+                            constraints,
+                        );
+                        let blob = prepared.blob;
+                        let metrics = prepared.metrics;
+
+                        let pad_x = 6.0f32;
+                        let pad_y = 3.0f32;
+                        let w = (metrics.size.width.0 + 2.0 * pad_x).max(1.0);
+                        let h = (metrics.size.height.0 + 2.0 * pad_y).max(1.0);
+
+                        let (mut box_x, mut box_y) = match axis_kind {
                             delinea::AxisKind::X => (
                                 x - 0.5 * w,
                                 band.rect.origin.y.0 + 0.5 * (band.rect.size.height.0 - h),
@@ -4503,36 +4526,55 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                 band.rect.origin.x.0 + 0.5 * (band.rect.size.width.0 - w),
                                 y - 0.5 * h,
                             ),
-                        },
-                        _ => unreachable!(),
+                        };
+
+                        let bx0 = band.rect.origin.x.0;
+                        let by0 = band.rect.origin.y.0;
+                        let bx1 = bx0 + band.rect.size.width.0;
+                        let by1 = by0 + band.rect.size.height.0;
+                        box_x = box_x.clamp(bx0, (bx1 - w).max(bx0));
+                        box_y = box_y.clamp(by0, (by1 - h).max(by0));
+                        let rect =
+                            Rect::new(Point::new(Px(box_x), Px(box_y)), Size::new(Px(w), Px(h)));
+                        axis_pointer_label_rect = Some(match axis_pointer_label_rect {
+                            Some(prev) => union(prev, rect),
+                            None => rect,
+                        });
+
+                        let kind_key: u32 = match axis_kind {
+                            delinea::AxisKind::X => 0,
+                            delinea::AxisKind::Y => 1,
+                        };
+                        let label_order = DrawOrder(
+                            self.style
+                                .draw_order
+                                .0
+                                .saturating_add(9_020 + kind_key.saturating_mul(4)),
+                        );
+                        cx.scene.push(SceneOp::Quad {
+                            order: label_order,
+                            rect,
+                            background: self.style.tooltip_background,
+                            border: Edges::all(self.style.tooltip_border_width),
+                            border_color: self.style.tooltip_border_color,
+                            corner_radii: Corners::all(Px(4.0)),
+                        });
+                        cx.scene.push(SceneOp::Text {
+                            order: DrawOrder(label_order.0.saturating_add(1)),
+                            origin: Point::new(Px(box_x + pad_x), Px(box_y + pad_y)),
+                            text: blob,
+                            color: self.style.tooltip_text_color,
+                        });
                     };
 
-                    let bx0 = band.rect.origin.x.0;
-                    let by0 = band.rect.origin.y.0;
-                    let bx1 = bx0 + band.rect.size.width.0;
-                    let by1 = by0 + band.rect.size.height.0;
-                    box_x = box_x.clamp(bx0, (bx1 - w).max(bx0));
-                    box_y = box_y.clamp(by0, (by1 - h).max(by0));
-                    axis_pointer_label_rect = Some(Rect::new(
-                        Point::new(Px(box_x), Px(box_y)),
-                        Size::new(Px(w), Px(h)),
-                    ));
-
-                    let label_order = DrawOrder(self.style.draw_order.0.saturating_add(9_020));
-                    cx.scene.push(SceneOp::Quad {
-                        order: label_order,
-                        rect: Rect::new(Point::new(Px(box_x), Px(box_y)), Size::new(Px(w), Px(h))),
-                        background: self.style.tooltip_background,
-                        border: Edges::all(self.style.tooltip_border_width),
-                        border_color: self.style.tooltip_border_color,
-                        corner_radii: Corners::all(Px(4.0)),
-                    });
-                    cx.scene.push(SceneOp::Text {
-                        order: DrawOrder(label_order.0.saturating_add(1)),
-                        origin: Point::new(Px(box_x + pad_x), Px(box_y + pad_y)),
-                        text: blob,
-                        color: self.style.tooltip_text_color,
-                    });
+                match &axis_pointer.tooltip {
+                    delinea::TooltipOutput::Axis(axis) => {
+                        draw_label_for_axis(axis.axis, axis.axis_kind, axis.axis_value);
+                    }
+                    delinea::TooltipOutput::Item(item) => {
+                        draw_label_for_axis(item.x_axis, delinea::AxisKind::X, item.x_value);
+                        draw_label_for_axis(item.y_axis, delinea::AxisKind::Y, item.y_value);
+                    }
                 }
             }
 

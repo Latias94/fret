@@ -21,7 +21,7 @@ pub(crate) struct AxisPointerLabelOverlay {
 #[derive(Debug, Default)]
 pub(crate) struct TooltipOverlayState {
     pub axis_pointer: Option<AxisPointerOutput>,
-    pub axis_pointer_label: Option<AxisPointerLabelOverlay>,
+    pub axis_pointer_labels: Vec<AxisPointerLabelOverlay>,
     pub lines: Vec<TooltipTextLine>,
     pub series_rank_by_id: BTreeMap<SeriesId, usize>,
 }
@@ -145,11 +145,8 @@ pub(crate) fn tooltip_overlay_tool(
             }
 
             let mut axis_pointer_label_rect: Option<Rect> = None;
-            if let Some(label) = state.axis_pointer_label.as_ref()
-                && matches!(&axis_pointer.tooltip, delinea::TooltipOutput::Axis(_))
-            {
+            if !state.axis_pointer_labels.is_empty() {
                 let label_scope = painter.key_scope(&"fret-chart.declarative.axis_pointer.label");
-                let text: Arc<str> = label.text.clone();
 
                 let text_style = fret_core::TextStyle {
                     size: Px(11.0),
@@ -162,66 +159,97 @@ pub(crate) fn tooltip_overlay_tool(
                     overflow: fret_core::TextOverflow::Clip,
                 };
 
-                let kind_key: u8 = match label.axis_kind {
-                    delinea::AxisKind::X => 0,
-                    delinea::AxisKind::Y => 1,
-                };
-                let key: u64 = painter
-                    .child_key(label_scope, &("label", kind_key, text.as_ref()))
-                    .into();
-                let metrics = painter.text(
-                    key,
-                    DrawOrder(0),
-                    Point::new(Px(0.0), Px(0.0)),
-                    text.clone(),
-                    text_style.clone(),
-                    Color::TRANSPARENT,
-                    constraints,
-                    paint_cx.raster_scale_factor,
-                );
-
-                let pad_x = 6.0f32;
-                let pad_y = 3.0f32;
-                let w = (metrics.size.width.0 + 2.0 * pad_x).max(1.0);
-                let h = (metrics.size.height.0 + 2.0 * pad_y).max(1.0);
-
                 let bx0 = bounds.origin.x.0;
                 let by0 = bounds.origin.y.0;
                 let bx1 = bx0 + bounds.size.width.0;
                 let by1 = by0 + bounds.size.height.0;
 
-                let (mut box_x, mut box_y) = match label.axis_kind {
-                    delinea::AxisKind::X => {
-                        (crosshair.x.0 - 0.5 * w, by0 + bounds.size.height.0 - h)
-                    }
-                    delinea::AxisKind::Y => (bx0, crosshair.y.0 - 0.5 * h),
-                };
-                box_x = box_x.clamp(bx0, (bx1 - w).max(bx0));
-                box_y = box_y.clamp(by0, (by1 - h).max(by0));
-                axis_pointer_label_rect = Some(Rect::new(
-                    Point::new(Px(box_x), Px(box_y)),
-                    Size::new(Px(w), Px(h)),
-                ));
+                let pad_x = 6.0f32;
+                let pad_y = 3.0f32;
 
-                let label_order = DrawOrder(style.draw_order.0.saturating_add(9_020));
-                painter.scene().push(fret_core::SceneOp::Quad {
-                    order: label_order,
-                    rect: Rect::new(Point::new(Px(box_x), Px(box_y)), Size::new(Px(w), Px(h))),
-                    background: style.tooltip_background,
-                    border: Edges::all(style.tooltip_border_width),
-                    border_color: style.tooltip_border_color,
-                    corner_radii: Corners::all(Px(4.0)),
-                });
-                let _ = painter.text(
-                    key,
-                    DrawOrder(label_order.0.saturating_add(1)),
-                    Point::new(Px(box_x + pad_x), Px(box_y + pad_y)),
-                    text,
-                    text_style,
-                    style.tooltip_text_color,
-                    constraints,
-                    paint_cx.raster_scale_factor,
-                );
+                let union = |a: Rect, b: Rect| -> Rect {
+                    let ax0 = a.origin.x.0;
+                    let ay0 = a.origin.y.0;
+                    let ax1 = ax0 + a.size.width.0;
+                    let ay1 = ay0 + a.size.height.0;
+
+                    let bx0 = b.origin.x.0;
+                    let by0 = b.origin.y.0;
+                    let bx1 = bx0 + b.size.width.0;
+                    let by1 = by0 + b.size.height.0;
+
+                    let x0 = ax0.min(bx0);
+                    let y0 = ay0.min(by0);
+                    let x1 = ax1.max(bx1);
+                    let y1 = ay1.max(by1);
+
+                    Rect::new(
+                        Point::new(Px(x0), Px(y0)),
+                        Size::new(Px((x1 - x0).max(0.0)), Px((y1 - y0).max(0.0))),
+                    )
+                };
+
+                for label in &state.axis_pointer_labels {
+                    let text: Arc<str> = label.text.clone();
+                    let kind_key: u8 = match label.axis_kind {
+                        delinea::AxisKind::X => 0,
+                        delinea::AxisKind::Y => 1,
+                    };
+                    let key: u64 = painter
+                        .child_key(label_scope, &("label", kind_key, text.as_ref()))
+                        .into();
+                    let metrics = painter.text(
+                        key,
+                        DrawOrder(0),
+                        Point::new(Px(0.0), Px(0.0)),
+                        text.clone(),
+                        text_style.clone(),
+                        Color::TRANSPARENT,
+                        constraints,
+                        paint_cx.raster_scale_factor,
+                    );
+
+                    let w = (metrics.size.width.0 + 2.0 * pad_x).max(1.0);
+                    let h = (metrics.size.height.0 + 2.0 * pad_y).max(1.0);
+
+                    let (mut box_x, mut box_y) = match label.axis_kind {
+                        delinea::AxisKind::X => (crosshair.x.0 - 0.5 * w, by1 - h),
+                        delinea::AxisKind::Y => (bx0, crosshair.y.0 - 0.5 * h),
+                    };
+                    box_x = box_x.clamp(bx0, (bx1 - w).max(bx0));
+                    box_y = box_y.clamp(by0, (by1 - h).max(by0));
+
+                    let rect = Rect::new(Point::new(Px(box_x), Px(box_y)), Size::new(Px(w), Px(h)));
+                    axis_pointer_label_rect = Some(match axis_pointer_label_rect {
+                        Some(prev) => union(prev, rect),
+                        None => rect,
+                    });
+
+                    let label_order = DrawOrder(
+                        style
+                            .draw_order
+                            .0
+                            .saturating_add(9_020 + (kind_key as u32).saturating_mul(4)),
+                    );
+                    painter.scene().push(fret_core::SceneOp::Quad {
+                        order: label_order,
+                        rect,
+                        background: style.tooltip_background,
+                        border: Edges::all(style.tooltip_border_width),
+                        border_color: style.tooltip_border_color,
+                        corner_radii: Corners::all(Px(4.0)),
+                    });
+                    let _ = painter.text(
+                        key,
+                        DrawOrder(label_order.0.saturating_add(1)),
+                        Point::new(Px(box_x + pad_x), Px(box_y + pad_y)),
+                        text,
+                        text_style.clone(),
+                        style.tooltip_text_color,
+                        constraints,
+                        paint_cx.raster_scale_factor,
+                    );
+                }
             }
 
             // Hover marker (best-effort).

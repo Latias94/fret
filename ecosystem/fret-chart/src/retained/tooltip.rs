@@ -325,35 +325,52 @@ impl TooltipFormatter for DefaultTooltipFormatter {
 
         match &axis_pointer.tooltip {
             delinea::TooltipOutput::Item(item) => {
-                let mut lines = Vec::with_capacity(2);
-                let x_window = axis_windows.get(&item.x_axis).copied().unwrap_or_default();
-                let x_label = Self::axis_label(model, item.x_axis);
-                let mut x_is_missing = false;
-                let x_value = if item.x_value.is_finite() {
-                    Self::format_value_for_tooltip(model, item.x_axis, x_window, item.x_value, spec)
-                } else {
-                    x_is_missing = true;
-                    spec.missing_value.clone()
+                let axis_pointer_label_enabled =
+                    model.axis_pointer.as_ref().is_some_and(|p| p.label.show);
+                let show_axis_line = match spec.item_axis_line {
+                    delinea::spec::TooltipItemAxisLineMode::Auto => !axis_pointer_label_enabled,
+                    delinea::spec::TooltipItemAxisLineMode::Show => true,
+                    delinea::spec::TooltipItemAxisLineMode::Hide => false,
                 };
-                if spec.axis_line_template == "{label}: {value}" {
-                    lines.push(
-                        TooltipTextLine::columns(x_label, x_value)
-                            .with_kind(TooltipTextLineKind::AxisHeader)
-                            .with_missing(x_is_missing),
-                    );
-                } else {
-                    lines.push(TooltipTextLine {
-                        source_series: None,
-                        text: Self::apply_line_template(
-                            &spec.axis_line_template,
-                            &x_label,
-                            &x_value,
-                        ),
-                        columns: None,
-                        kind: TooltipTextLineKind::AxisHeader,
-                        value_emphasis: false,
-                        is_missing: x_is_missing,
-                    });
+
+                let mut lines = Vec::with_capacity(if show_axis_line { 2 } else { 1 });
+
+                if show_axis_line {
+                    let x_window = axis_windows.get(&item.x_axis).copied().unwrap_or_default();
+                    let x_label = Self::axis_label(model, item.x_axis);
+                    let mut x_is_missing = false;
+                    let x_value = if item.x_value.is_finite() {
+                        Self::format_value_for_tooltip(
+                            model,
+                            item.x_axis,
+                            x_window,
+                            item.x_value,
+                            spec,
+                        )
+                    } else {
+                        x_is_missing = true;
+                        spec.missing_value.clone()
+                    };
+                    if spec.axis_line_template == "{label}: {value}" {
+                        lines.push(
+                            TooltipTextLine::columns(x_label, x_value)
+                                .with_kind(TooltipTextLineKind::AxisHeader)
+                                .with_missing(x_is_missing),
+                        );
+                    } else {
+                        lines.push(TooltipTextLine {
+                            source_series: None,
+                            text: Self::apply_line_template(
+                                &spec.axis_line_template,
+                                &x_label,
+                                &x_value,
+                            ),
+                            columns: None,
+                            kind: TooltipTextLineKind::AxisHeader,
+                            value_emphasis: false,
+                            is_missing: x_is_missing,
+                        });
+                    }
                 }
 
                 let series_label = Self::series_label(model, item.series);
@@ -856,6 +873,7 @@ mod tests {
         let tooltip = delinea::TooltipSpecV1 {
             axis_line_template: "{value} @ {label}".to_string(),
             series_line_template: "[{label}]={value}".to_string(),
+            item_axis_line: Default::default(),
             missing_value: "(missing)".to_string(),
             range_template: "{min}..{max}".to_string(),
             value_decimals: Some(2),
@@ -1265,6 +1283,252 @@ mod tests {
     }
 
     #[test]
+    fn default_formatter_hides_item_axis_line_when_axis_pointer_label_enabled() {
+        let dataset_id = delinea::DatasetId::new(1);
+        let grid_id = delinea::GridId::new(1);
+        let x_axis = delinea::AxisId::new(1);
+        let y_axis = delinea::AxisId::new(2);
+        let series_a = delinea::SeriesId::new(1);
+        let x_field = delinea::FieldId::new(1);
+        let y_a_field = delinea::FieldId::new(2);
+
+        let spec = ChartSpec {
+            id: delinea::ChartId::new(1),
+            viewport: Some(Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(100.0), Px(100.0)),
+            )),
+            datasets: vec![DatasetSpec {
+                id: dataset_id,
+                fields: vec![
+                    FieldSpec {
+                        id: x_field,
+                        column: 0,
+                    },
+                    FieldSpec {
+                        id: y_a_field,
+                        column: 1,
+                    },
+                ],
+            }],
+            grids: vec![GridSpec { id: grid_id }],
+            axes: vec![
+                delinea::AxisSpec {
+                    id: x_axis,
+                    name: Some("Time".to_string()),
+                    kind: AxisKind::X,
+                    grid: grid_id,
+                    position: None,
+                    scale: Default::default(),
+                    range: None,
+                },
+                delinea::AxisSpec {
+                    id: y_axis,
+                    name: Some("Value".to_string()),
+                    kind: AxisKind::Y,
+                    grid: grid_id,
+                    position: None,
+                    scale: Default::default(),
+                    range: None,
+                },
+            ],
+            data_zoom_x: vec![],
+            data_zoom_y: vec![],
+            tooltip: None,
+            axis_pointer: Some(delinea::AxisPointerSpec {
+                enabled: true,
+                trigger: delinea::AxisPointerTrigger::Item,
+                pointer_type: delinea::AxisPointerType::Line,
+                label: delinea::AxisPointerLabelSpec {
+                    show: true,
+                    template: "{value}".to_string(),
+                },
+                snap: false,
+                trigger_distance_px: 100.0,
+                throttle_px: 0.0,
+            }),
+            visual_maps: vec![],
+            series: vec![SeriesSpec {
+                id: series_a,
+                name: Some("A".to_string()),
+                kind: SeriesKind::Line,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_a_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+            }],
+        };
+
+        let mut engine = ChartEngine::new(spec).unwrap();
+        let mut table = delinea::data::DataTable::default();
+        table.push_column(delinea::data::Column::F64(vec![0.0, 1.0]));
+        table.push_column(delinea::data::Column::F64(vec![0.0, 1.0]));
+        engine.datasets_mut().insert(dataset_id, table);
+
+        let mut measurer = NullTextMeasurer::default();
+        let step = engine
+            .step(&mut measurer, WorkBudget::new(262_144, 0, 32))
+            .unwrap();
+        assert!(!step.unfinished);
+
+        let axis_pointer = delinea::engine::AxisPointerOutput {
+            crosshair_px: Point::new(Px(50.0), Px(50.0)),
+            hit: None,
+            shadow_rect_px: None,
+            tooltip: delinea::TooltipOutput::Item(delinea::TooltipItemOutput {
+                series: series_a,
+                data_index: 0,
+                x_axis,
+                y_axis,
+                x_value: 0.5,
+                y_value: 0.5,
+            }),
+        };
+
+        let formatter = DefaultTooltipFormatter::default();
+        let lines =
+            formatter.format_axis_pointer(&engine, &engine.output().axis_windows, &axis_pointer);
+
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].source_series, Some(series_a));
+        assert_eq!(lines[0].kind, TooltipTextLineKind::SeriesRow);
+        assert!(lines[0].value_emphasis);
+    }
+
+    #[test]
+    fn tooltip_spec_item_axis_line_show_overrides_auto_hiding() {
+        let dataset_id = delinea::DatasetId::new(1);
+        let grid_id = delinea::GridId::new(1);
+        let x_axis = delinea::AxisId::new(1);
+        let y_axis = delinea::AxisId::new(2);
+        let series_a = delinea::SeriesId::new(1);
+        let x_field = delinea::FieldId::new(1);
+        let y_a_field = delinea::FieldId::new(2);
+
+        let tooltip = delinea::TooltipSpecV1 {
+            item_axis_line: delinea::TooltipItemAxisLineMode::Show,
+            ..Default::default()
+        };
+
+        let spec = ChartSpec {
+            id: delinea::ChartId::new(1),
+            viewport: Some(Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(100.0), Px(100.0)),
+            )),
+            datasets: vec![DatasetSpec {
+                id: dataset_id,
+                fields: vec![
+                    FieldSpec {
+                        id: x_field,
+                        column: 0,
+                    },
+                    FieldSpec {
+                        id: y_a_field,
+                        column: 1,
+                    },
+                ],
+            }],
+            grids: vec![GridSpec { id: grid_id }],
+            axes: vec![
+                delinea::AxisSpec {
+                    id: x_axis,
+                    name: Some("Time".to_string()),
+                    kind: AxisKind::X,
+                    grid: grid_id,
+                    position: None,
+                    scale: Default::default(),
+                    range: None,
+                },
+                delinea::AxisSpec {
+                    id: y_axis,
+                    name: Some("Value".to_string()),
+                    kind: AxisKind::Y,
+                    grid: grid_id,
+                    position: None,
+                    scale: Default::default(),
+                    range: None,
+                },
+            ],
+            data_zoom_x: vec![],
+            data_zoom_y: vec![],
+            tooltip: Some(tooltip),
+            axis_pointer: Some(delinea::AxisPointerSpec {
+                enabled: true,
+                trigger: delinea::AxisPointerTrigger::Item,
+                pointer_type: delinea::AxisPointerType::Line,
+                label: delinea::AxisPointerLabelSpec {
+                    show: true,
+                    template: "{value}".to_string(),
+                },
+                snap: false,
+                trigger_distance_px: 100.0,
+                throttle_px: 0.0,
+            }),
+            visual_maps: vec![],
+            series: vec![SeriesSpec {
+                id: series_a,
+                name: Some("A".to_string()),
+                kind: SeriesKind::Line,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_a_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+            }],
+        };
+
+        let mut engine = ChartEngine::new(spec).unwrap();
+        let mut table = delinea::data::DataTable::default();
+        table.push_column(delinea::data::Column::F64(vec![0.0, 1.0]));
+        table.push_column(delinea::data::Column::F64(vec![0.0, 1.0]));
+        engine.datasets_mut().insert(dataset_id, table);
+
+        let mut measurer = NullTextMeasurer::default();
+        let step = engine
+            .step(&mut measurer, WorkBudget::new(262_144, 0, 32))
+            .unwrap();
+        assert!(!step.unfinished);
+
+        let axis_pointer = delinea::engine::AxisPointerOutput {
+            crosshair_px: Point::new(Px(50.0), Px(50.0)),
+            hit: None,
+            shadow_rect_px: None,
+            tooltip: delinea::TooltipOutput::Item(delinea::TooltipItemOutput {
+                series: series_a,
+                data_index: 0,
+                x_axis,
+                y_axis,
+                x_value: 0.5,
+                y_value: 0.5,
+            }),
+        };
+
+        let formatter = DefaultTooltipFormatter::default();
+        let lines =
+            formatter.format_axis_pointer(&engine, &engine.output().axis_windows, &axis_pointer);
+
+        assert_eq!(lines.len(), 2);
+        assert_eq!(lines[0].kind, TooltipTextLineKind::AxisHeader);
+        assert_eq!(lines[1].kind, TooltipTextLineKind::SeriesRow);
+    }
+
+    #[test]
     fn tooltip_spec_v1_per_series_overrides_apply_to_series_rows() {
         let dataset_id = delinea::DatasetId::new(1);
         let grid_id = delinea::GridId::new(1);
@@ -1279,6 +1543,7 @@ mod tests {
         let tooltip = delinea::TooltipSpecV1 {
             axis_line_template: "{label}: {value}".to_string(),
             series_line_template: "{label}={value}".to_string(),
+            item_axis_line: Default::default(),
             missing_value: "-".to_string(),
             range_template: "{min}..{max}".to_string(),
             value_decimals: Some(2),
