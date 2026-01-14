@@ -11,3 +11,13 @@ documentation.workspace = true
 
 [dependencies]
 
+[features]
+# The default build includes a minimal UI font bootstrap set for Web/WASM.
+default = ["bootstrap"]
+
+# UI sans + UI mono (plus legacy mono subset) intended to be fed into `Effect::TextAddFonts`.
+bootstrap = []
+
+# Optional future bundles (not implemented yet; kept as placeholders for feature gating strategy).
+emoji = []
+cjk-lite = []
