@@ -6,6 +6,14 @@ use crate::{FontCatalog, FontCatalogCache, GlobalsHost};
 pub enum FontFamilyDefaultsPolicy {
     None,
     FillIfEmpty,
+    /// If any UI family list is empty, seed it from the head of the current font catalog.
+    ///
+    /// This is primarily intended for Web/WASM bootstrap, where system font discovery is not
+    /// available and we need a deterministic, minimal fallback without exploding settings to
+    /// "all fonts".
+    FillIfEmptyFromCatalogPrefix {
+        max: usize,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -38,15 +46,31 @@ pub fn apply_font_catalog_update(
         .unwrap_or_default();
     let mut config = prev_config.clone();
 
-    if policy == FontFamilyDefaultsPolicy::FillIfEmpty {
-        if config.ui_sans.is_empty() {
-            config.ui_sans = families.clone();
+    match policy {
+        FontFamilyDefaultsPolicy::None => {}
+        FontFamilyDefaultsPolicy::FillIfEmpty => {
+            if config.ui_sans.is_empty() {
+                config.ui_sans = families.clone();
+            }
+            if config.ui_serif.is_empty() {
+                config.ui_serif = families.clone();
+            }
+            if config.ui_mono.is_empty() {
+                config.ui_mono = families.clone();
+            }
         }
-        if config.ui_serif.is_empty() {
-            config.ui_serif = families.clone();
-        }
-        if config.ui_mono.is_empty() {
-            config.ui_mono = families.clone();
+        FontFamilyDefaultsPolicy::FillIfEmptyFromCatalogPrefix { max } => {
+            let max = max.max(1);
+            let seed: Vec<String> = families.iter().take(max).cloned().collect();
+            if config.ui_sans.is_empty() {
+                config.ui_sans = seed.clone();
+            }
+            if config.ui_serif.is_empty() {
+                config.ui_serif = seed.clone();
+            }
+            if config.ui_mono.is_empty() {
+                config.ui_mono = seed;
+            }
         }
     }
 
