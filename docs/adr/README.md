@@ -111,6 +111,7 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Docking interaction arbitration (overlays/tools)**: `docs/adr/0072-docking-interaction-arbitration-matrix.md`
 - **Dismissable non-modal overlays (outside press)**: `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md`
 - **Text input / IME**: `docs/adr/0012-keyboard-ime-and-text-input.md`, `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0020-focus-and-command-routing.md`
+- **Color emoji / polychrome glyph pipeline**: `docs/adr/0167-polychrome-glyphs-and-emoji-pipeline-v1.md`, `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0157-text-system-v2-parley-attributed-spans-and-quality-baseline.md`
 - **Multiline text input + IME composition**: `docs/adr/0071-text-input-multiline-composition-contract.md`
 - **Typography (weight/line-height/tracking)**: `docs/adr/0058-typography-v1-textstyle-weight-lineheight-tracking.md`
 - **Text editing commands + selection model**: `docs/adr/0044-text-editing-state-and-commands.md`
@@ -343,6 +344,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0164-headless-dnd-toolbox-and-ui-integration.md`
 - `docs/adr/0165-pointer-identity-and-multi-pointer-capture.md`
 - `docs/adr/0166-multi-pointer-drag-sessions-and-routing-keys.md`
+- `docs/adr/0167-polychrome-glyphs-and-emoji-pipeline-v1.md`
 - `docs/adr/0056-component-size-and-density-system.md`
 - `docs/adr/0052-ui-host-runtime-boundary.md`
 - `docs/adr/0053-external-drag-payload-portability.md`
