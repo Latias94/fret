@@ -19,6 +19,20 @@ struct FretFallback;
 
 impl cosmic_text::Fallback for FretFallback {
     fn common_fallback(&self) -> &[&'static str] {
+        // For Web/WASM, there are no system fonts. If the app bundles fonts (e.g. via `fret-fonts`
+        // feature flags), include those families in the fallback chain so mixed-script text works
+        // without explicit per-span font selection.
+        #[cfg(target_arch = "wasm32")]
+        {
+            &[
+                // UI (bundled in `fret-fonts` bootstrap)
+                "Inter",
+                // CJK (bundled via `fret-fonts/cjk-lite`)
+                "Noto Sans CJK SC",
+                // Emoji (bundled via `fret-fonts/emoji`)
+                "Noto Color Emoji",
+            ]
+        }
         #[cfg(target_os = "windows")]
         {
             &[
@@ -68,6 +82,7 @@ impl cosmic_text::Fallback for FretFallback {
             ]
         }
         #[cfg(not(any(
+            target_arch = "wasm32",
             target_os = "windows",
             target_os = "macos",
             all(unix, not(any(target_os = "macos", target_os = "android")))

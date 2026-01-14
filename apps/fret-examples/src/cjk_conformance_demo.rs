@@ -39,6 +39,9 @@ const CJK_CASES: &[CjkCase] = &[
     },
 ];
 
+const FALLBACK_SMOKE: &str =
+    "Default font fallback: Text + 中文 + 日本語 + 한국어 + 😀 ✈️ 1️⃣ 🇺🇸 👨‍👩‍👧‍👦";
+
 struct CjkConformanceWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
@@ -103,6 +106,10 @@ impl CjkConformanceDriver {
                 size: Px(12.0),
                 ..Default::default()
             };
+            let default_style = TextStyle {
+                size: Px(20.0),
+                ..Default::default()
+            };
             let sample_style = TextStyle {
                 font: FontId::family(cjk_family),
                 size: Px(20.0),
@@ -112,6 +119,38 @@ impl CjkConformanceDriver {
             let mut rows: Vec<fret_ui::element::AnyElement> =
                 Vec::with_capacity(CJK_CASES.len() * 2 + 2);
             rows.push(status);
+            rows.push(cx.text_props(fret_ui::element::TextProps {
+                layout: Default::default(),
+                text: Arc::from("Fallback smoke (default style):"),
+                style: Some(label_style.clone()),
+                color: Some(theme.color_required("muted-foreground")),
+                wrap: TextWrap::None,
+                overflow: fret_core::TextOverflow::Clip,
+            }));
+            rows.push(cx.text_props(fret_ui::element::TextProps {
+                layout: Default::default(),
+                text: Arc::from(FALLBACK_SMOKE),
+                style: Some(default_style),
+                color: Some(theme.color_required("foreground")),
+                wrap: TextWrap::Word,
+                overflow: fret_core::TextOverflow::Clip,
+            }));
+            rows.push(cx.text_props(fret_ui::element::TextProps {
+                layout: Default::default(),
+                text: Arc::from("Fallback smoke (forced CJK family):"),
+                style: Some(label_style.clone()),
+                color: Some(theme.color_required("muted-foreground")),
+                wrap: TextWrap::None,
+                overflow: fret_core::TextOverflow::Clip,
+            }));
+            rows.push(cx.text_props(fret_ui::element::TextProps {
+                layout: Default::default(),
+                text: Arc::from(FALLBACK_SMOKE),
+                style: Some(sample_style.clone()),
+                color: Some(theme.color_required("foreground")),
+                wrap: TextWrap::Word,
+                overflow: fret_core::TextOverflow::Clip,
+            }));
 
             for case in CJK_CASES {
                 rows.push(cx.text_props(fret_ui::element::TextProps {
