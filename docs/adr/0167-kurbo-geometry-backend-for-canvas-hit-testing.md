@@ -45,9 +45,9 @@ We need a geometry implementation strategy that:
 
 ## Decision
 
-### 1) Kurbo is the canonical geometry implementation backend (ecosystem-only)
+### 1) Kurbo is an optional geometry backend (ecosystem-only)
 
-Fret adopts `kurbo` as the preferred geometry implementation backend for canvas widgets:
+Fret introduces `kurbo` as an *optional* geometry backend for canvas widgets:
 
 - `kurbo` is introduced in `ecosystem/fret-canvas` only (not in `crates/fret-core`).
 - Ecosystem crates (node graph, charts, editors) consume geometry helpers from `fret-canvas`.
@@ -100,6 +100,34 @@ Cons / risks:
 - Potential perf regressions if misused (e.g. overly precise refinement without coarse filtering).
 - Requires careful unit/precision handling (`f32` UI units vs `f64` internals).
 
+## Benchmark Notes (2026-01)
+
+We treat the current `polyline` implementation as the performance baseline.
+
+Bench harness:
+
+- `ecosystem/fret-canvas/examples/node_graph_spatial_bench.rs`
+- Added a `--compare-kurbo` mode (requires `--features kurbo`) to quantify:
+  - hit classification disagreements at a fixed hit width,
+  - average/max absolute distance error between backends.
+
+Repro commands:
+
+- `cargo run -p fret-canvas --example node_graph_spatial_bench -- --scenario uniform`
+- `cargo run -p fret-canvas --example node_graph_spatial_bench --features kurbo -- --scenario uniform --compare-kurbo 1`
+
+Observed results (typical runs on a large synthetic graph):
+
+- With tuned `accuracy` mapping (`kurbo_accuracy_canvas_units()`), `kurbo` refinement still tends to
+  be ~2x slower than polyline subdivision at similar hit rates.
+- Hit classification disagreement is low (near the boundary it still exists), and the benefit is
+  not yet large enough to justify making `kurbo` the default solely for wire hit testing.
+
+Therefore, we keep `kurbo` feature-gated for now and use it as:
+
+- a correctness reference implementation for future geometry work, and/or
+- an opt-in backend for widgets that need general path hit-testing beyond wires.
+
 ## Implementation Plan (phased)
 
 1. Add `kurbo` as an optional workspace dependency and a `fret-canvas/kurbo` feature.
@@ -110,4 +138,3 @@ Cons / risks:
    - stability under zoom and under heavy drag updates.
 4. If results are positive, gradually enable `kurbo` in ecosystem crates that benefit most
    (`fret-node` first), keeping an escape hatch to fall back.
-

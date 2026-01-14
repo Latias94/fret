@@ -3,6 +3,11 @@ use std::time::{Duration, Instant};
 
 use fret_canvas::spatial::DefaultIndexWithBackrefs;
 use fret_canvas::wires::{DEFAULT_BEZIER_HIT_TEST_STEPS, bezier_wire_distance2, wire_aabb};
+
+#[cfg(feature = "kurbo")]
+use fret_canvas::wires::bezier_wire_distance2_kurbo;
+#[cfg(feature = "kurbo")]
+use fret_canvas::wires::bezier_wire_distance2_polyline;
 use fret_core::{Point, Px, Rect, Size};
 
 #[derive(Clone, Copy, Debug)]
@@ -26,6 +31,7 @@ struct Config {
     seed: u64,
     scenario: Scenario,
     world: f32,
+    zoom: f32,
 
     nodes: usize,
     edges: usize,
@@ -57,6 +63,8 @@ struct Config {
     viewport_h: f32,
 
     cell: f32,
+
+    compare_kurbo: bool,
 }
 
 impl Default for Config {
@@ -65,6 +73,7 @@ impl Default for Config {
             seed: 1,
             scenario: Scenario::Uniform,
             world: 20_000.0,
+            zoom: 1.0,
 
             nodes: 5_000,
             edges: 12_000,
@@ -95,6 +104,8 @@ impl Default for Config {
             viewport_h: 800.0,
 
             cell: 128.0,
+
+            compare_kurbo: false,
         }
     }
 }
@@ -144,6 +155,7 @@ fn parse_args() -> Config {
             "--seed" => cfg.seed = value.parse().unwrap_or(cfg.seed),
             "--scenario" => cfg.scenario = Scenario::parse(&value).unwrap_or(cfg.scenario),
             "--world" => cfg.world = value.parse().unwrap_or(cfg.world),
+            "--zoom" => cfg.zoom = value.parse().unwrap_or(cfg.zoom),
             "--nodes" => cfg.nodes = value.parse().unwrap_or(cfg.nodes),
             "--edges" => cfg.edges = value.parse().unwrap_or(cfg.edges),
             "--ports-per-side" => cfg.ports_per_side = value.parse().unwrap_or(cfg.ports_per_side),
@@ -156,6 +168,13 @@ fn parse_args() -> Config {
             "--rect-queries" => cfg.rect_queries = value.parse().unwrap_or(cfg.rect_queries),
             "--edge-hit-width" => cfg.edge_hit_width = value.parse().unwrap_or(cfg.edge_hit_width),
             "--cell" => cfg.cell = value.parse().unwrap_or(cfg.cell),
+            "--compare-kurbo" => {
+                cfg.compare_kurbo = match value.as_str() {
+                    "1" | "true" | "True" | "TRUE" | "yes" | "on" => true,
+                    "0" | "false" | "False" | "FALSE" | "no" | "off" => false,
+                    _ => cfg.compare_kurbo,
+                }
+            }
             _ => {}
         }
     }
@@ -362,6 +381,11 @@ fn recompute_port(cfg: Config, node: Rect, idx: usize, side: u8) -> Port {
 fn main() {
     let cfg = parse_args();
     let mut rng = Rng::new(cfg.seed);
+    let zoom = if cfg.zoom.is_finite() && cfg.zoom > 0.0 {
+        cfg.zoom
+    } else {
+        1.0
+    };
 
     let mut nodes = gen_nodes(cfg, &mut rng);
     let centers = node_centers(&nodes);
@@ -383,7 +407,7 @@ fn main() {
     for (i, edge) in edges.iter().enumerate() {
         let from = ports[port_vec_index(cfg, decode_port_id(edge.from))].center;
         let to = ports[port_vec_index(cfg, decode_port_id(edge.to))].center;
-        edge_index.insert_rect(i as u32, wire_aabb(from, to, 1.0, cfg.edge_pad));
+        edge_index.insert_rect(i as u32, wire_aabb(from, to, zoom, cfg.edge_pad));
     }
     let build = t0.elapsed();
 
@@ -412,8 +436,39 @@ fn main() {
     let mut t_query = Duration::default();
     let mut t_refine = Duration::default();
 
+    #[cfg(feature = "kurbo")]
+    let mut t_refine_polyline = Duration::default();
+    #[cfg(feature = "kurbo")]
+    let mut t_refine_kurbo = Duration::default();
+
+    #[cfg(feature = "kurbo")]
+    let mut compare_total = 0usize;
+    #[cfg(feature = "kurbo")]
+    let mut compare_disagree = 0usize;
+    #[cfg(feature = "kurbo")]
+    let mut compare_false_pos = 0usize;
+    #[cfg(feature = "kurbo")]
+    let mut compare_false_neg = 0usize;
+    #[cfg(feature = "kurbo")]
+    let mut compare_hits_polyline = 0usize;
+    #[cfg(feature = "kurbo")]
+    let mut compare_hits_kurbo = 0usize;
+    #[cfg(feature = "kurbo")]
+    let mut compare_abs_d_err_sum = 0f64;
+    #[cfg(feature = "kurbo")]
+    let mut compare_abs_d_err_max = 0f32;
+
+    #[cfg(feature = "kurbo")]
+    let mut poly_d2_scratch: Vec<f32> = Vec::new();
+
     let mut rng_q = Rng::new(cfg.seed ^ 0x9e3779b97f4a7c15);
     let steps = DEFAULT_BEZIER_HIT_TEST_STEPS;
+    let hit_w2 = cfg.edge_hit_width * cfg.edge_hit_width;
+
+    #[cfg(feature = "kurbo")]
+    let compare_kurbo = cfg.compare_kurbo;
+    #[cfg(not(feature = "kurbo"))]
+    let compare_kurbo = false;
 
     for frame in 0..cfg.frames {
         let dx = (frame as f32 * 0.73).sin() * cfg.move_delta;
@@ -453,7 +508,7 @@ fn main() {
                 let e = edges[edge_id as usize];
                 let from = ports[port_vec_index(cfg, decode_port_id(e.from))].center;
                 let to = ports[port_vec_index(cfg, decode_port_id(e.to))].center;
-                edge_index.update_rect(edge_id, wire_aabb(from, to, 1.0, cfg.edge_pad));
+                edge_index.update_rect(edge_id, wire_aabb(from, to, zoom, cfg.edge_pad));
             }
         }
         t_update += t1.elapsed();
@@ -482,18 +537,73 @@ fn main() {
             query_candidates_edges += out_edges.len();
             max_edges = max_edges.max(out_edges.len());
 
-            let tr = Instant::now();
-            for &edge_id in &out_edges {
-                let e = edges[edge_id as usize];
-                let from = ports[port_vec_index(cfg, decode_port_id(e.from))].center;
-                let to = ports[port_vec_index(cfg, decode_port_id(e.to))].center;
-                let d2 = bezier_wire_distance2(p, from, to, 1.0, steps);
-                refine_evals += 1;
-                if d2 <= cfg.edge_hit_width * cfg.edge_hit_width {
-                    refine_hits += 1;
+            if compare_kurbo {
+                #[cfg(feature = "kurbo")]
+                {
+                    poly_d2_scratch.clear();
+                    poly_d2_scratch.reserve(out_edges.len());
+
+                    let tr = Instant::now();
+                    for &edge_id in &out_edges {
+                        let e = edges[edge_id as usize];
+                        let from = ports[port_vec_index(cfg, decode_port_id(e.from))].center;
+                        let to = ports[port_vec_index(cfg, decode_port_id(e.to))].center;
+                        poly_d2_scratch
+                            .push(bezier_wire_distance2_polyline(p, from, to, zoom, steps));
+                    }
+                    t_refine_polyline += tr.elapsed();
+
+                    let tr = Instant::now();
+                    for (i, &edge_id) in out_edges.iter().enumerate() {
+                        let e = edges[edge_id as usize];
+                        let from = ports[port_vec_index(cfg, decode_port_id(e.from))].center;
+                        let to = ports[port_vec_index(cfg, decode_port_id(e.to))].center;
+                        let d2_k = bezier_wire_distance2_kurbo(p, from, to, zoom, steps);
+                        let d2_p = poly_d2_scratch[i];
+
+                        let hit_p = d2_p <= hit_w2;
+                        let hit_k = d2_k <= hit_w2;
+
+                        compare_total += 1;
+                        if hit_p {
+                            compare_hits_polyline += 1;
+                        }
+                        if hit_k {
+                            compare_hits_kurbo += 1;
+                        }
+                        if hit_p != hit_k {
+                            compare_disagree += 1;
+                            if hit_k && !hit_p {
+                                compare_false_pos += 1;
+                            } else if hit_p && !hit_k {
+                                compare_false_neg += 1;
+                            }
+                        }
+
+                        let d_p = d2_p.sqrt();
+                        let d_k = d2_k.sqrt();
+                        if d_p.is_finite() && d_k.is_finite() {
+                            let abs = (d_p - d_k).abs();
+                            compare_abs_d_err_sum += abs as f64;
+                            compare_abs_d_err_max = compare_abs_d_err_max.max(abs);
+                        }
+                    }
+                    t_refine_kurbo += tr.elapsed();
                 }
+            } else {
+                let tr = Instant::now();
+                for &edge_id in &out_edges {
+                    let e = edges[edge_id as usize];
+                    let from = ports[port_vec_index(cfg, decode_port_id(e.from))].center;
+                    let to = ports[port_vec_index(cfg, decode_port_id(e.to))].center;
+                    let d2 = bezier_wire_distance2(p, from, to, zoom, steps);
+                    refine_evals += 1;
+                    if d2 <= hit_w2 {
+                        refine_hits += 1;
+                    }
+                }
+                t_refine += tr.elapsed();
             }
-            t_refine += tr.elapsed();
         }
 
         for _ in 0..cfg.rect_queries {
@@ -552,15 +662,41 @@ fn main() {
         max_nodes,
         (cfg.frames * cfg.rect_queries)
     );
+    if !compare_kurbo {
+        println!(
+            "refine(bezier): {} avg_evals_per_edge_query={:.2} hit_rate={:.2}%",
+            fmt_dur(t_refine),
+            (refine_evals as f64) / eq,
+            100.0 * (refine_hits as f64) / re
+        );
+    }
+    #[cfg(feature = "kurbo")]
+    if compare_kurbo {
+        let ct = compare_total.max(1) as f64;
+        println!(
+            "refine(polyline): {} avg_evals_per_edge_query={:.2} hit_rate={:.2}%",
+            fmt_dur(t_refine_polyline),
+            ct / eq,
+            100.0 * (compare_hits_polyline as f64) / ct
+        );
+        println!(
+            "refine(kurbo): {} avg_evals_per_edge_query={:.2} hit_rate={:.2}%",
+            fmt_dur(t_refine_kurbo),
+            ct / eq,
+            100.0 * (compare_hits_kurbo as f64) / ct
+        );
+        println!(
+            "compare(kurbo): disagree={:.2}% fp={} fn={} avg_abs_err={:.3} max_abs_err={:.3}",
+            100.0 * (compare_disagree as f64) / ct,
+            compare_false_pos,
+            compare_false_neg,
+            compare_abs_d_err_sum / ct,
+            compare_abs_d_err_max
+        );
+    }
     println!(
-        "refine(bezier): {} avg_evals_per_edge_query={:.2} hit_rate={:.2}%",
-        fmt_dur(t_refine),
-        (refine_evals as f64) / eq,
-        100.0 * (refine_hits as f64) / re
-    );
-    println!(
-        "config: scenario={:?} world={:.0} cell={:.0} viewport={:.0}x{:.0}",
-        cfg.scenario, cfg.world, cfg.cell, cfg.viewport_w, cfg.viewport_h
+        "config: scenario={:?} world={:.0} zoom={:.2} cell={:.0} viewport={:.0}x{:.0}",
+        cfg.scenario, cfg.world, zoom, cfg.cell, cfg.viewport_w, cfg.viewport_h
     );
     println!(
         "timing_per_frame: update={} query={} refine={}",
