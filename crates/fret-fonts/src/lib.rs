@@ -196,7 +196,11 @@ mod tests {
             "default fonts too large (expected subset bootstrap): {total}"
         );
 
-        #[cfg(all(feature = "emoji", not(feature = "cjk-lite"), feature = "bootstrap-full"))]
+        #[cfg(all(
+            feature = "emoji",
+            not(feature = "cjk-lite"),
+            feature = "bootstrap-full"
+        ))]
         assert!(
             total < 20_000_000,
             "default fonts too large (emoji + full bootstrap enabled): {total}"
