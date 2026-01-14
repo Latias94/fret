@@ -58,3 +58,32 @@ pub use view_gizmo::{
     ViewGizmo, ViewGizmoAnchor, ViewGizmoConfig, ViewGizmoFace, ViewGizmoInput, ViewGizmoLabel,
     ViewGizmoProjection, ViewGizmoSnap, ViewGizmoState, ViewGizmoUpdate,
 };
+
+/// Builds a `GizmoInput` from a `ViewportToolInput` plus host-defined policy flags.
+pub fn gizmo_input_from_tool_input(
+    tool: ViewportToolInput,
+    hovered: bool,
+    snap: bool,
+    cancel: bool,
+    precision: f32,
+) -> GizmoInput {
+    GizmoInput {
+        cursor_px: tool.cursor_px,
+        hovered,
+        drag_started: tool.drag_started,
+        dragging: tool.dragging,
+        snap,
+        cancel,
+        precision,
+    }
+}
+
+/// Builds a `ViewGizmoInput` from a `ViewportToolInput`.
+pub fn view_gizmo_input_from_tool_input(tool: ViewportToolInput, hovered: bool) -> ViewGizmoInput {
+    ViewGizmoInput {
+        cursor_px: tool.cursor_px,
+        hovered,
+        drag_started: tool.drag_started,
+        dragging: tool.dragging,
+    }
+}
