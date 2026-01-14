@@ -90,25 +90,28 @@ As of the initial audit:
 
 - `ecosystem/fret-ui-shadcn`
   - `Table` primitives exist and are always available: `ecosystem/fret-ui-shadcn/src/table.rs` (shadcn taxonomy).
-  - `DataTable` (first pass) exists at `ecosystem/fret-ui-shadcn/src/data_table.rs`.
-    - It provides: fixed header + vertical virtualization with a fixed row height.
-    - It explicitly does **not** target TanStack parity (matches ADR 0101’s “first pass” note).
-  - `DataTable` (headless-backed default) exists at `ecosystem/fret-ui-shadcn/src/data_table.rs` (`DataTableTanstack` is kept as a compatibility alias).
+  - `DataTable` is headless-backed (ADR 0101) and rendered via the shared declarative table view:
+    `ecosystem/fret-ui-shadcn/src/data_table.rs` -> `ecosystem/fret-ui-kit/src/declarative/table.rs::table_virtualized`.
+    - It provides: fixed header + vertical virtualization + the headless pipeline (sorting/filtering/pagination/selection/visibility).
+    - `DataTableTanstack` is kept as a compatibility alias (`pub type DataTableTanstack = DataTable;`).
   - `DataGrid` prototype exists at `ecosystem/fret-ui-shadcn/src/data_grid.rs`.
     - It explores 2D virtualization (rows + columns) and custom scrollbars.
+  - `DataGridCanvas` exists at `ecosystem/fret-ui-shadcn/src/data_grid_canvas.rs` as a performance-ceiling prototype.
   - `DataTable` and `DataGrid` used to be behind the `datagrid` crate feature; the gate has been removed because it had no heavy deps.
 - `ecosystem/fret-ui-kit`
-  - TanStack-inspired headless engine already exists behind the `table` feature:
+  - TanStack-inspired headless engine already exists (always available; `table` is a no-op compatibility flag):
     - `ecosystem/fret-ui-kit/src/headless/table/*`
-    - `fret-ui-kit` Cargo feature: `table` (default-off).
-  - There is also a substantial declarative table view implementation behind the same feature:
+    - `fret-ui-kit` Cargo feature: `table` (retained for compatibility; does not gate compilation).
+  - There is also a substantial declarative table view implementation (also always available):
     - `ecosystem/fret-ui-kit/src/declarative/table.rs` (uses `headless::table` and `fret-ui` primitives).
 - Forms
   - `ecosystem/fret-ui-shadcn/src/form.rs` is a taxonomy facade over field primitives; it is not a headless form state engine.
-  - No dedicated headless form state module exists in `fret-ui-kit` yet (to be implemented).
+  - A dedicated headless form state module exists in `fret-ui-kit`:
+    - `ecosystem/fret-ui-kit/src/headless/form_state.rs` + `ecosystem/fret-ui-kit/src/headless/form_validation.rs`
+    - Declarative registry/wiring: `ecosystem/fret-ui-kit/src/declarative/form.rs`
 - Calendar / Date Picker
-  - A shadcn-aligned `Calendar` is being added in `ecosystem/fret-ui-shadcn/src/calendar.rs` (WIP).
-  - `DatePicker` (Popover + Calendar recipe) is the next step and should live in `ecosystem/fret-ui-shadcn/src/date_picker.rs`.
+  - A shadcn-aligned `Calendar` + `DatePicker` exist in `ecosystem/fret-ui-shadcn/src/{calendar,date_picker}.rs`.
+  - `DatePicker` is implemented as a `Popover` + `Calendar` recipe and should be validated against APG keyboard/a11y outcomes.
 
 ## Milestones
 
@@ -143,7 +146,7 @@ As of the initial audit:
 ### M4 — Calendar / Date Picker
 
 - [x] Calendar date math core (month grid + month navigation).
-- [ ] shadcn `Calendar` surface + `DatePicker` recipe (`Popover` + `Calendar`) (in progress).
+- [x] shadcn `Calendar` surface + `DatePicker` recipe (`Popover` + `Calendar`).
 - [ ] Keyboard/a11y outcomes review against APG; add targeted tests where feasible.
 
 ### M5 — CanvasDataGrid (performance ceiling)
@@ -184,7 +187,7 @@ We keep the existing element-based `DataTable`/`DataGrid` for “rich cell UI”
 
 ## Consolidation Plan (Table/DataGrid Surfaces)
 
-Status: Planned (decision gates below)
+Status: In progress (consolidation landed; follow-ups tracked below)
 
 We currently have multiple table/grid surfaces in `fret-ui-shadcn`. This section defines how we
 intend to **converge** the public surface so users have a single obvious “default” path, while
@@ -196,40 +199,32 @@ preserving specialized variants and performance ceilings.
 - One recommended `DataGrid` surface for “spreadsheet density” UIs (canvas/GPU-backed).
 - Keep element-based grids/tables available for rich cell UI, but do not position them as the default.
 
-### Proposed mapping (public API)
+### Public mapping (current)
 
 - **Headless (source of truth):** `fret-ui-kit::headless::table` (always available).
-- **Default table recipe:** `fret-ui-shadcn::DataTable` should be backed by the headless engine.
-  - Candidate: current `DataTable` (`ecosystem/fret-ui-shadcn/src/data_table.rs`).
-- **Simple/legacy table:** current `DataTable` (`ecosystem/fret-ui-shadcn/src/data_table.rs`) should be renamed
-  (e.g. `DataTableSimple` or `DataTableLegacy`) and kept for a transition period.
+- **Default table recipe:** `fret-ui-shadcn::DataTable` is backed by the headless engine (ADR 0101) via the shared
+  `fret-ui-kit` view: `ecosystem/fret-ui-shadcn/src/data_table.rs` calls
+  `ecosystem/fret-ui-kit/src/declarative/table.rs::table_virtualized`.
+- **Compatibility alias:** `pub type DataTableTanstack = DataTable;` remains for one migration window (shadcn crate
+  denies `deprecated`, so we keep this as a non-deprecated alias for now).
+- **Simple preset:** the older “simple table” surface is not kept as a separate public type; any “simple” usage
+  should be expressed as a `DataTable` preset/config (keeps the public surface small and forces configurability).
 - **Performance ceiling grid:** `DataGridCanvas` remains the “spreadsheet scale” path.
 - **Element-based 2D grid:** `DataGrid` remains for rich cell UI and as a correctness/reference surface.
 
-### Decision gates (must decide before code changes)
+### Remaining decision gates
 
-1) **Naming:** should `fret-ui-shadcn::DataTable` be repointed to the headless-backed implementation?
-   - If yes: we ship a rename + re-export migration plan.
-   - If no: we keep `DataTable` as-is and treat the older `DataTableSimple` surface as a legacy/preset.
+1) **A11y semantics:** `DataTable` should use Table semantics, `DataGrid(Canvas)` should use Grid semantics
+   (recommended), but we should confirm this against our current semantics mapping support (ADR 0033 + ADR 0073).
 
-2) **A11y semantics:** `DataTable` uses `Table` semantics, `DataGrid(Canvas)` uses `Grid` semantics (recommended),
-   but we should confirm this against our current semantics mapping support (ADR 0033 + ADR 0073).
+### Follow-ups (to fully “close” the DataTable recipe)
 
-### Migration steps (if we repoint `DataTable`)
-
-This is the preferred convergence path, but it is a breaking change unless we keep a compatibility alias.
-
-1) Introduce explicit type names:
-   - `DataTable` (headless-backed default)
-   - `DataTableSimple` (current first-pass table; old `DataTable`)
-2) Keep a temporary re-export alias for one release window:
-   - `pub type DataTableTanstack = DataTable;` (or a `#[deprecated]` alias if we want hard migration pressure)
-3) Update demos and docs:
-   - ensure the “default” demo uses `DataTable` (headless-backed)
-   - keep a “simple table” demo only if it still serves a distinct use case
-4) After the deprecation window:
-   - remove/redirect `DataTableTanstack` alias
-   - remove any “new code” references to `DataTableSimple` unless explicitly intended
+- Recipe-level controls (shadcn): column visibility dropdown, global filter input, pagination widgets wired to
+  `TableState`.
+- Profile and validate large-table performance:
+  - stable `items_revision` and cache invalidation behavior,
+  - overscan defaults for typical inspector/admin tables,
+  - confirm bounded viewport constraints remain correct (no accidental “render all rows”).
 
 ### Definition of done (consolidation)
 

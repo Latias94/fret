@@ -66,9 +66,11 @@ Non-goals for the core runtime:
 What exists:
 
 - shadcn `Table` primitives (`ecosystem/fret-ui-shadcn/src/table.rs`).
-- `DataTable` (first pass): fixed header + vertical virtualization (non-TanStack parity).
+- shadcn `DataTable` (headless-backed): fixed header + vertical virtualization via the shared table view
+  (`ecosystem/fret-ui-shadcn/src/data_table.rs` -> `ecosystem/fret-ui-kit/src/declarative/table.rs::table_virtualized`).
 - `DataGrid` prototype: explores 2D virtualization via nested virtual lists.
-- A TanStack-inspired headless engine exists in `fret-ui-kit` (ADR 0101), but needs recipe integration and validation.
+- A TanStack-inspired headless engine exists in `fret-ui-kit` (ADR 0101) and is now integrated into the shadcn
+  `DataTable` recipe, but still needs recipe-level widgets + validation for editor-grade ergonomics.
   - Note: the long-lived `fret-ui-kit` `table` feature gate has been removed; the table modules are now always available.
 
 Recent work (workstream prototype surfaces):
@@ -87,7 +89,8 @@ The following areas are the most “high leverage” gaps for editor-grade apps 
 
 Gap:
 
-- We need a shadcn recipe that is clearly powered by the headless engine, not just a demo-grade table.
+- The core headless-backed `DataTable` surface exists, but we still need to “close” the recipe:
+  column visibility / global filter / pagination widgets, plus large-table profiling/validation.
 
 Why it matters:
 
