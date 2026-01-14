@@ -68,6 +68,11 @@ To reduce boilerplate and keep unit conversions consistent, use:
 
 - `fret_gizmo::ViewportToolInput::from_viewport_input_target_px(&event, MouseButton::Left)`
 
+Note:
+
+- `ViewportToolInput` is shared infrastructure (ADR 0168). It lives in `ecosystem/fret-viewport-tooling`
+  and is re-exported by `fret-gizmo` for convenience.
+
 It derives:
 
 - `viewport: ViewportRect` in render-target pixels,
@@ -125,6 +130,36 @@ Recommended pattern:
 
 Reference mapping is in `apps/fret-examples/src/gizmo3d_demo.rs`.
 
+## Tool arbitration (recommended): route gizmos as viewport tools
+
+Most editor viewports need multiple concurrent tools:
+
+- camera navigation (orbit/pan/zoom),
+- selection (click + marquee),
+- view gizmo (camera cube),
+- transform gizmo (translate/rotate/scale),
+- plus domain-specific gizmos.
+
+To keep these boundaries explicit and reusable across ecosystem crates, treat each interaction as a
+**viewport tool** and route them through the shared host helper (ADR 0168).
+
+Recommended host pattern:
+
+- Keep camera navigation as an explicit host policy (e.g. RMB/MMB drag wins, mouse wheel zoom).
+- Route everything else (view gizmo / transform gizmo / selection tools) through
+  `fret_ui_kit::viewport_tooling::route_viewport_tools(...)`.
+- Use `ViewportToolRouterState` (`hot` / `active` / captured button) as the stable “tool session”
+  state you store in your model.
+- If you need a pure “am I over a handle?” check for routing, prefer the side-effect-free pick helper:
+  - `GizmoPluginManager::pick_hovered_handle(...)` (no state updates; see ADR 0168 hit-test rule)
+- When handling `Esc` / cancel commands, cancel the active tool session via the routing helpers:
+  - callback router: `cancel_active_viewport_tools(...)`
+  - trait-object router: `ViewportToolArbitrator::cancel_active_and_clear_hot()`
+
+End-to-end reference:
+
+- `apps/fret-examples/src/gizmo3d_demo.rs` (multiple tools routed through `route_viewport_tools`)
+
 ## Update, commit, and undo/redo
 
 `GizmoPluginManager::update(...)` returns `Option<GizmoUpdate>` with:
@@ -178,18 +213,21 @@ Even though gizmo logic is updated imperatively, the *hosting* can remain declar
 This mirrors common editor architectures: a declarative UI shell around an imperative engine/tooling
 subsystem.
 
-## Ergonomics roadmap (planned, not implemented yet)
+## Ergonomics helpers (available today)
 
-ADR 0147 explicitly calls out an opportunity for helpers that bridge `ViewportInputEvent` to
-`fret-gizmo` input/state without duplicating DPI + fit-mode glue.
+The core boundary remains host-driven (ADR 0139 / ADR 0147), but common glue is now shared:
 
-Recommended direction:
+- Portable input mapping + tool protocol: `ecosystem/fret-viewport-tooling`
+  - `ViewportToolInput`, `ViewportRect`, `ViewportTool{Id,Priority,Result}`, `ViewportToolCx`
+- Default host routing/arbitration helpers: `ecosystem/fret-ui-kit/src/viewport_tooling.rs`
+  - `ViewportToolArbitrator` (trait-object tools)
+  - `ViewportToolRouterState` + `route_viewport_tools` (callback router, easy for demos/apps)
 
-- Keep `fret-gizmo` as a mechanism-level crate (host-driven, unit-explicit, backend-agnostic).
-- Add optional policy/ergonomics helpers to `ecosystem/fret-ui-kit`, for example:
-  - a small state machine that turns `ViewportInputEvent` streams into stable drag phases,
-  - default modifier mappings (`snap` / `precision` / `cancel`) that apps can override,
-  - composition helpers for "viewport tool arbitration" (camera vs selection vs gizmo).
+`fret-gizmo` re-exports the tool protocol types so apps that only use gizmos can depend on a single
+crate in v1.
 
-Until those helpers exist, use `apps/fret-examples/src/gizmo3d_demo.rs` as the canonical reference
-for integrating `fret-gizmo` correctly.
+### Remaining gaps (v1)
+
+- Standard engine overlay wiring helper beyond demo patterns (hook registration + per-frame record).
+- A standardized keyboard cancel / escape contract routed through the tool helpers (currently host-specific).
+- Multi-pointer / touch tooling sessions (router is single-pointer-first in v1).

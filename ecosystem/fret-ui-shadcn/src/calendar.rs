@@ -16,7 +16,7 @@ use time::{Date, OffsetDateTime, Weekday};
 
 use crate::button::{ButtonSize, ButtonVariant};
 
-use fret_ui_kit::headless::calendar::{CalendarMonth, month_grid};
+use fret_ui_headless::calendar::{CalendarMonth, month_grid};
 
 #[derive(Clone)]
 pub struct Calendar {

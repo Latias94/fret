@@ -100,6 +100,45 @@ The helper must support:
 - modal gating (respect UI modal barriers; see ADR 0011 / ADR 0072),
 - multi-tool coexistence (gizmo + selection + camera).
 
+#### Hit-testing must be side-effect-free
+
+To keep tool routing deterministic and avoid subtle “hover changes state” bugs, the routing helper assumes:
+
+- `hit_test(...) -> bool` is **pure** (no mutations, no phase transitions, no edit attaching),
+- any “hover visualization state” owned by the tool is cleared via an explicit `set_hot(false)` callback (optional),
+- tools only mutate long-lived state inside `handle_event(...)` (and only when they are `hot`/`active`).
+
+This supports both styles:
+
+- trait-object tools (`ViewportTool` + `ViewportToolArbitrator`), and
+- callback tools (`ViewportToolEntry` + `route_viewport_tools`), commonly used by demos and small apps.
+
+Tool ecosystems that currently compute hover via a stateful update function should provide a separate pure
+hit-test helper (or a “preview pick” API) so hosts do not need to perform a side-effecting update to answer “am I
+over a handle?”.
+
+#### Active-button latching (platform inconsistency)
+
+Some platforms can produce inconsistent `buttons` state for `PointerMove` events. When a tool captures on
+`PointerDown`, the routing helper must keep that tool latched as `active` until the corresponding `PointerUp`
+arrives.
+
+In v1, this is modeled by storing the captured mouse button in the router state and deriving drag flags from that
+button during the active session (instead of trusting `PointerMove.buttons`).
+
+#### Keyboard cancellation (Escape) is a first-class host helper
+
+Hosts frequently need to cancel the active tool session without any pointer event edge:
+
+- `Esc` / cancel commands,
+- undo/redo (cancel active interaction before mutating state),
+- viewport teardown / tool switching.
+
+In v1, the routing helpers provide explicit cancellation entry points:
+
+- `ViewportToolArbitrator::cancel_active_and_clear_hot()` (trait-object tools)
+- `cancel_active_viewport_tools(...)` (callback tools)
+
 ### 3) Keep engine-pass overlay integration explicit, but provide a recommended wiring shape
 
 Tool rendering is intentionally engine-pass for Tier A:
@@ -158,7 +197,8 @@ Rejected: other ecosystems should not depend on `fret-gizmo` just to reuse input
 2) Move/duplicate `ViewportToolInput`-class logic into that shared helper and have `fret-gizmo` re-export it.
 3) Add `fret-ui-kit` policy helpers:
    - default bindings for snap/precision/cancel,
-   - a small arbitration state machine for camera vs selection vs gizmo.
+   - a small arbitration state machine for camera vs selection vs gizmo,
+   - a callback router (`route_viewport_tools`) and a trait-object router (`ViewportToolArbitrator`).
 4) Migrate `apps/fret-examples` viewports to the helper as the canonical reference.
 
 ## References
@@ -170,4 +210,4 @@ Rejected: other ecosystems should not depend on `fret-gizmo` just to reuse input
 - Gizmo plugin contract: `docs/adr/0155-custom-gizmo-plugins-and-handle-contract.md`
 - Gizmo host properties (read-only): `docs/adr/0167-gizmo-host-property-source-readonly-v1.md`
 - Editor-layer example (deferred): `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
-
+ - Protocol + helper evidence: `ecosystem/fret-viewport-tooling/src/lib.rs`, `ecosystem/fret-ui-kit/src/viewport_tooling.rs`

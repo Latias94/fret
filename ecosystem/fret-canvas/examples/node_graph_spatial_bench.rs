@@ -2,7 +2,10 @@ use std::env;
 use std::time::{Duration, Instant};
 
 use fret_canvas::spatial::DefaultIndexWithBackrefs;
-use fret_canvas::wires::{DEFAULT_BEZIER_HIT_TEST_STEPS, bezier_wire_distance2, wire_aabb};
+use fret_canvas::wires::{
+    bezier_wire_distance2, bezier_wire_distance2_polyline_adaptive, wire_aabb,
+    DEFAULT_BEZIER_FLATTEN_TOLERANCE_SCREEN_PX, DEFAULT_BEZIER_HIT_TEST_STEPS,
+};
 
 #[cfg(feature = "kurbo")]
 use fret_canvas::wires::bezier_wire_distance2_kurbo;
@@ -65,6 +68,8 @@ struct Config {
     cell: f32,
 
     compare_kurbo: bool,
+    adaptive_polyline: bool,
+    polyline_tol_screen_px: f32,
 }
 
 impl Default for Config {
@@ -106,6 +111,8 @@ impl Default for Config {
             cell: 128.0,
 
             compare_kurbo: false,
+            adaptive_polyline: false,
+            polyline_tol_screen_px: DEFAULT_BEZIER_FLATTEN_TOLERANCE_SCREEN_PX,
         }
     }
 }
@@ -174,6 +181,20 @@ fn parse_args() -> Config {
                     "0" | "false" | "False" | "FALSE" | "no" | "off" => false,
                     _ => cfg.compare_kurbo,
                 }
+            }
+            "--adaptive-polyline" => {
+                cfg.adaptive_polyline = match value.as_str() {
+                    "1" | "true" | "True" | "TRUE" | "yes" | "on" => true,
+                    "0" | "false" | "False" | "FALSE" | "no" | "off" => false,
+                    _ => cfg.adaptive_polyline,
+                }
+            }
+            "--polyline-tol-screen" => {
+                cfg.polyline_tol_screen_px = value
+                    .parse()
+                    .ok()
+                    .filter(|v: &f32| v.is_finite() && *v > 0.0)
+                    .unwrap_or(cfg.polyline_tol_screen_px);
             }
             _ => {}
         }
@@ -469,6 +490,8 @@ fn main() {
     let compare_kurbo = cfg.compare_kurbo;
     #[cfg(not(feature = "kurbo"))]
     let compare_kurbo = false;
+    let polyline_adaptive = cfg.adaptive_polyline;
+    let polyline_tol_screen_px = cfg.polyline_tol_screen_px;
 
     for frame in 0..cfg.frames {
         let dx = (frame as f32 * 0.73).sin() * cfg.move_delta;
@@ -548,8 +571,18 @@ fn main() {
                         let e = edges[edge_id as usize];
                         let from = ports[port_vec_index(cfg, decode_port_id(e.from))].center;
                         let to = ports[port_vec_index(cfg, decode_port_id(e.to))].center;
-                        poly_d2_scratch
-                            .push(bezier_wire_distance2_polyline(p, from, to, zoom, steps));
+                        if polyline_adaptive {
+                            poly_d2_scratch.push(bezier_wire_distance2_polyline_adaptive(
+                                p,
+                                from,
+                                to,
+                                zoom,
+                                polyline_tol_screen_px,
+                            ));
+                        } else {
+                            poly_d2_scratch
+                                .push(bezier_wire_distance2_polyline(p, from, to, zoom, steps));
+                        }
                     }
                     t_refine_polyline += tr.elapsed();
 
@@ -596,7 +629,17 @@ fn main() {
                     let e = edges[edge_id as usize];
                     let from = ports[port_vec_index(cfg, decode_port_id(e.from))].center;
                     let to = ports[port_vec_index(cfg, decode_port_id(e.to))].center;
-                    let d2 = bezier_wire_distance2(p, from, to, zoom, steps);
+                    let d2 = if polyline_adaptive {
+                        bezier_wire_distance2_polyline_adaptive(
+                            p,
+                            from,
+                            to,
+                            zoom,
+                            polyline_tol_screen_px,
+                        )
+                    } else {
+                        bezier_wire_distance2(p, from, to, zoom, steps)
+                    };
                     refine_evals += 1;
                     if d2 <= hit_w2 {
                         refine_hits += 1;
@@ -674,7 +717,12 @@ fn main() {
     if compare_kurbo {
         let ct = compare_total.max(1) as f64;
         println!(
-            "refine(polyline): {} avg_evals_per_edge_query={:.2} hit_rate={:.2}%",
+            "refine(polyline:{}): {} avg_evals_per_edge_query={:.2} hit_rate={:.2}%",
+            if polyline_adaptive {
+                "adaptive"
+            } else {
+                "fixed"
+            },
             fmt_dur(t_refine_polyline),
             ct / eq,
             100.0 * (compare_hits_polyline as f64) / ct
@@ -697,6 +745,15 @@ fn main() {
     println!(
         "config: scenario={:?} world={:.0} zoom={:.2} cell={:.0} viewport={:.0}x{:.0}",
         cfg.scenario, cfg.world, zoom, cfg.cell, cfg.viewport_w, cfg.viewport_h
+    );
+    println!(
+        "config(polyline): mode={} tol_screen_px={:.2}",
+        if polyline_adaptive {
+            "adaptive"
+        } else {
+            "fixed"
+        },
+        polyline_tol_screen_px
     );
     println!(
         "timing_per_frame: update={} query={} refine={}",

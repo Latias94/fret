@@ -144,6 +144,10 @@ If you are authoring reusable gizmo tooling:
   `GizmoPropertySource` (read-only, ADR 0167) instead of requiring host push caches.
 - Emit edits via `GizmoCustomEdit` and let the host apply validation + undo/redo (write policy is
   intentionally host-owned in v1).
+- Treat gizmos as **viewport tools**, not UI widgets:
+  - Share the portable tool protocol via `ecosystem/fret-viewport-tooling`.
+  - Use `fret-ui-kit` host helpers (`viewport_tooling`) to arbitrate camera vs selection vs gizmo
+    and to route `ViewportInputEvent` streams into stable hot/active/capture decisions.
 
 ## 6) Settings: namespaced, layered, and optional
 

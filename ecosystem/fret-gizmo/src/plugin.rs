@@ -367,6 +367,42 @@ impl GizmoPluginManager {
         out
     }
 
+    /// Performs a pure hover pick (no state updates, no phase transitions).
+    ///
+    /// This is intended for tool routing / hit-testing paths that must not mutate long-lived state.
+    /// The host can use the result to decide whether a gizmo tool should become "hot" before
+    /// calling `update(...)` for the actual interaction.
+    pub fn pick_hovered_handle(
+        &mut self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        depth_range: DepthRange,
+        input: GizmoInput,
+        active_target: GizmoTargetId,
+        targets: &[GizmoTarget3d],
+        properties: Option<&dyn GizmoPropertySource>,
+    ) -> Option<HandleId> {
+        if targets.is_empty() {
+            return None;
+        }
+        if !input.hovered {
+            return None;
+        }
+        if self.state.active.is_some() {
+            return None;
+        }
+
+        self.pick_best_handle(
+            view_projection,
+            viewport,
+            depth_range,
+            input,
+            active_target,
+            targets,
+            properties,
+        )
+    }
+
     fn pick_best_handle(
         &mut self,
         view_projection: Mat4,
@@ -602,5 +638,61 @@ mod tests {
         let h = HandleId::from_parts(pid, 7);
         assert_eq!(h.plugin(), pid);
         assert_eq!(h.local(), 7);
+    }
+
+    #[test]
+    fn pick_hovered_handle_is_side_effect_free() {
+        let mut mgr = GizmoPluginManager::new(GizmoPluginManagerConfig {
+            drag_start_threshold_px: 0.0,
+        });
+        mgr.register(Box::new(DummyPlugin::new(7)));
+
+        let targets = vec![dummy_target(1)];
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = Mat4::IDENTITY;
+        let depth_range = DepthRange::ZeroToOne;
+
+        mgr.state.hovered = Some(HandleId::from_parts(GizmoPluginId(999), 1));
+        mgr.state.active = Some(HandleId::from_parts(GizmoPluginId(999), 2));
+
+        let input = GizmoInput {
+            cursor_px: Vec2::ZERO,
+            hovered: true,
+            drag_started: false,
+            dragging: false,
+            snap: false,
+            cancel: false,
+            precision: 1.0,
+        };
+
+        let hovered_before = mgr.state.hovered;
+        let active_before = mgr.state.active;
+        let picked = mgr.pick_hovered_handle(
+            view_proj,
+            vp,
+            depth_range,
+            input,
+            targets[0].id,
+            &targets,
+            None,
+        );
+
+        assert!(picked.is_none(), "pick should not run while active");
+        assert_eq!(mgr.state.hovered, hovered_before);
+        assert_eq!(mgr.state.active, active_before);
+
+        mgr.state.active = None;
+        let picked = mgr.pick_hovered_handle(
+            view_proj,
+            vp,
+            depth_range,
+            input,
+            targets[0].id,
+            &targets,
+            None,
+        );
+        assert!(picked.is_some());
+        assert_eq!(mgr.state.hovered, hovered_before);
+        assert_eq!(mgr.state.active, None);
     }
 }

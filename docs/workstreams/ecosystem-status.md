@@ -69,7 +69,9 @@ What exists:
 - shadcn `DataTable` (headless-backed): fixed header + vertical virtualization via the shared table view
   (`ecosystem/fret-ui-shadcn/src/data_table.rs` -> `ecosystem/fret-ui-kit/src/declarative/table.rs::table_virtualized`).
   - Recipe controls: `DataTableToolbar` + `DataTablePagination` (`ecosystem/fret-ui-shadcn/src/data_table_recipes.rs`).
-- `DataGrid` prototype: explores 2D virtualization via nested virtual lists.
+- `DataGrid` default surface is canvas-backed (performance ceiling): `ecosystem/fret-ui-shadcn/src/data_grid_canvas.rs`
+  (exported as `fret-ui-shadcn::DataGrid`).
+- `DataGridElement` prototype exists for rich per-cell UI: `ecosystem/fret-ui-shadcn/src/data_grid.rs`.
 - A TanStack-inspired headless engine exists in `fret-ui-kit` (ADR 0101) and is now integrated into the shadcn
   `DataTable` recipe, but still needs recipe-level widgets + validation for editor-grade ergonomics.
   - Note: the long-lived `fret-ui-kit` `table` feature gate has been removed; the table modules are now always available.
@@ -77,7 +79,7 @@ What exists:
 Recent work (workstream prototype surfaces):
 
 - Headless 2D viewport helper for grid-style virtualization:
-  - `ecosystem/fret-ui-kit/src/headless/grid_viewport.rs`
+  - Algorithm: `ecosystem/fret-ui-headless/src/grid_viewport.rs` (re-exported via `fret-ui-kit::headless::grid_viewport`)
 - Canvas/GPU-backed grid prototype to set a performance ceiling (Glide-style direction):
   - `ecosystem/fret-ui-shadcn/src/data_grid_canvas.rs`
   - Stress harness: `apps/fret-demo/src/bin/canvas_datagrid_stress_demo.rs`
@@ -149,7 +151,7 @@ Why it matters:
 - Align a shadcn `DataTable` recipe with the headless engine (ADR 0101):
   - sorting, filtering, pagination, selection, visibility
   - stable `RowKey` and derived `CellId`
-- Keep the existing element-based `DataTable`/`DataGrid` for “rich cell UI” use cases.
+- Keep the existing element-based `DataTable`/`DataGridElement` for “rich cell UI” use cases.
 
 ### Phase B — DataGrid performance ceiling (canvas/GPU-backed)
 
@@ -161,5 +163,5 @@ Why it matters:
 
 ### Phase C — Forms, then Calendar
 
-- Add a headless form state layer in `fret-ui-kit` and shadcn recipes in `fret-ui-shadcn`.
+- Add a headless form state layer in `fret-ui-headless` (re-exported via `fret-ui-kit::headless`) and shadcn recipes in `fret-ui-shadcn`.
 - Implement `Calendar` + `DatePicker` using overlay primitives (Popover + Calendar recipe).

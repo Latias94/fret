@@ -108,8 +108,12 @@ pub use context_menu::{
     ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItem, ContextMenuRadioItemSpec,
     ContextMenuShortcut,
 };
-pub use data_grid::{DataGrid, DataGridRowState};
 pub use data_grid_canvas::{DataGridCanvas, DataGridCanvasAxis};
+/// Default high-performance data grid surface (canvas-rendered).
+///
+/// Use [`DataGridElement`] for the element-based prototype when you need rich per-cell UI.
+pub type DataGrid = DataGridCanvas;
+pub use data_grid::{DataGrid as DataGridElement, DataGridRowState};
 pub use data_table::{DataTable, DataTableTanstack};
 pub use data_table_controls::{
     DataTableColumnOption, DataTableGlobalFilterInput, DataTableRowState, DataTableViewOptionItem,
