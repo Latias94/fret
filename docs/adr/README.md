@@ -227,6 +227,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`
 - `docs/adr/0066-fret-ui-runtime-contract-surface.md`
 - `docs/adr/0137-canvas-widgets-and-interactive-surfaces.md`
+- `docs/adr/0167-kurbo-geometry-backend-for-canvas-hit-testing.md`
 - `docs/adr/0150-node-graph-canvas-middleware.md`
 - `docs/adr/0139-viewport-gizmos-engine-pass-and-ui-overlay-boundary.md`
 - `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
