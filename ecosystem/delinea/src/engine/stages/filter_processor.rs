@@ -111,6 +111,7 @@ struct GridFilterPlan {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum FilterPlanStepKind {
     XYWeakFilter,
+    XRange,
     XIndices,
     YIndices,
 }
@@ -285,11 +286,15 @@ impl FilterProcessorStage {
             .collect();
 
         let mut plan_steps: Vec<FilterPlanStep> = Vec::new();
-        plan_steps.reserve(grid_plans.len() * 3);
+        plan_steps.reserve(grid_plans.len() * 4);
         for grid in grid_plans.keys().copied() {
             plan_steps.push(FilterPlanStep {
                 grid,
                 kind: FilterPlanStepKind::XYWeakFilter,
+            });
+            plan_steps.push(FilterPlanStep {
+                grid,
+                kind: FilterPlanStepKind::XRange,
             });
             plan_steps.push(FilterPlanStep {
                 grid,
@@ -328,6 +333,14 @@ impl FilterProcessorStage {
                     &mut xy_weak_filter_applied_series,
                     &mut xy_weak_filter_pending_series,
                     &mut xy_weak_filter_skipped_view_len_cap_series,
+                ),
+                FilterPlanStepKind::XRange => apply_x_range_for_grid(
+                    model,
+                    datasets,
+                    view,
+                    &view_series_index,
+                    &plan.series,
+                    &mut view_changed,
                 ),
                 FilterPlanStepKind::XIndices => apply_x_indices_for_grid(
                     model,
@@ -553,6 +566,77 @@ fn apply_xy_weak_filter_for_grid(
                 series_view.selection = RowSelection::Range(base_range);
                 *view_changed = true;
             }
+        }
+    }
+}
+
+fn apply_x_range_for_grid(
+    model: &ChartModel,
+    datasets: &DatasetStore,
+    view: &mut ViewState,
+    view_series_index: &BTreeMap<SeriesId, usize>,
+    series: &[SeriesId],
+    view_changed: &mut bool,
+) {
+    for series_id in series {
+        let Some(series_model) = model.series.get(series_id) else {
+            continue;
+        };
+        if !series_model.visible {
+            continue;
+        }
+
+        let Some(series_view_index) = view_series_index.get(series_id).copied() else {
+            continue;
+        };
+
+        let Some(dataset_view) = view.dataset_view(series_model.dataset) else {
+            continue;
+        };
+        let base_range = dataset_view.row_range;
+
+        let (x_filter_mode, selection, x_filter) = {
+            let series_view = &view.series[series_view_index];
+            (
+                series_view.x_filter_mode,
+                series_view.selection.clone(),
+                series_view.x_policy.filter,
+            )
+        };
+
+        if !matches!(
+            x_filter_mode,
+            crate::spec::FilterMode::Filter | crate::spec::FilterMode::WeakFilter
+        ) {
+            continue;
+        }
+
+        if !matches!(selection, RowSelection::All | RowSelection::Range(_)) {
+            continue;
+        }
+
+        if x_filter.min.is_none() && x_filter.max.is_none() {
+            continue;
+        }
+
+        let Some(table) = datasets.dataset(series_model.dataset) else {
+            continue;
+        };
+        let Some(dataset) = model.datasets.get(&series_model.dataset) else {
+            continue;
+        };
+        let Some(x_col) = dataset.fields.get(&series_model.encode.x).copied() else {
+            continue;
+        };
+        let Some(x_values) = table.column_f64(x_col) else {
+            continue;
+        };
+
+        let sel = crate::transform::row_selection_for_x_filter(x_values, base_range, x_filter);
+        let series_view = &mut view.series[series_view_index];
+        if series_view.selection != sel {
+            series_view.selection = sel;
+            *view_changed = true;
         }
     }
 }

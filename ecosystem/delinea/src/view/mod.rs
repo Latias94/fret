@@ -187,7 +187,7 @@ impl ViewState {
             let Some(x_col) = dataset.fields.get(&series.encode.x).copied() else {
                 continue;
             };
-            let Some(x) = table.column_f64(x_col) else {
+            let Some(_x) = table.column_f64(x_col) else {
                 continue;
             };
 
@@ -208,9 +208,8 @@ impl ViewState {
                 .unwrap_or_default();
             let x_node = data_zoom_x_node(model, state, series.x_axis, x_axis_range);
             let x_filter_mode = x_node.filter_mode();
-            let x_window = x_node.apply(x, base_range);
-
-            let selection = x_window.selection;
+            let x_policy = x_node.x_policy();
+            let selection = RowSelection::Range(base_range);
 
             let y_filter_mode = model
                 .data_zoom_y_by_axis
@@ -234,7 +233,7 @@ impl ViewState {
                 revision: self.revision,
                 data_revision: table.revision,
                 selection,
-                x_policy: x_window.x_policy,
+                x_policy,
                 x_filter_mode,
                 y_filter_mode,
                 y_filter,

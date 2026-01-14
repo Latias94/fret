@@ -2091,7 +2091,7 @@ fn engine_stats_track_y_filter_indices_materialization() {
     let stats = engine.stats();
     assert_eq!(stats.filter_plan_runs, 1);
     assert_eq!(stats.filter_plan_grids, 1);
-    assert_eq!(stats.filter_plan_steps_run, 3);
+    assert_eq!(stats.filter_plan_steps_run, 4);
     assert_eq!(stats.filter_y_indices_applied_series, 1);
     assert_eq!(stats.filter_x_indices_applied_series, 0);
     assert_eq!(stats.filter_xy_weakfilter_applied_series, 0);
@@ -7273,7 +7273,7 @@ fn filter_plan_isolated_per_grid_for_x_indices_materialization() {
         let stats = engine.stats();
         assert_eq!(stats.filter_plan_runs, steps);
         assert_eq!(stats.filter_plan_grids, steps * 2);
-        assert_eq!(stats.filter_plan_steps_run, steps * 6);
+        assert_eq!(stats.filter_plan_steps_run, steps * 8);
         assert_eq!(stats.filter_x_indices_applied_series, 1);
         assert_eq!(stats.filter_y_indices_applied_series, 0);
         return;
