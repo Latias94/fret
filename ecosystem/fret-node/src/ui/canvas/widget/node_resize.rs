@@ -115,6 +115,7 @@ fn size_canvas_to_px(size_canvas: (f32, f32), zoom: f32) -> CanvasSize {
 
 fn apply_resize_handle(
     handle: NodeResizeHandle,
+    keep_aspect_ratio: bool,
     start_node_pos: crate::core::CanvasPoint,
     start_size_px: CanvasSize,
     start_pointer: Point,
@@ -180,6 +181,34 @@ fn apply_resize_handle(
         }
         if handle.affects_bottom() {
             bottom = snap(bottom, gy);
+        }
+    }
+
+    let keep_aspect_ratio = keep_aspect_ratio
+        && (handle.affects_left() || handle.affects_right())
+        && (handle.affects_top() || handle.affects_bottom());
+    if keep_aspect_ratio && start_h_canvas.is_finite() && start_h_canvas > 1.0e-6 {
+        let aspect_ratio = start_w_canvas / start_h_canvas;
+        if aspect_ratio.is_finite() && aspect_ratio > 1.0e-6 {
+            let mut w = (right - left).max(0.0);
+            let mut h = (bottom - top).max(0.0);
+
+            let width_drives = dx.abs() >= dy.abs();
+            if width_drives {
+                h = (w / aspect_ratio).max(0.0);
+                if handle.affects_top() && !handle.affects_bottom() {
+                    top = bottom - h;
+                } else {
+                    bottom = top + h;
+                }
+            } else {
+                w = (h * aspect_ratio).max(0.0);
+                if handle.affects_left() && !handle.affects_right() {
+                    left = right - w;
+                } else {
+                    right = left + w;
+                }
+            }
         }
     }
 
@@ -279,7 +308,7 @@ pub(super) fn handle_node_resize_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,
-    _modifiers: Modifiers,
+    modifiers: Modifiers,
     zoom: f32,
 ) -> bool {
     let Some(mut resize) = canvas.interaction.node_resize.clone() else {
@@ -350,6 +379,7 @@ pub(super) fn handle_node_resize_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
     let (new_pos, new_size_px) = apply_resize_handle(
         resize.handle,
+        modifiers.shift,
         resize.start_node_pos,
         resize.start_size,
         resize.start_pos,
@@ -433,6 +463,7 @@ mod tests {
 
         let (pos, size) = apply_resize_handle(
             NodeResizeHandle::Right,
+            false,
             start_pos,
             start_size_px,
             start_pointer,
@@ -465,6 +496,7 @@ mod tests {
 
         let (pos, size) = apply_resize_handle(
             NodeResizeHandle::Left,
+            false,
             start_pos,
             start_size_px,
             start_pointer,
@@ -505,6 +537,7 @@ mod tests {
 
         let (_pos, size) = apply_resize_handle(
             NodeResizeHandle::Right,
+            false,
             start_pos,
             start_size_px,
             start_pointer,
@@ -539,6 +572,7 @@ mod tests {
 
         let (_pos, size) = apply_resize_handle(
             NodeResizeHandle::Right,
+            false,
             start_pos,
             start_size_px,
             start_pointer,
@@ -573,6 +607,7 @@ mod tests {
 
         let (_pos, size) = apply_resize_handle(
             NodeResizeHandle::BottomRight,
+            false,
             start_pos,
             start_size_px,
             start_pointer,
@@ -585,5 +620,38 @@ mod tests {
         );
         assert_eq!(size.width, 120.0);
         assert_eq!(size.height, 80.0);
+    }
+
+    #[test]
+    fn resize_keeps_aspect_ratio_for_corner_handles() {
+        let start_pos = CanvasPoint { x: 10.0, y: 20.0 };
+        let start_size_px = CanvasSize {
+            width: 100.0,
+            height: 50.0,
+        };
+        let start_pointer = Point::new(Px(0.0), Px(0.0));
+        let pointer = Point::new(Px(20.0), Px(10.0)); // dx dominates -> width drives.
+        let zoom = 1.0;
+        let min = CanvasSize {
+            width: 1.0,
+            height: 1.0,
+        };
+
+        let (pos, size) = apply_resize_handle(
+            NodeResizeHandle::BottomRight,
+            true,
+            start_pos,
+            start_size_px,
+            start_pointer,
+            pointer,
+            zoom,
+            min,
+            None,
+            None,
+            None,
+        );
+        assert_eq!(pos, start_pos);
+        assert_eq!(size.width, 120.0);
+        assert_eq!(size.height, 60.0);
     }
 }
