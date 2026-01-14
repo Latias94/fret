@@ -37,4 +37,21 @@ mod tests {
             assert!(font.len() > 1024);
         }
     }
+
+    #[test]
+    fn default_fonts_total_size_is_reasonable() {
+        let total: usize = super::default_fonts().iter().map(|b| b.len()).sum();
+
+        #[cfg(not(feature = "emoji"))]
+        assert!(
+            total < 2_000_000,
+            "default fonts too large (expected subset bootstrap): {total}"
+        );
+
+        #[cfg(feature = "emoji")]
+        assert!(
+            total < 15_000_000,
+            "default fonts too large (emoji bundle enabled): {total}"
+        );
+    }
 }
