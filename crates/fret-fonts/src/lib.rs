@@ -7,6 +7,8 @@
 /// Returns the default font bytes (TTF/OTF/TTC) that can be fed to `Effect::TextAddFonts`.
 pub fn default_fonts() -> &'static [&'static [u8]] {
     &[
+        #[cfg(feature = "emoji")]
+        include_bytes!("../assets/NotoColorEmoji.ttf"),
         #[cfg(feature = "bootstrap-full")]
         include_bytes!("../assets/Inter-roman.ttf"),
         #[cfg(feature = "bootstrap-full")]
