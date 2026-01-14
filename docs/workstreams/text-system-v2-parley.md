@@ -1,6 +1,6 @@
 # Text System v2 (Parley) — Workstream Roadmap & TODO Tracker
 
-Status: Active (design locked by ADR 0157; implementation in progress on `feat/text-system-v2-parley`)
+Status: Active (design proposed in ADR 0157; implementation TBD)
 
 This document is a living, implementation-focused tracker. It is intentionally non-authoritative;
 the normative contract is `docs/adr/0157-text-system-v2-parley-attributed-spans-and-quality-baseline.md`.
@@ -34,7 +34,7 @@ Exit criteria:
 
 Status:
 
-- Done on `feat/text-system-v2-parley` (see `094fd31`, `256e8a9`).
+- Not started on `main` (work will continue in a dedicated worktree branch).
 
 ### M1 — Renderer text system v2 (Parley + wrapper + atlas)
 
@@ -60,6 +60,12 @@ Exit criteria:
 - Subpixel strategy is implemented and included in raster/cache keys.
 - Shader-side gamma/contrast correction is present and tuneable via settings.
 - Add at least one conformance harness/demo snapshot for mixed-script + emoji + IME preedit.
+
+Current:
+
+- Manual emoji conformance harness exists: `apps/fret-examples/src/emoji_conformance_demo.rs`.
+  - Web runner supports `?demo=emoji_conformance_demo` and optional bundled emoji fonts via
+    `apps/fret-demo-web` feature `emoji-fonts`.
 
 ## Acceptance Checklist (what “done” means)
 
