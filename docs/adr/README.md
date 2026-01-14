@@ -118,7 +118,7 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Icons (semantic keys + SVG-first packaging)**: `docs/adr/0065-icon-system-and-asset-packaging.md`
 - **Editor interaction affordances (selection/docking highlights)**: `docs/adr/0030-shape-rendering-and-sdf-semantics.md`, `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`, `docs/adr/0011-overlays-and-multi-root.md`
 - **Engine viewports (embedded 3D)**: `docs/adr/0010-wgpu-context-ownership.md`, `docs/adr/0015-frame-lifecycle-and-submission-order.md`, `docs/adr/0025-viewport-input-forwarding.md`, `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`
-- **Viewport tools and overlays (example editor layer)**: `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
+- **Viewport tools and overlays**: `docs/adr/0168-viewport-tooling-host-helpers-and-arbitration-v1.md`, `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
 - **Inspector / property editing (example editor layer)**: `docs/adr/0048-inspector-property-protocol-and-editor-registry.md`
 - **Theme tokens and theme config (P0 styling)**: `docs/adr/0032-style-tokens-and-theme-resolution.md`, `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
 - **Elevation and shadows (no-blur baseline)**: `docs/adr/0060-shadows-and-elevation.md`
@@ -292,6 +292,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0025-viewport-input-forwarding.md`
 - `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`
 - `docs/adr/0040-color-management-and-compositing-contracts.md`
+- `docs/adr/0168-viewport-tooling-host-helpers-and-arbitration-v1.md`
 - `docs/adr/0116-window-scoped-layout-engine-and-viewport-roots.md`
 
 ## Example Editor App Notes (Out of Scope for Fret Framework)
