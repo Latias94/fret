@@ -119,6 +119,7 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Editor interaction affordances (selection/docking highlights)**: `docs/adr/0030-shape-rendering-and-sdf-semantics.md`, `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`, `docs/adr/0011-overlays-and-multi-root.md`
 - **Engine viewports (embedded 3D)**: `docs/adr/0010-wgpu-context-ownership.md`, `docs/adr/0015-frame-lifecycle-and-submission-order.md`, `docs/adr/0025-viewport-input-forwarding.md`, `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`
 - **Viewport tools and overlays**: `docs/adr/0168-viewport-tooling-host-helpers-and-arbitration-v1.md`, `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
+- **Ecosystem crates (glue vs kit vs primitives)**: `docs/adr/0169-ecosystem-crate-taxonomy-glue-and-ui-kit-split-v1.md`
 - **Inspector / property editing (example editor layer)**: `docs/adr/0048-inspector-property-protocol-and-editor-registry.md`
 - **Theme tokens and theme config (P0 styling)**: `docs/adr/0032-style-tokens-and-theme-resolution.md`, `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
 - **Elevation and shadows (no-blur baseline)**: `docs/adr/0060-shadows-and-elevation.md`
