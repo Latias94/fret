@@ -11,6 +11,7 @@ use fret_ui::declarative;
 use fret_ui::element::{ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign};
 use fret_ui::{Invalidation, Theme, UiTree};
 use fret_ui_shadcn::{DataGrid, DataGridCanvasAxis, DataGridCanvasOutput};
+use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -52,6 +53,8 @@ struct CanvasDataGridStressWindowState {
     clamp_rows: Model<bool>,
     revision: Model<u64>,
     grid_output: Model<DataGridCanvasOutput>,
+    grid_hist: VecDeque<DataGridCanvasOutput>,
+    grid_hist_window: usize,
     frame: u64,
     exit_after_frames: Option<u64>,
     auto_scroll: bool,
@@ -83,6 +86,7 @@ impl CanvasDataGridStressDriver {
             .insert(parse_env_bool("FRET_CANVAS_GRID_CLAMP_ROWS"));
         let revision = app.models_mut().insert(1u64);
         let grid_output = app.models_mut().insert(DataGridCanvasOutput::default());
+        let grid_hist_window = parse_env_usize("FRET_CANVAS_GRID_STATS_WINDOW").unwrap_or(120);
 
         let exit_after_frames = parse_env_u64("FRET_CANVAS_GRID_EXIT_AFTER_FRAMES");
         let auto_scroll = parse_env_bool("FRET_CANVAS_GRID_AUTO_SCROLL");
@@ -99,6 +103,8 @@ impl CanvasDataGridStressDriver {
             clamp_rows,
             revision,
             grid_output,
+            grid_hist: VecDeque::new(),
+            grid_hist_window,
             frame: 0,
             exit_after_frames,
             auto_scroll,
@@ -127,12 +133,48 @@ impl WinitAppDriver for CanvasDataGridStressDriver {
             return;
         }
 
+        let grid = app
+            .models()
+            .read(&state.grid_output, |v| *v)
+            .unwrap_or_default();
+        state.grid_hist.push_back(grid);
+        while state.grid_hist.len() > state.grid_hist_window {
+            state.grid_hist.pop_front();
+        }
+
         let now = Instant::now();
         let should_report = match state.last_renderer_report {
             None => true,
             Some(last) => now.duration_since(last) >= Duration::from_secs(1),
         };
         if should_report {
+            if !state.grid_hist.is_empty() {
+                let mut totals_us: Vec<u32> = state
+                    .grid_hist
+                    .iter()
+                    .map(|s| {
+                        s.ensure_axes_us
+                            .saturating_add(s.apply_overrides_us)
+                            .saturating_add(s.compute_viewport_us)
+                            .saturating_add(s.build_visible_items_us)
+                    })
+                    .collect();
+                totals_us.sort_unstable();
+
+                let sum_us: u64 = totals_us.iter().map(|v| *v as u64).sum();
+                let avg_ms = (sum_us as f64 / totals_us.len() as f64) / 1000.0;
+                let p95_idx = ((totals_us.len().saturating_mul(95)).saturating_add(99) / 100)
+                    .saturating_sub(1);
+                let p95_ms = totals_us.get(p95_idx).copied().unwrap_or_default() as f64 / 1000.0;
+
+                try_println!(
+                    "datagrid_canvas_stats: samples={} total_avg={:.3}ms total_p95={:.3}ms",
+                    totals_us.len(),
+                    avg_ms,
+                    p95_ms
+                );
+            }
+
             if let Some(snap) = renderer.take_perf_snapshot() {
                 if snap.frames != 0 {
                     try_println!(
@@ -153,10 +195,6 @@ impl WinitAppDriver for CanvasDataGridStressDriver {
                 }
             }
 
-            let grid = app
-                .models()
-                .read(&state.grid_output, |v| *v)
-                .unwrap_or_default();
             try_println!(
                 "datagrid_canvas: visible_rows={} visible_cols={} visible_cells={} ensure_axes={:.3}ms overrides={:.3}ms viewport={:.3}ms build={:.3}ms",
                 grid.visible_rows,
