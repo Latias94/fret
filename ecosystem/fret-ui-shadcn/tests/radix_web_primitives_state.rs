@@ -1620,26 +1620,24 @@ fn radix_web_context_menu_submenu_keyboard_open_close_matches_fret() {
                         ContextMenuEntry::Item(ContextMenuItem::new("Copy")),
                         ContextMenuEntry::Item(ContextMenuItem::new("Cut")),
                     ])),
-                    ContextMenuEntry::Item(
-                        ContextMenuItem::new("More Tools").submenu(vec![
-                            ContextMenuEntry::Group(ContextMenuGroup::new(vec![
-                                ContextMenuEntry::Item(ContextMenuItem::new("Save Page...")),
-                                ContextMenuEntry::Item(ContextMenuItem::new("Create Shortcut...")),
-                                ContextMenuEntry::Item(ContextMenuItem::new("Name Window...")),
-                            ])),
-                            ContextMenuEntry::Separator,
-                            ContextMenuEntry::Group(ContextMenuGroup::new(vec![
-                                ContextMenuEntry::Item(ContextMenuItem::new("Developer Tools")),
-                            ])),
-                            ContextMenuEntry::Separator,
-                            ContextMenuEntry::Group(ContextMenuGroup::new(vec![
+                    ContextMenuEntry::Item(ContextMenuItem::new("More Tools").submenu(vec![
+                        ContextMenuEntry::Group(ContextMenuGroup::new(vec![
+                            ContextMenuEntry::Item(ContextMenuItem::new("Save Page...")),
+                            ContextMenuEntry::Item(ContextMenuItem::new("Create Shortcut...")),
+                            ContextMenuEntry::Item(ContextMenuItem::new("Name Window...")),
+                        ])),
+                        ContextMenuEntry::Separator,
+                        ContextMenuEntry::Group(ContextMenuGroup::new(vec![
+                            ContextMenuEntry::Item(ContextMenuItem::new("Developer Tools")),
+                        ])),
+                        ContextMenuEntry::Separator,
+                        ContextMenuEntry::Group(ContextMenuGroup::new(vec![
                                 ContextMenuEntry::Item(
                                     ContextMenuItem::new("Delete")
                                         .variant(ContextMenuItemVariant::Destructive),
                                 ),
                             ])),
-                        ]),
-                    ),
+                    ])),
                 ]
             },
         )
