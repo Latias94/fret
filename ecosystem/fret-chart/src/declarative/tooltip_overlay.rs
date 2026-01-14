@@ -8,9 +8,9 @@ use fret_ui::canvas::{CanvasPainter, CanvasTextConstraints};
 use fret_ui_kit::recipes::canvas_pan_zoom::PanZoomCanvasPaintCx;
 use fret_ui_kit::recipes::canvas_tool_router::{CanvasToolEntry, CanvasToolHandlers, CanvasToolId};
 
-use crate::TooltipTextLine;
 use crate::retained::ChartStyle;
 use crate::tooltip_layout::split_tooltip_text_for_columns;
+use crate::{TooltipTextLine, TooltipTextLineKind};
 
 #[derive(Debug, Default)]
 pub(crate) struct TooltipOverlayState {
@@ -163,6 +163,8 @@ pub(crate) fn tooltip_overlay_tool(
                 weight: fret_core::FontWeight::NORMAL,
                 ..fret_core::TextStyle::default()
             };
+            let mut header_text_style = text_style.clone();
+            header_text_style.weight = fret_core::FontWeight::BOLD;
             let constraints = CanvasTextConstraints {
                 max_width: None,
                 wrap: fret_core::TextWrap::None,
@@ -199,6 +201,7 @@ pub(crate) fn tooltip_overlay_tool(
 
             struct PreparedTooltipLine {
                 source_series: Option<SeriesId>,
+                kind: TooltipTextLineKind,
                 layout: TooltipLineLayout,
             }
 
@@ -211,6 +214,12 @@ pub(crate) fn tooltip_overlay_tool(
             let mut total_h = 0.0f32;
 
             for (i, line) in state.lines.iter().enumerate() {
+                let text_style_for_line = if line.kind == TooltipTextLineKind::AxisHeader {
+                    header_text_style.clone()
+                } else {
+                    text_style.clone()
+                };
+
                 let columns = line
                     .columns
                     .as_ref()
@@ -221,15 +230,24 @@ pub(crate) fn tooltip_overlay_tool(
                     let left: Arc<str> = left.into();
                     let right: Arc<str> = right.into();
 
-                    let left_key: u64 = painter.child_key(scope, &("l", i, left.as_ref())).into();
-                    let right_key: u64 = painter.child_key(scope, &("r", i, right.as_ref())).into();
+                    let kind_key: u8 = match line.kind {
+                        TooltipTextLineKind::Body => 0,
+                        TooltipTextLineKind::AxisHeader => 1,
+                        TooltipTextLineKind::SeriesRow => 2,
+                    };
+                    let left_key: u64 = painter
+                        .child_key(scope, &("l", kind_key, i, left.as_ref()))
+                        .into();
+                    let right_key: u64 = painter
+                        .child_key(scope, &("r", kind_key, i, right.as_ref()))
+                        .into();
 
                     let left_metrics = painter.text(
                         left_key,
                         DrawOrder(0),
                         Point::new(Px(0.0), Px(0.0)),
                         left.clone(),
-                        text_style.clone(),
+                        text_style_for_line.clone(),
                         Color::TRANSPARENT,
                         constraints,
                         paint_cx.raster_scale_factor,
@@ -239,7 +257,7 @@ pub(crate) fn tooltip_overlay_tool(
                         DrawOrder(0),
                         Point::new(Px(0.0), Px(0.0)),
                         right.clone(),
-                        text_style.clone(),
+                        text_style_for_line.clone(),
                         Color::TRANSPARENT,
                         constraints,
                         paint_cx.raster_scale_factor,
@@ -256,6 +274,7 @@ pub(crate) fn tooltip_overlay_tool(
 
                     prepared_lines.push(PreparedTooltipLine {
                         source_series: line.source_series,
+                        kind: line.kind,
                         layout: TooltipLineLayout::Columns {
                             left_key,
                             left_metrics,
@@ -267,13 +286,20 @@ pub(crate) fn tooltip_overlay_tool(
                     });
                 } else {
                     let text: Arc<str> = line.text.as_str().into();
-                    let key: u64 = painter.child_key(scope, &("s", i, text.as_ref())).into();
+                    let kind_key: u8 = match line.kind {
+                        TooltipTextLineKind::Body => 0,
+                        TooltipTextLineKind::AxisHeader => 1,
+                        TooltipTextLineKind::SeriesRow => 2,
+                    };
+                    let key: u64 = painter
+                        .child_key(scope, &("s", kind_key, i, text.as_ref()))
+                        .into();
                     let metrics = painter.text(
                         key,
                         DrawOrder(0),
                         Point::new(Px(0.0), Px(0.0)),
                         text.clone(),
-                        text_style.clone(),
+                        text_style_for_line.clone(),
                         Color::TRANSPARENT,
                         constraints,
                         paint_cx.raster_scale_factor,
@@ -282,6 +308,7 @@ pub(crate) fn tooltip_overlay_tool(
                     total_h += metrics.size.height.0.max(1.0);
                     prepared_lines.push(PreparedTooltipLine {
                         source_series: line.source_series,
+                        kind: line.kind,
                         layout: TooltipLineLayout::Single { key, metrics, text },
                     });
                 }
@@ -391,12 +418,17 @@ pub(crate) fn tooltip_overlay_tool(
 
                 match line.layout {
                     TooltipLineLayout::Single { key, metrics, text } => {
+                        let text_style_for_line = if line.kind == TooltipTextLineKind::AxisHeader {
+                            header_text_style.clone()
+                        } else {
+                            text_style.clone()
+                        };
                         let _ = painter.text(
                             key,
                             DrawOrder(order_base.saturating_add(1)),
                             Point::new(Px(text_x0), Px(y)),
                             text,
-                            text_style.clone(),
+                            text_style_for_line,
                             style.tooltip_text_color,
                             constraints,
                             paint_cx.raster_scale_factor,
@@ -411,6 +443,11 @@ pub(crate) fn tooltip_overlay_tool(
                         right_metrics,
                         right,
                     } => {
+                        let text_style_for_line = if line.kind == TooltipTextLineKind::AxisHeader {
+                            header_text_style.clone()
+                        } else {
+                            text_style.clone()
+                        };
                         let line_height = left_metrics
                             .size
                             .height
@@ -427,7 +464,7 @@ pub(crate) fn tooltip_overlay_tool(
                             DrawOrder(order_base.saturating_add(1)),
                             Point::new(Px(text_x0), Px(y)),
                             left,
-                            text_style.clone(),
+                            text_style_for_line.clone(),
                             style.tooltip_text_color,
                             constraints,
                             paint_cx.raster_scale_factor,
@@ -437,7 +474,7 @@ pub(crate) fn tooltip_overlay_tool(
                             DrawOrder(order_base.saturating_add(2)),
                             Point::new(Px(value_x), Px(y)),
                             right,
-                            text_style.clone(),
+                            text_style_for_line,
                             style.tooltip_text_color,
                             constraints,
                             paint_cx.raster_scale_factor,

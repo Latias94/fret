@@ -4,11 +4,23 @@ use delinea::engine::window::DataWindow;
 use delinea::engine::{AxisPointerOutput, model::ChartModel};
 use delinea::{AxisId, ChartEngine, SeriesId};
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum TooltipTextLineKind {
+    /// Plain unstyled line (default).
+    #[default]
+    Body,
+    /// Axis header row (used by axis-trigger tooltips).
+    AxisHeader,
+    /// Series row (value for a series).
+    SeriesRow,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct TooltipTextLine {
     pub source_series: Option<SeriesId>,
     pub text: String,
     pub columns: Option<(String, String)>,
+    pub kind: TooltipTextLineKind,
 }
 
 impl TooltipTextLine {
@@ -17,6 +29,7 @@ impl TooltipTextLine {
             source_series: None,
             text: text.into(),
             columns: None,
+            kind: TooltipTextLineKind::Body,
         }
     }
 
@@ -25,6 +38,7 @@ impl TooltipTextLine {
             source_series: Some(series),
             text: text.into(),
             columns: None,
+            kind: TooltipTextLineKind::SeriesRow,
         }
     }
 
@@ -35,6 +49,7 @@ impl TooltipTextLine {
             source_series: None,
             text: format!("{left}: {right}"),
             columns: Some((left, right)),
+            kind: TooltipTextLineKind::Body,
         }
     }
 
@@ -49,7 +64,13 @@ impl TooltipTextLine {
             source_series: Some(series),
             text: format!("{left}: {right}"),
             columns: Some((left, right)),
+            kind: TooltipTextLineKind::SeriesRow,
         }
+    }
+
+    pub fn with_kind(mut self, kind: TooltipTextLineKind) -> Self {
+        self.kind = kind;
+        self
     }
 }
 
@@ -299,6 +320,7 @@ impl TooltipFormatter for DefaultTooltipFormatter {
                         source_series: Some(item.series),
                         text: Self::apply_line_template(series_template, "series", &series_value),
                         columns: None,
+                        kind: TooltipTextLineKind::SeriesRow,
                     });
                 }
 
@@ -322,6 +344,7 @@ impl TooltipFormatter for DefaultTooltipFormatter {
                             &x_value,
                         ),
                         columns: None,
+                        kind: TooltipTextLineKind::Body,
                     });
                 }
 
@@ -345,6 +368,7 @@ impl TooltipFormatter for DefaultTooltipFormatter {
                             &y_value,
                         ),
                         columns: None,
+                        kind: TooltipTextLineKind::Body,
                     });
                 }
 
@@ -362,7 +386,10 @@ impl TooltipFormatter for DefaultTooltipFormatter {
                     spec,
                 );
                 if spec.axis_line_template == "{label}: {value}" {
-                    lines.push(TooltipTextLine::columns(axis_label, axis_value));
+                    lines.push(
+                        TooltipTextLine::columns(axis_label, axis_value)
+                            .with_kind(TooltipTextLineKind::AxisHeader),
+                    );
                 } else {
                     lines.push(TooltipTextLine {
                         source_series: None,
@@ -372,6 +399,7 @@ impl TooltipFormatter for DefaultTooltipFormatter {
                             &axis_value,
                         ),
                         columns: None,
+                        kind: TooltipTextLineKind::AxisHeader,
                     });
                 }
 
@@ -435,6 +463,7 @@ impl TooltipFormatter for DefaultTooltipFormatter {
                             source_series: Some(entry.series),
                             text: Self::apply_line_template(series_template, &label, &value),
                             columns: None,
+                            kind: TooltipTextLineKind::SeriesRow,
                         });
                     }
                 }
@@ -610,6 +639,7 @@ mod tests {
                 .map(|(l, r)| (l.as_str(), r.as_str())),
             Some(("x (Time)", "0.5"))
         );
+        assert_eq!(lines[0].kind, TooltipTextLineKind::AxisHeader);
         assert_eq!(lines[1].source_series, Some(series_a));
         assert_eq!(lines[1].text, "A: 0.5");
         assert_eq!(
@@ -619,6 +649,7 @@ mod tests {
                 .map(|(l, r)| (l.as_str(), r.as_str())),
             Some(("A", "0.5"))
         );
+        assert_eq!(lines[1].kind, TooltipTextLineKind::SeriesRow);
         assert_eq!(lines[2].source_series, Some(series_b));
         assert_eq!(lines[2].text, "B: 1");
         assert_eq!(
@@ -628,6 +659,7 @@ mod tests {
                 .map(|(l, r)| (l.as_str(), r.as_str())),
             Some(("B", "1"))
         );
+        assert_eq!(lines[2].kind, TooltipTextLineKind::SeriesRow);
     }
 
     #[test]
@@ -776,12 +808,15 @@ mod tests {
         assert_eq!(lines[0].source_series, None);
         assert_eq!(lines[0].text, "0.50 @ x (Time)");
         assert_eq!(lines[0].columns, None);
+        assert_eq!(lines[0].kind, TooltipTextLineKind::AxisHeader);
         assert_eq!(lines[1].source_series, Some(series_a));
         assert_eq!(lines[1].text, "[A]=0.50");
         assert_eq!(lines[1].columns, None);
+        assert_eq!(lines[1].kind, TooltipTextLineKind::SeriesRow);
         assert_eq!(lines[2].source_series, Some(series_b));
         assert_eq!(lines[2].text, "[B]=1.00");
         assert_eq!(lines[2].columns, None);
+        assert_eq!(lines[2].kind, TooltipTextLineKind::SeriesRow);
     }
 
     #[test]
@@ -943,12 +978,15 @@ mod tests {
                 .map(|(l, r)| (l.as_str(), r.as_str())),
             Some(("x (Time)", "0.50"))
         );
+        assert_eq!(lines[0].kind, TooltipTextLineKind::AxisHeader);
         assert_eq!(lines[1].source_series, Some(series_a));
         assert_eq!(lines[1].text, "A=0.50");
         assert_eq!(lines[1].columns, None);
+        assert_eq!(lines[1].kind, TooltipTextLineKind::SeriesRow);
         assert_eq!(lines[2].source_series, Some(series_b));
         assert_eq!(lines[2].text, "B only: 1");
         assert_eq!(lines[2].columns, None);
+        assert_eq!(lines[2].kind, TooltipTextLineKind::SeriesRow);
     }
 
     #[test]
@@ -1067,5 +1105,6 @@ mod tests {
         let lines = formatter.format_axis_pointer(&engine, axis_windows, axis_pointer);
         assert_eq!(lines.len(), 1);
         assert!(lines[0].text.contains("axis="));
+        assert_eq!(lines[0].kind, TooltipTextLineKind::Body);
     }
 }

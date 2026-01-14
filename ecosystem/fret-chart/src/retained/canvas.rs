@@ -4747,6 +4747,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 weight: FontWeight::NORMAL,
                 ..TextStyle::default()
             };
+            let mut header_text_style = text_style.clone();
+            header_text_style.weight = FontWeight::BOLD;
             let constraints = TextConstraints {
                 max_width: None,
                 wrap: TextWrap::None,
@@ -4791,6 +4793,12 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             let mut total_h = 0.0f32;
 
             for line in &tooltip_lines {
+                let line_style = if line.kind == crate::TooltipTextLineKind::AxisHeader {
+                    &header_text_style
+                } else {
+                    &text_style
+                };
+
                 let columns = line
                     .columns
                     .as_ref()
@@ -4800,10 +4808,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 if let Some((left, right)) = columns {
                     let left_prepared =
                         self.tooltip_text
-                            .prepare(cx.services, left, &text_style, constraints);
+                            .prepare(cx.services, left, line_style, constraints);
                     let right_prepared =
                         self.tooltip_text
-                            .prepare(cx.services, right, &text_style, constraints);
+                            .prepare(cx.services, right, line_style, constraints);
                     let left_blob = left_prepared.blob;
                     let left_metrics = left_prepared.metrics;
                     let right_blob = right_prepared.blob;
@@ -4828,12 +4836,9 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         },
                     });
                 } else {
-                    let prepared = self.tooltip_text.prepare(
-                        cx.services,
-                        &line.text,
-                        &text_style,
-                        constraints,
-                    );
+                    let prepared =
+                        self.tooltip_text
+                            .prepare(cx.services, &line.text, line_style, constraints);
                     let blob = prepared.blob;
                     let metrics = prepared.metrics;
                     max_single_w = max_single_w.max(metrics.size.width.0);
