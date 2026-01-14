@@ -93,7 +93,7 @@ As of the initial audit:
   - `DataTable` (first pass) exists at `ecosystem/fret-ui-shadcn/src/data_table.rs`.
     - It provides: fixed header + vertical virtualization with a fixed row height.
     - It explicitly does **not** target TanStack parity (matches ADR 0101’s “first pass” note).
-  - `DataTableTanstack` exists at `ecosystem/fret-ui-shadcn/src/data_table_tanstack.rs` (no feature gate; `fret-ui-shadcn/tanstack-table` is now a no-op compatibility alias).
+  - `DataTable` (headless-backed default) exists at `ecosystem/fret-ui-shadcn/src/data_table.rs` (`DataTableTanstack` is kept as a compatibility alias).
   - `DataGrid` prototype exists at `ecosystem/fret-ui-shadcn/src/data_grid.rs`.
     - It explores 2D virtualization (rows + columns) and custom scrollbars.
   - `DataTable` and `DataGrid` used to be behind the `datagrid` crate feature; the gate has been removed because it had no heavy deps.
@@ -131,7 +131,7 @@ As of the initial audit:
 
 - [x] Implement `DataTable` composition in `ecosystem/fret-ui-shadcn`.
 - [x] Remove the `datagrid` feature gate (no heavy deps).
-- [x] Add `DataTableTanstack` (ungated).
+- [x] Add headless-backed `DataTable` (formerly `DataTableTanstack`).
 - [x] Add a demo page in `apps/fret-examples` to validate interaction outcomes (`apps/fret-examples/src/tanstack_datatable_demo.rs`).
 
 ### M3 — Forms (headless + shadcn wrappers)
@@ -200,7 +200,7 @@ preserving specialized variants and performance ceilings.
 
 - **Headless (source of truth):** `fret-ui-kit::headless::table` (always available).
 - **Default table recipe:** `fret-ui-shadcn::DataTable` should be backed by the headless engine.
-  - Candidate: current `DataTableTanstack` (`ecosystem/fret-ui-shadcn/src/data_table_tanstack.rs`).
+  - Candidate: current `DataTable` (`ecosystem/fret-ui-shadcn/src/data_table.rs`).
 - **Simple/legacy table:** current `DataTable` (`ecosystem/fret-ui-shadcn/src/data_table.rs`) should be renamed
   (e.g. `DataTableSimple` or `DataTableLegacy`) and kept for a transition period.
 - **Performance ceiling grid:** `DataGridCanvas` remains the “spreadsheet scale” path.
@@ -210,7 +210,7 @@ preserving specialized variants and performance ceilings.
 
 1) **Naming:** should `fret-ui-shadcn::DataTable` be repointed to the headless-backed implementation?
    - If yes: we ship a rename + re-export migration plan.
-   - If no: we keep `DataTableTanstack` as the recommended default and treat `DataTable` as a “simple table”.
+   - If no: we keep `DataTable` as-is and treat the older `DataTableSimple` surface as a legacy/preset.
 
 2) **A11y semantics:** `DataTable` uses `Table` semantics, `DataGrid(Canvas)` uses `Grid` semantics (recommended),
    but we should confirm this against our current semantics mapping support (ADR 0033 + ADR 0073).
@@ -220,7 +220,7 @@ preserving specialized variants and performance ceilings.
 This is the preferred convergence path, but it is a breaking change unless we keep a compatibility alias.
 
 1) Introduce explicit type names:
-   - `DataTable` (headless-backed default; currently `DataTableTanstack`)
+   - `DataTable` (headless-backed default)
    - `DataTableSimple` (current first-pass table; old `DataTable`)
 2) Keep a temporary re-export alias for one release window:
    - `pub type DataTableTanstack = DataTable;` (or a `#[deprecated]` alias if we want hard migration pressure)
@@ -302,7 +302,7 @@ Likely next optimizations (if we need “million-row spreadsheet” class perfor
 - 2026-01-13: Completed initial audit of existing table/datagrid/forms/calendar surfaces (see “Current Code Surfaces”).
 - 2026-01-13: Removed `fret-ui-shadcn` `datagrid` feature gate and validated with `cargo check -p fret-ui-shadcn` and `cargo nextest run -p fret-ui-shadcn`.
 - 2026-01-13: Hardened `DataTable`/`DataGrid` vertical virtualization options for fixed row height (`VirtualListMeasureMode::Fixed` + `VirtualListKeyCacheMode::VisibleOnly`).
-- 2026-01-13: Added `DataTableTanstack` native demo (`apps/fret-examples/src/tanstack_datatable_demo.rs`).
+- 2026-01-13: Added headless-backed `DataTable` native demo (`apps/fret-examples/src/tanstack_datatable_demo.rs`).
 - 2026-01-13: Extended `headless::grid_viewport` to support “count + key_fn” axes (no need to allocate a `Vec<K>` for fixed/identity-key axes).
 - 2026-01-13: Refactored `fret-ui-shadcn` `DataGrid` prototype to use `Scroll` + `headless::grid_viewport` (single range computation per frame; absolute-positioned visible cells).
 - 2026-01-14: Started implementing shadcn `Calendar` + `DatePicker` (Calendar WIP; `time` dependency added to `fret-ui-shadcn`).

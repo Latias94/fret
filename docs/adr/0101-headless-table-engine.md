@@ -110,7 +110,7 @@ We will provide convenience recipes in `ecosystem/fret-ui-shadcn`, but keep them
 
 - Feature: `tanstack_table` (name not final)
 - Modules (indicative):
-  - `data_table_tanstack` (renders with `Table` primitives + pagination/sorting/filters widgets)
+  - `data_table` (renders with `Table` primitives + pagination/sorting/filters widgets)
   - `data_grid_tanstack` (renders 2D virtualization when column sizing/pinning exist)
 
 The recipes:

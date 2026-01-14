@@ -18,7 +18,7 @@ use fret_ui_kit::headless::table::{
 use fret_ui_shadcn::button::{Button, ButtonSize, ButtonVariant};
 use fret_ui_shadcn::dropdown_menu::{DropdownMenu, DropdownMenuEntry, DropdownMenuItem};
 use fret_ui_shadcn::stack;
-use fret_ui_shadcn::{DataTableTanstack, Space};
+use fret_ui_shadcn::{DataTable, Space};
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -291,7 +291,7 @@ impl WinitAppDriver for TanstackDataTableDemoDriver {
                                     .on_click(CommandId::from("tanstack_datatable.close"))
                                     .into_element(cx),
                                 cx.text(Arc::from(format!(
-                                    "DataTableTanstack | selected={selected} sort={sorting}"
+                                    "DataTable | selected={selected} sort={sorting}"
                                 ))),
                                 DropdownMenu::new(view_options_open.clone()).into_element(
                                     cx,
@@ -309,7 +309,7 @@ impl WinitAppDriver for TanstackDataTableDemoDriver {
 
                     let columns_for_header: Arc<[(Arc<str>, Arc<str>)]> =
                         Arc::clone(&columns_for_menu);
-                    let data_table = DataTableTanstack::new().into_element(
+                    let data_table = DataTable::new().into_element(
                         cx,
                         Arc::clone(&rows),
                         1,

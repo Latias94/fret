@@ -27,7 +27,7 @@ pub mod context_menu;
 pub mod data_grid;
 pub mod data_grid_canvas;
 pub mod data_table;
-pub mod data_table_tanstack;
+mod data_table_simple;
 pub mod date_picker;
 pub mod dialog;
 pub mod drawer;
@@ -109,11 +109,10 @@ pub use context_menu::{
 };
 pub use data_grid::{DataGrid, DataGridRowState};
 pub use data_grid_canvas::{DataGridCanvas, DataGridCanvasAxis};
-pub use data_table::{
-    DataTable, DataTableColumnOption, DataTableGlobalFilterInput, DataTableRowState,
-    DataTableViewOptions,
+pub use data_table::{DataTable, DataTableTanstack};
+pub use data_table_simple::{
+    DataTableColumnOption, DataTableGlobalFilterInput, DataTableRowState, DataTableViewOptions,
 };
-pub use data_table_tanstack::DataTableTanstack;
 pub use date_picker::DatePicker;
 pub use dialog::{
     Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,

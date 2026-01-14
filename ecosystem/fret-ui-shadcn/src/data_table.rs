@@ -2,37 +2,22 @@ use std::sync::Arc;
 
 use fret_core::geometry::Edges;
 use fret_core::{Color, Px};
-use fret_runtime::{CommandId, Model};
+use fret_runtime::Model;
+use fret_ui::action::OnActivate;
 use fret_ui::element::{
-    AnyElement, ColumnProps, GridProps, LayoutStyle, Length, MainAlign, Overflow, ScrollAxis,
-    WheelRegionProps,
+    AnyElement, ColumnProps, GridProps, LayoutStyle, Length, MainAlign, Overflow, PressableProps,
+    ScrollAxis, WheelRegionProps,
 };
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius};
 
-use crate::button::{Button, ButtonVariant};
-use crate::dropdown_menu::{DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuEntry};
-use crate::input::Input;
+use fret_ui_kit::headless::table::{
+    ColumnDef, RowKey, Table, TableState, is_row_selected, toggle_sort_for_column,
+};
+
 use crate::table::{TableCell, TableHead, TableRow};
-
-#[derive(Debug, Clone)]
-pub struct DataTableRowState {
-    pub selected: bool,
-    pub enabled: bool,
-    pub on_click: Option<CommandId>,
-}
-
-impl Default for DataTableRowState {
-    fn default() -> Self {
-        Self {
-            selected: false,
-            enabled: true,
-            on_click: None,
-        }
-    }
-}
 
 fn border_color(theme: &Theme) -> Color {
     theme.color_required("border")
@@ -53,32 +38,42 @@ fn list_layout_style() -> LayoutStyle {
     layout
 }
 
-/// shadcn/ui `DataTable` (virtualized table contract, first pass).
+fn mixed_revision(a: u64, b: u64) -> u64 {
+    // Cheap, deterministic mixing to avoid obvious collisions.
+    a ^ b.wrapping_mul(0x9E37_79B9_7F4A_7C15)
+}
+
+/// shadcn/ui `DataTable` backed by the TanStack-aligned headless engine (ADR 0101).
 ///
-/// This is intentionally **not** TanStack Table parity. It is a stable, GPU-friendly contract for:
-/// - a fixed header row
-/// - a virtualized body with fixed row height
-/// - shadcn-style row hover + selection affordances via `TableRow`
+/// This is an integration surface:
+/// - headless row model: filtering/sorting/pagination/visibility (future: sizing/pinning)
+/// - UI: `Table` primitives + fixed header + virtualized body
+///
+/// Notes (v0):
+/// - row activation toggles selection by `RowKey` (flat tables; sub-row selection is deferred)
+/// - header activation toggles single-column sorting (multi-sort key modifiers are deferred)
 #[derive(Debug, Clone)]
 pub struct DataTable {
-    headers: Vec<Arc<str>>,
-    rows: usize,
     overscan: usize,
     row_height: Option<Px>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
 
-impl DataTable {
-    pub fn new(headers: impl IntoIterator<Item = impl Into<Arc<str>>>, rows: usize) -> Self {
+impl Default for DataTable {
+    fn default() -> Self {
         Self {
-            headers: headers.into_iter().map(Into::into).collect(),
-            rows,
             overscan: 4,
             row_height: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
+    }
+}
+
+impl DataTable {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn overscan(mut self, overscan: usize) -> Self {
@@ -101,60 +96,140 @@ impl DataTable {
         self
     }
 
-    pub fn into_element<H: UiHost>(
+    pub fn into_element<H: UiHost, TData>(
         self,
         cx: &mut ElementContext<'_, H>,
-        items_revision: u64,
-        key_at: impl FnMut(usize) -> u64,
-        mut row_state_at: impl FnMut(usize) -> DataTableRowState,
-        mut cells_at: impl FnMut(&mut ElementContext<'_, H>, usize) -> Vec<AnyElement>,
-    ) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        data: Arc<[TData]>,
+        data_revision: u64,
+        state: Model<TableState>,
+        columns: Vec<ColumnDef<TData>>,
+        get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static,
+        header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static,
+        cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static,
+    ) -> AnyElement
+    where
+        TData: 'static,
+    {
+        let DataTable {
+            overscan,
+            row_height,
+            chrome,
+            layout,
+        } = self;
 
-        let cols = self.headers.len().max(1) as u16;
-        let row_height = self.row_height.unwrap_or_else(|| row_height_px(&theme));
+        let theme = Theme::global(&*cx.app).clone();
         let border = border_color(&theme);
+        let row_height = row_height.unwrap_or_else(|| row_height_px(&theme));
+
+        let state_value = cx
+            .app
+            .models()
+            .read(&state, |v| v.clone())
+            .unwrap_or_default();
+        let state_revision = state.revision(&*cx.app).unwrap_or(0);
+        let items_revision = mixed_revision(data_revision, state_revision);
+
+        let table = Table::builder(data.as_ref())
+            .columns(columns)
+            .state(state_value)
+            .get_row_key(get_row_key)
+            .build();
+
+        let visible_columns: Arc<[ColumnDef<TData>]> = table
+            .visible_columns()
+            .into_iter()
+            .cloned()
+            .collect::<Vec<_>>()
+            .into();
+        let visible_headers: Arc<[Arc<str>]> = visible_columns
+            .iter()
+            .map(|c| header_label(c))
+            .collect::<Vec<_>>()
+            .into();
+
+        let row_model = table.row_model().clone();
+        let row_keys: Arc<[u64]> = row_model
+            .flat_rows()
+            .iter()
+            .filter_map(|&i| row_model.row(i).map(|r| r.key.0))
+            .collect::<Vec<_>>()
+            .into();
+        let rows = row_keys.len();
 
         let root_chrome = ChromeRefinement::default()
             .rounded(Radius::Lg)
             .border_1()
             .border_color(ColorRef::Color(border))
-            .merge(self.chrome);
-        let mut root_props = decl_style::container_props(&theme, root_chrome, self.layout.w_full());
+            .merge(chrome);
+        let mut root_props = decl_style::container_props(&theme, root_chrome, layout.w_full());
         root_props.layout.overflow = Overflow::Clip;
-
-        let headers = self.headers;
-        let rows = self.rows;
-        let overscan = self.overscan;
 
         cx.container(root_props, move |cx| {
             let theme = Theme::global(&*cx.app).clone();
             let border = border_color(&theme);
 
+            let cols = visible_columns.len().max(1) as u16;
             let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
             let mut options = fret_ui::element::VirtualListOptions::new(row_height, overscan);
             options.items_revision = items_revision;
             options.measure_mode = fret_ui::element::VirtualListMeasureMode::Fixed;
             options.key_cache = fret_ui::element::VirtualListKeyCacheMode::VisibleOnly;
+
+            let state_for_rows = state.clone();
+            let row_model_for_rows = row_model.clone();
+            let cols_for_rows = visible_columns.clone();
+            let cell_at = Arc::new(cell_at);
             let body = cx.virtual_list_keyed_with_layout(
                 list_layout_style(),
                 rows,
                 options,
                 &scroll_handle,
-                key_at,
+                {
+                    let row_keys = row_keys.clone();
+                    move |i| row_keys.get(i).copied().unwrap_or(i as u64)
+                },
                 move |cx, i| {
-                    let state = row_state_at(i);
+                    let key_u64 = row_keys.get(i).copied().unwrap_or(i as u64);
+                    let row_key = RowKey(key_u64);
+
+                    let selected = cx
+                        .app
+                        .models()
+                        .read(&state_for_rows, |st| {
+                            is_row_selected(row_key, &st.row_selection)
+                        })
+                        .unwrap_or(false);
+
+                    let on_activate: OnActivate = {
+                        let state = state_for_rows.clone();
+                        Arc::new(move |host, _acx, _reason| {
+                            let _ = host.models_mut().update(&state, |st| {
+                                if st.row_selection.contains(&row_key) {
+                                    st.row_selection.remove(&row_key);
+                                } else {
+                                    st.row_selection.insert(row_key);
+                                }
+                            });
+                        })
+                    };
+
                     let is_last = i + 1 == rows;
-                    let cells = cells_at(cx, i)
-                        .into_iter()
-                        .map(|c| TableCell::new(c).into_element(cx))
+                    let row_index = row_model_for_rows.flat_rows().get(i).copied();
+                    let row_data = row_index
+                        .and_then(|ri| row_model_for_rows.row(ri))
+                        .map(|r| r.original);
+
+                    let cells = cols_for_rows
+                        .iter()
+                        .filter_map(|c| {
+                            row_data.map(|d| TableCell::new(cell_at(cx, c, d)).into_element(cx))
+                        })
                         .collect::<Vec<_>>();
 
                     TableRow::new(cols, cells)
-                        .selected(state.selected)
-                        .enabled(state.enabled)
+                        .selected(selected)
                         .border_bottom(!is_last)
-                        .on_click_opt(state.on_click)
+                        .on_activate(on_activate)
                         .into_element(cx)
                 },
             );
@@ -181,10 +256,43 @@ impl DataTable {
                     left: Px(0.0),
                 };
 
-                let header_cells: Vec<AnyElement> = headers
+                let state_for_header = state.clone();
+                let header_cells: Vec<AnyElement> = visible_headers
                     .iter()
                     .cloned()
-                    .map(|h| TableHead::new(h).into_element(cx))
+                    .enumerate()
+                    .map(|(idx, label)| {
+                        let state_for_header = state_for_header.clone();
+                        let column_id = visible_columns
+                            .get(idx)
+                            .map(|c| c.id.clone())
+                            .unwrap_or_else(|| Arc::<str>::from(""));
+                        cx.pressable(
+                            PressableProps {
+                                enabled: true,
+                                layout: decl_style::layout_style(
+                                    &theme,
+                                    LayoutRefinement::default().w_full().h_full(),
+                                ),
+                                ..Default::default()
+                            },
+                            move |cx, _state| {
+                                let state = state_for_header.clone();
+                                let column_id = column_id.clone();
+                                cx.pressable_on_activate(Arc::new(move |host, _acx, _reason| {
+                                    let _ = host.models_mut().update(&state, |st| {
+                                        toggle_sort_for_column(
+                                            &mut st.sorting,
+                                            column_id.clone(),
+                                            false,
+                                        );
+                                    });
+                                }));
+
+                                vec![TableHead::new(label.clone()).into_element(cx)]
+                            },
+                        )
+                    })
                     .collect();
 
                 let header_theme = theme.clone();
@@ -229,123 +337,7 @@ impl DataTable {
     }
 }
 
-trait TableRowExt {
-    fn on_click_opt(self, cmd: Option<CommandId>) -> Self;
-}
-
-impl TableRowExt for TableRow {
-    fn on_click_opt(mut self, cmd: Option<CommandId>) -> Self {
-        if let Some(cmd) = cmd {
-            self = self.on_click(cmd);
-        }
-        self
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct DataTableColumnOption {
-    pub id: Arc<str>,
-    pub label: Arc<str>,
-    pub hideable: bool,
-}
-
-impl DataTableColumnOption {
-    pub fn new(id: impl Into<Arc<str>>, label: impl Into<Arc<str>>) -> Self {
-        Self {
-            id: id.into(),
-            label: label.into(),
-            hideable: true,
-        }
-    }
-
-    pub fn hideable(mut self, hideable: bool) -> Self {
-        self.hideable = hideable;
-        self
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct DataTableViewOptionItem {
-    pub label: Arc<str>,
-    pub checked: Model<bool>,
-    pub disabled: bool,
-}
-
-impl DataTableViewOptionItem {
-    pub fn new(checked: Model<bool>, label: impl Into<Arc<str>>) -> Self {
-        Self {
-            label: label.into(),
-            checked,
-            disabled: false,
-        }
-    }
-
-    pub fn disabled(mut self, disabled: bool) -> Self {
-        self.disabled = disabled;
-        self
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct DataTableViewOptions {
-    pub open: Model<bool>,
-    pub items: Vec<DataTableViewOptionItem>,
-}
-
-impl DataTableViewOptions {
-    pub fn new(open: Model<bool>, items: Vec<DataTableViewOptionItem>) -> Self {
-        Self { open, items }
-    }
-
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let open = self.open;
-        let items = self.items;
-
-        DropdownMenu::new(open).into_element(
-            cx,
-            |cx| {
-                Button::new("Columns")
-                    .variant(ButtonVariant::Outline)
-                    .into_element(cx)
-            },
-            move |_cx| {
-                items
-                    .iter()
-                    .cloned()
-                    .map(|it| {
-                        DropdownMenuEntry::CheckboxItem(
-                            DropdownMenuCheckboxItem::new(it.checked, it.label)
-                                .disabled(it.disabled),
-                        )
-                    })
-                    .collect()
-            },
-        )
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct DataTableGlobalFilterInput {
-    pub model: Model<String>,
-    pub placeholder: Arc<str>,
-}
-
-impl DataTableGlobalFilterInput {
-    pub fn new(model: Model<String>) -> Self {
-        Self {
-            model,
-            placeholder: Arc::from("Filter..."),
-        }
-    }
-
-    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
-        self.placeholder = placeholder.into();
-        self
-    }
-
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        Input::new(self.model)
-            .placeholder(self.placeholder)
-            .into_element(cx)
-    }
-}
+/// Backwards-compatible name for the previous `DataTableTanstack`.
+///
+/// Prefer `DataTable` for new code.
+pub type DataTableTanstack = DataTable;
