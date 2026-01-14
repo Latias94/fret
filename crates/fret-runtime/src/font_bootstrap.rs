@@ -34,6 +34,13 @@ pub fn apply_font_catalog_update(
     families: Vec<String>,
     policy: FontFamilyDefaultsPolicy,
 ) -> FontCatalogUpdate {
+    fn push_if_missing(list: &mut Vec<String>, name: &str) {
+        if list.iter().any(|v| v.eq_ignore_ascii_case(name)) {
+            return;
+        }
+        list.push(name.to_string());
+    }
+
     let prev_rev = app.global::<FontCatalog>().map(|c| c.revision).unwrap_or(0);
     let revision = prev_rev.saturating_add(1);
 
@@ -89,6 +96,9 @@ pub fn apply_font_catalog_update(
                     "Noto Sans".to_string(),
                     "DejaVu Sans".to_string(),
                 ];
+                for emoji in ["Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji"] {
+                    push_if_missing(&mut config.ui_sans, emoji);
+                }
             }
             if config.ui_serif.is_empty() {
                 config.ui_serif = vec![
@@ -97,6 +107,9 @@ pub fn apply_font_catalog_update(
                     "Georgia".to_string(),
                     "DejaVu Serif".to_string(),
                 ];
+                for emoji in ["Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji"] {
+                    push_if_missing(&mut config.ui_serif, emoji);
+                }
             }
             if config.ui_mono.is_empty() {
                 config.ui_mono = vec![
@@ -107,6 +120,9 @@ pub fn apply_font_catalog_update(
                     "DejaVu Sans Mono".to_string(),
                     "Noto Sans Mono".to_string(),
                 ];
+                for emoji in ["Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji"] {
+                    push_if_missing(&mut config.ui_mono, emoji);
+                }
             }
         }
     }
@@ -121,5 +137,75 @@ pub fn apply_font_catalog_update(
         cache,
         config,
         config_changed,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::any::{Any, TypeId};
+    use std::collections::HashMap;
+
+    #[derive(Default)]
+    struct TestApp {
+        globals: HashMap<TypeId, Box<dyn Any>>,
+    }
+
+    impl GlobalsHost for TestApp {
+        fn global<T: 'static>(&self) -> Option<&T> {
+            self.globals
+                .get(&TypeId::of::<T>())
+                .and_then(|v| v.downcast_ref::<T>())
+        }
+
+        fn global_mut<T: 'static>(&mut self) -> Option<&mut T> {
+            self.globals
+                .get_mut(&TypeId::of::<T>())
+                .and_then(|v| v.downcast_mut::<T>())
+        }
+
+        fn set_global<T: 'static>(&mut self, value: T) {
+            self.globals.insert(TypeId::of::<T>(), Box::new(value));
+        }
+
+        fn with_global_mut<T: 'static, R>(
+            &mut self,
+            init: impl FnOnce() -> T,
+            f: impl FnOnce(&mut T, &mut Self) -> R,
+        ) -> R {
+            let type_id = TypeId::of::<T>();
+
+            let mut value: T = self
+                .globals
+                .remove(&type_id)
+                .and_then(|v| v.downcast::<T>().ok())
+                .map(|v| *v)
+                .unwrap_or_else(init);
+
+            let out = f(&mut value, self);
+
+            self.globals.insert(type_id, Box::new(value));
+            out
+        }
+    }
+
+    #[test]
+    fn curated_defaults_append_known_emoji_families() {
+        let mut app = TestApp::default();
+        let update = apply_font_catalog_update(
+            &mut app,
+            vec!["Inter".to_string(), "JetBrains Mono".to_string()],
+            FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
+        );
+
+        for list in [
+            &update.config.ui_sans,
+            &update.config.ui_serif,
+            &update.config.ui_mono,
+        ] {
+            assert!(list.iter().any(|v| v == "Apple Color Emoji"));
+            assert!(list.iter().any(|v| v == "Segoe UI Emoji"));
+            assert!(list.iter().any(|v| v == "Noto Color Emoji"));
+        }
     }
 }
