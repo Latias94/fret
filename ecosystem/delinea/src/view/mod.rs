@@ -208,9 +208,9 @@ impl ViewState {
                 .unwrap_or_default();
             let x_node = data_zoom_x_node(model, state, series.x_axis, x_axis_range);
             let x_filter_mode = x_node.filter_mode();
-            let mut x_window = x_node.apply(x, base_range);
+            let x_window = x_node.apply(x, base_range);
 
-            let mut selection = x_window.selection;
+            let selection = x_window.selection;
 
             let y_filter_mode = model
                 .data_zoom_y_by_axis
@@ -226,40 +226,6 @@ impl ViewState {
                 .unwrap_or_default();
             let y_node = data_zoom_y_node(model, state, series.y_axis, y_axis_range);
             let y_filter = y_node.y_filter();
-
-            const MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN: usize = 200_000;
-            let band_y1_ready = if series.kind == crate::spec::SeriesKind::Band {
-                if let Some(y1_field) = series.encode.y2
-                    && let Some(y1_col) = dataset.fields.get(&y1_field).copied()
-                {
-                    table.column_f64(y1_col).is_some()
-                } else {
-                    false
-                }
-            } else {
-                true
-            };
-
-            let xy_weak_filter_active = series.stack.is_none()
-                && matches!(
-                    series.kind,
-                    crate::spec::SeriesKind::Scatter
-                        | crate::spec::SeriesKind::Line
-                        | crate::spec::SeriesKind::Area
-                        | crate::spec::SeriesKind::Band
-                )
-                && x_filter_mode == FilterMode::WeakFilter
-                && y_filter_mode == FilterMode::WeakFilter
-                && x_node.window().is_some()
-                && state.data_window_y.get(&series.y_axis).is_some()
-                && band_y1_ready
-                && base_range.end.saturating_sub(base_range.start)
-                    <= MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN;
-
-            if xy_weak_filter_active {
-                selection = RowSelection::Range(base_range);
-                x_window.x_policy.filter = Default::default();
-            }
 
             self.series.push(SeriesView {
                 series: *series_id,
