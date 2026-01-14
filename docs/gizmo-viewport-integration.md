@@ -150,6 +150,8 @@ Recommended host pattern:
   `fret_ui_kit::viewport_tooling::route_viewport_tools(...)`.
 - Use `ViewportToolRouterState` (`hot` / `active` / captured button) as the stable “tool session”
   state you store in your model.
+- If you need a pure “am I over a handle?” check for routing, prefer the side-effect-free pick helper:
+  - `GizmoPluginManager::pick_hovered_handle(...)` (no state updates; see ADR 0168 hit-test rule)
 
 End-to-end reference:
 
