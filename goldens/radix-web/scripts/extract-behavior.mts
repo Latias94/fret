@@ -72,6 +72,8 @@ type ScenarioContext = {
   timeoutMs: number
 }
 
+const SETTLE_MS = 50
+
 function parseArgs(argv: string[]): {
   flags: Record<string, string | boolean>
   names: string[]
@@ -515,6 +517,58 @@ async function pressChord(page: puppeteer.Page, keys: string[]) {
   }
 }
 
+type ActiveElementInfo = {
+  tag: string
+  role: string | null
+  inMenu: boolean
+  text: string
+}
+
+async function activeElementInfo(page: puppeteer.Page): Promise<ActiveElementInfo> {
+  return await page.evaluate(() => {
+    const el = document.activeElement
+    const htmlEl = el instanceof HTMLElement ? el : null
+    const role = htmlEl?.getAttribute("role") ?? null
+    const inMenu = htmlEl ? Boolean(htmlEl.closest('[role="menu"]')) : false
+    const text = htmlEl ? (htmlEl.textContent || "").trim() : ""
+    return {
+      tag: htmlEl ? htmlEl.tagName.toLowerCase() : "unknown",
+      role,
+      inMenu,
+      text: text.length > 120 ? text.slice(0, 120) + "…" : text,
+    }
+  })
+}
+
+async function pressUntilActiveElementContainsText(
+  page: puppeteer.Page,
+  key: string,
+  containsText: string,
+  maxPresses: number
+): Promise<string[]> {
+  const pressed: string[] = []
+  for (let i = 0; i < maxPresses; i++) {
+    const active = await activeElementInfo(page)
+    if (
+      active.inMenu &&
+      active.role &&
+      active.role.startsWith("menuitem") &&
+      active.text.includes(containsText)
+    ) {
+      return pressed
+    }
+    await press(page, key)
+    pressed.push(key)
+    await sleep(SETTLE_MS)
+  }
+  const active = await activeElementInfo(page)
+  throw new Error(
+    `active element did not match role=menuitem* and contain text=${containsText} after ${maxPresses} presses of ${key}; last active=${JSON.stringify(
+      active
+    )}`
+  )
+}
+
 async function clickUntilRoleAppears(
   page: puppeteer.Page,
   selector: string,
@@ -913,6 +967,49 @@ const scenarios: Scenario[] = [
   },
   {
     primitive: "context-menu",
+    scenario: "submenu-keyboard-open-close",
+    item: "context-menu-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+
+      await rightClickExampleTrigger(
+        ctx.page,
+        "With Submenu",
+        '[data-slot="context-menu-trigger"]'
+      )
+      await sleep(50)
+      await waitForRole(ctx.page, "menu", true, Math.min(15000, ctx.timeoutMs))
+      await pushStep(ctx, { kind: "click", target: "context-menu:with-submenu" })
+
+      const pressed = await pressUntilActiveElementContainsText(
+        ctx.page,
+        "ArrowDown",
+        "More Tools",
+        20
+      )
+      await press(ctx.page, "ArrowRight")
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="context-menu-sub-content"]',
+        true,
+        ctx.timeoutMs
+      )
+      await pushStep(ctx, { kind: "press", key: [...pressed, "ArrowRight"].join(",") })
+
+      await press(ctx.page, "ArrowLeft")
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="context-menu-sub-content"]',
+        false,
+        ctx.timeoutMs
+      )
+      await pushStep(ctx, { kind: "press", key: "ArrowLeft" })
+    },
+  },
+  {
+    primitive: "context-menu",
     scenario: "submenu-hover-select",
     item: "context-menu-example",
     async run(ctx) {
@@ -1250,6 +1347,55 @@ const scenarios: Scenario[] = [
       await pressChord(ctx.page, ["ArrowDown", "Escape"])
       await sleep(50)
       await pushStep(ctx, { kind: "press", key: "ArrowDown,Escape" })
+    },
+  },
+  {
+    primitive: "menubar",
+    scenario: "submenu-keyboard-open-close",
+    item: "menubar-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+
+      await clickExampleWithinSelectorByText(
+        ctx.page,
+        "With Submenu",
+        '[data-slot="menubar-trigger"]',
+        "File"
+      )
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="menubar-content"]',
+        true,
+        Math.min(15000, ctx.timeoutMs)
+      )
+      await pushStep(ctx, { kind: "click", target: "menubar:with-submenu:file" })
+
+      const pressed = await pressUntilActiveElementContainsText(
+        ctx.page,
+        "ArrowDown",
+        "Share",
+        20
+      )
+      await press(ctx.page, "ArrowRight")
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="menubar-sub-content"]',
+        true,
+        ctx.timeoutMs
+      )
+      await pushStep(ctx, { kind: "press", key: [...pressed, "ArrowRight"].join(",") })
+
+      await press(ctx.page, "ArrowLeft")
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="menubar-sub-content"]',
+        false,
+        ctx.timeoutMs
+      )
+      await pushStep(ctx, { kind: "press", key: "ArrowLeft" })
     },
   },
   {
