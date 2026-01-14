@@ -66,9 +66,9 @@ Current:
 - Manual emoji conformance harness exists: `apps/fret-examples/src/emoji_conformance_demo.rs`.
   - Web runner supports `?demo=emoji_conformance_demo` and optional bundled emoji fonts via
     `apps/fret-demo-web` feature `emoji-fonts`.
-- Automated conformance (unit): color emoji glyphs produce `GlyphQuadKind::Color` and populate the
-  `color_atlas` when a color emoji font is available (`cargo nextest run -p fret-render`;
-  `crates/fret-render/src/text.rs`).
+- Automated conformance (unit): emoji sequences (VS16/ZWJ/flags/keycaps) produce
+  `GlyphQuadKind::Color` and populate the `color_atlas` when a bundled color emoji font is available
+  (`cargo nextest run -p fret-render`; `crates/fret-render/src/text.rs`).
 
 ## Acceptance Checklist (what “done” means)
 
@@ -216,3 +216,5 @@ Legend:
 - 2026-01-13: B7.3: add stable `FontFaceKey` registry (commit `9a7f81a`).
 - 2026-01-13: Align `TextService` to `prepare(&TextInput, ...)` and introduce `TextInputRef<'_>` for shaping-only codepaths.
 - 2026-01-14: Add automated color emoji atlas conformance test in `fret-render` (commit `26ddc6d`).
+- 2026-01-14: Expose `fret-fonts` bootstrap/emoji bundles (commit `84b8a65`).
+- 2026-01-14: Expand emoji sequence conformance (VS16/ZWJ/flags/keycaps) in `fret-render` (commit `dbc5a89`).
