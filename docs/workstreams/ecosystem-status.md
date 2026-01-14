@@ -69,6 +69,7 @@ What exists:
 - `DataTable` (first pass): fixed header + vertical virtualization (non-TanStack parity).
 - `DataGrid` prototype: explores 2D virtualization via nested virtual lists.
 - A TanStack-inspired headless engine exists in `fret-ui-kit` (ADR 0101), but needs recipe integration and validation.
+  - Note: the long-lived `fret-ui-kit` `table` feature gate has been removed; the table modules are now always available.
 
 Recent work (workstream prototype surfaces):
 
@@ -120,7 +121,7 @@ Why it matters:
 
 Gap:
 
-- `calendar` is still missing from the shadcn surface tracker.
+- `Calendar` + `DatePicker` are now present in `fret-ui-shadcn` as a first-pass v1 surface.
 
 Why it matters:
 

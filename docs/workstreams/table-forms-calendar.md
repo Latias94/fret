@@ -182,6 +182,39 @@ We will pursue a Glide-style architecture for the “upper bound” DataGrid:
 
 We keep the existing element-based `DataTable`/`DataGrid` for “rich cell UI” scenarios and as a correctness reference.
 
+## Consolidation Plan (Table/DataGrid Surfaces)
+
+Status: Planned (decision gates below)
+
+We currently have multiple table/grid surfaces in `fret-ui-shadcn`. This section defines how we
+intend to **converge** the public surface so users have a single obvious “default” path, while
+preserving specialized variants and performance ceilings.
+
+### Goal
+
+- One recommended `DataTable` surface for “admin/settings/inspector” UIs (headless-backed, TanStack vocabulary).
+- One recommended `DataGrid` surface for “spreadsheet density” UIs (canvas/GPU-backed).
+- Keep element-based grids/tables available for rich cell UI, but do not position them as the default.
+
+### Proposed mapping (public API)
+
+- **Headless (source of truth):** `fret-ui-kit::headless::table` (always available).
+- **Default table recipe:** `fret-ui-shadcn::DataTable` should be backed by the headless engine.
+  - Candidate: current `DataTableTanstack` (`ecosystem/fret-ui-shadcn/src/data_table_tanstack.rs`).
+- **Simple/legacy table:** current `DataTable` (`ecosystem/fret-ui-shadcn/src/data_table.rs`) should be renamed
+  (e.g. `DataTableSimple` or `DataTableLegacy`) and kept for a transition period.
+- **Performance ceiling grid:** `DataGridCanvas` remains the “spreadsheet scale” path.
+- **Element-based 2D grid:** `DataGrid` remains for rich cell UI and as a correctness/reference surface.
+
+### Decision gates (must decide before code changes)
+
+1) **Naming:** should `fret-ui-shadcn::DataTable` be repointed to the headless-backed implementation?
+   - If yes: we ship a rename + re-export migration plan.
+   - If no: we keep `DataTableTanstack` as the recommended default and treat `DataTable` as a “simple table”.
+
+2) **A11y semantics:** `DataTable` uses `Table` semantics, `DataGrid(Canvas)` uses `Grid` semantics (recommended),
+   but we should confirm this against our current semantics mapping support (ADR 0033 + ADR 0073).
+
 ## Variable Size Support (Why v1 likely needs it)
 
 Markdown-like cell content often implies:
