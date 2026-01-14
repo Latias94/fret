@@ -195,8 +195,7 @@ mod tests {
     impl TextService for FakeUiServices {
         fn prepare(
             &mut self,
-            _text: &str,
-            _style: &fret_core::TextStyle,
+            _input: &fret_core::TextInput,
             _constraints: fret_core::TextConstraints,
         ) -> (TextBlobId, TextMetrics) {
             (

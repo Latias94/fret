@@ -4,8 +4,8 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, DrawOrder, EffectChain, EffectMode, EffectQuality, Point, Px, Rect, RichText,
-    Scene, SceneOp, SvgFit, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
+    AttributedText, Color, Corners, DrawOrder, EffectChain, EffectMode, EffectQuality, Point, Px,
+    Rect, Scene, SceneOp, SvgFit, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
     Transform2D,
 };
 use fret_core::{PathCommand, PathConstraints, PathMetrics, PathStyle};
@@ -354,7 +354,7 @@ impl<'a> CanvasPainter<'a> {
         key: u64,
         order: DrawOrder,
         origin: Point,
-        rich: RichText,
+        rich: AttributedText,
         base_style: TextStyle,
         color: Color,
         constraints: CanvasTextConstraints,
@@ -626,7 +626,7 @@ impl CanvasCache {
                 HostedTextContent::Plain(text) => {
                     services
                         .text()
-                        .prepare(text.as_ref(), &style, text_constraints)
+                        .prepare_str(text.as_ref(), &style, text_constraints)
                 }
                 HostedTextContent::Rich(rich) => {
                     services.text().prepare_rich(rich, &style, text_constraints)
@@ -776,7 +776,7 @@ struct CanvasTextCacheKey {
 #[derive(Debug, Clone, PartialEq)]
 enum HostedTextContent {
     Plain(Arc<str>),
-    Rich(RichText),
+    Rich(AttributedText),
 }
 
 #[derive(Debug, Clone, PartialEq)]

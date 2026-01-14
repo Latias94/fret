@@ -98,6 +98,18 @@ pub fn apply_op(graph: &mut Graph, op: &GraphOp) -> Result<(), ApplyError> {
             };
             node.pos = *to;
         }
+        GraphOp::SetNodeKind { id, to, .. } => {
+            let Some(node) = graph.nodes.get_mut(id) else {
+                return Err(ApplyError::MissingNode { id: *id });
+            };
+            node.kind = to.clone();
+        }
+        GraphOp::SetNodeKindVersion { id, to, .. } => {
+            let Some(node) = graph.nodes.get_mut(id) else {
+                return Err(ApplyError::MissingNode { id: *id });
+            };
+            node.kind_version = *to;
+        }
         GraphOp::SetNodeParent { id, to, .. } => {
             let Some(node) = graph.nodes.get_mut(id) else {
                 return Err(ApplyError::MissingNode { id: *id });

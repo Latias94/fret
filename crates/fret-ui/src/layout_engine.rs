@@ -10,10 +10,7 @@ use taffy::{TaffyTree, prelude::NodeId as TaffyNodeId};
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 
 mod flow;
-pub(crate) use flow::{
-    ParentLayoutKind, build_flow_subtree, build_viewport_flow_subtree,
-    layout_children_from_engine_if_solved,
-};
+pub(crate) use flow::{build_viewport_flow_subtree, layout_children_from_engine_if_solved};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct NodeContext {
@@ -297,7 +294,7 @@ impl TaffyLayoutEngine {
         }
     }
 
-    #[cfg_attr(feature = "layout-engine-v2", stacksafe::stacksafe)]
+    #[stacksafe::stacksafe]
     pub fn compute_root_with_measure(
         &mut self,
         root: LayoutId,

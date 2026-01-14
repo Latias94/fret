@@ -16,6 +16,8 @@ fret-ui = { path = "../../crates/fret-ui" }
 fret-canvas = { path = "../fret-canvas", optional = true }
 fret-icons = { path = "../fret-icons", optional = true }
 tracing.workspace = true
+time.workspace = true
+virtualizer.workspace = true
 
 [features]
 # Default to a minimal, third-party-friendly foundation surface.
@@ -30,7 +32,8 @@ icons = ["dep:fret-icons"]
 # Opinionated declarative helpers that are closer to "recipes" than substrate.
 recipes = ["icons", "dep:fret-canvas"]
 
-# TanStack-inspired headless table engine (`headless::table`).
+# Compatibility flag (no longer gates) for the TanStack-inspired table surface
+# (`headless::table` + `declarative::table`).
 table = []
 
 [dev-dependencies]

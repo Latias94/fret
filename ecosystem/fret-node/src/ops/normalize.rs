@@ -31,6 +31,24 @@ fn try_coalesce_setter(last: &mut GraphOp, next: &GraphOp) -> bool {
             true
         }
         (
+            GraphOp::SetNodeKind {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetNodeKind { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = to.clone();
+            true
+        }
+        (
+            GraphOp::SetNodeKindVersion {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetNodeKindVersion { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = *to;
+            true
+        }
+        (
             GraphOp::SetNodeParent {
                 id: a, to: last_to, ..
             },
@@ -118,6 +136,8 @@ fn try_coalesce_setter(last: &mut GraphOp, next: &GraphOp) -> bool {
 fn op_is_noop(op: &GraphOp) -> bool {
     match op {
         GraphOp::SetNodePos { from, to, .. } => from == to,
+        GraphOp::SetNodeKind { from, to, .. } => from == to,
+        GraphOp::SetNodeKindVersion { from, to, .. } => from == to,
         GraphOp::SetNodeParent { from, to, .. } => from == to,
         GraphOp::SetNodeSize { from, to, .. } => from == to,
         GraphOp::SetNodeCollapsed { from, to, .. } => from == to,

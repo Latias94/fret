@@ -528,13 +528,20 @@ impl WinitAppDriver for TableDemoDriver {
                                                         ..Default::default()
                                                     },
                                                     |_row| None,
-                                                    |cx, col, _sort| {
-                                                        let label: Arc<str> = match col.id.as_ref() {
+                                                    |cx, col, sort_state| {
+                                                        let label_base: Arc<str> = match col.id.as_ref() {
                                                             "id" => Arc::from("ID"),
                                                             "name" => Arc::from("Name"),
                                                             "role" => Arc::from("Role"),
                                                             "score" => Arc::from("Score"),
                                                             _ => Arc::from(col.id.as_ref()),
+                                                        };
+                                                        let label: Arc<str> = if let Some(desc) = sort_state {
+                                                            let mut s = label_base.to_string();
+                                                            s.push_str(if desc { " ▼" } else { " ▲" });
+                                                            Arc::from(s)
+                                                        } else {
+                                                            label_base
                                                         };
                                                         let open = match col.id.as_ref() {
                                                             "id" => header_menu_id_open.clone(),
@@ -566,7 +573,7 @@ impl WinitAppDriver for TableDemoDriver {
 
                                                         vec![ContextMenu::new(open).into_element(
                                                             cx,
-                                                            |cx| cx.text(label),
+                                                            |cx| cx.text(label.clone()),
                                                             |_cx| {
                                                                 let mut entries = Vec::new();
                                                                 if groupable {
@@ -632,6 +639,7 @@ impl WinitAppDriver for TableDemoDriver {
                                                         };
                                                         vec![cx.text(text)]
                                                     },
+                                                    None,
                                                 )]
                                             },
                                         ),

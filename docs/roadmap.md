@@ -10,7 +10,12 @@ Historical MVP planning snapshots live under `docs/archive/` (e.g. `docs/archive
 `docs/archive/mvp/active-plan.md`). These are kept for context only and are not maintained as
 active plans.
 
-Workstream notes live under `docs/workstreams/` (not a roadmap; do not treat as progress tracking).
+Workstream docs live under `docs/workstreams/` (living implementation trackers; not normative contracts).
+
+Active tracker highlights:
+
+- Text system v2 (Parley + attributed spans): `docs/workstreams/text-system-v2-parley.md` (see also `docs/todo-tracker.md`).
+- Fonts bootstrap + invalidation contract: `docs/adr/0162-font-stack-bootstrap-and-textfontstackkey-v1.md`.
 
 For the “foundation-first, component-validated” execution loop (Plan C), see `docs/foundation-first-workflow.md`.
 

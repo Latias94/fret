@@ -6,12 +6,49 @@ pub struct PaginationState {
     pub page_size: usize,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct PaginationBounds {
+    pub page_index: usize,
+    pub page_count: usize,
+    pub can_prev: bool,
+    pub can_next: bool,
+    pub page_start: usize,
+    pub page_end: usize,
+}
+
 impl Default for PaginationState {
     fn default() -> Self {
         Self {
             page_index: 0,
             page_size: 10,
         }
+    }
+}
+
+pub fn pagination_bounds(total_rows: usize, pagination: PaginationState) -> PaginationBounds {
+    if pagination.page_size == 0 || total_rows == 0 {
+        return PaginationBounds {
+            page_index: 0,
+            page_count: 0,
+            can_prev: false,
+            can_next: false,
+            page_start: 0,
+            page_end: 0,
+        };
+    }
+
+    let page_count = total_rows.div_ceil(pagination.page_size);
+    let page_index = pagination.page_index.min(page_count.saturating_sub(1));
+    let page_start = page_index.saturating_mul(pagination.page_size);
+    let page_end = (page_start.saturating_add(pagination.page_size)).min(total_rows);
+
+    PaginationBounds {
+        page_index,
+        page_count,
+        can_prev: page_index > 0,
+        can_next: page_index + 1 < page_count,
+        page_start,
+        page_end,
     }
 }
 
@@ -122,5 +159,52 @@ mod tests {
             .filter_map(|&i| paged.row(i).map(|r| r.key.0))
             .collect::<Vec<_>>();
         assert_eq!(ids, vec![0, 1, 2, 3, 4]);
+    }
+
+    #[test]
+    fn pagination_bounds_clamps_and_reports_can_next_prev() {
+        let b = pagination_bounds(
+            5,
+            PaginationState {
+                page_index: 0,
+                page_size: 2,
+            },
+        );
+        assert_eq!(
+            b,
+            PaginationBounds {
+                page_index: 0,
+                page_count: 3,
+                can_prev: false,
+                can_next: true,
+                page_start: 0,
+                page_end: 2,
+            }
+        );
+
+        let b = pagination_bounds(
+            5,
+            PaginationState {
+                page_index: 10,
+                page_size: 2,
+            },
+        );
+        assert_eq!(b.page_index, 2);
+        assert_eq!(b.page_count, 3);
+        assert!(!b.can_next);
+        assert!(b.can_prev);
+        assert_eq!((b.page_start, b.page_end), (4, 5));
+
+        let b = pagination_bounds(
+            0,
+            PaginationState {
+                page_index: 0,
+                page_size: 10,
+            },
+        );
+        assert_eq!(b.page_count, 0);
+        assert_eq!(b.page_index, 0);
+        assert!(!b.can_prev);
+        assert!(!b.can_next);
     }
 }

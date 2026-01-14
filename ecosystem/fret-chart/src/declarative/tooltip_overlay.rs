@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 
 use delinea::engine::AxisPointerOutput;
 use delinea::ids::SeriesId;
-use fret_core::{Color, Corners, DrawOrder, Edges, Point, Px, Rect, Size, StrokeStyle};
+use fret_core::{Color, Corners, DrawOrder, Edges, Point, Px, Rect, Size};
 use fret_ui::canvas::{CanvasPainter, CanvasTextConstraints};
 use fret_ui_kit::recipes::canvas_pan_zoom::PanZoomCanvasPaintCx;
 use fret_ui_kit::recipes::canvas_tool_router::{CanvasToolEntry, CanvasToolHandlers, CanvasToolId};
@@ -46,103 +46,7 @@ pub(crate) fn tooltip_overlay_tool(
                 return;
             }
 
-            // Crosshair (P0 axisPointer affordance for declarative).
             let crosshair = axis_pointer.crosshair_px;
-            let order = DrawOrder(style.draw_order.0.saturating_add(9_000));
-
-            if let Some(shadow) = axis_pointer.shadow_rect_px {
-                painter.scene().push(fret_core::SceneOp::Quad {
-                    order,
-                    rect: shadow,
-                    background: style.band_fill_color,
-                    border: Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
-                    corner_radii: Corners::all(Px(0.0)),
-                });
-            }
-
-            let crosshair_scope = painter.key_scope(&"fret-chart.declarative.crosshair");
-            let wants_crosshair_x = matches!(
-                &axis_pointer.tooltip,
-                delinea::TooltipOutput::Axis(axis) if axis.axis_kind == delinea::spec::AxisKind::X
-            ) || matches!(
-                &axis_pointer.tooltip,
-                delinea::TooltipOutput::Item(_)
-            );
-            let wants_crosshair_y = matches!(
-                &axis_pointer.tooltip,
-                delinea::TooltipOutput::Axis(axis) if axis.axis_kind == delinea::spec::AxisKind::Y
-            ) || matches!(
-                &axis_pointer.tooltip,
-                delinea::TooltipOutput::Item(_)
-            );
-
-            if wants_crosshair_x {
-                let key: u64 = painter
-                    .child_key(
-                        crosshair_scope,
-                        &(
-                            "x",
-                            crosshair.x.0.to_bits(),
-                            bounds.origin.y.0.to_bits(),
-                            bounds.size.height.0.to_bits(),
-                        ),
-                    )
-                    .into();
-                painter.path(
-                    key,
-                    DrawOrder(order.0.saturating_add(1)),
-                    Point::new(Px(0.0), Px(0.0)),
-                    &[
-                        fret_core::PathCommand::MoveTo(Point::new(
-                            Px(crosshair.x.0),
-                            bounds.origin.y,
-                        )),
-                        fret_core::PathCommand::LineTo(Point::new(
-                            Px(crosshair.x.0),
-                            Px(bounds.origin.y.0 + bounds.size.height.0),
-                        )),
-                    ],
-                    fret_core::PathStyle::Stroke(StrokeStyle {
-                        width: style.crosshair_width,
-                    }),
-                    style.crosshair_color,
-                    paint_cx.raster_scale_factor,
-                );
-            }
-            if wants_crosshair_y {
-                let key: u64 = painter
-                    .child_key(
-                        crosshair_scope,
-                        &(
-                            "y",
-                            crosshair.y.0.to_bits(),
-                            bounds.origin.x.0.to_bits(),
-                            bounds.size.width.0.to_bits(),
-                        ),
-                    )
-                    .into();
-                painter.path(
-                    key,
-                    DrawOrder(order.0.saturating_add(2)),
-                    Point::new(Px(0.0), Px(0.0)),
-                    &[
-                        fret_core::PathCommand::MoveTo(Point::new(
-                            bounds.origin.x,
-                            Px(crosshair.y.0),
-                        )),
-                        fret_core::PathCommand::LineTo(Point::new(
-                            Px(bounds.origin.x.0 + bounds.size.width.0),
-                            Px(crosshair.y.0),
-                        )),
-                    ],
-                    fret_core::PathStyle::Stroke(StrokeStyle {
-                        width: style.crosshair_width,
-                    }),
-                    style.crosshair_color,
-                    paint_cx.raster_scale_factor,
-                );
-            }
 
             let mut axis_pointer_label_rect: Option<Rect> = None;
             if !state.axis_pointer_labels.is_empty() {
@@ -250,22 +154,6 @@ pub(crate) fn tooltip_overlay_tool(
                         paint_cx.raster_scale_factor,
                     );
                 }
-            }
-
-            // Hover marker (best-effort).
-            if let Some(hit) = axis_pointer.hit {
-                let r = style.hover_point_size.0.max(1.0);
-                painter.scene().push(fret_core::SceneOp::Quad {
-                    order: DrawOrder(order.0.saturating_add(3)),
-                    rect: Rect::new(
-                        Point::new(Px(hit.point_px.x.0 - r), Px(hit.point_px.y.0 - r)),
-                        Size::new(Px(2.0 * r), Px(2.0 * r)),
-                    ),
-                    background: style.hover_point_color,
-                    border: Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
-                    corner_radii: Corners::all(Px(r)),
-                });
             }
 
             // Tooltip box.

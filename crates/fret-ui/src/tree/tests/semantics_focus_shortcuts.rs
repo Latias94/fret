@@ -95,6 +95,7 @@ fn modal_barrier_clears_focus_and_capture_in_underlay() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -764,7 +765,7 @@ fn remove_layer_uninstalls_overlay_and_removes_subtree() {
 
     // Pretend an overlay widget captured focus/pointer.
     ui.focus = Some(overlay_child);
-    ui.captured = Some(overlay_child);
+    ui.captured.insert(fret_core::PointerId(0), overlay_child);
 
     let mut services = FakeUiServices;
     let removed_root = ui.remove_layer(&mut services, layer);
@@ -849,6 +850,7 @@ fn event_cx_bounds_tracks_translated_nodes() {
             position: Point::new(Px(10.0), Px(110.0)),
             buttons: fret_core::MouseButtons::default(),
             modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );

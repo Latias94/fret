@@ -169,6 +169,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             buttons,
             modifiers,
             pointer_type,
+            ..
         }) => {
             let hook = crate::elements::with_element_state(
                 &mut *cx.app,
@@ -219,6 +220,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             delta,
             modifiers,
             pointer_type: _,
+            ..
         }) => {
             let hook = crate::elements::with_element_state(
                 &mut *cx.app,
@@ -268,6 +270,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             delta,
             modifiers,
             pointer_type,
+            ..
         }) => {
             let hook = crate::elements::with_element_state(
                 &mut *cx.app,

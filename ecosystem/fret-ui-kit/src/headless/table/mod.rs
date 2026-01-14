@@ -62,6 +62,7 @@ pub use grouping::{
     toggled_column_grouping_value,
 };
 pub use options::TableOptions;
+pub use pagination::{PaginationBounds, pagination_bounds};
 pub use pagination::{PaginationState, paginate_row_model};
 pub use row_expanding::{
     ExpandingState, expand_row_model, expanded_depth, is_row_expanded, is_some_rows_expanded,

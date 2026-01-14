@@ -16,6 +16,8 @@ cargo-clippy = []
 # Dev-only hotpatch integration (Subsecond). Feature-gated to avoid leaking dev tooling deps
 # into normal builds. See ADR 0107.
 hotpatch-subsecond = ["dep:serde_json", "dep:subsecond", "dep:tungstenite"]
+wasm-emoji-fonts = ["fret-fonts/emoji"]
+wasm-cjk-lite-fonts = ["fret-fonts/cjk-lite"]
 
 [dependencies]
 fret-app = { path = "../fret-app" }

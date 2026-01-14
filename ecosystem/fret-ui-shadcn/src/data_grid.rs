@@ -7,13 +7,16 @@ use fret_core::{Color, Px};
 use fret_runtime::CommandId;
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, InsetStyle, LayoutStyle, Length, MainAlign, Overflow,
-    PositionStyle, PressableProps, ScrollAxis, ScrollbarAxis, ScrollbarProps, ScrollbarStyle,
-    SizeStyle, StackProps, WheelRegionProps,
+    PositionStyle, PressableProps, ScrollAxis, ScrollProps, ScrollbarAxis, ScrollbarProps,
+    ScrollbarStyle, SizeStyle, StackProps, WheelRegionProps,
 };
-use fret_ui::scroll::VirtualListScrollHandle;
+use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::headless::grid_viewport::{
+    GridAxisMetrics, compute_grid_viewport_2d, default_range_extractor,
+};
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement};
 
 use crate::table::{TableCell, TableHead};
@@ -36,9 +39,11 @@ impl Default for DataGridRowState {
 }
 
 #[derive(Debug, Default, Clone)]
-struct DataGridScrollHandles {
-    rows: VirtualListScrollHandle,
-    cols: VirtualListScrollHandle,
+struct DataGridViewportState {
+    scroll: ScrollHandle,
+    row_metrics: GridAxisMetrics<u64>,
+    col_metrics: GridAxisMetrics<u64>,
+    applied_col_signature: (u64, usize),
 }
 
 fn with_alpha(mut c: Color, a: f32) -> Color {
@@ -85,23 +90,6 @@ fn list_layout_style() -> LayoutStyle {
     layout.flex.shrink = 1.0;
     layout.flex.basis = Length::Px(Px(0.0));
     layout
-}
-
-fn fixed_width_container<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    width: Px,
-    child: AnyElement,
-) -> AnyElement {
-    let mut layout = LayoutStyle::default();
-    layout.size.width = Length::Px(width);
-    layout.size.height = Length::Fill;
-    cx.container(
-        ContainerProps {
-            layout,
-            ..Default::default()
-        },
-        move |_cx| vec![child],
-    )
 }
 
 #[derive(Debug, Clone)]
@@ -167,7 +155,7 @@ impl DataGrid {
         rows_revision: u64,
         cols_revision: u64,
         row_key_at: impl FnMut(usize) -> u64,
-        mut row_state_at: impl FnMut(usize) -> DataGridRowState,
+        row_state_at: impl FnMut(usize) -> DataGridRowState,
         cell_at: impl FnMut(&mut ElementContext<'_, H>, usize, usize) -> AnyElement,
     ) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
@@ -200,15 +188,9 @@ impl DataGrid {
             let border = border_color(&theme);
             let row_bg = muted_bg(&theme);
 
-            let handles = cx.with_state(DataGridScrollHandles::default, |h| h.clone());
-            let row_handle = handles.rows.clone();
-            let col_handle = handles.cols.clone();
-
             let mut stack_layout = LayoutStyle::default();
             stack_layout.size.width = Length::Fill;
             stack_layout.size.height = Length::Fill;
-
-            let mut row_key_at = row_key_at;
             let cell_at = cell_at.clone();
 
             let stack = cx.stack_props(
@@ -217,7 +199,252 @@ impl DataGrid {
                 },
                 move |cx| {
                     let theme = Theme::global(&*cx.app).clone();
+                    let theme_for_body = theme.clone();
+                    let headers = headers.clone();
                     let col_widths = col_widths.clone();
+
+                    let (scroll_handle, scroll_x, total_w, total_h, rows_visible, cols_visible) =
+                        cx.with_state(DataGridViewportState::default, |state| {
+                            let cols_signature = (cols_revision, cols);
+                            state.row_metrics.ensure_fixed_with_key(
+                                rows,
+                                rows_revision,
+                                row_height,
+                                Px(0.0),
+                                Px(0.0),
+                                |i| i as u64,
+                            );
+
+                            if col_widths.is_empty() {
+                                state.col_metrics.ensure_fixed_with_key(
+                                    cols,
+                                    cols_revision,
+                                    Px(160.0),
+                                    Px(0.0),
+                                    Px(0.0),
+                                    |i| i as u64,
+                                );
+                            } else {
+                                state.col_metrics.ensure_measured_with_key(
+                                    cols,
+                                    cols_revision,
+                                    Px(160.0),
+                                    Px(0.0),
+                                    Px(0.0),
+                                    |i| i as u64,
+                                );
+                            }
+
+                            if state.applied_col_signature != cols_signature {
+                                if !col_widths.is_empty() {
+                                    state.col_metrics.reset_measurements();
+                                    for i in 0..cols {
+                                        let w = col_widths.get(i).copied().unwrap_or(Px(160.0));
+                                        state.col_metrics.measure(i, w);
+                                    }
+                                }
+                                state.applied_col_signature = cols_signature;
+                            }
+
+                            let viewport = state.scroll.viewport_size();
+                            let offset = state.scroll.offset();
+                            let vp = compute_grid_viewport_2d(
+                                &state.row_metrics,
+                                &state.col_metrics,
+                                offset.x,
+                                offset.y,
+                                viewport.width,
+                                viewport.height,
+                                overscan_rows,
+                                overscan_cols,
+                            );
+
+                            let mut rows_visible = Vec::new();
+                            let mut cols_visible = Vec::new();
+                            let mut scroll_x = offset.x;
+                            if let Some(vp) = vp {
+                                scroll_x = vp.scroll_x;
+                                rows_visible = default_range_extractor(vp.row_range)
+                                    .into_iter()
+                                    .filter_map(|i| state.row_metrics.axis_item(i))
+                                    .collect();
+                                cols_visible = default_range_extractor(vp.col_range)
+                                    .into_iter()
+                                    .filter_map(|i| state.col_metrics.axis_item(i))
+                                    .collect();
+                            }
+
+                            (
+                                state.scroll.clone(),
+                                scroll_x,
+                                state.col_metrics.total_size(),
+                                state.row_metrics.total_size(),
+                                rows_visible,
+                                cols_visible,
+                            )
+                        });
+
+                    let body = {
+                        let mut body_layout = list_layout_style();
+                        body_layout.overflow = Overflow::Clip;
+
+                        let mut content_layout = LayoutStyle::default();
+                        content_layout.size.width = Length::Px(total_w);
+                        content_layout.size.height = Length::Px(total_h);
+                        content_layout.overflow = Overflow::Visible;
+
+                        let cell_at = cell_at.clone();
+                        let cols_visible = cols_visible.clone();
+                        let rows_visible = rows_visible.clone();
+
+                        cx.scroll(
+                            ScrollProps {
+                                layout: body_layout,
+                                axis: ScrollAxis::Both,
+                                scroll_handle: Some(scroll_handle.clone()),
+                                ..Default::default()
+                            },
+                            move |cx| {
+                                let cell_at = cell_at.clone();
+                                let cols_visible = cols_visible.clone();
+
+                                let mut row_key_at = row_key_at;
+                                let mut row_state_at = row_state_at;
+
+                                vec![cx.container(
+                                    ContainerProps {
+                                        layout: content_layout,
+                                        ..Default::default()
+                                    },
+                                    move |cx| {
+                                        let mut out = Vec::new();
+                                        for row in rows_visible.iter() {
+                                            let st = row_state_at(row.index);
+                                            let on_click = st.on_click;
+                                            let selected = st.selected;
+                                            let enabled = st.enabled;
+                                            let row_key = row_key_at(row.index);
+                                            let is_last = row.index + 1 == rows;
+
+                                            let pressable_layout = LayoutStyle {
+                                                position: PositionStyle::Absolute,
+                                                inset: InsetStyle {
+                                                    top: Some(row.start),
+                                                    left: Some(Px(0.0)),
+                                                    ..Default::default()
+                                                },
+                                                size: SizeStyle {
+                                                    width: Length::Px(total_w),
+                                                    height: Length::Px(row.size),
+                                                    ..Default::default()
+                                                },
+                                                ..Default::default()
+                                            };
+                                            let pressable = PressableProps {
+                                                enabled,
+                                                layout: pressable_layout,
+                                                ..Default::default()
+                                            };
+
+                                            let row_theme = theme_for_body.clone();
+                                            let row_cell_at = cell_at.clone();
+                                            let row_cols_visible = cols_visible.clone();
+
+                                            out.push(cx.keyed(row_key, move |cx| {
+                                                cx.pressable(pressable, move |cx, state| {
+                                                    cx.pressable_dispatch_command_opt(on_click);
+
+                                                    let mut hover_bg = row_bg;
+                                                    hover_bg.a *= 0.5;
+                                                    let selected_bg = row_bg;
+
+                                                    let mut chrome = ChromeRefinement::default()
+                                                        .border_1()
+                                                        .border_color(ColorRef::Color(border));
+                                                    if selected {
+                                                        chrome =
+                                                            chrome.bg(ColorRef::Color(selected_bg));
+                                                    } else if state.hovered {
+                                                        chrome =
+                                                            chrome.bg(ColorRef::Color(hover_bg));
+                                                    }
+
+                                                    let mut row_container_layout =
+                                                        LayoutStyle::default();
+                                                    row_container_layout.size.width = Length::Fill;
+                                                    row_container_layout.size.height = Length::Fill;
+                                                    row_container_layout.overflow =
+                                                        Overflow::Visible;
+
+                                                    let mut props = decl_style::container_props(
+                                                        &row_theme,
+                                                        chrome,
+                                                        LayoutRefinement::default().w_full(),
+                                                    );
+                                                    props.layout = row_container_layout;
+                                                    props.border = if !is_last {
+                                                        Edges {
+                                                            top: Px(0.0),
+                                                            right: Px(0.0),
+                                                            bottom: Px(1.0),
+                                                            left: Px(0.0),
+                                                        }
+                                                    } else {
+                                                        Edges::all(Px(0.0))
+                                                    };
+
+                                                    vec![cx.container(props, move |cx| {
+                                                        let mut cells = Vec::new();
+                                                        for col in row_cols_visible.iter() {
+                                                            let cell_layout = LayoutStyle {
+                                                                position: PositionStyle::Absolute,
+                                                                inset: InsetStyle {
+                                                                    top: Some(Px(0.0)),
+                                                                    left: Some(col.start),
+                                                                    ..Default::default()
+                                                                },
+                                                                size: SizeStyle {
+                                                                    width: Length::Px(col.size),
+                                                                    height: Length::Fill,
+                                                                    ..Default::default()
+                                                                },
+                                                                ..Default::default()
+                                                            };
+
+                                                            let row_cell_at = row_cell_at.clone();
+                                                            let row_index = row.index;
+                                                            let col_index = col.index;
+                                                            cells.push(cx.keyed(
+                                                                (row_key, col.key),
+                                                                move |cx| {
+                                                                    let cell = row_cell_at
+                                                                        .borrow_mut()(
+                                                                        cx, row_index, col_index,
+                                                                    );
+                                                                    let cell = TableCell::new(cell)
+                                                                        .into_element(cx);
+                                                                    cx.container(
+                                                                        ContainerProps {
+                                                                            layout: cell_layout,
+                                                                            ..Default::default()
+                                                                        },
+                                                                        move |_cx| vec![cell],
+                                                                    )
+                                                                },
+                                                            ));
+                                                        }
+                                                        cells
+                                                    })]
+                                                })
+                                            }));
+                                        }
+                                        out
+                                    },
+                                )]
+                            },
+                        )
+                    };
+                    let body_id = body.id;
 
                     let header = {
                         let header_chrome = ChromeRefinement::default()
@@ -235,158 +462,55 @@ impl DataGrid {
                             left: Px(0.0),
                         };
                         props.layout.size.height = Length::Px(row_height);
+                        props.layout.overflow = Overflow::Clip;
 
-                        let headers = headers.clone();
-                        let col_handle = col_handle.clone();
-                        let header_col_widths = col_widths.clone();
                         let header_inner = cx.container(props, move |cx| {
-                            let mut options =
-                                fret_ui::element::VirtualListOptions::new(Px(160.0), overscan_cols);
-                            options.axis = fret_core::Axis::Horizontal;
-                            options.items_revision = cols_revision;
+                            let mut out = Vec::new();
+                            for col in cols_visible.iter() {
+                                let left = Px(col.start.0 - scroll_x.0);
+                                let cell_layout = LayoutStyle {
+                                    position: PositionStyle::Absolute,
+                                    inset: InsetStyle {
+                                        top: Some(Px(0.0)),
+                                        left: Some(left),
+                                        ..Default::default()
+                                    },
+                                    size: SizeStyle {
+                                        width: Length::Px(col.size),
+                                        height: Length::Fill,
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                };
 
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Fill;
-                            layout.size.height = Length::Fill;
-
-                            vec![cx.virtual_list_keyed_with_layout(
-                                layout,
-                                cols,
-                                options,
-                                &col_handle,
-                                |i| i as u64,
-                                move |cx, col| {
-                                    let text = headers.get(col).cloned().unwrap_or(Arc::from(""));
-                                    let width =
-                                        header_col_widths.get(col).copied().unwrap_or(Px(160.0));
+                                let text = headers.get(col.index).cloned().unwrap_or(Arc::from(""));
+                                out.push(cx.keyed(col.key, move |cx| {
                                     let head = TableHead::new(text).into_element(cx);
-                                    fixed_width_container(cx, width, head)
-                                },
-                            )]
+                                    cx.container(
+                                        ContainerProps {
+                                            layout: cell_layout,
+                                            ..Default::default()
+                                        },
+                                        move |_cx| vec![head],
+                                    )
+                                }));
+                            }
+                            out
                         });
 
                         cx.wheel_region(
                             WheelRegionProps {
-                                axis: ScrollAxis::Y,
-                                scroll_target: None,
-                                scroll_handle: row_handle.base_handle().clone(),
+                                axis: ScrollAxis::Both,
+                                scroll_target: Some(body_id),
+                                scroll_handle: scroll_handle.clone(),
                                 ..Default::default()
                             },
                             move |_cx| vec![header_inner],
                         )
                     };
 
-                    let body = {
-                        let mut options =
-                            fret_ui::element::VirtualListOptions::new(row_height, overscan_rows);
-                        options.axis = fret_core::Axis::Vertical;
-                        options.items_revision = rows_revision;
-
-                        let col_handle = col_handle.clone();
-                        let theme = theme.clone();
-                        let row_handle = row_handle.clone();
-
-                        cx.virtual_list_keyed_with_layout(
-                            list_layout_style(),
-                            rows,
-                            options,
-                            &row_handle,
-                            &mut row_key_at,
-                            move |cx, row| {
-                                let st = row_state_at(row);
-                                let is_last = row + 1 == rows;
-
-                                let pressable_layout = {
-                                    let mut layout = LayoutStyle::default();
-                                    layout.size.width = Length::Fill;
-                                    layout.size.height = Length::Px(row_height);
-                                    layout
-                                };
-                                let pressable = PressableProps {
-                                    enabled: st.enabled,
-                                    layout: pressable_layout,
-                                    ..Default::default()
-                                };
-
-                                let on_click = st.on_click;
-                                let selected = st.selected;
-
-                                let col_handle = col_handle.clone();
-                                let col_widths = col_widths.clone();
-                                let cell_at = cell_at.clone();
-                                let theme_for_row = theme.clone();
-
-                                cx.pressable(pressable, move |cx, state| {
-                                    cx.pressable_dispatch_command_opt(on_click);
-                                    let theme = Theme::global(&*cx.app).clone();
-
-                                    let mut hover_bg = row_bg;
-                                    hover_bg.a *= 0.5;
-                                    let selected_bg = row_bg;
-
-                                    let border = border_color(&theme);
-                                    let mut chrome = ChromeRefinement::default()
-                                        .border_1()
-                                        .border_color(ColorRef::Color(border));
-                                    if selected {
-                                        chrome = chrome.bg(ColorRef::Color(selected_bg));
-                                    } else if state.hovered {
-                                        chrome = chrome.bg(ColorRef::Color(hover_bg));
-                                    }
-
-                                    let layout = LayoutRefinement::default().w_full();
-                                    let mut props =
-                                        decl_style::container_props(&theme_for_row, chrome, layout);
-                                    props.layout.size.height = Length::Px(row_height);
-                                    props.layout.overflow = Overflow::Visible;
-                                    props.border = if !is_last {
-                                        Edges {
-                                            top: Px(0.0),
-                                            right: Px(0.0),
-                                            bottom: Px(1.0),
-                                            left: Px(0.0),
-                                        }
-                                    } else {
-                                        Edges::all(Px(0.0))
-                                    };
-
-                                    vec![cx.container(props, move |cx| {
-                                        let mut options = fret_ui::element::VirtualListOptions::new(
-                                            Px(160.0),
-                                            overscan_cols,
-                                        );
-                                        options.axis = fret_core::Axis::Horizontal;
-                                        options.items_revision = cols_revision;
-
-                                        let mut layout = LayoutStyle::default();
-                                        layout.size.width = Length::Fill;
-                                        layout.size.height = Length::Fill;
-
-                                        let row_cell_at = cell_at.clone();
-                                        vec![cx.virtual_list_keyed_with_layout(
-                                            layout,
-                                            cols,
-                                            options,
-                                            &col_handle,
-                                            |i| i as u64,
-                                            move |cx, col| {
-                                                let cell = row_cell_at.borrow_mut()(cx, row, col);
-                                                let width = col_widths
-                                                    .get(col)
-                                                    .copied()
-                                                    .unwrap_or(Px(160.0));
-                                                let cell = TableCell::new(cell).into_element(cx);
-                                                fixed_width_container(cx, width, cell)
-                                            },
-                                        )]
-                                    })]
-                                })
-                            },
-                        )
-                    };
-
-                    let show_scrollbar_x = col_handle.base_handle().max_offset().x.0 > 0.01;
-                    let show_scrollbar_y = row_handle.base_handle().max_offset().y.0 > 0.01;
+                    let show_scrollbar_x = scroll_handle.max_offset().x.0 > 0.01;
+                    let show_scrollbar_y = scroll_handle.max_offset().y.0 > 0.01;
 
                     let mut out = vec![header, body];
 
@@ -413,8 +537,8 @@ impl DataGrid {
                         out.push(cx.scrollbar(ScrollbarProps {
                             layout: scrollbar_layout,
                             axis: ScrollbarAxis::Vertical,
-                            scroll_target: None,
-                            scroll_handle: row_handle.base_handle().clone(),
+                            scroll_target: Some(body_id),
+                            scroll_handle: scroll_handle.clone(),
                             style: ScrollbarStyle {
                                 thumb,
                                 thumb_hover,
@@ -446,8 +570,8 @@ impl DataGrid {
                         out.push(cx.scrollbar(ScrollbarProps {
                             layout: scrollbar_layout,
                             axis: ScrollbarAxis::Horizontal,
-                            scroll_target: None,
-                            scroll_handle: col_handle.base_handle().clone(),
+                            scroll_target: Some(body_id),
+                            scroll_handle: scroll_handle.clone(),
                             style: ScrollbarStyle {
                                 thumb,
                                 thumb_hover,

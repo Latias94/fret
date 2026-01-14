@@ -51,7 +51,7 @@ pub struct ViewportToolManager {
     pub active: ViewportToolMode,
     pub interaction: Option<ViewportInteraction>,
     pub hover_rotate: Option<(AppWindowId, RenderTargetId)>,
-    pub hover_translate: Option<crate::viewport_overlays::ViewportGizmoPart>,
+    pub hover_translate: Option<crate::viewport_overlays::ViewportTranslateGizmoPart>,
 }
 
 #[allow(dead_code)]
@@ -235,7 +235,7 @@ impl ViewportToolManager {
             marquee: None,
             drag_line: None,
             selection_rect: None,
-            gizmo: None,
+            translate_gizmo: None,
             rotate_gizmo: None,
             marker: None,
         };
@@ -243,7 +243,7 @@ impl ViewportToolManager {
         match self.active {
             ViewportToolMode::Select => {}
             ViewportToolMode::Move => {
-                overlay.gizmo = Some(crate::viewport_overlays::ViewportGizmo {
+                overlay.translate_gizmo = Some(crate::viewport_overlays::ViewportTranslateGizmo {
                     center_uv: DEFAULT_GIZMO_CENTER_UV,
                     axis_len_px: DEFAULT_TRANSLATE_AXIS_LEN_PX,
                     highlight: self.hover_translate,
@@ -293,18 +293,18 @@ impl ViewportToolManager {
                         },
                     });
                 }
-                overlay.gizmo = Some(crate::viewport_overlays::ViewportGizmo {
+                overlay.translate_gizmo = Some(crate::viewport_overlays::ViewportTranslateGizmo {
                     center_uv: DEFAULT_GIZMO_CENTER_UV,
                     axis_len_px: DEFAULT_TRANSLATE_AXIS_LEN_PX,
                     highlight: match m.constraint {
                         TranslateAxisConstraint::Free => {
-                            Some(crate::viewport_overlays::ViewportGizmoPart::Handle)
+                            Some(crate::viewport_overlays::ViewportTranslateGizmoPart::Handle)
                         }
                         TranslateAxisConstraint::X => {
-                            Some(crate::viewport_overlays::ViewportGizmoPart::X)
+                            Some(crate::viewport_overlays::ViewportTranslateGizmoPart::X)
                         }
                         TranslateAxisConstraint::Y => {
-                            Some(crate::viewport_overlays::ViewportGizmoPart::Y)
+                            Some(crate::viewport_overlays::ViewportTranslateGizmoPart::Y)
                         }
                     },
                 });
@@ -367,13 +367,13 @@ impl ViewportToolManager {
                         return false;
                     };
                     let constraint = match part {
-                        crate::viewport_overlays::ViewportGizmoPart::X => {
+                        crate::viewport_overlays::ViewportTranslateGizmoPart::X => {
                             TranslateAxisConstraint::X
                         }
-                        crate::viewport_overlays::ViewportGizmoPart::Y => {
+                        crate::viewport_overlays::ViewportTranslateGizmoPart::Y => {
                             TranslateAxisConstraint::Y
                         }
-                        crate::viewport_overlays::ViewportGizmoPart::Handle => {
+                        crate::viewport_overlays::ViewportTranslateGizmoPart::Handle => {
                             TranslateAxisConstraint::Free
                         }
                     };
@@ -596,7 +596,7 @@ impl ViewportToolManager {
 
     fn hit_test_translate_gizmo(
         event: &ViewportInputEvent,
-    ) -> Option<crate::viewport_overlays::ViewportGizmoPart> {
+    ) -> Option<crate::viewport_overlays::ViewportTranslateGizmoPart> {
         let draw_rect = event.geometry.draw_rect_px;
         if draw_rect.size.width.0 <= 0.0 || draw_rect.size.height.0 <= 0.0 {
             return None;
@@ -610,7 +610,7 @@ impl ViewportToolManager {
         let t = DEFAULT_GIZMO_PICK_TOLERANCE_PX.0.max(0.0);
         let half_handle = DEFAULT_GIZMO_HANDLE_SIZE_PX.0 * 0.5 + t;
         if dx.abs() <= half_handle && dy.abs() <= half_handle {
-            return Some(crate::viewport_overlays::ViewportGizmoPart::Handle);
+            return Some(crate::viewport_overlays::ViewportTranslateGizmoPart::Handle);
         }
 
         let axis_len = DEFAULT_TRANSLATE_AXIS_LEN_PX.0.max(0.0);
@@ -618,11 +618,11 @@ impl ViewportToolManager {
 
         // X axis: to the right.
         if dx >= 0.0 && dx <= axis_len && dy.abs() <= axis_half_thickness {
-            return Some(crate::viewport_overlays::ViewportGizmoPart::X);
+            return Some(crate::viewport_overlays::ViewportTranslateGizmoPart::X);
         }
         // Y axis: up.
         if dy <= 0.0 && dy.abs() <= axis_len && dx.abs() <= axis_half_thickness {
-            return Some(crate::viewport_overlays::ViewportGizmoPart::Y);
+            return Some(crate::viewport_overlays::ViewportTranslateGizmoPart::Y);
         }
 
         None

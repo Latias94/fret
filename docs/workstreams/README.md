@@ -11,4 +11,5 @@ milestones, use:
 Active workstreams:
 
 - `docs/workstreams/text-system-v2-parley.md`
-
+- `docs/workstreams/table-forms-calendar.md`
+- `docs/workstreams/ecosystem-status.md`

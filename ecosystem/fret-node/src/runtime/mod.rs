@@ -9,6 +9,7 @@ pub mod callbacks;
 pub mod changes;
 pub mod events;
 pub mod lookups;
+pub mod middleware;
 pub mod store;
 
 #[cfg(test)]

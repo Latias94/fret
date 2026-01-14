@@ -5,10 +5,10 @@ use std::{
 };
 
 use crate::mermaid::MermaidDiagramType;
-use fret_core::{AppWindowId, ClipboardToken, ImageUploadToken, Point, TimerToken};
+use fret_core::{AppWindowId, ClipboardToken, ImageUploadToken, Point, PointerId, TimerToken};
 use fret_runtime::{
-    CommandRegistry, CommandsHost, DragHost, DragKind, DragSession, Effect, EffectSink, FrameId,
-    GlobalsHost, ModelHost, ModelId, ModelStore, ModelsHost, TickId, TimeHost,
+    CommandRegistry, CommandsHost, DragHost, DragKindId, DragSession, DragSessionId, Effect,
+    EffectSink, FrameId, GlobalsHost, ModelHost, ModelId, ModelStore, ModelsHost, TickId, TimeHost,
 };
 use fret_ui::ThemeConfig;
 
@@ -19,7 +19,8 @@ struct ThemeTestHost {
     commands: CommandRegistry,
     redraw: HashSet<AppWindowId>,
     effects: Vec<Effect>,
-    drag: Option<DragSession>,
+    drags: HashMap<PointerId, DragSession>,
+    next_drag_session_id: u64,
     tick_id: TickId,
     frame_id: FrameId,
     next_timer_token: u64,
@@ -158,41 +159,55 @@ impl TimeHost for ThemeTestHost {
 }
 
 impl DragHost for ThemeTestHost {
-    fn drag(&self) -> Option<&DragSession> {
-        self.drag.as_ref()
+    fn drag(&self, pointer_id: PointerId) -> Option<&DragSession> {
+        self.drags.get(&pointer_id)
     }
 
-    fn drag_mut(&mut self) -> Option<&mut DragSession> {
-        self.drag.as_mut()
+    fn drag_mut(&mut self, pointer_id: PointerId) -> Option<&mut DragSession> {
+        self.drags.get_mut(&pointer_id)
     }
 
-    fn cancel_drag(&mut self) {
-        self.drag = None;
+    fn cancel_drag(&mut self, pointer_id: PointerId) {
+        self.drags.remove(&pointer_id);
     }
 
     fn begin_drag_with_kind<T: Any>(
         &mut self,
-        kind: DragKind,
+        pointer_id: PointerId,
+        kind: DragKindId,
         source_window: AppWindowId,
         start: Point,
         payload: T,
     ) {
-        self.drag = Some(DragSession::new(source_window, kind, start, payload));
+        self.next_drag_session_id = self.next_drag_session_id.saturating_add(1);
+        let session_id = DragSessionId(self.next_drag_session_id);
+        self.drags.insert(
+            pointer_id,
+            DragSession::new(session_id, pointer_id, source_window, kind, start, payload),
+        );
     }
 
     fn begin_cross_window_drag_with_kind<T: Any>(
         &mut self,
-        kind: DragKind,
+        pointer_id: PointerId,
+        kind: DragKindId,
         source_window: AppWindowId,
         start: Point,
         payload: T,
     ) {
-        self.drag = Some(DragSession::new_cross_window(
-            source_window,
-            kind,
-            start,
-            payload,
-        ));
+        self.next_drag_session_id = self.next_drag_session_id.saturating_add(1);
+        let session_id = DragSessionId(self.next_drag_session_id);
+        self.drags.insert(
+            pointer_id,
+            DragSession::new_cross_window(
+                session_id,
+                pointer_id,
+                source_window,
+                kind,
+                start,
+                payload,
+            ),
+        );
     }
 }
 

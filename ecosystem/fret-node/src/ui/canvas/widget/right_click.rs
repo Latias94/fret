@@ -41,14 +41,15 @@ pub(super) fn handle_right_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddl
                         continue;
                     };
 
-                    let rect = super::group_resize::group_rect_to_px(group.rect);
+                    let rect0 = this.group_rect_with_preview(*group_id, group.rect);
+
+                    let rect = super::group_resize::group_rect_to_px(rect0);
                     let handle = this.resize_handle_rect(rect, zoom);
                     if super::group_resize::group_resize_handle_hit(handle, pos, zoom, 6.0) {
                         return Some(*group_id);
                     }
 
-                    if super::pending_group_drag::group_header_hit(group.rect, header_h, zoom, pos)
-                    {
+                    if super::pending_group_drag::group_header_hit(rect0, header_h, zoom, pos) {
                         return Some(*group_id);
                     }
                 }

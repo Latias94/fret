@@ -7,12 +7,14 @@ contracts early to avoid large rewrites later.
 
 - Progress: `docs/roadmap.md` and `docs/shadcn-declarative-progress.md`
 - Charts (ECharts alignment): `docs/audits/echarts-alignment.md` and `docs/delinea-echarts-alignment.md`
+- Text system v2 tracker: `docs/workstreams/text-system-v2-parley.md`
 - Node graph roadmap: `docs/node-graph-roadmap.md`
 - Layout engine refactor: `docs/layout-engine-refactor-roadmap.md`
 - Renderer refactor: `docs/renderer-refactor-roadmap.md`
 - GPU debugging (RenderDoc): `docs/renderdoc-inspection.md`
 - Debugging playbook: `docs/debugging-playbook.md`
 - Viewport panels (engine/video): `docs/viewport-panels.md`
+- Gizmo + viewport integration: `docs/gizmo-viewport-integration.md`
 - Contracts: `docs/adr/`
 - Workstream notes (non-authoritative): `docs/workstreams/`
 - Historical planning docs: `docs/archive/`

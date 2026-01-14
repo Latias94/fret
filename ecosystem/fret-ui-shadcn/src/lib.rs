@@ -17,16 +17,19 @@ pub mod badge;
 pub mod breadcrumb;
 pub mod button;
 pub mod button_group;
+pub mod calendar;
 pub mod card;
 pub mod checkbox;
 pub mod collapsible;
 pub mod combobox;
 pub mod command;
 pub mod context_menu;
-#[cfg(feature = "datagrid")]
 pub mod data_grid;
-#[cfg(feature = "datagrid")]
+pub mod data_grid_canvas;
 pub mod data_table;
+mod data_table_controls;
+mod data_table_recipes;
+pub mod date_picker;
 pub mod dialog;
 pub mod drawer;
 pub mod dropdown_menu;
@@ -89,6 +92,7 @@ pub use button::{Button, ButtonSize, ButtonVariant};
 pub use button_group::{
     ButtonGroup, ButtonGroupItem, ButtonGroupKind, button_group_multiple, button_group_single,
 };
+pub use calendar::Calendar;
 pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle};
 pub use checkbox::{Checkbox, checkbox};
 pub use collapsible::{
@@ -104,13 +108,15 @@ pub use context_menu::{
     ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItem, ContextMenuRadioItemSpec,
     ContextMenuShortcut,
 };
-#[cfg(feature = "datagrid")]
 pub use data_grid::{DataGrid, DataGridRowState};
-#[cfg(feature = "datagrid")]
-pub use data_table::{
-    DataTable, DataTableColumnOption, DataTableGlobalFilterInput, DataTableRowState,
+pub use data_grid_canvas::{DataGridCanvas, DataGridCanvasAxis};
+pub use data_table::{DataTable, DataTableTanstack};
+pub use data_table_controls::{
+    DataTableColumnOption, DataTableGlobalFilterInput, DataTableRowState, DataTableViewOptionItem,
     DataTableViewOptions,
 };
+pub use data_table_recipes::{DataTablePagination, DataTableToolbar};
+pub use date_picker::DatePicker;
 pub use dialog::{
     Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 };
@@ -129,6 +135,7 @@ pub use field::{
     FieldLegendVariant, FieldOrientation, FieldSeparator, FieldSet, FieldTitle,
 };
 pub use form::{Form, FormControl, FormDescription, FormItem, FormLabel, FormMessage, form};
+pub use fret_ui_kit::declarative::table::TableViewOutput as DataTableViewOutput;
 pub use hover_card::{
     HoverCard, HoverCardAlign, HoverCardAnchor, HoverCardContent, HoverCardSide, HoverCardTrigger,
 };

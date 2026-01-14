@@ -8,7 +8,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::core::{CanvasPoint, CanvasSize, Edge, EdgeId, EdgeKind, Graph, Node, NodeId, PortId};
+use crate::core::{
+    CanvasPoint, CanvasSize, Edge, EdgeId, EdgeKind, Graph, Node, NodeId, NodeKindKey, PortId,
+};
 use crate::ops::{EdgeEndpoints, GraphOp, GraphTransaction};
 
 /// Changes targeting nodes (graph-owned).
@@ -26,6 +28,14 @@ pub enum NodeChange {
     Position {
         id: NodeId,
         position: CanvasPoint,
+    },
+    Kind {
+        id: NodeId,
+        kind: NodeKindKey,
+    },
+    KindVersion {
+        id: NodeId,
+        kind_version: u32,
     },
     Size {
         id: NodeId,
@@ -96,6 +106,16 @@ impl NodeGraphChanges {
                     id: *id,
                     position: *to,
                 }),
+                GraphOp::SetNodeKind { id, to, .. } => out.nodes.push(NodeChange::Kind {
+                    id: *id,
+                    kind: to.clone(),
+                }),
+                GraphOp::SetNodeKindVersion { id, to, .. } => {
+                    out.nodes.push(NodeChange::KindVersion {
+                        id: *id,
+                        kind_version: *to,
+                    })
+                }
                 GraphOp::SetNodeSize { id, to, .. } => {
                     out.nodes.push(NodeChange::Size { id: *id, size: *to })
                 }
@@ -182,6 +202,30 @@ impl NodeGraphChanges {
                         id: *id,
                         from,
                         to: *position,
+                    });
+                }
+                NodeChange::Kind { id, kind } => {
+                    let from = graph
+                        .nodes
+                        .get(id)
+                        .map(|n| n.kind.clone())
+                        .ok_or(ChangesToTransactionError::MissingNode(*id))?;
+                    tx.push(GraphOp::SetNodeKind {
+                        id: *id,
+                        from,
+                        to: kind.clone(),
+                    });
+                }
+                NodeChange::KindVersion { id, kind_version } => {
+                    let from = graph
+                        .nodes
+                        .get(id)
+                        .map(|n| n.kind_version)
+                        .ok_or(ChangesToTransactionError::MissingNode(*id))?;
+                    tx.push(GraphOp::SetNodeKindVersion {
+                        id: *id,
+                        from,
+                        to: *kind_version,
                     });
                 }
                 NodeChange::Size { id, size } => {

@@ -50,6 +50,7 @@ ADR or adding a new ADR) before scaling feature surface area.
 
 - **Font discovery + user font loading + stable IDs**
   - Update: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0014-settings-and-configuration-files.md`
+  - Update: `docs/adr/0162-font-stack-bootstrap-and-textfontstackkey-v1.md`
   - Decide: persistence format (store family + features + fallbacks, never numeric `FontId`), and invalidation/revision semantics when font DB changes.
   - Implement: `crates/fret-render/src/text.rs`, platform font enumeration hooks (future: `crates/fret-platform`).
 
@@ -104,9 +105,13 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Rounded clipping / overflow-hidden**: `docs/adr/0063-rounded-clipping-and-soft-clip-masks.md`
 - **Overflow conventions (surfaces, focus rings, portals)**: `docs/adr/0088-overflow-and-clipping-conventions.md`
 - **Docking + multi-window tear-off**: `docs/adr/0013-docking-ops-and-persistence.md`, `docs/adr/0011-overlays-and-multi-root.md`, `docs/adr/0017-multi-window-display-and-dpi.md`, `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
+- **Headless drag-and-drop toolbox (sensors/collision/modifiers)**: `docs/adr/0164-headless-dnd-toolbox-and-ui-integration.md`, `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
+- **Pointer identity and multi-pointer dispatch**: `docs/adr/0165-pointer-identity-and-multi-pointer-capture.md`, `docs/adr/0017-multi-window-display-and-dpi.md`, `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
+- **Multi-pointer drag sessions (host + routing keys)**: `docs/adr/0166-multi-pointer-drag-sessions-and-routing-keys.md`, `docs/adr/0165-pointer-identity-and-multi-pointer-capture.md`, `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
 - **Docking interaction arbitration (overlays/tools)**: `docs/adr/0072-docking-interaction-arbitration-matrix.md`
 - **Dismissable non-modal overlays (outside press)**: `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md`
 - **Text input / IME**: `docs/adr/0012-keyboard-ime-and-text-input.md`, `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0020-focus-and-command-routing.md`
+- **Color emoji / polychrome glyph pipeline**: `docs/adr/0167-polychrome-glyphs-and-emoji-pipeline-v1.md`, `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0157-text-system-v2-parley-attributed-spans-and-quality-baseline.md`
 - **Multiline text input + IME composition**: `docs/adr/0071-text-input-multiline-composition-contract.md`
 - **Typography (weight/line-height/tracking)**: `docs/adr/0058-typography-v1-textstyle-weight-lineheight-tracking.md`
 - **Text editing commands + selection model**: `docs/adr/0044-text-editing-state-and-commands.md`
@@ -117,7 +122,8 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Icons (semantic keys + SVG-first packaging)**: `docs/adr/0065-icon-system-and-asset-packaging.md`
 - **Editor interaction affordances (selection/docking highlights)**: `docs/adr/0030-shape-rendering-and-sdf-semantics.md`, `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`, `docs/adr/0011-overlays-and-multi-root.md`
 - **Engine viewports (embedded 3D)**: `docs/adr/0010-wgpu-context-ownership.md`, `docs/adr/0015-frame-lifecycle-and-submission-order.md`, `docs/adr/0025-viewport-input-forwarding.md`, `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`
-- **Viewport tools and overlays (example editor layer)**: `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
+- **Viewport tools and overlays**: `docs/adr/0168-viewport-tooling-host-helpers-and-arbitration-v1.md`, `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
+- **Ecosystem crates (glue vs kit vs primitives)**: `docs/adr/0169-ecosystem-crate-taxonomy-glue-and-ui-kit-split-v1.md`
 - **Inspector / property editing (example editor layer)**: `docs/adr/0048-inspector-property-protocol-and-editor-registry.md`
 - **Theme tokens and theme config (P0 styling)**: `docs/adr/0032-style-tokens-and-theme-resolution.md`, `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
 - **Elevation and shadows (no-blur baseline)**: `docs/adr/0060-shadows-and-elevation.md`
@@ -223,6 +229,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`
 - `docs/adr/0066-fret-ui-runtime-contract-surface.md`
 - `docs/adr/0137-canvas-widgets-and-interactive-surfaces.md`
+- `docs/adr/0167-kurbo-geometry-backend-for-canvas-hit-testing.md`
 - `docs/adr/0150-node-graph-canvas-middleware.md`
 - `docs/adr/0139-viewport-gizmos-engine-pass-and-ui-overlay-boundary.md`
 - `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
@@ -291,6 +298,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0025-viewport-input-forwarding.md`
 - `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`
 - `docs/adr/0040-color-management-and-compositing-contracts.md`
+- `docs/adr/0168-viewport-tooling-host-helpers-and-arbitration-v1.md`
 - `docs/adr/0116-window-scoped-layout-engine-and-viewport-roots.md`
 
 ## Example Editor App Notes (Out of Scope for Fret Framework)
@@ -336,6 +344,10 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0037-workspace-boundaries-and-components-repository.md`
 - `docs/adr/0040-color-management-and-compositing-contracts.md`
 - `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
+- `docs/adr/0164-headless-dnd-toolbox-and-ui-integration.md`
+- `docs/adr/0165-pointer-identity-and-multi-pointer-capture.md`
+- `docs/adr/0166-multi-pointer-drag-sessions-and-routing-keys.md`
+- `docs/adr/0167-polychrome-glyphs-and-emoji-pipeline-v1.md`
 - `docs/adr/0056-component-size-and-density-system.md`
 - `docs/adr/0052-ui-host-runtime-boundary.md`
 - `docs/adr/0053-external-drag-payload-portability.md`

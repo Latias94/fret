@@ -1005,13 +1005,17 @@ impl Gizmo {
                     mask.contains(GizmoOps::rotate_arcball()),
                 )
             } else {
-                (
-                    true,
-                    self.config.show_view_axis_ring,
-                    self.config.show_arcball,
-                )
+                let (view, arcball) = match self.config.mode {
+                    GizmoMode::Universal => (
+                        self.config.universal_includes_rotate_view_ring,
+                        self.config.universal_includes_arcball,
+                    ),
+                    _ => (self.config.show_view_axis_ring, self.config.show_arcball),
+                };
+                (true, view, arcball)
             };
 
+        let pv = self.state.part_visuals;
         let radius_world = size_length_world.max(0.0);
 
         let segments: usize = 64;
@@ -1036,29 +1040,25 @@ impl Gizmo {
                     continue;
                 }
                 let (u, v) = plane_basis(axis_dir);
-
-                let mut prev_world = origin + u * radius_world;
-                let mut prev = match project_point(
-                    view_projection,
-                    viewport,
-                    prev_world,
-                    self.config.depth_range,
-                ) {
-                    Some(p) => p,
-                    None => continue,
-                };
-
-                for i in 1..=segments {
+                // Robust sampling: if the ring wraps partially behind the camera, we still want
+                // the visible arc to remain pickable. Avoid requiring the first sample point to
+                // be valid.
+                let mut prev: Option<crate::math::ProjectedPoint> = None;
+                for i in 0..=segments {
                     let t = (i as f32) / (segments as f32) * std::f32::consts::TAU;
                     let world = origin + (u * t.cos() + v * t.sin()) * radius_world;
                     let Some(p) =
                         project_point(view_projection, viewport, world, self.config.depth_range)
                     else {
-                        prev_world = world;
+                        prev = None;
                         continue;
                     };
+                    if !p.inside_clip {
+                        prev = None;
+                        continue;
+                    }
 
-                    if prev.inside_clip && p.inside_clip {
+                    if let Some(prev) = prev {
                         let r = self.config.pick_radius_px * alpha.sqrt();
                         if let Some(d) = (PickSegmentCapsule2d {
                             a: prev.screen,
@@ -1074,8 +1074,7 @@ impl Gizmo {
                         }
                     }
 
-                    prev = p;
-                    prev_world = world;
+                    prev = Some(p);
                 }
             }
         }
@@ -1089,19 +1088,9 @@ impl Gizmo {
                 if axis_dir.length_squared() > 0.0 {
                     let (u, v) = plane_basis(axis_dir);
                     let handle = RotateHandle::View.id();
-                    let r = (radius_world * self.config.view_axis_ring_radius_scale).max(1e-6);
-
-                    let mut prev = match project_point(
-                        view_projection,
-                        viewport,
-                        origin + u * r,
-                        self.config.depth_range,
-                    ) {
-                        Some(p) => p,
-                        None => return best_axis,
-                    };
-
-                    for i in 1..=segments {
+                    let r = (radius_world * pv.rotate_view_ring_radius_scale).max(1e-6);
+                    let mut prev: Option<crate::math::ProjectedPoint> = None;
+                    for i in 0..=segments {
                         let t = (i as f32) / (segments as f32) * std::f32::consts::TAU;
                         let world = origin + (u * t.cos() + v * t.sin()) * r;
                         let Some(p) = project_point(
@@ -1110,10 +1099,15 @@ impl Gizmo {
                             world,
                             self.config.depth_range,
                         ) else {
+                            prev = None;
                             continue;
                         };
+                        if !p.inside_clip {
+                            prev = None;
+                            continue;
+                        }
 
-                        if prev.inside_clip && p.inside_clip {
+                        if let Some(prev) = prev {
                             if let Some(d) = (PickSegmentCapsule2d {
                                 a: prev.screen,
                                 b: p.screen,
@@ -1127,7 +1121,8 @@ impl Gizmo {
                                 };
                             }
                         }
-                        prev = p;
+
+                        prev = Some(p);
                     }
                 }
             }

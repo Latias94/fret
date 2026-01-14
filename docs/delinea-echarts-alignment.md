@@ -197,6 +197,7 @@ single “at a glance” view of:
   - Rich text / HTML tooltip content and marker layout parity (ECharts `richText` / DOM tooltip).
   - Tooltip composition parity for complex series payloads (multi-dim values, multiple value axes, custom marker shapes).
   - More complete axisPointer label policies (only-X label for item trigger, label collision/stacking policy, per-axis styling options).
+  - Additional snapping policies and richer structural tooltip layouts beyond the current two-column rows.
 
 **S6 - Legend semantics (series visibility) + UI parity** (`[x]`)
 

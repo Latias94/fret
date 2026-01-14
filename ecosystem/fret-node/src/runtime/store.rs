@@ -10,11 +10,13 @@ use crate::core::Graph;
 use crate::io::NodeGraphViewState;
 use crate::ops::{GraphHistory, GraphTransaction, apply_transaction};
 use crate::profile::{ApplyPipelineError, GraphProfile, apply_transaction_with_profile};
+use crate::rules::{Diagnostic, DiagnosticSeverity, DiagnosticTarget};
 use crate::runtime::changes::{ChangesToTransactionError, NodeGraphChanges};
 use crate::runtime::events::{
     NodeGraphStoreEvent, NodeGraphStoreSnapshot, SubscriptionToken, ViewChange,
 };
 use crate::runtime::lookups::NodeGraphLookups;
+use crate::runtime::middleware::NodeGraphStoreMiddleware;
 
 /// Dispatch outcome for store actions.
 #[derive(Debug, Clone)]
@@ -41,6 +43,7 @@ pub struct NodeGraphStore {
     view_state: NodeGraphViewState,
     history: GraphHistory,
     profile: Option<Box<dyn GraphProfile>>,
+    middleware: Option<Box<dyn NodeGraphStoreMiddleware>>,
     lookups: NodeGraphLookups,
 
     next_subscription: u64,
@@ -90,6 +93,7 @@ impl NodeGraphStore {
             view_state,
             history: GraphHistory::default(),
             profile: None,
+            middleware: None,
             lookups,
             next_subscription: 1,
             event_subscriptions: Vec::new(),
@@ -111,11 +115,17 @@ impl NodeGraphStore {
             view_state,
             history: GraphHistory::default(),
             profile: Some(profile),
+            middleware: None,
             lookups,
             next_subscription: 1,
             event_subscriptions: Vec::new(),
             selector_subscriptions: Vec::new(),
         }
+    }
+
+    pub fn with_middleware(mut self, middleware: impl NodeGraphStoreMiddleware) -> Self {
+        self.middleware = Some(Box::new(middleware));
+        self
     }
 
     /// Subscribes to store events (graph commits + view-state changes).
@@ -405,12 +415,65 @@ impl NodeGraphStore {
         &mut self,
         tx: &GraphTransaction,
     ) -> Result<DispatchOutcome, DispatchError> {
+        let mut tx = crate::ops::normalize_transaction(tx.clone());
+        if tx.is_empty() {
+            return Ok(DispatchOutcome {
+                committed: tx,
+                changes: NodeGraphChanges::default(),
+            });
+        }
+        if let Some((key, message)) = crate::ops::find_non_finite_in_tx(&tx) {
+            return Err(DispatchError::Apply(Self::reject_tx(key, message)));
+        }
+        if let Some((key, message)) = crate::ops::find_invalid_size_in_tx(&tx) {
+            return Err(DispatchError::Apply(Self::reject_tx(key, message)));
+        }
+
+        if let Some(middleware) = self.middleware.as_deref_mut() {
+            let snapshot = NodeGraphStoreSnapshot {
+                graph: &self.graph,
+                view_state: &self.view_state,
+                history: &self.history,
+            };
+            middleware.before_dispatch(snapshot, &mut tx)?;
+        }
+        tx = crate::ops::normalize_transaction(tx);
+        if tx.is_empty() {
+            return Ok(DispatchOutcome {
+                committed: tx,
+                changes: NodeGraphChanges::default(),
+            });
+        }
+        if let Some((key, message)) = crate::ops::find_non_finite_in_tx(&tx) {
+            return Err(DispatchError::Apply(Self::reject_tx(key, message)));
+        }
+        if let Some((key, message)) = crate::ops::find_invalid_size_in_tx(&tx) {
+            return Err(DispatchError::Apply(Self::reject_tx(key, message)));
+        }
+
         let mut scratch = self.graph.clone();
-        let committed = self.apply_to_graph(&mut scratch, tx)?;
+        let committed = self.apply_to_graph(&mut scratch, &tx)?;
+        let committed = crate::ops::normalize_transaction(committed);
+        if let Some((key, message)) = crate::ops::find_non_finite_in_tx(&committed) {
+            return Err(DispatchError::Apply(Self::reject_tx(key, message)));
+        }
+        if let Some((key, message)) = crate::ops::find_invalid_size_in_tx(&committed) {
+            return Err(DispatchError::Apply(Self::reject_tx(key, message)));
+        }
         self.graph = scratch;
         self.lookups.apply_transaction(&self.graph, &committed);
         self.history.record(committed.clone());
         let changes = NodeGraphChanges::from_transaction(&committed);
+
+        if let Some(middleware) = self.middleware.as_deref_mut() {
+            let snapshot = NodeGraphStoreSnapshot {
+                graph: &self.graph,
+                view_state: &self.view_state,
+                history: &self.history,
+            };
+            middleware.after_dispatch(snapshot, &committed, &changes);
+        }
+
         self.emit(NodeGraphStoreEvent::GraphCommitted {
             committed: &committed,
             changes: &changes,
@@ -427,12 +490,65 @@ impl NodeGraphStore {
         tx: &GraphTransaction,
         profile: &mut dyn GraphProfile,
     ) -> Result<DispatchOutcome, ApplyPipelineError> {
+        let mut tx = crate::ops::normalize_transaction(tx.clone());
+        if tx.is_empty() {
+            return Ok(DispatchOutcome {
+                committed: tx,
+                changes: NodeGraphChanges::default(),
+            });
+        }
+        if let Some((key, message)) = crate::ops::find_non_finite_in_tx(&tx) {
+            return Err(Self::reject_tx(key, message));
+        }
+        if let Some((key, message)) = crate::ops::find_invalid_size_in_tx(&tx) {
+            return Err(Self::reject_tx(key, message));
+        }
+
+        if let Some(middleware) = self.middleware.as_deref_mut() {
+            let snapshot = NodeGraphStoreSnapshot {
+                graph: &self.graph,
+                view_state: &self.view_state,
+                history: &self.history,
+            };
+            middleware.before_dispatch(snapshot, &mut tx)?;
+        }
+        tx = crate::ops::normalize_transaction(tx);
+        if tx.is_empty() {
+            return Ok(DispatchOutcome {
+                committed: tx,
+                changes: NodeGraphChanges::default(),
+            });
+        }
+        if let Some((key, message)) = crate::ops::find_non_finite_in_tx(&tx) {
+            return Err(Self::reject_tx(key, message));
+        }
+        if let Some((key, message)) = crate::ops::find_invalid_size_in_tx(&tx) {
+            return Err(Self::reject_tx(key, message));
+        }
+
         let mut scratch = self.graph.clone();
-        let committed = apply_transaction_with_profile(&mut scratch, profile, tx)?;
+        let committed = apply_transaction_with_profile(&mut scratch, profile, &tx)?;
+        let committed = crate::ops::normalize_transaction(committed);
+        if let Some((key, message)) = crate::ops::find_non_finite_in_tx(&committed) {
+            return Err(Self::reject_tx(key, message));
+        }
+        if let Some((key, message)) = crate::ops::find_invalid_size_in_tx(&committed) {
+            return Err(Self::reject_tx(key, message));
+        }
         self.graph = scratch;
         self.lookups.apply_transaction(&self.graph, &committed);
         self.history.record(committed.clone());
         let changes = NodeGraphChanges::from_transaction(&committed);
+
+        if let Some(middleware) = self.middleware.as_deref_mut() {
+            let snapshot = NodeGraphStoreSnapshot {
+                graph: &self.graph,
+                view_state: &self.view_state,
+                history: &self.history,
+            };
+            middleware.after_dispatch(snapshot, &committed, &changes);
+        }
+
         self.emit(NodeGraphStoreEvent::GraphCommitted {
             committed: &committed,
             changes: &changes,
@@ -587,6 +703,19 @@ impl NodeGraphStore {
                 label: tx.label.clone(),
                 ops: tx.ops.clone(),
             })
+        }
+    }
+
+    fn reject_tx(key: String, message: String) -> ApplyPipelineError {
+        ApplyPipelineError::Rejected {
+            message: message.clone(),
+            diagnostics: vec![Diagnostic {
+                key,
+                severity: DiagnosticSeverity::Error,
+                target: DiagnosticTarget::Graph,
+                message,
+                fixes: Vec::new(),
+            }],
         }
     }
 

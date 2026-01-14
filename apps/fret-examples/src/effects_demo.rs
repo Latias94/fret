@@ -686,7 +686,10 @@ impl WinitAppDriver for EffectsDemoDriver {
                     scale_factor,
                 };
 
-                let (blob, metrics) = services.text().prepare(&overlay_text, &style, constraints);
+                let (blob, metrics) =
+                    services
+                        .text()
+                        .prepare_str(overlay_text.as_str(), &style, constraints);
                 state.overlay.last_text = overlay_text;
                 state.overlay.last_scale_bits = scale_bits;
                 state.overlay.blob = Some(blob);

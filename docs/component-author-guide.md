@@ -126,6 +126,25 @@ Baseline rules:
 If your crate crosses the viewport/tooling boundary, expose unit-explicit APIs and carry enough
 context to avoid ad-hoc conversions (see the viewport explicit-units contract).
 
+Concrete reference:
+
+- Gizmo + viewport integration (Tier A tooling boundary): `docs/gizmo-viewport-integration.md`
+
+### Gizmos and viewport tooling (Tier A boundary, plugin surface)
+
+`ecosystem/fret-gizmo` is **not** a `fret-ui` widget. It is engine/driver-owned viewport tool logic
+that stays backend-agnostic and unit-explicit (ADR 0139).
+
+If you are authoring reusable gizmo tooling:
+
+- Prefer depending on `fret-gizmo` (and `fret-core` if you need shared IDs/types).
+- Avoid `wgpu`/`winit` dependencies; rendering is owned by the engine pass.
+- Use the plugin contract (`GizmoPlugin`, ADR 0155) for extensibility.
+- When your plugin needs to read domain values (e.g. light radius readouts), query the host via
+  `GizmoPropertySource` (read-only, ADR 0167) instead of requiring host push caches.
+- Emit edits via `GizmoCustomEdit` and let the host apply validation + undo/redo (write policy is
+  intentionally host-owned in v1).
+
 ## 6) Settings: namespaced, layered, and optional
 
 If you support config:
@@ -158,7 +177,7 @@ Examples:
 
 ## References
 
-- Component ecosystem conventions: `docs/adr/0158-component-ecosystem-authoring-conventions-v1.md`
+- Component ecosystem conventions: `docs/adr/0163-component-ecosystem-authoring-conventions-v1.md`
 - Component authoring contracts (mechanism surface): `docs/component-authoring-contracts.md`
 - Crate map (what to depend on): `docs/crate-usage-guide.md`
 - Ecosystem integration guidance: `docs/adr/0113-ecosystem-integration-contracts.md`

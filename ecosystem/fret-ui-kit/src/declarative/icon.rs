@@ -116,7 +116,7 @@ pub fn icon_with<H: UiHost>(
 #[cfg(test)]
 mod tests {
     use fret_core::{
-        PathId, Rect, Size, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle,
+        PathId, Rect, Size, TextBlobId, TextConstraints, TextInput, TextMetrics, TextService,
     };
     use fret_ui::elements::ElementRuntime;
 
@@ -154,8 +154,7 @@ mod tests {
     impl TextService for FakeUiServices {
         fn prepare(
             &mut self,
-            _text: &str,
-            _style: &TextStyle,
+            _input: &TextInput,
             _constraints: TextConstraints,
         ) -> (TextBlobId, TextMetrics) {
             (

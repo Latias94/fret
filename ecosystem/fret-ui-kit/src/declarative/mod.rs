@@ -7,6 +7,7 @@ pub mod collection_semantics;
 pub mod controllable_state;
 pub mod dismissible;
 pub mod focus_scope;
+pub mod form;
 #[cfg(feature = "recipes")]
 pub mod glass;
 pub mod hover_intent;
@@ -23,7 +24,6 @@ pub mod scroll_area_visibility;
 pub mod slider;
 pub mod stack;
 pub mod style;
-#[cfg(feature = "table")]
 pub mod table;
 pub mod text;
 pub mod transition;

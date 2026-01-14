@@ -8,6 +8,7 @@ use crate::runtime::callbacks::{
 use crate::runtime::changes::{EdgeChange, NodeChange, NodeGraphChanges};
 use crate::runtime::events::NodeGraphStoreEvent;
 use crate::runtime::lookups::{ConnectionSide, NodeGraphLookups};
+use crate::runtime::middleware::NodeGraphStoreMiddleware;
 use crate::runtime::store::NodeGraphStore;
 
 fn make_graph() -> (
@@ -748,6 +749,193 @@ fn store_does_not_commit_rejected_profile_edits() {
     };
     assert!(!diagnostics.is_empty());
 
+    assert_eq!(
+        store.graph().nodes.get(&a).unwrap().pos,
+        g0.nodes.get(&a).unwrap().pos
+    );
+    assert!(!store.can_undo());
+}
+
+#[test]
+fn store_rejects_non_finite_transactions() {
+    let g = Graph::new(crate::core::GraphId::from_u128(1));
+    let node_id = NodeId::new();
+
+    let tx = GraphTransaction {
+        label: None,
+        ops: vec![GraphOp::AddNode {
+            id: node_id,
+            node: Node {
+                kind: NodeKindKey::new("demo.node"),
+                kind_version: 1,
+                pos: CanvasPoint {
+                    x: f32::NAN,
+                    y: 0.0,
+                },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: Some(crate::core::CanvasSize {
+                    width: 10.0,
+                    height: 10.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: serde_json::Value::Null,
+            },
+        }],
+    };
+
+    let mut store = NodeGraphStore::new(g.clone(), NodeGraphViewState::default());
+    let err = store.dispatch_transaction(&tx).expect_err("reject");
+    let crate::runtime::store::DispatchError::Apply(crate::profile::ApplyPipelineError::Rejected {
+        diagnostics,
+        ..
+    }) = err
+    else {
+        panic!("unexpected error: {err:?}");
+    };
+    assert_eq!(diagnostics[0].key, "tx.non_finite");
+    assert!(store.graph().nodes.is_empty());
+    assert_eq!(store.graph().graph_id, g.graph_id);
+    assert!(!store.can_undo());
+}
+
+#[test]
+fn store_rejects_invalid_size_transactions() {
+    let g = Graph::new(crate::core::GraphId::from_u128(1));
+    let node_id = NodeId::new();
+
+    let tx = GraphTransaction {
+        label: None,
+        ops: vec![GraphOp::AddNode {
+            id: node_id,
+            node: Node {
+                kind: NodeKindKey::new("demo.node"),
+                kind_version: 1,
+                pos: CanvasPoint { x: 0.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: Some(crate::core::CanvasSize {
+                    width: 0.0,
+                    height: 10.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: serde_json::Value::Null,
+            },
+        }],
+    };
+
+    let mut store = NodeGraphStore::new(g.clone(), NodeGraphViewState::default());
+    let err = store.dispatch_transaction(&tx).expect_err("reject");
+    let crate::runtime::store::DispatchError::Apply(crate::profile::ApplyPipelineError::Rejected {
+        diagnostics,
+        ..
+    }) = err
+    else {
+        panic!("unexpected error: {err:?}");
+    };
+    assert_eq!(diagnostics[0].key, "tx.invalid_size");
+    assert!(store.graph().nodes.is_empty());
+    assert_eq!(store.graph().graph_id, g.graph_id);
+    assert!(!store.can_undo());
+}
+
+#[test]
+fn store_middleware_can_rewrite_transactions() {
+    #[derive(Debug, Default)]
+    struct DropOps;
+
+    impl NodeGraphStoreMiddleware for DropOps {
+        fn before_dispatch(
+            &mut self,
+            _snapshot: crate::runtime::events::NodeGraphStoreSnapshot<'_>,
+            tx: &mut GraphTransaction,
+        ) -> Result<(), crate::profile::ApplyPipelineError> {
+            tx.ops.clear();
+            Ok(())
+        }
+    }
+
+    let (g0, a, _b, _out_port, _in_port, _eid) = make_graph();
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default()).with_middleware(DropOps);
+
+    let tx = GraphTransaction {
+        label: None,
+        ops: vec![GraphOp::SetNodePos {
+            id: a,
+            from: CanvasPoint { x: 0.0, y: 0.0 },
+            to: CanvasPoint { x: 10.0, y: 20.0 },
+        }],
+    };
+
+    let outcome = store.dispatch_transaction(&tx).expect("dispatch");
+    assert!(outcome.committed.ops.is_empty());
+    assert_eq!(
+        store.graph().nodes.get(&a).unwrap().pos,
+        CanvasPoint { x: 0.0, y: 0.0 }
+    );
+    assert!(!store.can_undo());
+}
+
+#[test]
+fn store_middleware_can_reject_transactions() {
+    use crate::rules::{Diagnostic, DiagnosticSeverity, DiagnosticTarget};
+
+    #[derive(Debug, Default)]
+    struct RejectAll;
+
+    impl NodeGraphStoreMiddleware for RejectAll {
+        fn before_dispatch(
+            &mut self,
+            _snapshot: crate::runtime::events::NodeGraphStoreSnapshot<'_>,
+            _tx: &mut GraphTransaction,
+        ) -> Result<(), crate::profile::ApplyPipelineError> {
+            Err(crate::profile::ApplyPipelineError::Rejected {
+                message: "rejected by middleware".to_string(),
+                diagnostics: vec![Diagnostic {
+                    key: "test.middleware.reject".to_string(),
+                    severity: DiagnosticSeverity::Error,
+                    target: DiagnosticTarget::Graph,
+                    message: "rejected by middleware".to_string(),
+                    fixes: Vec::new(),
+                }],
+            })
+        }
+    }
+
+    let (g0, a, _b, _out_port, _in_port, _eid) = make_graph();
+    let mut store =
+        NodeGraphStore::new(g0.clone(), NodeGraphViewState::default()).with_middleware(RejectAll);
+
+    let tx = GraphTransaction {
+        label: None,
+        ops: vec![GraphOp::SetNodePos {
+            id: a,
+            from: CanvasPoint { x: 0.0, y: 0.0 },
+            to: CanvasPoint { x: 10.0, y: 20.0 },
+        }],
+    };
+
+    let err = store.dispatch_transaction(&tx).expect_err("reject");
+    let crate::runtime::store::DispatchError::Apply(crate::profile::ApplyPipelineError::Rejected {
+        diagnostics,
+        ..
+    }) = err
+    else {
+        panic!("unexpected error: {err:?}");
+    };
+    assert_eq!(diagnostics[0].key, "test.middleware.reject");
     assert_eq!(
         store.graph().nodes.get(&a).unwrap().pos,
         g0.nodes.get(&a).unwrap().pos

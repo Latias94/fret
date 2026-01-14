@@ -11,19 +11,19 @@ documentation.workspace = true
 
 [features]
 default = []
-# Heavy, app-specific composites (e.g. data grids / dashboard blocks).
-datagrid = []
 app-integration = ["dep:fret-app"]
+tanstack-table = []
 
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
 fret-app = { path = "../../crates/fret-app", optional = true }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
-fret-ui-kit = { path = "../fret-ui-kit", features = ["icons"] }
+fret-ui-kit = { path = "../fret-ui-kit", features = ["icons", "table"] }
 fret-icons = { path = "../fret-icons" }
 serde.workspace = true
 serde_json.workspace = true
+time.workspace = true
 
 [dev-dependencies]
 fret-app = { path = "../../crates/fret-app" }

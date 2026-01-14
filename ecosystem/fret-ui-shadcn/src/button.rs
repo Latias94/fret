@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use fret_core::{Color, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::CommandId;
+use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, LayoutStyle, PressableA11y, PressableProps, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -62,7 +63,10 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
-fn variant_colors(theme: &Theme, variant: ButtonVariant) -> (Color, Color, Color, Color, Color) {
+pub(crate) fn variant_colors(
+    theme: &Theme,
+    variant: ButtonVariant,
+) -> (Color, Color, Color, Color, Color) {
     let transparent = Color::TRANSPARENT;
 
     let bg_primary = theme.color_required("primary");
@@ -128,7 +132,7 @@ fn variant_colors(theme: &Theme, variant: ButtonVariant) -> (Color, Color, Color
     }
 }
 
-fn button_text_style(theme: &Theme, size: ButtonSize) -> TextStyle {
+pub(crate) fn button_text_style(theme: &Theme, size: ButtonSize) -> TextStyle {
     let px = size.component_size().control_text_px(theme);
     let line_height = theme.metric_required("font.line_height");
 
@@ -147,6 +151,7 @@ pub struct Button {
     label: Arc<str>,
     children: Vec<AnyElement>,
     command: Option<CommandId>,
+    on_activate: Option<OnActivate>,
     toggle_model: Option<fret_runtime::Model<bool>>,
     disabled: bool,
     variant: ButtonVariant,
@@ -161,6 +166,7 @@ impl std::fmt::Debug for Button {
             .field("label", &self.label)
             .field("children_len", &self.children.len())
             .field("command", &self.command)
+            .field("on_activate", &self.on_activate.is_some())
             .field("toggle_model", &self.toggle_model.is_some())
             .field("disabled", &self.disabled)
             .field("variant", &self.variant)
@@ -178,6 +184,7 @@ impl Button {
             label,
             children: Vec::new(),
             command: None,
+            on_activate: None,
             toggle_model: None,
             disabled: false,
             variant: ButtonVariant::default(),
@@ -194,6 +201,11 @@ impl Button {
 
     pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
         self.command = Some(command.into());
+        self
+    }
+
+    pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
+        self.on_activate = Some(on_activate);
         self
     }
 
@@ -262,6 +274,7 @@ impl Button {
             let pressable_layout = decl_style::layout_style(&theme, base_layout);
 
             let command = self.command;
+            let on_activate = self.on_activate;
             let toggle_model = self.toggle_model;
             let a11y_label = self.label.clone();
             let disabled = self.disabled;
@@ -277,6 +290,9 @@ impl Button {
 
             let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
                 cx.pressable_dispatch_command_opt(command);
+                if let Some(on_activate) = on_activate.clone() {
+                    cx.pressable_on_activate(on_activate);
+                }
                 if let Some(model) = toggle_model {
                     cx.pressable_toggle_bool(&model);
                 }
@@ -417,8 +433,7 @@ mod tests {
     impl TextService for FakeServices {
         fn prepare(
             &mut self,
-            _text: &str,
-            _style: &CoreTextStyle,
+            _input: &fret_core::TextInput,
             _constraints: TextConstraints,
         ) -> (TextBlobId, TextMetrics) {
             (

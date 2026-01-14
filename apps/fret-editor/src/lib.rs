@@ -26,7 +26,7 @@ pub use viewport_tools::{
 };
 
 pub use viewport_overlays::{
-    ViewportDragLine, ViewportGizmo, ViewportGizmoPart, ViewportMarker, ViewportMarquee,
-    ViewportOverlay, ViewportRotateGizmo, ViewportSelectionRect, paint_viewport_crosshair,
-    paint_viewport_overlay,
+    ViewportDragLine, ViewportMarker, ViewportMarquee, ViewportOverlay, ViewportRotateGizmo,
+    ViewportSelectionRect, ViewportTranslateGizmo, ViewportTranslateGizmoPart,
+    paint_viewport_crosshair, paint_viewport_overlay,
 };

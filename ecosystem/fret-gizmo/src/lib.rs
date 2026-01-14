@@ -6,6 +6,10 @@
 //! - Fret composites the viewport via `SceneOp::ViewportSurface` (or `fret-ui`'s declarative
 //!   `ViewportSurface` element) (ADR 0139).
 //! - Optional screen-space affordances (labels/HUD) may be rendered as regular UI overlays.
+//!
+//! Optional feature:
+//! - `f64-math`: uses f64 internally for projection/unprojection and ray construction to improve
+//!   picking stability in very large worlds (public API remains f32).
 
 #![allow(clippy::too_many_arguments)]
 
@@ -20,6 +24,7 @@ mod style;
 mod transform_plugin;
 mod view_gizmo;
 
+pub use fret_viewport_tooling::ViewportToolInput;
 pub use gizmo::{
     Aabb3, BUILTIN_HANDLE_GROUP_ROTATE, BUILTIN_HANDLE_GROUP_SCALE, BUILTIN_HANDLE_GROUP_TRANSLATE,
     DepthMode, Gizmo, GizmoConfig, GizmoCustomEdit, GizmoDrawList3d, GizmoHandedness, GizmoInput,
@@ -42,7 +47,7 @@ pub use picking::{
 };
 pub use plugin::{
     GizmoPickHit, GizmoPickItem, GizmoPickShape2d, GizmoPlugin, GizmoPluginContext,
-    GizmoPluginManager, GizmoPluginManagerConfig, GizmoPluginManagerState,
+    GizmoPluginManager, GizmoPluginManagerConfig, GizmoPluginManagerState, GizmoPropertySource,
 };
 pub use ring_scale_plugin::{RingScaleGizmoConfig, RingScaleGizmoPlugin, RingScaleGizmoState};
 pub use style::{
@@ -53,3 +58,32 @@ pub use view_gizmo::{
     ViewGizmo, ViewGizmoAnchor, ViewGizmoConfig, ViewGizmoFace, ViewGizmoInput, ViewGizmoLabel,
     ViewGizmoProjection, ViewGizmoSnap, ViewGizmoState, ViewGizmoUpdate,
 };
+
+/// Builds a `GizmoInput` from a `ViewportToolInput` plus host-defined policy flags.
+pub fn gizmo_input_from_tool_input(
+    tool: ViewportToolInput,
+    hovered: bool,
+    snap: bool,
+    cancel: bool,
+    precision: f32,
+) -> GizmoInput {
+    GizmoInput {
+        cursor_px: tool.cursor_px,
+        hovered,
+        drag_started: tool.drag_started,
+        dragging: tool.dragging,
+        snap,
+        cancel,
+        precision,
+    }
+}
+
+/// Builds a `ViewGizmoInput` from a `ViewportToolInput`.
+pub fn view_gizmo_input_from_tool_input(tool: ViewportToolInput, hovered: bool) -> ViewGizmoInput {
+    ViewGizmoInput {
+        cursor_px: tool.cursor_px,
+        hovered,
+        drag_started: tool.drag_started,
+        dragging: tool.dragging,
+    }
+}

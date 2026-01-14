@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use fret_core::geometry::Edges;
 use fret_core::{Axis, FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
+use fret_ui::action::OnActivate;
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, GridProps, MainAlign, Overflow, PressableProps, TextProps,
 };
@@ -183,14 +184,28 @@ impl TableFooter {
 /// shadcn/ui `TableRow` (`tr`).
 ///
 /// This is implemented as a `Pressable` wrapper for hover/selected background parity.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct TableRow {
     cols: u16,
     children: Vec<AnyElement>,
     selected: bool,
     enabled: bool,
     on_click: Option<fret_runtime::CommandId>,
+    on_activate: Option<OnActivate>,
     border_bottom: bool,
+}
+
+impl std::fmt::Debug for TableRow {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TableRow")
+            .field("cols", &self.cols)
+            .field("selected", &self.selected)
+            .field("enabled", &self.enabled)
+            .field("on_click", &self.on_click)
+            .field("on_activate", &self.on_activate.is_some())
+            .field("border_bottom", &self.border_bottom)
+            .finish_non_exhaustive()
+    }
 }
 
 impl TableRow {
@@ -201,6 +216,7 @@ impl TableRow {
             selected: false,
             enabled: true,
             on_click: None,
+            on_activate: None,
             border_bottom: true,
         }
     }
@@ -220,6 +236,11 @@ impl TableRow {
         self
     }
 
+    pub fn on_activate(mut self, handler: OnActivate) -> Self {
+        self.on_activate = Some(handler);
+        self
+    }
+
     pub fn border_bottom(mut self, enabled: bool) -> Self {
         self.border_bottom = enabled;
         self
@@ -230,6 +251,7 @@ impl TableRow {
         let selected = self.selected;
         let enabled = self.enabled;
         let on_click = self.on_click.clone();
+        let on_activate = self.on_activate.clone();
         let border_bottom = self.border_bottom;
         let children = self.children;
 
@@ -244,6 +266,9 @@ impl TableRow {
         };
 
         cx.pressable(pressable, move |cx, state| {
+            if let Some(on_activate) = on_activate.clone() {
+                cx.pressable_add_on_activate(on_activate);
+            }
             cx.pressable_dispatch_command_opt(on_click);
             let theme = Theme::global(&*cx.app).clone();
 

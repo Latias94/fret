@@ -3,6 +3,9 @@
 //! These are editor/app-level policies (ADR 0027 / ADR 0049). Docking is responsible only for
 //! embedding viewports (render target + input forwarding). The app can paint these overlays via
 //! `fret-docking`'s `DockViewportOverlayHooks`.
+//!
+//! Note: this module implements small 2D viewport tool overlays (translate/rotate) for the editor
+//! demos. It is unrelated to the engine-pass 3D transform gizmos in `ecosystem/fret-gizmo`.
 
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Scene, SceneOp,
@@ -19,7 +22,7 @@ pub struct ViewportOverlay {
     pub marquee: Option<ViewportMarquee>,
     pub drag_line: Option<ViewportDragLine>,
     pub selection_rect: Option<ViewportSelectionRect>,
-    pub gizmo: Option<ViewportGizmo>,
+    pub translate_gizmo: Option<ViewportTranslateGizmo>,
     pub rotate_gizmo: Option<ViewportRotateGizmo>,
     pub marker: Option<ViewportMarker>,
 }
@@ -39,17 +42,17 @@ pub struct ViewportSelectionRect {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ViewportGizmoPart {
+pub enum ViewportTranslateGizmoPart {
     X,
     Y,
     Handle,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct ViewportGizmo {
+pub struct ViewportTranslateGizmo {
     pub center_uv: (f32, f32),
     pub axis_len_px: Px,
-    pub highlight: Option<ViewportGizmoPart>,
+    pub highlight: Option<ViewportTranslateGizmoPart>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -122,8 +125,8 @@ pub fn paint_viewport_overlay(
     if let Some(sel) = overlay.selection_rect {
         paint_viewport_selection_rect(content, sel, scene);
     }
-    if let Some(gizmo) = overlay.gizmo {
-        paint_viewport_gizmo(theme, content, gizmo, scene);
+    if let Some(gizmo) = overlay.translate_gizmo {
+        paint_viewport_translate_gizmo(theme, content, gizmo, scene);
     }
     if let Some(gizmo) = overlay.rotate_gizmo {
         paint_viewport_rotate_gizmo(theme, content, gizmo, scene);
@@ -139,10 +142,10 @@ pub fn paint_viewport_overlay(
     }
 }
 
-fn paint_viewport_gizmo(
+fn paint_viewport_translate_gizmo(
     theme: fret_ui::ThemeSnapshot,
     content: Rect,
-    gizmo: ViewportGizmo,
+    gizmo: ViewportTranslateGizmo,
     scene: &mut Scene,
 ) {
     let (u, v) = gizmo.center_uv;
@@ -152,12 +155,12 @@ fn paint_viewport_gizmo(
     let len = gizmo.axis_len_px;
     let highlight = gizmo.highlight;
     let t = VIEWPORT_GIZMO_AXIS_THICKNESS_PX;
-    let x_t = if highlight == Some(ViewportGizmoPart::X) {
+    let x_t = if highlight == Some(ViewportTranslateGizmoPart::X) {
         VIEWPORT_GIZMO_AXIS_HIGHLIGHT_THICKNESS_PX
     } else {
         t
     };
-    let y_t = if highlight == Some(ViewportGizmoPart::Y) {
+    let y_t = if highlight == Some(ViewportTranslateGizmoPart::Y) {
         VIEWPORT_GIZMO_AXIS_HIGHLIGHT_THICKNESS_PX
     } else {
         t
@@ -169,12 +172,12 @@ fn paint_viewport_gizmo(
         Size::new(y_t, len),
     );
 
-    let x_axis_alpha = if highlight == Some(ViewportGizmoPart::X) {
+    let x_axis_alpha = if highlight == Some(ViewportTranslateGizmoPart::X) {
         1.0
     } else {
         0.85
     };
-    let y_axis_alpha = if highlight == Some(ViewportGizmoPart::Y) {
+    let y_axis_alpha = if highlight == Some(ViewportTranslateGizmoPart::Y) {
         1.0
     } else {
         0.85
@@ -206,7 +209,7 @@ fn paint_viewport_gizmo(
     });
 
     let handle = Px(10.0);
-    let handle_highlight = highlight == Some(ViewportGizmoPart::Handle);
+    let handle_highlight = highlight == Some(ViewportTranslateGizmoPart::Handle);
     let handle_border = if handle_highlight { Px(2.5) } else { Px(1.5) };
     scene.push(SceneOp::Quad {
         order: DrawOrder(7),

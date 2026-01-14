@@ -8992,3 +8992,169 @@ fn stack_strategy_samesign_separates_positive_and_negative() {
     let expected = data_to_px_y(-2.0, y_window.min, y_window.max, viewport);
     assert!((p_neg.y.0 - expected).abs() < 0.5);
 }
+
+#[test]
+fn line_missing_values_break_into_segments() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let series_id = crate::ids::SeriesId::new(1);
+
+    let mut spec = basic_spec();
+    spec.viewport = Some(Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    ));
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(vec![0.0, 1.0, 2.0, 3.0, 4.0]));
+    table.push_column(Column::F64(vec![1.0, 2.0, f64::NAN, 3.0, 4.0]));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let marks = &engine.output().marks;
+    let mut segments: Vec<(u64, Vec<u32>)> = marks
+        .nodes
+        .iter()
+        .filter(|n| {
+            n.kind == crate::marks::MarkKind::Polyline && n.source_series == Some(series_id)
+        })
+        .filter_map(|n| {
+            let MarkPayloadRef::Polyline(poly) = &n.payload else {
+                return None;
+            };
+            Some((
+                crate::ids::mark_variant(n.id),
+                marks.arena.data_indices[poly.points.clone()].to_vec(),
+            ))
+        })
+        .collect();
+
+    segments.sort_by_key(|(variant, _)| *variant);
+    assert_eq!(segments.len(), 2, "expected two polyline segments");
+    assert_eq!(segments[0].0, 0);
+    assert_eq!(segments[1].0, 1);
+    assert_eq!(segments[0].1, vec![0, 1]);
+    assert_eq!(segments[1].1, vec![3, 4]);
+}
+
+#[test]
+fn band_missing_upper_breaks_and_preserves_pairing() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y0_field = crate::ids::FieldId::new(2);
+    let y1_field = crate::ids::FieldId::new(3);
+
+    let mut spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        )),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y0_field,
+                    column: 1,
+                },
+                FieldSpec {
+                    id: y1_field,
+                    column: 2,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        data_zoom_y: vec![],
+        tooltip: None,
+        axis_pointer: None,
+        visual_maps: vec![],
+        series: vec![SeriesSpec {
+            id: series_id,
+            name: None,
+            kind: SeriesKind::Band,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y0_field,
+                y2: Some(y1_field),
+            },
+            x_axis,
+            y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
+            bar_layout: Default::default(),
+            area_baseline: None,
+        }],
+    };
+
+    // No dataZoom config: the only break is missing values.
+    spec.data_zoom_x = vec![];
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(vec![0.0, 1.0, 2.0, 3.0, 4.0]));
+    table.push_column(Column::F64(vec![1.0, 2.0, 3.0, 4.0, 5.0]));
+    table.push_column(Column::F64(vec![2.0, 3.0, f64::NAN, 5.0, 6.0]));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let marks = &engine.output().marks;
+    let mut by_variant: BTreeMap<u64, Vec<u32>> = BTreeMap::new();
+    for node in &marks.nodes {
+        if node.kind != crate::marks::MarkKind::Polyline || node.source_series != Some(series_id) {
+            continue;
+        }
+        let MarkPayloadRef::Polyline(poly) = &node.payload else {
+            continue;
+        };
+        by_variant.insert(
+            crate::ids::mark_variant(node.id),
+            marks.arena.data_indices[poly.points.clone()].to_vec(),
+        );
+    }
+
+    // Segment 0: variants 1/2. Segment 1: variants 3/4.
+    assert_eq!(by_variant.get(&1).cloned(), Some(vec![0, 1]));
+    assert_eq!(by_variant.get(&2).cloned(), Some(vec![0, 1]));
+    assert_eq!(by_variant.get(&3).cloned(), Some(vec![3, 4]));
+    assert_eq!(by_variant.get(&4).cloned(), Some(vec![3, 4]));
+}

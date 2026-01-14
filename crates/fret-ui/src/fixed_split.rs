@@ -63,6 +63,7 @@ impl<H: UiHost> Widget<H> for FixedSplit {
 
         let first_fraction = self.first_fraction.clamp(0.0, 1.0);
         let origin = cx.bounds.origin;
+        let is_final = cx.pass_kind == crate::layout_pass::LayoutPassKind::Final;
 
         match self.axis {
             Axis::Vertical => {
@@ -71,14 +72,22 @@ impl<H: UiHost> Widget<H> for FixedSplit {
 
                 if let Some(&top) = cx.children.first() {
                     let rect = Rect::new(origin, Size::new(cx.available.width, top_h));
-                    let _ = cx.layout_in(top, rect);
+                    if is_final {
+                        let _ = cx.layout_viewport_root(top, rect);
+                    } else {
+                        let _ = cx.layout_in(top, rect);
+                    }
                 }
                 if let Some(&bottom) = cx.children.get(1) {
                     let rect = Rect::new(
                         fret_core::Point::new(origin.x, Px(origin.y.0 + top_h.0)),
                         Size::new(cx.available.width, bottom_h),
                     );
-                    let _ = cx.layout_in(bottom, rect);
+                    if is_final {
+                        let _ = cx.layout_viewport_root(bottom, rect);
+                    } else {
+                        let _ = cx.layout_in(bottom, rect);
+                    }
                 }
             }
             Axis::Horizontal => {
@@ -87,14 +96,22 @@ impl<H: UiHost> Widget<H> for FixedSplit {
 
                 if let Some(&left) = cx.children.first() {
                     let rect = Rect::new(origin, Size::new(left_w, cx.available.height));
-                    let _ = cx.layout_in(left, rect);
+                    if is_final {
+                        let _ = cx.layout_viewport_root(left, rect);
+                    } else {
+                        let _ = cx.layout_in(left, rect);
+                    }
                 }
                 if let Some(&right) = cx.children.get(1) {
                     let rect = Rect::new(
                         fret_core::Point::new(Px(origin.x.0 + left_w.0), origin.y),
                         Size::new(right_w, cx.available.height),
                     );
-                    let _ = cx.layout_in(right, rect);
+                    if is_final {
+                        let _ = cx.layout_viewport_root(right, rect);
+                    } else {
+                        let _ = cx.layout_in(right, rect);
+                    }
                 }
             }
         }

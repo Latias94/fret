@@ -88,20 +88,21 @@ v1 constraints:
 This does not remove the contiguous fast path. It makes “sparse views” an explicit, testable contract
 instead of an ad-hoc future rewrite.
 
-### 4) Selection does not represent value masking (v1 keeps the concepts separate)
+### 4) Selection does not *encode* “empty” masking (selection vs masking stay separate)
 
 ECharts `filterMode='empty'` keeps rows but turns out-of-window values into `NaN`, causing line breaks.
 
-We avoid modeling value masking as a first-class transform output in v1 because it introduces a second concept:
+We keep **two separate concepts**:
 
 - **row participation** (selection), vs
-- **value validity/masking** (per-point visibility/break rules).
+- **value validity/masking** (per-point visibility and segment-break rules).
 
-In v1, `RowSelection` remains the participation contract, and “empty-style” masking is handled as a mark-level policy:
+In v1, we implement an ECharts-aligned subset without conflating the two:
 
 - `FilterMode::Filter` removes out-of-window rows by selection (contiguous slice when possible).
-- `FilterMode::None` keeps the base range unchanged.
-- `FilterMode::Empty` preserves the base selection and culls values at consumption time (line-family marks emit segment breaks; ADR 1150).
+- `FilterMode::None` keeps the base range unchanged (no out-of-window masking).
+- `FilterMode::Empty` preserves the base row selection but treats out-of-window samples as missing at mark emission
+  time (line-family breaks), following ADR 1150 + ADR 1141.
 
 ### 5) When sparse behaviors are added, they must be budget-aware and cacheable
 

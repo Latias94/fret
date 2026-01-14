@@ -317,24 +317,23 @@ pub fn minmax_per_pixel_step_segmented_with(
     x: &[f64],
     bounds: &DataBounds,
     viewport: Rect,
-    row_range: core::ops::Range<usize>,
+    selection: &RowSelection,
     max_points_to_process: usize,
     out_points: &mut Vec<Point>,
     out_indices: &mut Vec<u32>,
     mut y_at: impl FnMut(usize) -> f64,
-    mut is_valid: impl FnMut(usize, f64, f64) -> bool,
+    mut is_gap: impl FnMut(usize, f64, f64) -> bool,
 ) -> Option<SegmentedMinMaxPerPixelStepResult> {
     let width_px = viewport.size.width.0.max(1.0).ceil() as usize;
     scratch.ensure_bucket_count(width_px);
 
     let len = x.len();
     if cursor.next_index == 0 {
-        cursor.next_index = row_range.start.min(len);
         cursor.in_segment = false;
         cursor.segment_points_seen = 0;
     }
 
-    let end_limit = row_range.end.min(len);
+    let end_limit = selection.view_len(len);
     if cursor.next_index >= end_limit {
         cursor.in_segment = false;
         cursor.segment_points_seen = 0;
@@ -351,19 +350,19 @@ pub fn minmax_per_pixel_step_segmented_with(
 
     let mut processed = 0usize;
     while cursor.next_index < end_limit && processed < max_points_to_process {
-        let i = cursor.next_index;
+        let view_index = cursor.next_index;
         cursor.next_index += 1;
         processed += 1;
 
+        let Some(i) = selection.get_raw_index(len, view_index) else {
+            continue;
+        };
+
         let xi = x.get(i).copied().unwrap_or(f64::NAN);
         let yi = y_at(i);
-        let valid = xi.is_finite()
-            && yi.is_finite()
-            && xi >= bounds.x_min
-            && xi <= bounds.x_max
-            && is_valid(i, xi, yi);
+        let gap = !xi.is_finite() || !yi.is_finite() || is_gap(i, xi, yi);
 
-        if !valid {
+        if gap {
             if cursor.in_segment && cursor.segment_points_seen > 0 {
                 let seg_points_seen = cursor.segment_points_seen;
                 cursor.in_segment = false;
@@ -385,6 +384,13 @@ pub fn minmax_per_pixel_step_segmented_with(
                     segment_points_seen: seg_points_seen,
                 });
             }
+            continue;
+        }
+
+        // Points outside the current mapping window are excluded from emission, but do not
+        // necessarily create gaps (ECharts `filter` / `none` vs `empty` semantics are handled by
+        // `is_gap`).
+        if xi < bounds.x_min || xi > bounds.x_max {
             continue;
         }
 

@@ -48,6 +48,7 @@ fn outside_press_observer_must_not_capture_pointer_or_break_click_through() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -59,6 +60,7 @@ fn outside_press_observer_must_not_capture_pointer_or_break_click_through() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -187,6 +189,7 @@ fn outside_press_observer_respects_overlay_render_transform() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -216,6 +219,7 @@ fn outside_press_observer_respects_overlay_render_transform() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -307,6 +311,7 @@ fn outside_press_observer_dispatch_sets_input_context_phase() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -420,6 +425,7 @@ fn outside_press_observer_can_suppress_hit_test_dispatch() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -431,6 +437,7 @@ fn outside_press_observer_can_suppress_hit_test_dispatch() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -545,6 +552,7 @@ fn outside_press_observer_suppression_respects_dismissable_branches() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -556,6 +564,7 @@ fn outside_press_observer_suppression_respects_dismissable_branches() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );

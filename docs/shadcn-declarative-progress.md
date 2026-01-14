@@ -69,7 +69,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | breadcrumb | `breadcrumb` | Present | Unreviewed |  |
 | button | `button` | Present | Unreviewed |  |
 | button-group | `button_group` | Present | Unreviewed | Thin wrapper over `toggle_group` styling |
-| calendar | `calendar` | Missing | Unreviewed | Large surface; likely deferred unless needed |
+| calendar | `calendar` | Present | Unreviewed | Headless month grid lives in `fret-ui-kit` (`headless::calendar`); UI surface lives in `fret-ui-shadcn` |
 | card | `card` | Present | Unreviewed |  |
 | carousel | `carousel` | Defer | Unreviewed | Not editor-critical |
 | chart | `chart` | Defer | Unreviewed | Not editor-critical |
@@ -122,15 +122,15 @@ These are shadcn-style surfaces referenced by docs/demos but not part of the `re
 | Surface | Rust module | Status | Audit | Notes |
 | --- | --- | --- | --- | --- |
 | combobox | `combobox` | Present | In review | Now implemented as `Popover` + `CommandPalette` recipe; audit: `docs/audits/shadcn-combobox.md` |
-| date picker | `date_picker` | Missing | Unreviewed | Upstream is a `Popover` + `Calendar` recipe; consider shipping as a recipe/example first |
-| data table / datagrid | `data_table` | Feature-gated | Unreviewed | Enabled by `fret-ui-shadcn/datagrid`; not a `registry:ui` item upstream |
+| date picker | `date_picker` | Present | Unreviewed | `Popover` + `Calendar` recipe; v1 is single-date selection |
+| data table / datagrid | `data_table` | Present | Unreviewed | Extension surface (not a `registry:ui` item upstream); enabled by default |
 | toast | `toast` | Skip | Unreviewed | Upstream `toast` is deprecated in favor of `sonner`; this repo ships `sonner` |
 | typography | `typography` | Skip | Unreviewed | Upstream typography page is docs-only and not shipped as a component |
 
 Notes:
 - "Present" means a declarative module exists and compiles; it may still be below the "Definition of Done" parity bar (keyboard/APG, a11y checklist, tests).
 - Most "Missing" entries were previously implemented as retained widgets and intentionally deleted under the declarative-only boundary. They should come back as declarative components backed by `fret-ui-kit` infra + `fret-ui` mechanisms.
-- `data_table` is not a `registry:ui` item upstream; treat it as an extension and keep it feature-gated.
+- `data_table` is not a `registry:ui` item upstream; treat it as an extension (API may evolve as the TanStack-aligned headless engine is integrated).
 
 ## Recommended Order (Near-term)
 

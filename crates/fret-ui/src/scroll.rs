@@ -44,10 +44,17 @@ impl ScrollHandle {
     }
 
     pub fn clamp_offset(&self, offset: Point) -> Point {
-        let max = self.max_offset();
+        let state = self.state.borrow();
+        let max_x = (state.content.width.0 - state.viewport.width.0).max(0.0);
+        let max_y = (state.content.height.0 - state.viewport.height.0).max(0.0);
+        let clamp_x = state.viewport.width.0 > 0.0 && state.content.width.0 > 0.0;
+        let clamp_y = state.viewport.height.0 > 0.0 && state.content.height.0 > 0.0;
+
+        let x = offset.x.0.max(0.0);
+        let y = offset.y.0.max(0.0);
         Point::new(
-            Px(offset.x.0.max(0.0).min(max.x.0)),
-            Px(offset.y.0.max(0.0).min(max.y.0)),
+            Px(if clamp_x { x.min(max_x) } else { x }),
+            Px(if clamp_y { y.min(max_y) } else { y }),
         )
     }
 
