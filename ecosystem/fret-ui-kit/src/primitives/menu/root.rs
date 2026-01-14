@@ -50,7 +50,7 @@ pub fn ensure_submenu<H: UiHost>(
     timer_handler_element: GlobalElementId,
     cfg: sub::MenuSubmenuConfig,
 ) -> sub::MenuSubmenuModels {
-    let models = sub::ensure_models(cx);
+    let models = sub::ensure_models_for(cx, timer_handler_element);
     sub::install_timer_handler(cx, timer_handler_element, models.clone(), cfg);
     models
 }
@@ -66,7 +66,7 @@ pub fn sync_root_open_and_ensure_submenu<H: UiHost>(
     timer_handler_element: GlobalElementId,
     cfg: sub::MenuSubmenuConfig,
 ) -> sub::MenuSubmenuModels {
-    sub::sync_root_open(cx, is_open);
+    sub::sync_root_open_for(cx, timer_handler_element, is_open);
     ensure_submenu(cx, timer_handler_element, cfg)
 }
 
