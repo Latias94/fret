@@ -120,11 +120,8 @@ function writeIfChanged(filePath: string, json: unknown, update: boolean) {
   fs.writeFileSync(filePath, data, "utf8")
 }
 
-const SETTLE_MS = 250
-
 async function sleep(ms: number) {
-  const next = ms === 50 ? SETTLE_MS : ms
-  await new Promise((r) => setTimeout(r, next))
+  await new Promise((r) => setTimeout(r, ms))
 }
 
 function resolveBrowserExecutablePath(): string | undefined {
@@ -865,6 +862,11 @@ async function loadPuppeteer(): Promise<typeof import("puppeteer")> {
 
 const { flags, names } = parseArgs(process.argv.slice(2))
 
+if (process.env.DEBUG_ARGS === "1") {
+  console.log("?? argv debug")
+  console.log({ flags, names })
+}
+
 const baseUrl =
   (typeof flags.baseUrl === "string" ? flags.baseUrl : undefined) ??
   process.env.BASE_URL ??
@@ -907,7 +909,14 @@ function selectedScenarios(): Scenario[] {
         ].includes(s.item)
       )
     }
-    return scenarios.filter((s) => wanted.has(s.item) || wanted.has(s.primitive))
+    return scenarios.filter((s) => {
+      if (wanted.has(s.item) || wanted.has(s.primitive)) return true
+      const full = `${s.item}.${s.primitive}.${s.scenario}`
+      if (wanted.has(full)) return true
+      const short = `${s.primitive}.${s.scenario}`
+      if (wanted.has(short)) return true
+      return false
+    })
   }
   return scenarios
 }
@@ -1024,6 +1033,18 @@ async function main() {
 
       const page = await browser.newPage()
       page.setDefaultTimeout(timeoutMs)
+
+      // Behavior goldens should be deterministic. External images add timing and network
+      // nondeterminism (e.g. Radix Avatar conditionally mounting <img/> only once loaded), so we
+      // abort image requests and rely on fallbacks.
+      await page.setRequestInterception(true)
+      page.on("request", (req) => {
+        if (req.resourceType() === "image") {
+          void req.abort()
+          return
+        }
+        void req.continue()
+      })
 
       // Ensure theme is stable.
       await page.evaluateOnNewDocument((theme) => {

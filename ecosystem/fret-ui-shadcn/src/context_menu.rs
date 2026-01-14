@@ -1126,6 +1126,7 @@ fn context_menu_submenu_panel<H: UiHost>(
                     },
                     labels_arc.clone(),
                     typeahead_timeout_ticks,
+                    submenu_models.clone(),
                     move |_cx| out.clone(),
                 ),
             ]
@@ -2512,6 +2513,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position,
                 button: fret_core::MouseButton::Right,
                 modifiers: Modifiers::default(),
@@ -2523,6 +2525,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position,
                 button: fret_core::MouseButton::Right,
                 modifiers: Modifiers::default(),

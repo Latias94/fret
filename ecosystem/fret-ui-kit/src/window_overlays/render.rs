@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use fret_core::{AppWindowId, Color, NodeId, Point, Px, Rect, Transform2D, WindowMetricsService};
-use fret_runtime::DragKind;
+use fret_runtime::DRAG_KIND_DOCK_PANEL;
 use fret_ui::action::{ActionCx, DismissReason, UiActionHostAdapter, UiActionHostExt};
 use fret_ui::declarative;
 use fret_ui::element::AnyElement;
@@ -77,8 +77,8 @@ pub fn render<H: UiHost>(
         (focus_lost, resized)
     });
 
-    let dock_drag_affects_window = app.drag().is_some_and(|d| {
-        d.kind == DragKind::DockPanel && (d.source_window == window || d.current_window == window)
+    let dock_drag_affects_window = app.drag(fret_core::PointerId(0)).is_some_and(|d| {
+        d.kind == DRAG_KIND_DOCK_PANEL && (d.source_window == window || d.current_window == window)
     });
 
     let (

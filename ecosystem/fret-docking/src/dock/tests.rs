@@ -15,6 +15,7 @@ use fret_core::{
     AppWindowId, Event, InternalDragEvent, InternalDragKind, Modifiers, Point, Px, Scene, SceneOp,
     Size, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle, UiServices,
 };
+use fret_runtime::DRAG_KIND_DOCK_PANEL;
 use fret_runtime::PlatformCapabilities;
 use fret_ui::InternalDragRouteService;
 use fret_ui::UiTree;
@@ -41,8 +42,7 @@ struct FakeTextService;
 impl TextService for FakeTextService {
     fn prepare(
         &mut self,
-        _text: &str,
-        _style: &TextStyle,
+        _input: &fret_core::TextInput,
         _constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics) {
         (
@@ -1475,6 +1475,7 @@ fn render_and_bind_dock_panels_keeps_non_viewport_panel_alive() {
             button: fret_core::MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -1585,7 +1586,7 @@ fn dock_space_installs_internal_drag_route_anchor() {
 
     let route = app
         .global::<InternalDragRouteService>()
-        .and_then(|svc| svc.route(window, DragKind::DockPanel));
+        .and_then(|svc| svc.route(window, DRAG_KIND_DOCK_PANEL));
 
     assert_eq!(
         route,
@@ -1806,6 +1807,7 @@ fn dock_space_clears_hover_on_drop_without_drag_session() {
             position: Point::new(Px(12.0), Px(12.0)),
             kind: InternalDragKind::Drop,
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
         }),
     );
 
@@ -1819,7 +1821,8 @@ fn dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
     harness.layout();
 
     harness.app.begin_cross_window_drag_with_kind(
-        DragKind::DockPanel,
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
         harness.window,
         Point::new(Px(12.0), Px(12.0)),
         DockPanelDragPayload {
@@ -1838,6 +1841,7 @@ fn dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
             position,
             buttons: fret_core::MouseButtons::default(),
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -1848,6 +1852,7 @@ fn dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
             position,
             delta: Point::new(Px(0.0), Px(12.0)),
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -1867,7 +1872,8 @@ fn dock_drag_requests_animation_frames_while_dragging() {
     harness.layout();
 
     harness.app.begin_cross_window_drag_with_kind(
-        DragKind::DockPanel,
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
         harness.window,
         Point::new(Px(12.0), Px(12.0)),
         DockPanelDragPayload {
@@ -1876,7 +1882,7 @@ fn dock_drag_requests_animation_frames_while_dragging() {
             tear_off_requested: false,
         },
     );
-    if let Some(drag) = harness.app.drag_mut() {
+    if let Some(drag) = harness.app.drag_mut(fret_core::PointerId(0)) {
         drag.dragging = true;
     }
     let _ = harness.app.take_effects();
@@ -1906,6 +1912,7 @@ fn viewport_capture_emits_clamped_pointer_moves_outside_draw_rect() {
             button: fret_core::MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -1922,6 +1929,7 @@ fn viewport_capture_emits_clamped_pointer_moves_outside_draw_rect() {
                 ..Default::default()
             },
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -2025,6 +2033,7 @@ fn viewport_capture_requests_animation_frames_while_active() {
             button: fret_core::MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -2086,6 +2095,7 @@ fn dock_split_handle_hover_sets_resize_cursor_effect() {
             position: Point::new(Px(x), Px(y)),
             buttons: fret_core::MouseButtons::default(),
             modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -2130,7 +2140,8 @@ fn dock_tab_drop_outside_window_requests_float() {
     });
 
     app.begin_cross_window_drag_with_kind(
-        DragKind::DockPanel,
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
         window,
         Point::new(Px(24.0), Px(12.0)),
         DockPanelDragPayload {
@@ -2139,7 +2150,7 @@ fn dock_tab_drop_outside_window_requests_float() {
             tear_off_requested: false,
         },
     );
-    if let Some(drag) = app.drag_mut() {
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
         drag.dragging = true;
     }
 
@@ -2154,6 +2165,7 @@ fn dock_tab_drop_outside_window_requests_float() {
             position: Point::new(Px(-32.0), Px(12.0)),
             kind: InternalDragKind::Drop,
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
         }),
     );
 
@@ -2197,7 +2209,8 @@ fn dock_tab_drop_outside_window_does_not_request_tear_off_twice() {
     });
 
     app.begin_cross_window_drag_with_kind(
-        DragKind::DockPanel,
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
         window,
         Point::new(Px(24.0), Px(12.0)),
         DockPanelDragPayload {
@@ -2206,7 +2219,7 @@ fn dock_tab_drop_outside_window_does_not_request_tear_off_twice() {
             tear_off_requested: false,
         },
     );
-    if let Some(drag) = app.drag_mut() {
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
         drag.dragging = true;
     }
 
@@ -2223,6 +2236,7 @@ fn dock_tab_drop_outside_window_does_not_request_tear_off_twice() {
             position: outside,
             kind: InternalDragKind::Over,
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
         }),
     );
     ui.dispatch_event(
@@ -2232,6 +2246,7 @@ fn dock_tab_drop_outside_window_does_not_request_tear_off_twice() {
             position: outside,
             kind: InternalDragKind::Drop,
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
         }),
     );
 
@@ -2283,7 +2298,8 @@ fn dock_tab_drop_outside_window_floats_in_window_when_tear_off_disabled() {
     });
 
     app.begin_cross_window_drag_with_kind(
-        DragKind::DockPanel,
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
         window,
         Point::new(Px(24.0), Px(12.0)),
         DockPanelDragPayload {
@@ -2292,7 +2308,7 @@ fn dock_tab_drop_outside_window_floats_in_window_when_tear_off_disabled() {
             tear_off_requested: false,
         },
     );
-    if let Some(drag) = app.drag_mut() {
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
         drag.dragging = true;
     }
 
@@ -2307,6 +2323,7 @@ fn dock_tab_drop_outside_window_floats_in_window_when_tear_off_disabled() {
             position: Point::new(Px(-32.0), Px(12.0)),
             kind: InternalDragKind::Drop,
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
         }),
     );
 
@@ -2353,7 +2370,8 @@ fn dock_tab_drop_outside_window_floats_in_window_when_multi_window_is_disabled()
     });
 
     app.begin_cross_window_drag_with_kind(
-        DragKind::DockPanel,
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
         window,
         Point::new(Px(24.0), Px(12.0)),
         DockPanelDragPayload {
@@ -2362,7 +2380,7 @@ fn dock_tab_drop_outside_window_floats_in_window_when_multi_window_is_disabled()
             tear_off_requested: false,
         },
     );
-    if let Some(drag) = app.drag_mut() {
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
         drag.dragging = true;
     }
 
@@ -2377,6 +2395,7 @@ fn dock_tab_drop_outside_window_floats_in_window_when_multi_window_is_disabled()
             position: Point::new(Px(-32.0), Px(12.0)),
             kind: InternalDragKind::Drop,
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
         }),
     );
 
@@ -2427,7 +2446,8 @@ fn dock_tab_drop_outside_routes_to_dock_space() {
     ui.layout_all(&mut app, &mut text, bounds, 1.0);
 
     app.begin_cross_window_drag_with_kind(
-        DragKind::DockPanel,
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
         window,
         Point::new(Px(24.0), Px(12.0)),
         DockPanelDragPayload {
@@ -2436,7 +2456,7 @@ fn dock_tab_drop_outside_routes_to_dock_space() {
             tear_off_requested: false,
         },
     );
-    if let Some(drag) = app.drag_mut() {
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
         drag.dragging = true;
     }
 
@@ -2447,6 +2467,7 @@ fn dock_tab_drop_outside_routes_to_dock_space() {
             position: Point::new(Px(-32.0), Px(12.0)),
             kind: InternalDragKind::Drop,
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
         }),
     );
 

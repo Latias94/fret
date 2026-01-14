@@ -39,7 +39,7 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.layout_engine_solves = 0;
             self.debug_stats.layout_engine_solve_time = Duration::default();
             self.debug_stats.focus = self.focus;
-            self.debug_stats.captured = self.captured;
+            self.debug_stats.captured = self.captured_for(fret_core::PointerId(0));
         }
 
         let roots: Vec<NodeId> = self

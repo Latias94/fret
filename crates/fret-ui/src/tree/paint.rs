@@ -19,7 +19,7 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.paint_cache_misses = 0;
             self.debug_stats.paint_cache_replayed_ops = 0;
             self.debug_stats.focus = self.focus;
-            self.debug_stats.captured = self.captured;
+            self.debug_stats.captured = self.captured_for(fret_core::PointerId(0));
         }
 
         // Keep IME enabled state in sync even if focus is set programmatically and no input event

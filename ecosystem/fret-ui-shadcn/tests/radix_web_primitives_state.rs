@@ -238,6 +238,7 @@ fn click_center(ui: &mut UiTree<App>, app: &mut App, services: &mut dyn UiServic
         app,
         services,
         &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId(0),
             position: center,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
@@ -249,6 +250,7 @@ fn click_center(ui: &mut UiTree<App>, app: &mut App, services: &mut dyn UiServic
         app,
         services,
         &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId(0),
             position: center,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),

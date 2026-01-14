@@ -1266,6 +1266,7 @@ fn radix_web_select_item_aligned_geometry_matches_fret() {
         &mut app,
         &mut services,
         &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId(0),
             position: Point::new(Px(web_trigger_rect.x + 10.0), Px(web_trigger_rect.y + 10.0)),
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
@@ -1277,6 +1278,7 @@ fn radix_web_select_item_aligned_geometry_matches_fret() {
         &mut app,
         &mut services,
         &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId(0),
             position: Point::new(Px(web_trigger_rect.x + 10.0), Px(web_trigger_rect.y + 10.0)),
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
@@ -1686,6 +1688,7 @@ fn radix_web_hover_card_hover_geometry_matches_fret() {
         &mut app,
         &mut services,
         &Event::Pointer(PointerEvent::Move {
+            pointer_id: fret_core::PointerId(0),
             position: Point::new(
                 Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
                 Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
@@ -1924,6 +1927,7 @@ fn radix_web_context_menu_open_geometry_matches_fret() {
         &mut app,
         &mut services,
         &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId(0),
             position: click_position,
             button: MouseButton::Right,
             modifiers: Modifiers::default(),
@@ -1935,6 +1939,7 @@ fn radix_web_context_menu_open_geometry_matches_fret() {
         &mut app,
         &mut services,
         &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId(0),
             position: click_position,
             button: MouseButton::Right,
             modifiers: Modifiers::default(),
@@ -2395,6 +2400,7 @@ fn radix_web_menubar_open_geometry_matches_fret() {
         &mut app,
         &mut services,
         &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId(0),
             position: click,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
@@ -2406,6 +2412,7 @@ fn radix_web_menubar_open_geometry_matches_fret() {
         &mut app,
         &mut services,
         &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId(0),
             position: click,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),

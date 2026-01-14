@@ -28,6 +28,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                 modifiers,
                 pointer_type,
                 click_count,
+                ..
             } => {
                 let hook = crate::elements::with_element_state(
                     &mut *cx.app,

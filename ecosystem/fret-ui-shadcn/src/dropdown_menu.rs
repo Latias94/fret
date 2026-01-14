@@ -2404,6 +2404,7 @@ impl DropdownMenu {
                                                         },
                                                         submenu_labels_arc.clone(),
                                                         typeahead_timeout_ticks,
+                                                        submenu_models_for_panel.clone(),
                                                         move |_cx| rows.clone(),
                                                     );
                                                     vec![roving]
@@ -3400,6 +3401,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position: outside,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3411,6 +3413,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position: outside,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3676,6 +3679,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3687,6 +3691,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3796,6 +3801,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3807,6 +3813,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3880,6 +3887,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3995,6 +4003,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: rect_center(more_bounds),
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),
@@ -4092,6 +4101,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(390.0), Px(10.0)),
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),
@@ -4237,6 +4247,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: rect_center(more_bounds),
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),
@@ -4334,6 +4345,7 @@ mod tests {
                 &mut app,
                 &mut services,
                 &Event::Pointer(PointerEvent::Wheel {
+                    pointer_id: fret_core::PointerId(0),
                     position: wheel_pos,
                     delta: fret_core::Point::new(Px(0.0), Px(-80.0)),
                     modifiers: Modifiers::default(),
@@ -4341,6 +4353,32 @@ mod tests {
                 }),
             );
         }
+
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let snap = ui
+            .semantics_snapshot()
+            .expect("semantics snapshot after wheel (no rerender)");
+        let last = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Sub 39"))
+            .expect("last submenu item");
+        let last_id_before_rerender = last.id;
+        let last_bounds = ui
+            .debug_node_visual_bounds(last.id)
+            .or_else(|| ui.debug_node_bounds(last.id))
+            .expect("last bounds");
+
+        let menu_top = viewport_bounds.origin.y.0;
+        let menu_bottom = viewport_bounds.origin.y.0 + viewport_bounds.size.height.0;
+        let last_top = last_bounds.origin.y.0;
+        let last_bottom = last_bounds.origin.y.0 + last_bounds.size.height.0;
+
+        assert!(
+            last_bottom > menu_top + 0.01 && last_top < menu_bottom - 0.01,
+            "expected last submenu item to be visible after wheel scrolling without rerender; menu={viewport_bounds:?} last={last_bounds:?}"
+        );
 
         let _ = render_frame(
             &mut ui,
@@ -4360,6 +4398,7 @@ mod tests {
             .iter()
             .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Sub 39"))
             .expect("last submenu item");
+        let last_id_after_rerender = last.id;
         let last_bounds = ui
             .debug_node_visual_bounds(last.id)
             .or_else(|| ui.debug_node_bounds(last.id))
@@ -4372,7 +4411,7 @@ mod tests {
 
         assert!(
             last_bottom > menu_top + 0.01 && last_top < menu_bottom - 0.01,
-            "expected last submenu item to be visible after wheel scrolling; menu={viewport_bounds:?} last={last_bounds:?}"
+            "expected last submenu item to be visible after wheel scrolling; menu={viewport_bounds:?} last={last_bounds:?} ids=({last_id_before_rerender:?} -> {last_id_after_rerender:?})"
         );
     }
 
@@ -4445,6 +4484,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: rect_center(more_bounds),
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),
@@ -4587,6 +4627,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: safe_point,
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),

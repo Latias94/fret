@@ -859,6 +859,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(12.0), Px(12.0)),
                 buttons: MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),
@@ -1166,6 +1167,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(2000.0), Px(2000.0)),
                 buttons: MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),
@@ -1292,6 +1294,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(12.0), Px(12.0)),
                 buttons: MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),
@@ -1354,6 +1357,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position: down_pos,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -1366,6 +1370,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: outside,
                 buttons: MouseButtons {
                     left: true,
@@ -1391,6 +1396,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position: outside,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -1411,6 +1417,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: down_pos,
                 buttons: MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),
@@ -1424,6 +1431,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: outside,
                 buttons: MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),
@@ -1545,6 +1553,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(12.0), Px(12.0)),
                 buttons: MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),
@@ -1585,6 +1594,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position: select_pos,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
@@ -1609,6 +1619,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: outside,
                 buttons: MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),

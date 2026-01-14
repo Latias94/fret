@@ -76,6 +76,7 @@ fn event_cx<'a>(
             caps: PlatformCapabilities::default(),
             ..Default::default()
         },
+        pointer_id: None,
         children: &[],
         focus: Some(node),
         captured: None,
@@ -118,6 +119,7 @@ fn text_input_hover_sets_text_cursor_effect() {
             position: Point::new(Px(10.0), Px(10.0)),
             buttons: fret_core::MouseButtons::default(),
             modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );

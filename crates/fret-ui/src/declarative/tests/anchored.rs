@@ -106,6 +106,7 @@ fn anchored_places_child_via_render_transform_and_updates_layout_out() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: Default::default(),
         }),
     );
@@ -117,6 +118,7 @@ fn anchored_places_child_via_render_transform_and_updates_layout_out() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: Default::default(),
         }),
     );
@@ -135,6 +137,7 @@ fn anchored_places_child_via_render_transform_and_updates_layout_out() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: Default::default(),
         }),
     );
@@ -146,6 +149,7 @@ fn anchored_places_child_via_render_transform_and_updates_layout_out() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: Default::default(),
         }),
     );
