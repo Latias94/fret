@@ -765,7 +765,7 @@ fn remove_layer_uninstalls_overlay_and_removes_subtree() {
 
     // Pretend an overlay widget captured focus/pointer.
     ui.focus = Some(overlay_child);
-    ui.captured = Some(overlay_child);
+    ui.captured.insert(fret_core::PointerId(0), overlay_child);
 
     let mut services = FakeUiServices;
     let removed_root = ui.remove_layer(&mut services, layer);

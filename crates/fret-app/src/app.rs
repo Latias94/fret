@@ -219,7 +219,14 @@ impl App {
         self.next_drag_session_id = self.next_drag_session_id.saturating_add(1);
         self.drags.insert(
             pointer_id,
-            DragSession::new_cross_window(session_id, pointer_id, source_window, kind, start, payload),
+            DragSession::new_cross_window(
+                session_id,
+                pointer_id,
+                source_window,
+                kind,
+                start,
+                payload,
+            ),
         );
     }
 

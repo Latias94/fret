@@ -146,6 +146,7 @@ fn hover_region_reports_hovered_even_when_child_is_pressable() {
             position: pos,
             buttons: fret_core::MouseButtons::default(),
             modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -4497,6 +4498,7 @@ fn scroll_wheel_updates_offset_and_shifts_child_bounds() {
             position: wheel_pos,
             delta: fret_core::Point::new(Px(0.0), Px(-10.0)),
             modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -4793,6 +4795,7 @@ fn scroll_thumb_drag_updates_offset() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -4811,6 +4814,7 @@ fn scroll_thumb_drag_updates_offset() {
                 ..Default::default()
             },
             modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -4822,6 +4826,7 @@ fn scroll_thumb_drag_updates_offset() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -4962,6 +4967,7 @@ fn scroll_thumb_drag_updates_offset_horizontal() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -4975,6 +4981,7 @@ fn scroll_thumb_drag_updates_offset_horizontal() {
                 ..Default::default()
             },
             modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -4986,6 +4993,7 @@ fn scroll_thumb_drag_updates_offset_horizontal() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -5474,6 +5482,7 @@ fn focus_ring_is_focus_visible_only() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -5929,6 +5938,7 @@ fn pressable_dispatches_click_command_when_released_over_self() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -5940,6 +5950,7 @@ fn pressable_dispatches_click_command_when_released_over_self() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -5960,6 +5971,7 @@ fn pressable_dispatches_click_command_when_released_over_self() {
             position: Point::new(Px(200.0), Px(200.0)),
             buttons: MouseButtons::default(),
             modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );

@@ -15,6 +15,7 @@ use fret_ui::{ElementContext, UiHost};
 
 use std::sync::Arc;
 
+use crate::primitives::direction::{self as direction_prim, LayoutDirection};
 use crate::primitives::menu::content_panel;
 use crate::primitives::menu::sub;
 use crate::primitives::menu::{content, content::RovingFlexProps, content::TypeaheadPolicy};
@@ -145,8 +146,10 @@ pub fn submenu_roving_group_apg_prefix_typeahead<H: UiHost>(
     props: RovingFlexProps,
     labels: Arc<[Arc<str>]>,
     timeout_ticks: u64,
+    models: sub::MenuSubmenuModels,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
+    let dir = direction_prim::use_direction_in_scope(cx, None);
     content::menu_roving_group_apg(
         cx,
         props,
@@ -154,7 +157,27 @@ pub fn submenu_roving_group_apg_prefix_typeahead<H: UiHost>(
             labels,
             timeout_ticks,
         },
-        f,
+        move |cx| {
+            let models = models.clone();
+            cx.roving_add_on_key_down(Arc::new(move |host, acx, down| {
+                use fret_core::KeyCode;
+
+                if down.repeat {
+                    return false;
+                }
+                let is_close_key = match (down.key, dir) {
+                    (KeyCode::ArrowLeft, LayoutDirection::Ltr) => true,
+                    (KeyCode::ArrowRight, LayoutDirection::Rtl) => true,
+                    _ => false,
+                };
+                if !is_close_key {
+                    return false;
+                }
+                sub::close_and_restore_trigger(host, acx, &models);
+                true
+            }));
+            f(cx)
+        },
     )
 }
 

@@ -537,9 +537,9 @@ impl<H: UiHost> Widget<H> for DockSpace {
             | fret_core::Event::Pointer(fret_core::PointerEvent::Down { pointer_id, .. })
             | fret_core::Event::Pointer(fret_core::PointerEvent::Up { pointer_id, .. })
             | fret_core::Event::Pointer(fret_core::PointerEvent::Wheel { pointer_id, .. })
-            | fret_core::Event::Pointer(fret_core::PointerEvent::PinchGesture { pointer_id, .. }) => {
-                *pointer_id
-            }
+            | fret_core::Event::Pointer(fret_core::PointerEvent::PinchGesture {
+                pointer_id, ..
+            }) => *pointer_id,
             fret_core::Event::PointerCancel(e) => e.pointer_id,
             fret_core::Event::InternalDrag(e) => e.pointer_id,
             _ => fret_core::PointerId(0),

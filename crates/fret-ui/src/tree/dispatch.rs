@@ -148,8 +148,8 @@ impl<H: UiHost> UiTree<H> {
                     }
                 }
 
-                let captured_now = pointer_id_for_capture
-                    .and_then(|p| self.captured.get(&p).copied());
+                let captured_now =
+                    pointer_id_for_capture.and_then(|p| self.captured.get(&p).copied());
                 if captured_now.is_some() || stop_propagation {
                     return true;
                 }
@@ -842,8 +842,8 @@ impl<H: UiHost> UiTree<H> {
                     }
                 }
 
-                let captured_now = event_pointer_id_for_capture
-                    .and_then(|p| self.captured.get(&p).copied());
+                let captured_now =
+                    event_pointer_id_for_capture.and_then(|p| self.captured.get(&p).copied());
                 if captured_now.is_some() || stop_propagation {
                     break;
                 }
@@ -938,8 +938,8 @@ impl<H: UiHost> UiTree<H> {
                     }
                 }
 
-                let captured_now = event_pointer_id_for_capture
-                    .and_then(|p| self.captured.get(&p).copied());
+                let captured_now =
+                    event_pointer_id_for_capture.and_then(|p| self.captured.get(&p).copied());
                 if captured_now.is_some() || stop_propagation {
                     break;
                 }
@@ -1243,8 +1243,7 @@ impl<H: UiHost> UiTree<H> {
                     input_ctx: observer_ctx,
                     children,
                     focus: tree.focus,
-                    captured: pointer_id_for_capture
-                        .and_then(|p| tree.captured.get(&p).copied()),
+                    captured: pointer_id_for_capture.and_then(|p| tree.captured.get(&p).copied()),
                     bounds,
                     invalidations: Vec::new(),
                     requested_focus: None,

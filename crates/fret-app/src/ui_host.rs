@@ -106,6 +106,13 @@ impl DragHost for App {
         start: Point,
         payload: T,
     ) {
-        App::begin_cross_window_drag_with_kind(self, pointer_id, kind, source_window, start, payload)
+        App::begin_cross_window_drag_with_kind(
+            self,
+            pointer_id,
+            kind,
+            source_window,
+            start,
+            payload,
+        )
     }
 }

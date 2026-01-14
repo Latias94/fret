@@ -97,6 +97,7 @@ fn text_area_hover_sets_text_cursor_effect() {
             position: Point::new(Px(12.0), Px(12.0)),
             buttons: fret_core::MouseButtons::default(),
             modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -278,6 +279,7 @@ fn event_cx<'a>(
             caps: PlatformCapabilities::default(),
             ..Default::default()
         },
+        pointer_id: None,
         children: &[],
         focus: Some(node),
         captured: None,
@@ -586,6 +588,7 @@ fn ime_cursor_area_reflects_scroll_offset_in_paint_space() {
                 position: Point::new(Px(0.0), Px(0.0)),
                 delta: Point::new(Px(0.0), Px(-10.0)),
                 modifiers: fret_core::Modifiers::default(),
+                pointer_id: fret_core::PointerId(0),
                 pointer_type: fret_core::PointerType::Mouse,
             }),
         );

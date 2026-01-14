@@ -10299,7 +10299,9 @@ mod tests {
     use fret_runtime::ui_host::{
         CommandsHost, DragHost, EffectSink, GlobalsHost, ModelsHost, TimeHost,
     };
-    use fret_runtime::{ClipboardToken, CommandRegistry, DragKind, DragSession, Effect, FrameId};
+    use fret_runtime::{
+        ClipboardToken, CommandRegistry, DragKindId, DragSession, DragSessionId, Effect, FrameId,
+    };
     use fret_runtime::{ModelHost, ModelStore, TickId, TimerToken};
     use fret_ui::retained_bridge::Widget as _;
     use serde_json::Value;
@@ -11331,12 +11333,10 @@ mod tests {
     fn internal_drag_drop_candidate_on_edge_splits_edge() {
         use std::sync::Arc;
 
-        use fret_core::{InternalDragEvent, InternalDragKind};
-        use fret_runtime::DragKind;
-
         use crate::core::{PortCapacity, PortDirection, PortKey, PortKind};
         use crate::rules::{InsertNodeTemplate, PortTemplate};
         use crate::ui::presenter::InsertNodeCandidate;
+        use fret_core::{InternalDragEvent, InternalDragKind};
 
         let mut host = TestUiHostImpl::default();
         let (mut graph_value, _a, _a_in, a_out, _b, b_in) =
@@ -11390,8 +11390,10 @@ mod tests {
         };
 
         host.drag = Some(DragSession::new_cross_window(
+            DragSessionId(1),
+            fret_core::PointerId(0),
             AppWindowId::default(),
-            DragKind::Custom,
+            super::insert_node_drag::DRAG_KIND_INSERT_NODE,
             Point::new(Px(0.0), Px(0.0)),
             super::insert_node_drag::InsertNodeDragPayload { candidate },
         ));
@@ -11621,34 +11623,58 @@ mod tests {
     }
 
     impl DragHost for TestUiHostImpl {
-        fn drag(&self) -> Option<&DragSession> {
-            self.drag.as_ref()
+        fn drag(&self, pointer_id: fret_core::PointerId) -> Option<&DragSession> {
+            self.drag
+                .as_ref()
+                .filter(|drag| drag.pointer_id == pointer_id)
         }
 
-        fn drag_mut(&mut self) -> Option<&mut DragSession> {
-            self.drag.as_mut()
+        fn drag_mut(&mut self, pointer_id: fret_core::PointerId) -> Option<&mut DragSession> {
+            self.drag
+                .as_mut()
+                .filter(|drag| drag.pointer_id == pointer_id)
         }
 
-        fn cancel_drag(&mut self) {
-            self.drag = None;
+        fn cancel_drag(&mut self, pointer_id: fret_core::PointerId) {
+            if self.drag(pointer_id).is_some() {
+                self.drag = None;
+            }
         }
 
         fn begin_drag_with_kind<T: Any>(
             &mut self,
-            _kind: DragKind,
-            _source_window: AppWindowId,
-            _start: Point,
-            _payload: T,
+            pointer_id: fret_core::PointerId,
+            kind: DragKindId,
+            source_window: AppWindowId,
+            start: Point,
+            payload: T,
         ) {
+            self.drag = Some(DragSession::new(
+                DragSessionId(1),
+                pointer_id,
+                source_window,
+                kind,
+                start,
+                payload,
+            ));
         }
 
         fn begin_cross_window_drag_with_kind<T: Any>(
             &mut self,
-            _kind: DragKind,
-            _source_window: AppWindowId,
-            _start: Point,
-            _payload: T,
+            pointer_id: fret_core::PointerId,
+            kind: DragKindId,
+            source_window: AppWindowId,
+            start: Point,
+            payload: T,
         ) {
+            self.drag = Some(DragSession::new_cross_window(
+                DragSessionId(1),
+                pointer_id,
+                source_window,
+                kind,
+                start,
+                payload,
+            ));
         }
     }
 
@@ -11663,6 +11689,7 @@ mod tests {
             node: fret_core::NodeId::default(),
             window: None,
             input_ctx: fret_runtime::InputContext::default(),
+            pointer_id: None,
             children: &[],
             focus: None,
             captured: None,

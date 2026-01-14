@@ -2404,6 +2404,7 @@ impl DropdownMenu {
                                                         },
                                                         submenu_labels_arc.clone(),
                                                         typeahead_timeout_ticks,
+                                                        submenu_models_for_panel.clone(),
                                                         move |_cx| rows.clone(),
                                                     );
                                                     vec![roving]
@@ -3400,6 +3401,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position: outside,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3411,6 +3413,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position: outside,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3676,6 +3679,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3687,6 +3691,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3796,6 +3801,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3807,6 +3813,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3880,6 +3887,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
@@ -3995,6 +4003,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: rect_center(more_bounds),
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),
@@ -4092,6 +4101,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(390.0), Px(10.0)),
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),
@@ -4237,6 +4247,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: rect_center(more_bounds),
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),
@@ -4334,6 +4345,7 @@ mod tests {
                 &mut app,
                 &mut services,
                 &Event::Pointer(PointerEvent::Wheel {
+                    pointer_id: fret_core::PointerId(0),
                     position: wheel_pos,
                     delta: fret_core::Point::new(Px(0.0), Px(-80.0)),
                     modifiers: Modifiers::default(),
@@ -4344,7 +4356,9 @@ mod tests {
 
         ui.request_semantics_snapshot();
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
-        let snap = ui.semantics_snapshot().expect("semantics snapshot after wheel (no rerender)");
+        let snap = ui
+            .semantics_snapshot()
+            .expect("semantics snapshot after wheel (no rerender)");
         let last = snap
             .nodes
             .iter()
@@ -4470,6 +4484,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: rect_center(more_bounds),
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),
@@ -4612,6 +4627,7 @@ mod tests {
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
                 position: safe_point,
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),

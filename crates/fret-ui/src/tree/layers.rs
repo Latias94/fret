@@ -120,7 +120,9 @@ impl<H: UiHost> UiTree<H> {
             let to_remove: Vec<fret_core::PointerId> = self
                 .captured
                 .iter()
-                .filter_map(|(p, n)| (self.node_layer(*n).is_some_and(|lid| lid == layer)).then_some(*p))
+                .filter_map(|(p, n)| {
+                    (self.node_layer(*n).is_some_and(|lid| lid == layer)).then_some(*p)
+                })
                 .collect();
             for p in to_remove {
                 self.captured.remove(&p);
@@ -144,7 +146,9 @@ impl<H: UiHost> UiTree<H> {
             let to_remove: Vec<fret_core::PointerId> = self
                 .captured
                 .iter()
-                .filter_map(|(p, n)| (self.node_layer(*n).is_some_and(|lid| lid == layer)).then_some(*p))
+                .filter_map(|(p, n)| {
+                    (self.node_layer(*n).is_some_and(|lid| lid == layer)).then_some(*p)
+                })
                 .collect();
             for p in to_remove {
                 self.captured.remove(&p);
