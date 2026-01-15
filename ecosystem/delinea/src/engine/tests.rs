@@ -15684,6 +15684,127 @@ fn lod_line_large_mode_is_budget_invariant() {
     );
 }
 
+#[test]
+fn lod_bar_mode_is_budget_invariant() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
+
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(200.0)),
+    );
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(viewport),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: Some("Category".to_string()),
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: crate::scale::AxisScale::Category(crate::scale::CategoryAxisScale {
+                    categories: (0..10_000).map(|i| format!("C{i:05}")).collect(),
+                }),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        data_zoom_y: vec![],
+        tooltip: None,
+        axis_pointer: None,
+        visual_maps: vec![],
+        series: vec![SeriesSpec {
+            id: series_id,
+            name: None,
+            kind: SeriesKind::Bar,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
+            bar_layout: Default::default(),
+            area_baseline: None,
+        }],
+    };
+
+    let n = 10_000usize;
+    let xs: Vec<f64> = (0..n).map(|i| i as f64).collect();
+    let ys: Vec<f64> = (0..n).map(|i| ((i as f64) * 0.01).sin()).collect();
+
+    let build_engine = || {
+        let mut engine = ChartEngine::new(spec.clone()).unwrap();
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(xs.clone()));
+        table.push_column(Column::F64(ys.clone()));
+        engine.datasets_mut().insert(dataset_id, table);
+        engine
+    };
+
+    let mut engine_a = build_engine();
+    let mut measurer_a = NullTextMeasurer::default();
+    run_engine_to_completion(
+        &mut engine_a,
+        &mut measurer_a,
+        WorkBudget::new(8_192, 0, 8),
+        4096,
+    );
+
+    let mut engine_b = build_engine();
+    let mut measurer_b = NullTextMeasurer::default();
+    run_engine_to_completion(
+        &mut engine_b,
+        &mut measurer_b,
+        WorkBudget::new(1_000_000, 0, 1_024),
+        256,
+    );
+
+    assert_eq!(
+        engine_a.output().axis_windows,
+        engine_b.output().axis_windows,
+        "expected axis windows to be budget-invariant"
+    );
+    assert_eq!(
+        marks_signature(&engine_a.output().marks),
+        marks_signature(&engine_b.output().marks),
+        "expected marks output to be budget-invariant"
+    );
+}
+
 fn find_polyline_point_by_data_index(
     marks: &crate::marks::MarkTree,
     series: crate::ids::SeriesId,

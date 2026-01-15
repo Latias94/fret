@@ -31,6 +31,14 @@ Implementation: `ecosystem/delinea/src/engine/stages/marks.rs`
 - If `visible_len <= 20_000`, emit all visible points (exact mode).
 - If `visible_len > 20_000`, switch to the same min/max-per-pixel strategy as line-family.
 
+### Bar: exact rectangles (not pixel-bounded)
+
+Implementation: `ecosystem/delinea/src/engine/stages/marks.rs`
+
+- Bars currently emit one rectangle per visible row (exact mode).
+- This is budgeted (incremental stepping), but not pixel-bounded. A future LOD/progressive strategy
+  is expected for large categorical datasets and stacked bars.
+
 ## P0 invariants (must stay stable)
 
 ### Geometry bounds and cardinality
@@ -41,6 +49,11 @@ For a plot viewport with `plot_width_px = ceil(viewport.size.width)`:
 - Identity alignment: `points.len() == data_indices.len()`.
 - Index validity: every emitted `data_index` must be within the dataset row range.
 - View bounds: emitted points must lie inside the viewport rectangle (after clamping).
+
+For bars:
+
+- Identity alignment: `rects.len() == rect_data_indices.len()`.
+- Index validity: every emitted `rect_data_index` must be within the dataset row range.
 
 ### Ordering and determinism (monotonic X precondition)
 
@@ -73,6 +86,7 @@ Given the same spec, dataset, state, and viewport:
   - `line_large_mode_is_pixel_bounded`
   - `lod_scatter_large_mode_is_budget_invariant`
   - `lod_line_large_mode_is_budget_invariant`
+  - `lod_bar_mode_is_budget_invariant`
 
 ### Manual stress harness
 

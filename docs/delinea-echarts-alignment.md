@@ -152,9 +152,14 @@ single “at a glance” view of:
 - Validation (recommended):
   - `cargo run -p fret-demo --bin fret-demo -- category_line_demo` (category X axis + line/scatter + dataZoom)
 - Missing vs ECharts:
-  - category 数据仍以 `f64` ordinal（索引）表达；ECharts 的“直接用字符串/任意值作为 category data”需要 adapter 侧/引擎侧更明确的映射策略与约束。
-  - 重复 category 的取样策略（first/last/nearest/aggregate）目前是 v1 隐式规则（偏向 first-in-selection），需要在更多路径与更多 series kind（Area/Band/stacked）上补齐一致性与文档口径。
-  - 性能/一致性：indices 物化与 ordinal index 的协同策略仍可优化（避免重复建索引、在更多采样路径复用 ordinal 映射而非扫描）。
+  - Category data is currently represented as `f64` ordinals (indices). ECharts-style string/any-value
+    categories require a clearer adapter/engine mapping strategy and explicit constraints.
+  - Duplicate-category sampling policy (first/last/nearest/aggregate) is currently a v1 implicit rule
+    (biased towards first-in-selection). It needs to be specified and made consistent across more
+    series kinds (Area/Band/stacked) and sampling paths.
+  - Performance and consistency: the coordination between indices materialization and ordinal index
+    caching can still be improved (avoid redundant index builds; reuse ordinal mapping in more
+    sampling paths instead of scanning).
 
 **S5 - Tooltip content parity + formatting hooks** (`[~]`)
 
@@ -255,10 +260,11 @@ single “at a glance” view of:
   - Line-family (line/area/band): min/max-per-pixel bucketing over the plot width, emitting `<= 4 * plot_width_px`
     points for monotonic-X inputs (preserves spikes while staying pixel-bounded).
   - Scatter: exact mode for small datasets; large mode (`visible_len > 20_000`) switches to pixel-bounded LOD.
+  - Bar: exact mode (one rect per visible row); no pixel-bounded LOD yet (performance is budgeted but output size is not).
   - LOD outputs preserve index identity: `points.len() == data_indices.len()` and indices refer to raw rows.
 - Tests (headless):
   - `ecosystem/delinea/src/engine/lod/minmax_per_pixel.rs` (unit invariants for finalize ordering + bounds)
-  - `ecosystem/delinea/src/engine/tests.rs` (`scatter_large_mode_is_pixel_bounded`, `line_large_mode_is_pixel_bounded`, `lod_scatter_large_mode_is_budget_invariant`, `lod_line_large_mode_is_budget_invariant`)
+  - `ecosystem/delinea/src/engine/tests.rs` (`scatter_large_mode_is_pixel_bounded`, `line_large_mode_is_pixel_bounded`, `lod_scatter_large_mode_is_budget_invariant`, `lod_line_large_mode_is_budget_invariant`, `lod_bar_mode_is_budget_invariant`)
 - Conformance doc: `docs/delinea-lod-conformance.md`
 - Validation harness (native, v1):
   - `cargo run -p fret-demo --bin chart_stress_demo`
@@ -266,8 +272,10 @@ single “at a glance” view of:
     - `FRET_CHART_STRESS_POINTS` (default: 1_000_000)
     - `FRET_CHART_STRESS_EXIT_AFTER_FRAMES`
 - Missing vs ECharts:
-  - 完整的按 series kind 暴露的策略/开关（ECharts `large/largeThreshold/progressive/*`），尤其是 bar/stacked 场景的 LOD 与渐进策略。
-  - 可在 CI 中 gate 的 benchmark/conformance harness（锁帧时间回归与更丰富的视觉不变量），而不仅是手工 stress demo。
+  - Explicit per-series-kind knobs aligned with ECharts (`large`, `largeThreshold`, `progressive`, etc),
+    especially for bar/stacked scenarios.
+  - A benchmark/conformance harness that can gate frame-time regressions on CI (richer invariants than
+    the current manual stress demo).
 
 **S9 - Append/update semantics (`appendData`)** (`[~]`)
 
