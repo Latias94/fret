@@ -223,8 +223,8 @@ impl WinitAppDriver for DataTableDemoDriver {
                     let helper = create_column_helper::<DemoRow>();
                     let columns: Vec<ColumnDef<DemoRow>> = vec![
                         helper.clone().accessor("id", |r| r.id),
-                        helper.clone().accessor("name", |r| r.name.clone()),
-                        helper.clone().accessor("role", |r| r.role.clone()),
+                        helper.clone().accessor_str("name", |r| r.name.as_ref()),
+                        helper.clone().accessor_str("role", |r| r.role.as_ref()),
                         helper.accessor("score", |r| r.score),
                     ];
                     let columns: Arc<[ColumnDef<DemoRow>]> = columns.into();
