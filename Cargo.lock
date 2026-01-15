@@ -1049,6 +1049,7 @@ name = "fret-docking"
 version = "0.1.0"
 dependencies = [
  "fret-core",
+ "fret-dnd",
  "fret-runtime",
  "fret-ui",
  "slotmap",
@@ -1099,6 +1100,7 @@ dependencies = [
  "glam",
  "image",
  "serde_json",
+ "time",
  "tracing",
  "tracing-subscriber",
  "ureq",
