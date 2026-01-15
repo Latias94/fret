@@ -62,7 +62,7 @@ If you also extract open overlay states (`--modes=open` or `--open`), you will g
 `*.open.json` files alongside the base closed-mode goldens. In this repo, the current snapshot is:
 
 - `362` closed-mode files (`*.json`, excluding `*.open.json`)
-- `6` open-mode files (`*.open.json`)
+- `8` open-mode files (`*.open.json`)
 
 If the extracted `computedStyle` looks like browser defaults (e.g. `<button>` has `display:
 inline-block`, `borderTopWidth: 2px`), your dev server is likely not producing Tailwind utilities.

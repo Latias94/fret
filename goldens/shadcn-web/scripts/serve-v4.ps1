@@ -9,7 +9,22 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\\..\\..\\..")
+function Resolve-RepoRoot([string]$startDir) {
+  $dir = (Resolve-Path $startDir).Path
+  while ($true) {
+    if (Test-Path (Join-Path $dir "repo-ref\\ui")) {
+      return $dir
+    }
+    $parent = Split-Path -Parent $dir
+    if (-not $parent -or $parent -eq $dir) {
+      break
+    }
+    $dir = $parent
+  }
+  throw "Unable to locate repo root from $startDir (expected repo-ref/ui)."
+}
+
+$repoRoot = Resolve-RepoRoot (Join-Path $PSScriptRoot "..\\..\\..")
 $uiRoot = Join-Path $repoRoot "repo-ref\\ui"
 $v4Root = Join-Path $uiRoot "apps\\v4"
 
@@ -48,4 +63,3 @@ if (-not $SkipBuild) {
 
 Write-Host "Starting server (pnpm -C repo-ref/ui/apps/v4 exec next start -p $Port)..."
 pnpm -C $v4Root exec next start -p $Port
-
