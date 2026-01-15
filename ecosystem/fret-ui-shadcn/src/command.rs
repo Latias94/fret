@@ -1061,75 +1061,78 @@ impl CommandList {
                                     let focusable = tab_stop.is_some_and(|i| i == idx);
 
                                     let query_for_row = query_for_render.clone();
+                                    let value_key = item.value.clone();
                                     let label = item.label.clone();
                                     let command = item.command;
                                     let on_select = item.on_select.clone();
                                     let children = item.children;
                                     let text_style = text_style.clone();
 
-                                    out.push(cx.pressable(
-                                        PressableProps {
-                                            layout: item_layout,
-                                            enabled,
-                                            focusable,
-                                            focus_ring: Some(ring),
-                                            a11y: PressableA11y {
-                                                role: Some(SemanticsRole::ListBoxOption),
-                                                label: Some(label.clone()),
+                                    out.push(cx.keyed(value_key, |cx| {
+                                        cx.pressable(
+                                            PressableProps {
+                                                layout: item_layout,
+                                                enabled,
+                                                focusable,
+                                                focus_ring: Some(ring),
+                                                a11y: PressableA11y {
+                                                    role: Some(SemanticsRole::ListBoxOption),
+                                                    label: Some(label.clone()),
+                                                    ..Default::default()
+                                                },
                                                 ..Default::default()
                                             },
-                                            ..Default::default()
-                                        },
-                                        move |cx, st| {
-                                            cx.pressable_dispatch_command_opt(command);
-                                            if let Some(on_select) = on_select.clone() {
-                                                cx.pressable_add_on_activate(on_select);
-                                            }
-                                            let hovered = st.hovered && !st.pressed;
-                                            let pressed = st.pressed;
+                                            move |cx, st| {
+                                                cx.pressable_dispatch_command_opt(command);
+                                                if let Some(on_select) = on_select.clone() {
+                                                    cx.pressable_add_on_activate(on_select);
+                                                }
+                                                let hovered = st.hovered && !st.pressed;
+                                                let pressed = st.pressed;
 
-                                            let bg = (hovered || pressed).then_some(bg_hover);
-                                            let props = ContainerProps {
-                                                layout: LayoutStyle::default(),
-                                                padding: Edges {
-                                                    top: pad_y,
-                                                    right: pad_x,
-                                                    bottom: pad_y,
-                                                    left: pad_x,
-                                                },
-                                                background: bg,
-                                                shadow: None,
-                                                border: Edges::all(Px(0.0)),
-                                                border_color: None,
-                                                corner_radii: Corners::all(radius),
-                                            };
+                                                let bg = (hovered || pressed).then_some(bg_hover);
+                                                let props = ContainerProps {
+                                                    layout: LayoutStyle::default(),
+                                                    padding: Edges {
+                                                        top: pad_y,
+                                                        right: pad_x,
+                                                        bottom: pad_y,
+                                                        left: pad_x,
+                                                    },
+                                                    background: bg,
+                                                    shadow: None,
+                                                    border: Edges::all(Px(0.0)),
+                                                    border_color: None,
+                                                    corner_radii: Corners::all(radius),
+                                                };
 
-                                            vec![cx.container(props, move |cx| {
-                                                vec![cx.row(
-                                                    RowProps {
-                                                        layout: LayoutStyle::default(),
-                                                        gap: row_gap,
-                                                        padding: Edges::all(Px(0.0)),
-                                                        justify: MainAlign::Start,
-                                                        align: CrossAlign::Center,
-                                                    },
-                                                    move |cx| {
-                                                        if children.is_empty() {
-                                                            vec![cmdk_highlighted_label(
-                                                                cx,
-                                                                label.clone(),
-                                                                query_for_row.as_ref(),
-                                                                fg,
-                                                                text_style.clone(),
-                                                            )]
-                                                        } else {
-                                                            children
-                                                        }
-                                                    },
-                                                )]
-                                            })]
-                                        },
-                                    ));
+                                                vec![cx.container(props, move |cx| {
+                                                    vec![cx.row(
+                                                        RowProps {
+                                                            layout: LayoutStyle::default(),
+                                                            gap: row_gap,
+                                                            padding: Edges::all(Px(0.0)),
+                                                            justify: MainAlign::Start,
+                                                            align: CrossAlign::Center,
+                                                        },
+                                                        move |cx| {
+                                                            if children.is_empty() {
+                                                                vec![cmdk_highlighted_label(
+                                                                    cx,
+                                                                    label.clone(),
+                                                                    query_for_row.as_ref(),
+                                                                    fg,
+                                                                    text_style.clone(),
+                                                                )]
+                                                            } else {
+                                                                children
+                                                            }
+                                                        },
+                                                    )]
+                                                })]
+                                            },
+                                        )
+                                    }));
                                 }
 
                                 out

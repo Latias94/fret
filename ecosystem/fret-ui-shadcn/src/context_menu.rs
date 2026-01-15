@@ -458,11 +458,22 @@ fn find_submenu_entries_by_value(
     open_value: &str,
 ) -> Option<Vec<ContextMenuEntry>> {
     for entry in entries {
-        let ContextMenuEntry::Item(item) = entry else {
-            continue;
-        };
-        if item.value.as_ref() == open_value {
-            return item.submenu.clone();
+        match entry {
+            ContextMenuEntry::Item(item) => {
+                if item.value.as_ref() == open_value {
+                    return item.submenu.clone();
+                }
+            }
+            ContextMenuEntry::Group(group) => {
+                if let Some(found) = find_submenu_entries_by_value(&group.entries, open_value) {
+                    return Some(found);
+                }
+            }
+            ContextMenuEntry::CheckboxItem(_)
+            | ContextMenuEntry::RadioGroup(_)
+            | ContextMenuEntry::RadioItem(_)
+            | ContextMenuEntry::Label(_)
+            | ContextMenuEntry::Separator => {}
         }
     }
     None
@@ -713,14 +724,14 @@ fn context_menu_submenu_panel<H: UiHost>(
 
     let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) = entries
         .iter()
-        .map(|e| match e {
-            ContextMenuEntry::Item(item) => (item.label.clone(), item.disabled),
-            ContextMenuEntry::CheckboxItem(item) => (item.label.clone(), item.disabled),
-            ContextMenuEntry::RadioItem(item) => (item.label.clone(), item.disabled),
-            ContextMenuEntry::Label(_) | ContextMenuEntry::Separator => (Arc::from(""), true),
-            ContextMenuEntry::Group(_) | ContextMenuEntry::RadioGroup(_) => {
-                unreachable!("entries are flattened")
-            }
+        .filter_map(|e| match e {
+            ContextMenuEntry::Item(item) => Some((item.label.clone(), item.disabled)),
+            ContextMenuEntry::CheckboxItem(item) => Some((item.label.clone(), item.disabled)),
+            ContextMenuEntry::RadioItem(item) => Some((item.label.clone(), item.disabled)),
+            ContextMenuEntry::Label(_)
+            | ContextMenuEntry::Separator
+            | ContextMenuEntry::Group(_)
+            | ContextMenuEntry::RadioGroup(_) => None,
         })
         .unzip();
 
@@ -753,10 +764,18 @@ fn context_menu_submenu_panel<H: UiHost>(
     let destructive_bg = alpha_mul(destructive_fg, 0.12);
     let panel_bg = theme.color_required("popover");
 
+    let labelled_by_element = cx
+        .app
+        .models_mut()
+        .read(&submenu_models.trigger, |v| *v)
+        .ok()
+        .flatten();
+
     menu::sub_content::submenu_panel_scroll_y_for_value_at(
         cx,
         open_value,
         placed,
+        labelled_by_element,
         move |layout| ContainerProps {
             layout,
             padding: Edges::all(Px(4.0)),
@@ -1119,7 +1138,7 @@ fn context_menu_submenu_panel<H: UiHost>(
                         },
                         roving: RovingFocusProps {
                             enabled: true,
-                            wrap: true,
+                            wrap: false,
                             disabled: disabled_arc.clone(),
                             ..Default::default()
                         },
@@ -1407,16 +1426,16 @@ impl ContextMenu {
                         .count();
                     let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) = entries
                         .iter()
-                        .map(|e| match e {
-                            ContextMenuEntry::Item(item) => (item.label.clone(), item.disabled),
-                            ContextMenuEntry::CheckboxItem(item) => (item.label.clone(), item.disabled),
-                            ContextMenuEntry::RadioItem(item) => (item.label.clone(), item.disabled),
-                            ContextMenuEntry::Label(_) | ContextMenuEntry::Separator => {
-                                (Arc::from(""), true)
+                        .filter_map(|e| match e {
+                            ContextMenuEntry::Item(item) => Some((item.label.clone(), item.disabled)),
+                            ContextMenuEntry::CheckboxItem(item) => {
+                                Some((item.label.clone(), item.disabled))
                             }
-                            ContextMenuEntry::Group(_) | ContextMenuEntry::RadioGroup(_) => {
-                                unreachable!("entries are flattened")
-                            }
+                            ContextMenuEntry::RadioItem(item) => Some((item.label.clone(), item.disabled)),
+                            ContextMenuEntry::Label(_)
+                            | ContextMenuEntry::Separator
+                            | ContextMenuEntry::Group(_)
+                            | ContextMenuEntry::RadioGroup(_) => None,
                         })
                         .unzip();
 
@@ -1592,7 +1611,7 @@ impl ContextMenu {
                                                     },
                                                     roving: RovingFocusProps {
                                                         enabled: true,
-                                                        wrap: true,
+                                                        wrap: false,
                                                         disabled: disabled_arc.clone(),
                                                         ..Default::default()
                                                     },

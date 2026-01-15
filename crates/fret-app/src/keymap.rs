@@ -70,7 +70,7 @@ pub fn install_command_default_keybindings_into_keymap(app: &mut App) {
         for kb in meta.default_keybindings.iter().cloned() {
             bindings.push(Binding {
                 platform: kb.platform,
-                sequence: vec![kb.chord],
+                sequence: kb.sequence,
                 when: kb.when.clone().or_else(|| meta.when.clone()),
                 command: Some(id.clone()),
             });

@@ -273,10 +273,12 @@ impl RadioGroup {
                         );
 
                         let a11y_label = item.label.clone();
+                        let value = item.value.clone();
                         let item_children = item.children.clone();
                         let text_style = text_style.clone();
-                        out.push(
-                            radio_group_prim::RadioGroupItem::new(item.value.clone())
+                        let root_for_item = root_for_items.clone();
+                        out.push(cx.keyed(value.clone(), move |cx| {
+                            radio_group_prim::RadioGroupItem::new(value)
                                 .label(a11y_label.clone())
                                 .disabled(!item_enabled)
                                 .index(idx)
@@ -284,7 +286,7 @@ impl RadioGroup {
                                 .set_size(set_size)
                                 .into_element(
                                     cx,
-                                    &root_for_items,
+                                    &root_for_item,
                                     PressableProps {
                                         layout: pressable_layout,
                                         enabled: item_enabled,
@@ -413,8 +415,8 @@ impl RadioGroup {
                                             },
                                         )]
                                     },
-                                ),
-                        );
+                                )
+                        }));
                     }
                     out
                 },

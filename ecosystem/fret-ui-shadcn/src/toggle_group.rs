@@ -510,72 +510,74 @@ impl ToggleGroup {
                             .flex_none(),
                     );
 
-                    out.push(cx.pressable(
-                        PressableProps {
-                            layout: pressable_layout,
-                            enabled,
-                            focusable,
-                            focus_ring: Some(ring),
-                            a11y,
-                            ..Default::default()
-                        },
-                        move |cx, state| {
-                            if let Some(m) = model_single.as_ref() {
-                                let model = m.clone();
-                                let value = value.clone();
-                                cx.pressable_add_on_activate(Arc::new(
-                                    move |host, _action_cx, _reason| {
-                                        let current =
-                                            host.models_mut().get_cloned(&model).flatten();
-                                        let next = if current
-                                            .as_ref()
-                                            .is_some_and(|cur| cur.as_ref() == value.as_ref())
-                                        {
-                                            None
-                                        } else {
-                                            Some(value.clone())
-                                        };
-                                        let _ = host.models_mut().update(&model, |v| *v = next);
-                                    },
-                                ));
-                            }
-                            if let Some(m) = model_multi.as_ref() {
-                                cx.pressable_toggle_vec_arc_str(m, value.clone());
-                            }
+                    out.push(cx.keyed(value.clone(), move |cx| {
+                        cx.pressable(
+                            PressableProps {
+                                layout: pressable_layout,
+                                enabled,
+                                focusable,
+                                focus_ring: Some(ring),
+                                a11y,
+                                ..Default::default()
+                            },
+                            move |cx, state| {
+                                if let Some(m) = model_single.as_ref() {
+                                    let model = m.clone();
+                                    let value = value.clone();
+                                    cx.pressable_add_on_activate(Arc::new(
+                                        move |host, _action_cx, _reason| {
+                                            let current =
+                                                host.models_mut().get_cloned(&model).flatten();
+                                            let next = if current
+                                                .as_ref()
+                                                .is_some_and(|cur| cur.as_ref() == value.as_ref())
+                                            {
+                                                None
+                                            } else {
+                                                Some(value.clone())
+                                            };
+                                            let _ = host.models_mut().update(&model, |v| *v = next);
+                                        },
+                                    ));
+                                }
+                                if let Some(m) = model_multi.as_ref() {
+                                    cx.pressable_toggle_vec_arc_str(m, value.clone());
+                                }
 
-                            let hovered = state.hovered && !state.pressed;
-                            let pressed = state.pressed;
+                                let hovered = state.hovered && !state.pressed;
+                                let pressed = state.pressed;
 
-                            let hover_bg = match variant {
-                                ToggleVariant::Default => bg_hover_muted,
-                                ToggleVariant::Outline => bg_on,
-                            };
+                                let hover_bg = match variant {
+                                    ToggleVariant::Default => bg_hover_muted,
+                                    ToggleVariant::Outline => bg_on,
+                                };
 
-                            let bg = if on && !item_disabled {
-                                Some(bg_on)
-                            } else if (hovered || pressed) && !item_disabled {
-                                Some(hover_bg)
-                            } else {
-                                None
-                            };
+                                let bg = if on && !item_disabled {
+                                    Some(bg_on)
+                                } else if (hovered || pressed) && !item_disabled {
+                                    Some(hover_bg)
+                                } else {
+                                    None
+                                };
 
-                            let mut props = base_props;
-                            if bg.is_some() {
-                                props.background = bg;
-                            }
-                            if state.focused {
-                                props.border_color = Some(ring_border);
-                            }
-                            props.layout.size = pressable_layout.size;
+                                let mut props = base_props;
+                                if bg.is_some() {
+                                    props.background = bg;
+                                }
+                                if state.focused {
+                                    props.border_color = Some(ring_border);
+                                }
+                                props.layout.size = pressable_layout.size;
 
-                            vec![shadcn_layout::container_hstack_centered(
-                                cx,
-                                props,
-                                Space::N1,
-                                children,
-                            )]
-                        },
-                    ));
+                                vec![shadcn_layout::container_hstack_centered(
+                                    cx,
+                                    props,
+                                    Space::N1,
+                                    children,
+                                )]
+                            },
+                        )
+                    }));
                 }
 
                 out

@@ -9,18 +9,7 @@ pub(crate) fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(
     app: fret_app::App,
     driver: D,
 ) -> anyhow::Result<()> {
-    use anyhow::Context as _;
-    use fret_bootstrap::BootstrapBuilder;
-
-    BootstrapBuilder::new(app, driver)
-        .configure(move |c| {
-            *c = config;
-        })
-        .with_default_config_files()
-        .context("load layered config files (settings/keymap)")?
-        .with_lucide_icons()
-        .run()
-        .map_err(anyhow::Error::from)
+    fret_kit::run_native_demo(config, app, driver).map_err(anyhow::Error::from)
 }
 
 #[cfg(not(target_arch = "wasm32"))]

@@ -2,6 +2,7 @@ use super::*;
 use std::any::TypeId;
 
 impl<H: UiHost> UiTree<H> {
+    #[stacksafe::stacksafe]
     pub fn paint_all(
         &mut self,
         app: &mut H,

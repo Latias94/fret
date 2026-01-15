@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+readme = "README.md"
 
 [features]
 # Desktop-first, batteries-included defaults.
@@ -26,6 +27,7 @@ icons-lucide = ["fret-bootstrap/icons-lucide"]
 icons-radix = ["fret-bootstrap/icons-radix"]
 preload-icon-svgs = ["fret-bootstrap/preload-icon-svgs"]
 command-palette = ["fret-bootstrap/ui-app-command-palette"]
+workspace-shell = ["dep:fret-workspace"]
 
 [dependencies]
 thiserror.workspace = true
@@ -35,7 +37,9 @@ fret = { path = "../../crates/fret", optional = true }
 
 # Golden-path wiring and optional ecosystem integrations.
 fret-bootstrap = { path = "../fret-bootstrap", default-features = false }
+fret-icons = { path = "../fret-icons" }
 fret-ui-shadcn = { path = "../fret-ui-shadcn", features = ["app-integration"] }
+fret-workspace = { path = "../fret-workspace", optional = true }
 
 # Used by the public signatures and error types.
 fret-app = { path = "../../crates/fret-app" }

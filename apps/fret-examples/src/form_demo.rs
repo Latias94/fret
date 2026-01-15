@@ -420,5 +420,5 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    crate::run_native_demo(config, app, FormDemoDriver::default()).context("run form_demo app")
+    fret_kit::run_native_demo(config, app, FormDemoDriver::default()).context("run form_demo app")
 }

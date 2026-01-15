@@ -1,3 +1,15 @@
+//! Fret's kernel facade crate.
+//!
+//! This crate is intended to be the small, memorable entry point for **manual/advanced assembly**
+//! and integrations. It re-exports selected workspace crates behind opt-in feature flags, without
+//! pulling ecosystem defaults (components, policies, tooling) into `crates/*`.
+//!
+//! For the batteries-included desktop-first experience, prefer:
+//! - `fret-kit` (app entry points)
+//! - `fretboard` (dev tooling)
+//!
+//! See ADR 0111: `docs/adr/0111-user-facing-crate-surfaces-and-golden-path.md`.
+
 #[cfg(feature = "core")]
 pub mod core {
     pub use fret_core::*;
@@ -21,6 +33,11 @@ pub mod runtime {
 #[cfg(feature = "render")]
 pub mod render {
     pub use fret_render::*;
+}
+
+#[cfg(feature = "fonts")]
+pub mod fonts {
+    pub use fret_fonts::*;
 }
 
 #[cfg(feature = "platform-contracts")]

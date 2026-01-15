@@ -12,13 +12,43 @@ use fret_ui::element::SemanticsProps;
 use fret_ui::{Invalidation, Theme, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_workspace::commands::{
+    CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_PREFIX, CMD_WORKSPACE_TAB_NEXT,
+    CMD_WORKSPACE_TAB_PREV,
+};
 use fret_workspace::{
     WorkspaceFrame, WorkspaceStatusBar, WorkspaceTab, WorkspaceTabStrip, WorkspaceTopBar,
 };
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::time::Duration;
+use time::Date;
+
+const ENV_UI_GALLERY_BISECT: &str = "FRET_UI_GALLERY_BISECT";
+
+const BISECT_MINIMAL_ROOT: u32 = 1 << 0;
+const BISECT_DISABLE_OVERLAY_CONTROLLER: u32 = 1 << 1;
+const BISECT_DISABLE_TOASTER: u32 = 1 << 2;
+const BISECT_DISABLE_TAB_STRIP: u32 = 1 << 3;
+const BISECT_SIMPLE_SIDEBAR: u32 = 1 << 4;
+const BISECT_SIMPLE_CONTENT: u32 = 1 << 5;
+const BISECT_DISABLE_SIDEBAR_SCROLL: u32 = 1 << 6;
+const BISECT_DISABLE_CONTENT_SCROLL: u32 = 1 << 7;
+const BISECT_DISABLE_MARKDOWN: u32 = 1 << 8;
+const BISECT_DISABLE_TABS: u32 = 1 << 9;
+
+fn ui_gallery_bisect_flags() -> u32 {
+    static FLAGS: OnceLock<u32> = OnceLock::new();
+    *FLAGS.get_or_init(|| {
+        std::env::var(ENV_UI_GALLERY_BISECT)
+            .ok()
+            .and_then(|v| v.parse::<u32>().ok())
+            .unwrap_or(0)
+    })
+}
 
 const CMD_NAV_SELECT_PREFIX: &str = "ui_gallery.nav.select.";
+const CMD_DATA_GRID_ROW_PREFIX: &str = "ui_gallery.data_grid.row.";
 
 const PAGE_INTRO: &str = "intro";
 const PAGE_LAYOUT: &str = "layout";
@@ -26,6 +56,11 @@ const PAGE_BUTTON: &str = "button";
 const PAGE_OVERLAY: &str = "overlay";
 const PAGE_FORMS: &str = "forms";
 const PAGE_SELECT: &str = "select";
+const PAGE_COMBOBOX: &str = "combobox";
+const PAGE_DATE_PICKER: &str = "date_picker";
+const PAGE_RESIZABLE: &str = "resizable";
+const PAGE_DATA_TABLE: &str = "data_table";
+const PAGE_DATA_GRID: &str = "data_grid";
 const PAGE_TABS: &str = "tabs";
 const PAGE_ACCORDION: &str = "accordion";
 const PAGE_TABLE: &str = "table";
@@ -40,6 +75,11 @@ const CMD_NAV_BUTTON: &str = "ui_gallery.nav.select.button";
 const CMD_NAV_OVERLAY: &str = "ui_gallery.nav.select.overlay";
 const CMD_NAV_FORMS: &str = "ui_gallery.nav.select.forms";
 const CMD_NAV_SELECT: &str = "ui_gallery.nav.select.select";
+const CMD_NAV_COMBOBOX: &str = "ui_gallery.nav.select.combobox";
+const CMD_NAV_DATE_PICKER: &str = "ui_gallery.nav.select.date_picker";
+const CMD_NAV_RESIZABLE: &str = "ui_gallery.nav.select.resizable";
+const CMD_NAV_DATA_TABLE: &str = "ui_gallery.nav.select.data_table";
+const CMD_NAV_DATA_GRID: &str = "ui_gallery.nav.select.data_grid";
 const CMD_NAV_TABS: &str = "ui_gallery.nav.select.tabs";
 const CMD_NAV_ACCORDION: &str = "ui_gallery.nav.select.accordion";
 const CMD_NAV_TABLE: &str = "ui_gallery.nav.select.table";
@@ -110,6 +150,41 @@ static NAV_GROUPS: &[NavGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_SELECT,
                 &["select", "popover", "listbox"],
+            ),
+            NavItemSpec::new(
+                PAGE_COMBOBOX,
+                "Combobox",
+                "fret-ui-shadcn",
+                CMD_NAV_COMBOBOX,
+                &["combobox", "cmdk", "search"],
+            ),
+            NavItemSpec::new(
+                PAGE_DATE_PICKER,
+                "Date Picker",
+                "fret-ui-shadcn",
+                CMD_NAV_DATE_PICKER,
+                &["date", "calendar", "popover"],
+            ),
+            NavItemSpec::new(
+                PAGE_RESIZABLE,
+                "Resizable",
+                "fret-ui-shadcn",
+                CMD_NAV_RESIZABLE,
+                &["split", "panel", "resize"],
+            ),
+            NavItemSpec::new(
+                PAGE_DATA_TABLE,
+                "DataTable",
+                "fret-ui-shadcn + fret-ui-headless",
+                CMD_NAV_DATA_TABLE,
+                &["table", "virtualized", "tanstack"],
+            ),
+            NavItemSpec::new(
+                PAGE_DATA_GRID,
+                "DataGrid",
+                "fret-ui-shadcn",
+                CMD_NAV_DATA_GRID,
+                &["grid", "viewport", "virtualized"],
             ),
             NavItemSpec::new(
                 PAGE_TABS,
@@ -208,6 +283,8 @@ struct UiGalleryWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
     selected_page: Model<Arc<str>>,
+    workspace_tabs: Model<Vec<Arc<str>>>,
+    workspace_dirty_tabs: Model<Vec<Arc<str>>>,
     nav_query: Model<String>,
     content_tab: Model<Option<Arc<str>>>,
     theme_preset: Model<Option<Arc<str>>>,
@@ -219,6 +296,16 @@ struct UiGalleryWindowState {
     sheet_open: Model<bool>,
     select_value: Model<Option<Arc<str>>>,
     select_open: Model<bool>,
+    combobox_value: Model<Option<Arc<str>>>,
+    combobox_open: Model<bool>,
+    combobox_query: Model<String>,
+    date_picker_open: Model<bool>,
+    date_picker_month: Model<fret_ui_headless::calendar::CalendarMonth>,
+    date_picker_selected: Model<Option<Date>>,
+    resizable_h_fractions: Model<Vec<f32>>,
+    resizable_v_fractions: Model<Vec<f32>>,
+    data_table_state: Model<fret_ui_headless::table::TableState>,
+    data_grid_selected_row: Model<Option<u64>>,
     tabs_value: Model<Option<Arc<str>>>,
     accordion_value: Model<Option<Arc<str>>>,
     progress: Model<f32>,
@@ -239,6 +326,16 @@ struct UiGalleryDriver;
 impl UiGalleryDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> UiGalleryWindowState {
         let selected_page = app.models_mut().insert(Arc::<str>::from(PAGE_INTRO));
+        let workspace_tabs = app.models_mut().insert(vec![
+            Arc::<str>::from(PAGE_INTRO),
+            Arc::<str>::from(PAGE_LAYOUT),
+            Arc::<str>::from(PAGE_BUTTON),
+            Arc::<str>::from(PAGE_OVERLAY),
+            Arc::<str>::from(PAGE_COMMAND),
+        ]);
+        let workspace_dirty_tabs = app
+            .models_mut()
+            .insert(vec![Arc::<str>::from(PAGE_OVERLAY)]);
         let nav_query = app.models_mut().insert(String::new());
         let content_tab = app.models_mut().insert(Some(Arc::<str>::from("preview")));
         let theme_preset = app
@@ -253,6 +350,24 @@ impl UiGalleryDriver {
             .models_mut()
             .insert(Option::<Arc<str>>::Some(Arc::from("apple")));
         let select_open = app.models_mut().insert(false);
+        let combobox_value = app.models_mut().insert(None::<Arc<str>>);
+        let combobox_open = app.models_mut().insert(false);
+        let combobox_query = app.models_mut().insert(String::new());
+
+        let date_picker_open = app.models_mut().insert(false);
+        let today = time::OffsetDateTime::now_utc().date();
+        let date_picker_month = app
+            .models_mut()
+            .insert(fret_ui_headless::calendar::CalendarMonth::from_date(today));
+        let date_picker_selected = app.models_mut().insert(None::<Date>);
+
+        let resizable_h_fractions = app.models_mut().insert(vec![0.3, 0.7]);
+        let resizable_v_fractions = app.models_mut().insert(vec![0.5, 0.5]);
+
+        let data_table_state = app
+            .models_mut()
+            .insert(fret_ui_headless::table::TableState::default());
+        let data_grid_selected_row = app.models_mut().insert(None::<u64>);
         let tabs_value = app
             .models_mut()
             .insert(Option::<Arc<str>>::Some(Arc::from("overview")));
@@ -277,6 +392,8 @@ impl UiGalleryDriver {
             ui,
             root: None,
             selected_page,
+            workspace_tabs,
+            workspace_dirty_tabs,
             nav_query,
             content_tab,
             theme_preset,
@@ -288,6 +405,16 @@ impl UiGalleryDriver {
             sheet_open,
             select_value,
             select_open,
+            combobox_value,
+            combobox_open,
+            combobox_query,
+            date_picker_open,
+            date_picker_month,
+            date_picker_selected,
+            resizable_h_fractions,
+            resizable_v_fractions,
+            data_table_state,
+            data_grid_selected_row,
             tabs_value,
             accordion_value,
             progress,
@@ -313,8 +440,113 @@ impl UiGalleryDriver {
         };
 
         let page: Arc<str> = Arc::from(page);
+        let page_for_tabs = page.clone();
         let _ = app.models_mut().update(&state.selected_page, |v| *v = page);
+        let _ = app.models_mut().update(&state.workspace_tabs, |tabs| {
+            if !tabs.iter().any(|t| t.as_ref() == page_for_tabs.as_ref()) {
+                tabs.push(page_for_tabs);
+            }
+        });
         true
+    }
+
+    fn handle_workspace_tab_command(
+        app: &mut App,
+        state: &UiGalleryWindowState,
+        command: &CommandId,
+    ) -> bool {
+        let close_tab_by_id = |app: &mut App, tab_id: Arc<str>| -> bool {
+            let selected = app
+                .models()
+                .get_cloned(&state.selected_page)
+                .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+
+            let mut closed = false;
+            let mut next_selected: Option<Arc<str>> = None;
+
+            let _ = app.models_mut().update(&state.workspace_tabs, |tabs| {
+                let Some(index) = tabs.iter().position(|t| t.as_ref() == tab_id.as_ref()) else {
+                    return;
+                };
+                if tabs.len() <= 1 {
+                    return;
+                }
+
+                tabs.remove(index);
+                closed = true;
+
+                if selected.as_ref() == tab_id.as_ref() {
+                    let next_index = index.min(tabs.len().saturating_sub(1));
+                    next_selected = tabs.get(next_index).cloned();
+                }
+            });
+
+            if !closed {
+                return false;
+            }
+
+            let _ = app
+                .models_mut()
+                .update(&state.workspace_dirty_tabs, |dirty| {
+                    dirty.retain(|t| t.as_ref() != tab_id.as_ref());
+                });
+
+            if let Some(next) = next_selected {
+                let _ = app.models_mut().update(&state.selected_page, |v| *v = next);
+            }
+
+            true
+        };
+
+        match command.as_str() {
+            CMD_WORKSPACE_TAB_NEXT | CMD_WORKSPACE_TAB_PREV => {
+                let selected = app
+                    .models()
+                    .get_cloned(&state.selected_page)
+                    .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+                let tabs = app
+                    .models()
+                    .get_cloned(&state.workspace_tabs)
+                    .unwrap_or_default();
+                if tabs.is_empty() {
+                    return false;
+                }
+                let Some(index) = tabs.iter().position(|t| t.as_ref() == selected.as_ref()) else {
+                    return false;
+                };
+
+                let next_index = if command.as_str() == CMD_WORKSPACE_TAB_NEXT {
+                    (index + 1) % tabs.len()
+                } else {
+                    (index + tabs.len() - 1) % tabs.len()
+                };
+                if let Some(next) = tabs.get(next_index).cloned() {
+                    let _ = app.models_mut().update(&state.selected_page, |v| *v = next);
+                    return true;
+                }
+                false
+            }
+            CMD_WORKSPACE_TAB_CLOSE => {
+                let selected = app
+                    .models()
+                    .get_cloned(&state.selected_page)
+                    .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+                close_tab_by_id(app, selected)
+            }
+            _ => {
+                if let Some(suffix) = command
+                    .as_str()
+                    .strip_prefix(CMD_WORKSPACE_TAB_CLOSE_PREFIX)
+                {
+                    let suffix = suffix.trim();
+                    if suffix.is_empty() {
+                        return false;
+                    }
+                    return close_tab_by_id(app, Arc::<str>::from(suffix));
+                }
+                false
+            }
+        }
     }
 
     fn handle_gallery_command(app: &mut App, state: &UiGalleryWindowState, command: &CommandId) {
@@ -395,8 +627,11 @@ impl UiGalleryDriver {
         bounds: fret_core::Rect,
     ) {
         OverlayController::begin_frame(app, window);
+        let bisect = ui_gallery_bisect_flags();
 
         let selected_page = state.selected_page.clone();
+        let workspace_tabs = state.workspace_tabs.clone();
+        let workspace_dirty_tabs = state.workspace_dirty_tabs.clone();
         let nav_query = state.nav_query.clone();
         let content_tab = state.content_tab.clone();
         let theme_preset = state.theme_preset.clone();
@@ -407,6 +642,16 @@ impl UiGalleryDriver {
         let sheet_open = state.sheet_open.clone();
         let select_value = state.select_value.clone();
         let select_open = state.select_open.clone();
+        let combobox_value = state.combobox_value.clone();
+        let combobox_open = state.combobox_open.clone();
+        let combobox_query = state.combobox_query.clone();
+        let date_picker_open = state.date_picker_open.clone();
+        let date_picker_month = state.date_picker_month.clone();
+        let date_picker_selected = state.date_picker_selected.clone();
+        let resizable_h_fractions = state.resizable_h_fractions.clone();
+        let resizable_v_fractions = state.resizable_v_fractions.clone();
+        let data_table_state = state.data_table_state.clone();
+        let data_grid_selected_row = state.data_grid_selected_row.clone();
         let tabs_value = state.tabs_value.clone();
         let accordion_value = state.accordion_value.clone();
         let progress = state.progress.clone();
@@ -425,7 +670,13 @@ impl UiGalleryDriver {
         let root =
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
                 .render_root("fret-ui-gallery", |cx| {
+                    if (bisect & BISECT_MINIMAL_ROOT) != 0 {
+                        return vec![cx.text("Hello, fret-ui-gallery")];
+                    }
+
                     cx.observe_model(&selected_page, Invalidation::Layout);
+                    cx.observe_model(&workspace_tabs, Invalidation::Layout);
+                    cx.observe_model(&workspace_dirty_tabs, Invalidation::Layout);
                     cx.observe_model(&nav_query, Invalidation::Layout);
                     cx.observe_model(&content_tab, Invalidation::Layout);
                     cx.observe_model(&theme_preset, Invalidation::Layout);
@@ -436,6 +687,16 @@ impl UiGalleryDriver {
                     cx.observe_model(&sheet_open, Invalidation::Layout);
                     cx.observe_model(&select_value, Invalidation::Layout);
                     cx.observe_model(&select_open, Invalidation::Layout);
+                    cx.observe_model(&combobox_value, Invalidation::Layout);
+                    cx.observe_model(&combobox_open, Invalidation::Layout);
+                    cx.observe_model(&combobox_query, Invalidation::Layout);
+                    cx.observe_model(&date_picker_open, Invalidation::Layout);
+                    cx.observe_model(&date_picker_month, Invalidation::Layout);
+                    cx.observe_model(&date_picker_selected, Invalidation::Layout);
+                    cx.observe_model(&resizable_h_fractions, Invalidation::Layout);
+                    cx.observe_model(&resizable_v_fractions, Invalidation::Layout);
+                    cx.observe_model(&data_table_state, Invalidation::Layout);
+                    cx.observe_model(&data_grid_selected_row, Invalidation::Layout);
                     cx.observe_model(&tabs_value, Invalidation::Layout);
                     cx.observe_model(&accordion_value, Invalidation::Layout);
                     cx.observe_model(&progress, Invalidation::Layout);
@@ -465,39 +726,78 @@ impl UiGalleryDriver {
                         .ok()
                         .unwrap_or_default();
 
-                    let sidebar = sidebar_view(
-                        cx,
-                        &theme,
-                        selected.as_ref(),
-                        query.as_str(),
-                        nav_query.clone(),
-                    );
-                    let content = content_view(
-                        cx,
-                        &theme,
-                        selected.as_ref(),
-                        content_tab.clone(),
-                        theme_preset.clone(),
-                        theme_preset_open.clone(),
-                        popover_open.clone(),
-                        dialog_open.clone(),
-                        alert_dialog_open.clone(),
-                        sheet_open.clone(),
-                        select_value.clone(),
-                        select_open.clone(),
-                        tabs_value.clone(),
-                        accordion_value.clone(),
-                        progress.clone(),
-                        checkbox.clone(),
-                        switch.clone(),
-                        text_input.clone(),
-                        text_area.clone(),
-                        dropdown_open.clone(),
-                        context_menu_open.clone(),
-                        cmdk_open.clone(),
-                        cmdk_query.clone(),
-                        last_action.clone(),
-                    );
+                    let sidebar = if (bisect & BISECT_SIMPLE_SIDEBAR) != 0 {
+                        cx.container(
+                            decl_style::container_props(
+                                &theme,
+                                ChromeRefinement::default()
+                                    .bg(ColorRef::Color(theme.color_required("muted")))
+                                    .p(Space::N4),
+                                LayoutRefinement::default()
+                                    .w_px(MetricRef::Px(Px(280.0)))
+                                    .h_full(),
+                            ),
+                            |cx| vec![cx.text("Sidebar (disabled)")],
+                        )
+                    } else {
+                        sidebar_view(
+                            cx,
+                            &theme,
+                            selected.as_ref(),
+                            query.as_str(),
+                            nav_query.clone(),
+                        )
+                    };
+
+                    let content = if (bisect & BISECT_SIMPLE_CONTENT) != 0 {
+                        cx.container(
+                            decl_style::container_props(
+                                &theme,
+                                ChromeRefinement::default()
+                                    .bg(ColorRef::Color(theme.color_required("background")))
+                                    .p(Space::N6),
+                                LayoutRefinement::default().w_full().h_full(),
+                            ),
+                            |cx| vec![cx.text("Content (disabled)")],
+                        )
+                    } else {
+                        content_view(
+                            cx,
+                            &theme,
+                            selected.as_ref(),
+                            content_tab.clone(),
+                            theme_preset.clone(),
+                            theme_preset_open.clone(),
+                            popover_open.clone(),
+                            dialog_open.clone(),
+                            alert_dialog_open.clone(),
+                            sheet_open.clone(),
+                            select_value.clone(),
+                            select_open.clone(),
+                            combobox_value.clone(),
+                            combobox_open.clone(),
+                            combobox_query.clone(),
+                            date_picker_open.clone(),
+                            date_picker_month.clone(),
+                            date_picker_selected.clone(),
+                            resizable_h_fractions.clone(),
+                            resizable_v_fractions.clone(),
+                            data_table_state.clone(),
+                            data_grid_selected_row.clone(),
+                            tabs_value.clone(),
+                            accordion_value.clone(),
+                            progress.clone(),
+                            checkbox.clone(),
+                            switch.clone(),
+                            text_input.clone(),
+                            text_area.clone(),
+                            dropdown_open.clone(),
+                            context_menu_open.clone(),
+                            cmdk_open.clone(),
+                            cmdk_query.clone(),
+                            last_action.clone(),
+                        )
+                    };
 
                     let menubar = shadcn::Menubar::new(vec![
                         shadcn::MenubarMenu::new("File").entries(vec![
@@ -530,31 +830,44 @@ impl UiGalleryDriver {
                     ])
                     .into_element(cx);
 
-                    let tab_strip = WorkspaceTabStrip::new(selected.clone())
-                        .tabs([
-                            WorkspaceTab::new(PAGE_INTRO, "Intro", CommandId::from(CMD_NAV_INTRO)),
-                            WorkspaceTab::new(
-                                PAGE_LAYOUT,
-                                "Layout",
-                                CommandId::from(CMD_NAV_LAYOUT),
-                            ),
-                            WorkspaceTab::new(
-                                PAGE_BUTTON,
-                                "Button",
-                                CommandId::from(CMD_NAV_BUTTON),
-                            ),
-                            WorkspaceTab::new(
-                                PAGE_OVERLAY,
-                                "Overlay",
-                                CommandId::from(CMD_NAV_OVERLAY),
-                            ),
-                            WorkspaceTab::new(
-                                PAGE_COMMAND,
-                                "Command",
-                                CommandId::from(CMD_NAV_COMMAND),
-                            ),
-                        ])
-                        .into_element(cx);
+                    let tab_strip = if (bisect & BISECT_DISABLE_TAB_STRIP) != 0 {
+                        cx.text("Tabs (disabled)")
+                    } else {
+                        let workspace_tab_ids = cx
+                            .app
+                            .models()
+                            .get_cloned(&workspace_tabs)
+                            .unwrap_or_default();
+                        let workspace_dirty_ids = cx
+                            .app
+                            .models()
+                            .get_cloned(&workspace_dirty_tabs)
+                            .unwrap_or_default();
+
+                        WorkspaceTabStrip::new(selected.clone())
+                            .tabs(workspace_tab_ids.iter().map(|tab_id| {
+                                let (title, _origin, _docs, _usage) = page_meta(tab_id.as_ref());
+                                let dirty = workspace_dirty_ids
+                                    .iter()
+                                    .any(|d| d.as_ref() == tab_id.as_ref());
+                                WorkspaceTab::new(
+                                    tab_id.clone(),
+                                    title,
+                                    CommandId::new(format!(
+                                        "{}{}",
+                                        CMD_NAV_SELECT_PREFIX,
+                                        tab_id.as_ref()
+                                    )),
+                                )
+                                .close_command(CommandId::new(format!(
+                                    "{}{}",
+                                    CMD_WORKSPACE_TAB_CLOSE_PREFIX,
+                                    tab_id.as_ref()
+                                )))
+                                .dirty(dirty)
+                            }))
+                            .into_element(cx)
+                    };
 
                     let top_bar = WorkspaceTopBar::new()
                         .left(vec![menubar])
@@ -616,12 +929,18 @@ impl UiGalleryDriver {
                             },
                             |_cx| vec![frame],
                         ),
-                        shadcn::Toaster::new().into_element(cx),
+                        if (bisect & BISECT_DISABLE_TOASTER) != 0 {
+                            cx.text("")
+                        } else {
+                            shadcn::Toaster::new().into_element(cx)
+                        },
                     ]
                 });
 
         state.ui.set_root(root);
-        OverlayController::render(&mut state.ui, app, services, window, bounds);
+        if (bisect & BISECT_DISABLE_OVERLAY_CONTROLLER) == 0 {
+            OverlayController::render(&mut state.ui, app, services, window, bounds);
+        }
         state.root = Some(root);
     }
 }
@@ -633,6 +952,8 @@ fn sidebar_view(
     query: &str,
     nav_query: Model<String>,
 ) -> AnyElement {
+    let bisect = ui_gallery_bisect_flags();
+
     let title_row = stack::hstack(
         cx,
         stack::HStackProps::default()
@@ -700,15 +1021,20 @@ fn sidebar_view(
         ));
     }
 
-    let nav_scroll = shadcn::ScrollArea::new(vec![stack::vstack(
+    let nav_body = stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N4),
         |_cx| nav_sections,
-    )])
-    .refine_layout(LayoutRefinement::default().w_full().h_full())
-    .into_element(cx);
+    );
+    let nav_scroll = if (bisect & BISECT_DISABLE_SIDEBAR_SCROLL) != 0 {
+        nav_body
+    } else {
+        shadcn::ScrollArea::new(vec![nav_body])
+            .refine_layout(LayoutRefinement::default().w_full().h_full())
+            .into_element(cx)
+    };
 
     let container = cx.container(
         decl_style::container_props(
@@ -747,6 +1073,16 @@ fn content_view(
     sheet_open: Model<bool>,
     select_value: Model<Option<Arc<str>>>,
     select_open: Model<bool>,
+    combobox_value: Model<Option<Arc<str>>>,
+    combobox_open: Model<bool>,
+    combobox_query: Model<String>,
+    date_picker_open: Model<bool>,
+    date_picker_month: Model<fret_ui_headless::calendar::CalendarMonth>,
+    date_picker_selected: Model<Option<Date>>,
+    resizable_h_fractions: Model<Vec<f32>>,
+    resizable_v_fractions: Model<Vec<f32>>,
+    data_table_state: Model<fret_ui_headless::table::TableState>,
+    data_grid_selected_row: Model<Option<u64>>,
     tabs_value: Model<Option<Arc<str>>>,
     accordion_value: Model<Option<Arc<str>>>,
     progress: Model<f32>,
@@ -760,6 +1096,8 @@ fn content_view(
     cmdk_query: Model<String>,
     last_action: Model<Arc<str>>,
 ) -> AnyElement {
+    let bisect = ui_gallery_bisect_flags();
+
     let (title, origin, docs_md, usage_md) = page_meta(selected);
 
     let header = stack::hstack(
@@ -814,6 +1152,16 @@ fn content_view(
         sheet_open,
         select_value,
         select_open,
+        combobox_value,
+        combobox_open,
+        combobox_query,
+        date_picker_open,
+        date_picker_month,
+        date_picker_selected,
+        resizable_h_fractions,
+        resizable_v_fractions,
+        data_table_state,
+        data_grid_selected_row,
         tabs_value,
         accordion_value,
         progress,
@@ -827,28 +1175,51 @@ fn content_view(
         cmdk_query,
         last_action,
     );
-    let docs_panel = markdown::Markdown::new(Arc::from(docs_md)).into_element(cx);
-    let usage_panel = markdown::Markdown::new(Arc::from(usage_md)).into_element(cx);
+    let docs_panel = if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
+        cx.text(docs_md)
+    } else {
+        markdown::Markdown::new(Arc::from(docs_md)).into_element(cx)
+    };
+    let usage_panel = if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
+        cx.text(usage_md)
+    } else {
+        markdown::Markdown::new(Arc::from(usage_md)).into_element(cx)
+    };
 
-    let tabs = shadcn::Tabs::new(content_tab)
-        .refine_layout(LayoutRefinement::default().w_full())
-        .list_full_width(true)
-        .items([
-            shadcn::TabsItem::new("preview", "Preview", vec![preview_panel]),
-            shadcn::TabsItem::new("usage", "Usage", vec![usage_panel]),
-            shadcn::TabsItem::new("docs", "Notes", vec![docs_panel]),
-        ])
-        .into_element(cx);
+    let tabs = if (bisect & BISECT_DISABLE_TABS) != 0 {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .gap(Space::N6),
+            |_cx| vec![preview_panel, usage_panel, docs_panel],
+        )
+    } else {
+        shadcn::Tabs::new(content_tab)
+            .refine_layout(LayoutRefinement::default().w_full())
+            .list_full_width(true)
+            .items([
+                shadcn::TabsItem::new("preview", "Preview", vec![preview_panel]),
+                shadcn::TabsItem::new("usage", "Usage", vec![usage_panel]),
+                shadcn::TabsItem::new("docs", "Notes", vec![docs_panel]),
+            ])
+            .into_element(cx)
+    };
 
-    let content = shadcn::ScrollArea::new(vec![stack::vstack(
+    let body = stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N6),
         |_cx| vec![header, tabs],
-    )])
-    .refine_layout(LayoutRefinement::default().w_full().h_full())
-    .into_element(cx);
+    );
+    let content = if (bisect & BISECT_DISABLE_CONTENT_SCROLL) != 0 {
+        body
+    } else {
+        shadcn::ScrollArea::new(vec![body])
+            .refine_layout(LayoutRefinement::default().w_full().h_full())
+            .into_element(cx)
+    };
 
     cx.container(
         decl_style::container_props(
@@ -873,6 +1244,26 @@ fn page_meta(selected: &str) -> (&'static str, &'static str, &'static str, &'sta
         PAGE_BUTTON => ("Button", "fret-ui-shadcn", DOC_BUTTON, USAGE_BUTTON),
         PAGE_FORMS => ("Forms", "fret-ui-shadcn", DOC_FORMS, USAGE_FORMS),
         PAGE_SELECT => ("Select", "fret-ui-shadcn", DOC_SELECT, USAGE_SELECT),
+        PAGE_COMBOBOX => ("Combobox", "fret-ui-shadcn", DOC_COMBOBOX, USAGE_COMBOBOX),
+        PAGE_DATE_PICKER => (
+            "Date Picker",
+            "fret-ui-shadcn",
+            DOC_DATE_PICKER,
+            USAGE_DATE_PICKER,
+        ),
+        PAGE_RESIZABLE => (
+            "Resizable",
+            "fret-ui-shadcn",
+            DOC_RESIZABLE,
+            USAGE_RESIZABLE,
+        ),
+        PAGE_DATA_TABLE => (
+            "DataTable",
+            "fret-ui-shadcn + fret-ui-headless",
+            DOC_DATA_TABLE,
+            USAGE_DATA_TABLE,
+        ),
+        PAGE_DATA_GRID => ("DataGrid", "fret-ui-shadcn", DOC_DATA_GRID, USAGE_DATA_GRID),
         PAGE_TABS => ("Tabs", "fret-ui-shadcn", DOC_TABS, USAGE_TABS),
         PAGE_ACCORDION => (
             "Accordion",
@@ -910,6 +1301,16 @@ fn page_preview(
     sheet_open: Model<bool>,
     select_value: Model<Option<Arc<str>>>,
     select_open: Model<bool>,
+    combobox_value: Model<Option<Arc<str>>>,
+    combobox_open: Model<bool>,
+    combobox_query: Model<String>,
+    date_picker_open: Model<bool>,
+    date_picker_month: Model<fret_ui_headless::calendar::CalendarMonth>,
+    date_picker_selected: Model<Option<Date>>,
+    resizable_h_fractions: Model<Vec<f32>>,
+    resizable_v_fractions: Model<Vec<f32>>,
+    data_table_state: Model<fret_ui_headless::table::TableState>,
+    data_grid_selected_row: Model<Option<u64>>,
     tabs_value: Model<Option<Arc<str>>>,
     accordion_value: Model<Option<Arc<str>>>,
     progress: Model<f32>,
@@ -931,6 +1332,18 @@ fn page_preview(
         }
         PAGE_FORMS => preview_forms(cx, text_input, text_area, checkbox, switch),
         PAGE_SELECT => preview_select(cx, select_value, select_open),
+        PAGE_COMBOBOX => preview_combobox(cx, combobox_value, combobox_open, combobox_query),
+        PAGE_DATE_PICKER => preview_date_picker(
+            cx,
+            date_picker_open,
+            date_picker_month,
+            date_picker_selected,
+        ),
+        PAGE_RESIZABLE => {
+            preview_resizable(cx, theme, resizable_h_fractions, resizable_v_fractions)
+        }
+        PAGE_DATA_TABLE => preview_data_table(cx, data_table_state),
+        PAGE_DATA_GRID => preview_data_grid(cx, data_grid_selected_row),
         PAGE_TABS => preview_tabs(cx, tabs_value),
         PAGE_ACCORDION => preview_accordion(cx, accordion_value),
         PAGE_TABLE => preview_table(cx),
@@ -1179,6 +1592,299 @@ fn preview_select(
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
     vec![select, cx.text(format!("Selected: {selected}"))]
+}
+
+fn preview_combobox(
+    cx: &mut ElementContext<'_, App>,
+    value: Model<Option<Arc<str>>>,
+    open: Model<bool>,
+    query: Model<String>,
+) -> Vec<AnyElement> {
+    let combo = shadcn::Combobox::new(value.clone(), open)
+        .a11y_label("Combobox")
+        .width(Px(240.0))
+        .placeholder("Pick a fruit")
+        .query_model(query.clone())
+        .items([
+            shadcn::ComboboxItem::new("apple", "Apple"),
+            shadcn::ComboboxItem::new("banana", "Banana"),
+            shadcn::ComboboxItem::new("orange", "Orange"),
+            shadcn::ComboboxItem::new("disabled", "Disabled").disabled(true),
+        ])
+        .into_element(cx);
+
+    let selected = cx
+        .app
+        .models()
+        .read(&value, |v| v.clone())
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| Arc::<str>::from("<none>"));
+    let query = cx.app.models().get_cloned(&query).unwrap_or_default();
+
+    vec![
+        combo,
+        cx.text(format!("Selected: {selected}")),
+        cx.text(format!("Query: {query}")),
+    ]
+}
+
+fn preview_date_picker(
+    cx: &mut ElementContext<'_, App>,
+    open: Model<bool>,
+    month: Model<fret_ui_headless::calendar::CalendarMonth>,
+    selected: Model<Option<Date>>,
+) -> Vec<AnyElement> {
+    let picker = shadcn::DatePicker::new(open, month, selected.clone())
+        .placeholder("Pick a date")
+        .into_element(cx);
+
+    let selected_text: Arc<str> = cx
+        .app
+        .models()
+        .read(&selected, |v| v.map(|d| Arc::<str>::from(d.to_string())))
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| Arc::<str>::from("<none>"));
+
+    vec![picker, cx.text(format!("Selected: {selected_text}"))]
+}
+
+fn preview_resizable(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+    h_fractions: Model<Vec<f32>>,
+    v_fractions: Model<Vec<f32>>,
+) -> Vec<AnyElement> {
+    let boxy = |cx: &mut ElementContext<'_, App>, title: &str, color_key: &str| -> AnyElement {
+        let props = decl_style::container_props(
+            theme,
+            ChromeRefinement::default()
+                .bg(ColorRef::Color(theme.color_required(color_key)))
+                .rounded(Radius::Md)
+                .p(Space::N3),
+            LayoutRefinement::default().w_full().h_full(),
+        );
+        cx.container(props, move |cx| vec![cx.text(title)])
+    };
+
+    let nested_vertical = shadcn::ResizablePanelGroup::new(v_fractions)
+        .axis(fret_core::Axis::Vertical)
+        .entries(vec![
+            shadcn::ResizablePanel::new(vec![boxy(cx, "Viewport", "muted")])
+                .min_px(Px(120.0))
+                .into(),
+            shadcn::ResizableHandle::new().into(),
+            shadcn::ResizablePanel::new(vec![boxy(cx, "Console", "card")])
+                .min_px(Px(80.0))
+                .into(),
+        ])
+        .into_element(cx);
+
+    let root = shadcn::ResizablePanelGroup::new(h_fractions)
+        .axis(fret_core::Axis::Horizontal)
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .h_px(MetricRef::Px(Px(320.0))),
+        )
+        .entries(vec![
+            shadcn::ResizablePanel::new(vec![boxy(cx, "Explorer", "accent")])
+                .min_px(Px(140.0))
+                .into(),
+            shadcn::ResizableHandle::new().into(),
+            shadcn::ResizablePanel::new(vec![nested_vertical])
+                .min_px(Px(240.0))
+                .into(),
+        ])
+        .into_element(cx);
+
+    vec![cx.text("Drag the handles to resize panels."), root]
+}
+
+#[derive(Debug, Clone)]
+struct DemoProcessRow {
+    id: u64,
+    name: Arc<str>,
+    status: Arc<str>,
+    cpu: u64,
+    mem_mb: u64,
+}
+
+#[derive(Debug, Clone)]
+struct DemoProcessTableAssets {
+    data: Arc<[DemoProcessRow]>,
+    columns: Arc<[fret_ui_headless::table::ColumnDef<DemoProcessRow>]>,
+}
+
+fn preview_data_table(
+    cx: &mut ElementContext<'_, App>,
+    state: Model<fret_ui_headless::table::TableState>,
+) -> Vec<AnyElement> {
+    let assets = cx.with_state(
+        || {
+            let data: Arc<[DemoProcessRow]> = Arc::from(vec![
+                DemoProcessRow {
+                    id: 1,
+                    name: Arc::from("Renderer"),
+                    status: Arc::from("Running"),
+                    cpu: 12,
+                    mem_mb: 420,
+                },
+                DemoProcessRow {
+                    id: 2,
+                    name: Arc::from("Asset Cache"),
+                    status: Arc::from("Idle"),
+                    cpu: 0,
+                    mem_mb: 128,
+                },
+                DemoProcessRow {
+                    id: 3,
+                    name: Arc::from("Indexer"),
+                    status: Arc::from("Running"),
+                    cpu: 38,
+                    mem_mb: 860,
+                },
+                DemoProcessRow {
+                    id: 4,
+                    name: Arc::from("Spellcheck"),
+                    status: Arc::from("Disabled"),
+                    cpu: 0,
+                    mem_mb: 0,
+                },
+                DemoProcessRow {
+                    id: 5,
+                    name: Arc::from("Language Server"),
+                    status: Arc::from("Running"),
+                    cpu: 7,
+                    mem_mb: 512,
+                },
+            ]);
+
+            let columns: Arc<[fret_ui_headless::table::ColumnDef<DemoProcessRow>]> =
+                Arc::from(vec![
+                    fret_ui_headless::table::ColumnDef::new("name")
+                        .sort_by(|a: &DemoProcessRow, b: &DemoProcessRow| a.name.cmp(&b.name))
+                        .size(220.0),
+                    fret_ui_headless::table::ColumnDef::new("status")
+                        .sort_by(|a: &DemoProcessRow, b: &DemoProcessRow| a.status.cmp(&b.status))
+                        .size(140.0),
+                    fret_ui_headless::table::ColumnDef::new("cpu%")
+                        .sort_by(|a: &DemoProcessRow, b: &DemoProcessRow| a.cpu.cmp(&b.cpu))
+                        .size(90.0),
+                    fret_ui_headless::table::ColumnDef::new("mem_mb")
+                        .sort_by(|a: &DemoProcessRow, b: &DemoProcessRow| a.mem_mb.cmp(&b.mem_mb))
+                        .size(110.0),
+                ]);
+
+            DemoProcessTableAssets { data, columns }
+        },
+        |st| st.clone(),
+    );
+
+    let selected_count = cx
+        .app
+        .models()
+        .read(&state, |st| st.row_selection.len())
+        .ok()
+        .unwrap_or(0);
+    let sorting = cx
+        .app
+        .models()
+        .read(&state, |st| {
+            st.sorting.first().map(|s| (s.column.clone(), s.desc))
+        })
+        .ok()
+        .flatten();
+
+    let sorting_text: Arc<str> = sorting
+        .map(|(col, desc)| {
+            Arc::<str>::from(format!(
+                "Sorting: {} {}",
+                col,
+                if desc { "desc" } else { "asc" }
+            ))
+        })
+        .unwrap_or_else(|| Arc::<str>::from("Sorting: <none>"));
+
+    let table = shadcn::DataTable::new()
+        .row_height(Px(36.0))
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .h_px(MetricRef::Px(Px(280.0))),
+        )
+        .into_element(
+            cx,
+            assets.data.clone(),
+            1,
+            state,
+            assets.columns.clone(),
+            |row, _index, _parent| fret_ui_headless::table::RowKey(row.id),
+            |col| col.id.clone(),
+            |cx, col, row| match col.id.as_ref() {
+                "name" => cx.text(row.name.as_ref()),
+                "status" => cx.text(row.status.as_ref()),
+                "cpu%" => cx.text(format!("{}%", row.cpu)),
+                "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
+                _ => cx.text("?"),
+            },
+        );
+
+    vec![
+        cx.text("Click header to sort; click row to toggle selection."),
+        cx.text(format!("Selected rows: {selected_count}")),
+        cx.text(sorting_text.as_ref()),
+        table,
+    ]
+}
+
+fn preview_data_grid(
+    cx: &mut ElementContext<'_, App>,
+    selected_row: Model<Option<u64>>,
+) -> Vec<AnyElement> {
+    let selected = cx.app.models().get_cloned(&selected_row).flatten();
+
+    let grid = shadcn::DataGridElement::new(["PID", "Name", "State", "CPU%"], 200)
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .h_px(MetricRef::Px(Px(320.0))),
+        )
+        .into_element(
+            cx,
+            1,
+            1,
+            |row| row as u64,
+            move |row| {
+                let is_selected = selected == Some(row as u64);
+                let cmd = CommandId::new(format!("{CMD_DATA_GRID_ROW_PREFIX}{row}"));
+                shadcn::DataGridRowState {
+                    selected: is_selected,
+                    enabled: row % 17 != 0,
+                    on_click: Some(cmd),
+                }
+            },
+            |cx, row, col| {
+                let pid = 1000 + row as u64;
+                match col {
+                    0 => cx.text(pid.to_string()),
+                    1 => cx.text(format!("Process {row}")),
+                    2 => cx.text(if row % 3 == 0 { "Running" } else { "Idle" }),
+                    _ => cx.text(((row * 7) % 100).to_string()),
+                }
+            },
+        );
+
+    let selected_text: Arc<str> = selected
+        .map(|v| Arc::<str>::from(v.to_string()))
+        .unwrap_or_else(|| Arc::<str>::from("<none>"));
+
+    vec![
+        cx.text("Virtualized rows/cols viewport; click a row to select (disabled every 17th row)."),
+        cx.text(format!("Selected row: {selected_text}")),
+        grid,
+    ]
 }
 
 fn preview_tabs(
@@ -1746,6 +2452,129 @@ let select = shadcn::Select::new(value, open)
 ```
 "#;
 
+const DOC_COMBOBOX: &str = r#"
+## Combobox
+
+Combobox is a shadcn recipe: Popover + Command list + optional search.
+
+This page validates:
+
+- value model (`Model<Option<Arc<str>>>`)
+- open model (`Model<bool>`)
+- query model (`Model<String>`)
+"#;
+
+const USAGE_COMBOBOX: &str = r#"
+```rust
+let value = app.models_mut().insert(None::<Arc<str>>);
+let open = app.models_mut().insert(false);
+let query = app.models_mut().insert(String::new());
+
+let combo = shadcn::Combobox::new(value, open)
+    .query_model(query)
+    .items([shadcn::ComboboxItem::new("apple", "Apple")]);
+```
+"#;
+
+const DOC_DATE_PICKER: &str = r#"
+## Date Picker
+
+Date picker is a Popover + Calendar integration.
+
+This page validates:
+
+- selected date model (`Model<Option<time::Date>>`)
+- month model (`Model<CalendarMonth>`)
+- open model (`Model<bool>`)
+"#;
+
+const USAGE_DATE_PICKER: &str = r#"
+```rust
+let open = app.models_mut().insert(false);
+let month = app
+    .models_mut()
+    .insert(fret_ui_headless::calendar::CalendarMonth::from_date(
+        time::OffsetDateTime::now_utc().date(),
+    ));
+let selected = app.models_mut().insert(None::<time::Date>);
+
+let picker = shadcn::DatePicker::new(open, month, selected);
+```
+"#;
+
+const DOC_RESIZABLE: &str = r#"
+## Resizable
+
+Resizable panel groups are runtime-owned drag surfaces (splitter handles).
+
+This page validates:
+
+- fraction model (`Model<Vec<f32>>`) persistence
+- nested groups (horizontal + vertical)
+"#;
+
+const USAGE_RESIZABLE: &str = r#"
+```rust
+let fractions = app.models_mut().insert(vec![0.3, 0.7]);
+
+let group = shadcn::ResizablePanelGroup::new(fractions).entries(vec![
+    shadcn::ResizablePanel::new(vec![/* ... */]).into(),
+    shadcn::ResizableHandle::new().into(),
+    shadcn::ResizablePanel::new(vec![/* ... */]).into(),
+]);
+```
+"#;
+
+const DOC_DATA_TABLE: &str = r#"
+## DataTable
+
+`DataTable` integrates the TanStack-aligned headless engine (ADR 0101):
+
+- headless: sorting / filtering / selection state (`TableState`)
+- UI: fixed header + virtualized body
+"#;
+
+const USAGE_DATA_TABLE: &str = r#"
+```rust
+let state = app.models_mut().insert(fret_ui_headless::table::TableState::default());
+
+let table = shadcn::DataTable::new().into_element(
+    cx,
+    data,
+    data_revision,
+    state,
+    columns,
+    get_row_key,
+    header_label,
+    cell_at,
+);
+```
+"#;
+
+const DOC_DATA_GRID: &str = r#"
+## DataGrid
+
+`DataGrid` is a viewport-driven, virtualized rows/cols surface.
+
+This page validates:
+
+- large row counts without allocating all row widgets
+- per-row hover/selected styling
+"#;
+
+const USAGE_DATA_GRID: &str = r#"
+```rust
+let grid = shadcn::DataGrid::new(["A", "B", "C"], 10_000).into_element(
+    cx,
+    rows_revision,
+    cols_revision,
+    row_key_at,
+    row_state_at,
+    cell_at,
+);
+```
+"#;
+
 const DOC_TABS: &str = r#"
 ## Tabs
 
@@ -1920,6 +2749,9 @@ pub fn build_app() -> App {
             .with_keywords(["settings", "preferences"]),
     );
 
+    fret_workspace::commands::register_workspace_commands(app.commands_mut());
+    fret_app::install_command_default_keybindings_into_keymap(&mut app);
+
     app
 }
 
@@ -2021,8 +2853,27 @@ impl WinitAppDriver for UiGalleryDriver {
             return;
         }
 
+        if Self::handle_workspace_tab_command(app, state, &command) {
+            app.request_redraw(window);
+            return;
+        }
+
         let _ = Self::handle_nav_command(app, state, &command);
         Self::handle_gallery_command(app, state, &command);
+
+        if let Some(suffix) = command.as_str().strip_prefix(CMD_DATA_GRID_ROW_PREFIX) {
+            if let Ok(row) = suffix.parse::<u64>() {
+                let _ = app.models_mut().update(&state.data_grid_selected_row, |v| {
+                    if *v == Some(row) {
+                        *v = None;
+                    } else {
+                        *v = Some(row);
+                    }
+                });
+                app.request_redraw(window);
+                return;
+            }
+        }
 
         match command.as_str() {
             CMD_MENU_DROPDOWN_APPLE => {

@@ -1,13 +1,6 @@
 use std::sync::Arc;
 
-use fret_app::{App, CommandId, Effect};
-use fret_bootstrap::ui_app_with_hooks;
-use fret_core::{AppWindowId, SemanticsRole, UiServices};
-use fret_core::{TextOverflow, TextWrap};
-use fret_ui::element::SemanticsProps;
-use fret_ui::element::{HoverRegionProps, TextProps};
-use fret_ui::{Invalidation, Theme};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_kit::prelude::*;
 
 const CMD_ADD: &str = "todo.add";
 const CMD_REMOVE_PREFIX: &str = "todo.remove.";
@@ -34,10 +27,8 @@ enum TodoFilter {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    ui_app_with_hooks("todo-demo", init_window, view, |d| d.on_command(on_command))
-        .with_default_diagnostics()
+    fret_kit::app_with_hooks("todo-demo", init_window, view, |d| d.on_command(on_command))?
         .with_main_window("todo_demo", (560.0, 520.0))
-        .with_default_config_files()?
         .with_ui_assets_budgets(64 * 1024 * 1024, 2048, 16 * 1024 * 1024, 4096)
         .init_app(|app| {
             shadcn::shadcn_themes::apply_shadcn_new_york_v4(
@@ -46,10 +37,8 @@ pub fn run() -> anyhow::Result<()> {
                 shadcn::shadcn_themes::ShadcnColorScheme::Light,
             );
         })
-        .with_lucide_icons()
-        .preload_icon_svgs_on_gpu_ready()
-        .run()
-        .map_err(anyhow::Error::from)
+        .run()?;
+    Ok(())
 }
 
 fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
@@ -156,8 +145,8 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
                         .bg(ColorRef::Color(theme.color_required("muted")))
                         .rounded(Radius::Full),
                     LayoutRefinement::default()
-                        .w_px(MetricRef::Px(fret_core::Px(32.0)))
-                        .h_px(MetricRef::Px(fret_core::Px(32.0))),
+                        .w_px(MetricRef::Px(Px(32.0)))
+                        .h_px(MetricRef::Px(Px(32.0))),
                 );
                 cx.container(props, |cx| {
                     vec![stack::hstack(
@@ -170,7 +159,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
                             vec![icon::icon_with(
                                 cx,
                                 IconId::new("lucide.calendar"),
-                                Some(fret_core::Px(16.0)),
+                                Some(Px(16.0)),
                                 Some(ColorRef::Color(theme.color_required("muted-foreground"))),
                             )]
                         },
@@ -192,7 +181,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
         |_cx| vec![input, add_btn],
     );
 
-    let list_max_h = MetricRef::Px(fret_core::Px(260.0));
+    let list_max_h = MetricRef::Px(Px(260.0));
 
     let tabs = shadcn::Tabs::new(st.filter.clone())
         .refine_layout(LayoutRefinement::default().w_full())
@@ -276,7 +265,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()
-                .max_w(MetricRef::Px(fret_core::Px(460.0))),
+                .max_w(MetricRef::Px(Px(460.0))),
         )
         .into_element(cx);
 
@@ -416,13 +405,13 @@ fn todo_row(
         .children(vec![icon::icon_with(
             cx,
             IconId::new("lucide.trash-2"),
-            Some(fret_core::Px(16.0)),
+            Some(Px(16.0)),
             Some(ColorRef::Color(theme.color_required("muted-foreground"))),
         )])
         .into_element(cx);
 
     let mut hover = HoverRegionProps::default();
-    hover.layout.size.width = fret_ui::element::Length::Fill;
+    hover.layout.size.width = Length::Fill;
     cx.hover_region(hover, move |cx, hovered| {
         let bg = hovered.then(|| theme.color_required("accent"));
 
@@ -498,7 +487,7 @@ fn on_command(
     app: &mut App,
     services: &mut dyn UiServices,
     window: AppWindowId,
-    _ui: &mut fret_ui::UiTree<App>,
+    _ui: &mut UiTree<App>,
     state: &mut TodoState,
     cmd: &CommandId,
 ) {

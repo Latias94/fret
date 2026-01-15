@@ -2,22 +2,15 @@
 //
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
-use super::layout::{dock_drop_edge_thickness, dock_hint_rects, split_tab_bar};
+use super::layout::split_tab_bar;
+#[cfg(test)]
+use super::layout::{dock_drop_edge_thickness, dock_hint_rects};
 use super::prelude_core::*;
+use super::tab_bar_geometry::TabBarGeometry;
 use fret_ui::retained_bridge::resizable_panel_group as resizable;
 
 pub(super) fn tab_scroll_for_node(tab_scroll: &HashMap<DockNodeId, Px>, node: DockNodeId) -> Px {
     tab_scroll.get(&node).copied().unwrap_or(Px(0.0))
-}
-
-pub(super) fn tab_rect_for_index(tab_bar: Rect, index: usize, scroll: Px) -> Rect {
-    Rect {
-        origin: Point::new(
-            Px(tab_bar.origin.x.0 + DOCK_TAB_W.0 * index as f32 - scroll.0),
-            tab_bar.origin.y,
-        ),
-        size: Size::new(DOCK_TAB_W, tab_bar.size.height),
-    }
 }
 
 pub(super) fn tab_close_rect(theme: fret_ui::ThemeSnapshot, tab_rect: Rect) -> Rect {
@@ -34,6 +27,7 @@ pub(super) fn hit_test_tab(
     graph: &DockGraph,
     layout: &std::collections::HashMap<DockNodeId, Rect>,
     tab_scroll: &HashMap<DockNodeId, Px>,
+    tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
     theme: fret_ui::ThemeSnapshot,
     position: Point,
 ) -> Option<(DockNodeId, usize, PanelKey, bool)> {
@@ -49,20 +43,21 @@ pub(super) fn hit_test_tab(
             continue;
         }
         let scroll = tab_scroll_for_node(tab_scroll, node);
-        let rel_x = position.x.0 - tab_bar.origin.x.0 + scroll.0;
-        let idx = (rel_x / DOCK_TAB_W.0).floor() as isize;
-        if idx < 0 {
-            continue;
-        }
-        let idx = idx as usize;
+        let geom = tab_widths
+            .get(&node)
+            .filter(|w| w.len() == tabs.len())
+            .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
+            .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tabs.len()));
+        let idx = geom.hit_test_tab_index(position, scroll)?;
         let panel = tabs.get(idx)?.clone();
-        let tab_rect = tab_rect_for_index(tab_bar, idx, scroll);
+        let tab_rect = geom.tab_rect(idx, scroll);
         let close = tab_close_rect(theme, tab_rect).contains(position);
         return Some((node, idx, panel, close));
     }
     None
 }
 
+#[cfg(test)]
 pub(super) fn hit_test_drop_target(
     graph: &DockGraph,
     layout: &std::collections::HashMap<DockNodeId, Rect>,
@@ -80,7 +75,8 @@ pub(super) fn hit_test_drop_target(
         let (tab_bar, _content) = split_tab_bar(rect);
         if tab_bar.contains(position) {
             let scroll = tab_scroll_for_node(tab_scroll, node);
-            let insert_index = compute_tab_insert_index(tab_bar, scroll, tabs.len(), position);
+            let geom = TabBarGeometry::fixed(tab_bar, tabs.len());
+            let insert_index = geom.compute_insert_index(position, scroll);
             return Some(HoverTarget {
                 tabs: node,
                 zone: DropZone::Center,
@@ -127,13 +123,6 @@ pub(super) fn hit_test_drop_target(
         });
     }
     None
-}
-
-fn compute_tab_insert_index(tab_bar: Rect, scroll: Px, tab_count: usize, position: Point) -> usize {
-    let rel_x = position.x.0 - tab_bar.origin.x.0 + scroll.0;
-    let raw = (rel_x / DOCK_TAB_W.0) + 0.5;
-    let idx = raw.floor() as isize;
-    idx.clamp(0, tab_count as isize) as usize
 }
 
 pub(super) fn hit_test_split_handle(

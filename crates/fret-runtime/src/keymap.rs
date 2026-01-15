@@ -35,8 +35,18 @@ pub struct Binding {
 #[derive(Debug, Clone)]
 pub struct DefaultKeybinding {
     pub platform: PlatformFilter,
-    pub chord: KeyChord,
+    pub sequence: Vec<KeyChord>,
     pub when: Option<WhenExpr>,
+}
+
+impl DefaultKeybinding {
+    pub fn single(platform: PlatformFilter, chord: KeyChord) -> Self {
+        Self {
+            platform,
+            sequence: vec![chord],
+            when: None,
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone)]

@@ -1,6 +1,6 @@
 use fret_app::App;
 use fret_core::AppWindowId;
-use fret_ui::{InternalDragRouteService, UiTree};
+use fret_ui::UiTree;
 
 pub(crate) fn hotpatch_drop_old_state() -> bool {
     #[cfg(not(target_arch = "wasm32"))]
@@ -25,7 +25,5 @@ pub(crate) fn reset_ui_tree(app: &mut App, window: AppWindowId, ui: &mut UiTree<
         std::mem::forget(old);
     }
 
-    app.with_global_mut(InternalDragRouteService::default, |svc, _app| {
-        svc.clear_window(window);
-    });
+    fret_ui::internal_drag::clear_window(app, window);
 }

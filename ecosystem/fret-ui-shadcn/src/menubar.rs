@@ -1157,21 +1157,19 @@ impl MenubarMenuEntries {
 
                         let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) = entries
                             .iter()
-                            .map(|e| match e {
-                                MenubarEntry::Item(item) => (item.label.clone(), item.disabled),
+                            .filter_map(|e| match e {
+                                MenubarEntry::Item(item) => Some((item.label.clone(), item.disabled)),
                                 MenubarEntry::CheckboxItem(item) => {
-                                    (item.label.clone(), item.disabled)
+                                    Some((item.label.clone(), item.disabled))
                                 }
-                                MenubarEntry::RadioItem(item) => (item.label.clone(), item.disabled),
-                                MenubarEntry::Label(_) | MenubarEntry::Separator => {
-                                    (Arc::from(""), true)
-                                }
-                                MenubarEntry::Group(_) | MenubarEntry::RadioGroup(_) => {
-                                    unreachable!("entries are flattened")
-                                }
+                                MenubarEntry::RadioItem(item) => Some((item.label.clone(), item.disabled)),
                                 MenubarEntry::Submenu(submenu) => {
-                                    (submenu.trigger.label.clone(), submenu.trigger.disabled)
+                                    Some((submenu.trigger.label.clone(), submenu.trigger.disabled))
                                 }
+                                MenubarEntry::Label(_)
+                                | MenubarEntry::Separator
+                                | MenubarEntry::Group(_)
+                                | MenubarEntry::RadioGroup(_) => None,
                             })
                             .unzip();
 
@@ -1182,7 +1180,7 @@ impl MenubarMenuEntries {
 
                         let roving = RovingFocusProps {
                             enabled: true,
-                            wrap: true,
+                            wrap: false,
                             disabled: disabled_arc,
                             ..Default::default()
                         };
@@ -2052,27 +2050,24 @@ impl MenubarMenuEntries {
                                     let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) =
                                         submenu_entries
                                             .iter()
-                                            .map(|e| match e {
+                                            .filter_map(|e| match e {
                                                 MenubarEntry::Item(item) => {
-                                                    (item.label.clone(), item.disabled)
+                                                    Some((item.label.clone(), item.disabled))
                                                 }
                                                 MenubarEntry::CheckboxItem(item) => {
-                                                    (item.label.clone(), item.disabled)
+                                                    Some((item.label.clone(), item.disabled))
                                                 }
                                                 MenubarEntry::RadioItem(item) => {
-                                                    (item.label.clone(), item.disabled)
+                                                    Some((item.label.clone(), item.disabled))
                                                 }
-                                                MenubarEntry::Submenu(submenu) => (
+                                                MenubarEntry::Submenu(submenu) => Some((
                                                     submenu.trigger.label.clone(),
                                                     submenu.trigger.disabled,
-                                                ),
-                                                MenubarEntry::Label(_) | MenubarEntry::Separator => {
-                                                    (Arc::from(""), true)
-                                                }
-                                                MenubarEntry::Group(_)
-                                                | MenubarEntry::RadioGroup(_) => {
-                                                    unreachable!("entries are flattened")
-                                                }
+                                                )),
+                                                MenubarEntry::Label(_)
+                                                | MenubarEntry::Separator
+                                                | MenubarEntry::Group(_)
+                                                | MenubarEntry::RadioGroup(_) => None,
                                             })
                                             .unzip();
 
@@ -2097,7 +2092,7 @@ impl MenubarMenuEntries {
 
                                     let roving = RovingFocusProps {
                                         enabled: true,
-                                        wrap: true,
+                                        wrap: false,
                                         disabled: disabled_arc,
                                         ..Default::default()
                                     };
@@ -2109,12 +2104,19 @@ impl MenubarMenuEntries {
                                         trigger_registry_for_overlay.clone();
                                     let text_style = text_style_for_submenu.clone();
                                     let submenu_models_for_panel = submenu_for_panel.clone();
+                                    let labelled_by_element = cx
+                                        .app
+                                        .models_mut()
+                                        .read(&submenu_models_for_panel.trigger, |v| *v)
+                                        .ok()
+                                        .flatten();
                                     let item_ring = item_ring;
 
                                     let submenu_panel = menu::sub_content::submenu_panel_scroll_y_for_value_at(
                                         cx,
                                         open_value.clone(),
                                         placed,
+                                        labelled_by_element,
                                         move |layout| ContainerProps {
                                             layout,
                                             padding: Edges::all(Px(6.0)),

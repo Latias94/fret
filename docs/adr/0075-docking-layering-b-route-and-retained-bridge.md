@@ -62,7 +62,7 @@ hit-testing fails (e.g. docking tear-off).
 
 `fret-ui` provides a mechanism-only table:
 
-- `fret_ui::InternalDragRouteService` (per window + drag kind → dispatch root node)
+- `fret_ui::internal_drag` (per window + drag kind → dispatch root node)
 
 This avoids hard-coding dock-specific concepts into the runtime.
 
@@ -87,7 +87,7 @@ The goal is to enable a staged migration:
 
 ### Stage 0 (this ADR)
 
-- Add `InternalDragRouteService` (mechanism) in `fret-ui`.
+- Add the internal drag route table API (mechanism) in `fret-ui`.
 - Add `unstable-retained-bridge` (feature-gated) in `fret-ui`.
 - Migrate docking UI out of `fret-ui` into a dedicated crate (Stage 1), removing the in-runtime
   docking widget implementation from the runtime substrate.
@@ -96,7 +96,7 @@ The goal is to enable a staged migration:
 
 - Create `ecosystem/fret-docking`.
 - Move `DockSpace` and related UI/policy code out of `crates/fret-ui` (done; now in `ecosystem/fret-docking/src/dock/space.rs`).
-- Register internal drag routing via `InternalDragRouteService`.
+- Register internal drag routing via `fret_ui::internal_drag::set_route(...)`.
 
 ### Stage 2 (thin the runtime further)
 

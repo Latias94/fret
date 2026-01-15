@@ -42,7 +42,7 @@ pub fn menu_roving_group_apg_prefix_typeahead<H: UiHost>(
     menu_roving_group_apg(
         cx,
         props,
-        TypeaheadPolicy::Prefix {
+        TypeaheadPolicy::PrefixAlwaysWrap {
             labels,
             timeout_ticks,
         },

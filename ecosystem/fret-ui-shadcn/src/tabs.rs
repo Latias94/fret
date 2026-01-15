@@ -776,7 +776,8 @@ impl Tabs {
                                     let model = model.clone();
                                     let text_style = text_style.clone();
 
-                                    out.push(cx.pressable_with_id_props(move |cx, st, _id| {
+                                    out.push(cx.keyed(value.clone(), move |cx| {
+                                        cx.pressable_with_id_props(move |cx, st, _id| {
                                         let value_for_pointer = value.clone();
                                         let model_for_pointer = model.clone();
 
@@ -890,6 +891,7 @@ impl Tabs {
                                         )];
 
                                         (props, children)
+                                        })
                                     }));
                                 }
                                 out

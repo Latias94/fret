@@ -1184,9 +1184,7 @@ fn reset_ui_tree_for_hotpatch(app: &mut App, window: AppWindowId, ui: &mut UiTre
         std::mem::forget(old);
     }
 
-    app.with_global_mut(fret_ui::InternalDragRouteService::default, |svc, _app| {
-        svc.clear_window(window);
-    });
+    fret_ui::internal_drag::clear_window(app, window);
 }
 
 fn hotpatch_drop_old_state() -> bool {

@@ -2,12 +2,10 @@
 //
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
-use super::hit_test::{
-    hit_test_drop_target, hit_test_split_handle, hit_test_tab, tab_rect_for_index,
-};
+use super::hit_test::{hit_test_split_handle, hit_test_tab, tab_scroll_for_node};
 use super::layout::{
-    active_panel_content_bounds, compute_layout_map, dock_space_regions, float_zone, hidden_bounds,
-    split_tab_bar,
+    active_panel_content_bounds, compute_layout_map, dock_hint_rects, dock_space_regions,
+    drop_zone_rect, float_zone, hidden_bounds, split_tab_bar,
 };
 use super::manager::DockManager;
 use super::paint::{
@@ -22,12 +20,15 @@ use super::services::{
 use super::split_stabilize::{
     SplitSizeLock, apply_same_axis_locks, compute_same_axis_locks_for_split_drag,
 };
+use super::tab_bar_geometry::TabBarGeometry;
+use super::tab_bar_geometry::dock_tab_width_for_title;
 use super::viewport::{
     ViewportCaptureState, hit_test_active_viewport_panel, viewport_input_from_hit,
     viewport_input_from_hit_clamped,
 };
 use crate::invalidation::DockInvalidationService;
 use fret_ui::retained_bridge::resizable_panel_group as resizable;
+use slotmap::Key as _;
 
 const DOCK_FLOATING_BORDER: Px = Px(1.0);
 const DOCK_FLOATING_TITLE_H: Px = Px(22.0);
@@ -38,6 +39,7 @@ pub struct DockSpace {
     last_bounds: Rect,
     divider_drag: Option<DividerDragSession>,
     floating_drag: Option<FloatingDragState>,
+    pending_dock_drags: HashMap<fret_core::PointerId, PendingDockDrag>,
     hovered_floating_close: Option<DockNodeId>,
     pressed_floating_close: Option<DockNodeId>,
     panel_content: HashMap<PanelKey, NodeId>,
@@ -49,6 +51,7 @@ pub struct DockSpace {
     hovered_tab_close: bool,
     pressed_tab_close: Option<(DockNodeId, usize, PanelKey)>,
     tab_scroll: HashMap<DockNodeId, Px>,
+    tab_widths: HashMap<DockNodeId, Arc<[Px]>>,
     tab_close_glyph: Option<PreparedTabTitle>,
     tab_text_style: TextStyle,
     tab_close_style: TextStyle,
@@ -64,6 +67,14 @@ struct FloatingDragState {
     floating: DockNodeId,
     grab_offset: Point,
     start_rect: Rect,
+}
+
+#[derive(Debug, Clone)]
+struct PendingDockDrag {
+    start: Point,
+    panel: PanelKey,
+    grab_offset: Point,
+    start_tick: fret_runtime::TickId,
 }
 
 #[derive(Debug, Clone)]
@@ -89,6 +100,7 @@ impl DockSpace {
             last_bounds: Rect::default(),
             divider_drag: None,
             floating_drag: None,
+            pending_dock_drags: HashMap::new(),
             hovered_floating_close: None,
             pressed_floating_close: None,
             panel_content: HashMap::new(),
@@ -100,6 +112,7 @@ impl DockSpace {
             hovered_tab_close: false,
             pressed_tab_close: None,
             tab_scroll: HashMap::new(),
+            tab_widths: HashMap::new(),
             tab_close_glyph: None,
             tab_text_style: TextStyle {
                 font: fret_core::FontId::default(),
@@ -287,7 +300,7 @@ impl DockSpace {
 
         let pad_x = theme.metric_required("metric.padding.md");
         let reserve = Px(DOCK_TAB_CLOSE_SIZE.0 + DOCK_TAB_CLOSE_GAP.0);
-        let inner_max_w = Px((DOCK_TAB_W.0 - pad_x.0 * 2.0 - reserve.0).max(0.0));
+        let inner_max_w = Px((DOCK_TAB_MAX_W.0 - pad_x.0 * 2.0 - reserve.0).max(0.0));
         let constraints = TextConstraints {
             max_width: Some(inner_max_w),
             wrap: TextWrap::None,
@@ -344,9 +357,22 @@ impl DockSpace {
         }
     }
 
-    fn max_tab_scroll(tab_bar: Rect, tab_count: usize) -> Px {
-        let total = DOCK_TAB_W.0 * tab_count as f32;
-        Px((total - tab_bar.size.width.0).max(0.0))
+    fn tab_bar_geometry_for_node(
+        &self,
+        tabs: DockNodeId,
+        tab_bar: Rect,
+        tab_count: usize,
+    ) -> TabBarGeometry {
+        self.tab_widths
+            .get(&tabs)
+            .filter(|w| w.len() == tab_count)
+            .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
+            .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tab_count))
+    }
+
+    fn max_tab_scroll(&self, tabs: DockNodeId, tab_bar: Rect, tab_count: usize) -> Px {
+        self.tab_bar_geometry_for_node(tabs, tab_bar, tab_count)
+            .max_scroll()
     }
 
     fn clamp_and_ensure_active_visible(
@@ -361,7 +387,8 @@ impl DockSpace {
             return;
         }
 
-        let max_scroll = Self::max_tab_scroll(tab_bar, tab_count);
+        let geom = self.tab_bar_geometry_for_node(tabs, tab_bar, tab_count);
+        let max_scroll = geom.max_scroll();
         let mut scroll = self.tab_scroll_for(tabs);
 
         if max_scroll.0 <= 0.0 {
@@ -369,17 +396,7 @@ impl DockSpace {
             return;
         }
 
-        scroll = Px(scroll.0.clamp(0.0, max_scroll.0));
-
-        let tab_left = DOCK_TAB_W.0 * active as f32 - scroll.0;
-        let tab_right = tab_left + DOCK_TAB_W.0;
-        if tab_left < 0.0 {
-            scroll = Px(DOCK_TAB_W.0 * active as f32);
-        } else if tab_right > tab_bar.size.width.0 {
-            scroll = Px(DOCK_TAB_W.0 * (active + 1) as f32 - tab_bar.size.width.0);
-        }
-
-        scroll = Px(scroll.0.clamp(0.0, max_scroll.0));
+        scroll = geom.ensure_tab_visible(scroll, active.min(tab_count.saturating_sub(1)));
         self.set_tab_scroll_for(tabs, scroll);
     }
 
@@ -483,6 +500,157 @@ impl<H: UiHost> Widget<H> for DockSpace {
             tear_off_requested: bool,
         }
 
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+        enum DockDropCandidateKind {
+            TabBar,
+            Hint(DropZone),
+            Edge(DropZone),
+            FallbackCenter,
+        }
+
+        fn candidate_id(node: DockNodeId, kind: DockDropCandidateKind) -> fret_dnd::DndItemId {
+            let node_id = node.data().as_ffi();
+            let kind_id = match kind {
+                DockDropCandidateKind::TabBar => 1,
+                DockDropCandidateKind::Hint(DropZone::Center) => 2,
+                DockDropCandidateKind::Hint(DropZone::Left) => 3,
+                DockDropCandidateKind::Hint(DropZone::Right) => 4,
+                DockDropCandidateKind::Hint(DropZone::Top) => 5,
+                DockDropCandidateKind::Hint(DropZone::Bottom) => 6,
+                DockDropCandidateKind::Edge(DropZone::Left) => 10,
+                DockDropCandidateKind::Edge(DropZone::Right) => 11,
+                DockDropCandidateKind::Edge(DropZone::Top) => 12,
+                DockDropCandidateKind::Edge(DropZone::Bottom) => 13,
+                DockDropCandidateKind::Edge(DropZone::Center) => 14,
+                DockDropCandidateKind::FallbackCenter => 255,
+            };
+
+            // A small, stable mixing function to avoid relying on std hasher stability.
+            let mut x = node_id ^ (kind_id as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
+            x = x.wrapping_mul(0xBF58_476D_1CE4_E5B9);
+            x ^= x >> 32;
+            fret_dnd::DndItemId(x)
+        }
+
+        fn dock_drop_target_via_dnd(
+            graph: &DockGraph,
+            layout: &HashMap<DockNodeId, Rect>,
+            tab_scroll: &HashMap<DockNodeId, Px>,
+            tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
+            position: Point,
+        ) -> Option<HoverTarget> {
+            #[derive(Debug, Clone, Copy)]
+            enum HoverKind {
+                TabBar {
+                    tabs: DockNodeId,
+                    tab_bar: Rect,
+                    scroll: Px,
+                    tab_count: usize,
+                },
+                Zone {
+                    tabs: DockNodeId,
+                    zone: DropZone,
+                },
+            }
+
+            let mut nodes: Vec<(DockNodeId, Rect)> = layout.iter().map(|(&n, &r)| (n, r)).collect();
+            nodes.sort_by_key(|(node, _)| node.data().as_ffi());
+
+            let mut idx = fret_dnd::RectDroppableIndex::<HoverKind>::default();
+
+            for (node, rect) in nodes {
+                let Some(DockNode::Tabs { tabs, .. }) = graph.node(node) else {
+                    continue;
+                };
+                if tabs.is_empty() {
+                    continue;
+                }
+
+                let (tab_bar, _content) = split_tab_bar(rect);
+                let scroll = tab_scroll_for_node(tab_scroll, node);
+
+                let tab_id = candidate_id(node, DockDropCandidateKind::TabBar);
+                idx.push_rect(
+                    tab_id,
+                    tab_bar,
+                    30,
+                    false,
+                    HoverKind::TabBar {
+                        tabs: node,
+                        tab_bar,
+                        scroll,
+                        tab_count: tabs.len(),
+                    },
+                );
+
+                for (zone, hint_rect) in dock_hint_rects(rect) {
+                    let hint_id = candidate_id(node, DockDropCandidateKind::Hint(zone));
+                    idx.push_rect(
+                        hint_id,
+                        hint_rect,
+                        20,
+                        false,
+                        HoverKind::Zone { tabs: node, zone },
+                    );
+                }
+
+                for zone in [
+                    DropZone::Left,
+                    DropZone::Right,
+                    DropZone::Top,
+                    DropZone::Bottom,
+                ] {
+                    let edge_rect = drop_zone_rect(rect, zone);
+                    let edge_id = candidate_id(node, DockDropCandidateKind::Edge(zone));
+                    idx.push_rect(
+                        edge_id,
+                        edge_rect,
+                        10,
+                        false,
+                        HoverKind::Zone { tabs: node, zone },
+                    );
+                }
+
+                let fallback_id = candidate_id(node, DockDropCandidateKind::FallbackCenter);
+                idx.push_rect(
+                    fallback_id,
+                    rect,
+                    0,
+                    false,
+                    HoverKind::Zone {
+                        tabs: node,
+                        zone: DropZone::Center,
+                    },
+                );
+            }
+
+            let (_id, kind) = idx.pick_pointer_within(position)?;
+            match kind {
+                HoverKind::TabBar {
+                    tabs,
+                    tab_bar,
+                    scroll,
+                    tab_count,
+                } => Some(HoverTarget {
+                    tabs,
+                    zone: DropZone::Center,
+                    insert_index: Some({
+                        let geom = tab_widths
+                            .get(&tabs)
+                            .filter(|w| w.len() == tab_count)
+                            .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
+                            .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tab_count));
+                        geom.compute_insert_index(position, scroll)
+                    }),
+                }),
+                HoverKind::Zone { tabs, zone } => Some(HoverTarget {
+                    tabs,
+                    zone,
+                    insert_index: None,
+                }),
+            }
+        }
+
         fn is_outside_bounds_with_margin(bounds: Rect, position: Point, margin: Px) -> bool {
             position.x.0 < bounds.origin.x.0 - margin.0
                 || position.y.0 < bounds.origin.y.0 - margin.0
@@ -558,11 +726,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     tear_off_requested: p.tear_off_requested,
                 })
         });
+        let has_pending_dock_drag = self.pending_dock_drags.contains_key(&pointer_id);
         // While a dock drag session exists (even before it crosses the drag threshold), we must
         // not forward pointer moves/wheel to embedded viewports in this window. Docking owns the
         // interaction until the session ends (ADR 0072).
-        let allow_viewport_hover =
-            dock_drag.is_none() && cx.app.drag(pointer_id).is_none_or(|d| !d.dragging);
+        let allow_viewport_hover = dock_drag.is_none()
+            && !has_pending_dock_drag
+            && cx.app.drag(pointer_id).is_none_or(|d| !d.dragging);
         let docking_interaction_settings = cx
             .app
             .global::<fret_runtime::DockingInteractionSettings>()
@@ -581,16 +751,18 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
         let now_tick = cx.app.tick_id();
 
-        let mut begin_drag: Option<(Point, PanelKey, Point)> = None;
+        let mut start_dock_drag: Option<(Point, DockPanelDragPayload, Point)> = None;
         let mut update_drag: Option<(Point, bool)> = None;
         let mut end_dock_drag = false;
         let mut mark_drag_tear_off_requested = false;
 
         {
-            cx.app
-                .with_global_mut(InternalDragRouteService::default, |routes, _app| {
-                    routes.set(self.window, fret_runtime::DRAG_KIND_DOCK_PANEL, cx.node);
-                });
+            fret_ui::internal_drag::set_route(
+                cx.app,
+                self.window,
+                fret_runtime::DRAG_KIND_DOCK_PANEL,
+                cx.node,
+            );
             let Some(dock) = cx.app.global_mut::<DockManager>() else {
                 return;
             };
@@ -612,6 +784,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         // active), we do not allow starting competing capture sessions from a
                         // secondary button press. The active session owns the interaction.
                         if dock_drag.is_some()
+                            || has_pending_dock_drag
                             || self.viewport_capture.is_some()
                             || self.divider_drag.is_some()
                             || self.floating_drag.is_some()
@@ -704,6 +877,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     &dock.graph,
                                     &layout,
                                     &self.tab_scroll,
+                                    &self.tab_widths,
                                     theme,
                                     *position,
                                 )
@@ -731,20 +905,35 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     let tab_rect = layout
                                         .get(&tabs_node)
                                         .copied()
-                                        .map(split_tab_bar)
-                                        .map(|(bar, _content)| {
-                                            tab_rect_for_index(
-                                                bar,
-                                                tab_index,
-                                                self.tab_scroll_for(tabs_node),
-                                            )
+                                        .and_then(|rect| {
+                                            let (bar, _content) = split_tab_bar(rect);
+                                            let tab_count = match dock.graph.node(tabs_node) {
+                                                Some(DockNode::Tabs { tabs, .. }) => tabs.len(),
+                                                _ => 0,
+                                            };
+                                            (tab_index < tab_count).then(|| {
+                                                let scroll = self.tab_scroll_for(tabs_node);
+                                                self.tab_bar_geometry_for_node(
+                                                    tabs_node, bar, tab_count,
+                                                )
+                                                .tab_rect(tab_index, scroll)
+                                            })
                                         })
                                         .unwrap_or_else(|| Rect::new(*position, Size::default()));
                                     let tab_local = Point::new(
                                         Px((position.x.0 - tab_rect.origin.x.0).max(0.0)),
                                         Px((position.y.0 - tab_rect.origin.y.0).max(0.0)),
                                     );
-                                    begin_drag = Some((*position, panel_key, tab_local));
+                                    self.pending_dock_drags.insert(
+                                        pointer_id,
+                                        PendingDockDrag {
+                                            start: *position,
+                                            panel: panel_key,
+                                            grab_offset: tab_local,
+                                            start_tick: now_tick,
+                                        },
+                                    );
+                                    request_pointer_capture = Some(Some(cx.node));
                                     dock.hover = None;
                                     invalidate_paint = true;
                                     handled = true;
@@ -758,6 +947,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 &dock.graph,
                                 &layout,
                                 &self.tab_scroll,
+                                &self.tab_widths,
                                 theme,
                                 *position,
                             )
@@ -836,184 +1026,240 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             return;
                         }
 
-                        let hovered_floating =
-                            hit_test_floating(&dock.graph, self.window, *position);
-                        let hovered_close =
-                            hovered_floating.and_then(|(floating, _chrome, kind)| {
-                                if kind == FloatingHitKind::Close {
-                                    Some(floating)
-                                } else {
-                                    None
+                        if has_pending_dock_drag {
+                            if !buttons.left {
+                                self.pending_dock_drags.remove(&pointer_id);
+                                request_pointer_capture = Some(None);
+                            } else {
+                                let activation = fret_dnd::ActivationConstraint::Distance {
+                                    px: docking_interaction_settings.tab_drag_threshold.0,
+                                };
+                                let should_activate = self
+                                    .pending_dock_drags
+                                    .get(&pointer_id)
+                                    .is_some_and(|pending| {
+                                        activation.is_satisfied(
+                                            pending.start_tick.0,
+                                            now_tick.0,
+                                            pending.start,
+                                            *position,
+                                        )
+                                    });
+                                if should_activate
+                                    && let Some(pending) =
+                                        self.pending_dock_drags.remove(&pointer_id)
+                                {
+                                    start_dock_drag = Some((
+                                        pending.start,
+                                        DockPanelDragPayload {
+                                            panel: pending.panel,
+                                            grab_offset: pending.grab_offset,
+                                            start_tick: pending.start_tick,
+                                            tear_off_requested: false,
+                                        },
+                                        *position,
+                                    ));
+                                    request_pointer_capture = Some(None);
                                 }
-                            });
-                        if hovered_close != self.hovered_floating_close {
-                            self.hovered_floating_close = hovered_close;
+                            }
+
+                            dock.hover = None;
                             invalidate_paint = true;
                             pending_redraws.push(self.window);
-                        }
-                        if request_cursor.is_none()
-                            && let Some((_floating, _chrome, kind)) = hovered_floating
-                        {
-                            match kind {
-                                FloatingHitKind::Close => {
-                                    request_cursor = Some(fret_core::CursorIcon::Pointer);
-                                }
-                                FloatingHitKind::TitleBar => {
-                                    request_cursor = Some(fret_core::CursorIcon::Default);
-                                }
-                                FloatingHitKind::Body => {}
+                        } else {
+                            let hovered_floating =
+                                hit_test_floating(&dock.graph, self.window, *position);
+                            let hovered_close =
+                                hovered_floating.and_then(|(floating, _chrome, kind)| {
+                                    if kind == FloatingHitKind::Close {
+                                        Some(floating)
+                                    } else {
+                                        None
+                                    }
+                                });
+                            if hovered_close != self.hovered_floating_close {
+                                self.hovered_floating_close = hovered_close;
+                                invalidate_paint = true;
+                                pending_redraws.push(self.window);
                             }
-                        }
-
-                        if self.viewport_capture.is_none()
-                            && self.divider_drag.is_none()
-                            && dock_drag.is_none()
-                        {
-                            let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
-                            let (layout_root, layout_bounds) = layout_context_for_position(
-                                &dock.graph,
-                                self.window,
-                                root,
-                                dock_bounds,
-                                *position,
-                            );
-                            let layout =
-                                compute_layout_map(&dock.graph, layout_root, layout_bounds);
-                            if let Some(handle) =
-                                hit_test_split_handle(&dock.graph, &layout, *position)
+                            if request_cursor.is_none()
+                                && let Some((_floating, _chrome, kind)) = hovered_floating
                             {
-                                request_cursor = Some(match handle.axis {
+                                match kind {
+                                    FloatingHitKind::Close => {
+                                        request_cursor = Some(fret_core::CursorIcon::Pointer);
+                                    }
+                                    FloatingHitKind::TitleBar => {
+                                        request_cursor = Some(fret_core::CursorIcon::Default);
+                                    }
+                                    FloatingHitKind::Body => {}
+                                }
+                            }
+
+                            if self.viewport_capture.is_none()
+                                && self.divider_drag.is_none()
+                                && dock_drag.is_none()
+                            {
+                                let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
+                                let (layout_root, layout_bounds) = layout_context_for_position(
+                                    &dock.graph,
+                                    self.window,
+                                    root,
+                                    dock_bounds,
+                                    *position,
+                                );
+                                let layout =
+                                    compute_layout_map(&dock.graph, layout_root, layout_bounds);
+                                if let Some(handle) =
+                                    hit_test_split_handle(&dock.graph, &layout, *position)
+                                {
+                                    request_cursor = Some(match handle.axis {
+                                        fret_core::Axis::Horizontal => {
+                                            fret_core::CursorIcon::ColResize
+                                        }
+                                        fret_core::Axis::Vertical => {
+                                            fret_core::CursorIcon::RowResize
+                                        }
+                                    });
+                                }
+                            }
+
+                            let hovered = if self.viewport_capture.is_none()
+                                && self.divider_drag.is_none()
+                                && dock_drag.is_none()
+                            {
+                                let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
+                                let (layout_root, layout_bounds) = layout_context_for_position(
+                                    &dock.graph,
+                                    self.window,
+                                    root,
+                                    dock_bounds,
+                                    *position,
+                                );
+                                let layout =
+                                    compute_layout_map(&dock.graph, layout_root, layout_bounds);
+                                hit_test_tab(
+                                    &dock.graph,
+                                    &layout,
+                                    &self.tab_scroll,
+                                    &self.tab_widths,
+                                    theme,
+                                    *position,
+                                )
+                                .map(|(node, idx, _panel, close)| (node, idx, close))
+                            } else {
+                                None
+                            };
+                            let next_tab = hovered.map(|(node, idx, _close)| (node, idx));
+                            let next_close =
+                                hovered.map(|(_node, _idx, close)| close).unwrap_or(false);
+                            if next_tab != self.hovered_tab || next_close != self.hovered_tab_close
+                            {
+                                self.hovered_tab = next_tab;
+                                self.hovered_tab_close = next_close;
+                                invalidate_paint = true;
+                                pending_redraws.push(self.window);
+                            }
+
+                            if let Some(divider) = self.divider_drag.as_ref() {
+                                cx.requested_cursor = Some(match divider.handle.axis {
                                     fret_core::Axis::Horizontal => fret_core::CursorIcon::ColResize,
                                     fret_core::Axis::Vertical => fret_core::CursorIcon::RowResize,
                                 });
-                            }
-                        }
-
-                        let hovered = if self.viewport_capture.is_none()
-                            && self.divider_drag.is_none()
-                            && dock_drag.is_none()
-                        {
-                            let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
-                            let (layout_root, layout_bounds) = layout_context_for_position(
-                                &dock.graph,
-                                self.window,
-                                root,
-                                dock_bounds,
-                                *position,
-                            );
-                            let layout =
-                                compute_layout_map(&dock.graph, layout_root, layout_bounds);
-                            hit_test_tab(&dock.graph, &layout, &self.tab_scroll, theme, *position)
-                                .map(|(node, idx, _panel, close)| (node, idx, close))
-                        } else {
-                            None
-                        };
-                        let next_tab = hovered.map(|(node, idx, _close)| (node, idx));
-                        let next_close = hovered.map(|(_node, _idx, close)| close).unwrap_or(false);
-                        if next_tab != self.hovered_tab || next_close != self.hovered_tab_close {
-                            self.hovered_tab = next_tab;
-                            self.hovered_tab_close = next_close;
-                            invalidate_paint = true;
-                            pending_redraws.push(self.window);
-                        }
-
-                        if let Some(divider) = self.divider_drag.as_ref() {
-                            cx.requested_cursor = Some(match divider.handle.axis {
-                                fret_core::Axis::Horizontal => fret_core::CursorIcon::ColResize,
-                                fret_core::Axis::Vertical => fret_core::CursorIcon::RowResize,
-                            });
-                            let Some((children_len, fractions_now)) =
-                                dock.graph.node(divider.handle.split).and_then(|n| match n {
-                                    DockNode::Split {
-                                        children,
-                                        fractions,
-                                        ..
-                                    } => Some((children.len(), fractions.clone())),
-                                    _ => None,
-                                })
-                            else {
-                                return;
-                            };
-                            if let Some(next) = resizable::drag_update_fractions(
-                                divider.handle.axis,
-                                divider.handle.bounds,
-                                children_len,
-                                &fractions_now,
-                                divider.handle.handle_ix,
-                                DOCK_SPLIT_HANDLE_GAP,
-                                DOCK_SPLIT_HANDLE_HIT_THICKNESS,
-                                &[],
-                                divider.handle.grab_offset,
-                                *position,
-                            ) {
-                                dock.graph
-                                    .update_split_fractions(divider.handle.split, next);
-                                apply_same_axis_locks(
-                                    &mut dock.graph,
-                                    divider.layout_root,
-                                    divider.layout_bounds,
+                                let Some((children_len, fractions_now)) =
+                                    dock.graph.node(divider.handle.split).and_then(|n| match n {
+                                        DockNode::Split {
+                                            children,
+                                            fractions,
+                                            ..
+                                        } => Some((children.len(), fractions.clone())),
+                                        _ => None,
+                                    })
+                                else {
+                                    return;
+                                };
+                                if let Some(next) = resizable::drag_update_fractions(
                                     divider.handle.axis,
-                                    &divider.locks,
-                                );
-                                cx.invalidate(cx.node, Invalidation::Layout);
-                                cx.invalidate(cx.node, Invalidation::Paint);
+                                    divider.handle.bounds,
+                                    children_len,
+                                    &fractions_now,
+                                    divider.handle.handle_ix,
+                                    DOCK_SPLIT_HANDLE_GAP,
+                                    DOCK_SPLIT_HANDLE_HIT_THICKNESS,
+                                    &[],
+                                    divider.handle.grab_offset,
+                                    *position,
+                                ) {
+                                    dock.graph
+                                        .update_split_fractions(divider.handle.split, next);
+                                    apply_same_axis_locks(
+                                        &mut dock.graph,
+                                        divider.layout_root,
+                                        divider.layout_bounds,
+                                        divider.handle.axis,
+                                        &divider.locks,
+                                    );
+                                    cx.invalidate(cx.node, Invalidation::Layout);
+                                    cx.invalidate(cx.node, Invalidation::Paint);
+                                }
+                                return;
                             }
-                            return;
-                        }
 
-                        if let Some(capture) = self.viewport_capture.as_mut() {
-                            let hit = capture.hit.clone();
-                            let e = viewport_input_from_hit_clamped(
-                                self.window,
-                                hit,
-                                pixels_per_point,
-                                *position,
-                                ViewportInputKind::PointerMove {
-                                    buttons: *buttons,
-                                    modifiers: *modifiers,
-                                },
-                            );
-                            pending_effects.push(Effect::ViewportInput(e));
-                            pending_redraws.push(self.window);
-                        } else {
-                            let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
-                            let (layout_root, layout_bounds) = layout_context_for_position(
-                                &dock.graph,
-                                self.window,
-                                root,
-                                dock_bounds,
-                                *position,
-                            );
-                            if allow_viewport_hover && layout_bounds.contains(*position) {
-                                let layout =
-                                    compute_layout_map(&dock.graph, layout_root, layout_bounds);
-                                let hit = hit_test_active_viewport_panel(
+                            if let Some(capture) = self.viewport_capture.as_mut() {
+                                let hit = capture.hit.clone();
+                                let e = viewport_input_from_hit_clamped(
+                                    self.window,
+                                    hit,
+                                    pixels_per_point,
+                                    *position,
+                                    ViewportInputKind::PointerMove {
+                                        buttons: *buttons,
+                                        modifiers: *modifiers,
+                                    },
+                                );
+                                pending_effects.push(Effect::ViewportInput(e));
+                                pending_redraws.push(self.window);
+                            } else {
+                                let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
+                                let (layout_root, layout_bounds) = layout_context_for_position(
                                     &dock.graph,
-                                    &dock.panels,
-                                    &layout,
+                                    self.window,
+                                    root,
+                                    dock_bounds,
                                     *position,
                                 );
-
-                                if let Some(hit) = hit
-                                    && let Some(e) = viewport_input_from_hit(
-                                        self.window,
-                                        hit,
-                                        pixels_per_point,
+                                if allow_viewport_hover && layout_bounds.contains(*position) {
+                                    let layout =
+                                        compute_layout_map(&dock.graph, layout_root, layout_bounds);
+                                    let hit = hit_test_active_viewport_panel(
+                                        &dock.graph,
+                                        &dock.panels,
+                                        &layout,
                                         *position,
-                                        ViewportInputKind::PointerMove {
-                                            buttons: *buttons,
-                                            modifiers: *modifiers,
-                                        },
-                                    )
-                                {
-                                    pending_effects.push(Effect::ViewportInput(e));
-                                    pending_redraws.push(self.window);
+                                    );
+
+                                    if let Some(hit) = hit
+                                        && let Some(e) = viewport_input_from_hit(
+                                            self.window,
+                                            hit,
+                                            pixels_per_point,
+                                            *position,
+                                            ViewportInputKind::PointerMove {
+                                                buttons: *buttons,
+                                                modifiers: *modifiers,
+                                            },
+                                        )
+                                    {
+                                        pending_effects.push(Effect::ViewportInput(e));
+                                        pending_redraws.push(self.window);
+                                    }
                                 }
                             }
                         }
 
-                        // Dock/tab dragging is handled via `Event::InternalDrag` so it can work
-                        // across windows without relying on pointer-event broadcasting.
+                        // Dock/tab dragging uses `Event::InternalDrag` so it can work across
+                        // windows without relying on pointer-event broadcasting. Drag session
+                        // creation is delayed until activation crosses the drag threshold.
                     }
                     fret_core::PointerEvent::Wheel {
                         position,
@@ -1025,7 +1271,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         if !bounds.contains(*position) {
                             return;
                         }
-                        if dock_drag.is_some() {
+                        if dock_drag.is_some() || has_pending_dock_drag {
                             return;
                         }
                         let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
@@ -1058,7 +1304,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 *active,
                             );
 
-                            let max_scroll = Self::max_tab_scroll(tab_bar, tabs.len());
+                            let max_scroll = self.max_tab_scroll(node_id, tab_bar, tabs.len());
                             if max_scroll.0 <= 0.0 {
                                 scrolled_tabs = true;
                                 break;
@@ -1105,6 +1351,14 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         ..
                     } => {
                         let mut handled = false;
+                        if *button == fret_core::MouseButton::Left && has_pending_dock_drag {
+                            self.pending_dock_drags.remove(&pointer_id);
+                            request_pointer_capture = Some(None);
+                            dock.hover = None;
+                            invalidate_paint = true;
+                            pending_redraws.push(self.window);
+                            handled = true;
+                        }
                         if *button == fret_core::MouseButton::Left
                             && self.floating_drag.take().is_some()
                         {
@@ -1205,6 +1459,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 &dock.graph,
                                 &layout,
                                 &self.tab_scroll,
+                                &self.tab_widths,
                                 theme,
                                 *position,
                             )
@@ -1356,9 +1611,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 let prev_hover = dock.hover.clone();
                                 let mut dragging = drag.dragging;
                                 if drag.source_window == self.window {
-                                    // Match ImGui's default drag threshold (~6 screen px).
-                                    let activation =
-                                        fret_dnd::ActivationConstraint::Distance { px: 6.0 };
+                                    // Match ImGui's default drag threshold (~6 logical px).
+                                    let activation = fret_dnd::ActivationConstraint::Distance {
+                                        px: docking_interaction_settings.tab_drag_threshold.0,
+                                    };
                                     if !dragging
                                         && activation.is_satisfied(
                                             drag.start_tick.0,
@@ -1431,10 +1687,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                     layout_root,
                                                     layout_bounds,
                                                 );
-                                                dock.hover = hit_test_drop_target(
+                                                dock.hover = dock_drop_target_via_dnd(
                                                     &dock.graph,
                                                     &layout,
                                                     &self.tab_scroll,
+                                                    &self.tab_widths,
                                                     position,
                                                 )
                                                 .map(DockDropTarget::Dock);
@@ -1495,10 +1752,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 layout_root,
                                                 layout_bounds,
                                             );
-                                            dock.hover = hit_test_drop_target(
+                                            dock.hover = dock_drop_target_via_dnd(
                                                 &dock.graph,
                                                 &layout,
                                                 &self.tab_scroll,
+                                                &self.tab_widths,
                                                 position,
                                             )
                                             .map(DockDropTarget::Dock);
@@ -1630,6 +1888,20 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         }
                     }
                 }
+                fret_core::Event::PointerCancel(e) => {
+                    if self.pending_dock_drags.remove(&e.pointer_id).is_some() {
+                        request_pointer_capture = Some(None);
+                        dock.hover = None;
+                        invalidate_paint = true;
+                        pending_redraws.push(self.window);
+                    }
+                    if dock_drag.is_some() {
+                        dock.hover = None;
+                        end_dock_drag = true;
+                        invalidate_paint = true;
+                        pending_redraws.push(self.window);
+                    }
+                }
                 _ => {}
             }
         }
@@ -1641,19 +1913,18 @@ impl<H: UiHost> Widget<H> for DockSpace {
             request_focus = panel_nodes.get(&panel).copied();
         }
 
-        if let Some((start, panel, grab_offset)) = begin_drag {
+        if let Some((start, payload, position)) = start_dock_drag {
             cx.app.begin_cross_window_drag_with_kind(
                 pointer_id,
                 fret_runtime::DRAG_KIND_DOCK_PANEL,
                 self.window,
                 start,
-                DockPanelDragPayload {
-                    panel,
-                    grab_offset,
-                    start_tick: cx.app.tick_id(),
-                    tear_off_requested: false,
-                },
+                payload,
             );
+            if let Some(drag) = cx.app.drag_mut(pointer_id) {
+                drag.position = position;
+                drag.dragging = true;
+            }
         }
 
         if let Some(request) = request_pointer_capture {
@@ -1738,10 +2009,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
         self.last_bounds = cx.bounds;
         let hidden = hidden_bounds(Size::new(Px(0.0), Px(0.0)));
 
-        cx.app
-            .with_global_mut(InternalDragRouteService::default, |routes, _app| {
-                routes.set(self.window, fret_runtime::DRAG_KIND_DOCK_PANEL, cx.node);
-            });
+        fret_ui::internal_drag::set_route(
+            cx.app,
+            self.window,
+            fret_runtime::DRAG_KIND_DOCK_PANEL,
+            cx.node,
+        );
         if let Some(dock) = cx.app.global_mut::<DockManager>() {
             dock.register_dock_space_node(self.window, cx.node);
         }
@@ -1781,6 +2054,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 self.clamp_and_ensure_active_visible(node_id, tab_bar, tabs.len(), *active);
             }
             self.tab_scroll
+                .retain(|tabs_node, _| visible_tabs_nodes.contains(tabs_node));
+            self.tab_widths
                 .retain(|tabs_node, _| visible_tabs_nodes.contains(tabs_node));
         }
 
@@ -1822,10 +2097,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
         // This must be refreshed during paint/layout, not only during event handling, because
         // cross-window drag routing needs a reliable per-window anchor even when hit-testing is
         // over unrelated UI (ADR 0072) and even when no events have fired this frame.
-        cx.app
-            .with_global_mut(InternalDragRouteService::default, |routes, _app| {
-                routes.set(self.window, fret_runtime::DRAG_KIND_DOCK_PANEL, cx.node);
-            });
+        fret_ui::internal_drag::set_route(
+            cx.app,
+            self.window,
+            fret_runtime::DRAG_KIND_DOCK_PANEL,
+            cx.node,
+        );
         let overlay_hooks = cx
             .app
             .global::<DockViewportOverlayHooksService>()
@@ -1873,6 +2150,28 @@ impl<H: UiHost> Widget<H> for DockSpace {
             let hover = dock.hover.clone();
 
             self.rebuild_tab_titles(cx.services, theme, cx.scale_factor, &*dock, &layout_all);
+            self.tab_widths.clear();
+            for (&node_id, &_rect) in layout_all.iter() {
+                let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(node_id) else {
+                    continue;
+                };
+                if tabs.is_empty() {
+                    continue;
+                }
+                let close_glyph_present = self.tab_close_glyph.is_some();
+                let widths: Vec<Px> = tabs
+                    .iter()
+                    .map(|panel| {
+                        let title_width = self
+                            .tab_titles
+                            .get(panel)
+                            .map(|t| t.metrics.size.width)
+                            .unwrap_or(Px(0.0));
+                        dock_tab_width_for_title(theme, title_width, close_glyph_present)
+                    })
+                    .collect();
+                self.tab_widths.insert(node_id, Arc::from(widths));
+            }
 
             dock.clear_viewport_layout_for_window(self.window);
             for (&node_id, &rect) in layout_all.iter() {
@@ -1910,6 +2209,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     window: self.window,
                     layout: &root_layout,
                     tab_titles: &self.tab_titles,
+                    tab_widths: &self.tab_widths,
                     hovered_tab: self.hovered_tab,
                     hovered_tab_close: self.hovered_tab_close,
                     pressed_tab_close: self.pressed_tab_close.as_ref().map(|(n, i, _)| (*n, *i)),
@@ -1991,6 +2291,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         window: self.window,
                         layout,
                         tab_titles: &self.tab_titles,
+                        tab_widths: &self.tab_widths,
                         hovered_tab: self.hovered_tab,
                         hovered_tab_close: self.hovered_tab_close,
                         pressed_tab_close: self
@@ -2031,8 +2332,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 hover,
                 self.window,
                 cx.bounds,
+                &dock.graph,
                 &layout_all,
                 &self.tab_scroll,
+                &self.tab_widths,
                 cx.scene,
             );
 
