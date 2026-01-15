@@ -69,6 +69,18 @@ Recent fixes:
 
 - Destructive item focus tint now matches upstream (`destructive/10` in light, `destructive/20` in dark) via seeded theme tokens.
 
+### `Command` / `CommandDialog`
+
+- Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/command.tsx`
+- Upstream demo: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/command-dialog.tsx`
+- Fret: `ecosystem/fret-ui-shadcn/src/command.rs`
+- Notes:
+  - `CommandDialog` is a `Dialog`-backed recipe that composes `CommandPalette` into a modal.
+  - The upstream demo opens via a key chord (`Ctrl/Cmd+J`); the golden extractor treats it as `openAction=keys`.
+- Conformance gates:
+  - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_command_dialog_panel_chrome_matches`).
+  - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_command_dialog_overlay_center_matches`).
+
 ### `ContextMenu`
 
 - Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/context-menu.tsx`

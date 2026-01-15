@@ -57,6 +57,10 @@ Key upstream semantics:
 ## Validation
 
 - `cargo test -p fret-ui-shadcn --lib command::tests`
+- shadcn-web golden + gates:
+  - Golden: `goldens/shadcn-web/v4/new-york-v4/command-dialog.open.json`
+  - Chrome gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome -- web_vs_fret_command_dialog_panel_chrome_matches`
+  - Placement gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement -- web_vs_fret_command_dialog_overlay_center_matches`
 
 ## Follow-ups (non-P0)
 

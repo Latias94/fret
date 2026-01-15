@@ -1168,6 +1168,41 @@ fn web_vs_fret_dialog_demo_panel_chrome_matches() {
 }
 
 #[test]
+fn web_vs_fret_command_dialog_panel_chrome_matches() {
+    use fret_ui_shadcn::{Button, CommandDialog, CommandItem};
+
+    assert_overlay_chrome_matches(
+        "command-dialog",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            #[derive(Default)]
+            struct Models {
+                query: Option<Model<String>>,
+            }
+
+            let existing = cx.with_state(Models::default, |st| st.query.clone());
+            let query = if let Some(existing) = existing {
+                existing
+            } else {
+                let model = cx.app.models_mut().insert(String::new());
+                cx.with_state(Models::default, |st| st.query = Some(model.clone()));
+                model
+            };
+
+            let items = vec![
+                CommandItem::new("Calendar"),
+                CommandItem::new("Search Emoji"),
+                CommandItem::new("Calculator"),
+            ];
+
+            CommandDialog::new(open.clone(), query, items)
+                .into_element(cx, |cx| Button::new("Open").into_element(cx))
+        },
+    );
+}
+
+#[test]
 fn web_vs_fret_alert_dialog_demo_panel_chrome_matches() {
     use fret_ui_shadcn::{AlertDialog, AlertDialogContent, Button, ButtonVariant};
 
