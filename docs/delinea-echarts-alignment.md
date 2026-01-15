@@ -507,3 +507,72 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 4. P0/P1: Incremental dataset updates + stable partial recompute (append/update + cache invalidation boundaries) (S9 / ADR 1149).
 5. P1: VisualMap per-item attribute pipelines (beyond bucketization) and multi-map targeting semantics (S7).
 6. P1: Tooltip rich text / HTML parity and richer formatter surfaces (S5 / ADR 1148).
+
+## ECharts Replica P0 Backlog (Option -> Engine Baseline)
+
+This section is a **workable P0 execution plan** for the `fret-chart` ECharts translator and the
+headless engine contracts. It is intentionally narrower than the full ECharts option schema: the
+goal is to establish a stable “Option -> Engine” spine that scales to more series and components.
+
+### P0-0: Translator test harness (golden-ish, but allocation-free)
+
+- Goal: a repeatable way to validate that a given ECharts JSON option produces stable `delinea`
+  outputs (marks + axis windows), without requiring GPU rendering.
+- Evidence target:
+  - `ecosystem/fret-chart/src/echarts/mod.rs` (translator entrypoint + unit tests)
+  - `ecosystem/delinea/src/engine/tests.rs` (engine-level invariants)
+- Suggested tests:
+  - “can build engine and run to completion” (already exists for minimal cases)
+  - “option change only affects expected revision family” (future: spec vs visual vs data)
+
+### P0-1: `dataset + dimensions + encode` baseline (cartesian2d only)
+
+- Goal: support the ECharts “real” data path: `dataset.source` + `series.encode` mapping, so that
+  new series types do not require ad-hoc `series.data` parsing.
+- Scope:
+  - `dataset`: one or many datasets (at least `dataset[0]`).
+  - `source`: numeric table (array-of-arrays); string categories are P1.
+  - `series.datasetIndex` + `series.encode.{x,y}` (index or name).
+- Engine mapping:
+  - `dataset -> delinea::DatasetSpec + DataTable`
+  - `encode -> delinea::SeriesEncode` (`FieldId` bindings)
+- Code anchors:
+  - `ecosystem/fret-chart/src/echarts/mod.rs` (dataset parsing + encode mapping)
+  - `ecosystem/delinea/src/spec/mod.rs` (`DatasetSpec`, `FieldSpec`, `SeriesEncode`)
+- Missing vs ECharts:
+  - `transform` graph (`dataset.transform`) (P0-4 / P1 depending on scope)
+  - `source` object rows, `sourceHeader`, and type inference (P1)
+
+### P0-2: Multi-axis binding via indices (`xAxisIndex` / `yAxisIndex`)
+
+- Goal: support multiple axes and deterministic binding for series (still cartesian2d).
+- Scope:
+  - `xAxis` / `yAxis` as arrays.
+  - `series.xAxisIndex` / `series.yAxisIndex` (default 0).
+- Engine mapping:
+  - allocate `AxisId` per ECharts axis index; bind `SeriesSpec.{x_axis,y_axis}` accordingly.
+- Code anchors:
+  - `ecosystem/fret-chart/src/echarts/mod.rs` (axis array parsing + index -> `AxisId` mapping)
+  - `ecosystem/delinea/src/engine/model/mod.rs` (reference validation and routing)
+
+### P0-3: LOD/progressive knobs baseline (per-series surface)
+
+- Goal: ECharts-inspired knobs should flow through Option -> Spec -> Model -> Marks consistently.
+- Scope:
+  - `series.large`, `series.largeThreshold`, `series.progressive`, `series.progressiveThreshold`
+    (subset; not option-schema parity).
+- Evidence:
+  - Translator: `ecosystem/fret-chart/src/echarts/mod.rs`
+  - Engine: `ecosystem/delinea/src/spec/mod.rs` (`SeriesSpec.lod`), `ecosystem/delinea/src/engine/stages/marks.rs`
+  - Conformance: `docs/delinea-lod-conformance.md`
+
+### P0-4: Transform graph (ECharts-class, but minimal nodes)
+
+- Goal: stop baking filter/dataZoom semantics into bespoke code paths; move to a cached transform graph.
+- Minimum viable nodes:
+  - selection/slice node (monotonic fast path + non-monotonic index selection)
+  - derived columns (computed fields)
+  - (optional) sort/index helpers for nearest-X sampling
+- Code anchors:
+  - `ecosystem/delinea/src/transform/*`
+  - `ecosystem/delinea/src/engine/stages/data_view.rs` (current incremental indices builder)
