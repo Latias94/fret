@@ -307,6 +307,18 @@ pub fn sortable_reorder_list<H: UiHost>(
                 host.release_pointer_capture();
 
                 if let Some((active, over)) = reorder {
+                    let over_rect = dnd::droppable_rect_in_scope(
+                        host.models_mut(),
+                        &dnd_on_up,
+                        action_cx.window,
+                        frame_id,
+                        scope,
+                        over,
+                    );
+                    let side = over_rect
+                        .map(|rect| insertion_side_for_pointer(up.position, rect, Axis::Y))
+                        .unwrap_or(InsertionSide::Before);
+
                     let _ = host.models_mut().update(&items_on_up, |ids| {
                         let Some(active_index) = ids.iter().position(|&v| v == active) else {
                             return;
@@ -315,17 +327,6 @@ pub fn sortable_reorder_list<H: UiHost>(
                             return;
                         };
 
-                        let over_rect = dnd::droppable_rect_in_scope(
-                            host.models(),
-                            &dnd_on_up,
-                            action_cx.window,
-                            frame_id,
-                            scope,
-                            over,
-                        );
-                        let side = over_rect
-                            .map(|rect| insertion_side_for_pointer(up.position, rect, Axis::Y))
-                            .unwrap_or(InsertionSide::Before);
                         let mut insert_at = over_index.saturating_add(match side {
                             InsertionSide::Before => 0,
                             InsertionSide::After => 1,

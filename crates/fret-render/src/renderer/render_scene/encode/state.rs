@@ -95,6 +95,35 @@ impl<'a> EncodeState<'a> {
         }
     }
 
+    pub(super) fn push_text_draw(&mut self, draw: TextDraw) {
+        if draw.vertex_count == 0 {
+            return;
+        }
+
+        let Some(prev) = self.ordered_draws.last_mut() else {
+            self.ordered_draws.push(OrderedDraw::Text(draw));
+            return;
+        };
+
+        let OrderedDraw::Text(prev) = prev else {
+            self.ordered_draws.push(OrderedDraw::Text(draw));
+            return;
+        };
+
+        let prev_end = prev.first_vertex.saturating_add(prev.vertex_count);
+        let can_merge = prev.scissor == draw.scissor
+            && prev.uniform_index == draw.uniform_index
+            && prev.kind == draw.kind
+            && prev.atlas_page == draw.atlas_page
+            && prev_end == draw.first_vertex;
+
+        if can_merge {
+            prev.vertex_count = prev.vertex_count.saturating_add(draw.vertex_count);
+        } else {
+            self.ordered_draws.push(OrderedDraw::Text(draw));
+        }
+    }
+
     pub(super) fn push_uniform_snapshot(&mut self, clip_head: u32, clip_count: u32) -> u32 {
         let uniform_index = self.uniforms.len() as u32;
         self.uniforms.push(ViewportUniform {

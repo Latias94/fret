@@ -155,6 +155,12 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 - Call `fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(...)` for an explicit preset, or
 - Enable `fret-ui-shadcn/app-integration` and call `fret_ui_shadcn::install_app(...)` for the golden-path default.
 
+**Tables vs grids (naming and intent):**
+
+- `DataTable`: business-table surface (headless filtering/sorting/pagination + virtualized rows; recipes like toolbar + pagination).
+- `DataGrid` (`DataGridCanvas`): performance ceiling (canvas-rendered, constant-ish UI node count; intended for spreadsheet-scale density).
+- `experimental::DataGridElement`: element-based prototype for rich per-cell UI; not intended for spreadsheet-scale workloads.
+
 ### `fret-icons` + icon packs
 
 - `fret-icons`: renderer-agnostic icon IDs + registry.

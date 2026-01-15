@@ -18,12 +18,12 @@ use time::{Date, OffsetDateTime, Weekday};
 
 use crate::button::{ButtonSize, ButtonVariant};
 
-use fret_ui_headless::calendar::{CalendarMonth, month_grid};
+use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection, month_grid};
 
 #[derive(Clone)]
-pub struct Calendar {
+pub struct CalendarRange {
     month: Model<CalendarMonth>,
-    selected: Model<Option<Date>>,
+    selected: Model<DateRangeSelection>,
     week_start: Weekday,
     show_outside_days: bool,
     disable_outside_days: bool,
@@ -32,9 +32,9 @@ pub struct Calendar {
     initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
 }
 
-impl std::fmt::Debug for Calendar {
+impl std::fmt::Debug for CalendarRange {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Calendar")
+        f.debug_struct("CalendarRange")
             .field("month", &"<model>")
             .field("selected", &"<model>")
             .field("week_start", &self.week_start)
@@ -47,8 +47,8 @@ impl std::fmt::Debug for Calendar {
     }
 }
 
-impl Calendar {
-    pub fn new(month: Model<CalendarMonth>, selected: Model<Option<Date>>) -> Self {
+impl CalendarRange {
+    pub fn new(month: Model<CalendarMonth>, selected: Model<DateRangeSelection>) -> Self {
         Self {
             month,
             selected,
@@ -81,6 +81,7 @@ impl Calendar {
         self
     }
 
+    /// Closes the parent popover when the selection becomes complete (both ends chosen).
     pub fn close_on_select(mut self, open: Model<bool>) -> Self {
         self.close_on_select = Some(open);
         self
@@ -107,7 +108,7 @@ impl Calendar {
             .watch_model(&month_model)
             .copied()
             .unwrap_or_else(|| CalendarMonth::from_date(OffsetDateTime::now_utc().date()));
-        let selected = cx.watch_model(&selected_model).copied().flatten();
+        let selected = cx.watch_model(&selected_model).cloned().unwrap_or_default();
 
         let grid = month_grid(month, self.week_start);
         let today = OffsetDateTime::now_utc().date();
@@ -128,7 +129,8 @@ impl Calendar {
         let disabled: Arc<[bool]> = disabled.into();
 
         let focus_date = {
-            let selected_idx = selected.and_then(|d| grid.iter().position(|it| it.date == d));
+            let preferred = selected.from.or(selected.to);
+            let preferred_idx = preferred.and_then(|d| grid.iter().position(|it| it.date == d));
             let today_idx = grid.iter().position(|it| it.date == today);
 
             let visible = |idx: usize| {
@@ -137,7 +139,7 @@ impl Calendar {
             };
             let enabled = |idx: usize| !disabled.get(idx).copied().unwrap_or(false);
 
-            selected_idx
+            preferred_idx
                 .filter(|&idx| visible(idx) && enabled(idx))
                 .and_then(|idx| grid.get(idx).map(|d| d.date))
                 .or_else(|| {
@@ -156,9 +158,7 @@ impl Calendar {
         };
 
         let root = LayoutRefinement::default().w_full();
-
         let title: Arc<str> = Arc::from(format!("{:?} {}", month.month, month.year));
-
         let weekday_labels = weekday_labels(self.week_start);
 
         let text_sm_px = theme
@@ -243,42 +243,33 @@ impl Calendar {
                         });
                         title_props.wrap = TextWrap::None;
                         title_props.overflow = TextOverflow::Clip;
-                        let title_el = cx.text_props(title_props);
+                        let title = cx.text_props(title_props);
 
-                        vec![prev, title_el, next]
+                        vec![prev, title, next]
                     },
                 );
 
-                let weekday_row = cx.flex(
-                    FlexProps {
-                        layout: LayoutStyle {
-                            size: fret_ui::element::SizeStyle {
-                                width: Length::Fill,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        direction: fret_core::Axis::Horizontal,
-                        gap: day_gap,
-                        padding: fret_core::Edges::all(Px(0.0)),
-                        justify: MainAlign::Start,
-                        align: fret_ui::element::CrossAlign::Center,
-                        wrap: false,
-                    },
+                let weekday_row = stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .gap_x(Space::N1)
+                        .layout(LayoutRefinement::default().w_full()),
                     move |cx| {
                         weekday_labels
                             .iter()
                             .map(|label| {
-                                let mut props = TextProps::new(Arc::clone(label));
+                                let mut props = TextProps::new(label.clone());
                                 props.style = Some(grid_text_style.clone());
-                                props.color = theme_weekdays.color_by_key("muted-foreground");
                                 props.wrap = TextWrap::None;
                                 props.overflow = TextOverflow::Clip;
-
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Px(day_size);
-                                layout.size.height = Length::Px(Px(24.0));
-                                props.layout = layout;
+                                props.color =
+                                    Some(theme_weekdays.color_required("muted-foreground"));
+                                props.layout = {
+                                    let mut ls = LayoutStyle::default();
+                                    ls.size.width = Length::Px(day_size);
+                                    ls.size.height = Length::Px(day_size);
+                                    ls
+                                };
                                 cx.text_props(props)
                             })
                             .collect()
@@ -371,16 +362,22 @@ impl Calendar {
                                 return None;
                             }
 
-                            let is_selected = selected.is_some_and(|d| d == day.date);
                             let is_today = today == day.date;
                             let is_disabled = disabled.get(idx).copied().unwrap_or(false);
 
-                            Some(calendar_day_cell(
+                            let is_from = selected.from.is_some_and(|d| d == day.date);
+                            let is_to = selected.to.is_some_and(|d| d == day.date);
+                            let in_range = selected.contains(day.date);
+                            let selected_flag = in_range || is_from || is_to;
+
+                            Some(calendar_range_day_cell(
                                 cx,
                                 &theme_days,
                                 day.date,
                                 day.in_month,
-                                is_selected,
+                                is_from,
+                                is_to,
+                                selected_flag,
                                 is_today,
                                 is_disabled,
                                 focus_date.is_some_and(|d| d == day.date),
@@ -502,17 +499,20 @@ fn calendar_icon_button<H: UiHost>(
     })
 }
 
-fn calendar_day_cell<H: UiHost>(
+#[allow(clippy::too_many_arguments)]
+fn calendar_range_day_cell<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     date: Date,
     in_month: bool,
+    is_from: bool,
+    is_to: bool,
     selected: bool,
     today: bool,
     disabled: bool,
     focus_candidate: bool,
     size: Px,
-    selected_model: &Model<Option<Date>>,
+    selected_model: &Model<DateRangeSelection>,
     close_on_select: Option<Model<bool>>,
     disabled_predicate: Option<Arc<dyn Fn(Date) -> bool + Send + Sync + 'static>>,
     initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
@@ -530,11 +530,13 @@ fn calendar_day_cell<H: UiHost>(
         muted_fg
     };
 
-    let (bg, fg) = if selected {
+    let (bg, fg) = if is_from || is_to {
         (
             theme.color_required("primary"),
             theme.color_required("primary-foreground"),
         )
+    } else if selected {
+        (theme.color_required("accent"), fg)
     } else {
         (Color::TRANSPARENT, fg)
     };
@@ -574,6 +576,9 @@ fn calendar_day_cell<H: UiHost>(
         let close_on_select = close_on_select.clone();
         let disabled_predicate = disabled_predicate.clone();
 
+        let complete_out = Rc::new(Cell::new(false));
+        let complete_out_for_update = Rc::clone(&complete_out);
+
         cx.pressable_add_on_activate(Arc::new(move |host, _acx, _reason| {
             if disabled {
                 return;
@@ -583,10 +588,17 @@ fn calendar_day_cell<H: UiHost>(
             {
                 return;
             }
-            let _ = host
-                .models_mut()
-                .update(&selected_model, |v| *v = Some(date));
-            if let Some(open) = close_on_select.as_ref() {
+
+            complete_out_for_update.set(false);
+            let complete_out_in_update = Rc::clone(&complete_out_for_update);
+            let _ = host.models_mut().update(&selected_model, |v| {
+                v.apply_click(date);
+                complete_out_in_update.set(v.is_complete());
+            });
+
+            if complete_out_for_update.get()
+                && let Some(open) = close_on_select.as_ref()
+            {
                 let _ = host.models_mut().update(open, |v| *v = false);
             }
         }));
@@ -598,20 +610,20 @@ fn calendar_day_cell<H: UiHost>(
             c
         };
 
-        let bg = if selected {
+        let bg = if is_from || is_to {
             bg
         } else if st.pressed {
             pressed_bg
         } else if st.hovered {
             hover_bg
         } else {
-            Color::TRANSPARENT
+            bg
         };
 
         let mut chrome = ChromeRefinement::default()
             .rounded(Radius::Sm)
             .bg(ColorRef::Color(bg));
-        if today && !selected {
+        if today && !(is_from || is_to) {
             chrome = chrome.border_1().border_color(ColorRef::Color(ring_color));
         }
 

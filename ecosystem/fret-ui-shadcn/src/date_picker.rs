@@ -1,3 +1,5 @@
+use std::cell::Cell;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_runtime::Model;
@@ -22,6 +24,7 @@ pub struct DatePicker {
     pub selected: Model<Option<Date>>,
     week_start: Weekday,
     placeholder: Arc<str>,
+    format_selected: Arc<dyn Fn(Date) -> Arc<str> + Send + Sync + 'static>,
     disabled: bool,
     show_outside_days: bool,
     disable_outside_days: bool,
@@ -36,6 +39,7 @@ impl std::fmt::Debug for DatePicker {
             .field("selected", &"<model>")
             .field("week_start", &self.week_start)
             .field("placeholder", &self.placeholder)
+            .field("format_selected", &"<fn>")
             .field("disabled", &self.disabled)
             .field("show_outside_days", &self.show_outside_days)
             .field("disable_outside_days", &self.disable_outside_days)
@@ -56,6 +60,7 @@ impl DatePicker {
             selected,
             week_start: Weekday::Monday,
             placeholder: Arc::from("Pick a date"),
+            format_selected: Arc::new(format_selected_ppp_en),
             disabled: false,
             show_outside_days: true,
             disable_outside_days: true,
@@ -103,6 +108,22 @@ impl DatePicker {
         Self::new(open, month, selected)
     }
 
+    /// Overrides how the selected date is shown on the trigger button.
+    ///
+    /// Default: `Jan 15, 2026` (English, shadcn-aligned).
+    pub fn format_selected_by(
+        mut self,
+        f: impl Fn(Date) -> Arc<str> + Send + Sync + 'static,
+    ) -> Self {
+        self.format_selected = Arc::new(f);
+        self
+    }
+
+    /// Uses ISO format (`YYYY-MM-DD`) via `Date::to_string()`.
+    pub fn format_selected_iso(self) -> Self {
+        self.format_selected_by(|d| Arc::<str>::from(d.to_string()))
+    }
+
     pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
         self.placeholder = placeholder.into();
         self
@@ -143,16 +164,19 @@ impl DatePicker {
             let disabled_predicate = self.disabled_predicate.clone();
             let open_trigger = open.clone();
             let open_content = open.clone();
+            let initial_focus_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+                Rc::new(Cell::new(None));
 
             let selected_value = cx.watch_model(&selected).copied().flatten();
             let button_text: Arc<str> = match selected_value {
-                Some(date) => Arc::<str>::from(date.to_string()),
+                Some(date) => (self.format_selected)(date),
                 None => self.placeholder.clone(),
             };
 
             Popover::new(open.clone())
                 .side(PopoverSide::Bottom)
                 .align(PopoverAlign::Start)
+                .initial_focus_from_cell(initial_focus_out.clone())
                 .into_element(
                     cx,
                     move |cx| {
@@ -174,7 +198,8 @@ impl DatePicker {
                                 .week_start(self.week_start)
                                 .show_outside_days(self.show_outside_days)
                                 .disable_outside_days(self.disable_outside_days)
-                                .close_on_select(open_content.clone());
+                                .close_on_select(open_content.clone())
+                                .initial_focus_out(initial_focus_out.clone());
 
                             if let Some(pred) = disabled_predicate.clone() {
                                 calendar = calendar.disabled_by(move |d| pred(d));
@@ -185,5 +210,190 @@ impl DatePicker {
                     },
                 )
         })
+    }
+}
+
+fn format_selected_ppp_en(date: Date) -> Arc<str> {
+    use time::Month;
+
+    let month = match date.month() {
+        Month::January => "Jan",
+        Month::February => "Feb",
+        Month::March => "Mar",
+        Month::April => "Apr",
+        Month::May => "May",
+        Month::June => "Jun",
+        Month::July => "Jul",
+        Month::August => "Aug",
+        Month::September => "Sep",
+        Month::October => "Oct",
+        Month::November => "Nov",
+        Month::December => "Dec",
+    };
+
+    Arc::<str>::from(format!("{month} {}, {}", date.day(), date.year()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size as CoreSize};
+    use fret_ui::UiTree;
+    use fret_ui_kit::OverlayController;
+    use time::Month;
+
+    use fret_core::{
+        PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle, SvgId,
+        SvgService, TextBlobId, TextConstraints, TextMetrics, TextService,
+    };
+    use fret_runtime::FrameId;
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _input: &fret_core::TextInput,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: CoreSize::new(Px(0.0), Px(0.0)),
+                    baseline: Px(0.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    fn render_frame(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        month: Model<CalendarMonth>,
+        selected: Model<Option<Date>>,
+        frame_id: u64,
+    ) {
+        app.set_frame_id(FrameId(frame_id));
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+        OverlayController::begin_frame(app, window);
+
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                vec![
+                    DatePicker::new(open.clone(), month.clone(), selected.clone())
+                        .format_selected_iso()
+                        .placeholder("Pick a test date")
+                        .into_element(cx),
+                ]
+            });
+
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+    }
+
+    #[test]
+    fn date_picker_focuses_selected_day_on_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        let open = app.models_mut().insert(false);
+        let selected_date = Date::from_calendar_date(2026, Month::January, 15).unwrap();
+        let selected = app.models_mut().insert(Some(selected_date));
+        let month = app
+            .models_mut()
+            .insert(CalendarMonth::from_date(selected_date));
+
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            month.clone(),
+            selected.clone(),
+            1,
+        );
+
+        let snap1 = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger_node = snap1
+            .nodes
+            .iter()
+            .find(|n| n.label.as_deref() == Some("2026-01-15"))
+            .map(|n| n.id)
+            .expect("trigger semantics node");
+        ui.set_focus(Some(trigger_node));
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            month.clone(),
+            selected.clone(),
+            2,
+        );
+
+        let focused = ui.focus().expect("focused node");
+        let snap2 = ui.semantics_snapshot().expect("semantics snapshot");
+        let focused_sem = snap2
+            .nodes
+            .iter()
+            .find(|n| n.id == focused)
+            .expect("focused semantics node");
+        assert_eq!(focused_sem.label.as_deref(), Some("2026-01-15"));
+        assert!(
+            focused_sem.flags.selected,
+            "expected focused day to be selected"
+        );
     }
 }

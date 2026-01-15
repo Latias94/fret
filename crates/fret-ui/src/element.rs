@@ -307,6 +307,11 @@ pub struct SemanticsProps {
     /// This MUST NOT be mapped into platform accessibility name/label fields by default.
     pub test_id: Option<Arc<str>>,
     pub value: Option<Arc<str>>,
+    /// Whether this semantics wrapper participates in focus traversal.
+    ///
+    /// Note: this is intentionally separate from pointer hit-testing. `Semantics` remains
+    /// input-transparent; use `Pressable` when you need pointer-driven focus.
+    pub focusable: bool,
     pub disabled: bool,
     pub selected: bool,
     pub expanded: Option<bool>,
@@ -340,6 +345,7 @@ impl Default for SemanticsProps {
             label: None,
             test_id: None,
             value: None,
+            focusable: false,
             disabled: false,
             selected: false,
             expanded: None,

@@ -47,6 +47,9 @@ fn mixed_revision(a: u64, b: u64) -> u64 {
 /// - headless row model: filtering/sorting/pagination/visibility (future: sizing/pinning)
 /// - UI: `Table` primitives + fixed header + virtualized body
 ///
+/// Prefer `DataTable` for "business table" use-cases (toolbars, filters, pagination, column
+/// visibility). For spreadsheet-scale density, prefer the canvas-backed [`crate::DataGrid`].
+///
 /// Notes (v0):
 /// - row activation toggles selection by `RowKey` (flat tables; sub-row selection is deferred)
 /// - header activation toggles single-column sorting (multi-sort key modifiers are deferred)
@@ -174,6 +177,7 @@ impl DataTable {
                 &scroll_handle,
                 items_revision,
                 &row_key_at,
+                None,
                 view_props,
                 |_row| None,
                 move |cx, col, sort_state| {
@@ -229,8 +233,3 @@ impl DataTable {
         })
     }
 }
-
-/// Backwards-compatible name for the previous `DataTableTanstack`.
-///
-/// Prefer `DataTable` for new code.
-pub type DataTableTanstack = DataTable;

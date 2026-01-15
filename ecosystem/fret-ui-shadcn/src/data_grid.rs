@@ -1,3 +1,9 @@
+//! Element-based data grid prototype.
+//!
+//! This surface exists for rich per-cell UI and interaction experiments.
+//! For spreadsheet-scale density and a constant-ish UI node count, prefer the canvas-backed
+//! `DataGridCanvas` (re-exported as `DataGrid` in `fret-ui-shadcn`).
+
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;

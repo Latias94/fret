@@ -93,11 +93,11 @@ As of the initial audit:
   - `DataTable` is headless-backed (ADR 0101) and rendered via the shared declarative table view:
     `ecosystem/fret-ui-shadcn/src/data_table.rs` -> `ecosystem/fret-ui-kit/src/declarative/table.rs::table_virtualized`.
     - It provides: fixed header + vertical virtualization + the headless pipeline (sorting/filtering/pagination/selection/visibility).
-    - `DataTableTanstack` is kept as a compatibility alias (`pub type DataTableTanstack = DataTable;`).
+    - Public surface: `DataTable`.
   - `DataGrid` is the recommended performance-ceiling surface (canvas-backed):
     - API alias: `fret-ui-shadcn::DataGrid` -> `DataGridCanvas` (see `ecosystem/fret-ui-shadcn/src/lib.rs`).
     - Implementation: `ecosystem/fret-ui-shadcn/src/data_grid_canvas.rs`.
-  - `DataGridElement` prototype exists at `ecosystem/fret-ui-shadcn/src/data_grid.rs`.
+  - `experimental::DataGridElement` prototype exists at `ecosystem/fret-ui-shadcn/src/data_grid.rs`.
     - It explores element-based 2D virtualization (rows + columns) and custom scrollbars.
   - `DataTable` and `DataGrid` used to be behind the `datagrid` crate feature; the gate has been removed because it had no heavy deps.
 - `ecosystem/fret-ui-kit`
@@ -138,20 +138,24 @@ As of the initial audit:
 
 - [x] Implement `DataTable` composition in `ecosystem/fret-ui-shadcn`.
 - [x] Remove the `datagrid` feature gate (no heavy deps).
-- [x] Add headless-backed `DataTable` (formerly `DataTableTanstack`).
-- [x] Add a demo page in `apps/fret-examples` to validate interaction outcomes (`apps/fret-examples/src/tanstack_datatable_demo.rs`).
+- [x] Add headless-backed `DataTable`.
+- [x] Add a demo page in `apps/fret-examples` to validate interaction outcomes (`apps/fret-examples/src/datatable_demo.rs`).
 - [x] Add recipe controls: `DataTableToolbar` + `DataTablePagination` (wires `global_filter`, `column_visibility`, `pagination`).
+- [x] Add baseline keyboard navigation for `DataTable` (focusable list container + active-descendant + Arrow/Home/End/Page keys; Enter/Space toggles).
+- [x] Add range selection + typeahead navigation for `DataTable` (headless-aligned, widget-agnostic).
 
 ### M3 — Forms (headless + shadcn wrappers)
 
 - [x] Headless `FormState` core (dirty/touched/errors/submitting).
 - [x] Validation hooks (sync v1): field registry + submit lifecycle + revalidate-on-change glue (`fret-ui-kit::declarative::form::FormRegistry`).
-- [ ] shadcn wrappers (`Form`, `FormField`, integration with `Input`, `Textarea`, `Select`).
+- [x] shadcn wrappers (`Form`, `FormField`, and control decoration for `Input`/`Textarea`/`Select`-style triggers).
 
 ### M4 — Calendar / Date Picker
 
 - [x] Calendar date math core (month grid + month navigation).
 - [x] shadcn `Calendar` surface + `DatePicker` recipe (`Popover` + `Calendar`).
+- [x] DatePicker trigger formatting (PPP-style, shadcn-aligned default; customizable).
+- [x] Validate `FormField` decoration against `DatePicker` trigger (button/pressable) in `form_demo`.
 - [ ] Keyboard/a11y outcomes review against APG; add targeted tests where feasible.
 
 ### M5 — CanvasDataGrid (performance ceiling)
@@ -176,6 +180,7 @@ Glide’s renderer architecture is a useful reference for “spreadsheet scale�
 ## Open Questions / Decision Gates
 
 - What is the v1 semantics role for DataGrid-like surfaces (Grid vs Table), and how does it interact with active-descendant?
+- For v1, `DataTable` currently exposes list semantics (`SemanticsRole::List` + `ListItem`) and uses `active_descendant` for the highlighted row.
 - How do we model cell focus vs row selection (and multi-select) without leaking policy into runtime?
 - Clipboard contract for cells vs rows (tie to ADR 0041 / existing selection primitives).
 
@@ -188,7 +193,8 @@ We will pursue a Glide-style architecture for the “upper bound” DataGrid:
 - Interaction: selection/focus/caret/drag handles as lightweight overlay layers; in-place editing via a single floating editor (popover/portal).
 - API: `rows + columns + get_cell(row, col)` contract for on-demand data, with explicit revision/invalidation hooks.
 
-We keep the existing element-based `DataTable`/`DataGridElement` for “rich cell UI” scenarios and as a correctness reference.
+We keep the existing element-based `DataTable`/`experimental::DataGridElement` for "rich cell UI"
+scenarios and as a correctness reference.
 
 ## Consolidation Plan (Table/DataGrid Surfaces)
 
@@ -210,12 +216,11 @@ preserving specialized variants and performance ceilings.
 - **Default table recipe:** `fret-ui-shadcn::DataTable` is backed by the headless engine (ADR 0101) via the shared
   `fret-ui-kit` view: `ecosystem/fret-ui-shadcn/src/data_table.rs` calls
   `ecosystem/fret-ui-kit/src/declarative/table.rs::table_virtualized`.
-- **Compatibility alias:** `pub type DataTableTanstack = DataTable;` remains for one migration window (shadcn crate
-  denies `deprecated`, so we keep this as a non-deprecated alias for now).
+- `DataTable` is the stable name.
+- **Experimental grid prototype:** `experimental::DataGridElement` remains for rich cell UI and as a correctness/reference surface.
 - **Simple preset:** the older “simple table” surface is not kept as a separate public type; any “simple” usage
   should be expressed as a `DataTable` preset/config (keeps the public surface small and forces configurability).
 - **Default grid (performance ceiling):** `DataGrid` is an alias for `DataGridCanvas` (canvas-rendered; spreadsheet scale).
-- **Element-based 2D grid:** `DataGridElement` remains for rich cell UI and as a correctness/reference surface.
 
 ### Remaining decision gates
 
@@ -226,6 +231,8 @@ preserving specialized variants and performance ceilings.
 
 - Profile and validate pagination + filtering at scale (now that we have a `TableViewOutput` contract for bounds),
   and confirm it behaves well under rapid filter input.
+- Lock pagination reset rules in tests (global filter / sorting / column visibility reset `page_index` to 0; out-of-range
+  indices are clamped by the table view output).
 - Profile and validate large-table performance:
   - stable `items_revision` and cache invalidation behavior,
   - overscan defaults for typical inspector/admin tables,
@@ -234,7 +241,7 @@ preserving specialized variants and performance ceilings.
 ### Definition of done (consolidation)
 
 - Docs: users can answer “which table do I use?” in < 30 seconds:
-  - `DataTable` (headless-backed) vs `DataGrid` (canvas performance ceiling) vs `DataGridElement` (rich cell UI).
+  - `DataTable` (headless-backed) vs `DataGrid` (canvas performance ceiling) vs `experimental::DataGridElement` (rich cell UI).
 - API: public exports are stable and consistent (`lib.rs` tells the truth).
 - Demos: at least one end-to-end demo validates:
   - sorting, filtering, pagination, selection, column visibility
@@ -276,7 +283,7 @@ Baseline observations (what we already have):
   - `fret-ui` provides `VirtualList` with fixed-measure support and visible-only key caching.
   - `fret-ui-kit`’s `declarative::table` configures fixed row height (`VirtualListMeasureMode::Fixed`) and uses `VirtualListKeyCacheMode::VisibleOnly`.
 - A TanStack-aligned headless engine already exists (`fret-ui-kit/headless::table`) and is memoized/unit-testable.
-- `fret-ui-shadcn`’s `DataGridElement` prototype performs 2D virtualization (rows + columns) by computing
+- `fret-ui-shadcn`’s `experimental::DataGridElement` prototype performs 2D virtualization (rows + columns) by computing
   visible ranges once per frame (via `fret-ui-kit::headless::grid_viewport`) and only instantiating
   visible cells (no per-row nested `VirtualList`).
 
@@ -303,8 +310,12 @@ Likely next optimizations (if we need “million-row spreadsheet” class perfor
 - 2026-01-13: Completed initial audit of existing table/datagrid/forms/calendar surfaces (see “Current Code Surfaces”).
 - 2026-01-13: Removed `fret-ui-shadcn` `datagrid` feature gate and validated with `cargo check -p fret-ui-shadcn` and `cargo nextest run -p fret-ui-shadcn`.
 - 2026-01-13: Hardened `DataTable`/`DataGrid` vertical virtualization options for fixed row height (`VirtualListMeasureMode::Fixed` + `VirtualListKeyCacheMode::VisibleOnly`).
-- 2026-01-13: Added headless-backed `DataTable` native demo (`apps/fret-examples/src/tanstack_datatable_demo.rs`).
+- 2026-01-13: Added headless-backed `DataTable` native demo (`apps/fret-examples/src/datatable_demo.rs`).
 - 2026-01-13: Extended `headless::grid_viewport` to support “count + key_fn” axes (no need to allocate a `Vec<K>` for fixed/identity-key axes).
 - 2026-01-13: Refactored `fret-ui-shadcn` `DataGrid` prototype to use `Scroll` + `headless::grid_viewport` (single range computation per frame; absolute-positioned visible cells).
 - 2026-01-14: Started implementing shadcn `Calendar` + `DatePicker` (Calendar WIP; `time` dependency added to `fret-ui-shadcn`).
 - 2026-01-14: Removed the long-lived `fret-ui-kit` `table` feature gate (kept the feature as a no-op compatibility flag) and updated ADR/docs accordingly.
+- 2026-01-15: Enabled focus traversal for semantics wrappers (`SemanticsProps.focusable`) and made `Pressable` semantics respect `PressableProps.focusable`; wired `DataTable` keyboard navigation + active-descendant in `fret-ui-kit::declarative::table::table_virtualized` with tests.
+- 2026-01-15: Added shadcn `FormField` helper to reduce wiring boilerplate; auto-decorates common controls (a11y labels + destructive focus/border on error).
+- 2026-01-15: Extended `DataTable` interaction outcomes (range select + typeahead) and added `ColumnHelper::accessor_str` to support string-based typeahead.
+- 2026-01-15: Updated `DatePicker` trigger label formatting (PPP-style default) and added `form_demo` fields (`Role` select + `Start date` picker) to validate `FormField` decoration.

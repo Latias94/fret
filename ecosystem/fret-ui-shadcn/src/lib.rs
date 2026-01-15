@@ -18,6 +18,7 @@ pub mod breadcrumb;
 pub mod button;
 pub mod button_group;
 pub mod calendar;
+pub mod calendar_range;
 pub mod card;
 pub mod checkbox;
 pub mod collapsible;
@@ -30,10 +31,12 @@ pub mod data_table;
 mod data_table_controls;
 mod data_table_recipes;
 pub mod date_picker;
+pub mod date_range_picker;
 pub mod dialog;
 pub mod drawer;
 pub mod dropdown_menu;
 pub mod empty;
+pub mod experimental;
 pub mod field;
 pub mod form;
 pub mod hover_card;
@@ -93,6 +96,7 @@ pub use button_group::{
     ButtonGroup, ButtonGroupItem, ButtonGroupKind, button_group_multiple, button_group_single,
 };
 pub use calendar::Calendar;
+pub use calendar_range::CalendarRange;
 pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle};
 pub use checkbox::{Checkbox, checkbox};
 pub use collapsible::{
@@ -109,18 +113,26 @@ pub use context_menu::{
     ContextMenuShortcut,
 };
 pub use data_grid_canvas::{DataGridCanvas, DataGridCanvasAxis};
+pub use fret_ui_headless::calendar::{DateRange, DateRangeSelection};
 /// Default high-performance data grid surface (canvas-rendered).
 ///
-/// Use [`DataGridElement`] for the element-based prototype when you need rich per-cell UI.
+/// This is the "performance ceiling" option for spreadsheet-scale density:
+/// prefer it when you need to scroll/render very large grids while keeping UI node count ~constant.
+///
+/// For business tables that need typical shadcn recipes (toolbar, column visibility, pagination),
+/// prefer [`DataTable`].
+///
+/// For rich per-cell UI experiments, use [`experimental::DataGridElement`].
 pub type DataGrid = DataGridCanvas;
-pub use data_grid::{DataGrid as DataGridElement, DataGridRowState};
-pub use data_table::{DataTable, DataTableTanstack};
+pub use data_grid_canvas::DataGridCanvasOutput;
+pub use data_table::DataTable;
 pub use data_table_controls::{
     DataTableColumnOption, DataTableGlobalFilterInput, DataTableRowState, DataTableViewOptionItem,
     DataTableViewOptions,
 };
 pub use data_table_recipes::{DataTablePagination, DataTableToolbar};
 pub use date_picker::DatePicker;
+pub use date_range_picker::DateRangePicker;
 pub use dialog::{
     Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 };
@@ -138,7 +150,10 @@ pub use field::{
     Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend,
     FieldLegendVariant, FieldOrientation, FieldSeparator, FieldSet, FieldTitle,
 };
-pub use form::{Form, FormControl, FormDescription, FormItem, FormLabel, FormMessage, form};
+pub use form::{
+    Form, FormControl, FormDescription, FormErrorVisibility, FormField, FormItem, FormLabel,
+    FormMessage, form,
+};
 pub use fret_ui_kit::declarative::table::TableViewOutput as DataTableViewOutput;
 pub use hover_card::{
     HoverCard, HoverCardAlign, HoverCardAnchor, HoverCardContent, HoverCardSide, HoverCardTrigger,

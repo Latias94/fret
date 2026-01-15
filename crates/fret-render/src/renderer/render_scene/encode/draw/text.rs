@@ -48,14 +48,14 @@ pub(in super::super) fn encode_text(
                 let vertex_count =
                     (state.text_vertices.len() as u32).saturating_sub(group_first_vertex);
                 if vertex_count > 0 {
-                    state.ordered_draws.push(OrderedDraw::Text(TextDraw {
+                    state.push_text_draw(TextDraw {
                         scissor: state.current_scissor,
                         uniform_index: state.current_uniform_index,
                         first_vertex: group_first_vertex,
                         vertex_count,
                         kind: prev,
                         atlas_page: active_page,
-                    }));
+                    });
                 }
             }
             active_kind = Some(kind);
@@ -128,14 +128,14 @@ pub(in super::super) fn encode_text(
     if let Some(kind) = active_kind {
         let vertex_count = (state.text_vertices.len() as u32).saturating_sub(group_first_vertex);
         if vertex_count > 0 {
-            state.ordered_draws.push(OrderedDraw::Text(TextDraw {
+            state.push_text_draw(TextDraw {
                 scissor: state.current_scissor,
                 uniform_index: state.current_uniform_index,
                 first_vertex: group_first_vertex,
                 vertex_count,
                 kind,
                 atlas_page: active_page,
-            }));
+            });
         }
     }
 }

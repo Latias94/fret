@@ -182,6 +182,12 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         .entry("component.size.lg.icon_button.size".to_string())
         .or_insert(40.0);
 
+    // Legacy generic size tokens used by some components/tests.
+    // Prefer `component.size.*` tokens in new code.
+    metrics.entry("metric.size.sm".to_string()).or_insert(32.0);
+    metrics.entry("metric.size.md".to_string()).or_insert(36.0);
+    metrics.entry("metric.size.lg".to_string()).or_insert(40.0);
+
     // new-york-v4 `Slider` defaults:
     // - Track uses `h-1.5` (6px) via `data-[orientation=horizontal]:h-1.5`.
     // - Thumb uses `size-4` (16px).

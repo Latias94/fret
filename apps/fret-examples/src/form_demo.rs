@@ -17,8 +17,9 @@ use fret_ui_kit::headless::form_state::{FormState, FormValidateMode};
 use fret_ui_kit::headless::form_validation::{first_error, required_trimmed};
 use fret_ui_shadcn::button::{Button, ButtonSize, ButtonVariant};
 use fret_ui_shadcn::stack;
-use fret_ui_shadcn::{Form, FormControl, FormItem, FormLabel, FormMessage, Input, Space};
+use fret_ui_shadcn::{DatePicker, Form, FormField, Input, Select, SelectItem, Space};
 use std::sync::Arc;
+use time::Date;
 
 struct DemoWindowState {
     ui: UiTree<App>,
@@ -26,6 +27,9 @@ struct DemoWindowState {
     registry: FormRegistry,
     name: Model<String>,
     email: Model<String>,
+    role: Model<Option<Arc<str>>>,
+    role_open: Model<bool>,
+    start_date: Model<Option<Date>>,
     status: Model<Arc<str>>,
 }
 
@@ -36,6 +40,9 @@ impl FormDemoDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> DemoWindowState {
         let name = app.models_mut().insert(String::new());
         let email = app.models_mut().insert(String::new());
+        let role = app.models_mut().insert(None);
+        let role_open = app.models_mut().insert(false);
+        let start_date = app.models_mut().insert(None::<Date>);
 
         let mut form_state = FormState::default();
         form_state.validate_mode = FormValidateMode::OnSubmit;
@@ -53,6 +60,12 @@ impl FormDemoDriver {
                 (!v.contains('@')).then(|| Arc::from("Email must contain '@'")),
             ])
         });
+        registry.register_field("role", role.clone(), None, |v| {
+            v.is_none().then(|| Arc::from("Role is required"))
+        });
+        registry.register_field("start_date", start_date.clone(), None, |v| {
+            v.is_none().then(|| Arc::from("Start date is required"))
+        });
         registry.register_into_form_state(app, &form_state);
 
         let mut ui: UiTree<App> = UiTree::new();
@@ -64,6 +77,9 @@ impl FormDemoDriver {
             registry,
             name,
             email,
+            role,
+            role_open,
+            start_date,
             status,
         }
     }
@@ -136,6 +152,9 @@ impl WinitAppDriver for FormDemoDriver {
             "form_demo.reset" => {
                 let _ = app.models_mut().update(&state.name, |v| v.clear());
                 let _ = app.models_mut().update(&state.email, |v| v.clear());
+                let _ = app.models_mut().update(&state.role, |v| *v = None);
+                let _ = app.models_mut().update(&state.role_open, |v| *v = false);
+                let _ = app.models_mut().update(&state.start_date, |v| *v = None);
                 let _ = app.models_mut().update(&state.form_state, |st| st.reset());
                 state
                     .registry
@@ -202,6 +221,9 @@ impl WinitAppDriver for FormDemoDriver {
 
         let name = state.name.clone();
         let email = state.email.clone();
+        let role = state.role.clone();
+        let role_open = state.role_open.clone();
+        let start_date = state.start_date.clone();
         let form_state = state.form_state.clone();
         let status = state.status.clone();
         let root =
@@ -210,24 +232,20 @@ impl WinitAppDriver for FormDemoDriver {
                     cx.observe_model(&form_state, Invalidation::Layout);
                     cx.observe_model(&name, Invalidation::Layout);
                     cx.observe_model(&email, Invalidation::Layout);
+                    cx.observe_model(&role, Invalidation::Layout);
+                    cx.observe_model(&start_date, Invalidation::Layout);
                     cx.observe_model(&status, Invalidation::Layout);
 
                     let theme = Theme::global(&*cx.app).clone();
                     let padding = theme.metric_required("metric.padding.md");
 
-                    let (submit_count, valid, dirty, name_err, email_err) = cx
+                    let (submit_count, valid, dirty) = cx
                         .app
                         .models()
                         .read(&form_state, |st| {
-                            (
-                                st.submit_count,
-                                st.is_valid(),
-                                st.is_dirty(),
-                                st.error_for("name").cloned(),
-                                st.error_for("email").cloned(),
-                            )
+                            (st.submit_count, st.is_valid(), st.is_dirty())
                         })
-                        .unwrap_or((0, true, false, None, None));
+                        .unwrap_or((0, true, false));
 
                     let status_text = cx
                         .app
@@ -267,32 +285,55 @@ impl WinitAppDriver for FormDemoDriver {
                     );
 
                     let form = {
-                        let name_children = {
-                            let mut out = vec![
-                                FormLabel::new("Name").into_element(cx),
-                                FormControl::new(vec![Input::new(name.clone()).into_element(cx)])
-                                    .into_element(cx),
-                            ];
-                            if let Some(err) = name_err {
-                                out.push(FormMessage::new(err).into_element(cx));
-                            }
-                            out
-                        };
-                        let email_children = {
-                            let mut out = vec![
-                                FormLabel::new("Email").into_element(cx),
-                                FormControl::new(vec![Input::new(email.clone()).into_element(cx)])
-                                    .into_element(cx),
-                            ];
-                            if let Some(err) = email_err {
-                                out.push(FormMessage::new(err).into_element(cx));
-                            }
-                            out
-                        };
-
                         Form::new(vec![
-                            FormItem::new(name_children).into_element(cx),
-                            FormItem::new(email_children).into_element(cx),
+                            FormField::new(
+                                form_state.clone(),
+                                "name",
+                                vec![Input::new(name.clone()).into_element(cx)],
+                            )
+                            .label("Name")
+                            .into_element(cx),
+                            FormField::new(
+                                form_state.clone(),
+                                "email",
+                                vec![Input::new(email.clone()).into_element(cx)],
+                            )
+                            .label("Email")
+                            .into_element(cx),
+                            FormField::new(
+                                form_state.clone(),
+                                "role",
+                                vec![
+                                    Select::new(role.clone(), role_open.clone())
+                                        .a11y_label("Role")
+                                        .placeholder("Pick a role")
+                                        .items([
+                                            SelectItem::new("admin", "Admin"),
+                                            SelectItem::new("editor", "Editor"),
+                                            SelectItem::new("viewer", "Viewer"),
+                                        ])
+                                        .into_element(cx),
+                                ],
+                            )
+                            .label("Role")
+                            .into_element(cx),
+                            FormField::new(
+                                form_state.clone(),
+                                "start_date",
+                                vec![
+                                    DatePicker::new_controllable(
+                                        cx,
+                                        Some(start_date.clone()),
+                                        None,
+                                        None,
+                                        false,
+                                    )
+                                    .placeholder("Pick a start date")
+                                    .into_element(cx),
+                                ],
+                            )
+                            .label("Start date")
+                            .into_element(cx),
                         ])
                         .into_element(cx)
                     };
