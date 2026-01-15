@@ -14,6 +14,17 @@ function Get-TimestampFolder() {
   return (Get-Date -Format "yyyyMMdd-HHmmss")
 }
 
+function Resolve-CargoTargetDir([string]$RepoRoot) {
+  if (-not [string]::IsNullOrWhiteSpace($env:CARGO_TARGET_DIR)) {
+    return $env:CARGO_TARGET_DIR
+  }
+  if (-not [string]::IsNullOrWhiteSpace($env:SCCACHE_DIR)) {
+    $parent = Split-Path $env:SCCACHE_DIR -Parent
+    return Join-Path $parent (Join-Path "target" (Split-Path $RepoRoot -Leaf))
+  }
+  return ""
+}
+
 function Ensure-Dir([string]$Path) {
   if (-not (Test-Path $Path)) {
     New-Item -ItemType Directory -Path $Path | Out-Null
@@ -94,6 +105,7 @@ function Invoke-Case(
   $fullLogPath = "${logBase}.full.log"
 
   $vars = @{
+    CARGO_TARGET_DIR = $script:CargoTargetDir
     FRET_CANVAS_GRID_ROWS = $Rows
     FRET_CANVAS_GRID_COLS = $Cols
     FRET_CANVAS_GRID_VARIABLE = $(if ($VariableSizes) { "1" } else { "0" })
@@ -148,6 +160,7 @@ function Invoke-Case(
 
 $root = (Resolve-Path ".").Path
 $ts = Get-TimestampFolder
+$script:CargoTargetDir = Resolve-CargoTargetDir $root
 $runDir = ""
 if (-not [string]::IsNullOrWhiteSpace($OutDir)) {
   $runDir = $OutDir
@@ -172,6 +185,7 @@ $metaPath = Join-Path $runDir "meta.txt"
 "rustc=$rustc" | Out-File -FilePath $metaPath -Append -Encoding utf8
 "cargo=$cargo" | Out-File -FilePath $metaPath -Append -Encoding utf8
 "sccache=$env:SCCACHE_DIR" | Out-File -FilePath $metaPath -Append -Encoding utf8
+"cargo_target_dir=$script:CargoTargetDir" | Out-File -FilePath $metaPath -Append -Encoding utf8
 
 $summaryPath = Join-Path $runDir "summary.csv"
 "case,iteration,rows,cols,variable,profile,exit_after_frames,stats_window,auto_scroll,visible_rows,visible_cols,visible_cells,samples,total_avg_ms,total_p95_ms,encode_ms,prepare_text_ms,draws,log,full_log" | Out-File -FilePath $summaryPath -Encoding utf8
