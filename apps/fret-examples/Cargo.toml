@@ -20,6 +20,7 @@ layout-engine-v2 = ["fret-ui/layout-engine-v2", "fret-docking/layout-engine-v2"]
 [dependencies]
 anyhow.workspace = true
 fret-icons = { path = "../../ecosystem/fret-icons" }
+fret-kit = { path = "../../ecosystem/fret-kit" }
 fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["preload-icon-svgs", "icons-lucide", "ui-app-driver", "ui-app-command-palette", "ui-assets", "diagnostics"] }
 fret-ui-assets = { path = "../../ecosystem/fret-ui-assets" }
 fret-docking = { path = "../../ecosystem/fret-docking" }

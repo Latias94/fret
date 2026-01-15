@@ -29,7 +29,12 @@ pub mod prelude {
     pub use crate::shadcn::prelude::*;
 
     pub use fret_app::App;
+    pub use fret_app::Effect;
+    pub use fret_core::{AppWindowId, Event, Px, SemanticsRole, UiServices};
     pub use fret_runtime::CommandId;
+    pub use fret_runtime::Model;
+    pub use fret_ui::element::{AnyElement, HoverRegionProps, Length, SemanticsProps, TextProps};
+    pub use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
 }
 
 #[derive(Debug, thiserror::Error)]
