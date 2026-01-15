@@ -70,3 +70,5 @@ _None tracked at this time._
 - Contract test: `menubar_items_have_collection_position_metadata_excluding_separators`
 - Radix Web overlay geometry gate: `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
   (`radix_web_menubar_open_geometry_matches_fret`).
+- shadcn-web chrome gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
+  (`web_vs_fret_menubar_panel_chrome_matches`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json`).

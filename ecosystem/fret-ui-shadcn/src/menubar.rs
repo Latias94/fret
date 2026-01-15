@@ -753,11 +753,12 @@ impl Menubar {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
             let border = theme.color_required("border");
-            let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
-            let pad_x = MetricRef::space(Space::N2).resolve(&theme);
-            let pad_y = MetricRef::space(Space::N2).resolve(&theme);
+            let radius = MetricRef::radius(Radius::Md).resolve(&theme);
+            let pad_x = MetricRef::space(Space::N1).resolve(&theme);
+            let pad_y = MetricRef::space(Space::N1).resolve(&theme);
             let gap = MetricRef::space(Space::N1).resolve(&theme);
             let bg = theme.color_required("background");
+            let shadow = decl_style::shadow_xs(&theme, radius);
 
             let disabled = self.disabled;
             let menus = self.menus;
@@ -803,7 +804,7 @@ impl Menubar {
                                 left: pad_x,
                             },
                             background: Some(bg),
-                            shadow: None,
+                            shadow: Some(shadow),
                             border: Edges::all(Px(1.0)),
                             border_color: Some(border),
                             corner_radii: Corners::all(radius),
@@ -1189,7 +1190,9 @@ impl MenubarMenuEntries {
 
                         let border = theme.color_required("border");
                         let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
-                        let shadow = decl_style::shadow_sm(&theme, radius_sm);
+                        let radius_md = MetricRef::radius(Radius::Md).resolve(&theme);
+                        let shadow = decl_style::shadow_md(&theme, radius_md);
+                        let shadow_submenu = decl_style::shadow_lg(&theme, radius_md);
                         let item_ring = decl_style::focus_ring(&theme, radius_sm);
                         let pad_x = MetricRef::space(Space::N3).resolve(&theme);
                         let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
@@ -1223,12 +1226,12 @@ impl MenubarMenuEntries {
                                         placed,
                                         move |layout| ContainerProps {
                                             layout,
-                                            padding: Edges::all(Px(6.0)),
+                                            padding: Edges::all(Px(4.0)),
                                             background: Some(panel_bg),
                                             shadow: Some(shadow),
                                             border: Edges::all(Px(1.0)),
                                             border_color: Some(border),
-                                            corner_radii: Corners::all(radius_sm),
+                                            corner_radii: Corners::all(radius_md),
                                         },
                                         move |cx| {
                                             let content_focus_id_for_panel =
@@ -2117,12 +2120,12 @@ impl MenubarMenuEntries {
                                         placed,
                                         move |layout| ContainerProps {
                                             layout,
-                                            padding: Edges::all(Px(6.0)),
+                                            padding: Edges::all(Px(4.0)),
                                             background: Some(panel_bg),
-                                            shadow: Some(shadow),
+                                            shadow: Some(shadow_submenu),
                                             border: Edges::all(Px(1.0)),
                                             border_color: Some(border),
-                                            corner_radii: Corners::all(radius_sm),
+                                            corner_radii: Corners::all(radius_md),
                                         },
                                         move |cx| {
                                             let content_focus_id_for_panel =

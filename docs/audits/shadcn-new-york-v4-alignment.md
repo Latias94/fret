@@ -83,6 +83,21 @@ Recent fixes:
 - Panel chrome now matches upstream `rounded-md` (radius token) and `shadow-md` / `shadow-lg` split.
 - Conformance gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_context_menu_panel_chrome_matches`).
 
+### `Menubar`
+
+- Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/menubar.tsx`
+- Fret: `ecosystem/fret-ui-shadcn/src/menubar.rs`
+- Gaps to check:
+  - Root: `h-9`, `rounded-md`, `border`, `p-1`, `shadow-xs`, `gap-1`.
+  - Content: `rounded-md`, `border`, `p-1`, `shadow-md`.
+  - SubContent: `rounded-md`, `border`, `p-1`, `shadow-lg`.
+
+Recent fixes:
+
+- Root panel chrome now matches upstream `rounded-md` + `shadow-xs` (new-york-v4 baseline).
+- Menu panels now match upstream `rounded-md` + `p-1` and `shadow-md` / `shadow-lg` split.
+- Conformance gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_menubar_panel_chrome_matches`).
+
 ### `Input`
 
 - Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/input.tsx`
