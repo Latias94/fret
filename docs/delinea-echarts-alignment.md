@@ -258,7 +258,7 @@ single “at a glance” view of:
   - LOD outputs preserve index identity: `points.len() == data_indices.len()` and indices refer to raw rows.
 - Tests (headless):
   - `ecosystem/delinea/src/engine/lod/minmax_per_pixel.rs` (unit invariants for finalize ordering + bounds)
-  - `ecosystem/delinea/src/engine/tests.rs` (`scatter_large_mode_is_pixel_bounded`, `line_large_mode_is_pixel_bounded`)
+  - `ecosystem/delinea/src/engine/tests.rs` (`scatter_large_mode_is_pixel_bounded`, `line_large_mode_is_pixel_bounded`, `lod_scatter_large_mode_is_budget_invariant`, `lod_line_large_mode_is_budget_invariant`)
 - Conformance doc: `docs/delinea-lod-conformance.md`
 - Validation harness (native, v1):
   - `cargo run -p fret-demo --bin chart_stress_demo`
@@ -266,8 +266,8 @@ single “at a glance” view of:
     - `FRET_CHART_STRESS_POINTS` (default: 1_000_000)
     - `FRET_CHART_STRESS_EXIT_AFTER_FRAMES`
 - Missing vs ECharts:
-  - explicit policies per series kind (line vs scatter vs bar),
-  - a benchmark/conformance harness that locks frame-time and visual invariants.
+  - 完整的按 series kind 暴露的策略/开关（ECharts `large/largeThreshold/progressive/*`），尤其是 bar/stacked 场景的 LOD 与渐进策略。
+  - 可在 CI 中 gate 的 benchmark/conformance harness（锁帧时间回归与更丰富的视觉不变量），而不仅是手工 stress demo。
 
 **S9 - Append/update semantics (`appendData`)** (`[~]`)
 

@@ -15446,6 +15446,244 @@ fn line_large_mode_is_pixel_bounded() {
     assert!(emitted > 0);
 }
 
+#[test]
+fn lod_scatter_large_mode_is_budget_invariant() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
+
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(200.0)),
+    );
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(viewport),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        data_zoom_y: vec![],
+        tooltip: None,
+        axis_pointer: None,
+        visual_maps: vec![],
+        series: vec![SeriesSpec {
+            id: series_id,
+            name: None,
+            kind: SeriesKind::Scatter,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
+            bar_layout: Default::default(),
+            area_baseline: None,
+        }],
+    };
+
+    let n = 60_000usize;
+    let xs: Vec<f64> = (0..n).map(|i| i as f64 / (n as f64 - 1.0)).collect();
+    let ys: Vec<f64> = (0..n).map(|i| ((i as f64) * 0.01).sin()).collect();
+
+    let build_engine = || {
+        let mut engine = ChartEngine::new(spec.clone()).unwrap();
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(xs.clone()));
+        table.push_column(Column::F64(ys.clone()));
+        engine.datasets_mut().insert(dataset_id, table);
+        engine
+    };
+
+    let mut engine_a = build_engine();
+    let mut measurer_a = NullTextMeasurer::default();
+    run_engine_to_completion(
+        &mut engine_a,
+        &mut measurer_a,
+        WorkBudget::new(16_384, 0, 16),
+        512,
+    );
+
+    let mut engine_b = build_engine();
+    let mut measurer_b = NullTextMeasurer::default();
+    run_engine_to_completion(
+        &mut engine_b,
+        &mut measurer_b,
+        WorkBudget::new(1_000_000, 0, 1_024),
+        64,
+    );
+
+    assert_eq!(
+        engine_a.output().axis_windows,
+        engine_b.output().axis_windows,
+        "expected axis windows to be budget-invariant"
+    );
+    assert_eq!(
+        marks_signature(&engine_a.output().marks),
+        marks_signature(&engine_b.output().marks),
+        "expected marks output to be budget-invariant"
+    );
+}
+
+#[test]
+fn lod_line_large_mode_is_budget_invariant() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
+
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(200.0)),
+    );
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(viewport),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        data_zoom_y: vec![],
+        tooltip: None,
+        axis_pointer: None,
+        visual_maps: vec![],
+        series: vec![SeriesSpec {
+            id: series_id,
+            name: None,
+            kind: SeriesKind::Line,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
+            bar_layout: Default::default(),
+            area_baseline: None,
+        }],
+    };
+
+    let n = 50_000usize;
+    let xs: Vec<f64> = (0..n).map(|i| i as f64 / (n as f64 - 1.0)).collect();
+    let ys: Vec<f64> = (0..n).map(|i| ((i as f64) * 0.01).sin()).collect();
+
+    let build_engine = || {
+        let mut engine = ChartEngine::new(spec.clone()).unwrap();
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(xs.clone()));
+        table.push_column(Column::F64(ys.clone()));
+        engine.datasets_mut().insert(dataset_id, table);
+        engine
+    };
+
+    let mut engine_a = build_engine();
+    let mut measurer_a = NullTextMeasurer::default();
+    run_engine_to_completion(
+        &mut engine_a,
+        &mut measurer_a,
+        WorkBudget::new(16_384, 0, 16),
+        512,
+    );
+
+    let mut engine_b = build_engine();
+    let mut measurer_b = NullTextMeasurer::default();
+    run_engine_to_completion(
+        &mut engine_b,
+        &mut measurer_b,
+        WorkBudget::new(1_000_000, 0, 1_024),
+        64,
+    );
+
+    assert_eq!(
+        engine_a.output().axis_windows,
+        engine_b.output().axis_windows,
+        "expected axis windows to be budget-invariant"
+    );
+    assert_eq!(
+        marks_signature(&engine_a.output().marks),
+        marks_signature(&engine_b.output().marks),
+        "expected marks output to be budget-invariant"
+    );
+}
+
 fn find_polyline_point_by_data_index(
     marks: &crate::marks::MarkTree,
     series: crate::ids::SeriesId,
@@ -15790,6 +16028,127 @@ fn line_missing_values_break_into_segments() {
     assert_eq!(segments[1].0, 1);
     assert_eq!(segments[0].1, vec![0, 1]);
     assert_eq!(segments[1].1, vec![3, 4]);
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct MarkTreeSignature {
+    pub arena_points: Vec<fret_core::Point>,
+    pub arena_data_indices: Vec<u32>,
+    pub arena_rects: Vec<fret_core::Rect>,
+    pub arena_rect_data_indices: Vec<u32>,
+    pub nodes: Vec<MarkNodeSignature>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct MarkNodeSignature {
+    pub id: crate::ids::MarkId,
+    pub parent: Option<crate::ids::MarkId>,
+    pub layer: crate::ids::LayerId,
+    pub order: crate::marks::MarkOrderKey,
+    pub kind: crate::marks::MarkKind,
+    pub source_series: Option<crate::ids::SeriesId>,
+    pub payload: MarkPayloadSignature,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+enum MarkPayloadSignature {
+    Group {
+        clip: Option<fret_core::Rect>,
+    },
+    Polyline {
+        points: core::ops::Range<usize>,
+        stroke: Option<(crate::ids::PaintId, crate::paint::StrokeStyleV2)>,
+    },
+    Points {
+        points: core::ops::Range<usize>,
+        fill: Option<crate::ids::PaintId>,
+        opacity_mul: Option<u32>,
+        radius_mul: Option<u32>,
+        stroke: Option<(crate::ids::PaintId, crate::paint::StrokeStyleV2)>,
+    },
+    Rect {
+        rects: core::ops::Range<usize>,
+        fill: Option<crate::ids::PaintId>,
+        opacity_mul: Option<u32>,
+        stroke: Option<(crate::ids::PaintId, crate::paint::StrokeStyleV2)>,
+    },
+    Text {
+        rect: fret_core::Rect,
+        text: crate::ids::StringId,
+        style: crate::text::TextStyleId,
+        fill: Option<crate::ids::PaintId>,
+    },
+}
+
+fn f32_to_bits(v: Option<f32>) -> Option<u32> {
+    v.map(|v| v.to_bits())
+}
+
+fn marks_signature(marks: &crate::marks::MarkTree) -> MarkTreeSignature {
+    let mut nodes: Vec<MarkNodeSignature> = marks
+        .nodes
+        .iter()
+        .map(|n| MarkNodeSignature {
+            id: n.id,
+            parent: n.parent,
+            layer: n.layer,
+            order: n.order,
+            kind: n.kind,
+            source_series: n.source_series,
+            payload: match &n.payload {
+                crate::marks::MarkPayloadRef::Group(g) => {
+                    MarkPayloadSignature::Group { clip: g.clip }
+                }
+                crate::marks::MarkPayloadRef::Polyline(p) => MarkPayloadSignature::Polyline {
+                    points: p.points.clone(),
+                    stroke: p.stroke.clone(),
+                },
+                crate::marks::MarkPayloadRef::Points(p) => MarkPayloadSignature::Points {
+                    points: p.points.clone(),
+                    fill: p.fill,
+                    opacity_mul: f32_to_bits(p.opacity_mul),
+                    radius_mul: f32_to_bits(p.radius_mul),
+                    stroke: p.stroke.clone(),
+                },
+                crate::marks::MarkPayloadRef::Rect(r) => MarkPayloadSignature::Rect {
+                    rects: r.rects.clone(),
+                    fill: r.fill,
+                    opacity_mul: f32_to_bits(r.opacity_mul),
+                    stroke: r.stroke.clone(),
+                },
+                crate::marks::MarkPayloadRef::Text(t) => MarkPayloadSignature::Text {
+                    rect: t.rect,
+                    text: t.text,
+                    style: t.style,
+                    fill: t.fill,
+                },
+            },
+        })
+        .collect();
+    nodes.sort_by_key(|n| (n.layer.0, n.order.0, n.id.0));
+
+    MarkTreeSignature {
+        arena_points: marks.arena.points.clone(),
+        arena_data_indices: marks.arena.data_indices.clone(),
+        arena_rects: marks.arena.rects.clone(),
+        arena_rect_data_indices: marks.arena.rect_data_indices.clone(),
+        nodes,
+    }
+}
+
+fn run_engine_to_completion(
+    engine: &mut ChartEngine,
+    measurer: &mut NullTextMeasurer,
+    budget: WorkBudget,
+    max_steps: usize,
+) {
+    for _ in 0..max_steps {
+        let step = engine.step(measurer, budget).unwrap();
+        if !step.unfinished {
+            return;
+        }
+    }
+    panic!("engine did not finish within max_steps={max_steps}");
 }
 
 #[test]

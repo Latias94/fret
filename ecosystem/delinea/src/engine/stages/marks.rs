@@ -27,6 +27,8 @@ use std::collections::BTreeMap;
 
 use super::{BarLayoutStage, DataViewStage, ParticipationState, StackDimsStage};
 
+const SCATTER_LARGE_MODE_VISIBLE_LEN_THRESHOLD: usize = 20_000;
+
 #[derive(Debug, Default, Clone)]
 struct MinMaxAppendCache {
     data_rev: crate::ids::Revision,
@@ -629,7 +631,7 @@ impl MarksStage {
                 y_window.clamp_non_degenerate();
 
                 let visible_len = selection.view_len(table.row_count);
-                let use_lod = visible_len > 20_000;
+                let use_lod = visible_len > SCATTER_LARGE_MODE_VISIBLE_LEN_THRESHOLD;
 
                 if use_lod {
                     let width_px = viewport.size.width.0.max(1.0).ceil() as usize;

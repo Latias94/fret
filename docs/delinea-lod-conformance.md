@@ -51,6 +51,14 @@ When the input X is monotonic:
 
 Note: if X is not monotonic, ordering invariants are not guaranteed by the current algorithm.
 
+### Budget invariance (incremental stepping)
+
+Given the same spec, dataset, state, and viewport:
+
+- Running the engine to completion with different `WorkBudget` values must converge to the same
+  `marks` output and `axis_windows` (i.e. budgets only affect *how fast* we build, not *what* we
+  build).
+
 ## Where these invariants are enforced
 
 ### Unit tests
@@ -63,6 +71,8 @@ Note: if X is not monotonic, ordering invariants are not guaranteed by the curre
 - `ecosystem/delinea/src/engine/tests.rs`
   - `scatter_large_mode_is_pixel_bounded`
   - `line_large_mode_is_pixel_bounded`
+  - `lod_scatter_large_mode_is_budget_invariant`
+  - `lod_line_large_mode_is_budget_invariant`
 
 ### Manual stress harness
 
