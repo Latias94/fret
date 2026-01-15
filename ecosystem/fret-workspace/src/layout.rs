@@ -39,6 +39,88 @@ pub enum SplitMode {
     CloneActiveTab,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PaneDirection {
+    Left,
+    Right,
+    Up,
+    Down,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct Rect {
+    x0: f32,
+    y0: f32,
+    x1: f32,
+    y1: f32,
+}
+
+impl Rect {
+    fn unit() -> Self {
+        Self {
+            x0: 0.0,
+            y0: 0.0,
+            x1: 1.0,
+            y1: 1.0,
+        }
+    }
+
+    fn center_x(self) -> f32 {
+        (self.x0 + self.x1) * 0.5
+    }
+
+    fn center_y(self) -> f32 {
+        (self.y0 + self.y1) * 0.5
+    }
+
+    fn interval_gap(a0: f32, a1: f32, b0: f32, b1: f32) -> f32 {
+        let left = a0 - b1;
+        let right = b0 - a1;
+        left.max(right).max(0.0)
+    }
+
+    fn score_neighbor(self, dir: PaneDirection, other: Rect) -> Option<(f32, f32, f32)> {
+        match dir {
+            PaneDirection::Left => {
+                let dx = self.x0 - other.x1;
+                if dx < 0.0 {
+                    return None;
+                }
+                let gap = Rect::interval_gap(self.y0, self.y1, other.y0, other.y1);
+                let align = (self.center_y() - other.center_y()).abs();
+                Some((dx, gap, align))
+            }
+            PaneDirection::Right => {
+                let dx = other.x0 - self.x1;
+                if dx < 0.0 {
+                    return None;
+                }
+                let gap = Rect::interval_gap(self.y0, self.y1, other.y0, other.y1);
+                let align = (self.center_y() - other.center_y()).abs();
+                Some((dx, gap, align))
+            }
+            PaneDirection::Up => {
+                let dy = self.y0 - other.y1;
+                if dy < 0.0 {
+                    return None;
+                }
+                let gap = Rect::interval_gap(self.x0, self.x1, other.x0, other.x1);
+                let align = (self.center_x() - other.center_x()).abs();
+                Some((dy, gap, align))
+            }
+            PaneDirection::Down => {
+                let dy = other.y0 - self.y1;
+                if dy < 0.0 {
+                    return None;
+                }
+                let gap = Rect::interval_gap(self.x0, self.x1, other.x0, other.x1);
+                let align = (self.center_x() - other.center_x()).abs();
+                Some((dy, gap, align))
+            }
+        }
+    }
+}
+
 impl WorkspaceWindowLayout {
     pub fn new(id: impl Into<Arc<str>>, root_pane_id: impl Into<Arc<str>>) -> Self {
         let root_pane_id: Arc<str> = root_pane_id.into();
@@ -147,6 +229,41 @@ impl WorkspaceWindowLayout {
 
     pub fn focus_prev_pane(&mut self) -> bool {
         self.focus_adjacent_pane(false)
+    }
+
+    pub fn focus_pane_in_direction(&mut self, dir: PaneDirection) -> bool {
+        if self.active_pane.is_none() {
+            self.active_pane = self.pane_tree.first_leaf_id().cloned();
+        }
+        let Some(active) = self.active_pane.clone() else {
+            return false;
+        };
+
+        let Some(target) = self.pane_tree.find_neighbor_leaf(active.as_ref(), dir) else {
+            return false;
+        };
+        if target.as_ref() == active.as_ref() {
+            return false;
+        }
+        self.active_pane = Some(target);
+        true
+    }
+
+    pub fn move_active_tab_to_direction(&mut self, dir: PaneDirection) -> bool {
+        if self.active_pane.is_none() {
+            self.active_pane = self.pane_tree.first_leaf_id().cloned();
+        }
+        let Some(active) = self.active_pane.clone() else {
+            return false;
+        };
+
+        let Some(target) = self.pane_tree.find_neighbor_leaf(active.as_ref(), dir) else {
+            return false;
+        };
+        if target.as_ref() == active.as_ref() {
+            return false;
+        }
+        self.move_active_tab_to_pane(target.as_ref())
     }
 
     fn focus_adjacent_pane(&mut self, forward: bool) -> bool {
@@ -317,6 +434,30 @@ impl WorkspaceWindowLayout {
                     SplitMode::CloneActiveTab,
                 );
             }
+            crate::commands::CMD_WORKSPACE_PANE_FOCUS_LEFT => {
+                return self.focus_pane_in_direction(PaneDirection::Left);
+            }
+            crate::commands::CMD_WORKSPACE_PANE_FOCUS_RIGHT => {
+                return self.focus_pane_in_direction(PaneDirection::Right);
+            }
+            crate::commands::CMD_WORKSPACE_PANE_FOCUS_UP => {
+                return self.focus_pane_in_direction(PaneDirection::Up);
+            }
+            crate::commands::CMD_WORKSPACE_PANE_FOCUS_DOWN => {
+                return self.focus_pane_in_direction(PaneDirection::Down);
+            }
+            crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_LEFT => {
+                return self.move_active_tab_to_direction(PaneDirection::Left);
+            }
+            crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_RIGHT => {
+                return self.move_active_tab_to_direction(PaneDirection::Right);
+            }
+            crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_UP => {
+                return self.move_active_tab_to_direction(PaneDirection::Up);
+            }
+            crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_DOWN => {
+                return self.move_active_tab_to_direction(PaneDirection::Down);
+            }
             _ => {}
         }
 
@@ -449,6 +590,86 @@ impl WorkspacePaneTree {
                 a.collect_leaf_ids(into);
                 b.collect_leaf_ids(into);
             }
+        }
+    }
+
+    pub fn find_neighbor_leaf(&self, pane_id: &str, dir: PaneDirection) -> Option<Arc<str>> {
+        let mut rects: Vec<(Arc<str>, Rect)> = Vec::new();
+        self.collect_leaf_rects(Rect::unit(), &mut rects);
+
+        let active_rect = rects
+            .iter()
+            .find(|(id, _)| id.as_ref() == pane_id)
+            .map(|(_, rect)| *rect)?;
+
+        let mut best: Option<(Arc<str>, (f32, f32, f32))> = None;
+        for (id, rect) in rects {
+            if id.as_ref() == pane_id {
+                continue;
+            }
+
+            if let Some((primary, secondary, tertiary)) = active_rect.score_neighbor(dir, rect) {
+                let candidate = (primary, secondary, tertiary);
+                match &best {
+                    None => best = Some((id, candidate)),
+                    Some((_, current)) => {
+                        if candidate < *current {
+                            best = Some((id, candidate));
+                        }
+                    }
+                }
+            }
+        }
+
+        best.map(|(id, _)| id)
+    }
+
+    fn collect_leaf_rects(&self, rect: Rect, out: &mut Vec<(Arc<str>, Rect)>) {
+        match self {
+            WorkspacePaneTree::Leaf(pane) => out.push((pane.id.clone(), rect)),
+            WorkspacePaneTree::Split {
+                axis,
+                fraction,
+                a,
+                b,
+            } => match axis {
+                Axis::Horizontal => {
+                    let w = rect.x1 - rect.x0;
+                    let ax1 = rect.x0 + w * clamp_fraction(*fraction);
+                    let a_rect = Rect {
+                        x0: rect.x0,
+                        y0: rect.y0,
+                        x1: ax1,
+                        y1: rect.y1,
+                    };
+                    let b_rect = Rect {
+                        x0: ax1,
+                        y0: rect.y0,
+                        x1: rect.x1,
+                        y1: rect.y1,
+                    };
+                    a.collect_leaf_rects(a_rect, out);
+                    b.collect_leaf_rects(b_rect, out);
+                }
+                Axis::Vertical => {
+                    let h = rect.y1 - rect.y0;
+                    let ay1 = rect.y0 + h * clamp_fraction(*fraction);
+                    let a_rect = Rect {
+                        x0: rect.x0,
+                        y0: rect.y0,
+                        x1: rect.x1,
+                        y1: ay1,
+                    };
+                    let b_rect = Rect {
+                        x0: rect.x0,
+                        y0: ay1,
+                        x1: rect.x1,
+                        y1: rect.y1,
+                    };
+                    a.collect_leaf_rects(a_rect, out);
+                    b.collect_leaf_rects(b_rect, out);
+                }
+            },
         }
     }
 
@@ -948,5 +1169,81 @@ mod tests {
             crate::commands::CMD_WORKSPACE_PANE_SPLIT_DOWN
         )));
         assert_eq!(window.active_pane_id().unwrap().as_ref(), "w.pane.2");
+    }
+
+    #[test]
+    fn focus_pane_in_direction_uses_geometry_best_effort() {
+        let mut window = WorkspaceWindowLayout::new("w", "p1");
+        window.pane_tree = WorkspacePaneTree::split(
+            Axis::Vertical,
+            0.5,
+            WorkspacePaneTree::split(
+                Axis::Horizontal,
+                0.5,
+                WorkspacePaneTree::leaf("p1"),
+                WorkspacePaneTree::leaf("p2"),
+            ),
+            WorkspacePaneTree::split(
+                Axis::Horizontal,
+                0.5,
+                WorkspacePaneTree::leaf("p3"),
+                WorkspacePaneTree::leaf("p4"),
+            ),
+        );
+
+        window.active_pane = Some(Arc::<str>::from("p1"));
+        assert!(window.apply_command(&CommandId::from(
+            crate::commands::CMD_WORKSPACE_PANE_FOCUS_RIGHT
+        )));
+        assert_eq!(window.active_pane_id().unwrap().as_ref(), "p2");
+
+        assert!(window.apply_command(&CommandId::from(
+            crate::commands::CMD_WORKSPACE_PANE_FOCUS_DOWN
+        )));
+        assert_eq!(window.active_pane_id().unwrap().as_ref(), "p4");
+
+        assert!(window.apply_command(&CommandId::from(
+            crate::commands::CMD_WORKSPACE_PANE_FOCUS_LEFT
+        )));
+        assert_eq!(window.active_pane_id().unwrap().as_ref(), "p3");
+
+        assert!(window.apply_command(&CommandId::from(
+            crate::commands::CMD_WORKSPACE_PANE_FOCUS_UP
+        )));
+        assert_eq!(window.active_pane_id().unwrap().as_ref(), "p1");
+    }
+
+    #[test]
+    fn move_active_tab_to_direction_moves_to_neighbor_pane() {
+        let mut window = WorkspaceWindowLayout::new("w", "p1");
+        window.pane_tree = WorkspacePaneTree::split(
+            Axis::Horizontal,
+            0.5,
+            WorkspacePaneTree::leaf("p1"),
+            WorkspacePaneTree::leaf("p2"),
+        );
+        window.active_pane = Some(Arc::<str>::from("p2"));
+
+        window
+            .pane_tree
+            .find_pane_mut("p2")
+            .unwrap()
+            .tabs
+            .open_and_activate(Arc::<str>::from("a"));
+
+        assert!(window.apply_command(&CommandId::from(
+            crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_LEFT
+        )));
+        assert_eq!(window.active_pane_id().unwrap().as_ref(), "p1");
+        assert!(
+            window
+                .pane_tree
+                .find_pane("p1")
+                .unwrap()
+                .tabs
+                .tabs()
+                .iter()
+                .any(|t| t.as_ref() == "a")
+        );
     }
 }

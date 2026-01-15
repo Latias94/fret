@@ -24,6 +24,16 @@ pub const CMD_WORKSPACE_PANE_SPLIT_LEFT: &str = "workspace.pane.split.left";
 pub const CMD_WORKSPACE_PANE_SPLIT_UP: &str = "workspace.pane.split.up";
 pub const CMD_WORKSPACE_PANE_SPLIT_DOWN: &str = "workspace.pane.split.down";
 
+pub const CMD_WORKSPACE_PANE_FOCUS_RIGHT: &str = "workspace.pane.focus.right";
+pub const CMD_WORKSPACE_PANE_FOCUS_LEFT: &str = "workspace.pane.focus.left";
+pub const CMD_WORKSPACE_PANE_FOCUS_UP: &str = "workspace.pane.focus.up";
+pub const CMD_WORKSPACE_PANE_FOCUS_DOWN: &str = "workspace.pane.focus.down";
+
+pub const CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_RIGHT: &str = "workspace.pane.move_active_tab.right";
+pub const CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_LEFT: &str = "workspace.pane.move_active_tab.left";
+pub const CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_UP: &str = "workspace.pane.move_active_tab.up";
+pub const CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_DOWN: &str = "workspace.pane.move_active_tab.down";
+
 /// Prefix for "activate a specific tab" commands.
 ///
 /// This is intentionally a prefix-based command family so apps can implement their own tab models
@@ -294,5 +304,61 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
         CommandMeta::new("Split Pane Down")
             .with_category("Workspace")
             .with_keywords(["split", "pane", "down", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_FOCUS_RIGHT),
+        CommandMeta::new("Focus Pane Right")
+            .with_category("Workspace")
+            .with_keywords(["focus", "pane", "right", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_FOCUS_LEFT),
+        CommandMeta::new("Focus Pane Left")
+            .with_category("Workspace")
+            .with_keywords(["focus", "pane", "left", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_FOCUS_UP),
+        CommandMeta::new("Focus Pane Up")
+            .with_category("Workspace")
+            .with_keywords(["focus", "pane", "up", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_FOCUS_DOWN),
+        CommandMeta::new("Focus Pane Down")
+            .with_category("Workspace")
+            .with_keywords(["focus", "pane", "down", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_RIGHT),
+        CommandMeta::new("Move Active Tab Right")
+            .with_category("Workspace")
+            .with_keywords(["move", "tab", "pane", "right", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_LEFT),
+        CommandMeta::new("Move Active Tab Left")
+            .with_category("Workspace")
+            .with_keywords(["move", "tab", "pane", "left", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_UP),
+        CommandMeta::new("Move Active Tab Up")
+            .with_category("Workspace")
+            .with_keywords(["move", "tab", "pane", "up", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_DOWN),
+        CommandMeta::new("Move Active Tab Down")
+            .with_category("Workspace")
+            .with_keywords(["move", "tab", "pane", "down", "workspace"]),
     );
 }

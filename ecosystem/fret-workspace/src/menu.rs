@@ -213,6 +213,53 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
                         command: cmds.move_active_tab_prev_pane,
                         when: None,
                     },
+                    MenuItem::Separator,
+                    MenuItem::Command {
+                        command: CommandId::new(
+                            crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_LEFT,
+                        ),
+                        when: None,
+                    },
+                    MenuItem::Command {
+                        command: CommandId::new(
+                            crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_RIGHT,
+                        ),
+                        when: None,
+                    },
+                    MenuItem::Command {
+                        command: CommandId::new(
+                            crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_UP,
+                        ),
+                        when: None,
+                    },
+                    MenuItem::Command {
+                        command: CommandId::new(
+                            crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_DOWN,
+                        ),
+                        when: None,
+                    },
+                ],
+            },
+            MenuItem::Submenu {
+                title: Arc::from("Focus Pane"),
+                when: None,
+                items: vec![
+                    MenuItem::Command {
+                        command: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_FOCUS_LEFT),
+                        when: None,
+                    },
+                    MenuItem::Command {
+                        command: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_FOCUS_RIGHT),
+                        when: None,
+                    },
+                    MenuItem::Command {
+                        command: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_FOCUS_UP),
+                        when: None,
+                    },
+                    MenuItem::Command {
+                        command: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_FOCUS_DOWN),
+                        when: None,
+                    },
                 ],
             },
             MenuItem::Submenu {
