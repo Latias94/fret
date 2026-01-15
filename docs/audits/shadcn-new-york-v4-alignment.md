@@ -54,6 +54,11 @@ Recent fixes:
 - Trigger chrome/content width now tracks the trigger width mode (auto vs fixed), preventing “ellipsis even when there is space” cases.
 - `fret-icons-radix` now vendors `chevron-up.svg`, so Radix-backed semantic `ui.chevron.up` resolves correctly.
 
+Conformance gates:
+
+- Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_select_panel_chrome_matches`).
+- Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_select_scrollable_overlay_placement_matches`).
+
 ### `DropdownMenu`
 
 - Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/dropdown-menu.tsx`
@@ -68,6 +73,11 @@ Recent fixes:
 Recent fixes:
 
 - Destructive item focus tint now matches upstream (`destructive/10` in light, `destructive/20` in dark) via seeded theme tokens.
+
+Conformance gates:
+
+- Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_dropdown_menu_panel_chrome_matches`).
+- Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_dropdown_menu_demo_overlay_placement_matches`, `web_vs_fret_dropdown_menu_demo_submenu_overlay_placement_matches`).
 
 ### `Command` / `CommandDialog`
 
@@ -93,7 +103,9 @@ Recent fixes:
 Recent fixes:
 
 - Panel chrome now matches upstream `rounded-md` (radius token) and `shadow-md` / `shadow-lg` split.
-- Conformance gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_context_menu_panel_chrome_matches`).
+- Conformance gates:
+  - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_context_menu_panel_chrome_matches`).
+  - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_context_menu_demo_overlay_placement_matches`, `web_vs_fret_context_menu_demo_submenu_overlay_placement_matches`).
 
 ### `Menubar`
 
@@ -110,7 +122,11 @@ Recent fixes:
 - Menu panels now match upstream `rounded-md` + `p-1` and `shadow-md` / `shadow-lg` split.
 - Conformance gates:
   - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_menubar_panel_chrome_matches`).
-  - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_menubar_demo_overlay_placement_matches`).
+  - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_menubar_demo_overlay_placement_matches`, `web_vs_fret_menubar_demo_submenu_overlay_placement_matches`).
+
+Note: for menu-like overlays (DropdownMenu / ContextMenu / Menubar), the placement gate also asserts
+the portal panel `w/h` against the shadcn-web portal wrapper geometry (so “menu height” regressions
+are caught as layout/style outcomes, not just placement drift).
 
 ### `NavigationMenu`
 
