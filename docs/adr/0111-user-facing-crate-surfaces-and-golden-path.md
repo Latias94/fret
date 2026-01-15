@@ -88,12 +88,15 @@ We adopt the Dioxus lesson: dev UX matters, but it must be kept out of core libr
   - enabling dev-only hotpatch/hotreload wiring by setting environment variables and feature flags.
 - `fret-bootstrap` may expose small helpers for dev env wiring (feature-gated), but must not become a toolchain manager.
 
-### 5) No mixed "app kit" crate in the recommended story
+### 5) Keep the kernel story unbundled (optional kit allowed)
 
-To reduce cognition and dependency ambiguity, we avoid a mixed "kit" crate entirely:
+To keep layering clear and keep portable dependencies explicit, the **kernel** story remains unbundled:
 
 - UI render-asset conveniences live in `fret-ui-assets`.
 - App defaults / "starter semantics" (settings load, icon packs, budgets, dev toggles) live in `fret-bootstrap`.
+
+However, we may provide an **ecosystem-level optional meta crate** (e.g. `fret-kit`) for desktop-first quick starts.
+This must remain optional (not the only entry point) and must not be depended on by `crates/*`.
 
 ## Recommended “User Story” (What we want people to do)
 
@@ -101,6 +104,7 @@ To reduce cognition and dependency ambiguity, we avoid a mixed "kit" crate entir
 
 - Depend on `fret`, a component crate, plus `fret-bootstrap`.
 - Build your app using `FnDriver` as the primary authoring surface when you care about dev hotpatch (ADR 0107).
+  - Optional quick start: depend on `fret-kit` instead of assembling the set manually.
 
 ### B) Web (wasm32)
 
@@ -118,7 +122,7 @@ layering and make “minimal portable dependency” impossible.
 
 ### B) Provide a single “everything crate” for maximum ergonomics
 
-Rejected (ADR 0108).
+Rejected (ADR 0108) as the **only** user story / required entry point.
 
 This increases compile times, blurs boundaries, and makes long-term evolution of defaults risky.
 
@@ -143,6 +147,7 @@ It conflicts with ADR 0026’s explicit scope separation and would pull non-UI c
 ## Migration Plan
 
 1. Ensure all examples/demos use `fret-bootstrap` as the default startup path.
+   - Optionally provide a `fret-kit` path for “one dependency” quick starts and templates.
 2. Update docs to present:
    - “Golden path” (recommended),
    - “Manual assembly” (advanced).

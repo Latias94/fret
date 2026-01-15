@@ -22,34 +22,32 @@ pub(super) fn todo_template_cargo_toml(
     opts: ScaffoldOptions,
     workspace_prefix: &str,
 ) -> String {
-    let mut bootstrap_features: Vec<&str> = vec!["ui-app-driver", "diagnostics"];
+    let mut kit_features: Vec<&str> = vec!["desktop", "diagnostics"];
     if opts.command_palette {
-        bootstrap_features.push("ui-app-command-palette");
+        kit_features.push("command-palette");
     }
     if opts.ui_assets {
-        bootstrap_features.push("ui-assets");
+        kit_features.push("ui-assets");
     }
     match opts.icon_pack {
         IconPack::Lucide => {
-            bootstrap_features.push("icons-lucide");
-            bootstrap_features.push("preload-icon-svgs");
+            kit_features.push("icons-lucide");
+            kit_features.push("preload-icon-svgs");
         }
         IconPack::Radix => {
-            bootstrap_features.push("icons-radix");
-            bootstrap_features.push("preload-icon-svgs");
+            kit_features.push("icons-radix");
+            kit_features.push("preload-icon-svgs");
         }
         IconPack::None => {}
     }
 
-    let bootstrap_features = bootstrap_features
+    let kit_features = kit_features
         .into_iter()
         .map(|f| format!("\"{f}\""))
         .collect::<Vec<_>>()
         .join(", ");
 
-    let fret_app_path = join_workspace_path(workspace_prefix, "crates/fret-app");
-    let fret_bootstrap_path = join_workspace_path(workspace_prefix, "ecosystem/fret-bootstrap");
-    let fret_ui_shadcn_path = join_workspace_path(workspace_prefix, "ecosystem/fret-ui-shadcn");
+    let fret_kit_path = join_workspace_path(workspace_prefix, "ecosystem/fret-kit");
 
     format!(
         r#"[package]
@@ -59,9 +57,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1"
-fret-app = {{ path = "{fret_app_path}" }}
-fret-bootstrap = {{ path = "{fret_bootstrap_path}", features = [{bootstrap_features}] }}
-fret-ui-shadcn = {{ path = "{fret_ui_shadcn_path}", features = ["app-integration"] }}
+fret-kit = {{ path = "{fret_kit_path}", default-features = false, features = [{kit_features}] }}
 [workspace]
 "#
     )
@@ -87,25 +83,29 @@ pub(super) fn hello_template_cargo_toml(
     opts: ScaffoldOptions,
     workspace_prefix: &str,
 ) -> String {
-    let mut bootstrap_features: Vec<&str> = vec!["ui-app-driver", "diagnostics"];
+    let mut kit_features: Vec<&str> = vec!["desktop", "diagnostics"];
     if opts.command_palette {
-        bootstrap_features.push("ui-app-command-palette");
+        kit_features.push("command-palette");
     }
     match opts.icon_pack {
-        IconPack::Lucide => bootstrap_features.push("icons-lucide"),
-        IconPack::Radix => bootstrap_features.push("icons-radix"),
+        IconPack::Lucide => {
+            kit_features.push("icons-lucide");
+            kit_features.push("preload-icon-svgs");
+        }
+        IconPack::Radix => {
+            kit_features.push("icons-radix");
+            kit_features.push("preload-icon-svgs");
+        }
         IconPack::None => {}
     }
 
-    let bootstrap_features = bootstrap_features
+    let kit_features = kit_features
         .into_iter()
         .map(|f| format!("\"{f}\""))
         .collect::<Vec<_>>()
         .join(", ");
 
-    let fret_app_path = join_workspace_path(workspace_prefix, "crates/fret-app");
-    let fret_bootstrap_path = join_workspace_path(workspace_prefix, "ecosystem/fret-bootstrap");
-    let fret_ui_shadcn_path = join_workspace_path(workspace_prefix, "ecosystem/fret-ui-shadcn");
+    let fret_kit_path = join_workspace_path(workspace_prefix, "ecosystem/fret-kit");
 
     format!(
         r#"[package]
@@ -115,9 +115,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1"
-fret-app = {{ path = "{fret_app_path}" }}
-fret-bootstrap = {{ path = "{fret_bootstrap_path}", features = [{bootstrap_features}] }}
-fret-ui-shadcn = {{ path = "{fret_ui_shadcn_path}", features = ["app-integration"] }}
+fret-kit = {{ path = "{fret_kit_path}", default-features = false, features = [{kit_features}] }}
 
 [workspace]
 "#
@@ -125,22 +123,6 @@ fret-ui-shadcn = {{ path = "{fret_ui_shadcn_path}", features = ["app-integration
 }
 
 pub(super) fn todo_template_main_rs(_package_name: &str, opts: ScaffoldOptions) -> String {
-    let ui_assets_builder = if opts.ui_assets {
-        "\n        .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)"
-    } else {
-        ""
-    };
-
-    let icons_builder = match opts.icon_pack {
-        IconPack::Lucide => {
-            "\n        .with_lucide_icons()\n        .preload_icon_svgs_on_gpu_ready()"
-        }
-        IconPack::Radix => {
-            "\n        .with_radix_icons()\n        .preload_icon_svgs_on_gpu_ready()"
-        }
-        IconPack::None => "",
-    };
-
     // Radix doesn't currently ship plus/trash icons in our curated set; keep the todo template
     // functional by falling back to text buttons when Lucide isn't selected.
     let has_action_icons = matches!(opts.icon_pack, IconPack::Lucide);
@@ -179,9 +161,7 @@ pub(super) fn todo_template_main_rs(_package_name: &str, opts: ScaffoldOptions) 
 
     const TEMPLATE: &str = r#"use std::sync::Arc;
 
-use fret_app::{App, CommandId};
-use fret_bootstrap::ui_app_with_hooks;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_kit::prelude::*;
 
 const CMD_ADD: &str = "todo.add";
 const CMD_CLEAR_DONE: &str = "todo.clear_done";
@@ -201,15 +181,10 @@ struct TodoState {
 }
 
 fn main() -> anyhow::Result<()> {
-    ui_app_with_hooks("todo", init_window, view, |d| d.on_command(on_command))
-        .with_default_diagnostics()
-        .with_default_config_files()?__UI_ASSETS_BUILDER__
+    fret_kit::app_with_hooks("todo", init_window, view, |d| d.on_command(on_command))?
         .with_main_window("todo", (560.0, 520.0))
-        .init_app(|app| {
-            shadcn::install_app(app);
-        })__ICONS_BUILDER__
-        .run()
-        .map_err(anyhow::Error::from)
+        .run()?;
+    Ok(())
 }
 
 fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
@@ -463,19 +438,11 @@ fn on_command(
 "#;
 
     TEMPLATE
-        .replace("__UI_ASSETS_BUILDER__", ui_assets_builder)
-        .replace("__ICONS_BUILDER__", icons_builder)
         .replace("__ADD_BTN_DEF__", add_btn_def)
         .replace("__REMOVE_BTN_DEF__", remove_btn_def)
 }
 
 pub(super) fn hello_template_main_rs(package_name: &str, opts: ScaffoldOptions) -> String {
-    let icons_builder = match opts.icon_pack {
-        IconPack::Lucide => "\n        .with_lucide_icons()",
-        IconPack::Radix => "\n        .with_radix_icons()",
-        IconPack::None => "",
-    };
-
     let palette_button = if opts.command_palette {
         r#"
                 shadcn::Button::new("Command palette")
@@ -486,22 +453,15 @@ pub(super) fn hello_template_main_rs(package_name: &str, opts: ScaffoldOptions) 
     };
 
     format!(
-        r#"use fret_app::{{App, CommandId}};
-use fret_bootstrap::ui_app_with_hooks;
-use fret_ui_shadcn::{{self as shadcn, prelude::*}};
+        r#"use fret_kit::prelude::*;
 
 const CMD_CLICK: &str = "hello.click";
 
 fn main() -> anyhow::Result<()> {{
-    ui_app_with_hooks("{package_name}", init_window, view, |d| d.on_command(on_command))
-        .with_default_diagnostics()
-        .with_default_config_files()?
+    fret_kit::app_with_hooks("{package_name}", init_window, view, |d| d.on_command(on_command))?
         .with_main_window("{package_name}", (560.0, 360.0))
-        .init_app(|app| {{
-            shadcn::install_app(app);
-        }})__ICONS_BUILDER__
-        .run()
-        .map_err(anyhow::Error::from)
+        .run()?;
+    Ok(())
 }}
 
 fn init_window(_app: &mut App, _window: AppWindowId) {{}}
@@ -540,7 +500,6 @@ fn on_command(
 }}
 "#
     )
-    .replace("__ICONS_BUILDER__", icons_builder)
     .replace("__PALETTE_BUTTON__", palette_button)
 }
 
@@ -554,14 +513,14 @@ pub(super) fn empty_template_main_rs() -> &'static str {
 
 pub(super) fn todo_template_readme_md(package_name: &str, opts: ScaffoldOptions) -> String {
     let ui_assets_line = if opts.ui_assets {
-        "- UI assets: enabled (`fret-bootstrap/ui-assets`)\n"
+        "- UI assets: enabled (`fret-kit/ui-assets`)\n"
     } else {
         "- UI assets: disabled (use `fretboard new todo --ui-assets` if you need images/SVG caches)\n"
     };
 
     let icons_line = match opts.icon_pack {
-        IconPack::Lucide => "- Icons: Lucide (`fret-bootstrap/icons-lucide`)\n",
-        IconPack::Radix => "- Icons: Radix (`fret-bootstrap/icons-radix`)\n",
+        IconPack::Lucide => "- Icons: Lucide (`fret-kit/icons-lucide`)\n",
+        IconPack::Radix => "- Icons: Radix (`fret-kit/icons-radix`)\n",
         IconPack::None => "- Icons: disabled\n",
     };
 
@@ -628,7 +587,7 @@ Set-Content -Path .fret/hotpatch.touch -Value (Get-Date).Ticks
 ## Next steps
 
 - Edit UI in `src/main.rs`
-- If you want hotpatch later, keep commands/IDs stable and prefer the `ui_app_with_hooks` golden path (ADR 0107 / 0112).
+- If you want hotpatch later, keep commands/IDs stable and prefer the `fret_kit::app_with_hooks` golden path (ADR 0107 / 0112).
 "#
     )
 }
@@ -658,8 +617,8 @@ cargo run --release
 
 pub(super) fn hello_template_readme_md(package_name: &str, opts: ScaffoldOptions) -> String {
     let icons_line = match opts.icon_pack {
-        IconPack::Lucide => "- Icons: Lucide (`fret-bootstrap/icons-lucide`)\n",
-        IconPack::Radix => "- Icons: Radix (`fret-bootstrap/icons-radix`)\n",
+        IconPack::Lucide => "- Icons: Lucide (`fret-kit/icons-lucide`)\n",
+        IconPack::Radix => "- Icons: Radix (`fret-kit/icons-radix`)\n",
         IconPack::None => "- Icons: disabled\n",
     };
 
