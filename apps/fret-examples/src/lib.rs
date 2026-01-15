@@ -49,6 +49,8 @@ pub mod drag_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod echarts_demo;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod echarts_multi_grid_demo;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod effects_demo;
 pub mod emoji_conformance_demo;
 pub mod error_bars_demo;
