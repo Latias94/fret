@@ -317,24 +317,13 @@ impl MarksStage {
                 self.series_index += 1;
                 continue;
             };
-            let (base_selection, view_x_filter, view_x_mapping_window, view_y_filter, empty_mask) =
-                if let Some(v) = participation.series_participation(series.id) {
-                    (
-                        v.selection.clone(),
-                        v.x_policy.filter,
-                        v.x_policy.mapping_window,
-                        v.y_filter,
-                        v.empty_mask,
-                    )
-                } else {
-                    (
-                        RowSelection::All,
-                        crate::engine::window_policy::AxisFilter1D::default(),
-                        None,
-                        crate::engine::window_policy::AxisFilter1D::default(),
-                        crate::view::SeriesEmptyMask::default(),
-                    )
-                };
+            let contract = participation.series_contract(series.id, table.row_count);
+            let base_selection = contract.selection;
+            let selection_range = contract.selection_range;
+            let view_x_filter = contract.x_policy.filter;
+            let view_x_mapping_window = contract.x_policy.mapping_window;
+            let view_y_filter = contract.y_filter;
+            let empty_mask = contract.empty_mask;
 
             let Some(dataset) = model.datasets.get(&series.dataset) else {
                 self.series_index += 1;
@@ -349,12 +338,6 @@ impl MarksStage {
                 continue;
             };
 
-            let selection_range = base_selection.as_range(table.row_count);
-            let selection_range = crate::transform::RowRange {
-                start: selection_range.start,
-                end: selection_range.end,
-            };
-
             if self.active_series != Some(series.id) {
                 let view = selection_stage.table_view_for(
                     table,
@@ -362,7 +345,7 @@ impl MarksStage {
                     x_col,
                     selection_range,
                     view_x_filter,
-                    base_selection.clone(),
+                    base_selection,
                 );
                 self.active_series = Some(series.id);
                 self.active_selection = view.selection().clone();

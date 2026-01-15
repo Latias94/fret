@@ -1255,14 +1255,11 @@ fn request_nearest_x_indices_for_axis_pointer(
             continue;
         }
 
-        let Some(series_view) = participation.series_participation(series.id) else {
-            continue;
-        };
-        let (RowSelection::All | RowSelection::Range(_)) = series_view.selection else {
-            continue;
-        };
-
         let Some(table) = datasets.dataset(series.dataset) else {
+            continue;
+        };
+        let contract = participation.series_contract(series.id, table.row_count);
+        let (RowSelection::All | RowSelection::Range(_)) = contract.selection else {
             continue;
         };
         let Some(dataset) = model.datasets.get(&series.dataset) else {
@@ -1275,11 +1272,7 @@ fn request_nearest_x_indices_for_axis_pointer(
             continue;
         };
 
-        let selection_range = series_view.selection.as_range(table.row_count);
-        let selection_range = RowRange {
-            start: selection_range.start,
-            end: selection_range.end,
-        };
+        let selection_range = contract.selection_range;
         let visible_len = selection_range.end.saturating_sub(selection_range.start);
         if visible_len <= MAX_UNSORTED_AXIS_SCAN_POINTS {
             continue;
@@ -1293,7 +1286,7 @@ fn request_nearest_x_indices_for_axis_pointer(
             series.dataset,
             x_col,
             selection_range,
-            series_view.x_policy.filter,
+            contract.x_policy.filter,
         ));
     }
 }
@@ -1554,31 +1547,11 @@ fn compute_axis_axis_pointer_output(
             None
         };
 
-        let (selection_range, filter, base_selection, empty_mask) =
-            match participation.series_participation(series.id) {
-                Some(series_view) => {
-                    let selection_range = series_view.selection.as_range(table.row_count);
-                    let selection_range = RowRange {
-                        start: selection_range.start,
-                        end: selection_range.end,
-                    };
-                    (
-                        selection_range,
-                        series_view.x_policy.filter,
-                        series_view.selection.clone(),
-                        series_view.empty_mask,
-                    )
-                }
-                None => (
-                    RowRange {
-                        start: 0,
-                        end: table.row_count,
-                    },
-                    crate::engine::window_policy::AxisFilter1D::default(),
-                    RowSelection::default(),
-                    Default::default(),
-                ),
-            };
+        let contract = participation.series_contract(series.id, table.row_count);
+        let selection_range = contract.selection_range;
+        let filter = contract.x_policy.filter;
+        let base_selection = contract.selection.clone();
+        let empty_mask = contract.empty_mask;
 
         let selection_for_index = base_selection.clone();
         let filter_for_index = if series_trigger_axis == series.x_axis {
@@ -1849,31 +1822,11 @@ fn snap_axis_pointer_x_to_series(
         .and_then(|y2_field| dataset.fields.get(&y2_field).copied())
         .and_then(|y2_col| table.column_f64(y2_col));
 
-    let (selection_range, filter, base_selection, empty_mask) =
-        match participation.series_participation(primary.id) {
-            Some(series_view) => {
-                let selection_range = series_view.selection.as_range(table.row_count);
-                let selection_range = RowRange {
-                    start: selection_range.start,
-                    end: selection_range.end,
-                };
-                (
-                    selection_range,
-                    series_view.x_policy.filter,
-                    series_view.selection.clone(),
-                    series_view.empty_mask,
-                )
-            }
-            None => (
-                RowRange {
-                    start: 0,
-                    end: table.row_count,
-                },
-                crate::engine::window_policy::AxisFilter1D::default(),
-                RowSelection::default(),
-                Default::default(),
-            ),
-        };
+    let contract = participation.series_contract(primary.id, table.row_count);
+    let selection_range = contract.selection_range;
+    let filter = contract.x_policy.filter;
+    let base_selection = contract.selection;
+    let empty_mask = contract.empty_mask;
 
     let table_view = data_views.table_view_for(
         table,
@@ -2075,31 +2028,11 @@ fn snap_axis_pointer_y_to_series(
         .and_then(|y2_field| dataset.fields.get(&y2_field).copied())
         .and_then(|y2_col| table.column_f64(y2_col));
 
-    let (selection_range, filter, base_selection, empty_mask) =
-        match participation.series_participation(primary.id) {
-            Some(series_view) => {
-                let selection_range = series_view.selection.as_range(table.row_count);
-                let selection_range = RowRange {
-                    start: selection_range.start,
-                    end: selection_range.end,
-                };
-                (
-                    selection_range,
-                    series_view.x_policy.filter,
-                    series_view.selection.clone(),
-                    series_view.empty_mask,
-                )
-            }
-            None => (
-                RowRange {
-                    start: 0,
-                    end: table.row_count,
-                },
-                crate::engine::window_policy::AxisFilter1D::default(),
-                RowSelection::default(),
-                Default::default(),
-            ),
-        };
+    let contract = participation.series_contract(primary.id, table.row_count);
+    let selection_range = contract.selection_range;
+    let filter = contract.x_policy.filter;
+    let base_selection = contract.selection.clone();
+    let empty_mask = contract.empty_mask;
 
     let table_view = data_views.table_view_for(
         table,
@@ -2321,29 +2254,10 @@ fn request_ordinal_indices_for_axis_pointer(
             continue;
         };
 
-        let (selection_range, filter, selection) =
-            match participation.series_participation(series.id) {
-                Some(series_view) => {
-                    let selection_range = series_view.selection.as_range(table.row_count);
-                    let selection_range = RowRange {
-                        start: selection_range.start,
-                        end: selection_range.end,
-                    };
-                    (
-                        selection_range,
-                        series_view.x_policy.filter,
-                        series_view.selection.clone(),
-                    )
-                }
-                None => (
-                    RowRange {
-                        start: 0,
-                        end: table.row_count,
-                    },
-                    crate::engine::window_policy::AxisFilter1D::default(),
-                    RowSelection::default(),
-                ),
-            };
+        let contract = participation.series_contract(series.id, table.row_count);
+        let selection_range = contract.selection_range;
+        let filter = contract.x_policy.filter;
+        let selection = contract.selection;
 
         if matches!(selection, RowSelection::Indices(_)) {
             continue;

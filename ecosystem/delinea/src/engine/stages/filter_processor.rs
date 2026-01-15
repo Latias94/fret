@@ -4,7 +4,7 @@ use crate::engine::ChartState;
 use crate::engine::model::ChartModel;
 use crate::ids::{DatasetId, GridId, Revision, SeriesId};
 use crate::spec::FilterMode;
-use crate::transform::{RowSelection, SeriesXPolicy};
+use crate::transform::{RowRange, RowSelection, SeriesXPolicy};
 use crate::view::SeriesEmptyMask;
 use crate::view::ViewState;
 use std::collections::BTreeMap;
@@ -34,6 +34,17 @@ pub struct ParticipationState {
     series_index: BTreeMap<SeriesId, usize>,
 }
 
+#[derive(Debug, Clone)]
+pub struct SeriesParticipationContract {
+    pub selection_range: RowRange,
+    pub selection: RowSelection,
+    pub x_policy: SeriesXPolicy,
+    pub x_filter_mode: FilterMode,
+    pub y_filter_mode: FilterMode,
+    pub y_filter: crate::engine::window_policy::AxisFilter1D,
+    pub empty_mask: SeriesEmptyMask,
+}
+
 impl ParticipationState {
     pub fn clear(&mut self) {
         self.revision = Revision::default();
@@ -46,6 +57,41 @@ impl ParticipationState {
             .get(&series)
             .copied()
             .and_then(|i| self.series.get(i))
+    }
+
+    pub fn series_contract(
+        &self,
+        series: SeriesId,
+        row_count: usize,
+    ) -> SeriesParticipationContract {
+        let Some(p) = self.series_participation(series) else {
+            return SeriesParticipationContract {
+                selection_range: RowRange {
+                    start: 0,
+                    end: row_count,
+                },
+                selection: RowSelection::All,
+                x_policy: SeriesXPolicy::default(),
+                x_filter_mode: FilterMode::None,
+                y_filter_mode: FilterMode::None,
+                y_filter: crate::engine::window_policy::AxisFilter1D::default(),
+                empty_mask: SeriesEmptyMask::default(),
+            };
+        };
+
+        let selection_range = p.selection.as_range(row_count);
+        SeriesParticipationContract {
+            selection_range: RowRange {
+                start: selection_range.start,
+                end: selection_range.end,
+            },
+            selection: p.selection.clone(),
+            x_policy: p.x_policy,
+            x_filter_mode: p.x_filter_mode,
+            y_filter_mode: p.y_filter_mode,
+            y_filter: p.y_filter,
+            empty_mask: p.empty_mask,
+        }
     }
 
     pub fn rebuild_from_view(&mut self, model: &ChartModel, view: &ViewState) {
