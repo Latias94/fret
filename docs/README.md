@@ -19,6 +19,20 @@ contracts early to avoid large rewrites later.
 - Workstream notes (non-authoritative): `docs/workstreams/`
 - Historical planning docs: `docs/archive/`
 
+## Public crate surfaces (what to remember)
+
+We intentionally keep the *user-facing* story to a small set of crate names:
+
+- `fret-kit`: desktop-first batteries-included app entry points.
+- `fret-ui-shadcn`: default component surface (shadcn/ui-aligned taxonomy + recipes).
+- `fret-ui-kit`: component authoring glue (policies + headless primitives + declarative helpers).
+- `fret`: framework facade for advanced/manual assembly and integrations.
+- `fretboard`: dev tooling (templates + native/web demo runner).
+
+Web/wasm runs through tooling (not through `fret-kit`):
+
+- `cargo run -p fretboard -- dev web --demo ui_gallery`
+
 ## Recommended reading order (for a new contributor or AI agent)
 
 1. `docs/architecture.md` — what Fret is, what it is not, and how crates fit together.

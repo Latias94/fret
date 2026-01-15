@@ -64,3 +64,21 @@ cargo run -p fretboard -- dev web --demo ui_gallery
 
 This runs `apps/fret-demo-web` via `trunk serve`.
 
+## When to drop down to `fret` + `fret-bootstrap`
+
+`fret-kit` is designed to keep the “first app” and “small app” story simple. Prefer dropping down
+to manual assembly when you need:
+
+- a custom runner/event loop integration (`fret-launch`),
+- non-default settings/keymap/config file layering,
+- different icon/asset wiring policies than the kit defaults,
+- experimenting with alternate component surfaces without the kit defaults.
+
+Mapping (rough):
+
+- `fret_kit::app_with_hooks(...)` → `fret_bootstrap::ui_app_with_hooks(...)`
+- `fret_kit::UiAppBuilder` → `fret_bootstrap::UiAppBootstrapBuilder`
+- `fret_kit::UiAppDriver` → `fret_bootstrap::ui_app_driver::UiAppDriver`
+
+The recommended manual-assembly entry point remains `fret-bootstrap`, keeping the underlying driver
+hotpatch-friendly (function-pointer `FnDriver` surface, per ADR 0107 / 0112).

@@ -13,6 +13,14 @@ If you are a component author, start with:
 
 ## Quick rules of thumb
 
+### The 5 crate names to remember
+
+- `fret-kit`: desktop-first batteries-included app entry point.
+- `fret-ui-shadcn`: default component surface (apps).
+- `fret-ui-kit`: component authoring glue (ecosystem libraries).
+- `fret`: framework facade for advanced/manual assembly.
+- `fretboard`: dev tooling (templates + native/web runner).
+
 1) If you are writing a reusable ecosystem library, avoid backend crates (`fret-launch`, `winit`, `wgpu`).
 
 2) Prefer this dependency ladder (low → high):
@@ -26,6 +34,10 @@ If you are a component author, start with:
 Desktop-first quick start:
 
 - If you want a single dependency for a native desktop app, use `fret-kit` (ecosystem-level batteries-included wrapper).
+
+Web/wasm quick start (tooling):
+
+- `cargo run -p fretboard -- dev web --demo ui_gallery`
 
 3) Only depend on `fret-app` if you need app-owned integration surfaces:
 
