@@ -152,8 +152,9 @@ single “at a glance” view of:
 - Validation (recommended):
   - `cargo run -p fret-demo --bin fret-demo -- category_line_demo` (category X axis + line/scatter + dataZoom)
 - Missing vs ECharts:
-  - fully stable ordinal mapping semantics for line/scatter under zoom (not just bars/axis pointer),
-  - conformance tests that lock “raw index ↔ ordinal index” invariants across transforms.
+  - category 数据仍以 `f64` ordinal（索引）表达；ECharts 的“直接用字符串/任意值作为 category data”需要 adapter 侧/引擎侧更明确的映射策略与约束。
+  - 重复 category 的取样策略（first/last/nearest/aggregate）目前是 v1 隐式规则（偏向 first-in-selection），需要在更多路径与更多 series kind（Area/Band/stacked）上补齐一致性与文档口径。
+  - 性能/一致性：indices 物化与 ordinal index 的协同策略仍可优化（避免重复建索引、在更多采样路径复用 ordinal 映射而非扫描）。
 
 **S5 - Tooltip content parity + formatting hooks** (`[~]`)
 
