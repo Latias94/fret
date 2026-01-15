@@ -753,10 +753,18 @@ fn context_menu_submenu_panel<H: UiHost>(
     let destructive_bg = alpha_mul(destructive_fg, 0.12);
     let panel_bg = theme.color_required("popover");
 
+    let labelled_by_element = cx
+        .app
+        .models_mut()
+        .read(&submenu_models.trigger, |v| *v)
+        .ok()
+        .flatten();
+
     menu::sub_content::submenu_panel_scroll_y_for_value_at(
         cx,
         open_value,
         placed,
+        labelled_by_element,
         move |layout| ContainerProps {
             layout,
             padding: Edges::all(Px(4.0)),
@@ -1119,7 +1127,7 @@ fn context_menu_submenu_panel<H: UiHost>(
                         },
                         roving: RovingFocusProps {
                             enabled: true,
-                            wrap: true,
+                            wrap: false,
                             disabled: disabled_arc.clone(),
                             ..Default::default()
                         },
@@ -1592,7 +1600,7 @@ impl ContextMenu {
                                                     },
                                                     roving: RovingFocusProps {
                                                         enabled: true,
-                                                        wrap: true,
+                                                        wrap: false,
                                                         disabled: disabled_arc.clone(),
                                                         ..Default::default()
                                                     },
