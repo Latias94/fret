@@ -35,6 +35,7 @@ fret = { path = "../../crates/fret", optional = true }
 
 # Golden-path wiring and optional ecosystem integrations.
 fret-bootstrap = { path = "../fret-bootstrap", default-features = false }
+fret-icons = { path = "../fret-icons" }
 fret-ui-shadcn = { path = "../fret-ui-shadcn", features = ["app-integration"] }
 
 # Used by the public signatures and error types.

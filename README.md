@@ -11,4 +11,5 @@ The primary demo in this repository is an editor-style app (Unity/Unreal/Godot-i
 This repo focuses on the **core framework** (`fret-*` crates). Reusable UI components will live in a separate
 repository (`fret-components`) per `docs/adr/0037-workspace-boundaries-and-components-repository.md`.
 
+- Quick start (desktop, in this repo): `cargo run -p fretboard -- new todo --name my-todo`
 - Start here: `docs/README.md`
