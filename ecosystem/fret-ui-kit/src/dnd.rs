@@ -9,8 +9,8 @@ use fret_dnd::{
     Draggable, Droppable, PointerSensor, RegistrySnapshot, SensorEvent, closest_center_collisions,
     compute_autoscroll, pointer_within_collisions,
 };
-use fret_runtime::{DragKindId, FrameId, TickId};
-use fret_ui::UiHost;
+use fret_runtime::{DragKindId, FrameId, Model, ModelStore, TickId};
+use fret_ui::{ElementContext, UiHost};
 
 #[derive(Debug, Clone)]
 pub struct PendingDragUpdate {
@@ -35,6 +35,31 @@ impl Default for PendingDragUpdate {
 struct DndService {
     registry: DndRegistryService,
     controller: DndControllerService,
+}
+
+#[derive(Clone)]
+pub struct DndServiceModel {
+    model: Model<DndService>,
+}
+
+#[derive(Default)]
+struct DndServiceModelState {
+    model: Option<DndServiceModel>,
+}
+
+pub fn dnd_service_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> DndServiceModel {
+    let existing = cx.with_state(DndServiceModelState::default, |st| st.model.clone());
+    if let Some(model) = existing {
+        return model;
+    }
+
+    let model = DndServiceModel {
+        model: cx.app.models_mut().insert(DndService::default()),
+    };
+    cx.with_state(DndServiceModelState::default, |st| {
+        st.model = Some(model.clone());
+    });
+    model
 }
 
 #[derive(Default)]
@@ -96,21 +121,26 @@ impl DndControllerService {
     }
 }
 
-fn with_dnd_mut<H: UiHost, R>(app: &mut H, f: impl FnOnce(&mut DndService, &mut H) -> R) -> R {
-    app.with_global_mut(DndService::default, f)
+fn update_dnd<R>(
+    models: &mut ModelStore,
+    svc: &DndServiceModel,
+    f: impl FnOnce(&mut DndService) -> R,
+) -> Option<R> {
+    models.update(&svc.model, f).ok()
 }
 
-pub fn register_droppable_rect<H: UiHost>(
-    app: &mut H,
+pub fn register_droppable_rect(
+    models: &mut ModelStore,
+    svc: &DndServiceModel,
     window: AppWindowId,
+    frame_id: FrameId,
     id: DndItemId,
     rect: Rect,
     z_index: i32,
     disabled: bool,
 ) {
-    let frame_id = app.frame_id();
-    with_dnd_mut(app, |svc, _app| {
-        let snapshot = svc.registry.snapshot_mut_for_frame(window, frame_id);
+    let _ = update_dnd(models, svc, |dnd| {
+        let snapshot = dnd.registry.snapshot_mut_for_frame(window, frame_id);
         snapshot.droppables.push(Droppable {
             id,
             rect,
@@ -120,27 +150,29 @@ pub fn register_droppable_rect<H: UiHost>(
     });
 }
 
-pub fn register_draggable_rect<H: UiHost>(
-    app: &mut H,
+pub fn register_draggable_rect(
+    models: &mut ModelStore,
+    svc: &DndServiceModel,
     window: AppWindowId,
+    frame_id: FrameId,
     id: DndItemId,
     rect: Rect,
 ) {
-    let frame_id = app.frame_id();
-    with_dnd_mut(app, |svc, _app| {
-        let snapshot = svc.registry.snapshot_mut_for_frame(window, frame_id);
+    let _ = update_dnd(models, svc, |dnd| {
+        let snapshot = dnd.registry.snapshot_mut_for_frame(window, frame_id);
         snapshot.draggables.push(Draggable { id, rect });
     });
 }
 
-pub fn clear_pending_pointer<H: UiHost>(
-    app: &mut H,
+pub fn clear_pending_pointer(
+    models: &mut ModelStore,
+    svc: &DndServiceModel,
     window: AppWindowId,
     kind: DragKindId,
     pointer_id: PointerId,
 ) {
-    with_dnd_mut(app, |svc, _app| {
-        let Some(window) = svc.controller.windows.get_mut(&window) else {
+    let _ = update_dnd(models, svc, |dnd| {
+        let Some(window) = dnd.controller.windows.get_mut(&window) else {
             return;
         };
         let Some(sensor) = window.sensors_by_kind.get_mut(&kind) else {
@@ -151,23 +183,23 @@ pub fn clear_pending_pointer<H: UiHost>(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn update_pending_drag_move<H: UiHost>(
-    app: &mut H,
+pub fn update_pending_drag_move(
+    models: &mut ModelStore,
+    svc: &DndServiceModel,
     window: AppWindowId,
+    frame_id: FrameId,
     kind: DragKindId,
     pointer_id: PointerId,
     start_tick: TickId,
     start_position: Point,
     position: Point,
+    tick_id: TickId,
     constraint: ActivationConstraint,
     collision_strategy: CollisionStrategy,
     autoscroll: Option<(Rect, AutoScrollConfig)>,
 ) -> PendingDragUpdate {
-    let frame_id = app.frame_id();
-    let tick = app.tick_id();
-
-    with_dnd_mut(app, |svc, _app| {
-        let sensor = svc.controller.sensor_mut(window, kind, constraint);
+    update_dnd(models, svc, |dnd| {
+        let sensor = dnd.controller.sensor_mut(window, kind, constraint);
         if !sensor.is_tracking(pointer_id) {
             let _ = sensor.handle(SensorEvent::Down {
                 pointer_id,
@@ -179,10 +211,10 @@ pub fn update_pending_drag_move<H: UiHost>(
         let sensor = sensor.handle(SensorEvent::Move {
             pointer_id,
             position,
-            tick: tick.0,
+            tick: tick_id.0,
         });
 
-        let snapshot = svc.registry.snapshot_for_frame(window, frame_id);
+        let snapshot = dnd.registry.snapshot_for_frame(window, frame_id);
         let collisions = match collision_strategy {
             CollisionStrategy::PointerWithin => pointer_within_collisions(snapshot, position),
             CollisionStrategy::ClosestCenter => closest_center_collisions(snapshot, position),
@@ -199,4 +231,5 @@ pub fn update_pending_drag_move<H: UiHost>(
             autoscroll,
         }
     })
+    .unwrap_or_default()
 }
