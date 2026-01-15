@@ -1131,31 +1131,31 @@ impl ChartEngine {
                     if rect_contains_point(viewport, hover_px) {
                         match spec.trigger {
                             AxisPointerTrigger::Item => {
-                                let hit = hit_test::hover_hit_test(
+                                let raw_hit = hit_test::hover_hit_test(
                                     &self.model,
                                     &self.datasets,
                                     &self.output.marks,
                                     hover_px,
                                     &self.stack_dims_stage,
                                 );
-                                self.axis_pointer_cache.hit = hit;
-                                self.axis_pointer_cache.output = compute_item_axis_pointer_output(
+                                let output = compute_item_axis_pointer_output(
                                     &self.model,
                                     hover_px,
-                                    hit,
+                                    raw_hit,
                                     spec,
                                 );
+                                self.axis_pointer_cache.hit = output.as_ref().and_then(|o| o.hit);
+                                self.axis_pointer_cache.output = output;
                             }
                             AxisPointerTrigger::Axis => {
-                                let hit = hit_test::hover_hit_test(
+                                let raw_hit = hit_test::hover_hit_test(
                                     &self.model,
                                     &self.datasets,
                                     &self.output.marks,
                                     hover_px,
                                     &self.stack_dims_stage,
                                 );
-                                self.axis_pointer_cache.hit = hit;
-                                self.axis_pointer_cache.output = compute_axis_axis_pointer_output(
+                                let output = compute_axis_axis_pointer_output(
                                     &self.model,
                                     &self.datasets,
                                     &self.participation,
@@ -1166,9 +1166,11 @@ impl ChartEngine {
                                     &self.output.axis_windows,
                                     viewport,
                                     hover_px,
-                                    hit,
+                                    raw_hit,
                                     spec,
                                 );
+                                self.axis_pointer_cache.hit = output.as_ref().and_then(|o| o.hit);
+                                self.axis_pointer_cache.output = output;
                             }
                         }
                     }

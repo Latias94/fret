@@ -387,6 +387,9 @@ single “at a glance” view of:
 
 - When multiple hits are equally close (distance ties within float epsilon), the chosen hover hit is
   deterministic and prefers earlier `series_order` (stable tooltip/marker behavior across refactors).
+- `ChartOutput.hover` is gated by `AxisPointerSpec.trigger_distance_px` and matches `AxisPointerOutput.hit`:
+  - `trigger=Item`: `hover` is `None` when the pointer is too far from a mark (same as `axis_pointer=None`).
+  - `trigger=Axis`: `axis_pointer` can remain active while `hover`/marker hit is `None`.
 - Axis-trigger tooltips keep a stable row set and order:
   - First row is always the trigger axis label/value.
   - Then one row per visible series in `series_order`.
