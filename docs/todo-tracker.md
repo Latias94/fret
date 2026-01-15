@@ -168,6 +168,8 @@ It complements (but does not replace) ADRs:
       - tooltip hover open/close + Escape dismissal,
       - hover-card hover-out (content remains mounted with `data-state=closed`),
       - navigation-menu Escape close clears selected value.
+    - Normalized Radix web `press` simulation in state gates to dispatch `KeyDown`+`KeyUp` (so
+      activation semantics match web timelines consistently, without per-test patches).
   - Goldens to expand:
     - `goldens/shadcn-web/v4/new-york-v4/*.open.json`: add open snapshots for pages that require non-click input and/or submenu open states.
   - Fret gates to add:

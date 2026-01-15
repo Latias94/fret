@@ -151,10 +151,56 @@ fn parse_key_sequence(key: &str) -> Vec<KeyCode> {
             "Home" => KeyCode::Home,
             "End" => KeyCode::End,
             "Enter" => KeyCode::Enter,
+            "NumpadEnter" => KeyCode::NumpadEnter,
             "Escape" => KeyCode::Escape,
+            "Space" => KeyCode::Space,
+            "Tab" => KeyCode::Tab,
             other => panic!("unsupported key in radix web action: {other:?}"),
         })
         .collect()
+}
+
+fn dispatch_key_down(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    key: KeyCode,
+) {
+    ui.dispatch_event(
+        app,
+        services,
+        &Event::KeyDown {
+            key,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+}
+
+fn dispatch_key_up(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    key: KeyCode,
+) {
+    ui.dispatch_event(
+        app,
+        services,
+        &Event::KeyUp {
+            key,
+            modifiers: Modifiers::default(),
+        },
+    );
+}
+
+fn dispatch_web_press(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    key: KeyCode,
+) {
+    dispatch_key_down(ui, app, services, key);
+    dispatch_key_up(ui, app, services, key);
 }
 
 fn find_first<'a>(node: &'a DomNode, pred: &impl Fn(&'a DomNode) -> bool) -> Option<&'a DomNode> {
@@ -515,15 +561,7 @@ fn radix_web_alert_dialog_open_cancel_matches_fret() {
     );
     assert!(app.models().get_copied(&open).unwrap_or(false));
 
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::KeyDown {
-            key: KeyCode::Escape,
-            modifiers: Modifiers::default(),
-            repeat: false,
-        },
-    );
+    dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::Escape);
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
@@ -633,15 +671,7 @@ fn radix_web_dialog_open_close_matches_fret() {
     );
     assert!(app.models().get_copied(&open).unwrap_or(false));
 
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::KeyDown {
-            key: KeyCode::Escape,
-            modifiers: Modifiers::default(),
-            repeat: false,
-        },
-    );
+    dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::Escape);
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
@@ -768,27 +798,12 @@ fn radix_web_dropdown_menu_open_navigate_select_matches_fret() {
         "expected focus to move to the menu content after opening"
     );
 
-    let keys = parse_key_sequence("ArrowDown,Enter");
+    let Action::Press { key } = &press_step.action else {
+        unreachable!("press step must be a press action");
+    };
+    let keys = parse_key_sequence(key);
     for (idx, key) in keys.into_iter().enumerate() {
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &Event::KeyDown {
-                key,
-                modifiers: Modifiers::default(),
-                repeat: false,
-            },
-        );
-        if matches!(key, KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space) {
-            ui.dispatch_event(
-                &mut app,
-                &mut services,
-                &Event::KeyUp {
-                    key,
-                    modifiers: Modifiers::default(),
-                },
-            );
-        }
+        dispatch_web_press(&mut ui, &mut app, &mut services, key);
         timers.ingest_effects(&mut app);
         timers.fire_all(&mut ui, &mut app, &mut services);
 
@@ -914,15 +929,7 @@ fn radix_web_context_menu_open_close_matches_fret() {
 
     assert!(app.models().get_copied(&open).unwrap_or(false));
 
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::KeyDown {
-            key: KeyCode::Escape,
-            modifiers: Modifiers::default(),
-            repeat: false,
-        },
-    );
+    dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::Escape);
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
@@ -1026,17 +1033,12 @@ fn radix_web_menubar_open_navigate_close_matches_fret() {
         |cx| vec![build(cx)],
     );
 
-    let keys = parse_key_sequence("ArrowDown,Escape");
+    let Action::Press { key } = &press_step.action else {
+        unreachable!("press step must be a press action");
+    };
+    let keys = parse_key_sequence(key);
     for (idx, key) in keys.into_iter().enumerate() {
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &Event::KeyDown {
-                key,
-                modifiers: Modifiers::default(),
-                repeat: false,
-            },
-        );
+        dispatch_web_press(&mut ui, &mut app, &mut services, key);
         timers.ingest_effects(&mut app);
         timers.fire_all(&mut ui, &mut app, &mut services);
 
@@ -1150,15 +1152,7 @@ fn radix_web_navigation_menu_open_close_matches_fret() {
         Some("alpha")
     );
 
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::KeyDown {
-            key: KeyCode::Escape,
-            modifiers: Modifiers::default(),
-            repeat: false,
-        },
-    );
+    dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::Escape);
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
@@ -1266,15 +1260,7 @@ fn radix_web_popover_open_close_matches_fret() {
 
     assert!(app.models().get_copied(&open).unwrap_or(false));
 
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::KeyDown {
-            key: KeyCode::Escape,
-            modifiers: Modifiers::default(),
-            repeat: false,
-        },
-    );
+    dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::Escape);
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
@@ -1379,17 +1365,17 @@ fn radix_web_select_open_navigate_select_matches_fret() {
 
     assert!(app.models().get_copied(&open).unwrap_or(false));
 
-    let keys = parse_key_sequence("ArrowDown,ArrowDown,Enter");
+    let press_step = golden
+        .steps
+        .iter()
+        .find(|s| matches!(s.action, Action::Press { .. }))
+        .expect("press step");
+    let Action::Press { key } = &press_step.action else {
+        unreachable!("press step must be a press action");
+    };
+    let keys = parse_key_sequence(key);
     for (idx, key) in keys.into_iter().enumerate() {
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &Event::KeyDown {
-                key,
-                modifiers: Modifiers::default(),
-                repeat: false,
-            },
-        );
+        dispatch_web_press(&mut ui, &mut app, &mut services, key);
         timers.ingest_effects(&mut app);
         timers.fire_all(&mut ui, &mut app, &mut services);
 
@@ -1498,15 +1484,7 @@ fn radix_web_tooltip_hover_show_hide_matches_fret() {
         "expected tooltip semantics after hover"
     );
 
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::KeyDown {
-            key: KeyCode::Escape,
-            modifiers: Modifiers::default(),
-            repeat: false,
-        },
-    );
+    dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::Escape);
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
@@ -2653,15 +2631,7 @@ fn radix_web_dropdown_menu_submenu_keyboard_open_close_matches_fret() {
         .expect("semantics snapshot");
     let trigger = find_semantics(&snap, SemanticsRole::Button, "Open");
     ui.set_focus(Some(trigger.id));
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::KeyDown {
-            key: KeyCode::ArrowDown,
-            modifiers: Modifiers::default(),
-            repeat: false,
-        },
-    );
+    dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
@@ -2687,15 +2657,7 @@ fn radix_web_dropdown_menu_submenu_keyboard_open_close_matches_fret() {
         "expected first menu item to be focused after opening via ArrowDown"
     );
 
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::KeyDown {
-            key: KeyCode::ArrowDown,
-            modifiers: Modifiers::default(),
-            repeat: false,
-        },
-    );
+    dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
@@ -2721,15 +2683,7 @@ fn radix_web_dropdown_menu_submenu_keyboard_open_close_matches_fret() {
         "expected submenu trigger to be focused after ArrowDown"
     );
 
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::KeyDown {
-            key: KeyCode::ArrowRight,
-            modifiers: Modifiers::default(),
-            repeat: false,
-        },
-    );
+    dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::ArrowRight);
     timers.ingest_effects(&mut app);
 
     render_frame(
@@ -2781,15 +2735,7 @@ fn radix_web_dropdown_menu_submenu_keyboard_open_close_matches_fret() {
         "expected UiTree focus to match focused semantics node"
     );
 
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::KeyDown {
-            key: KeyCode::ArrowLeft,
-            modifiers: Modifiers::default(),
-            repeat: false,
-        },
-    );
+    dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::ArrowLeft);
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
@@ -2965,15 +2911,7 @@ fn radix_web_context_menu_submenu_keyboard_open_close_matches_fret() {
             break;
         }
 
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &Event::KeyDown {
-                key: KeyCode::ArrowDown,
-                modifiers: Modifiers::default(),
-                repeat: false,
-            },
-        );
+        dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
         timers.ingest_effects(&mut app);
         timers.fire_all(&mut ui, &mut app, &mut services);
 
@@ -3001,15 +2939,7 @@ fn radix_web_context_menu_submenu_keyboard_open_close_matches_fret() {
         "expected submenu trigger to be focused before ArrowRight"
     );
 
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::KeyDown {
-            key: KeyCode::ArrowRight,
-            modifiers: Modifiers::default(),
-            repeat: false,
-        },
-    );
+    dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::ArrowRight);
     timers.ingest_effects(&mut app);
 
     render_frame(
@@ -3057,15 +2987,7 @@ fn radix_web_context_menu_submenu_keyboard_open_close_matches_fret() {
         "expected first submenu item to be focused after ArrowRight"
     );
 
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::KeyDown {
-            key: KeyCode::ArrowLeft,
-            modifiers: Modifiers::default(),
-            repeat: false,
-        },
-    );
+    dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::ArrowLeft);
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
@@ -3222,15 +3144,7 @@ fn radix_web_menubar_submenu_keyboard_open_close_matches_fret() {
             break;
         }
 
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &Event::KeyDown {
-                key: KeyCode::ArrowDown,
-                modifiers: Modifiers::default(),
-                repeat: false,
-            },
-        );
+        dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
         timers.ingest_effects(&mut app);
         timers.fire_all(&mut ui, &mut app, &mut services);
 
@@ -3258,15 +3172,7 @@ fn radix_web_menubar_submenu_keyboard_open_close_matches_fret() {
         "expected submenu trigger to be focused before ArrowRight"
     );
 
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::KeyDown {
-            key: KeyCode::ArrowRight,
-            modifiers: Modifiers::default(),
-            repeat: false,
-        },
-    );
+    dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::ArrowRight);
     timers.ingest_effects(&mut app);
 
     render_frame(
@@ -3313,15 +3219,7 @@ fn radix_web_menubar_submenu_keyboard_open_close_matches_fret() {
         "expected first submenu item to be focused after ArrowRight"
     );
 
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::KeyDown {
-            key: KeyCode::ArrowLeft,
-            modifiers: Modifiers::default(),
-            repeat: false,
-        },
-    );
+    dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::ArrowLeft);
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
@@ -4253,15 +4151,7 @@ fn radix_web_slider_arrow_right_state_matches_fret() {
     );
 
     for key in keys {
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &Event::KeyDown {
-                key,
-                modifiers: Modifiers::default(),
-                repeat: false,
-            },
-        );
+        dispatch_web_press(&mut ui, &mut app, &mut services, key);
     }
 
     render_frame(
