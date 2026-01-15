@@ -14,6 +14,7 @@ pub(super) struct PaintDockParams<'a> {
     pub(super) window: fret_core::AppWindowId,
     pub(super) layout: &'a std::collections::HashMap<DockNodeId, Rect>,
     pub(super) tab_titles: &'a HashMap<PanelKey, PreparedTabTitle>,
+    pub(super) tab_widths: &'a HashMap<DockNodeId, Arc<[Px]>>,
     pub(super) hovered_tab: Option<(DockNodeId, usize)>,
     pub(super) hovered_tab_close: bool,
     pub(super) pressed_tab_close: Option<(DockNodeId, usize)>,
@@ -41,6 +42,7 @@ pub(super) fn paint_dock(
         window,
         layout,
         tab_titles,
+        tab_widths,
         hovered_tab,
         hovered_tab_close,
         pressed_tab_close,
@@ -73,7 +75,11 @@ pub(super) fn paint_dock(
         });
 
         let scroll = tab_scroll_for_node(tab_scroll, node_id);
-        let tab_geom = TabBarGeometry::fixed(tab_bar, tabs.len());
+        let tab_geom = tab_widths
+            .get(&node_id)
+            .filter(|w| w.len() == tabs.len())
+            .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
+            .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tabs.len()));
         scene.push(SceneOp::PushClipRect { rect: tab_bar });
 
         for (i, panel) in tabs.iter().enumerate() {
@@ -303,6 +309,7 @@ pub(super) fn paint_drop_overlay(
     graph: &DockGraph,
     layout: &std::collections::HashMap<DockNodeId, Rect>,
     tab_scroll: &HashMap<DockNodeId, Px>,
+    tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
     scene: &mut Scene,
 ) {
     let Some(target) = target else {
@@ -349,7 +356,11 @@ pub(super) fn paint_drop_overlay(
                         Some(DockNode::Tabs { tabs, .. }) => tabs.len(),
                         _ => 0,
                     };
-                    let geom = TabBarGeometry::fixed(tab_bar, tab_count);
+                    let geom = tab_widths
+                        .get(&target.tabs)
+                        .filter(|w| w.len() == tab_count)
+                        .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
+                        .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tab_count));
                     let x = geom.insert_x(i.min(tab_count), scroll).0;
                     let marker = Rect::new(
                         Point::new(Px(x - 3.0), Px(tab_bar.origin.y.0 + 3.0)),

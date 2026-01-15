@@ -27,6 +27,7 @@ pub(super) fn hit_test_tab(
     graph: &DockGraph,
     layout: &std::collections::HashMap<DockNodeId, Rect>,
     tab_scroll: &HashMap<DockNodeId, Px>,
+    tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
     theme: fret_ui::ThemeSnapshot,
     position: Point,
 ) -> Option<(DockNodeId, usize, PanelKey, bool)> {
@@ -42,7 +43,11 @@ pub(super) fn hit_test_tab(
             continue;
         }
         let scroll = tab_scroll_for_node(tab_scroll, node);
-        let geom = TabBarGeometry::fixed(tab_bar, tabs.len());
+        let geom = tab_widths
+            .get(&node)
+            .filter(|w| w.len() == tabs.len())
+            .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
+            .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tabs.len()));
         let idx = geom.hit_test_tab_index(position, scroll)?;
         let panel = tabs.get(idx)?.clone();
         let tab_rect = geom.tab_rect(idx, scroll);

@@ -21,6 +21,7 @@ use super::split_stabilize::{
     SplitSizeLock, apply_same_axis_locks, compute_same_axis_locks_for_split_drag,
 };
 use super::tab_bar_geometry::TabBarGeometry;
+use super::tab_bar_geometry::dock_tab_width_for_title;
 use super::viewport::{
     ViewportCaptureState, hit_test_active_viewport_panel, viewport_input_from_hit,
     viewport_input_from_hit_clamped,
@@ -50,6 +51,7 @@ pub struct DockSpace {
     hovered_tab_close: bool,
     pressed_tab_close: Option<(DockNodeId, usize, PanelKey)>,
     tab_scroll: HashMap<DockNodeId, Px>,
+    tab_widths: HashMap<DockNodeId, Arc<[Px]>>,
     tab_close_glyph: Option<PreparedTabTitle>,
     tab_text_style: TextStyle,
     tab_close_style: TextStyle,
@@ -110,6 +112,7 @@ impl DockSpace {
             hovered_tab_close: false,
             pressed_tab_close: None,
             tab_scroll: HashMap::new(),
+            tab_widths: HashMap::new(),
             tab_close_glyph: None,
             tab_text_style: TextStyle {
                 font: fret_core::FontId::default(),
@@ -297,7 +300,7 @@ impl DockSpace {
 
         let pad_x = theme.metric_required("metric.padding.md");
         let reserve = Px(DOCK_TAB_CLOSE_SIZE.0 + DOCK_TAB_CLOSE_GAP.0);
-        let inner_max_w = Px((DOCK_TAB_W.0 - pad_x.0 * 2.0 - reserve.0).max(0.0));
+        let inner_max_w = Px((DOCK_TAB_MAX_W.0 - pad_x.0 * 2.0 - reserve.0).max(0.0));
         let constraints = TextConstraints {
             max_width: Some(inner_max_w),
             wrap: TextWrap::None,
@@ -354,8 +357,22 @@ impl DockSpace {
         }
     }
 
-    fn max_tab_scroll(tab_bar: Rect, tab_count: usize) -> Px {
-        TabBarGeometry::fixed(tab_bar, tab_count).max_scroll()
+    fn tab_bar_geometry_for_node(
+        &self,
+        tabs: DockNodeId,
+        tab_bar: Rect,
+        tab_count: usize,
+    ) -> TabBarGeometry {
+        self.tab_widths
+            .get(&tabs)
+            .filter(|w| w.len() == tab_count)
+            .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
+            .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tab_count))
+    }
+
+    fn max_tab_scroll(&self, tabs: DockNodeId, tab_bar: Rect, tab_count: usize) -> Px {
+        self.tab_bar_geometry_for_node(tabs, tab_bar, tab_count)
+            .max_scroll()
     }
 
     fn clamp_and_ensure_active_visible(
@@ -370,7 +387,7 @@ impl DockSpace {
             return;
         }
 
-        let geom = TabBarGeometry::fixed(tab_bar, tab_count);
+        let geom = self.tab_bar_geometry_for_node(tabs, tab_bar, tab_count);
         let max_scroll = geom.max_scroll();
         let mut scroll = self.tab_scroll_for(tabs);
 
@@ -519,6 +536,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             graph: &DockGraph,
             layout: &HashMap<DockNodeId, Rect>,
             tab_scroll: &HashMap<DockNodeId, Px>,
+            tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
             position: Point,
         ) -> Option<HoverTarget> {
             #[derive(Debug, Clone, Copy)]
@@ -616,10 +634,14 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 } => Some(HoverTarget {
                     tabs,
                     zone: DropZone::Center,
-                    insert_index: Some(
-                        TabBarGeometry::fixed(tab_bar, tab_count)
-                            .compute_insert_index(position, scroll),
-                    ),
+                    insert_index: Some({
+                        let geom = tab_widths
+                            .get(&tabs)
+                            .filter(|w| w.len() == tab_count)
+                            .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
+                            .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tab_count));
+                        geom.compute_insert_index(position, scroll)
+                    }),
                 }),
                 HoverKind::Zone { tabs, zone } => Some(HoverTarget {
                     tabs,
@@ -855,6 +877,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     &dock.graph,
                                     &layout,
                                     &self.tab_scroll,
+                                    &self.tab_widths,
                                     theme,
                                     *position,
                                 )
@@ -890,8 +913,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             };
                                             (tab_index < tab_count).then(|| {
                                                 let scroll = self.tab_scroll_for(tabs_node);
-                                                TabBarGeometry::fixed(bar, tab_count)
-                                                    .tab_rect(tab_index, scroll)
+                                                self.tab_bar_geometry_for_node(
+                                                    tabs_node, bar, tab_count,
+                                                )
+                                                .tab_rect(tab_index, scroll)
                                             })
                                         })
                                         .unwrap_or_else(|| Rect::new(*position, Size::default()));
@@ -922,6 +947,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 &dock.graph,
                                 &layout,
                                 &self.tab_scroll,
+                                &self.tab_widths,
                                 theme,
                                 *position,
                             )
@@ -1116,6 +1142,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     &dock.graph,
                                     &layout,
                                     &self.tab_scroll,
+                                    &self.tab_widths,
                                     theme,
                                     *position,
                                 )
@@ -1277,7 +1304,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 *active,
                             );
 
-                            let max_scroll = Self::max_tab_scroll(tab_bar, tabs.len());
+                            let max_scroll = self.max_tab_scroll(node_id, tab_bar, tabs.len());
                             if max_scroll.0 <= 0.0 {
                                 scrolled_tabs = true;
                                 break;
@@ -1432,6 +1459,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 &dock.graph,
                                 &layout,
                                 &self.tab_scroll,
+                                &self.tab_widths,
                                 theme,
                                 *position,
                             )
@@ -1663,6 +1691,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                     &dock.graph,
                                                     &layout,
                                                     &self.tab_scroll,
+                                                    &self.tab_widths,
                                                     position,
                                                 )
                                                 .map(DockDropTarget::Dock);
@@ -1727,6 +1756,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 &dock.graph,
                                                 &layout,
                                                 &self.tab_scroll,
+                                                &self.tab_widths,
                                                 position,
                                             )
                                             .map(DockDropTarget::Dock);
@@ -2025,6 +2055,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
             }
             self.tab_scroll
                 .retain(|tabs_node, _| visible_tabs_nodes.contains(tabs_node));
+            self.tab_widths
+                .retain(|tabs_node, _| visible_tabs_nodes.contains(tabs_node));
         }
 
         let panel_nodes = self.panel_nodes(cx.app);
@@ -2118,6 +2150,28 @@ impl<H: UiHost> Widget<H> for DockSpace {
             let hover = dock.hover.clone();
 
             self.rebuild_tab_titles(cx.services, theme, cx.scale_factor, &*dock, &layout_all);
+            self.tab_widths.clear();
+            for (&node_id, &_rect) in layout_all.iter() {
+                let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(node_id) else {
+                    continue;
+                };
+                if tabs.is_empty() {
+                    continue;
+                }
+                let close_glyph_present = self.tab_close_glyph.is_some();
+                let widths: Vec<Px> = tabs
+                    .iter()
+                    .map(|panel| {
+                        let title_width = self
+                            .tab_titles
+                            .get(panel)
+                            .map(|t| t.metrics.size.width)
+                            .unwrap_or(Px(0.0));
+                        dock_tab_width_for_title(theme, title_width, close_glyph_present)
+                    })
+                    .collect();
+                self.tab_widths.insert(node_id, Arc::from(widths));
+            }
 
             dock.clear_viewport_layout_for_window(self.window);
             for (&node_id, &rect) in layout_all.iter() {
@@ -2155,6 +2209,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     window: self.window,
                     layout: &root_layout,
                     tab_titles: &self.tab_titles,
+                    tab_widths: &self.tab_widths,
                     hovered_tab: self.hovered_tab,
                     hovered_tab_close: self.hovered_tab_close,
                     pressed_tab_close: self.pressed_tab_close.as_ref().map(|(n, i, _)| (*n, *i)),
@@ -2236,6 +2291,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         window: self.window,
                         layout,
                         tab_titles: &self.tab_titles,
+                        tab_widths: &self.tab_widths,
                         hovered_tab: self.hovered_tab,
                         hovered_tab_close: self.hovered_tab_close,
                         pressed_tab_close: self
@@ -2279,6 +2335,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 &dock.graph,
                 &layout_all,
                 &self.tab_scroll,
+                &self.tab_widths,
                 cx.scene,
             );
 
