@@ -64,7 +64,7 @@ Status symbols:
 ### Components & interaction semantics
 
 - `[x]` dataZoom X inside + slider UI (`fret-chart`) (ADR 1129 / ADR 1138)
-  - v1 option adapter seeds initial windows via `dataZoom.startValue/endValue` and `dataZoom.start/end` (percent, mapped from raw data extents).
+  - v1 option adapter seeds initial windows via `dataZoom.startValue/endValue` and `dataZoom.start/end` (percent, mapped from raw data extents); supports `dataZoom.rangeMode` (homogeneous `percent`/`value`) for choosing which range props are active.
   - v1 subset: when no `xAxisIndex`/`yAxisIndex` is specified, auto-targets all parallel axes in the first grid by `orient` (`horizontal` -> all X axes in grid(0), `vertical` -> all Y axes in grid(0)).
 - `[~]` dataZoom Y + 2D zoom semantics (v1 boundary + opt-in filtering) (ADR 1136 / ADR 1150)
 - `[x]` AxisPointer (axis-trigger + item-trigger) baseline (ADR 1133)

@@ -272,6 +272,8 @@ struct EchartsDataZoom {
     #[serde(default)]
     filter_mode: Option<String>,
     #[serde(default)]
+    range_mode: Option<EchartsDataZoomRangeMode>,
+    #[serde(default)]
     start: Option<f64>,
     #[serde(default)]
     end: Option<f64>,
@@ -283,6 +285,42 @@ struct EchartsDataZoom {
     min_value_span: Option<f64>,
     #[serde(default)]
     max_value_span: Option<f64>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+enum EchartsDataZoomRangeMode {
+    One(String),
+    Many(Vec<String>),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RangeMode {
+    Percent,
+    Value,
+}
+
+impl EchartsDataZoomRangeMode {
+    fn parse_homogeneous(&self) -> Result<RangeMode> {
+        let mode_str = match self {
+            Self::One(v) => v.as_str(),
+            Self::Many(v) => {
+                let first = v.first().map(|s| s.as_str()).unwrap_or("");
+                if v.iter().any(|s| s.as_str() != first) {
+                    return Err(EchartsError::Unsupported(
+                        "dataZoom.rangeMode mixed per bound (v1 subset)",
+                    ));
+                }
+                first
+            }
+        };
+
+        match mode_str {
+            "percent" => Ok(RangeMode::Percent),
+            "value" => Ok(RangeMode::Value),
+            _ => Err(EchartsError::Unsupported("dataZoom.rangeMode")),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -1051,14 +1089,22 @@ fn translate_data_zoom_v1(
         }
 
         let window_input = {
+            let range_mode = entry
+                .range_mode
+                .as_ref()
+                .map(EchartsDataZoomRangeMode::parse_homogeneous)
+                .transpose()?;
+
             let start_value = entry.start_value.as_ref().map(parse_f64_value);
             let end_value = entry.end_value.as_ref().map(parse_f64_value);
-            if let (Some(a), Some(b)) = (start_value, end_value)
-                && a.is_finite()
-                && b.is_finite()
-            {
-                Some(ZoomWindowInput::Value { start: a, end: b })
-            } else if entry.start.is_some() || entry.end.is_some() {
+            let value_window = match (start_value, end_value) {
+                (Some(a), Some(b)) if a.is_finite() && b.is_finite() => {
+                    Some(ZoomWindowInput::Value { start: a, end: b })
+                }
+                _ => None,
+            };
+
+            let percent_window = if entry.start.is_some() || entry.end.is_some() {
                 let start = entry.start.unwrap_or(0.0);
                 let end = entry.end.unwrap_or(100.0);
                 if start.is_finite() && end.is_finite() {
@@ -1068,6 +1114,12 @@ fn translate_data_zoom_v1(
                 }
             } else {
                 None
+            };
+
+            match range_mode {
+                Some(RangeMode::Value) => value_window,
+                Some(RangeMode::Percent) => percent_window,
+                None => value_window.or(percent_window),
             }
         };
 
@@ -2309,6 +2361,78 @@ mod tests {
                     if (w.min - 10.0).abs() < 1e-9 && (w.max - 30.0).abs() < 1e-9
             )),
             "expected SetDataWindowY actions for all targeted axes"
+        );
+    }
+
+    #[test]
+    fn translate_data_zoom_range_mode_value_ignores_start_end_percent() {
+        let json = r#"
+        {
+          "xAxis": { "type": "value" },
+          "yAxis": { "type": "value" },
+          "dataZoom": [
+            {
+              "type": "slider",
+              "xAxisIndex": 0,
+              "filterMode": "filter",
+              "rangeMode": "value",
+              "start": 25,
+              "end": 75,
+              "startValue": 1,
+              "endValue": 3
+            }
+          ],
+          "series": [
+            { "type": "scatter", "data": [[0, 0], [1, 10], [2, 20], [3, 30], [4, 40]] }
+          ]
+        }
+        "#;
+
+        let translated = translate_json_str(json).expect("translate");
+        assert_eq!(translated.spec.data_zoom_x.len(), 1);
+        assert!(
+            translated.actions.iter().any(|a| matches!(
+                a,
+                Action::SetDataWindowX { window: Some(w), .. }
+                    if (w.min - 1.0).abs() < 1e-9 && (w.max - 3.0).abs() < 1e-9
+            )),
+            "expected startValue/endValue to win under rangeMode=value"
+        );
+    }
+
+    #[test]
+    fn translate_data_zoom_range_mode_percent_ignores_start_value_end_value() {
+        let json = r#"
+        {
+          "xAxis": { "type": "value" },
+          "yAxis": { "type": "value" },
+          "dataZoom": [
+            {
+              "type": "slider",
+              "xAxisIndex": 0,
+              "filterMode": "filter",
+              "rangeMode": "percent",
+              "start": 25,
+              "end": 75,
+              "startValue": 123,
+              "endValue": 456
+            }
+          ],
+          "series": [
+            { "type": "scatter", "data": [[0, 0], [1, 10], [2, 20], [3, 30], [4, 40]] }
+          ]
+        }
+        "#;
+
+        let translated = translate_json_str(json).expect("translate");
+        assert_eq!(translated.spec.data_zoom_x.len(), 1);
+        assert!(
+            translated.actions.iter().any(|a| matches!(
+                a,
+                Action::SetDataWindowX { window: Some(w), .. }
+                    if (w.min - 1.0).abs() < 1e-9 && (w.max - 3.0).abs() < 1e-9
+            )),
+            "expected start/end percent to win under rangeMode=percent"
         );
     }
 
