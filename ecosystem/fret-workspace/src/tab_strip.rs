@@ -123,7 +123,7 @@ impl WorkspaceTab {
 /// - This is not a replacement for shadcn `Tabs` (which targets in-page navigation semantics).
 #[derive(Debug, Clone)]
 pub struct WorkspaceTabStrip {
-    active: Arc<str>,
+    active: Option<Arc<str>>,
     tabs: Vec<WorkspaceTab>,
     height: Px,
 }
@@ -137,10 +137,23 @@ struct WorkspaceTabStripState {
 impl WorkspaceTabStrip {
     pub fn new(active: impl Into<Arc<str>>) -> Self {
         Self {
-            active: active.into(),
+            active: Some(active.into()),
             tabs: Vec::new(),
             height: Px(28.0),
         }
+    }
+
+    pub fn new_optional(active: Option<Arc<str>>) -> Self {
+        Self {
+            active,
+            tabs: Vec::new(),
+            height: Px(28.0),
+        }
+    }
+
+    pub fn active(mut self, active: Option<Arc<str>>) -> Self {
+        self.active = active;
+        self
     }
 
     pub fn height(mut self, height: Px) -> Self {
@@ -227,8 +240,9 @@ impl WorkspaceTabStrip {
                                             let tab_command = tab.command.clone();
                                             let tab_close_command = tab.close_command.clone();
                                             let tab_dirty = tab.dirty;
-                                            let is_active =
-                                                tab_id.as_ref() == active.as_ref();
+                                            let is_active = active
+                                                .as_deref()
+                                                .is_some_and(|a| tab_id.as_ref() == a);
                                             let pos_in_set = (index as u32) + 1;
 
                                             let element = cx.keyed(tab_id.as_ref(), |cx| {
@@ -423,7 +437,7 @@ impl WorkspaceTabStrip {
                         },
                     );
 
-                    let active_changed = last_active.as_deref() != Some(active.as_ref());
+                    let active_changed = last_active.as_deref() != active.as_deref();
                     if active_changed {
                         if let (Some(scroll_id), Some(tab_id)) =
                             (scroll_element.get(), active_tab_element.get())
@@ -438,7 +452,7 @@ impl WorkspaceTabStrip {
                     }
 
                     cx.with_state(WorkspaceTabStripState::default, |state| {
-                        state.last_active = Some(active.clone());
+                        state.last_active = active.clone();
                     });
 
                     vec![root]

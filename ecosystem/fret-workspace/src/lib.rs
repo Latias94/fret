@@ -6,7 +6,10 @@
 
 pub mod commands;
 mod frame;
+pub mod layout;
+pub mod menu;
 mod tab_strip;
+pub mod tabs;
 
 pub use frame::{WorkspaceFrame, WorkspaceStatusBar, WorkspaceTopBar};
 pub use tab_strip::{WorkspaceTab, WorkspaceTabStrip};

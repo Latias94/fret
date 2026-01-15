@@ -2,16 +2,43 @@ use fret_core::{KeyCode, Modifiers};
 use fret_runtime::{
     CommandId, CommandMeta, CommandRegistry, DefaultKeybinding, KeyChord, PlatformFilter,
 };
+use std::sync::Arc;
 
 pub const CMD_WORKSPACE_TAB_NEXT: &str = "workspace.tab.next";
 pub const CMD_WORKSPACE_TAB_PREV: &str = "workspace.tab.prev";
 pub const CMD_WORKSPACE_TAB_CLOSE: &str = "workspace.tab.close";
+
+/// Prefix for "activate a specific tab" commands.
+///
+/// This is intentionally a prefix-based command family so apps can implement their own tab models
+/// without exposing internal IDs via generic enum payloads.
+pub const CMD_WORKSPACE_TAB_ACTIVATE_PREFIX: &str = "workspace.tab.activate.";
 
 /// Prefix for "close a specific tab" commands.
 ///
 /// This is intentionally a prefix-based command family so apps can implement their own tab models
 /// without exposing internal IDs via generic enum payloads.
 pub const CMD_WORKSPACE_TAB_CLOSE_PREFIX: &str = "workspace.tab.close.";
+
+pub fn tab_activate_command(id: &str) -> Option<CommandId> {
+    let id = id.trim();
+    if id.is_empty() {
+        return None;
+    }
+    Some(CommandId::new(Arc::<str>::from(format!(
+        "{CMD_WORKSPACE_TAB_ACTIVATE_PREFIX}{id}"
+    ))))
+}
+
+pub fn tab_close_command(id: &str) -> Option<CommandId> {
+    let id = id.trim();
+    if id.is_empty() {
+        return None;
+    }
+    Some(CommandId::new(Arc::<str>::from(format!(
+        "{CMD_WORKSPACE_TAB_CLOSE_PREFIX}{id}"
+    ))))
+}
 
 fn kb(platform: PlatformFilter, key: KeyCode, mods: Modifiers) -> DefaultKeybinding {
     DefaultKeybinding {
