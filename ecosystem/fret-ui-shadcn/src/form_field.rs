@@ -1,9 +1,11 @@
 use std::sync::Arc;
 
+use fret_core::Color;
 use fret_runtime::Model;
-use fret_ui::element::AnyElement;
+use fret_ui::element::{AnyElement, ElementKind};
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::headless::form_state::{FormFieldId, FormState};
 
 use crate::form::{FormControl, FormDescription, FormItem, FormLabel, FormMessage};
@@ -38,6 +40,7 @@ pub struct FormField {
     description: Option<Arc<str>>,
     control: Vec<AnyElement>,
     error_visibility: FormErrorVisibility,
+    decorate_control: bool,
 }
 
 impl FormField {
@@ -53,6 +56,7 @@ impl FormField {
             description: None,
             control: control.into(),
             error_visibility: FormErrorVisibility::default(),
+            decorate_control: true,
         }
     }
 
@@ -71,8 +75,17 @@ impl FormField {
         self
     }
 
+    /// When enabled (default), `FormField` attempts to decorate common controls:
+    /// - sets `a11y_label` on text inputs if missing
+    /// - switches border/focus styling to `destructive` when an error is visible
+    pub fn decorate_control(mut self, enabled: bool) -> Self {
+        self.decorate_control = enabled;
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let id = self.id;
+        let a11y_label = self.label.clone();
         let (submit_count, touched, error) = cx
             .watch_model(&self.form_state)
             .layout()
@@ -93,12 +106,34 @@ impl FormField {
             FormErrorVisibility::Always => true,
         };
 
+        let invalid = show_error && error.is_some();
+
         let mut children: Vec<AnyElement> = Vec::new();
-        if let Some(label) = self.label {
-            children.push(FormLabel::new(label).into_element(cx));
+        if let Some(label) = self.label.as_ref() {
+            children.push(FormLabel::new(Arc::clone(label)).into_element(cx));
         }
 
-        children.push(FormControl::new(self.control).into_element(cx));
+        let mut control = self.control;
+        if self.decorate_control {
+            let theme = fret_ui::Theme::global(&*cx.app).clone();
+            let destructive = theme.color_required("destructive");
+            let ring_color = Color {
+                a: 0.35,
+                ..destructive
+            };
+            let mut ring =
+                decl_style::focus_ring(&theme, theme.metric_required("metric.radius.md"));
+            ring.color = ring_color;
+
+            form_decorate_control_elements(
+                &mut control,
+                a11y_label.as_ref(),
+                invalid,
+                destructive,
+                ring,
+            );
+        }
+        children.push(FormControl::new(control).into_element(cx));
 
         if let Some(desc) = self.description {
             children.push(FormDescription::new(desc).into_element(cx));
@@ -109,5 +144,56 @@ impl FormField {
         }
 
         FormItem::new(children).into_element(cx)
+    }
+}
+
+fn form_decorate_control_elements(
+    elements: &mut [AnyElement],
+    a11y_label: Option<&Arc<str>>,
+    invalid: bool,
+    destructive: Color,
+    ring: fret_ui::element::RingStyle,
+) {
+    for el in elements {
+        form_decorate_control_element(el, a11y_label, invalid, destructive, ring);
+    }
+}
+
+fn form_decorate_control_element(
+    element: &mut AnyElement,
+    a11y_label: Option<&Arc<str>>,
+    invalid: bool,
+    destructive: Color,
+    ring: fret_ui::element::RingStyle,
+) {
+    match &mut element.kind {
+        ElementKind::TextInput(props) => {
+            if props.a11y_label.is_none() {
+                props.a11y_label = a11y_label.cloned();
+            }
+            if invalid {
+                let mut ring = ring;
+                ring.corner_radii = props.chrome.corner_radii;
+                props.chrome.border_color = destructive;
+                props.chrome.border_color_focused = destructive;
+                props.chrome.focus_ring = Some(ring);
+            }
+        }
+        ElementKind::TextArea(props) => {
+            if props.a11y_label.is_none() {
+                props.a11y_label = a11y_label.cloned();
+            }
+            if invalid {
+                let mut ring = ring;
+                ring.corner_radii = props.chrome.corner_radii;
+                props.chrome.border_color = destructive;
+                props.chrome.focus_ring = Some(ring);
+            }
+        }
+        _ => {
+            for child in element.children.iter_mut() {
+                form_decorate_control_element(child, a11y_label, invalid, destructive, ring);
+            }
+        }
     }
 }
