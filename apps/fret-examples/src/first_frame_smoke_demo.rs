@@ -90,7 +90,7 @@ impl WinitAppDriver for FirstFrameSmokeDriver {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    crate::run_native_demo(
+    fret_kit::run_native_demo(
         WinitRunnerConfig {
             main_window_title: "first_frame_smoke_demo".to_string(),
             main_window_size: winit::dpi::LogicalSize::new(520.0, 200.0),
@@ -99,4 +99,5 @@ pub fn run() -> anyhow::Result<()> {
         App::new(),
         FirstFrameSmokeDriver::default(),
     )
+    .map_err(anyhow::Error::from)
 }

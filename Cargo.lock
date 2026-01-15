@@ -1084,6 +1084,7 @@ dependencies = [
  "fret-editor",
  "fret-gizmo",
  "fret-icons",
+ "fret-kit",
  "fret-launch",
  "fret-markdown",
  "fret-node",

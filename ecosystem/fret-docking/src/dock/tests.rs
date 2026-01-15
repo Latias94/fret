@@ -191,6 +191,28 @@ impl DockViewportHarness {
         let rect = layout.content_rect;
         Point::new(Px(rect.origin.x.0 + 10.0), Px(rect.origin.y.0 + 10.0))
     }
+
+    fn tab_point(&self, index: usize) -> Point {
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let (_chrome, dock_bounds) = dock_space_regions(bounds);
+        let root = self
+            .app
+            .global::<DockManager>()
+            .and_then(|dock| dock.graph.window_root(self.window))
+            .expect("expected dock window root");
+        let layout = compute_layout_map(
+            &self.app.global::<DockManager>().unwrap().graph,
+            root,
+            dock_bounds,
+        );
+        let root_rect = layout.get(&root).copied().expect("expected root rect");
+        let (tab_bar, _content) = split_tab_bar(root_rect);
+        let tab_rect = tab_rect_for_index(tab_bar, index, Px(0.0));
+        Point::new(Px(tab_rect.origin.x.0 + 2.0), Px(tab_rect.origin.y.0 + 2.0))
+    }
 }
 
 struct FocusOnDown;
@@ -1873,25 +1895,7 @@ fn pending_dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
     let mut harness = DockViewportHarness::new();
     harness.layout();
 
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        Size::new(Px(800.0), Px(600.0)),
-    );
-    let (_chrome, dock_bounds) = dock_space_regions(bounds);
-    let root = harness
-        .app
-        .global::<DockManager>()
-        .and_then(|dock| dock.graph.window_root(harness.window))
-        .expect("expected dock window root");
-    let layout = compute_layout_map(
-        &harness.app.global::<DockManager>().unwrap().graph,
-        root,
-        dock_bounds,
-    );
-    let root_rect = layout.get(&root).copied().expect("expected root rect");
-    let (tab_bar, _content) = split_tab_bar(root_rect);
-    let tab_rect = tab_rect_for_index(tab_bar, 0, Px(0.0));
-    let tab_pos = Point::new(Px(tab_rect.origin.x.0 + 2.0), Px(tab_rect.origin.y.0 + 2.0));
+    let tab_pos = harness.tab_point(0);
 
     harness.ui.dispatch_event(
         &mut harness.app,
@@ -1971,6 +1975,281 @@ fn pending_dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
     assert!(
         drag.dragging,
         "expected drag session to start in dragging state"
+    );
+}
+
+#[test]
+fn pending_dock_drag_does_not_start_drag_session_on_pointer_up_before_activation() {
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    let tab_pos = harness.tab_point(0);
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: tab_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Up {
+            position: tab_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    assert!(
+        harness.app.drag(fret_core::PointerId(0)).is_none(),
+        "pending dock drag must not create a drag session if released before activation",
+    );
+
+    // After releasing, viewport hover forwarding should resume.
+    let position = harness.viewport_point();
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let effects = harness.app.take_effects();
+    assert!(
+        effects
+            .iter()
+            .any(|e| matches!(e, Effect::ViewportInput(_))),
+        "expected viewport hover forwarding after pending drag is released, got: {effects:?}",
+    );
+}
+
+#[test]
+fn pending_dock_drag_clears_on_pointer_cancel() {
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    let tab_pos = harness.tab_point(0);
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: tab_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::PointerCancel(fret_core::PointerCancelEvent {
+            pointer_id: fret_core::PointerId(0),
+            position: Some(tab_pos),
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+            reason: fret_core::PointerCancelReason::LeftWindow,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    assert!(
+        harness.app.drag(fret_core::PointerId(0)).is_none(),
+        "pending dock drag must not create a drag session on cancel",
+    );
+
+    let position = harness.viewport_point();
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let effects = harness.app.take_effects();
+    assert!(
+        effects
+            .iter()
+            .any(|e| matches!(e, Effect::ViewportInput(_))),
+        "expected viewport hover forwarding after pending drag cancel, got: {effects:?}",
+    );
+}
+
+#[test]
+fn pending_dock_drag_arbitration_is_pointer_keyed() {
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    let tab_pos = harness.tab_point(0);
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: tab_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    let position = harness.viewport_point();
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(1),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let effects = harness.app.take_effects();
+    assert!(
+        effects
+            .iter()
+            .any(|e| matches!(e, Effect::ViewportInput(_))),
+        "pending dock drag for one pointer must not suppress viewport hover for other pointers, got: {effects:?}",
+    );
+}
+
+#[test]
+fn docking_tab_drag_threshold_is_configurable_via_settings() {
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    harness
+        .app
+        .set_global(fret_runtime::DockingInteractionSettings {
+            tab_drag_threshold: Px(1000.0),
+            ..Default::default()
+        });
+
+    let tab_pos = harness.tab_point(0);
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: tab_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    let move_pos = Point::new(Px(tab_pos.x.0 + 40.0), tab_pos.y);
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position: move_pos,
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    assert!(
+        harness.app.drag(fret_core::PointerId(0)).is_none(),
+        "expected large threshold to prevent activation",
+    );
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Up {
+            position: move_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    harness
+        .app
+        .set_global(fret_runtime::DockingInteractionSettings {
+            tab_drag_threshold: Px(0.0),
+            ..Default::default()
+        });
+
+    let tab_pos = harness.tab_point(0);
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: tab_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position: tab_pos,
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let drag = harness
+        .app
+        .drag(fret_core::PointerId(0))
+        .and_then(|d| d.payload::<DockPanelDragPayload>().map(|_| d));
+    assert!(
+        drag.is_some_and(|d| d.dragging),
+        "expected zero threshold to activate immediately on first move",
     );
 }
 

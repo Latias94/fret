@@ -1,11 +1,13 @@
-use std::collections::HashMap;
+use std::cell::Cell;
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, Point, Px, Rect, SemanticsRole, TextOverflow, TextStyle, TextWrap,
+    Color, Corners, Edges, FontId, FontWeight, Point, Px, Rect, SemanticsRole, TextOverflow,
+    TextStyle, TextWrap,
 };
 use fret_runtime::CommandId;
 use fret_ui::action::OnActivate;
+use fret_ui::element::ElementKind;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     PressableA11y, PressableProps, ScrollAxis, ScrollProps, SemanticsProps, TextProps,
@@ -29,15 +31,53 @@ fn row_layout(height: Px) -> LayoutStyle {
     layout
 }
 
+fn scroll_content_row_layout() -> LayoutStyle {
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Auto;
+    layout.size.height = Length::Fill;
+    layout.flex.shrink = 0.0;
+    layout
+}
+
+fn tab_strip_scroll_content_layout() -> LayoutStyle {
+    if std::env::var_os("FRET_DEBUG_TABSTRIP_FILL").is_some() {
+        fill_layout()
+    } else {
+        scroll_content_row_layout()
+    }
+}
+
 fn tab_text_style(theme: &Theme) -> TextStyle {
     let px = theme.metric_by_key("font.size").unwrap_or(Px(13.0));
     TextStyle {
-        font: fret_core::FontId::default(),
+        font: FontId::default(),
         size: px,
-        weight: fret_core::FontWeight::MEDIUM,
+        weight: FontWeight::MEDIUM,
         slant: Default::default(),
         line_height: None,
         letter_spacing_em: None,
+    }
+}
+
+fn scroll_rect_into_view_x(handle: &ScrollHandle, viewport: Rect, child: Rect) {
+    let margin = Px(12.0);
+
+    let current = handle.offset();
+    let view_left = viewport.origin.x;
+    let view_right = Px(viewport.origin.x.0 + viewport.size.width.0);
+    let child_left = child.origin.x;
+    let child_right = Px(child.origin.x.0 + child.size.width.0);
+
+    let next_x = if child_left.0 < (view_left.0 + margin.0) {
+        Px(current.x.0 + (child_left.0 - (view_left.0 + margin.0)))
+    } else if child_right.0 > (view_right.0 - margin.0) {
+        Px(current.x.0 + (child_right.0 - (view_right.0 - margin.0)))
+    } else {
+        current.x
+    };
+
+    if next_x != current.x {
+        handle.set_offset(Point::new(next_x, current.y));
     }
 }
 
@@ -92,8 +132,6 @@ pub struct WorkspaceTabStrip {
 struct WorkspaceTabStripState {
     scroll: ScrollHandle,
     last_active: Option<Arc<str>>,
-    scroll_element: Option<GlobalElementId>,
-    tab_elements: HashMap<Arc<str>, GlobalElementId>,
 }
 
 impl WorkspaceTabStrip {
@@ -146,9 +184,14 @@ impl WorkspaceTabStrip {
                 ..Default::default()
             },
             |cx| {
-                cx.with_state(WorkspaceTabStripState::default, |state| {
-                    state.tab_elements.clear();
-                    vec![cx.container(
+                let (scroll_handle, last_active) = cx.with_state(
+                    WorkspaceTabStripState::default,
+                    |state| (state.scroll.clone(), state.last_active.clone()),
+                );
+                let scroll_element = Cell::<Option<GlobalElementId>>::new(None);
+                let active_tab_element = Cell::<Option<GlobalElementId>>::new(None);
+
+                let root = cx.container(
                         ContainerProps {
                             layout: row_layout(self.height),
                             padding: Edges::all(Px(2.0)),
@@ -161,86 +204,100 @@ impl WorkspaceTabStrip {
                             ..Default::default()
                         },
                         |cx| {
-                            vec![cx.scroll(
-                                ScrollProps {
-                                    layout: fill_layout(),
-                                    axis: ScrollAxis::X,
-                                    scroll_handle: Some(state.scroll.clone()),
-                                    probe_unbounded: true,
-                                },
-                                |cx| {
-                                    vec![cx.flex(
-                                        FlexProps {
-                                            layout: fill_layout(),
-                                            direction: fret_core::Axis::Horizontal,
-                                            gap: Px(2.0),
-                                            justify: MainAlign::Start,
-                                            align: CrossAlign::Center,
-                                            ..Default::default()
-                                        },
-                                        |cx| {
-                                            tabs.into_iter()
-                                                .enumerate()
-                                                .map(|(index, tab)| {
-                                                let is_active = tab.id.as_ref() == active.as_ref();
-                                                let command = tab.command.clone();
-                                                let title_for_a11y = tab.title.clone();
-                                                let selected = is_active;
-                                                let pos_in_set = (index as u32) + 1;
+                            let scroll = cx.scope(|cx| {
+                                let id = cx.root_id();
+                                scroll_element.set(Some(id));
 
-                                                cx.pressable(
+                                let children = vec![cx.flex(
+                                    FlexProps {
+                                        layout: tab_strip_scroll_content_layout(),
+                                        direction: fret_core::Axis::Horizontal,
+                                        gap: Px(2.0),
+                                        padding: Edges::all(Px(0.0)),
+                                        justify: MainAlign::Start,
+                                        align: CrossAlign::Center,
+                                        wrap: false,
+                                    },
+                                    |cx| {
+                                        let mut out: Vec<AnyElement> = Vec::new();
+
+                                        for (index, tab) in tabs.iter().enumerate() {
+                                            let tab_id = tab.id.clone();
+                                            let tab_title = tab.title.clone();
+                                            let tab_command = tab.command.clone();
+                                            let tab_close_command = tab.close_command.clone();
+                                            let tab_dirty = tab.dirty;
+                                            let is_active =
+                                                tab_id.as_ref() == active.as_ref();
+                                            let pos_in_set = (index as u32) + 1;
+
+                                            let element = cx.keyed(tab_id.as_ref(), |cx| {
+                                                cx.pressable_with_id(
                                                     PressableProps {
                                                         layout: {
-                                                            let mut layout = LayoutStyle::default();
+                                                            let mut layout =
+                                                                LayoutStyle::default();
                                                             layout.size.height = Length::Fill;
+                                                            layout.size.width = Length::Auto;
                                                             layout
                                                         },
                                                         a11y: PressableA11y {
                                                             role: Some(SemanticsRole::Tab),
-                                                            label: Some(title_for_a11y),
-                                                            selected,
+                                                            label: Some(tab_title.clone()),
+                                                            selected: is_active,
                                                             pos_in_set: Some(pos_in_set),
                                                             set_size: Some(set_size),
                                                             ..Default::default()
                                                         },
                                                         ..Default::default()
                                                     },
-                                                    |cx, state| {
-                                                        let handler: OnActivate =
-                                                            Arc::new(move |host, acx, _reason| {
+                                                    |cx, press_state, element_id| {
+                                                        if is_active {
+                                                            active_tab_element.set(Some(element_id));
+                                                        }
+
+                                                        let handler: OnActivate = Arc::new(
+                                                            move |host, acx, _reason| {
                                                                 host.dispatch_command(
                                                                     Some(acx.window),
-                                                                    command.clone(),
+                                                                    tab_command.clone(),
                                                                 );
-                                                            });
+                                                            },
+                                                        );
                                                         cx.pressable_add_on_activate(handler);
 
                                                         let bg = if is_active {
                                                             active_bg
-                                                        } else if state.hovered || state.pressed {
+                                                        } else if press_state.hovered
+                                                            || press_state.pressed
+                                                        {
                                                             Some(hover_bg)
                                                         } else {
                                                             None
                                                         };
 
-                                                        let mut layout = LayoutStyle::default();
-                                                        layout.size.height = Length::Fill;
-                                                        layout.size.width = Length::Auto;
-
-                                                        let mut label = tab.title.clone();
-                                                        if tab.dirty {
+                                                        let mut label = tab_title.clone();
+                                                        if tab_dirty {
                                                             label = Arc::from(format!(
                                                                 "{} \u{2022}",
-                                                                tab.title.as_ref()
+                                                                tab_title.as_ref()
                                                             ));
                                                         }
 
                                                         vec![cx.container(
                                                             ContainerProps {
-                                                                layout,
+                                                                layout: {
+                                                                    let mut layout =
+                                                                        LayoutStyle::default();
+                                                                    layout.size.height =
+                                                                        Length::Fill;
+                                                                    layout.size.width =
+                                                                        Length::Auto;
+                                                                    layout
+                                                                },
                                                                 padding: Edges {
                                                                     left: Px(10.0),
-                                                                    right: Px(10.0),
+                                                                    right: Px(6.0),
                                                                     top: Px(4.0),
                                                                     bottom: Px(4.0),
                                                                 },
@@ -251,28 +308,140 @@ impl WorkspaceTabStrip {
                                                                 ..Default::default()
                                                             },
                                                             |cx| {
-                                                                vec![cx.text_props(TextProps {
-                                                                    layout: LayoutStyle::default(),
-                                                                    text: label,
-                                                                    style: Some(text_style.clone()),
-                                                                    color: Some(inactive_fg),
-                                                                    wrap: TextWrap::None,
-                                                                    overflow:
-                                                                        TextOverflow::Ellipsis,
-                                                                })]
+                                                                vec![cx.flex(
+                                                                    FlexProps {
+                                                                        layout: {
+                                                                            let mut layout =
+                                                                                LayoutStyle::default();
+                                                                            layout.size.height =
+                                                                                Length::Fill;
+                                                                            layout.size.width =
+                                                                                Length::Auto;
+                                                                            layout
+                                                                        },
+                                                                        direction:
+                                                                            fret_core::Axis::Horizontal,
+                                                                        gap: Px(6.0),
+                                                                        justify: MainAlign::Start,
+                                                                        align: CrossAlign::Center,
+                                                                        ..Default::default()
+                                                                    },
+                                                                    |cx| {
+                                                                        let mut children = vec![
+                                                                            cx.text_props(TextProps {
+                                                                                layout: LayoutStyle::default(),
+                                                                                text: label,
+                                                                                style: Some(text_style.clone()),
+                                                                                color: Some(inactive_fg),
+                                                                                wrap: TextWrap::None,
+                                                                                overflow: TextOverflow::Ellipsis,
+                                                                            }),
+                                                                        ];
+
+                                                                        if let Some(
+                                                                            close_command,
+                                                                        ) = tab_close_command
+                                                                            .clone()
+                                                                        {
+                                                                            children.push(cx.pressable(
+                                                                                PressableProps {
+                                                                                    layout: {
+                                                                                        let mut layout = LayoutStyle::default();
+                                                                                        layout.size.width = Length::Px(Px(18.0));
+                                                                                        layout.size.height = Length::Px(Px(18.0));
+                                                                                        layout
+                                                                                    },
+                                                                                    focusable: false,
+                                                                                    a11y: PressableA11y {
+                                                                                        role: Some(SemanticsRole::Button),
+                                                                                        label: Some(Arc::from("Close tab")),
+                                                                                        ..Default::default()
+                                                                                    },
+                                                                                    ..Default::default()
+                                                                                },
+                                                                                move |cx, close_state| {
+                                                                                    let close_handler: OnActivate = Arc::new(
+                                                                                        move |host, acx, _reason| {
+                                                                                            host.dispatch_command(
+                                                                                                Some(acx.window),
+                                                                                                close_command.clone(),
+                                                                                            );
+                                                                                        },
+                                                                                    );
+                                                                                    cx.pressable_add_on_activate(close_handler);
+
+                                                                                    let bg = if close_state.hovered || close_state.pressed {
+                                                                                        Some(hover_bg)
+                                                                                    } else {
+                                                                                        None
+                                                                                    };
+
+                                                                                    vec![cx.container(
+                                                                                        ContainerProps {
+                                                                                            layout: fill_layout(),
+                                                                                            background: bg,
+                                                                                            corner_radii: Corners::all(Px(4.0)),
+                                                                                            ..Default::default()
+                                                                                        },
+                                                                                        |cx| vec![cx.text("×")],
+                                                                                    )]
+                                                                                },
+                                                                            ));
+                                                                        }
+
+                                                                        children
+                                                                    },
+                                                                )]
                                                             },
                                                         )]
                                                     },
                                                 )
-                                            })
-                                            .collect()
-                                        },
-                                    )]
-                                },
-                            )]
+                                            });
+                                            out.push(element);
+                                        }
+
+                                        out
+                                    },
+                                )];
+
+                                AnyElement::new(
+                                    id,
+                                    ElementKind::Scroll(ScrollProps {
+                                        layout: fill_layout(),
+                                        axis: ScrollAxis::X,
+                                        scroll_handle: Some(scroll_handle.clone()),
+                                        // Important: keep the scroll child width `Auto` (see
+                                        // `scroll_content_row_layout`) to avoid recursive
+                                        // "fill-to-max" probing that can blow the stack in layout.
+                                        probe_unbounded: true,
+                                    }),
+                                    children,
+                                )
+                            });
+
+                            vec![scroll]
                         },
-                    )]
-                })
+                    );
+
+                    let active_changed = last_active.as_deref() != Some(active.as_ref());
+                    if active_changed {
+                        if let (Some(scroll_id), Some(tab_id)) =
+                            (scroll_element.get(), active_tab_element.get())
+                        {
+                            if let (Some(viewport), Some(tab_rect)) = (
+                                cx.last_bounds_for_element(scroll_id),
+                                cx.last_bounds_for_element(tab_id),
+                            ) {
+                                scroll_rect_into_view_x(&scroll_handle, viewport, tab_rect);
+                            }
+                        }
+                    }
+
+                    cx.with_state(WorkspaceTabStripState::default, |state| {
+                        state.last_active = Some(active.clone());
+                    });
+
+                    vec![root]
             },
         )
     }

@@ -29,7 +29,12 @@ pub mod prelude {
     pub use crate::shadcn::prelude::*;
 
     pub use fret_app::App;
+    pub use fret_app::Effect;
+    pub use fret_core::{AppWindowId, Event, Px, SemanticsRole, UiServices};
     pub use fret_runtime::CommandId;
+    pub use fret_runtime::Model;
+    pub use fret_ui::element::{AnyElement, HoverRegionProps, Length, SemanticsProps, TextProps};
+    pub use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -255,10 +260,51 @@ impl<S: 'static> UiAppBuilder<S> {
         }
     }
 
+    pub fn on_gpu_ready(
+        self,
+        f: impl FnOnce(&mut App, &crate::fret::render::WgpuContext, &mut crate::fret::render::Renderer)
+        + 'static,
+    ) -> Self {
+        Self {
+            inner: self.inner.on_gpu_ready(f),
+        }
+    }
+
     pub fn run(self) -> Result<()> {
         self.inner.run().map_err(RunnerError::from)?;
         Ok(())
     }
+}
+
+/// Run a native desktop demo using the `winit + wgpu` stack.
+///
+/// This is a small convenience wrapper for examples that implement `WinitAppDriver` directly,
+/// keeping "how to boot the app" consistent with the `fret-kit` golden path.
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+pub fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(
+    config: fret_launch::WinitRunnerConfig,
+    app: App,
+    driver: D,
+) -> Result<()> {
+    let builder = fret_bootstrap::BootstrapBuilder::new(app, driver).configure(move |c| {
+        *c = config;
+    });
+
+    #[cfg(feature = "diagnostics")]
+    let builder = builder.with_default_diagnostics();
+
+    let builder = builder
+        .with_default_config_files()
+        .map_err(BootstrapError::from)?;
+
+    #[cfg(feature = "icons-lucide")]
+    let builder = builder.with_lucide_icons();
+
+    #[cfg(feature = "icons-radix")]
+    let builder = builder.with_radix_icons();
+
+    builder.run().map_err(RunnerError::from)?;
+    Ok(())
 }
 
 /// Create a desktop-first UI app builder with conservative defaults applied.
