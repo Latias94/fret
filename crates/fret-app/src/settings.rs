@@ -129,6 +129,7 @@ impl SettingsFileV1 {
     pub fn docking_interaction_settings(&self) -> fret_runtime::DockingInteractionSettings {
         fret_runtime::DockingInteractionSettings {
             drag_inversion: self.docking.drag_inversion.clone().into(),
+            ..Default::default()
         }
     }
 }
