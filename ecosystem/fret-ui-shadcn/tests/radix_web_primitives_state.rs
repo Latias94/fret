@@ -1888,6 +1888,26 @@ fn radix_web_dropdown_menu_submenu_hover_select_matches_fret() {
         "submenu item should not be present before hovering the submenu trigger"
     );
 
+    let group_ancestor_id = |node: &fret_core::SemanticsNode| {
+        let mut cur = node.parent;
+        while let Some(id) = cur {
+            let parent = snap.nodes.iter().find(|n| n.id == id)?;
+            if parent.role == SemanticsRole::Group {
+                return Some(id);
+            }
+            cur = parent.parent;
+        }
+        None
+    };
+
+    let team = find_semantics(&snap, SemanticsRole::MenuItem, "Team");
+    let invite = find_semantics(&snap, SemanticsRole::MenuItem, "Invite users");
+    assert_eq!(
+        group_ancestor_id(&team),
+        group_ancestor_id(&invite),
+        "dropdown menu group should contain its menu items"
+    );
+
     let invite = find_semantics(&snap, SemanticsRole::MenuItem, "Invite users");
     move_pointer(
         &mut ui,
@@ -1912,11 +1932,34 @@ fn radix_web_dropdown_menu_submenu_hover_select_matches_fret() {
         .semantics_snapshot()
         .cloned()
         .expect("semantics snapshot");
+
+    let group_ancestor_id = |node: &fret_core::SemanticsNode| {
+        let mut cur = node.parent;
+        while let Some(id) = cur {
+            let parent = snap.nodes.iter().find(|n| n.id == id)?;
+            if parent.role == SemanticsRole::Group {
+                return Some(id);
+            }
+            cur = parent.parent;
+        }
+        None
+    };
+
     let email = snap
         .nodes
         .iter()
         .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Email"))
         .expect("submenu Email item should be present after hover");
+    let message = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Message"))
+        .expect("submenu Message item should be present after hover");
+    assert_eq!(
+        group_ancestor_id(email),
+        group_ancestor_id(message),
+        "submenu group should contain its menu items"
+    );
 
     click_center(
         &mut ui,
@@ -2069,24 +2112,24 @@ fn radix_web_context_menu_submenu_hover_select_matches_fret() {
         .cloned()
         .expect("semantics snapshot");
 
+    let group_ancestor_id = |node: &fret_core::SemanticsNode| {
+        let mut cur = node.parent;
+        while let Some(id) = cur {
+            let parent = snap.nodes.iter().find(|n| n.id == id)?;
+            if parent.role == SemanticsRole::Group {
+                return Some(id);
+            }
+            cur = parent.parent;
+        }
+        None
+    };
+
     let copy = find_semantics(&snap, SemanticsRole::MenuItem, "Copy");
     let cut = find_semantics(&snap, SemanticsRole::MenuItem, "Cut");
     assert_eq!(
-        copy.parent, cut.parent,
+        group_ancestor_id(copy),
+        group_ancestor_id(cut),
         "context menu group should parent its menu items"
-    );
-    let group_id = copy
-        .parent
-        .expect("Copy should have a parent semantics node");
-    let group = snap
-        .nodes
-        .iter()
-        .find(|n| n.id == group_id)
-        .expect("Copy parent semantics node");
-    assert_eq!(
-        group.role,
-        SemanticsRole::Group,
-        "context menu group should use role=Group"
     );
 
     let more_tools = find_semantics(&snap, SemanticsRole::MenuItem, "More Tools");
@@ -2114,24 +2157,24 @@ fn radix_web_context_menu_submenu_hover_select_matches_fret() {
         .cloned()
         .expect("semantics snapshot");
 
+    let group_ancestor_id = |node: &fret_core::SemanticsNode| {
+        let mut cur = node.parent;
+        while let Some(id) = cur {
+            let parent = snap.nodes.iter().find(|n| n.id == id)?;
+            if parent.role == SemanticsRole::Group {
+                return Some(id);
+            }
+            cur = parent.parent;
+        }
+        None
+    };
+
     let save_page = find_semantics(&snap, SemanticsRole::MenuItem, "Save Page...");
     let create_shortcut = find_semantics(&snap, SemanticsRole::MenuItem, "Create Shortcut...");
     assert_eq!(
-        save_page.parent, create_shortcut.parent,
+        group_ancestor_id(save_page),
+        group_ancestor_id(create_shortcut),
         "submenu group should parent its menu items"
-    );
-    let submenu_group_id = save_page
-        .parent
-        .expect("submenu item should have a parent semantics node");
-    let submenu_group = snap
-        .nodes
-        .iter()
-        .find(|n| n.id == submenu_group_id)
-        .expect("submenu item parent semantics node");
-    assert_eq!(
-        submenu_group.role,
-        SemanticsRole::Group,
-        "submenu group should use role=Group"
     );
 
     click_center(

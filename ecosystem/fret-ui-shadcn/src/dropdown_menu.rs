@@ -10,8 +10,8 @@ use fret_runtime::{CommandId, Model};
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    Overflow, PositionStyle, PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis,
-    ScrollProps, SizeStyle, TextProps,
+    Overflow, PositionStyle, PressableProps, RingStyle, RovingFlexProps, RovingFocusProps,
+    ScrollAxis, ScrollProps, SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -418,8 +418,9 @@ impl DropdownMenuLabel {
 
 /// shadcn/ui `DropdownMenuGroup` (v4).
 ///
-/// In the upstream DOM implementation, this is a structural wrapper. In Fret, we currently treat
-/// it as a transparent grouping node and simply flatten its entries for rendering/navigation.
+/// In the upstream DOM implementation, this is a structural wrapper (`MenuPrimitive.Group`).
+/// In Fret, we preserve it as a structural semantics wrapper (`role=Group`) without changing
+/// layout, so menu roving/typeahead still matches Radix while keeping group boundaries.
 #[derive(Debug, Clone)]
 pub struct DropdownMenuGroup {
     pub entries: Vec<DropdownMenuEntry>,
@@ -564,23 +565,6 @@ fn collect_roving_labels_and_disabled(
     }
 }
 
-fn flatten_entries(into: &mut Vec<DropdownMenuEntry>, entries: Vec<DropdownMenuEntry>) {
-    for entry in entries {
-        match entry {
-            DropdownMenuEntry::Group(group) => flatten_entries(into, group.entries),
-            DropdownMenuEntry::RadioGroup(group) => {
-                let group_value = group.value.clone();
-                for item in group.items {
-                    into.push(DropdownMenuEntry::RadioItem(
-                        item.into_item(group_value.clone()),
-                    ));
-                }
-            }
-            other => into.push(other),
-        }
-    }
-}
-
 fn find_submenu_entries_by_value(
     entries: &[DropdownMenuEntry],
     open_value: &str,
@@ -605,6 +589,42 @@ fn find_submenu_entries_by_value(
         }
     }
     None
+}
+
+fn menu_structural_group<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    role: fret_core::SemanticsRole,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    cx.semantics(
+        SemanticsProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Fill;
+                layout
+            },
+            role,
+            ..Default::default()
+        },
+        move |cx| {
+            vec![cx.flex(
+                FlexProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout
+                    },
+                    direction: fret_core::Axis::Vertical,
+                    gap: Px(0.0),
+                    padding: Edges::all(Px(0.0)),
+                    justify: MainAlign::Start,
+                    align: CrossAlign::Stretch,
+                    wrap: false,
+                },
+                move |_cx| children.clone(),
+            )]
+        },
+    )
 }
 
 fn estimated_menu_panel_height_for_entries(
@@ -1092,11 +1112,7 @@ impl DropdownMenu {
                         return (Vec::new(), None);
                     };
 
-                    let entries: Arc<[DropdownMenuEntry]> = {
-                        let mut flat: Vec<DropdownMenuEntry> = Vec::new();
-                        flatten_entries(&mut flat, entries(cx));
-                        Arc::from(flat.into_boxed_slice())
-                    };
+                    let entries: Arc<[DropdownMenuEntry]> = Arc::from(entries(cx).into_boxed_slice());
                     let reserve_leading_slot_enabled =
                         align_leading_icons && reserve_leading_slot(&entries);
 
@@ -1193,6 +1209,10 @@ impl DropdownMenu {
 
                     let first_item_focus_id_for_items = first_item_focus_id.clone();
                     let last_item_focus_id_for_items = last_item_focus_id.clone();
+                    let overlay_root_name_for_controls_for_content =
+                        overlay_root_name_for_controls.clone();
+                    let overlay_root_name_for_controls_for_submenu =
+                        overlay_root_name_for_controls.clone();
 
                     // Match Radix: `role=menu` is on the content panel element (not a fullscreen
                     // wrapper). We keep the popper wrapper for arrow hit-test expansion, but
@@ -1326,14 +1346,90 @@ impl DropdownMenu {
                                                         letter_spacing_em: None,
                                                     };
 
-                                                    let mut out: Vec<AnyElement> =
-                                                        Vec::with_capacity(entries.len());
-
                                                     let mut item_ix: usize = 0;
-                                                    for entry in entries.iter().cloned() {
-                                                        match entry {
+
+                                                    #[derive(Clone)]
+                                                    struct RenderEnv {
+                                                        reserve_leading_slot_enabled: bool,
+                                                        item_count: usize,
+                                                        ring: RingStyle,
+                                                        border: fret_core::Color,
+                                                        radius_sm: Px,
+                                                        pad_x: Px,
+                                                        pad_x_inset: Px,
+                                                        pad_y: Px,
+                                                        font_size: Px,
+                                                        font_line_height: Px,
+                                                        text_style: TextStyle,
+                                                        text_disabled: fret_core::Color,
+                                                        label_fg: fret_core::Color,
+                                                        accent: fret_core::Color,
+                                                        accent_fg: fret_core::Color,
+                                                        fg: fret_core::Color,
+                                                        icon_muted_fg: fret_core::Color,
+                                                        destructive_fg: fret_core::Color,
+                                                        destructive_bg: fret_core::Color,
+                                                        row_height: Px,
+                                                        window_margin: Px,
+                                                        submenu_min_width: Px,
+                                                        submenu_max_height_metric: Option<Px>,
+                                                        open: Model<bool>,
+                                                        submenu_for_content: menu::sub::MenuSubmenuModels,
+                                                        submenu_cfg: menu::sub::MenuSubmenuConfig,
+                                                        overlay_root_name_for_controls: Arc<str>,
+                                                        first_item_focus_id: Rc<Cell<Option<GlobalElementId>>>,
+                                                        last_item_focus_id: Rc<Cell<Option<GlobalElementId>>>,
+                                                    }
+
+                                                    fn render_entries<H: UiHost>(
+                                                        cx: &mut ElementContext<'_, H>,
+                                                        entries: &[DropdownMenuEntry],
+                                                        item_ix: &mut usize,
+                                                        env: &RenderEnv,
+                                                    ) -> Vec<AnyElement> {
+                                                        let reserve_leading_slot_enabled =
+                                                            env.reserve_leading_slot_enabled;
+                                                        let item_count = env.item_count;
+                                                        let ring = env.ring.clone();
+                                                        let border = env.border;
+                                                        let radius_sm = env.radius_sm;
+                                                        let pad_x = env.pad_x;
+                                                        let pad_x_inset = env.pad_x_inset;
+                                                        let pad_y = env.pad_y;
+                                                        let font_size = env.font_size;
+                                                        let font_line_height = env.font_line_height;
+                                                        let text_style = env.text_style.clone();
+                                                        let text_disabled = env.text_disabled;
+                                                        let label_fg = env.label_fg;
+                                                        let accent = env.accent;
+                                                        let accent_fg = env.accent_fg;
+                                                        let fg = env.fg;
+                                                        let icon_muted_fg = env.icon_muted_fg;
+                                                        let destructive_fg = env.destructive_fg;
+                                                        let destructive_bg = env.destructive_bg;
+                                                        let row_height = env.row_height;
+                                                        let window_margin = env.window_margin;
+                                                        let submenu_min_width = env.submenu_min_width;
+                                                        let submenu_max_height_metric =
+                                                            env.submenu_max_height_metric;
+                                                        let open_for_menu = env.open.clone();
+                                                        let submenu_for_content =
+                                                            env.submenu_for_content.clone();
+                                                        let submenu_cfg = env.submenu_cfg.clone();
+                                                        let overlay_root_name_for_controls =
+                                                            env.overlay_root_name_for_controls.clone();
+                                                        let first_item_focus_id_for_items =
+                                                            env.first_item_focus_id.clone();
+                                                        let last_item_focus_id_for_items =
+                                                            env.last_item_focus_id.clone();
+
+                                                        let mut out: Vec<AnyElement> =
+                                                            Vec::with_capacity(entries.len());
+
+                                                        for entry in entries.iter().cloned() {
+                                                            match entry {
                                                     DropdownMenuEntry::Label(label) => {
-                                                        let fg = theme.color_required("muted-foreground");
+                                                        let fg = label_fg;
                                                         let text = label.text.clone();
                                                         let pad_left =
                                                             if label.inset { pad_x_inset } else { pad_x };
@@ -1369,11 +1465,33 @@ impl DropdownMenu {
                                                             },
                                                         ));
                                                     }
-                                                    DropdownMenuEntry::Group(_) => {
-                                                        unreachable!("groups are flattened")
+                                                    DropdownMenuEntry::Group(group) => {
+                                                        let children =
+                                                            render_entries(cx, &group.entries, item_ix, env);
+                                                        out.push(menu_structural_group(
+                                                            cx,
+                                                            fret_core::SemanticsRole::Group,
+                                                            children,
+                                                        ));
                                                     }
-                                                    DropdownMenuEntry::RadioGroup(_) => {
-                                                        unreachable!("radio groups are flattened")
+                                                    DropdownMenuEntry::RadioGroup(group) => {
+                                                        let group_value = group.value.clone();
+                                                        let items: Vec<DropdownMenuEntry> = group
+                                                            .items
+                                                            .into_iter()
+                                                            .map(|spec| {
+                                                                DropdownMenuEntry::RadioItem(
+                                                                    spec.into_item(group_value.clone()),
+                                                                )
+                                                            })
+                                                            .collect();
+                                                        let children =
+                                                            render_entries(cx, &items, item_ix, env);
+                                                        out.push(menu_structural_group(
+                                                            cx,
+                                                            fret_core::SemanticsRole::Group,
+                                                            children,
+                                                        ));
                                                     }
                                                     DropdownMenuEntry::Separator => {
                                                         out.push(cx.container(
@@ -1404,8 +1522,8 @@ impl DropdownMenu {
                                                                 ));
                                                             }
                                                     DropdownMenuEntry::CheckboxItem(item) => {
-                                                        let collection_index = item_ix;
-                                                        item_ix = item_ix.saturating_add(1);
+                                                        let collection_index = *item_ix;
+                                                        *item_ix = (*item_ix).saturating_add(1);
 
                                                         let label = item.label.clone();
                                                         let value = item.value.clone();
@@ -1524,8 +1642,8 @@ impl DropdownMenu {
                                                         }));
                                                     }
                                                     DropdownMenuEntry::RadioItem(item) => {
-                                                        let collection_index = item_ix;
-                                                        item_ix = item_ix.saturating_add(1);
+                                                        let collection_index = *item_ix;
+                                                        *item_ix = (*item_ix).saturating_add(1);
 
                                                         let label = item.label.clone();
                                                         let value = item.value.clone();
@@ -1650,8 +1768,8 @@ impl DropdownMenu {
                                                         }));
                                                     }
                                                     DropdownMenuEntry::Item(item) => {
-                                                        let collection_index = item_ix;
-                                                        item_ix = item_ix.saturating_add(1);
+                                                        let collection_index = *item_ix;
+                                                        *item_ix = (*item_ix).saturating_add(1);
 
                                                         let label = item.label.clone();
                                                         let value = item.value.clone();
@@ -1683,16 +1801,14 @@ impl DropdownMenu {
                                                                             cx.bounds,
                                                                             window_margin,
                                                                         );
-                                                                    let submenu_max_h = theme
-                                                                        .metric_by_key(
-                                                                            "component.dropdown_menu.max_height",
-                                                                        )
-                                                                        .map(|h| {
-                                                                            Px(h.0.min(
-                                                                                outer.size.height.0,
-                                                                            ))
-                                                                        })
-                                                                        .unwrap_or(outer.size.height);
+                                                                    let submenu_max_h =
+                                                                        submenu_max_height_metric
+                                                                            .map(|h| {
+                                                                                Px(h.0.min(
+                                                                                    outer.size.height.0,
+                                                                                ))
+                                                                            })
+                                                                            .unwrap_or(outer.size.height);
                                                                     let entries_for_estimate =
                                                                         submenu_entries_for_hint
                                                                             .clone()
@@ -1877,7 +1993,56 @@ impl DropdownMenu {
                                                         }
                                                     }
 
-                                                    out
+
+                                                            out
+                                                    }
+
+                                                    let env = RenderEnv {
+                                                        reserve_leading_slot_enabled,
+                                                        item_count,
+                                                        ring,
+                                                        border,
+                                                        radius_sm,
+                                                        pad_x,
+                                                        pad_x_inset,
+                                                        pad_y,
+                                                        font_size,
+                                                        font_line_height,
+                                                        text_style,
+                                                        text_disabled,
+                                                        label_fg: icon_muted_fg,
+                                                        accent,
+                                                        accent_fg,
+                                                        fg,
+                                                        icon_muted_fg,
+                                                        destructive_fg,
+                                                        destructive_bg,
+                                                        row_height,
+                                                        window_margin,
+                                                        submenu_min_width,
+                                                        submenu_max_height_metric: theme
+                                                            .metric_by_key(
+                                                                "component.dropdown_menu.max_height",
+                                                            ),
+                                                        open: open_for_menu.clone(),
+                                                        submenu_for_content:
+                                                            submenu_for_content.clone(),
+                                                        submenu_cfg,
+                                                        overlay_root_name_for_controls:
+                                                            overlay_root_name_for_controls_for_content
+                                                                .clone(),
+                                                        first_item_focus_id:
+                                                            first_item_focus_id_for_items.clone(),
+                                                        last_item_focus_id:
+                                                            last_item_focus_id_for_items.clone(),
+                                                    };
+
+                                                    render_entries(
+                                                        cx,
+                                                        entries.as_ref(),
+                                                        &mut item_ix,
+                                                        &env,
+                                                    )
                                                 },
                                             );
                                             vec![roving]
@@ -2018,12 +2183,6 @@ impl DropdownMenu {
                         );
 
                         if let Some(submenu_entries) = submenu_entries {
-                            let submenu_entries: Vec<DropdownMenuEntry> = {
-                                let mut flat: Vec<DropdownMenuEntry> = Vec::new();
-                                flatten_entries(&mut flat, submenu_entries);
-                                flat
-                            };
-
                             let reserve_leading_slot_enabled =
                                 align_leading_icons && reserve_leading_slot(&submenu_entries);
                             let item_count = focusable_item_count(&submenu_entries);
@@ -2100,11 +2259,79 @@ impl DropdownMenu {
                                                 },
                                                 move |cx| {
                                                     let mut item_ix: usize = 0;
-                                                    let mut rows: Vec<AnyElement> =
-                                                        Vec::with_capacity(submenu_entries.len());
 
-                                                    for entry in submenu_entries.iter().cloned() {
-                                                        match entry {
+                                                    #[derive(Clone)]
+                                                    struct RenderEnv {
+                                                        reserve_leading_slot_enabled: bool,
+                                                        item_count: usize,
+                                                        ring: RingStyle,
+                                                        border: fret_core::Color,
+                                                        radius_sm: Px,
+                                                        pad_x: Px,
+                                                        pad_x_inset: Px,
+                                                        pad_y: Px,
+                                                        font_size: Px,
+                                                        font_line_height: Px,
+                                                        text_style: TextStyle,
+                                                        text_disabled: fret_core::Color,
+                                                        label_fg: fret_core::Color,
+                                                        accent: fret_core::Color,
+                                                        accent_fg: fret_core::Color,
+                                                        fg: fret_core::Color,
+                                                        destructive_fg: fret_core::Color,
+                                                        destructive_bg: fret_core::Color,
+                                                        row_height: Px,
+                                                        window_margin: Px,
+                                                        submenu_min_width: Px,
+                                                        submenu_max_height_metric: Option<Px>,
+                                                        open: Model<bool>,
+                                                        submenu_models: menu::sub::MenuSubmenuModels,
+                                                        submenu_cfg: menu::sub::MenuSubmenuConfig,
+                                                        overlay_root_name_for_controls: Arc<str>,
+                                                    }
+
+                                                    fn render_entries<H: UiHost>(
+                                                        cx: &mut ElementContext<'_, H>,
+                                                        entries: &[DropdownMenuEntry],
+                                                        item_ix: &mut usize,
+                                                        env: &RenderEnv,
+                                                    ) -> Vec<AnyElement> {
+                                                        let reserve_leading_slot_enabled =
+                                                            env.reserve_leading_slot_enabled;
+                                                        let item_count = env.item_count;
+                                                        let ring = env.ring.clone();
+                                                        let border = env.border;
+                                                        let radius_sm = env.radius_sm;
+                                                        let pad_x = env.pad_x;
+                                                        let pad_x_inset = env.pad_x_inset;
+                                                        let pad_y = env.pad_y;
+                                                        let font_size = env.font_size;
+                                                        let font_line_height = env.font_line_height;
+                                                        let text_style = env.text_style.clone();
+                                                        let text_disabled = env.text_disabled;
+                                                        let label_fg = env.label_fg;
+                                                        let accent = env.accent;
+                                                        let accent_fg = env.accent_fg;
+                                                        let fg = env.fg;
+                                                        let destructive_fg = env.destructive_fg;
+                                                        let destructive_bg = env.destructive_bg;
+                                                        let _row_height = env.row_height;
+                                                        let _window_margin = env.window_margin;
+                                                        let _submenu_min_width = env.submenu_min_width;
+                                                        let _submenu_max_height_metric =
+                                                            env.submenu_max_height_metric;
+                                                        let open_for_submenu = env.open.clone();
+                                                        let submenu_models_for_panel =
+                                                            env.submenu_models.clone();
+                                                        let _submenu_cfg = env.submenu_cfg.clone();
+                                                        let _overlay_root_name_for_controls =
+                                                            env.overlay_root_name_for_controls.clone();
+
+                                                        let mut rows: Vec<AnyElement> =
+                                                            Vec::with_capacity(entries.len());
+
+                                                        for entry in entries.iter().cloned() {
+                                                            match entry {
                                                             DropdownMenuEntry::Label(label) => {
                                                                 let text = label.text.clone();
                                                                 let pad_left = if label.inset {
@@ -2142,11 +2369,37 @@ impl DropdownMenu {
                                                                     },
                                                                 ));
                                                             }
-                                                            DropdownMenuEntry::Group(_) => {
-                                                                unreachable!("groups are flattened")
+                                                            DropdownMenuEntry::Group(group) => {
+                                                                let children = render_entries(
+                                                                    cx,
+                                                                    &group.entries,
+                                                                    item_ix,
+                                                                    env,
+                                                                );
+                                                                rows.push(menu_structural_group(
+                                                                    cx,
+                                                                    fret_core::SemanticsRole::Group,
+                                                                    children,
+                                                                ));
                                                             }
-                                                            DropdownMenuEntry::RadioGroup(_) => {
-                                                                unreachable!("radio groups are flattened")
+                                                            DropdownMenuEntry::RadioGroup(group) => {
+                                                                let group_value = group.value.clone();
+                                                                let items: Vec<DropdownMenuEntry> = group
+                                                                    .items
+                                                                    .into_iter()
+                                                                    .map(|spec| {
+                                                                        DropdownMenuEntry::RadioItem(
+                                                                            spec.into_item(group_value.clone()),
+                                                                        )
+                                                                    })
+                                                                    .collect();
+                                                                let children =
+                                                                    render_entries(cx, &items, item_ix, env);
+                                                                rows.push(menu_structural_group(
+                                                                    cx,
+                                                                    fret_core::SemanticsRole::Group,
+                                                                    children,
+                                                                ));
                                                             }
                                                             DropdownMenuEntry::Separator => {
                                                                 rows.push(cx.container(
@@ -2185,8 +2438,8 @@ impl DropdownMenu {
                                                                 ));
                                                             }
                                                             DropdownMenuEntry::CheckboxItem(item) => {
-                                                                let collection_index = item_ix;
-                                                                item_ix = item_ix.saturating_add(1);
+                                                                let collection_index = *item_ix;
+                                                                *item_ix = (*item_ix).saturating_add(1);
 
                                                                 let label = item.label.clone();
                                                                 let value = item.value.clone();
@@ -2286,8 +2539,8 @@ impl DropdownMenu {
                                                                 }));
                                                             }
                                                             DropdownMenuEntry::RadioItem(item) => {
-                                                                let collection_index = item_ix;
-                                                                item_ix = item_ix.saturating_add(1);
+                                                                let collection_index = *item_ix;
+                                                                *item_ix = (*item_ix).saturating_add(1);
 
                                                                 let label = item.label.clone();
                                                                 let value = item.value.clone();
@@ -2392,8 +2645,8 @@ impl DropdownMenu {
                                                                 }));
                                                             }
                                                             DropdownMenuEntry::Item(item) => {
-                                                                let collection_index = item_ix;
-                                                                item_ix = item_ix.saturating_add(1);
+                                                                let collection_index = *item_ix;
+                                                                *item_ix = (*item_ix).saturating_add(1);
 
                                                                 let label = item.label.clone();
                                                                 let value = item.value.clone();
@@ -2542,6 +2795,50 @@ impl DropdownMenu {
                                                             }
                                                         }
                                                     }
+
+                                                    rows
+                                                    }
+
+                                                    let env = RenderEnv {
+                                                        reserve_leading_slot_enabled,
+                                                        item_count,
+                                                        ring,
+                                                        border,
+                                                        radius_sm,
+                                                        pad_x,
+                                                        pad_x_inset,
+                                                        pad_y,
+                                                        font_size,
+                                                        font_line_height,
+                                                        text_style,
+                                                        text_disabled,
+                                                        label_fg,
+                                                        accent,
+                                                        accent_fg,
+                                                        fg,
+                                                        destructive_fg,
+                                                        destructive_bg,
+                                                        row_height,
+                                                        window_margin,
+                                                        submenu_min_width,
+                                                        submenu_max_height_metric: theme
+                                                            .metric_by_key(
+                                                                "component.dropdown_menu.max_height",
+                                                            ),
+                                                        open: open_for_submenu.clone(),
+                                                        submenu_models: submenu_models_for_panel.clone(),
+                                                        submenu_cfg,
+                                                        overlay_root_name_for_controls:
+                                                            overlay_root_name_for_controls_for_submenu
+                                                                .clone(),
+                                                    };
+
+                                                    let rows = render_entries(
+                                                        cx,
+                                                        submenu_entries.as_ref(),
+                                                        &mut item_ix,
+                                                        &env,
+                                                    );
 
                                                     let roving = menu::sub_content::submenu_roving_group_apg_prefix_typeahead(
                                                         cx,
