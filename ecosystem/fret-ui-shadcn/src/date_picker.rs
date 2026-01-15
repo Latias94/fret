@@ -22,6 +22,7 @@ pub struct DatePicker {
     pub selected: Model<Option<Date>>,
     week_start: Weekday,
     placeholder: Arc<str>,
+    format_selected: Arc<dyn Fn(Date) -> Arc<str> + Send + Sync + 'static>,
     disabled: bool,
     show_outside_days: bool,
     disable_outside_days: bool,
@@ -36,6 +37,7 @@ impl std::fmt::Debug for DatePicker {
             .field("selected", &"<model>")
             .field("week_start", &self.week_start)
             .field("placeholder", &self.placeholder)
+            .field("format_selected", &"<fn>")
             .field("disabled", &self.disabled)
             .field("show_outside_days", &self.show_outside_days)
             .field("disable_outside_days", &self.disable_outside_days)
@@ -56,6 +58,7 @@ impl DatePicker {
             selected,
             week_start: Weekday::Monday,
             placeholder: Arc::from("Pick a date"),
+            format_selected: Arc::new(format_selected_ppp_en),
             disabled: false,
             show_outside_days: true,
             disable_outside_days: true,
@@ -103,6 +106,22 @@ impl DatePicker {
         Self::new(open, month, selected)
     }
 
+    /// Overrides how the selected date is shown on the trigger button.
+    ///
+    /// Default: `Jan 15, 2026` (English, shadcn-aligned).
+    pub fn format_selected_by(
+        mut self,
+        f: impl Fn(Date) -> Arc<str> + Send + Sync + 'static,
+    ) -> Self {
+        self.format_selected = Arc::new(f);
+        self
+    }
+
+    /// Uses ISO format (`YYYY-MM-DD`) via `Date::to_string()`.
+    pub fn format_selected_iso(self) -> Self {
+        self.format_selected_by(|d| Arc::<str>::from(d.to_string()))
+    }
+
     pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
         self.placeholder = placeholder.into();
         self
@@ -146,7 +165,7 @@ impl DatePicker {
 
             let selected_value = cx.watch_model(&selected).copied().flatten();
             let button_text: Arc<str> = match selected_value {
-                Some(date) => Arc::<str>::from(date.to_string()),
+                Some(date) => (self.format_selected)(date),
                 None => self.placeholder.clone(),
             };
 
@@ -186,4 +205,25 @@ impl DatePicker {
                 )
         })
     }
+}
+
+fn format_selected_ppp_en(date: Date) -> Arc<str> {
+    use time::Month;
+
+    let month = match date.month() {
+        Month::January => "Jan",
+        Month::February => "Feb",
+        Month::March => "Mar",
+        Month::April => "Apr",
+        Month::May => "May",
+        Month::June => "Jun",
+        Month::July => "Jul",
+        Month::August => "Aug",
+        Month::September => "Sep",
+        Month::October => "Oct",
+        Month::November => "Nov",
+        Month::December => "Dec",
+    };
+
+    Arc::<str>::from(format!("{month} {}, {}", date.day(), date.year()))
 }
