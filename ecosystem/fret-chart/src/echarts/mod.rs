@@ -441,11 +441,13 @@ fn translate_option(option: &EchartsOption) -> Result<TranslatedChart> {
     }
 
     let axis_extents = compute_axis_extents(&spec, &datasets);
+    let axis_grids = compute_axis_grids(&spec);
     let (data_zoom_x, data_zoom_y, actions) = translate_data_zoom_v1(
         option.data_zoom.as_ref(),
         &[x_axis_id],
         &[y_axis_id],
         &axis_extents,
+        &axis_grids,
     )?;
     spec.data_zoom_x = data_zoom_x;
     spec.data_zoom_y = data_zoom_y;
@@ -892,8 +894,14 @@ fn translate_option_with_dataset(option: &EchartsOption) -> Result<TranslatedCha
     }
 
     let axis_extents = compute_axis_extents(&spec, &out_datasets);
-    let (data_zoom_x, data_zoom_y, actions) =
-        translate_data_zoom_v1(option.data_zoom.as_ref(), &x_ids, &y_ids, &axis_extents)?;
+    let axis_grids = compute_axis_grids(&spec);
+    let (data_zoom_x, data_zoom_y, actions) = translate_data_zoom_v1(
+        option.data_zoom.as_ref(),
+        &x_ids,
+        &y_ids,
+        &axis_extents,
+        &axis_grids,
+    )?;
     spec.data_zoom_x = data_zoom_x;
     spec.data_zoom_y = data_zoom_y;
 
@@ -936,6 +944,7 @@ fn translate_data_zoom_v1(
     x_axes: &[AxisId],
     y_axes: &[AxisId],
     axis_extents: &BTreeMap<AxisId, (f64, f64)>,
+    axis_grids: &BTreeMap<AxisId, GridId>,
 ) -> Result<(Vec<DataZoomXSpec>, Vec<DataZoomYSpec>, Vec<Action>)> {
     let Some(zoom) = zoom else {
         return Ok((Vec::new(), Vec::new(), Vec::new()));
@@ -1003,6 +1012,23 @@ fn translate_data_zoom_v1(
     let mut x_accum: BTreeMap<usize, ZoomAxisAccum> = BTreeMap::new();
     let mut y_accum: BTreeMap<usize, ZoomAxisAccum> = BTreeMap::new();
 
+    fn auto_target_parallel_axes_in_first_grid(
+        axes: &[AxisId],
+        axis_grids: &BTreeMap<AxisId, GridId>,
+    ) -> Vec<usize> {
+        let Some(first_axis) = axes.first().copied() else {
+            return Vec::new();
+        };
+        let Some(grid) = axis_grids.get(&first_axis).copied() else {
+            return vec![0];
+        };
+
+        axes.iter()
+            .enumerate()
+            .filter_map(|(i, axis)| (axis_grids.get(axis).copied() == Some(grid)).then_some(i))
+            .collect()
+    }
+
     for entry in zoom.to_vec() {
         let _kind = entry.kind.as_deref().unwrap_or("inside");
         let orient = entry.orient.as_deref().unwrap_or("horizontal");
@@ -1045,151 +1071,147 @@ fn translate_data_zoom_v1(
             }
         };
 
-        // v1 subset: if no axis is specified, default to the first X axis (ECharts auto-targets
-        // a parallel axis by orient; see DataZoomModel._fillAutoTargetAxisByOrient).
-        let default_x_axis_index = AxisIndexOrIndices::One(0);
-        let default_y_axis_index = AxisIndexOrIndices::One(0);
-        let x_axis_index = if entry.x_axis_index.is_none() && entry.y_axis_index.is_none() {
-            match orient {
-                "horizontal" => Some(&default_x_axis_index),
-                "vertical" => None,
-                _ => None,
-            }
+        let x_axis_indices: Vec<usize> = if let Some(indices) = entry.x_axis_index.as_ref() {
+            indices.to_vec()
+        } else if entry.y_axis_index.is_some() {
+            Vec::new()
+        } else if orient == "horizontal" {
+            // ECharts-style auto-target: all parallel axes in the same grid as the first axis.
+            auto_target_parallel_axes_in_first_grid(x_axes, axis_grids)
         } else {
-            entry.x_axis_index.as_ref()
-        };
-        let y_axis_index = if entry.x_axis_index.is_none() && entry.y_axis_index.is_none() {
-            match orient {
-                "vertical" => Some(&default_y_axis_index),
-                "horizontal" => None,
-                _ => None,
-            }
-        } else {
-            entry.y_axis_index.as_ref()
+            Vec::new()
         };
 
-        if let Some(indices) = x_axis_index {
-            for axis_index in indices.to_vec() {
-                if x_axes.get(axis_index).is_none() {
-                    return Err(EchartsError::Invalid("dataZoom.xAxisIndex out of range"));
-                }
+        let y_axis_indices: Vec<usize> = if let Some(indices) = entry.y_axis_index.as_ref() {
+            indices.to_vec()
+        } else if entry.x_axis_index.is_some() {
+            Vec::new()
+        } else if orient == "vertical" {
+            auto_target_parallel_axes_in_first_grid(y_axes, axis_grids)
+        } else {
+            Vec::new()
+        };
 
-                let axis = x_axes[axis_index];
-                let window = match window_input {
-                    None => None,
-                    Some(ZoomWindowInput::Value { start, end }) => Some(DataWindow {
-                        min: start,
-                        max: end,
-                    }),
-                    Some(ZoomWindowInput::Percent { start, end }) => {
-                        let (base_min, base_max) = axis_extents
-                            .get(&axis)
-                            .copied()
-                            .ok_or(EchartsError::Unsupported(
-                                "dataZoom.start/end requires a data extent for the target axis (v1 subset)",
-                            ))?;
-                        if !base_min.is_finite() || !base_max.is_finite() {
-                            return Err(EchartsError::Unsupported(
-                                "dataZoom.start/end requires a finite data extent for the target axis (v1 subset)",
-                            ));
+        for axis_index in x_axis_indices {
+            if x_axes.get(axis_index).is_none() {
+                return Err(EchartsError::Invalid("dataZoom.xAxisIndex out of range"));
+            }
+
+            let axis = x_axes[axis_index];
+            let window = match window_input {
+                None => None,
+                Some(ZoomWindowInput::Value { start, end }) => Some(DataWindow {
+                    min: start,
+                    max: end,
+                }),
+                Some(ZoomWindowInput::Percent { start, end }) => {
+                    match axis_extents.get(&axis).copied() {
+                        None => {
+                            // Best-effort v1: if we cannot infer a data extent for the axis, we
+                            // still install the dataZoom spec but skip initial window seeding.
+                            None
                         }
+                        Some((base_min, base_max)) => {
+                            if !base_min.is_finite() || !base_max.is_finite() {
+                                return Err(EchartsError::Unsupported(
+                                    "dataZoom.start/end requires a finite data extent for the target axis (v1 subset)",
+                                ));
+                            }
 
-                        let (base_min, base_max) = if base_min <= base_max {
-                            (base_min, base_max)
-                        } else {
-                            (base_max, base_min)
-                        };
-                        let span = base_max - base_min;
+                            let (base_min, base_max) = if base_min <= base_max {
+                                (base_min, base_max)
+                            } else {
+                                (base_max, base_min)
+                            };
+                            let span = base_max - base_min;
 
-                        let mut a = (start / 100.0).clamp(0.0, 1.0);
-                        let mut b = (end / 100.0).clamp(0.0, 1.0);
-                        if a > b {
-                            core::mem::swap(&mut a, &mut b);
+                            let mut a = (start / 100.0).clamp(0.0, 1.0);
+                            let mut b = (end / 100.0).clamp(0.0, 1.0);
+                            if a > b {
+                                core::mem::swap(&mut a, &mut b);
+                            }
+
+                            Some(DataWindow {
+                                min: base_min + span * a,
+                                max: base_min + span * b,
+                            })
                         }
-
-                        Some(DataWindow {
-                            min: base_min + span * a,
-                            max: base_min + span * b,
-                        })
                     }
-                };
-                x_accum
-                    .entry(axis_index)
-                    .or_insert(ZoomAxisAccum {
-                        filter_mode: None,
-                        min_value_span: None,
-                        max_value_span: None,
-                        window: None,
-                    })
-                    .apply(
-                        filter_mode,
-                        entry.min_value_span,
-                        entry.max_value_span,
-                        window,
-                    )?;
-            }
+                }
+            };
+            x_accum
+                .entry(axis_index)
+                .or_insert(ZoomAxisAccum {
+                    filter_mode: None,
+                    min_value_span: None,
+                    max_value_span: None,
+                    window: None,
+                })
+                .apply(
+                    filter_mode,
+                    entry.min_value_span,
+                    entry.max_value_span,
+                    window,
+                )?;
         }
 
-        if let Some(indices) = y_axis_index {
-            for axis_index in indices.to_vec() {
-                if y_axes.get(axis_index).is_none() {
-                    return Err(EchartsError::Invalid("dataZoom.yAxisIndex out of range"));
-                }
-
-                let axis = y_axes[axis_index];
-                let window = match window_input {
-                    None => None,
-                    Some(ZoomWindowInput::Value { start, end }) => Some(DataWindow {
-                        min: start,
-                        max: end,
-                    }),
-                    Some(ZoomWindowInput::Percent { start, end }) => {
-                        let (base_min, base_max) = axis_extents
-                            .get(&axis)
-                            .copied()
-                            .ok_or(EchartsError::Unsupported(
-                                "dataZoom.start/end requires a data extent for the target axis (v1 subset)",
-                            ))?;
-                        if !base_min.is_finite() || !base_max.is_finite() {
-                            return Err(EchartsError::Unsupported(
-                                "dataZoom.start/end requires a finite data extent for the target axis (v1 subset)",
-                            ));
-                        }
-
-                        let (base_min, base_max) = if base_min <= base_max {
-                            (base_min, base_max)
-                        } else {
-                            (base_max, base_min)
-                        };
-                        let span = base_max - base_min;
-
-                        let mut a = (start / 100.0).clamp(0.0, 1.0);
-                        let mut b = (end / 100.0).clamp(0.0, 1.0);
-                        if a > b {
-                            core::mem::swap(&mut a, &mut b);
-                        }
-
-                        Some(DataWindow {
-                            min: base_min + span * a,
-                            max: base_min + span * b,
-                        })
-                    }
-                };
-                y_accum
-                    .entry(axis_index)
-                    .or_insert(ZoomAxisAccum {
-                        filter_mode: None,
-                        min_value_span: None,
-                        max_value_span: None,
-                        window: None,
-                    })
-                    .apply(
-                        filter_mode,
-                        entry.min_value_span,
-                        entry.max_value_span,
-                        window,
-                    )?;
+        for axis_index in y_axis_indices {
+            if y_axes.get(axis_index).is_none() {
+                return Err(EchartsError::Invalid("dataZoom.yAxisIndex out of range"));
             }
+
+            let axis = y_axes[axis_index];
+            let window = match window_input {
+                None => None,
+                Some(ZoomWindowInput::Value { start, end }) => Some(DataWindow {
+                    min: start,
+                    max: end,
+                }),
+                Some(ZoomWindowInput::Percent { start, end }) => {
+                    match axis_extents.get(&axis).copied() {
+                        None => None,
+                        Some((base_min, base_max)) => {
+                            if !base_min.is_finite() || !base_max.is_finite() {
+                                return Err(EchartsError::Unsupported(
+                                    "dataZoom.start/end requires a finite data extent for the target axis (v1 subset)",
+                                ));
+                            }
+
+                            let (base_min, base_max) = if base_min <= base_max {
+                                (base_min, base_max)
+                            } else {
+                                (base_max, base_min)
+                            };
+                            let span = base_max - base_min;
+
+                            let mut a = (start / 100.0).clamp(0.0, 1.0);
+                            let mut b = (end / 100.0).clamp(0.0, 1.0);
+                            if a > b {
+                                core::mem::swap(&mut a, &mut b);
+                            }
+
+                            Some(DataWindow {
+                                min: base_min + span * a,
+                                max: base_min + span * b,
+                            })
+                        }
+                    }
+                }
+            };
+            y_accum
+                .entry(axis_index)
+                .or_insert(ZoomAxisAccum {
+                    filter_mode: None,
+                    min_value_span: None,
+                    max_value_span: None,
+                    window: None,
+                })
+                .apply(
+                    filter_mode,
+                    entry.min_value_span,
+                    entry.max_value_span,
+                    window,
+                )?;
         }
     }
 
@@ -1304,6 +1326,10 @@ fn compute_axis_extents(
     }
 
     out
+}
+
+fn compute_axis_grids(spec: &ChartSpec) -> BTreeMap<AxisId, GridId> {
+    spec.axes.iter().map(|a| (a.id, a.grid)).collect()
 }
 
 fn build_y_scale(y_axis: Option<&EchartsAxis>) -> Result<AxisScale> {
@@ -2223,6 +2249,66 @@ mod tests {
                     if (w.min - 10.0).abs() < 1e-9 && (w.max - 30.0).abs() < 1e-9
             )),
             "expected SetDataWindowY action"
+        );
+    }
+
+    #[test]
+    fn translate_data_zoom_auto_targets_all_parallel_x_axes_in_first_grid() {
+        let json = r#"
+        {
+          "dataset": { "source": [[0, 0], [1, 10], [2, 20], [3, 30], [4, 40]] },
+          "xAxis": [{ "type": "value" }, { "type": "value" }],
+          "yAxis": { "type": "value" },
+          "dataZoom": [
+            { "type": "slider", "filterMode": "empty", "startValue": 1, "endValue": 3 }
+          ],
+          "series": [
+            { "type": "scatter", "datasetIndex": 0, "encode": { "x": 0, "y": 1 }, "xAxisIndex": 0, "yAxisIndex": 0 }
+          ]
+        }
+        "#;
+
+        let translated = translate_json_str(json).expect("translate");
+        assert_eq!(translated.spec.data_zoom_x.len(), 2);
+        assert_eq!(translated.spec.data_zoom_y.len(), 0);
+        assert_eq!(translated.actions.len(), 2);
+        assert!(
+            translated.actions.iter().all(|a| matches!(
+                a,
+                Action::SetDataWindowX { window: Some(w), .. }
+                    if (w.min - 1.0).abs() < 1e-9 && (w.max - 3.0).abs() < 1e-9
+            )),
+            "expected SetDataWindowX actions for all targeted axes"
+        );
+    }
+
+    #[test]
+    fn translate_data_zoom_auto_targets_all_parallel_y_axes_in_first_grid_when_orient_vertical() {
+        let json = r#"
+        {
+          "dataset": { "source": [[0, 0], [1, 10], [2, 20], [3, 30], [4, 40]] },
+          "xAxis": { "type": "value" },
+          "yAxis": [{ "type": "value" }, { "type": "value" }],
+          "dataZoom": [
+            { "type": "slider", "orient": "vertical", "filterMode": "filter", "startValue": 10, "endValue": 30 }
+          ],
+          "series": [
+            { "type": "scatter", "datasetIndex": 0, "encode": { "x": 0, "y": 1 }, "xAxisIndex": 0, "yAxisIndex": 0 }
+          ]
+        }
+        "#;
+
+        let translated = translate_json_str(json).expect("translate");
+        assert_eq!(translated.spec.data_zoom_x.len(), 0);
+        assert_eq!(translated.spec.data_zoom_y.len(), 2);
+        assert_eq!(translated.actions.len(), 2);
+        assert!(
+            translated.actions.iter().all(|a| matches!(
+                a,
+                Action::SetDataWindowY { window: Some(w), .. }
+                    if (w.min - 10.0).abs() < 1e-9 && (w.max - 30.0).abs() < 1e-9
+            )),
+            "expected SetDataWindowY actions for all targeted axes"
         );
     }
 
