@@ -123,7 +123,7 @@ pub struct ViewState {
     pub series: Vec<SeriesView>,
     last_model_rev: Revision,
     last_data_sig: u64,
-    last_state_rev: Revision,
+    last_state_sig: u64,
 }
 
 impl ViewState {
@@ -135,17 +135,16 @@ impl ViewState {
     ) -> bool {
         let model_rev = model.revs.spec;
         let data_sig = dataset_store_signature(model, datasets);
-
-        let state_rev = state.revision;
+        let state_sig = view_state_signature(model, state);
 
         if model_rev != self.last_model_rev
             || data_sig != self.last_data_sig
-            || state_rev != self.last_state_rev
+            || state_sig != self.last_state_sig
         {
             self.revision.bump();
             self.last_model_rev = model_rev;
             self.last_data_sig = data_sig;
-            self.last_state_rev = state_rev;
+            self.last_state_sig = state_sig;
             return true;
         }
 
@@ -296,6 +295,70 @@ fn fnv1a_step(hash: u64, value: u64) -> u64 {
     (hash ^ value).wrapping_mul(1099511628211u64)
 }
 
+fn filter_mode_tag(mode: crate::spec::FilterMode) -> u64 {
+    match mode {
+        crate::spec::FilterMode::Filter => 1,
+        crate::spec::FilterMode::WeakFilter => 2,
+        crate::spec::FilterMode::Empty => 3,
+        crate::spec::FilterMode::None => 4,
+    }
+}
+
+fn f64_tag(v: Option<f64>) -> u64 {
+    match v {
+        None => 0,
+        Some(v) => v.to_bits(),
+    }
+}
+
+fn view_state_signature(model: &ChartModel, state: &ChartState) -> u64 {
+    // This signature intentionally ignores state that does not affect data/row participation:
+    // hover position, brush selection, axis locks, visualMap state, etc.
+    //
+    // The intent is to avoid rebuilding the data view pipeline for purely visual/interaction state
+    // changes (aligns with ECharts `dataZoomProcessor` which is part of the data pipeline).
+    let mut hash = 1469598103934665603u64;
+
+    hash = fnv1a_step(hash, model.data_zoom_x_by_axis.len() as u64);
+    for axis in model.data_zoom_x_by_axis.keys() {
+        hash = fnv1a_step(hash, axis.0);
+        let st = state.data_zoom_x.get(axis).copied();
+        hash = fnv1a_step(hash, st.is_some() as u64);
+        if let Some(st) = st {
+            hash = fnv1a_step(hash, filter_mode_tag(st.filter_mode));
+            hash = fnv1a_step(hash, st.window.is_some() as u64);
+            if let Some(w) = st.window {
+                hash = fnv1a_step(hash, f64_tag(Some(w.min)));
+                hash = fnv1a_step(hash, f64_tag(Some(w.max)));
+            }
+        }
+    }
+
+    hash = fnv1a_step(hash, model.data_zoom_y_by_axis.len() as u64);
+    for axis in model.data_zoom_y_by_axis.keys() {
+        hash = fnv1a_step(hash, axis.0);
+        let w = state.data_window_y.get(axis).copied();
+        hash = fnv1a_step(hash, w.is_some() as u64);
+        if let Some(w) = w {
+            hash = fnv1a_step(hash, f64_tag(Some(w.min)));
+            hash = fnv1a_step(hash, f64_tag(Some(w.max)));
+        }
+    }
+
+    hash = fnv1a_step(hash, model.datasets.len() as u64);
+    for dataset in model.datasets.keys() {
+        hash = fnv1a_step(hash, dataset.0);
+        let r = state.dataset_row_ranges.get(dataset).copied();
+        hash = fnv1a_step(hash, r.is_some() as u64);
+        if let Some(r) = r {
+            hash = fnv1a_step(hash, r.start as u64);
+            hash = fnv1a_step(hash, r.end as u64);
+        }
+    }
+
+    hash
+}
+
 pub fn table_row_range<'a>(
     table: &'a DataTable,
     view: Option<&DatasetView>,
@@ -308,4 +371,173 @@ pub fn table_row_range<'a>(
         range = view.row_range;
     }
     range.as_std_range(table.row_count)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::data::{Column, DataTable, DatasetStore};
+    use crate::engine::ChartState;
+    use crate::engine::model::ChartModel;
+    use crate::engine::window::DataWindow;
+    use crate::ids::{AxisId, ChartId, DataZoomId, DatasetId, FieldId, GridId, SeriesId};
+    use crate::scale::AxisScale;
+    use crate::spec::{
+        AxisKind, AxisRange, AxisSpec, DatasetSpec, FieldSpec, FilterMode, GridSpec, SeriesEncode,
+        SeriesKind, SeriesSpec,
+    };
+
+    fn build_model() -> ChartModel {
+        let dataset_id = DatasetId::new(1);
+        let grid_id = GridId::new(1);
+        let x_axis = AxisId::new(1);
+        let y_axis = AxisId::new(2);
+        let x_field = FieldId::new(1);
+        let y_field = FieldId::new(2);
+
+        let spec = crate::spec::ChartSpec {
+            id: ChartId::new(1),
+            viewport: None,
+            datasets: vec![DatasetSpec {
+                id: dataset_id,
+                fields: vec![
+                    FieldSpec {
+                        id: x_field,
+                        column: 0,
+                    },
+                    FieldSpec {
+                        id: y_field,
+                        column: 1,
+                    },
+                ],
+            }],
+            grids: vec![GridSpec { id: grid_id }],
+            axes: vec![
+                AxisSpec {
+                    id: x_axis,
+                    name: None,
+                    kind: AxisKind::X,
+                    grid: grid_id,
+                    position: None,
+                    scale: AxisScale::default(),
+                    range: Some(AxisRange::Auto),
+                },
+                AxisSpec {
+                    id: y_axis,
+                    name: None,
+                    kind: AxisKind::Y,
+                    grid: grid_id,
+                    position: None,
+                    scale: AxisScale::default(),
+                    range: Some(AxisRange::Auto),
+                },
+            ],
+            data_zoom_x: vec![crate::spec::DataZoomXSpec {
+                id: DataZoomId::new(1),
+                axis: x_axis,
+                filter_mode: FilterMode::Filter,
+                min_value_span: None,
+                max_value_span: None,
+            }],
+            data_zoom_y: vec![crate::spec::DataZoomYSpec {
+                id: DataZoomId::new(2),
+                axis: y_axis,
+                filter_mode: FilterMode::Filter,
+                min_value_span: None,
+                max_value_span: None,
+            }],
+            tooltip: None,
+            axis_pointer: None,
+            visual_maps: vec![],
+            series: vec![SeriesSpec {
+                id: SeriesId::new(1),
+                name: None,
+                kind: SeriesKind::Scatter,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+                lod: None,
+            }],
+        };
+
+        ChartModel::from_spec(spec).expect("valid chart spec")
+    }
+
+    fn build_datasets() -> DatasetStore {
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(vec![0.0, 1.0, 2.0, 3.0]));
+        table.push_column(Column::F64(vec![10.0, 20.0, 30.0, 40.0]));
+        let mut store = DatasetStore::default();
+        store.insert(DatasetId::new(1), table);
+        store
+    }
+
+    #[test]
+    fn view_sync_ignores_hover_and_brush_state() {
+        let model = build_model();
+        let datasets = build_datasets();
+        let mut state = ChartState::default();
+        let mut view = ViewState::default();
+
+        assert!(view.sync_inputs(&model, &datasets, &state));
+        assert!(!view.sync_inputs(&model, &datasets, &state));
+
+        state.hover_px = Some(fret_core::Point::new(
+            fret_core::Px(1.0),
+            fret_core::Px(2.0),
+        ));
+        state.revision.bump();
+        assert!(
+            !view.sync_inputs(&model, &datasets, &state),
+            "hover must not invalidate the data view pipeline"
+        );
+
+        state.brush_selection_2d = Some(crate::selection::BrushSelection2D {
+            x_axis: AxisId::new(1),
+            y_axis: AxisId::new(2),
+            x: DataWindow { min: 0.0, max: 1.0 },
+            y: DataWindow { min: 0.0, max: 1.0 },
+        });
+        state.revision.bump();
+        assert!(
+            !view.sync_inputs(&model, &datasets, &state),
+            "brush must not invalidate the data view pipeline"
+        );
+    }
+
+    #[test]
+    fn view_sync_rebuilds_on_datazoom_and_dataset_row_range_changes() {
+        let model = build_model();
+        let datasets = build_datasets();
+        let mut state = ChartState::default();
+        let mut view = ViewState::default();
+
+        assert!(view.sync_inputs(&model, &datasets, &state));
+
+        state.data_zoom_x.insert(
+            AxisId::new(1),
+            crate::engine::DataZoomXState {
+                window: Some(DataWindow { min: 0.0, max: 2.0 }),
+                filter_mode: FilterMode::Filter,
+            },
+        );
+        state.revision.bump();
+        assert!(view.sync_inputs(&model, &datasets, &state));
+
+        state.dataset_row_ranges.insert(
+            DatasetId::new(1),
+            crate::transform::RowRange { start: 1, end: 3 },
+        );
+        state.revision.bump();
+        assert!(view.sync_inputs(&model, &datasets, &state));
+    }
 }
