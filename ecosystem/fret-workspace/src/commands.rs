@@ -193,6 +193,17 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
             },
         )
     };
+    let mac_cmd_shift = |key: KeyCode| {
+        kb(
+            PlatformFilter::Macos,
+            key,
+            Modifiers {
+                meta: true,
+                shift: true,
+                ..Default::default()
+            },
+        )
+    };
 
     let win_ctrl_k = KeyChord::new(
         KeyCode::KeyK,
@@ -577,6 +588,9 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
             .with_category("Workspace")
             .with_keywords(["split", "pane", "down", "workspace"])
             .with_default_keybindings([
+                win_ctrl(KeyCode::Backslash, true),
+                linux_ctrl(KeyCode::Backslash, true),
+                mac_cmd_shift(KeyCode::Backslash),
                 seq(
                     PlatformFilter::Windows,
                     vec![
