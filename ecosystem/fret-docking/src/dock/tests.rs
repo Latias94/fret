@@ -1828,6 +1828,7 @@ fn dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
         DockPanelDragPayload {
             panel: PanelKey::new("core.viewport"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
         },
     );
@@ -1879,6 +1880,7 @@ fn dock_drag_requests_animation_frames_while_dragging() {
         DockPanelDragPayload {
             panel: PanelKey::new("core.viewport"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
         },
     );
@@ -2147,6 +2149,7 @@ fn dock_tab_drop_outside_window_requests_float() {
         DockPanelDragPayload {
             panel: PanelKey::new("core.hierarchy"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
         },
     );
@@ -2216,6 +2219,7 @@ fn dock_tab_drop_outside_window_does_not_request_tear_off_twice() {
         DockPanelDragPayload {
             panel: PanelKey::new("core.hierarchy"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
         },
     );
@@ -2305,6 +2309,7 @@ fn dock_tab_drop_outside_window_floats_in_window_when_tear_off_disabled() {
         DockPanelDragPayload {
             panel: PanelKey::new("core.hierarchy"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
         },
     );
@@ -2377,6 +2382,7 @@ fn dock_tab_drop_outside_window_floats_in_window_when_multi_window_is_disabled()
         DockPanelDragPayload {
             panel: PanelKey::new("core.hierarchy"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
         },
     );
@@ -2453,6 +2459,7 @@ fn dock_tab_drop_outside_routes_to_dock_space() {
         DockPanelDragPayload {
             panel: PanelKey::new("core.hierarchy"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
         },
     );

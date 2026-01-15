@@ -479,6 +479,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             dragging: bool,
             panel: PanelKey,
             grab_offset: Point,
+            start_tick: fret_runtime::TickId,
             tear_off_requested: bool,
         }
 
@@ -553,6 +554,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     dragging: d.dragging,
                     panel: p.panel.clone(),
                     grab_offset: p.grab_offset,
+                    start_tick: p.start_tick,
                     tear_off_requested: p.tear_off_requested,
                 })
         });
@@ -577,6 +579,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             .and_then(|svc| svc.scale_factor(self.window))
             .unwrap_or(1.0);
         let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
+        let now_tick = cx.app.tick_id();
 
         let mut begin_drag: Option<(Point, PanelKey, Point)> = None;
         let mut update_drag: Option<(Point, bool)> = None;
@@ -1353,14 +1356,17 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 let prev_hover = dock.hover.clone();
                                 let mut dragging = drag.dragging;
                                 if drag.source_window == self.window {
-                                    let dx = position.x.0 - drag.start.x.0;
-                                    let dy = position.y.0 - drag.start.y.0;
-                                    let dist2 = dx * dx + dy * dy;
                                     // Match ImGui's default drag threshold (~6 screen px).
-                                    const DOCK_PANEL_DRAG_THRESHOLD_PX: Px = Px(6.0);
-                                    let threshold_sq = DOCK_PANEL_DRAG_THRESHOLD_PX.0
-                                        * DOCK_PANEL_DRAG_THRESHOLD_PX.0;
-                                    if !dragging && dist2 > threshold_sq {
+                                    let activation =
+                                        fret_dnd::ActivationConstraint::Distance { px: 6.0 };
+                                    if !dragging
+                                        && activation.is_satisfied(
+                                            drag.start_tick.0,
+                                            now_tick.0,
+                                            drag.start,
+                                            position,
+                                        )
+                                    {
                                         dragging = true;
                                     }
                                 } else if !dragging {
@@ -1644,6 +1650,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 DockPanelDragPayload {
                     panel,
                     grab_offset,
+                    start_tick: cx.app.tick_id(),
                     tear_off_requested: false,
                 },
             );
