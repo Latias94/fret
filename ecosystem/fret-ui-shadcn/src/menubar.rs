@@ -1157,21 +1157,19 @@ impl MenubarMenuEntries {
 
                         let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) = entries
                             .iter()
-                            .map(|e| match e {
-                                MenubarEntry::Item(item) => (item.label.clone(), item.disabled),
+                            .filter_map(|e| match e {
+                                MenubarEntry::Item(item) => Some((item.label.clone(), item.disabled)),
                                 MenubarEntry::CheckboxItem(item) => {
-                                    (item.label.clone(), item.disabled)
+                                    Some((item.label.clone(), item.disabled))
                                 }
-                                MenubarEntry::RadioItem(item) => (item.label.clone(), item.disabled),
-                                MenubarEntry::Label(_) | MenubarEntry::Separator => {
-                                    (Arc::from(""), true)
-                                }
-                                MenubarEntry::Group(_) | MenubarEntry::RadioGroup(_) => {
-                                    unreachable!("entries are flattened")
-                                }
+                                MenubarEntry::RadioItem(item) => Some((item.label.clone(), item.disabled)),
                                 MenubarEntry::Submenu(submenu) => {
-                                    (submenu.trigger.label.clone(), submenu.trigger.disabled)
+                                    Some((submenu.trigger.label.clone(), submenu.trigger.disabled))
                                 }
+                                MenubarEntry::Label(_)
+                                | MenubarEntry::Separator
+                                | MenubarEntry::Group(_)
+                                | MenubarEntry::RadioGroup(_) => None,
                             })
                             .unzip();
 
@@ -2052,27 +2050,24 @@ impl MenubarMenuEntries {
                                     let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) =
                                         submenu_entries
                                             .iter()
-                                            .map(|e| match e {
+                                            .filter_map(|e| match e {
                                                 MenubarEntry::Item(item) => {
-                                                    (item.label.clone(), item.disabled)
+                                                    Some((item.label.clone(), item.disabled))
                                                 }
                                                 MenubarEntry::CheckboxItem(item) => {
-                                                    (item.label.clone(), item.disabled)
+                                                    Some((item.label.clone(), item.disabled))
                                                 }
                                                 MenubarEntry::RadioItem(item) => {
-                                                    (item.label.clone(), item.disabled)
+                                                    Some((item.label.clone(), item.disabled))
                                                 }
-                                                MenubarEntry::Submenu(submenu) => (
+                                                MenubarEntry::Submenu(submenu) => Some((
                                                     submenu.trigger.label.clone(),
                                                     submenu.trigger.disabled,
-                                                ),
-                                                MenubarEntry::Label(_) | MenubarEntry::Separator => {
-                                                    (Arc::from(""), true)
-                                                }
-                                                MenubarEntry::Group(_)
-                                                | MenubarEntry::RadioGroup(_) => {
-                                                    unreachable!("entries are flattened")
-                                                }
+                                                )),
+                                                MenubarEntry::Label(_)
+                                                | MenubarEntry::Separator
+                                                | MenubarEntry::Group(_)
+                                                | MenubarEntry::RadioGroup(_) => None,
                                             })
                                             .unzip();
 

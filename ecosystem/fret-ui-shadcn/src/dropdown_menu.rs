@@ -573,6 +573,22 @@ fn collect_roving_labels_and_disabled(
     }
 }
 
+fn flatten_entries(into: &mut Vec<DropdownMenuEntry>, entries: Vec<DropdownMenuEntry>) {
+    for entry in entries {
+        match entry {
+            DropdownMenuEntry::Group(group) => flatten_entries(into, group.entries),
+            DropdownMenuEntry::RadioGroup(group) => {
+                for item in group.items {
+                    into.push(DropdownMenuEntry::RadioItem(
+                        item.into_item(group.value.clone()),
+                    ));
+                }
+            }
+            other => into.push(other),
+        }
+    }
+}
+
 fn find_submenu_entries_by_value(
     entries: &[DropdownMenuEntry],
     open_value: &str,
@@ -1036,8 +1052,11 @@ impl DropdownMenu {
                         return (Vec::new(), None);
                     };
 
-                    let entries: Arc<[DropdownMenuEntry]> =
-                        Arc::from(entries(cx).into_boxed_slice());
+                    let entries: Arc<[DropdownMenuEntry]> = {
+                        let mut flat: Vec<DropdownMenuEntry> = Vec::new();
+                        flatten_entries(&mut flat, entries(cx));
+                        Arc::from(flat.into_boxed_slice())
+                    };
                     let reserve_leading_slot_enabled =
                         align_leading_icons && reserve_leading_slot(&entries);
 
@@ -1908,6 +1927,12 @@ impl DropdownMenu {
                         );
 
                         if let Some(submenu_entries) = submenu_entries {
+                                        let submenu_entries: Vec<DropdownMenuEntry> = {
+                                            let mut flat: Vec<DropdownMenuEntry> = Vec::new();
+                                            flatten_entries(&mut flat, submenu_entries);
+                                            flat
+                                        };
+
                                         let reserve_leading_slot_enabled =
                                             align_leading_icons && reserve_leading_slot(&submenu_entries);
                                         let item_count = focusable_item_count(&submenu_entries);

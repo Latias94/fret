@@ -12,6 +12,15 @@ pub(super) fn handle_roving_flex<H: UiHost>(
         return;
     }
 
+    fn is_roving_item_instance(instance: &crate::declarative::frame::ElementInstance) -> bool {
+        matches!(
+            instance,
+            crate::declarative::frame::ElementInstance::Pressable(_)
+                | crate::declarative::frame::ElementInstance::TextInput(_)
+                | crate::declarative::frame::ElementInstance::TextArea(_)
+        )
+    }
+
     struct RovingHookHost<'a, H: UiHost> {
         app: &'a mut H,
         window: AppWindowId,
@@ -118,9 +127,25 @@ pub(super) fn handle_roving_flex<H: UiHost>(
         return;
     }
 
+    // Roving flex items are expected to be direct children of the roving container.
+    let mut roving_items: Vec<NodeId> = Vec::with_capacity(len);
+    for &child in cx.children {
+        let Some(record) =
+            crate::declarative::frame::element_record_for_node(cx.app, window, child)
+        else {
+            continue;
+        };
+        if is_roving_item_instance(&record.instance) {
+            roving_items.push(child);
+        }
+    }
+    if roving_items.is_empty() {
+        return;
+    }
+
     let current = cx
         .focus
-        .and_then(|focus| cx.children.iter().position(|n| *n == focus));
+        .and_then(|focus| roving_items.iter().position(|n| *n == focus));
 
     let navigate_hook = crate::elements::with_element_state(
         &mut *cx.app,
@@ -152,7 +177,7 @@ pub(super) fn handle_roving_flex<H: UiHost>(
                 repeat: *repeat,
                 axis: props.flex.direction,
                 current,
-                len,
+                len: roving_items.len(),
                 disabled: props.roving.disabled.clone(),
                 wrap: props.roving.wrap,
             },
@@ -196,7 +221,7 @@ pub(super) fn handle_roving_flex<H: UiHost>(
                 crate::action::RovingTypeaheadCx {
                     input: ch,
                     current,
-                    len,
+                    len: roving_items.len(),
                     disabled: props.roving.disabled.clone(),
                     wrap: props.roving.wrap,
                     tick,
@@ -220,7 +245,10 @@ pub(super) fn handle_roving_flex<H: UiHost>(
         return;
     }
 
-    cx.request_focus(cx.children[target]);
+    if target >= roving_items.len() {
+        return;
+    }
+    cx.request_focus(roving_items[target]);
 
     let hook = crate::elements::with_element_state(
         &mut *cx.app,
