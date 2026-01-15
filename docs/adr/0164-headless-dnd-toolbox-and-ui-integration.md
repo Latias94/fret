@@ -139,6 +139,20 @@ This is the default semantic for `fret-ui-kit` recipes. More specialized semanti
 lines, sectioned lists, pinned columns) may be layered as higher-level recipes but must remain compatible with
 this base interpretation.
 
+### 2.5) DnD registries are scoped within a window (`DndScopeId`)
+
+Within a single window, multiple independent DnD workflows may coexist (e.g. a canvas with ports, a tree view,
+and a sortable list). To prevent unrelated droppable sets from influencing collision results, `fret-ui-kit`'s
+registry is partitioned by an explicit scope ID:
+
+- `DndScopeId` is an opaque `u64` identifier
+- the default scope is `DndScopeId(0)`
+- recipes and component integrations should compute a stable scope per component instance (e.g. based on the
+  declarative root element id)
+
+This keeps the mechanism layer (`fret-ui`) unchanged while avoiding a later, hard-to-reverse expansion to support
+same-frame geometry or cross-component coordination.
+
 ### 3) Treat internal drag routing as mechanism-only; toolbox owns policy
 
 The runtime continues to route `Event::InternalDrag` using hit-testing and the existing internal-drag anchor override
