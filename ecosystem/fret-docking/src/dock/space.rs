@@ -556,8 +556,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             let mut nodes: Vec<(DockNodeId, Rect)> = layout.iter().map(|(&n, &r)| (n, r)).collect();
             nodes.sort_by_key(|(node, _)| node.data().as_ffi());
 
-            let mut by_id: HashMap<fret_dnd::DndItemId, HoverKind> = HashMap::new();
-            let mut droppables: Vec<fret_dnd::Droppable> = Vec::new();
+            let mut idx = fret_dnd::RectDroppableIndex::<HoverKind>::default();
 
             for (node, rect) in nodes {
                 let Some(DockNode::Tabs { tabs, .. }) = graph.node(node) else {
@@ -571,8 +570,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 let scroll = tab_scroll_for_node(tab_scroll, node);
 
                 let tab_id = candidate_id(node, DockDropCandidateKind::TabBar);
-                by_id.insert(
+                idx.push_rect(
                     tab_id,
+                    tab_bar,
+                    30,
+                    false,
                     HoverKind::TabBar {
                         tabs: node,
                         tab_bar,
@@ -580,22 +582,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         tab_count: tabs.len(),
                     },
                 );
-                droppables.push(fret_dnd::Droppable {
-                    id: tab_id,
-                    rect: tab_bar,
-                    disabled: false,
-                    z_index: 30,
-                });
 
                 for (zone, hint_rect) in dock_hint_rects(rect) {
                     let hint_id = candidate_id(node, DockDropCandidateKind::Hint(zone));
-                    by_id.insert(hint_id, HoverKind::Zone { tabs: node, zone });
-                    droppables.push(fret_dnd::Droppable {
-                        id: hint_id,
-                        rect: hint_rect,
-                        disabled: false,
-                        z_index: 20,
-                    });
+                    idx.push_rect(
+                        hint_id,
+                        hint_rect,
+                        20,
+                        false,
+                        HoverKind::Zone { tabs: node, zone },
+                    );
                 }
 
                 for zone in [
@@ -606,39 +602,30 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 ] {
                     let edge_rect = drop_zone_rect(rect, zone);
                     let edge_id = candidate_id(node, DockDropCandidateKind::Edge(zone));
-                    by_id.insert(edge_id, HoverKind::Zone { tabs: node, zone });
-                    droppables.push(fret_dnd::Droppable {
-                        id: edge_id,
-                        rect: edge_rect,
-                        disabled: false,
-                        z_index: 10,
-                    });
+                    idx.push_rect(
+                        edge_id,
+                        edge_rect,
+                        10,
+                        false,
+                        HoverKind::Zone { tabs: node, zone },
+                    );
                 }
 
                 let fallback_id = candidate_id(node, DockDropCandidateKind::FallbackCenter);
-                by_id.insert(
+                idx.push_rect(
                     fallback_id,
+                    rect,
+                    0,
+                    false,
                     HoverKind::Zone {
                         tabs: node,
                         zone: DropZone::Center,
                     },
                 );
-                droppables.push(fret_dnd::Droppable {
-                    id: fallback_id,
-                    rect,
-                    disabled: false,
-                    z_index: 0,
-                });
             }
 
-            let snapshot = fret_dnd::RegistrySnapshot {
-                draggables: Vec::new(),
-                droppables,
-            };
-            let collision = fret_dnd::pointer_within_collisions(&snapshot, position)
-                .into_iter()
-                .next()?;
-            match by_id.get(&collision.id).copied()? {
+            let (_id, kind) = idx.pick_pointer_within(position)?;
+            match kind {
                 HoverKind::TabBar {
                     tabs,
                     tab_bar,
