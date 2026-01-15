@@ -1,14 +1,17 @@
-use fret_core::{Color, Corners, CursorIcon, Edges, Px, SemanticsRole};
+use fret_core::{Color, Corners, CursorIcon, Edges, KeyCode, Modifiers, Px, SemanticsRole};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, Overflow, PointerRegionProps, PressableA11y,
-    PressableProps, ScrollAxis, ScrollProps,
+    PressableProps, ScrollAxis, ScrollProps, SemanticsProps,
 };
 use fret_ui::scroll::{ScrollHandle, VirtualListScrollHandle};
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{
+    ElementContext, Theme, UiHost, action::PressablePointerDownResult, scroll::ScrollStrategy,
+};
 
 use fret_core::time::Instant;
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
+use std::rc::Rc;
 use std::sync::Arc;
 
 use crate::declarative::action_hooks::ActionHooksExt;
@@ -324,6 +327,26 @@ fn columns_fingerprint<TData>(columns: &[ColumnDef<TData>]) -> u64 {
         h = h.wrapping_mul(0x00000100000001B3);
     }
     h
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TableNavRowKind {
+    Leaf,
+    Group,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct TableNavRowMeta {
+    row_key: RowKey,
+    kind: TableNavRowKind,
+}
+
+#[derive(Default)]
+struct TableKeyboardNavState {
+    active_index: Rc<Cell<Option<usize>>>,
+    row_meta: Rc<RefCell<Arc<[TableNavRowMeta]>>>,
+    active_element: Rc<Cell<Option<fret_ui::GlobalElementId>>>,
+    active_command: Rc<RefCell<Option<CommandId>>>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -828,12 +851,169 @@ pub fn table_virtualized<H: UiHost, TData>(
 
     let rendered_rows = Cell::new(0usize);
 
-    cx.semantics(
-        fret_ui::element::SemanticsProps {
+    let (active_index, row_meta, active_element, active_command) =
+        cx.with_state(TableKeyboardNavState::default, |st| {
+            (
+                st.active_index.clone(),
+                st.row_meta.clone(),
+                st.active_element.clone(),
+                st.active_command.clone(),
+            )
+        });
+
+    {
+        let next_meta: Arc<[TableNavRowMeta]> = page_display_rows
+            .iter()
+            .map(|row| match row {
+                DisplayRow::Leaf { row_key, .. } => TableNavRowMeta {
+                    row_key: *row_key,
+                    kind: TableNavRowKind::Leaf,
+                },
+                DisplayRow::Group { row_key, .. } => TableNavRowMeta {
+                    row_key: *row_key,
+                    kind: TableNavRowKind::Group,
+                },
+            })
+            .collect::<Vec<_>>()
+            .into();
+        *row_meta.borrow_mut() = next_meta;
+    }
+
+    if set_size == 0 {
+        if active_index.get().is_some() {
+            active_index.set(None);
+        }
+    } else {
+        let next = Some(
+            active_index
+                .get()
+                .unwrap_or(0)
+                .min(set_size.saturating_sub(1)),
+        );
+        if active_index.get() != next {
+            active_index.set(next);
+        }
+    }
+
+    let key_handler: fret_ui::action::OnKeyDown = {
+        let active_index = active_index.clone();
+        let row_meta = row_meta.clone();
+        let active_command = active_command.clone();
+        let vertical_scroll = vertical_scroll.clone();
+        let state = state.clone();
+        let enable_row_selection = props.enable_row_selection;
+        let single_row_selection = props.single_row_selection;
+
+        Arc::new(move |host, action_cx, down| {
+            if down.modifiers != Modifiers::default() {
+                return false;
+            }
+
+            let meta = row_meta.borrow().clone();
+            let len = meta.len();
+            if len == 0 {
+                if active_index.get().is_some() {
+                    active_index.set(None);
+                    host.request_redraw(action_cx.window);
+                }
+                return false;
+            }
+
+            let current = active_index.get().unwrap_or(0).min(len.saturating_sub(1));
+
+            match down.key {
+                KeyCode::ArrowDown
+                | KeyCode::ArrowUp
+                | KeyCode::Home
+                | KeyCode::End
+                | KeyCode::PageDown
+                | KeyCode::PageUp => {
+                    let page = 10usize;
+                    let next = match down.key {
+                        KeyCode::ArrowDown => (current + 1).min(len.saturating_sub(1)),
+                        KeyCode::ArrowUp => current.saturating_sub(1),
+                        KeyCode::Home => 0,
+                        KeyCode::End => len.saturating_sub(1),
+                        KeyCode::PageDown => (current + page).min(len.saturating_sub(1)),
+                        KeyCode::PageUp => current.saturating_sub(page),
+                        _ => current,
+                    };
+
+                    if next != current {
+                        active_index.set(Some(next));
+                        *active_command.borrow_mut() = None;
+                        vertical_scroll.scroll_to_item(next, ScrollStrategy::Nearest);
+                        host.request_redraw(action_cx.window);
+                    }
+                    true
+                }
+                KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space => {
+                    let Some(meta) = meta.get(current).copied() else {
+                        return false;
+                    };
+
+                    if let Some(cmd) = active_command.borrow().clone() {
+                        host.dispatch_command(Some(action_cx.window), cmd);
+                    }
+
+                    match meta.kind {
+                        TableNavRowKind::Group => {
+                            let row_key = meta.row_key;
+                            let _ = host.models_mut().update(&state, move |st| {
+                                match &mut st.expanding {
+                                    ExpandingState::All => {
+                                        st.expanding = ExpandingState::default();
+                                    }
+                                    ExpandingState::Keys(keys) => {
+                                        if keys.contains(&row_key) {
+                                            keys.remove(&row_key);
+                                        } else {
+                                            keys.insert(row_key);
+                                        }
+                                    }
+                                }
+                            });
+                            host.request_redraw(action_cx.window);
+                            true
+                        }
+                        TableNavRowKind::Leaf => {
+                            if !enable_row_selection {
+                                return false;
+                            }
+
+                            let row_key = meta.row_key;
+                            let _ = host.models_mut().update(&state, move |st| {
+                                let selected = st.row_selection.contains(&row_key);
+                                if single_row_selection {
+                                    st.row_selection.clear();
+                                }
+                                if selected {
+                                    st.row_selection.remove(&row_key);
+                                } else {
+                                    st.row_selection.insert(row_key);
+                                }
+                            });
+                            host.request_redraw(action_cx.window);
+                            true
+                        }
+                    }
+                }
+                _ => false,
+            }
+        })
+    };
+
+    let active_descendant = active_element.get().and_then(|id| cx.node_for_element(id));
+
+    cx.semantics_with_id(
+        SemanticsProps {
             role: SemanticsRole::List,
+            focusable: true,
+            active_descendant,
             ..Default::default()
         },
-        |cx| {
+        |cx, list_id| {
+            cx.key_on_key_down_for(list_id, key_handler.clone());
             vec![cx.container(
                 ContainerProps {
                     layout: {
@@ -1383,9 +1563,16 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                         };
 
                                                         let enabled = true;
+                                                        let active_index = active_index.clone();
+                                                        let active_element = active_element.clone();
+                                                        let active_command = active_command.clone();
+                                                        let key_handler = key_handler.clone();
+                                                        let focus_target = list_id;
+
                                                         return cx.pressable(
                                                             PressableProps {
                                                                 enabled,
+                                                                focusable: false,
                                                                 a11y: PressableA11y {
                                                                     role: Some(
                                                                         SemanticsRole::ListItem,
@@ -1397,6 +1584,29 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                 ..Default::default()
                                                             },
                                                             |cx, st| {
+                                                                cx.key_on_key_down_for(
+                                                                    cx.root_id(),
+                                                                    key_handler.clone(),
+                                                                );
+
+                                                                let active_index_for_pointer =
+                                                                    active_index.clone();
+                                                                let active_command_for_pointer =
+                                                                    active_command.clone();
+                                                                cx.pressable_on_pointer_down(
+                                                                    Arc::new(move |host, action_cx, _down| {
+                                                                        host.request_focus(focus_target);
+                                                                        active_index_for_pointer.set(Some(i));
+                                                                        *active_command_for_pointer.borrow_mut() = None;
+                                                                        host.request_redraw(action_cx.window);
+                                                                        PressablePointerDownResult::Continue
+                                                                    }),
+                                                                );
+
+                                                                if active_index.get() == Some(i) {
+                                                                    active_element.set(Some(cx.root_id()));
+                                                                    *active_command.borrow_mut() = None;
+                                                                }
                                                                 let state_model = state.clone();
                                                                 cx.pressable_update_model(
                                                                     &state_model,
@@ -1417,8 +1627,11 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                     },
                                                                 );
 
+                                                                let is_active = active_index.get() == Some(i);
                                                                 let bg = if st.pressed {
                                                                     Some(row_active)
+                                                                } else if is_active {
+                                                                    Some(row_hover)
                                                                 } else if st.hovered {
                                                                     Some(row_hover)
                                                                 } else {
@@ -1876,9 +2089,16 @@ pub fn table_virtualized<H: UiHost, TData>(
                                             let is_selected =
                                                 is_row_selected(data_row.key, &state_value.row_selection);
 
+                                            let active_index = active_index.clone();
+                                            let active_element = active_element.clone();
+                                            let active_command = active_command.clone();
+                                            let key_handler = key_handler.clone();
+                                            let focus_target = list_id;
+
                                             cx.pressable(
                                                 PressableProps {
                                                     enabled,
+                                                    focusable: false,
                                                     a11y: PressableA11y {
                                                         role: Some(SemanticsRole::ListItem),
                                                         selected: is_selected,
@@ -1888,6 +2108,25 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                     ..Default::default()
                                                 },
                                                 |cx, st| {
+                                                    cx.key_on_key_down_for(
+                                                        cx.root_id(),
+                                                        key_handler.clone(),
+                                                    );
+
+                                                    let active_index_for_pointer = active_index.clone();
+                                                    cx.pressable_on_pointer_down(Arc::new(
+                                                        move |host, action_cx, _down| {
+                                                            host.request_focus(focus_target);
+                                                            active_index_for_pointer.set(Some(i));
+                                                            host.request_redraw(action_cx.window);
+                                                            PressablePointerDownResult::Continue
+                                                        },
+                                                    ));
+
+                                                    if active_index.get() == Some(i) {
+                                                        active_element.set(Some(cx.root_id()));
+                                                        *active_command.borrow_mut() = cmd.clone();
+                                                    }
                                                     cx.pressable_dispatch_command_opt(cmd.clone());
                                                     if props.enable_row_selection {
                                                         let state_model = state.clone();
@@ -1906,8 +2145,11 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                         });
                                                     }
 
+                                                    let is_active = active_index.get() == Some(i);
                                                     let bg = if is_selected || (enabled && st.pressed) {
                                                         Some(row_active)
+                                                    } else if is_active {
+                                                        Some(row_hover)
                                                     } else if enabled && st.hovered {
                                                         Some(row_hover)
                                                     } else {
