@@ -1039,7 +1039,16 @@ fn translate_data_zoom_v1(
             }
         };
 
-        if let Some(indices) = entry.x_axis_index.as_ref() {
+        // v1 subset: if no axis is specified, default to the first X axis (ECharts auto-targets
+        // a parallel axis by orient; see DataZoomModel._fillAutoTargetAxisByOrient).
+        let default_x_axis_index = AxisIndexOrIndices::One(0);
+        let x_axis_index = if entry.x_axis_index.is_none() && entry.y_axis_index.is_none() {
+            Some(&default_x_axis_index)
+        } else {
+            entry.x_axis_index.as_ref()
+        };
+
+        if let Some(indices) = x_axis_index {
             for axis_index in indices.to_vec() {
                 if x_axes.get(axis_index).is_none() {
                     return Err(EchartsError::Invalid("dataZoom.xAxisIndex out of range"));
@@ -2138,6 +2147,34 @@ mod tests {
                     if (w.min - 1.0).abs() < 1e-9 && (w.max - 3.0).abs() < 1e-9
             )),
             "expected SetDataWindowX action for percent window"
+        );
+    }
+
+    #[test]
+    fn translate_data_zoom_defaults_to_first_x_axis_when_unspecified() {
+        let json = r#"
+        {
+          "xAxis": { "type": "value" },
+          "yAxis": { "type": "value" },
+          "dataZoom": [
+            { "type": "slider", "filterMode": "empty", "startValue": 1, "endValue": 3 }
+          ],
+          "series": [
+            { "type": "scatter", "data": [[0, 0], [1, 10], [2, 20], [3, 30], [4, 40]] }
+          ]
+        }
+        "#;
+
+        let translated = translate_json_str(json).expect("translate");
+        assert_eq!(translated.spec.data_zoom_x.len(), 1);
+        assert_eq!(translated.spec.data_zoom_y.len(), 0);
+        assert!(
+            translated.actions.iter().any(|a| matches!(
+                a,
+                Action::SetDataWindowX { window: Some(w), .. }
+                    if (w.min - 1.0).abs() < 1e-9 && (w.max - 3.0).abs() < 1e-9
+            )),
+            "expected SetDataWindowX action"
         );
     }
 
