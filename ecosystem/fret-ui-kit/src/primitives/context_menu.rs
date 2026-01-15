@@ -32,6 +32,10 @@ pub use crate::primitives::menu::trigger::wire_open_on_shift_f10 as wire_context
 /// - wrap your trigger in a `PointerRegion`,
 /// - call `cx.pointer_region_on_pointer_down(context_menu_pointer_down_policy(open.clone()))`,
 /// - read `PointerRegionState::last_down` to anchor the popup at the click position.
+///
+/// Note: `PointerRegionState::last_down` is per-element state; if you need the anchor to persist
+/// across re-renders (or want to decouple it from element identity), copy `down.position` into an
+/// app-owned model (e.g. `Model<Option<Point>>`, or a map keyed by your `open` model id).
 pub fn context_menu_pointer_down_policy(open: Model<bool>) -> OnPointerDown {
     Arc::new(
         move |host: &mut dyn UiPointerActionHost,
