@@ -61,6 +61,8 @@ Extract nested open sequences (example: submenu open) by combining `--openVarian
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts context-menu-demo --modes=open --update --baseUrl=http://localhost:4020 --openVariants="submenu=[data-fret-golden-target] [data-slot='context-menu-trigger']" --openSteps="hover=[data-slot='context-menu-sub-trigger']"`
 
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts menubar-demo --modes=open --update --baseUrl=http://localhost:4020 --openVariants="submenu=[data-fret-golden-target] [aria-haspopup='menu'][data-state='closed']" --openSteps="hover=[data-slot='menubar-sub-trigger']"`
+
 Extract multiple open variants for a single page (writes `*.{variant}.open.json` alongside the base files):
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts sheet-side --modes=open --update --baseUrl=http://localhost:4020 --openVariants="right=[data-fret-golden-target] button[data-slot='sheet-trigger']:nth-of-type(2);bottom=[data-fret-golden-target] button[data-slot='sheet-trigger']:nth-of-type(3);left=[data-fret-golden-target] button[data-slot='sheet-trigger']:nth-of-type(4)"`
@@ -76,7 +78,7 @@ If you also extract open overlay states (`--modes=open` or `--open`), you will g
 `*.open.json` files alongside the base closed-mode goldens. In this repo, the current snapshot is:
 
 - `362` closed-mode files (`*.json`, excluding `*.open.json`)
-- `18` open-mode files (`*.open.json`)
+- `19` open-mode files (`*.open.json`)
 
 If the extracted `computedStyle` looks like browser defaults (e.g. `<button>` has `display:
 inline-block`, `borderTopWidth: 2px`), your dev server is likely not producing Tailwind utilities.

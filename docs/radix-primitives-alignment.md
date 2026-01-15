@@ -88,5 +88,5 @@ concepts and Fret building blocks they depend on.
   - (Done) `radix-web` timeline scenarios now cover submenu keyboard open/close for
     dropdown-menu/context-menu/menubar (in addition to hover-open + grace corridor).
   - (Done) `shadcn-web` open snapshots now cover non-click input pages like `command-dialog` (key chord; see `docs/shadcn-web-goldens.md` `--openKeys`).
-  - (Done) `shadcn-web` open snapshots now cover nested submenu states for dropdown-menu/context-menu (see `docs/shadcn-web-goldens.md` `--openSteps`).
-  - (Next) extend `shadcn-web` open snapshots for additional multi-step states (e.g. menubar nested menus, navigation-menu hover + content open, and other chained interactions).
+  - (Done) `shadcn-web` open snapshots now cover nested submenu states for dropdown-menu/context-menu/menubar (see `docs/shadcn-web-goldens.md` `--openSteps`).
+  - (Next) extend `shadcn-web` open snapshots for additional multi-step states (e.g. navigation-menu hover + content open, and other chained interactions).
