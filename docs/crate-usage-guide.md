@@ -23,6 +23,10 @@ If you are a component author, start with:
 - `fret-app` / `fret-bootstrap` (app-level integration and golden-path defaults)
 - `fret-launch` (runner glue, effect draining, presentation)
 
+Desktop-first quick start:
+
+- If you want a single dependency for a native desktop app, use `fret-kit` (ecosystem-level batteries-included wrapper).
+
 3) Only depend on `fret-app` if you need app-owned integration surfaces:
 
 - command registration / command palette integration,
@@ -176,6 +180,14 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 - optional UI app driver wiring,
 - optional command palette integration,
 - optional dev hotpatch toggles.
+
+### `fret-kit`
+
+**What it is:** a desktop-first batteries-included convenience crate that composes:
+
+- `fret` (with `native-wgpu`) + `fret-bootstrap` (golden path wiring) + `fret-ui-shadcn` (default component surface).
+
+**Use it when:** you want a working native app with minimal boilerplate and a single memorable dependency.
 
 ### `fret-canvas`
 

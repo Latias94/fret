@@ -3,8 +3,8 @@ use std::time::{Duration, Instant};
 
 use fret_canvas::spatial::DefaultIndexWithBackrefs;
 use fret_canvas::wires::{
-    bezier_wire_distance2, bezier_wire_distance2_polyline_adaptive, wire_aabb,
     DEFAULT_BEZIER_FLATTEN_TOLERANCE_SCREEN_PX, DEFAULT_BEZIER_HIT_TEST_STEPS,
+    bezier_wire_distance2, bezier_wire_distance2_polyline_adaptive, wire_aabb,
 };
 
 #[cfg(feature = "kurbo")]
@@ -70,6 +70,7 @@ struct Config {
     compare_kurbo: bool,
     adaptive_polyline: bool,
     polyline_tol_screen_px: f32,
+    compare_band_screen_px: f32,
 }
 
 impl Default for Config {
@@ -113,6 +114,7 @@ impl Default for Config {
             compare_kurbo: false,
             adaptive_polyline: false,
             polyline_tol_screen_px: DEFAULT_BEZIER_FLATTEN_TOLERANCE_SCREEN_PX,
+            compare_band_screen_px: 2.0,
         }
     }
 }
@@ -181,6 +183,13 @@ fn parse_args() -> Config {
                     "0" | "false" | "False" | "FALSE" | "no" | "off" => false,
                     _ => cfg.compare_kurbo,
                 }
+            }
+            "--compare-band-screen" => {
+                cfg.compare_band_screen_px = value
+                    .parse()
+                    .ok()
+                    .filter(|v: &f32| v.is_finite() && *v > 0.0)
+                    .unwrap_or(cfg.compare_band_screen_px);
             }
             "--adaptive-polyline" => {
                 cfg.adaptive_polyline = match value.as_str() {
@@ -480,11 +489,26 @@ fn main() {
     let mut compare_abs_d_err_max = 0f32;
 
     #[cfg(feature = "kurbo")]
+    let mut compare_boundary_total = 0usize;
+    #[cfg(feature = "kurbo")]
+    let mut compare_boundary_disagree = 0usize;
+    #[cfg(feature = "kurbo")]
+    let mut compare_boundary_false_pos = 0usize;
+    #[cfg(feature = "kurbo")]
+    let mut compare_boundary_false_neg = 0usize;
+    #[cfg(feature = "kurbo")]
+    let mut compare_boundary_abs_err_sum = 0f64;
+    #[cfg(feature = "kurbo")]
+    let mut compare_boundary_abs_err_max = 0f32;
+
+    #[cfg(feature = "kurbo")]
     let mut poly_d2_scratch: Vec<f32> = Vec::new();
 
     let mut rng_q = Rng::new(cfg.seed ^ 0x9e3779b97f4a7c15);
     let steps = DEFAULT_BEZIER_HIT_TEST_STEPS;
     let hit_w2 = cfg.edge_hit_width * cfg.edge_hit_width;
+    let hit_w_screen = cfg.edge_hit_width * zoom;
+    let compare_band_screen_px = cfg.compare_band_screen_px;
 
     #[cfg(feature = "kurbo")]
     let compare_kurbo = cfg.compare_kurbo;
@@ -616,9 +640,30 @@ fn main() {
                         let d_p = d2_p.sqrt();
                         let d_k = d2_k.sqrt();
                         if d_p.is_finite() && d_k.is_finite() {
-                            let abs = (d_p - d_k).abs();
-                            compare_abs_d_err_sum += abs as f64;
-                            compare_abs_d_err_max = compare_abs_d_err_max.max(abs);
+                            let d_p_screen = d_p * zoom;
+                            let d_k_screen = d_k * zoom;
+                            let abs_screen = (d_p_screen - d_k_screen).abs();
+                            compare_abs_d_err_sum += abs_screen as f64;
+                            compare_abs_d_err_max = compare_abs_d_err_max.max(abs_screen);
+
+                            let boundary = ((d_p_screen - hit_w_screen).abs())
+                                .min((d_k_screen - hit_w_screen).abs())
+                                <= compare_band_screen_px;
+                            if boundary {
+                                compare_boundary_total += 1;
+                                compare_boundary_abs_err_sum += abs_screen as f64;
+                                compare_boundary_abs_err_max =
+                                    compare_boundary_abs_err_max.max(abs_screen);
+
+                                if hit_p != hit_k {
+                                    compare_boundary_disagree += 1;
+                                    if hit_k && !hit_p {
+                                        compare_boundary_false_pos += 1;
+                                    } else if hit_p && !hit_k {
+                                        compare_boundary_false_neg += 1;
+                                    }
+                                }
+                            }
                         }
                     }
                     t_refine_kurbo += tr.elapsed();
@@ -741,6 +786,17 @@ fn main() {
             compare_abs_d_err_sum / ct,
             compare_abs_d_err_max
         );
+        let bt = compare_boundary_total.max(1) as f64;
+        println!(
+            "compare(kurbo,boundary): band_screen_px={:.2} samples={:.2}% disagree={:.2}% fp={} fn={} avg_abs_err={:.3} max_abs_err={:.3}",
+            compare_band_screen_px,
+            100.0 * (compare_boundary_total as f64) / ct,
+            100.0 * (compare_boundary_disagree as f64) / bt,
+            compare_boundary_false_pos,
+            compare_boundary_false_neg,
+            compare_boundary_abs_err_sum / bt,
+            compare_boundary_abs_err_max
+        );
     }
     println!(
         "config: scenario={:?} world={:.0} zoom={:.2} cell={:.0} viewport={:.0}x{:.0}",
@@ -755,6 +811,12 @@ fn main() {
         },
         polyline_tol_screen_px
     );
+    if compare_kurbo {
+        println!(
+            "config(compare): band_screen_px={:.2}",
+            compare_band_screen_px
+        );
+    }
     println!(
         "timing_per_frame: update={} query={} refine={}",
         fmt_dur(Duration::from_secs_f64(t_update.as_secs_f64() / frames)),

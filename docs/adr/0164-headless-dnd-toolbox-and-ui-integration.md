@@ -82,12 +82,91 @@ It must not depend on `fret-ui` or runner crates.
 
 This keeps the runtime clean while making the common integrations easy.
 
+### 2.1) Lock a canonical coordinate space for the registry snapshot
+
+The integration registry (whether stored app-scoped or component-scoped) uses **window-local logical pixels**
+as its canonical space (ADR 0017):
+
+- droppable/draggable rects are expressed in window-local logical px,
+- pointer positions fed into sensors/collision are window-local logical px,
+- higher-level surfaces (canvas, 3D viewports) must perform their own mapping to/from their internal spaces.
+
+Rationale:
+
+- window-local logical px is already the stable cross-window routing coordinate for editor-grade input,
+- it keeps the toolbox independent from any particular scene graph / transform stack,
+- it avoids “hidden” DPI coupling in policy code.
+
+### 2.2) Activation delay is expressed in deterministic ticks
+
+Activation delay is defined in terms of **monotonic ticks** (`TickId`, runner-owned), not wall-clock time:
+
+- `ActivationConstraint::DelayTicks { ticks: u64 }` is evaluated against `TickId` deltas,
+- distance thresholds are evaluated in window-local logical px.
+
+This keeps drag activation deterministic and testable across runners/platforms.
+
+Note: component-owned pointer hooks must expose `pointer_id` and `tick_id` so policy code can be written
+without coupling to a concrete `UiHost` implementation.
+
+### 2.3) Registry geometry is based on the last completed layout (1-frame lag is allowed)
+
+The `fret-ui-kit` integration registry is populated from **last-known layout geometry** (the runtime's
+"prev-bounds" snapshot), not from same-frame layout execution order:
+
+- the registry may be empty on the first frame a subtree mounts,
+- on interactive frames, the registry is expected to be available after at most one frame of layout+paint,
+- integrations must tolerate a one-frame lag between a layout change and collision geometry updates.
+
+Rationale:
+
+- keeps the mechanism layer (`fret-ui`) small (ADR 0066) by avoiding same-frame geometry queries/hooks,
+- keeps DnD policy deterministic and testable (no dependency on layout scheduling),
+- matches the repository philosophy: pay small latency early to avoid a later, hard-to-reverse contract expansion.
+
+If a future use-case requires same-frame geometry (e.g. drag overlays tightly coupled to layout), it must be
+introduced via an explicit ADR that scopes the added `fret-ui` contract surface.
+
+### 2.4) Sortable/reorder semantics are defined as `array_move(from, to)`
+
+The canonical sortable/reorder outcome is an **index move**:
+
+- `active`: the item being dragged
+- `over`: the collision-selected target item
+- on drop: reorder is performed as `array_move(active_index, over_index)`
+
+This is the default semantic for `fret-ui-kit` recipes. More specialized semantics (e.g. before/after insertion
+lines, sectioned lists, pinned columns) may be layered as higher-level recipes but must remain compatible with
+this base interpretation.
+
+### 2.5) DnD registries are scoped within a window (`DndScopeId`)
+
+Within a single window, multiple independent DnD workflows may coexist (e.g. a canvas with ports, a tree view,
+and a sortable list). To prevent unrelated droppable sets from influencing collision results, `fret-ui-kit`'s
+registry is partitioned by an explicit scope ID:
+
+- `DndScopeId` is an opaque `u64` identifier
+- the default scope is `DndScopeId(0)`
+- recipes and component integrations should compute a stable scope per component instance (e.g. based on the
+  declarative root element id)
+
+This keeps the mechanism layer (`fret-ui`) unchanged while avoiding a later, hard-to-reverse expansion to support
+same-frame geometry or cross-component coordination.
+
 ### 3) Treat internal drag routing as mechanism-only; toolbox owns policy
 
 The runtime continues to route `Event::InternalDrag` using hit-testing and the existing internal-drag anchor override
 mechanism (`InternalDragRouteService`) when needed (e.g. docking tear-off).
 
 The toolbox does not change routing rules; it consumes a geometry registry snapshot and computes “over/collisions”.
+
+### 3.1) Only cross-window workflows require `DragSession`
+
+`DragSession` (ADR 0041 / ADR 0166) is used only when an interaction requires **runner-assisted cross-window
+hover/drop routing** or other internal-drag semantics (tear-off docking-class flows).
+
+Window-local reorder/sortable interactions should remain component-local (pointer capture + headless sensor),
+and must not require entering the app-scoped internal drag session mechanism.
 
 ### 4) Multi-pointer readiness is a first-class requirement
 
@@ -104,11 +183,18 @@ Cross-window internal-drag routing sometimes requires a stable anchor node per �
 The routing key must be extensible beyond a closed `enum` to avoid future rewrites when ecosystem DnD flows
 need the same mechanism.
 
-Proposed direction (final shape TBD during implementation):
+Direction (implemented by ADR 0166):
 
-- replace `DragKind` with an extensible ID newtype (e.g. `DragKindId(u64)`), with reserved constants for built-ins
-  (e.g. docking),
-- or keep `DragKind` but add an ID-carrying variant (e.g. `Custom(u64)`).
+- Replace `DragKind` with an extensible ID newtype `DragKindId(u64)`, with reserved constants for built-ins
+  (e.g. docking).
+
+### 6) Determinism requirements (collision + tie-breaks)
+
+To avoid "jitter" and hard-to-debug divergence across platforms:
+
+- collision outputs must be **stably ordered** (explicit `z_index` groups first, then stable ids),
+- activation constraints must be deterministic (ticks, not wall-clock),
+- per-pointer state must never "jump" across pointers (all ownership is keyed by `PointerId`).
 
 ## Design (Illustrative)
 
@@ -137,8 +223,13 @@ widgets can register explicit droppable regions:
 The registry is window-scoped and frame-scoped:
 
 - it is rebuilt every frame (or logically treated as rebuilt) to reflect layout/scroll/transform changes,
-- it can be stored as a service and reused via a `revision` key to avoid allocations, but consumers must treat it
+  - it can be stored as a service and reused via a `revision` key to avoid allocations, but consumers must treat it
   as an immutable snapshot for collision computation.
+
+Timing note:
+
+- when the registry is derived from declarative element geometry, it is expected to be sourced from the runtime's
+  last completed layout snapshot ("prev-bounds") rather than same-frame layout hooks (see §2.3).
 
 ### C) Controller responsibilities (in `fret-ui-kit`)
 
@@ -186,6 +277,15 @@ interaction at that moment.
    - auto-scroll implementation hooks,
    - exposing stable public surfaces in `fret-ui-kit`.
 
+## Current Implementation (MVP)
+
+- Headless toolbox: `ecosystem/fret-dnd/` (activation constraints, collision strategies, modifiers, auto-scroll).
+- UI integration glue (initial): `ecosystem/fret-ui-kit/src/dnd.rs` (window-scoped registry snapshot + per-kind sensors).
+- Use-case A (canvas/node graph): insert-node drag wiring in
+  `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag.rs`.
+- Use-case B (sortable/reorder): minimal declarative recipe in
+  `ecosystem/fret-ui-kit/src/recipes/sortable_dnd.rs`.
+
 ## Open Questions
 
 - (Resolved by ADR 0165) Pointer identity and per-pointer capture/dispatch is a prerequisite for true multi-pointer
@@ -193,3 +293,5 @@ interaction at that moment.
 - How do we represent multiple rects per droppable (e.g. complex shapes, ports) without over-complicating the core
   snapshot format?
 - Do we want a shared “sortable preset” crate in the ecosystem, or keep it as a `fret-ui-kit` recipe layer?
+- When do we need a dedicated "before/after insertion line" semantic beyond `array_move`, and what additional
+  inputs does it require (pointer half, drag direction, list axis, virtualization window)?

@@ -129,7 +129,6 @@ Summary (last rolling window, 240 samples):
 
 Updated baseline (stable, 3 iterations, median; output moved off repo disk):
 
-- Script defaults to `G:\\sccache\\bench\\canvas-datagrid\\...` when `SCCACHE_DIR` is set.
 - Commit: `fd4cae9f539ada0d8c4a1d4caad760dcba3931a4`
 - Output: `G:\\sccache\\bench\\canvas-datagrid\\20260115-001530\\summary_agg.csv`
 

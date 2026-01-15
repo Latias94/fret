@@ -129,6 +129,7 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
             buttons,
             modifiers,
             pointer_type,
+            pointer_id,
             ..
         }) => {
             let hook = crate::elements::with_element_state(
@@ -144,7 +145,9 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
             };
 
             let mv = action::PointerMoveCx {
+                pointer_id: *pointer_id,
                 position: *position,
+                tick_id: cx.app.tick_id(),
                 pixels_per_point,
                 buttons: *buttons,
                 modifiers: *modifiers,

@@ -1,4 +1,4 @@
-use fret_core::{Modifiers, MouseButton, Point};
+use fret_core::{Modifiers, MouseButton, Point, PointerId};
 use fret_ui::UiHost;
 
 use super::super::searcher::SearcherRowKind;
@@ -173,6 +173,8 @@ pub(super) fn handle_searcher_pointer_down<H: UiHost, M: NodeGraphCanvasMiddlewa
                         canvas.interaction.pending_insert_node_drag = Some(PendingInsertNodeDrag {
                             candidate,
                             start_pos: position,
+                            pointer_id: cx.pointer_id.unwrap_or(PointerId(0)),
+                            start_tick: cx.app.tick_id(),
                         });
                         cx.capture_pointer(cx.node);
                     }

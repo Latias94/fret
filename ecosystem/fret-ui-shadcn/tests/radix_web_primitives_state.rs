@@ -1553,6 +1553,537 @@ fn radix_web_dropdown_menu_submenu_keyboard_open_close_matches_fret() {
 }
 
 #[test]
+fn radix_web_context_menu_submenu_keyboard_open_close_matches_fret() {
+    let golden =
+        read_timeline("context-menu-example.context-menu.submenu-keyboard-open-close.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.primitive, "context-menu");
+    assert_eq!(golden.scenario, "submenu-keyboard-open-close");
+    assert!(golden.steps.len() >= 4);
+
+    let sub_open_step = golden
+        .steps
+        .iter()
+        .find(|s| {
+            matches!(&s.action, Action::Press { key } if key.split(',').last() == Some("ArrowRight"))
+        })
+        .expect("submenu open step");
+    assert!(
+        has_dom_node_attr(
+            &sub_open_step.snapshot.dom,
+            "data-slot",
+            "context-menu-sub-content"
+        ),
+        "web expected submenu content to be present after ArrowRight"
+    );
+
+    let sub_close_step = golden
+        .steps
+        .iter()
+        .find(|s| matches!(&s.action, Action::Press { key } if key == "ArrowLeft"))
+        .expect("submenu close step");
+    assert!(
+        !has_dom_node_attr(
+            &sub_close_step.snapshot.dom,
+            "data-slot",
+            "context-menu-sub-content"
+        ),
+        "web expected submenu content to be absent after ArrowLeft"
+    );
+
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
+        fret_ui_shadcn::ContextMenu::new(open.clone()).into_element(
+            cx,
+            |cx| fret_ui_shadcn::Button::new("Right click here").into_element(cx),
+            |_cx| {
+                use fret_ui_shadcn::context_menu::ContextMenuItemVariant;
+                use fret_ui_shadcn::{ContextMenuEntry, ContextMenuGroup, ContextMenuItem};
+
+                vec![
+                    ContextMenuEntry::Group(ContextMenuGroup::new(vec![
+                        ContextMenuEntry::Item(ContextMenuItem::new("Copy")),
+                        ContextMenuEntry::Item(ContextMenuItem::new("Cut")),
+                    ])),
+                    ContextMenuEntry::Item(ContextMenuItem::new("More Tools").submenu(vec![
+                        ContextMenuEntry::Group(ContextMenuGroup::new(vec![
+                            ContextMenuEntry::Item(ContextMenuItem::new("Save Page...")),
+                            ContextMenuEntry::Item(ContextMenuItem::new("Create Shortcut...")),
+                            ContextMenuEntry::Item(ContextMenuItem::new("Name Window...")),
+                        ])),
+                        ContextMenuEntry::Separator,
+                        ContextMenuEntry::Group(ContextMenuGroup::new(vec![
+                            ContextMenuEntry::Item(ContextMenuItem::new("Developer Tools")),
+                        ])),
+                        ContextMenuEntry::Separator,
+                        ContextMenuEntry::Group(ContextMenuGroup::new(vec![
+                                ContextMenuEntry::Item(
+                                    ContextMenuItem::new("Delete")
+                                        .variant(ContextMenuItemVariant::Destructive),
+                                ),
+                            ])),
+                    ])),
+                ]
+            },
+        )
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let trigger = find_semantics(&snap, SemanticsRole::Button, "Right click here");
+    right_click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    let mut frame = 3;
+    for _ in 0..20 {
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("semantics snapshot");
+        let focused_label = snap
+            .nodes
+            .iter()
+            .find(|n| n.flags.focused)
+            .and_then(|n| n.label.as_deref());
+        if focused_label == Some("More Tools") {
+            break;
+        }
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        timers.ingest_effects(&mut app);
+        timers.fire_all(&mut ui, &mut app, &mut services);
+
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            true,
+            |cx| vec![build(cx, &open)],
+        );
+        frame += 1;
+    }
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let focused = snap.nodes.iter().find(|n| n.flags.focused).expect("focus");
+    assert_eq!(
+        focused.label.as_deref(),
+        Some("More Tools"),
+        "expected submenu trigger to be focused before ArrowRight"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::ArrowRight,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    timers.ingest_effects(&mut app);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(frame),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+    frame += 1;
+
+    timers.ingest_effects(&mut app);
+    timers.fire_after(Duration::from_millis(0), &mut ui, &mut app, &mut services);
+    timers.ingest_effects(&mut app);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(frame),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+    frame += 1;
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert!(
+        snap.nodes.iter().any(|n| {
+            n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Save Page...")
+        }),
+        "submenu should be open after ArrowRight"
+    );
+    let focused = snap.nodes.iter().find(|n| n.flags.focused).expect("focus");
+    assert_eq!(
+        focused.label.as_deref(),
+        Some("Save Page..."),
+        "expected first submenu item to be focused after ArrowRight"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::ArrowLeft,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(frame),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert!(
+        !snap.nodes.iter().any(|n| {
+            n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Save Page...")
+        }),
+        "submenu should be closed after ArrowLeft"
+    );
+    let focused = snap.nodes.iter().find(|n| n.flags.focused).expect("focus");
+    assert_eq!(
+        focused.label.as_deref(),
+        Some("More Tools"),
+        "expected focus to return to the submenu trigger after ArrowLeft"
+    );
+}
+
+#[test]
+fn radix_web_menubar_submenu_keyboard_open_close_matches_fret() {
+    let golden = read_timeline("menubar-example.menubar.submenu-keyboard-open-close.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.primitive, "menubar");
+    assert_eq!(golden.scenario, "submenu-keyboard-open-close");
+    assert!(golden.steps.len() >= 4);
+
+    let sub_open_step = golden
+        .steps
+        .iter()
+        .find(|s| {
+            matches!(&s.action, Action::Press { key } if key.split(',').last() == Some("ArrowRight"))
+        })
+        .expect("submenu open step");
+    assert!(
+        has_dom_node_attr(
+            &sub_open_step.snapshot.dom,
+            "data-slot",
+            "menubar-sub-content"
+        ),
+        "web expected submenu content to be present after ArrowRight"
+    );
+
+    let sub_close_step = golden
+        .steps
+        .iter()
+        .find(|s| matches!(&s.action, Action::Press { key } if key == "ArrowLeft"))
+        .expect("submenu close step");
+    assert!(
+        !has_dom_node_attr(
+            &sub_close_step.snapshot.dom,
+            "data-slot",
+            "menubar-sub-content"
+        ),
+        "web expected submenu content to be absent after ArrowLeft"
+    );
+
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    let build = |cx: &mut ElementContext<'_, App>| {
+        use fret_ui_shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu};
+
+        Menubar::new(vec![
+            MenubarMenu::new("File").entries(vec![
+                MenubarEntry::Submenu(MenubarItem::new("Share").submenu(vec![
+                    MenubarEntry::Group(MenubarGroup::new(vec![
+                        MenubarEntry::Item(MenubarItem::new("Email link")),
+                        MenubarEntry::Item(MenubarItem::new("Messages")),
+                        MenubarEntry::Item(MenubarItem::new("Notes")),
+                    ])),
+                ])),
+                MenubarEntry::Separator,
+                MenubarEntry::Group(MenubarGroup::new(vec![MenubarEntry::Item(
+                    MenubarItem::new("Print..."),
+                )])),
+            ]),
+            MenubarMenu::new("Edit").entries(vec![MenubarEntry::Group(MenubarGroup::new(vec![
+                MenubarEntry::Item(MenubarItem::new("Undo")),
+                MenubarEntry::Item(MenubarItem::new("Redo")),
+            ]))]),
+        ])
+        .into_element(cx)
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build(cx)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let file = find_semantics(&snap, SemanticsRole::MenuItem, "File");
+    click_center(&mut ui, &mut app, &mut services, bounds_center(file.bounds));
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| vec![build(cx)],
+    );
+
+    let mut frame = 3;
+    for _ in 0..20 {
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("semantics snapshot");
+        let focused_label = snap
+            .nodes
+            .iter()
+            .find(|n| n.flags.focused)
+            .and_then(|n| n.label.as_deref());
+        if focused_label == Some("Share") {
+            break;
+        }
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        timers.ingest_effects(&mut app);
+        timers.fire_all(&mut ui, &mut app, &mut services);
+
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            true,
+            |cx| vec![build(cx)],
+        );
+        frame += 1;
+    }
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let focused = snap.nodes.iter().find(|n| n.flags.focused).expect("focus");
+    assert_eq!(
+        focused.label.as_deref(),
+        Some("Share"),
+        "expected submenu trigger to be focused before ArrowRight"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::ArrowRight,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    timers.ingest_effects(&mut app);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(frame),
+        true,
+        |cx| vec![build(cx)],
+    );
+    frame += 1;
+
+    timers.ingest_effects(&mut app);
+    timers.fire_after(Duration::from_millis(0), &mut ui, &mut app, &mut services);
+    timers.ingest_effects(&mut app);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(frame),
+        true,
+        |cx| vec![build(cx)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert!(
+        snap.nodes.iter().any(|n| {
+            n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Email link")
+        }),
+        "submenu should be open after ArrowRight"
+    );
+    let focused = snap.nodes.iter().find(|n| n.flags.focused).expect("focus");
+    assert_eq!(
+        focused.label.as_deref(),
+        Some("Email link"),
+        "expected first submenu item to be focused after ArrowRight"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::ArrowLeft,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(frame + 1),
+        true,
+        |cx| vec![build(cx)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert!(
+        !snap.nodes.iter().any(|n| {
+            n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Email link")
+        }),
+        "submenu should be closed after ArrowLeft"
+    );
+    let focused = snap.nodes.iter().find(|n| n.flags.focused).expect("focus");
+    assert_eq!(
+        focused.label.as_deref(),
+        Some("Share"),
+        "expected focus to return to the submenu trigger after ArrowLeft"
+    );
+}
+
+#[test]
 fn radix_web_context_menu_submenu_grace_corridor_matches_fret() {
     let golden = read_timeline("context-menu-example.context-menu.submenu-grace-corridor.light");
     assert!(golden.version >= 1);

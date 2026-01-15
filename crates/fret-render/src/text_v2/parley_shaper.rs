@@ -51,6 +51,19 @@ impl ParleyShaper {
         Self::default()
     }
 
+    #[cfg(test)]
+    #[allow(dead_code)]
+    pub fn new_without_system_fonts() -> Self {
+        let mut out = Self::default();
+        out.fcx.collection =
+            parley::fontique::Collection::new(parley::fontique::CollectionOptions {
+                shared: false,
+                system_fonts: false,
+            });
+        out.fcx.source_cache = parley::fontique::SourceCache::default();
+        out
+    }
+
     pub fn add_fonts(&mut self, fonts: impl IntoIterator<Item = Vec<u8>>) -> usize {
         let mut added = 0usize;
         for data in fonts {

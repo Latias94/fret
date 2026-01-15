@@ -1,5 +1,6 @@
 mod common;
 mod streaming_upload;
+mod viewport_overlay_immediate_3d;
 mod viewport_target;
 mod yuv;
 mod yuv_gpu;
@@ -10,6 +11,7 @@ pub mod desktop;
 mod web;
 
 pub use common::*;
+pub use viewport_overlay_immediate_3d::*;
 pub use viewport_target::*;
 
 #[cfg(not(target_arch = "wasm32"))]

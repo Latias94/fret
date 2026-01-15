@@ -17,14 +17,15 @@ use fret_gizmo::{
 };
 use fret_gizmo::{ViewportToolCx, ViewportToolId, ViewportToolPriority, ViewportToolResult};
 use fret_launch::{
-    EngineFrameUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService,
-    ViewportRenderTargetWithDepth, WinitAppDriver, WinitCommandContext, WinitEventContext,
-    WinitRenderContext, WinitRunnerConfig, WinitWindowContext, record_viewport_overlay_3d,
+    EngineFrameUpdate, ViewportRenderTargetWithDepth, WinitAppDriver, WinitCommandContext,
+    WinitEventContext, WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
+    install_viewport_overlay_3d_immediate, record_viewport_overlay_3d,
+    upload_viewport_overlay_3d_immediate,
 };
 use fret_plot3d::retained::{Plot3dCanvas, Plot3dModel, Plot3dStyle, Plot3dViewport};
 use fret_render::viewport_overlay::{
-    Overlay3dCache, Overlay3dCpuBuilder, Overlay3dPipelines, Overlay3dUniforms, Overlay3dVertex,
-    ViewportOverlay3dContext, push_thick_line_quad, push_triangle,
+    Overlay3dCpuBuilder, Overlay3dUniforms, Overlay3dVertex, ViewportOverlay3dContext,
+    push_thick_line_quad, push_triangle,
 };
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
@@ -41,7 +42,6 @@ use std::any::TypeId;
 use std::collections::HashMap;
 use std::fmt::Write as _;
 use std::fs;
-use std::sync::Arc;
 use std::time::Instant;
 use wgpu::util::DeviceExt as _;
 
@@ -1963,72 +1963,6 @@ struct Gizmo3dDemoService {
     per_window: HashMap<AppWindowId, fret_runtime::Model<Gizmo3dDemoModel>>,
 }
 
-struct Gizmo3dDemoViewportOverlayService {
-    cache: Overlay3dCache<(AppWindowId, RenderTargetId)>,
-}
-
-impl Default for Gizmo3dDemoViewportOverlayService {
-    fn default() -> Self {
-        Self {
-            cache: Overlay3dCache::new(
-                wgpu::TextureFormat::Bgra8UnormSrgb,
-                wgpu::TextureFormat::Depth24Plus,
-            ),
-        }
-    }
-}
-
-impl Gizmo3dDemoViewportOverlayService {
-    fn upload(
-        &mut self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        window: AppWindowId,
-        target: RenderTargetId,
-        uniforms: Uniforms,
-        cpu: &Overlay3dCpuBuilder,
-    ) -> Overlay3dPipelines {
-        let entry = self.cache.ensure(device, (window, target));
-        entry.update_uniform(queue, &uniforms);
-        entry.batch.upload(
-            device,
-            queue,
-            cpu.solid_test(),
-            cpu.solid_ghost(),
-            cpu.solid_always(),
-            cpu.line_test(),
-            cpu.line_ghost(),
-            cpu.line_always(),
-        );
-        entry.overlay.clone()
-    }
-
-    fn record(&self, window: AppWindowId, target: RenderTargetId, pass: &mut wgpu::RenderPass<'_>) {
-        let Some(entry) = self.cache.get(&(window, target)) else {
-            return;
-        };
-        entry.batch.record(&entry.overlay, pass);
-    }
-}
-
-struct Gizmo3dDemoViewportOverlayHooks;
-
-impl ViewportOverlay3dHooks for Gizmo3dDemoViewportOverlayHooks {
-    fn record(
-        &self,
-        app: &mut App,
-        window: AppWindowId,
-        target: RenderTargetId,
-        pass: &mut wgpu::RenderPass<'_>,
-        _ctx: &ViewportOverlay3dContext,
-    ) {
-        let Some(svc) = app.global::<Gizmo3dDemoViewportOverlayService>() else {
-            return;
-        };
-        svc.record(window, target, pass);
-    }
-}
-
 struct Gizmo3dDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
@@ -2824,9 +2758,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
     type WindowState = Gizmo3dDemoWindowState;
 
     fn init(&mut self, app: &mut App, _main_window: AppWindowId) {
-        app.with_global_mut(ViewportOverlay3dHooksService::default, |svc, _app| {
-            svc.set(Arc::new(Gizmo3dDemoViewportOverlayHooks));
-        });
+        install_viewport_overlay_3d_immediate(app);
     }
 
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
@@ -4141,17 +4073,17 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             }
         }
 
-        let overlay =
-            app.with_global_mut(Gizmo3dDemoViewportOverlayService::default, |svc, _app| {
-                svc.upload(
-                    &context.device,
-                    &context.queue,
-                    window,
-                    target_id,
-                    uniforms,
-                    cpu,
-                )
-            });
+        let overlay = upload_viewport_overlay_3d_immediate(
+            app,
+            &context.device,
+            &context.queue,
+            window,
+            target_id,
+            state.target.color_format(),
+            state.target.depth_format(),
+            uniforms,
+            cpu,
+        );
 
         let clear = wgpu::Color {
             r: 0.08,
