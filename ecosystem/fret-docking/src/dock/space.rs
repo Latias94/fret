@@ -33,6 +33,7 @@ use slotmap::Key as _;
 const DOCK_FLOATING_BORDER: Px = Px(1.0);
 const DOCK_FLOATING_TITLE_H: Px = Px(22.0);
 const DOCK_FLOATING_CLOSE_SIZE: Px = Px(14.0);
+const DOCK_TAB_DRAG_THRESHOLD_PX: f32 = 6.0;
 
 pub struct DockSpace {
     pub window: fret_core::AppWindowId,
@@ -1027,8 +1028,9 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 self.pending_dock_drags.remove(&pointer_id);
                                 request_pointer_capture = Some(None);
                             } else {
-                                let activation =
-                                    fret_dnd::ActivationConstraint::Distance { px: 6.0 };
+                                let activation = fret_dnd::ActivationConstraint::Distance {
+                                    px: DOCK_TAB_DRAG_THRESHOLD_PX,
+                                };
                                 let should_activate = self
                                     .pending_dock_drags
                                     .get(&pointer_id)
@@ -1605,8 +1607,9 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 let mut dragging = drag.dragging;
                                 if drag.source_window == self.window {
                                     // Match ImGui's default drag threshold (~6 screen px).
-                                    let activation =
-                                        fret_dnd::ActivationConstraint::Distance { px: 6.0 };
+                                    let activation = fret_dnd::ActivationConstraint::Distance {
+                                        px: DOCK_TAB_DRAG_THRESHOLD_PX,
+                                    };
                                     if !dragging
                                         && activation.is_satisfied(
                                             drag.start_tick.0,
