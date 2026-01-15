@@ -379,6 +379,12 @@ pub fn table_virtualized<H: UiHost, TData>(
     let (table_bg, border, header_bg, row_hover, row_active) = resolve_table_colors(theme);
     let resize_grip = emphasize_border(border, 0.35);
     let resize_preview = emphasize_border(border, 0.75);
+    let ring = theme
+        .color_by_key("ring")
+        .or_else(|| theme.color_by_key("focus.ring"))
+        .or_else(|| theme.color_by_key("primary"))
+        .unwrap_or(row_active);
+    let ring = emphasize_border(ring, 0.9);
     let radius = theme.metric_required("metric.radius.md");
 
     let row_h = props
@@ -1014,6 +1020,7 @@ pub fn table_virtualized<H: UiHost, TData>(
         },
         |cx, list_id| {
             cx.key_on_key_down_for(list_id, key_handler.clone());
+            let is_focused = cx.is_focused_element(list_id);
             vec![cx.container(
                 ContainerProps {
                     layout: {
@@ -1026,13 +1033,21 @@ pub fn table_virtualized<H: UiHost, TData>(
                         layout
                     },
                     background: Some(table_bg),
-                    border: if props.draw_frame {
+                    border: if is_focused {
+                        Edges::all(Px(2.0))
+                    } else if props.draw_frame {
                         Edges::all(Px(1.0))
                     } else {
                         Edges::all(Px(0.0))
                     },
-                    border_color: if props.draw_frame { Some(border) } else { None },
-                    corner_radii: if props.draw_frame {
+                    border_color: if is_focused {
+                        Some(ring)
+                    } else if props.draw_frame {
+                        Some(border)
+                    } else {
+                        None
+                    },
+                    corner_radii: if props.draw_frame || is_focused {
                         Corners::all(radius)
                     } else {
                         Corners::all(Px(0.0))
@@ -1566,7 +1581,6 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                         let active_index = active_index.clone();
                                                         let active_element = active_element.clone();
                                                         let active_command = active_command.clone();
-                                                        let key_handler = key_handler.clone();
                                                         let focus_target = list_id;
 
                                                         return cx.pressable(
@@ -1584,11 +1598,6 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                 ..Default::default()
                                                             },
                                                             |cx, st| {
-                                                                cx.key_on_key_down_for(
-                                                                    cx.root_id(),
-                                                                    key_handler.clone(),
-                                                                );
-
                                                                 let active_index_for_pointer =
                                                                     active_index.clone();
                                                                 let active_command_for_pointer =
@@ -2092,7 +2101,6 @@ pub fn table_virtualized<H: UiHost, TData>(
                                             let active_index = active_index.clone();
                                             let active_element = active_element.clone();
                                             let active_command = active_command.clone();
-                                            let key_handler = key_handler.clone();
                                             let focus_target = list_id;
 
                                             cx.pressable(
@@ -2108,11 +2116,6 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                     ..Default::default()
                                                 },
                                                 |cx, st| {
-                                                    cx.key_on_key_down_for(
-                                                        cx.root_id(),
-                                                        key_handler.clone(),
-                                                    );
-
                                                     let active_index_for_pointer = active_index.clone();
                                                     cx.pressable_on_pointer_down(Arc::new(
                                                         move |host, action_cx, _down| {
