@@ -492,7 +492,14 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 
 - Order-sensitive multi-dimensional filtering semantics beyond the current v1 subset (ECharts `dataZoomProcessor` ordering, per-axis composition) (S2).
 - General transform graph with cached node outputs + derived columns (ECharts-class dataset transforms).
-- Multi-grid layout (multiple independent grids in one chart).
+- `[~]` Multi-grid layout (multiple independent grids in one chart).
+  - Notes: v1 has `GridSpec` + `AxisSpec.grid` in the engine model, and the ECharts translator binds `gridIndex`.
+    The current UI adapter workaround renders multi-grid charts by splitting the `ChartSpec` into multiple single-grid charts (one viewport per chart) and laying them out side-by-side/stacked.
+  - Evidence:
+    - `ecosystem/fret-chart/src/echarts/mod.rs` (translates `gridIndex`)
+    - `ecosystem/fret-chart/src/multi_grid.rs` (split helper)
+    - `ecosystem/fret-chart/src/retained/multi_grid.rs` (retained multi-canvas builder)
+    - `apps/fret-examples/src/echarts_multi_grid_demo.rs` (demo)
 - Category axis indexing under zoom for non-bar series (S4).
 - VisualMap: multiple maps per series and per-item attribute pipelines (S7).
 - Series-specific LOD / downsampling policies + conformance harness (S8).
@@ -504,6 +511,7 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 1. P0: Expand the existing “filter processor” stage (ECharts `dataZoomProcessor` analogue) to cover the remaining order-sensitive multi-dim composition gaps and to emit a unified participation contract (selection + masks) (S2).
 2. P0: Add a general transform graph (cached nodes + derived columns) and migrate DataZoom/filtering to it incrementally (ECharts-class dataset transforms).
 3. P0: Multi-grid layout + deterministic routing rules (UI adapter + engine layout) (ADR 1134 follow-ups).
+   - Note: the current v1 UI shows multi-grid charts via `ChartSpec` splitting; the long-term target is per-grid viewport/layout inside a single chart instance (crosshair/zoom/tooltip linking).
 4. P0/P1: Incremental dataset updates + stable partial recompute (append/update + cache invalidation boundaries) (S9 / ADR 1149).
 5. P1: VisualMap per-item attribute pipelines (beyond bucketization) and multi-map targeting semantics (S7).
 6. P1: Tooltip rich text / HTML parity and richer formatter surfaces (S5 / ADR 1148).
