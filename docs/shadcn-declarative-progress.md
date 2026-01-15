@@ -62,7 +62,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | --- | --- | --- | --- | --- |
 | accordion | `accordion` | Present | Unreviewed | Selection model drives open/close; no animation yet |
 | alert | `alert` | Present | Unreviewed |  |
-| alert-dialog | `alert_dialog` | Present | Unreviewed | Modal overlay policy; Tab traversal wraps within modal barrier (ADR 0068) |
+| alert-dialog | `alert_dialog` | Present | In review | Audit: `docs/audits/shadcn-alert-dialog.md`; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` |
 | aspect-ratio | `aspect_ratio` | Present | Unreviewed |  |
 | avatar | `avatar` | Present | Unreviewed |  |
 | badge | `badge` | Present | Unreviewed |  |
@@ -77,7 +77,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | collapsible | `collapsible` | Present | Unreviewed | Headless open/close + a11y semantics |
 | command | `command` | Present | In review | `CommandPalette` provides cmdk-style active-descendant navigation + filtering/scoring (value + keywords), plus group/separator/empty + checkmark/shortcut |
 | context-menu | `context_menu` | Present | In review | Right click + (macOS) ctrl-click + Shift+F10; audit: `docs/audits/shadcn-context-menu.md` |
-| dialog | `dialog` | Present | Unreviewed | Modal barrier + Escape + overlay dismissal; Tab traversal wraps within modal barrier (ADR 0068) |
+| dialog | `dialog` | Present | In review | Audit: `docs/audits/shadcn-dialog.md`; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` |
 | drawer | `drawer` | Present | Unreviewed | `sheet` facade (defaults to bottom); overlay policy |
 | dropdown-menu | `dropdown_menu` | Present | In review | Menu navigation + typeahead + dismissible popover infra (ADR 0074); now includes `Label`/`Group`/`Shortcut` + destructive items; audit: `docs/audits/shadcn-dropdown-menu.md` |
 | empty | `empty` | Present | Unreviewed |  |
@@ -101,7 +101,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | scroll-area | `scroll_area` | Present | Unreviewed | Declarative wrapper over `Scroll` + styling |
 | select | `select` | Present | In review | Anchored placement supports `side`/`align` + offsets; roving navigation supports `loop` default; audit: `docs/audits/shadcn-select.md` |
 | separator | `separator` | Present | Unreviewed | Simple primitive; declarative-only |
-| sheet | `sheet` | Present | Unreviewed | Modal barrier + Escape + overlay dismissal; Tab traversal wraps within modal barrier (ADR 0068) |
+| sheet | `sheet` | Present | In review | Audit: `docs/audits/shadcn-sheet.md`; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` |
 | sidebar | `sidebar` | Present | Unreviewed |  |
 | skeleton | `skeleton` | Present | Unreviewed |  |
 | slider | `slider` | Present | Unreviewed | Declarative composition over primitives (PointerRegion hooks + bounds); a11y TBD |
