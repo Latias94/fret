@@ -2,7 +2,9 @@
 //
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
-use super::layout::{dock_drop_edge_thickness, dock_hint_rects, split_tab_bar};
+use super::layout::split_tab_bar;
+#[cfg(test)]
+use super::layout::{dock_drop_edge_thickness, dock_hint_rects};
 use super::prelude_core::*;
 use fret_ui::retained_bridge::resizable_panel_group as resizable;
 
@@ -63,6 +65,7 @@ pub(super) fn hit_test_tab(
     None
 }
 
+#[cfg(test)]
 pub(super) fn hit_test_drop_target(
     graph: &DockGraph,
     layout: &std::collections::HashMap<DockNodeId, Rect>,
@@ -129,6 +132,7 @@ pub(super) fn hit_test_drop_target(
     None
 }
 
+#[cfg(test)]
 fn compute_tab_insert_index(tab_bar: Rect, scroll: Px, tab_count: usize, position: Point) -> usize {
     let rel_x = position.x.0 - tab_bar.origin.x.0 + scroll.0;
     let raw = (rel_x / DOCK_TAB_W.0) + 0.5;

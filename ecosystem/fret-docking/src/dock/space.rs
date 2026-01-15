@@ -3,11 +3,11 @@
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
 use super::hit_test::{
-    hit_test_drop_target, hit_test_split_handle, hit_test_tab, tab_rect_for_index,
+    hit_test_split_handle, hit_test_tab, tab_rect_for_index, tab_scroll_for_node,
 };
 use super::layout::{
-    active_panel_content_bounds, compute_layout_map, dock_space_regions, float_zone, hidden_bounds,
-    split_tab_bar,
+    active_panel_content_bounds, compute_layout_map, dock_hint_rects, dock_space_regions,
+    drop_zone_rect, float_zone, hidden_bounds, split_tab_bar,
 };
 use super::manager::DockManager;
 use super::paint::{
@@ -28,6 +28,7 @@ use super::viewport::{
 };
 use crate::invalidation::DockInvalidationService;
 use fret_ui::retained_bridge::resizable_panel_group as resizable;
+use slotmap::Key as _;
 
 const DOCK_FLOATING_BORDER: Px = Px(1.0);
 const DOCK_FLOATING_TITLE_H: Px = Px(22.0);
@@ -481,6 +482,169 @@ impl<H: UiHost> Widget<H> for DockSpace {
             grab_offset: Point,
             start_tick: fret_runtime::TickId,
             tear_off_requested: bool,
+        }
+
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+        enum DockDropCandidateKind {
+            TabBar,
+            Hint(DropZone),
+            Edge(DropZone),
+            FallbackCenter,
+        }
+
+        fn candidate_id(node: DockNodeId, kind: DockDropCandidateKind) -> fret_dnd::DndItemId {
+            let node_id = node.data().as_ffi();
+            let kind_id = match kind {
+                DockDropCandidateKind::TabBar => 1,
+                DockDropCandidateKind::Hint(DropZone::Center) => 2,
+                DockDropCandidateKind::Hint(DropZone::Left) => 3,
+                DockDropCandidateKind::Hint(DropZone::Right) => 4,
+                DockDropCandidateKind::Hint(DropZone::Top) => 5,
+                DockDropCandidateKind::Hint(DropZone::Bottom) => 6,
+                DockDropCandidateKind::Edge(DropZone::Left) => 10,
+                DockDropCandidateKind::Edge(DropZone::Right) => 11,
+                DockDropCandidateKind::Edge(DropZone::Top) => 12,
+                DockDropCandidateKind::Edge(DropZone::Bottom) => 13,
+                DockDropCandidateKind::Edge(DropZone::Center) => 14,
+                DockDropCandidateKind::FallbackCenter => 255,
+            };
+
+            // A small, stable mixing function to avoid relying on std hasher stability.
+            let mut x = node_id ^ (kind_id as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
+            x = x.wrapping_mul(0xBF58_476D_1CE4_E5B9);
+            x ^= x >> 32;
+            fret_dnd::DndItemId(x)
+        }
+
+        fn tab_insert_index(tab_bar: Rect, scroll: Px, tab_count: usize, position: Point) -> usize {
+            let rel_x = position.x.0 - tab_bar.origin.x.0 + scroll.0;
+            let raw = (rel_x / DOCK_TAB_W.0) + 0.5;
+            let idx = raw.floor() as isize;
+            idx.clamp(0, tab_count as isize) as usize
+        }
+
+        fn dock_drop_target_via_dnd(
+            graph: &DockGraph,
+            layout: &HashMap<DockNodeId, Rect>,
+            tab_scroll: &HashMap<DockNodeId, Px>,
+            position: Point,
+        ) -> Option<HoverTarget> {
+            #[derive(Debug, Clone, Copy)]
+            enum HoverKind {
+                TabBar {
+                    tabs: DockNodeId,
+                    tab_bar: Rect,
+                    scroll: Px,
+                    tab_count: usize,
+                },
+                Zone {
+                    tabs: DockNodeId,
+                    zone: DropZone,
+                },
+            }
+
+            let mut nodes: Vec<(DockNodeId, Rect)> = layout.iter().map(|(&n, &r)| (n, r)).collect();
+            nodes.sort_by_key(|(node, _)| node.data().as_ffi());
+
+            let mut by_id: HashMap<fret_dnd::DndItemId, HoverKind> = HashMap::new();
+            let mut droppables: Vec<fret_dnd::Droppable> = Vec::new();
+
+            for (node, rect) in nodes {
+                let Some(DockNode::Tabs { tabs, .. }) = graph.node(node) else {
+                    continue;
+                };
+                if tabs.is_empty() {
+                    continue;
+                }
+
+                let (tab_bar, _content) = split_tab_bar(rect);
+                let scroll = tab_scroll_for_node(tab_scroll, node);
+
+                let tab_id = candidate_id(node, DockDropCandidateKind::TabBar);
+                by_id.insert(
+                    tab_id,
+                    HoverKind::TabBar {
+                        tabs: node,
+                        tab_bar,
+                        scroll,
+                        tab_count: tabs.len(),
+                    },
+                );
+                droppables.push(fret_dnd::Droppable {
+                    id: tab_id,
+                    rect: tab_bar,
+                    disabled: false,
+                    z_index: 30,
+                });
+
+                for (zone, hint_rect) in dock_hint_rects(rect) {
+                    let hint_id = candidate_id(node, DockDropCandidateKind::Hint(zone));
+                    by_id.insert(hint_id, HoverKind::Zone { tabs: node, zone });
+                    droppables.push(fret_dnd::Droppable {
+                        id: hint_id,
+                        rect: hint_rect,
+                        disabled: false,
+                        z_index: 20,
+                    });
+                }
+
+                for zone in [
+                    DropZone::Left,
+                    DropZone::Right,
+                    DropZone::Top,
+                    DropZone::Bottom,
+                ] {
+                    let edge_rect = drop_zone_rect(rect, zone);
+                    let edge_id = candidate_id(node, DockDropCandidateKind::Edge(zone));
+                    by_id.insert(edge_id, HoverKind::Zone { tabs: node, zone });
+                    droppables.push(fret_dnd::Droppable {
+                        id: edge_id,
+                        rect: edge_rect,
+                        disabled: false,
+                        z_index: 10,
+                    });
+                }
+
+                let fallback_id = candidate_id(node, DockDropCandidateKind::FallbackCenter);
+                by_id.insert(
+                    fallback_id,
+                    HoverKind::Zone {
+                        tabs: node,
+                        zone: DropZone::Center,
+                    },
+                );
+                droppables.push(fret_dnd::Droppable {
+                    id: fallback_id,
+                    rect,
+                    disabled: false,
+                    z_index: 0,
+                });
+            }
+
+            let snapshot = fret_dnd::RegistrySnapshot {
+                draggables: Vec::new(),
+                droppables,
+            };
+            let collision = fret_dnd::pointer_within_collisions(&snapshot, position)
+                .into_iter()
+                .next()?;
+            match by_id.get(&collision.id).copied()? {
+                HoverKind::TabBar {
+                    tabs,
+                    tab_bar,
+                    scroll,
+                    tab_count,
+                } => Some(HoverTarget {
+                    tabs,
+                    zone: DropZone::Center,
+                    insert_index: Some(tab_insert_index(tab_bar, scroll, tab_count, position)),
+                }),
+                HoverKind::Zone { tabs, zone } => Some(HoverTarget {
+                    tabs,
+                    zone,
+                    insert_index: None,
+                }),
+            }
         }
 
         fn is_outside_bounds_with_margin(bounds: Rect, position: Point, margin: Px) -> bool {
@@ -1431,7 +1595,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                     layout_root,
                                                     layout_bounds,
                                                 );
-                                                dock.hover = hit_test_drop_target(
+                                                dock.hover = dock_drop_target_via_dnd(
                                                     &dock.graph,
                                                     &layout,
                                                     &self.tab_scroll,
@@ -1495,7 +1659,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 layout_root,
                                                 layout_bounds,
                                             );
-                                            dock.hover = hit_test_drop_target(
+                                            dock.hover = dock_drop_target_via_dnd(
                                                 &dock.graph,
                                                 &layout,
                                                 &self.tab_scroll,
