@@ -1446,7 +1446,10 @@ fn select_impl<H: UiHost>(
                                                                             let mouse_open_guard_for_item_pointer_up =
                                                                                 mouse_open_guard_for_content.clone();
 
-                                                                            out.push(cx.pressable_with_id(
+                                                                            let value_key = item.value.clone();
+
+                                                                            out.push(cx.keyed(value_key, move |cx| {
+                                                                                cx.pressable_with_id(
                                                                                 PressableProps {
                                                                                     layout: {
                                                                                         let mut layout = LayoutStyle::default();
@@ -1709,7 +1712,8 @@ fn select_impl<H: UiHost>(
                                                                                         },
                                                                                     )]
                                                                                 },
-                                                                            ));
+                                                                                )
+                                                                            }));
                                                                         }
                                                                     }
                                                                 }

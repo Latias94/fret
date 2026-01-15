@@ -475,20 +475,128 @@ impl DropdownMenuShortcut {
     }
 }
 
-fn flatten_entries(into: &mut Vec<DropdownMenuEntry>, entries: Vec<DropdownMenuEntry>) {
+fn leaf_row_count(entries: &[DropdownMenuEntry]) -> usize {
+    let mut out = 0usize;
     for entry in entries {
         match entry {
-            DropdownMenuEntry::Group(group) => flatten_entries(into, group.entries),
-            DropdownMenuEntry::RadioGroup(group) => {
-                for item in group.items {
-                    into.push(DropdownMenuEntry::RadioItem(
-                        item.into_item(group.value.clone()),
-                    ));
-                }
-            }
-            other => into.push(other),
+            DropdownMenuEntry::Item(_)
+            | DropdownMenuEntry::CheckboxItem(_)
+            | DropdownMenuEntry::RadioItem(_)
+            | DropdownMenuEntry::Label(_)
+            | DropdownMenuEntry::Separator => out += 1,
+            DropdownMenuEntry::Group(group) => out += leaf_row_count(&group.entries),
+            DropdownMenuEntry::RadioGroup(group) => out += group.items.len(),
         }
     }
+    out
+}
+
+fn focusable_item_count(entries: &[DropdownMenuEntry]) -> usize {
+    let mut out = 0usize;
+    for entry in entries {
+        match entry {
+            DropdownMenuEntry::Item(_)
+            | DropdownMenuEntry::CheckboxItem(_)
+            | DropdownMenuEntry::RadioItem(_) => out += 1,
+            DropdownMenuEntry::Label(_) | DropdownMenuEntry::Separator => {}
+            DropdownMenuEntry::Group(group) => out += focusable_item_count(&group.entries),
+            DropdownMenuEntry::RadioGroup(group) => out += group.items.len(),
+        }
+    }
+    out
+}
+
+fn reserve_leading_slot(entries: &[DropdownMenuEntry]) -> bool {
+    for entry in entries {
+        match entry {
+            DropdownMenuEntry::Item(item) => {
+                if item.leading.is_some() {
+                    return true;
+                }
+            }
+            DropdownMenuEntry::CheckboxItem(item) => {
+                if item.leading.is_some() {
+                    return true;
+                }
+            }
+            DropdownMenuEntry::RadioItem(item) => {
+                if item.leading.is_some() {
+                    return true;
+                }
+            }
+            DropdownMenuEntry::RadioGroup(group) => {
+                if group.items.iter().any(|i| i.leading.is_some()) {
+                    return true;
+                }
+            }
+            DropdownMenuEntry::Group(group) => {
+                if reserve_leading_slot(&group.entries) {
+                    return true;
+                }
+            }
+            DropdownMenuEntry::Label(_) | DropdownMenuEntry::Separator => {}
+        }
+    }
+    false
+}
+
+fn collect_roving_labels_and_disabled(
+    entries: &[DropdownMenuEntry],
+    labels: &mut Vec<Arc<str>>,
+    disabled: &mut Vec<bool>,
+) {
+    for entry in entries {
+        match entry {
+            DropdownMenuEntry::Item(item) => {
+                labels.push(item.label.clone());
+                disabled.push(item.disabled);
+            }
+            DropdownMenuEntry::CheckboxItem(item) => {
+                labels.push(item.label.clone());
+                disabled.push(item.disabled);
+            }
+            DropdownMenuEntry::RadioItem(item) => {
+                labels.push(item.label.clone());
+                disabled.push(item.disabled);
+            }
+            DropdownMenuEntry::RadioGroup(group) => {
+                for item in &group.items {
+                    labels.push(item.label.clone());
+                    disabled.push(item.disabled);
+                }
+            }
+            DropdownMenuEntry::Group(group) => {
+                collect_roving_labels_and_disabled(&group.entries, labels, disabled);
+            }
+            DropdownMenuEntry::Label(_) | DropdownMenuEntry::Separator => {}
+        }
+    }
+}
+
+fn find_submenu_entries_by_value(
+    entries: &[DropdownMenuEntry],
+    open_value: &str,
+) -> Option<Vec<DropdownMenuEntry>> {
+    for entry in entries {
+        match entry {
+            DropdownMenuEntry::Item(item) => {
+                if item.value.as_ref() == open_value {
+                    return item.submenu.clone();
+                }
+            }
+            DropdownMenuEntry::Group(group) => {
+                if let Some(found) = find_submenu_entries_by_value(&group.entries, open_value) {
+                    return Some(found);
+                }
+            }
+            DropdownMenuEntry::CheckboxItem(_)
+            | DropdownMenuEntry::RadioGroup(_)
+            | DropdownMenuEntry::RadioItem(_)
+            | DropdownMenuEntry::Label(_)
+            | DropdownMenuEntry::Separator => {}
+        }
+    }
+    None
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -928,47 +1036,15 @@ impl DropdownMenu {
                         return (Vec::new(), None);
                     };
 
-                    let mut flat: Vec<DropdownMenuEntry> = Vec::new();
-                    flatten_entries(&mut flat, entries(cx));
-                    let entries = flat;
-                    let reserve_leading_slot = align_leading_icons
-                        && entries.iter().any(|e| match e {
-                            DropdownMenuEntry::Item(item) => item.leading.is_some(),
-                            DropdownMenuEntry::CheckboxItem(item) => item.leading.is_some(),
-                            DropdownMenuEntry::RadioItem(item) => item.leading.is_some(),
-                            DropdownMenuEntry::Label(_)
-                            | DropdownMenuEntry::Group(_)
-                            | DropdownMenuEntry::RadioGroup(_)
-                            | DropdownMenuEntry::Separator => false,
-                        });
+                    let entries: Arc<[DropdownMenuEntry]> =
+                        Arc::from(entries(cx).into_boxed_slice());
+                    let reserve_leading_slot_enabled =
+                        align_leading_icons && reserve_leading_slot(&entries);
 
-                    let item_count = entries
-                        .iter()
-                        .filter(|e| {
-                            matches!(
-                                e,
-                                DropdownMenuEntry::Item(_)
-                                    | DropdownMenuEntry::CheckboxItem(_)
-                                    | DropdownMenuEntry::RadioItem(_)
-                            )
-                        })
-                        .count();
-                    let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) = entries
-                        .iter()
-                        .map(|e| match e {
-                            DropdownMenuEntry::Item(item) => (item.label.clone(), item.disabled),
-                            DropdownMenuEntry::CheckboxItem(item) => {
-                                (item.label.clone(), item.disabled)
-                            }
-                            DropdownMenuEntry::RadioItem(item) => (item.label.clone(), item.disabled),
-                            DropdownMenuEntry::Label(_) | DropdownMenuEntry::Separator => {
-                                (Arc::from(""), true)
-                            }
-                            DropdownMenuEntry::Group(_) | DropdownMenuEntry::RadioGroup(_) => {
-                                unreachable!("entries are flattened")
-                            }
-                        })
-                        .unzip();
+                    let item_count = focusable_item_count(&entries);
+                    let mut labels: Vec<Arc<str>> = Vec::with_capacity(item_count);
+                    let mut disabled_flags: Vec<bool> = Vec::with_capacity(item_count);
+                    collect_roving_labels_and_disabled(&entries, &mut labels, &mut disabled_flags);
 
                     let labels_arc: Arc<[Arc<str>]> = Arc::from(labels.into_boxed_slice());
                     let disabled_arc: Arc<[bool]> = Arc::from(disabled_flags.into_boxed_slice());
@@ -1192,7 +1268,7 @@ impl DropdownMenu {
                                                         Vec::with_capacity(entries.len());
 
                                                     let mut item_ix: usize = 0;
-                                                    for entry in entries.clone() {
+                                                    for entry in entries.iter().cloned() {
                                                         match entry {
                                                     DropdownMenuEntry::Label(label) => {
                                                         let fg = theme.color_required("muted-foreground");
@@ -1359,7 +1435,7 @@ impl DropdownMenu {
                                                                         cx,
                                                                         label.clone(),
                                                                         leading.clone(),
-                                                                        reserve_leading_slot,
+                                                                        reserve_leading_slot_enabled,
                                                                         trailing.clone(),
                                                                         CheckableIndicatorKind::Check,
                                                                         checked_now,
@@ -1481,7 +1557,7 @@ impl DropdownMenu {
                                                                         cx,
                                                                         label.clone(),
                                                                         leading.clone(),
-                                                                        reserve_leading_slot,
+                                                                        reserve_leading_slot_enabled,
                                                                         trailing.clone(),
                                                                         CheckableIndicatorKind::RadioDot,
                                                                         is_selected,
@@ -1521,12 +1597,7 @@ impl DropdownMenu {
                                                         let variant = item.variant;
                                                         let has_submenu = item.submenu.is_some();
                                                         let submenu_row_count_for_hint =
-                                                            item.submenu.clone().map(|entries| {
-                                                                let mut flat: Vec<DropdownMenuEntry> =
-                                                                    Vec::new();
-                                                                flatten_entries(&mut flat, entries);
-                                                                flat.len()
-                                                            });
+                                                            item.submenu.clone().map(|entries| leaf_row_count(&entries));
                                                         let pad_left =
                                                             if item.inset { pad_x_inset } else { pad_x };
                                                         let open = open_for_menu.clone();
@@ -1655,13 +1726,13 @@ impl DropdownMenu {
                                                                         let mut row: Vec<AnyElement> = Vec::with_capacity(
                                                                             2 + usize::from(
                                                                                 leading.is_some()
-                                                                                    || reserve_leading_slot,
+                                                                                    || reserve_leading_slot_enabled,
                                                                             ) + usize::from(trailing.is_some())
                                                                                 + usize::from(has_submenu),
                                                                         );
                                                                         if let Some(l) = leading.clone() {
                                                                             row.push(menu_icon_slot(cx, l));
-                                                                        } else if reserve_leading_slot {
+                                                                        } else if reserve_leading_slot_enabled {
                                                                             row.push(menu_icon_slot_empty(cx));
                                                                         }
                                                                         row.push(cx.text_props(TextProps {
@@ -1762,19 +1833,9 @@ impl DropdownMenu {
                     let desired = submenu_open_value
                         .as_deref()
                         .and_then(|open_value| {
-                            entries_for_submenu.iter().find_map(|e| {
-                                let DropdownMenuEntry::Item(item) = e else {
-                                    return None;
-                                };
-                                let Some(sub) = item.submenu.clone() else {
-                                    return None;
-                                };
-                                (item.value.as_ref() == open_value).then_some(sub)
-                            })
+                            find_submenu_entries_by_value(entries_for_submenu.as_ref(), open_value)
                         })
                         .map(|submenu_entries| {
-                            let mut flat: Vec<DropdownMenuEntry> = Vec::new();
-                            flatten_entries(&mut flat, submenu_entries);
                             let submenu_max_h = theme
                                 .metric_by_key("component.dropdown_menu.max_height")
                                 .map(|h| Px(h.0.min(outer.size.height.0)))
@@ -1782,7 +1843,7 @@ impl DropdownMenu {
                             menu::sub::estimated_desired_size_for_row_count(
                                 Px(192.0),
                                 Px(28.0),
-                                flat.len(),
+                                leaf_row_count(&submenu_entries),
                                 submenu_max_h,
                             )
                         })
@@ -1841,43 +1902,15 @@ impl DropdownMenu {
                             return (children, Some(dismissible_on_pointer_move));
                         };
 
-                        let submenu_entries = entries_for_submenu.iter().find_map(|e| {
-                            let DropdownMenuEntry::Item(item) = e else {
-                                return None;
-                            };
-                            let Some(sub) = item.submenu.clone() else {
-                                return None;
-                            };
-                            (item.value.as_ref() == open_value.as_ref()).then_some(sub)
-                        });
+                        let submenu_entries = find_submenu_entries_by_value(
+                            entries_for_submenu.as_ref(),
+                            open_value.as_ref(),
+                        );
 
                         if let Some(submenu_entries) = submenu_entries {
-                                        let mut flat: Vec<DropdownMenuEntry> = Vec::new();
-                                        flatten_entries(&mut flat, submenu_entries);
-                                        let submenu_entries = flat;
-                                        let reserve_leading_slot = align_leading_icons
-                                            && submenu_entries.iter().any(|e| match e {
-                                                DropdownMenuEntry::Item(item) => item.leading.is_some(),
-                                                DropdownMenuEntry::CheckboxItem(item) => {
-                                                    item.leading.is_some()
-                                                }
-                                                DropdownMenuEntry::RadioItem(item) => item.leading.is_some(),
-                                                DropdownMenuEntry::Label(_)
-                                                | DropdownMenuEntry::Group(_)
-                                                | DropdownMenuEntry::RadioGroup(_)
-                                                | DropdownMenuEntry::Separator => false,
-                                            });
-                                        let item_count = submenu_entries
-                                            .iter()
-                                            .filter(|e| {
-                                                matches!(
-                                                    e,
-                                                    DropdownMenuEntry::Item(_)
-                                                        | DropdownMenuEntry::CheckboxItem(_)
-                                                        | DropdownMenuEntry::RadioItem(_)
-                                                )
-                                            })
-                                            .count();
+                                        let reserve_leading_slot_enabled =
+                                            align_leading_icons && reserve_leading_slot(&submenu_entries);
+                                        let item_count = focusable_item_count(&submenu_entries);
 
                                             let font_size = theme.metric_required("font.size");
                                             let font_line_height =
@@ -1907,31 +1940,15 @@ impl DropdownMenu {
                                                 letter_spacing_em: None,
                                             };
 
-                                            let (submenu_labels, submenu_disabled_flags): (
-                                                Vec<Arc<str>>,
-                                                Vec<bool>,
-                                            ) = submenu_entries
-                                                .iter()
-                                                .map(|e| match e {
-                                                    DropdownMenuEntry::Item(item) => {
-                                                        (item.label.clone(), item.disabled)
-                                                    }
-                                                    DropdownMenuEntry::CheckboxItem(item) => {
-                                                        (item.label.clone(), item.disabled)
-                                                    }
-                                                    DropdownMenuEntry::RadioItem(item) => {
-                                                        (item.label.clone(), item.disabled)
-                                                    }
-                                                    DropdownMenuEntry::Label(_)
-                                                    | DropdownMenuEntry::Separator => {
-                                                        (Arc::from(""), true)
-                                                    }
-                                                    DropdownMenuEntry::Group(_)
-                                                    | DropdownMenuEntry::RadioGroup(_) => {
-                                                        unreachable!("entries are flattened")
-                                                    }
-                                                })
-                                                .unzip();
+                                            let mut submenu_labels: Vec<Arc<str>> =
+                                                Vec::with_capacity(item_count);
+                                            let mut submenu_disabled_flags: Vec<bool> =
+                                                Vec::with_capacity(item_count);
+                                            collect_roving_labels_and_disabled(
+                                                &submenu_entries,
+                                                &mut submenu_labels,
+                                                &mut submenu_disabled_flags,
+                                            );
                                             let submenu_labels_arc: Arc<[Arc<str>]> =
                                                 Arc::from(submenu_labels.into_boxed_slice());
                                             let submenu_disabled_arc: Arc<[bool]> = Arc::from(
@@ -1970,7 +1987,7 @@ impl DropdownMenu {
                                                     let mut rows: Vec<AnyElement> =
                                                         Vec::with_capacity(submenu_entries.len());
 
-                                                    for entry in submenu_entries.clone() {
+                                                    for entry in submenu_entries.iter().cloned() {
                                                         match entry {
                                                             DropdownMenuEntry::Label(label) => {
                                                                 let text = label.text.clone();
@@ -2130,7 +2147,7 @@ impl DropdownMenu {
                                                                                 cx,
                                                                                 label.clone(),
                                                                                 leading.clone(),
-                                                                                reserve_leading_slot,
+                                                                                reserve_leading_slot_enabled,
                                                                                 trailing.clone(),
                                                                                 CheckableIndicatorKind::Check,
                                                                                 checked_now,
@@ -2236,7 +2253,7 @@ impl DropdownMenu {
                                                                                 cx,
                                                                                 label.clone(),
                                                                                 leading.clone(),
-                                                                                reserve_leading_slot,
+                                                                                reserve_leading_slot_enabled,
                                                                                 trailing.clone(),
                                                                                 CheckableIndicatorKind::RadioDot,
                                                                                 is_selected,
@@ -2354,12 +2371,12 @@ impl DropdownMenu {
                                                                                     let mut row: Vec<AnyElement> = Vec::with_capacity(
                                                                                         1 + usize::from(
                                                                                             leading.is_some()
-                                                                                                || reserve_leading_slot,
+                                                                                                || reserve_leading_slot_enabled,
                                                                                         ) + usize::from(trailing.is_some()),
                                                                                     );
                                                                                     if let Some(l) = leading.clone() {
                                                                                         row.push(menu_icon_slot(cx, l));
-                                                                                    } else if reserve_leading_slot {
+                                                                                    } else if reserve_leading_slot_enabled {
                                                                                         row.push(menu_icon_slot_empty(cx));
                                                                                     }
                                                                                     row.push(cx.text_props(TextProps {
