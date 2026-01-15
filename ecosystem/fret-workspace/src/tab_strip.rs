@@ -16,6 +16,8 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 
+use crate::commands::{tab_activate_command, tab_close_command};
+
 fn fill_layout() -> LayoutStyle {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
@@ -164,6 +166,29 @@ impl WorkspaceTabStrip {
     pub fn tabs(mut self, tabs: impl IntoIterator<Item = WorkspaceTab>) -> Self {
         self.tabs.extend(tabs);
         self
+    }
+
+    pub fn from_workspace_tabs(
+        state: &crate::tabs::WorkspaceTabs,
+        title: impl Fn(&str) -> Arc<str>,
+    ) -> Self {
+        let active = state.active().cloned();
+        let mut out = WorkspaceTabStrip::new_optional(active);
+        out.tabs = state
+            .tabs()
+            .iter()
+            .filter_map(|id| {
+                let activate = tab_activate_command(id.as_ref())?;
+                let mut tab = WorkspaceTab::new(id.clone(), title(id.as_ref()), activate);
+                if let Some(close) = tab_close_command(id.as_ref()) {
+                    tab = tab.close_command(close);
+                }
+                tab.dirty = state.is_dirty(id.as_ref());
+                Some(tab)
+            })
+            .collect();
+
+        out
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {

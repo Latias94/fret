@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::Axis;
+use fret_runtime::CommandId;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -36,9 +37,37 @@ impl WorkspaceWindowLayout {
         self.active_pane.as_ref()
     }
 
+    pub fn activate_pane(&mut self, id: &str) -> bool {
+        if self.pane_tree.find_pane(id).is_none() {
+            return false;
+        }
+        self.active_pane = Some(Arc::<str>::from(id));
+        true
+    }
+
     pub fn active_pane_mut(&mut self) -> Option<&mut WorkspacePaneLayout> {
         let active = self.active_pane.clone()?;
         self.pane_tree.find_pane_mut(active.as_ref())
+    }
+
+    pub fn apply_command(&mut self, command: &CommandId) -> bool {
+        if let Some(id) = command
+            .as_str()
+            .strip_prefix(crate::commands::CMD_WORKSPACE_PANE_ACTIVATE_PREFIX)
+        {
+            let id = id.trim();
+            if id.is_empty() {
+                return false;
+            }
+            return self.activate_pane(id);
+        }
+
+        if self.active_pane.is_none() {
+            self.active_pane = self.pane_tree.first_leaf_id().cloned();
+        }
+
+        self.active_pane_mut()
+            .is_some_and(|pane| pane.tabs.apply_command(command))
     }
 }
 
@@ -238,5 +267,63 @@ impl WorkspacePaneTreeV1 {
                 b: Box::new(b.into_tree()),
             },
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn apply_command_routes_to_active_pane_tabs() {
+        let mut window = WorkspaceWindowLayout::new("main", "p1");
+        window.pane_tree = WorkspacePaneTree::split(
+            Axis::Horizontal,
+            0.5,
+            WorkspacePaneTree::leaf("p1"),
+            WorkspacePaneTree::leaf("p2"),
+        );
+        window.active_pane = Some(Arc::<str>::from("p2"));
+
+        window
+            .pane_tree
+            .find_pane_mut("p2")
+            .unwrap()
+            .tabs
+            .open_and_activate(Arc::<str>::from("a"));
+        window
+            .pane_tree
+            .find_pane_mut("p2")
+            .unwrap()
+            .tabs
+            .open_and_activate(Arc::<str>::from("b"));
+
+        assert!(window.apply_command(&CommandId::from(crate::commands::CMD_WORKSPACE_TAB_PREV)));
+        assert_eq!(
+            window
+                .pane_tree
+                .find_pane("p2")
+                .unwrap()
+                .tabs
+                .active()
+                .unwrap()
+                .as_ref(),
+            "a"
+        );
+    }
+
+    #[test]
+    fn apply_command_handles_activate_pane_prefix() {
+        let mut window = WorkspaceWindowLayout::new("main", "p1");
+        window.pane_tree = WorkspacePaneTree::split(
+            Axis::Horizontal,
+            0.5,
+            WorkspacePaneTree::leaf("p1"),
+            WorkspacePaneTree::leaf("p2"),
+        );
+
+        let cmd = crate::commands::pane_activate_command("p2").unwrap();
+        assert!(window.apply_command(&cmd));
+        assert_eq!(window.active_pane_id().unwrap().as_ref(), "p2");
     }
 }

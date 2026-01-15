@@ -8,8 +8,10 @@ pub mod commands;
 mod frame;
 pub mod layout;
 pub mod menu;
+pub mod panes;
 mod tab_strip;
 pub mod tabs;
 
 pub use frame::{WorkspaceFrame, WorkspaceStatusBar, WorkspaceTopBar};
+pub use panes::workspace_pane_tree_element;
 pub use tab_strip::{WorkspaceTab, WorkspaceTabStrip};

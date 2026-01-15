@@ -20,6 +20,12 @@ pub const CMD_WORKSPACE_TAB_ACTIVATE_PREFIX: &str = "workspace.tab.activate.";
 /// without exposing internal IDs via generic enum payloads.
 pub const CMD_WORKSPACE_TAB_CLOSE_PREFIX: &str = "workspace.tab.close.";
 
+/// Prefix for "activate a specific pane" commands.
+///
+/// This is prefix-based so apps can use their own stable pane IDs (strings) without adding a
+/// dedicated runtime enum payload surface.
+pub const CMD_WORKSPACE_PANE_ACTIVATE_PREFIX: &str = "workspace.pane.activate.";
+
 pub fn tab_activate_command(id: &str) -> Option<CommandId> {
     let id = id.trim();
     if id.is_empty() {
@@ -37,6 +43,16 @@ pub fn tab_close_command(id: &str) -> Option<CommandId> {
     }
     Some(CommandId::new(Arc::<str>::from(format!(
         "{CMD_WORKSPACE_TAB_CLOSE_PREFIX}{id}"
+    ))))
+}
+
+pub fn pane_activate_command(id: &str) -> Option<CommandId> {
+    let id = id.trim();
+    if id.is_empty() {
+        return None;
+    }
+    Some(CommandId::new(Arc::<str>::from(format!(
+        "{CMD_WORKSPACE_PANE_ACTIVATE_PREFIX}{id}"
     ))))
 }
 
