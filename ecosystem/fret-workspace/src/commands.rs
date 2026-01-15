@@ -11,6 +11,29 @@ pub const CMD_WORKSPACE_TAB_CLOSE: &str = "workspace.tab.close";
 pub const CMD_WORKSPACE_PANE_NEXT: &str = "workspace.pane.next";
 pub const CMD_WORKSPACE_PANE_PREV: &str = "workspace.pane.prev";
 
+pub const CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_NEXT: &str = "workspace.pane.move_active_tab.next";
+pub const CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_PREV: &str = "workspace.pane.move_active_tab.prev";
+
+pub const CMD_WORKSPACE_PANE_RESIZE_RIGHT: &str = "workspace.pane.resize.right";
+pub const CMD_WORKSPACE_PANE_RESIZE_LEFT: &str = "workspace.pane.resize.left";
+pub const CMD_WORKSPACE_PANE_RESIZE_UP: &str = "workspace.pane.resize.up";
+pub const CMD_WORKSPACE_PANE_RESIZE_DOWN: &str = "workspace.pane.resize.down";
+
+pub const CMD_WORKSPACE_PANE_SPLIT_RIGHT: &str = "workspace.pane.split.right";
+pub const CMD_WORKSPACE_PANE_SPLIT_LEFT: &str = "workspace.pane.split.left";
+pub const CMD_WORKSPACE_PANE_SPLIT_UP: &str = "workspace.pane.split.up";
+pub const CMD_WORKSPACE_PANE_SPLIT_DOWN: &str = "workspace.pane.split.down";
+
+pub const CMD_WORKSPACE_PANE_FOCUS_RIGHT: &str = "workspace.pane.focus.right";
+pub const CMD_WORKSPACE_PANE_FOCUS_LEFT: &str = "workspace.pane.focus.left";
+pub const CMD_WORKSPACE_PANE_FOCUS_UP: &str = "workspace.pane.focus.up";
+pub const CMD_WORKSPACE_PANE_FOCUS_DOWN: &str = "workspace.pane.focus.down";
+
+pub const CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_RIGHT: &str = "workspace.pane.move_active_tab.right";
+pub const CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_LEFT: &str = "workspace.pane.move_active_tab.left";
+pub const CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_UP: &str = "workspace.pane.move_active_tab.up";
+pub const CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_DOWN: &str = "workspace.pane.move_active_tab.down";
+
 /// Prefix for "activate a specific tab" commands.
 ///
 /// This is intentionally a prefix-based command family so apps can implement their own tab models
@@ -113,7 +136,15 @@ pub fn pane_move_active_tab_to_command(pane_id: &str) -> Option<CommandId> {
 fn kb(platform: PlatformFilter, key: KeyCode, mods: Modifiers) -> DefaultKeybinding {
     DefaultKeybinding {
         platform,
-        chord: KeyChord::new(key, mods),
+        sequence: vec![KeyChord::new(key, mods)],
+        when: None,
+    }
+}
+
+fn seq(platform: PlatformFilter, sequence: Vec<KeyChord>) -> DefaultKeybinding {
+    DefaultKeybinding {
+        platform,
+        sequence,
         when: None,
     }
 }
@@ -162,6 +193,33 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
             },
         )
     };
+    let mac_cmd_shift = |key: KeyCode| {
+        kb(
+            PlatformFilter::Macos,
+            key,
+            Modifiers {
+                meta: true,
+                shift: true,
+                ..Default::default()
+            },
+        )
+    };
+
+    let win_ctrl_k = KeyChord::new(
+        KeyCode::KeyK,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+    );
+    let linux_ctrl_k = win_ctrl_k;
+    let mac_cmd_k = KeyChord::new(
+        KeyCode::KeyK,
+        Modifiers {
+            meta: true,
+            ..Default::default()
+        },
+    );
 
     registry.register(
         CommandId::new(CMD_WORKSPACE_TAB_NEXT),
@@ -211,5 +269,733 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
         CommandMeta::new("Previous Pane")
             .with_category("Workspace")
             .with_keywords(["pane", "previous", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_NEXT),
+        CommandMeta::new("Move Active Tab to Next Pane")
+            .with_category("Workspace")
+            .with_keywords(["move", "tab", "pane", "next", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_PREV),
+        CommandMeta::new("Move Active Tab to Previous Pane")
+            .with_category("Workspace")
+            .with_keywords(["move", "tab", "pane", "previous", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_RESIZE_RIGHT),
+        CommandMeta::new("Resize Pane Right")
+            .with_category("Workspace")
+            .with_keywords(["resize", "pane", "right", "workspace"])
+            .with_default_keybindings([
+                seq(
+                    PlatformFilter::Windows,
+                    vec![
+                        win_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowRight,
+                            Modifiers {
+                                ctrl: true,
+                                shift: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Linux,
+                    vec![
+                        linux_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowRight,
+                            Modifiers {
+                                ctrl: true,
+                                shift: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Macos,
+                    vec![
+                        mac_cmd_k,
+                        KeyChord::new(
+                            KeyCode::ArrowRight,
+                            Modifiers {
+                                alt: true,
+                                shift: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_RESIZE_LEFT),
+        CommandMeta::new("Resize Pane Left")
+            .with_category("Workspace")
+            .with_keywords(["resize", "pane", "left", "workspace"])
+            .with_default_keybindings([
+                seq(
+                    PlatformFilter::Windows,
+                    vec![
+                        win_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowLeft,
+                            Modifiers {
+                                ctrl: true,
+                                shift: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Linux,
+                    vec![
+                        linux_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowLeft,
+                            Modifiers {
+                                ctrl: true,
+                                shift: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Macos,
+                    vec![
+                        mac_cmd_k,
+                        KeyChord::new(
+                            KeyCode::ArrowLeft,
+                            Modifiers {
+                                alt: true,
+                                shift: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_RESIZE_UP),
+        CommandMeta::new("Resize Pane Up")
+            .with_category("Workspace")
+            .with_keywords(["resize", "pane", "up", "workspace"])
+            .with_default_keybindings([
+                seq(
+                    PlatformFilter::Windows,
+                    vec![
+                        win_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowUp,
+                            Modifiers {
+                                ctrl: true,
+                                shift: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Linux,
+                    vec![
+                        linux_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowUp,
+                            Modifiers {
+                                ctrl: true,
+                                shift: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Macos,
+                    vec![
+                        mac_cmd_k,
+                        KeyChord::new(
+                            KeyCode::ArrowUp,
+                            Modifiers {
+                                alt: true,
+                                shift: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_RESIZE_DOWN),
+        CommandMeta::new("Resize Pane Down")
+            .with_category("Workspace")
+            .with_keywords(["resize", "pane", "down", "workspace"])
+            .with_default_keybindings([
+                seq(
+                    PlatformFilter::Windows,
+                    vec![
+                        win_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowDown,
+                            Modifiers {
+                                ctrl: true,
+                                shift: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Linux,
+                    vec![
+                        linux_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowDown,
+                            Modifiers {
+                                ctrl: true,
+                                shift: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Macos,
+                    vec![
+                        mac_cmd_k,
+                        KeyChord::new(
+                            KeyCode::ArrowDown,
+                            Modifiers {
+                                alt: true,
+                                shift: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_SPLIT_RIGHT),
+        CommandMeta::new("Split Pane Right")
+            .with_category("Workspace")
+            .with_keywords(["split", "pane", "right", "workspace"])
+            .with_default_keybindings([
+                win_ctrl(KeyCode::Backslash, false),
+                linux_ctrl(KeyCode::Backslash, false),
+                mac_cmd(KeyCode::Backslash),
+                seq(
+                    PlatformFilter::Windows,
+                    vec![
+                        win_ctrl_k,
+                        KeyChord::new(KeyCode::ArrowRight, Modifiers::default()),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Linux,
+                    vec![
+                        linux_ctrl_k,
+                        KeyChord::new(KeyCode::ArrowRight, Modifiers::default()),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Macos,
+                    vec![
+                        mac_cmd_k,
+                        KeyChord::new(KeyCode::ArrowRight, Modifiers::default()),
+                    ],
+                ),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_SPLIT_LEFT),
+        CommandMeta::new("Split Pane Left")
+            .with_category("Workspace")
+            .with_keywords(["split", "pane", "left", "workspace"])
+            .with_default_keybindings([
+                seq(
+                    PlatformFilter::Windows,
+                    vec![
+                        win_ctrl_k,
+                        KeyChord::new(KeyCode::ArrowLeft, Modifiers::default()),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Linux,
+                    vec![
+                        linux_ctrl_k,
+                        KeyChord::new(KeyCode::ArrowLeft, Modifiers::default()),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Macos,
+                    vec![
+                        mac_cmd_k,
+                        KeyChord::new(KeyCode::ArrowLeft, Modifiers::default()),
+                    ],
+                ),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_SPLIT_UP),
+        CommandMeta::new("Split Pane Up")
+            .with_category("Workspace")
+            .with_keywords(["split", "pane", "up", "workspace"])
+            .with_default_keybindings([
+                seq(
+                    PlatformFilter::Windows,
+                    vec![
+                        win_ctrl_k,
+                        KeyChord::new(KeyCode::ArrowUp, Modifiers::default()),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Linux,
+                    vec![
+                        linux_ctrl_k,
+                        KeyChord::new(KeyCode::ArrowUp, Modifiers::default()),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Macos,
+                    vec![
+                        mac_cmd_k,
+                        KeyChord::new(KeyCode::ArrowUp, Modifiers::default()),
+                    ],
+                ),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_SPLIT_DOWN),
+        CommandMeta::new("Split Pane Down")
+            .with_category("Workspace")
+            .with_keywords(["split", "pane", "down", "workspace"])
+            .with_default_keybindings([
+                win_ctrl(KeyCode::Backslash, true),
+                linux_ctrl(KeyCode::Backslash, true),
+                mac_cmd_shift(KeyCode::Backslash),
+                seq(
+                    PlatformFilter::Windows,
+                    vec![
+                        win_ctrl_k,
+                        KeyChord::new(KeyCode::ArrowDown, Modifiers::default()),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Linux,
+                    vec![
+                        linux_ctrl_k,
+                        KeyChord::new(KeyCode::ArrowDown, Modifiers::default()),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Macos,
+                    vec![
+                        mac_cmd_k,
+                        KeyChord::new(KeyCode::ArrowDown, Modifiers::default()),
+                    ],
+                ),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_FOCUS_RIGHT),
+        CommandMeta::new("Focus Pane Right")
+            .with_category("Workspace")
+            .with_keywords(["focus", "pane", "right", "workspace"])
+            .with_default_keybindings([
+                seq(
+                    PlatformFilter::Windows,
+                    vec![
+                        win_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowRight,
+                            Modifiers {
+                                shift: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Linux,
+                    vec![
+                        linux_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowRight,
+                            Modifiers {
+                                shift: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Macos,
+                    vec![
+                        mac_cmd_k,
+                        KeyChord::new(
+                            KeyCode::ArrowRight,
+                            Modifiers {
+                                shift: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_FOCUS_LEFT),
+        CommandMeta::new("Focus Pane Left")
+            .with_category("Workspace")
+            .with_keywords(["focus", "pane", "left", "workspace"])
+            .with_default_keybindings([
+                seq(
+                    PlatformFilter::Windows,
+                    vec![
+                        win_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowLeft,
+                            Modifiers {
+                                shift: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Linux,
+                    vec![
+                        linux_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowLeft,
+                            Modifiers {
+                                shift: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Macos,
+                    vec![
+                        mac_cmd_k,
+                        KeyChord::new(
+                            KeyCode::ArrowLeft,
+                            Modifiers {
+                                shift: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_FOCUS_UP),
+        CommandMeta::new("Focus Pane Up")
+            .with_category("Workspace")
+            .with_keywords(["focus", "pane", "up", "workspace"])
+            .with_default_keybindings([
+                seq(
+                    PlatformFilter::Windows,
+                    vec![
+                        win_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowUp,
+                            Modifiers {
+                                shift: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Linux,
+                    vec![
+                        linux_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowUp,
+                            Modifiers {
+                                shift: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Macos,
+                    vec![
+                        mac_cmd_k,
+                        KeyChord::new(
+                            KeyCode::ArrowUp,
+                            Modifiers {
+                                shift: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_FOCUS_DOWN),
+        CommandMeta::new("Focus Pane Down")
+            .with_category("Workspace")
+            .with_keywords(["focus", "pane", "down", "workspace"])
+            .with_default_keybindings([
+                seq(
+                    PlatformFilter::Windows,
+                    vec![
+                        win_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowDown,
+                            Modifiers {
+                                shift: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Linux,
+                    vec![
+                        linux_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowDown,
+                            Modifiers {
+                                shift: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Macos,
+                    vec![
+                        mac_cmd_k,
+                        KeyChord::new(
+                            KeyCode::ArrowDown,
+                            Modifiers {
+                                shift: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_RIGHT),
+        CommandMeta::new("Move Active Tab Right")
+            .with_category("Workspace")
+            .with_keywords(["move", "tab", "pane", "right", "workspace"])
+            .with_default_keybindings([
+                seq(
+                    PlatformFilter::Windows,
+                    vec![
+                        win_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowRight,
+                            Modifiers {
+                                alt: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Linux,
+                    vec![
+                        linux_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowRight,
+                            Modifiers {
+                                alt: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Macos,
+                    vec![
+                        mac_cmd_k,
+                        KeyChord::new(
+                            KeyCode::ArrowRight,
+                            Modifiers {
+                                alt: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_LEFT),
+        CommandMeta::new("Move Active Tab Left")
+            .with_category("Workspace")
+            .with_keywords(["move", "tab", "pane", "left", "workspace"])
+            .with_default_keybindings([
+                seq(
+                    PlatformFilter::Windows,
+                    vec![
+                        win_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowLeft,
+                            Modifiers {
+                                alt: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Linux,
+                    vec![
+                        linux_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowLeft,
+                            Modifiers {
+                                alt: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Macos,
+                    vec![
+                        mac_cmd_k,
+                        KeyChord::new(
+                            KeyCode::ArrowLeft,
+                            Modifiers {
+                                alt: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_UP),
+        CommandMeta::new("Move Active Tab Up")
+            .with_category("Workspace")
+            .with_keywords(["move", "tab", "pane", "up", "workspace"])
+            .with_default_keybindings([
+                seq(
+                    PlatformFilter::Windows,
+                    vec![
+                        win_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowUp,
+                            Modifiers {
+                                alt: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Linux,
+                    vec![
+                        linux_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowUp,
+                            Modifiers {
+                                alt: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Macos,
+                    vec![
+                        mac_cmd_k,
+                        KeyChord::new(
+                            KeyCode::ArrowUp,
+                            Modifiers {
+                                alt: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_DOWN),
+        CommandMeta::new("Move Active Tab Down")
+            .with_category("Workspace")
+            .with_keywords(["move", "tab", "pane", "down", "workspace"])
+            .with_default_keybindings([
+                seq(
+                    PlatformFilter::Windows,
+                    vec![
+                        win_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowDown,
+                            Modifiers {
+                                alt: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Linux,
+                    vec![
+                        linux_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowDown,
+                            Modifiers {
+                                alt: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Macos,
+                    vec![
+                        mac_cmd_k,
+                        KeyChord::new(
+                            KeyCode::ArrowDown,
+                            Modifiers {
+                                alt: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+            ]),
     );
 }

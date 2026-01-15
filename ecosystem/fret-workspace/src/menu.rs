@@ -27,6 +27,19 @@ pub struct WorkspaceMenuCommands {
 
     pub next_pane: CommandId,
     pub prev_pane: CommandId,
+
+    pub split_right: CommandId,
+    pub split_left: CommandId,
+    pub split_up: CommandId,
+    pub split_down: CommandId,
+
+    pub move_active_tab_next_pane: CommandId,
+    pub move_active_tab_prev_pane: CommandId,
+
+    pub resize_pane_right: CommandId,
+    pub resize_pane_left: CommandId,
+    pub resize_pane_up: CommandId,
+    pub resize_pane_down: CommandId,
 }
 
 impl Default for WorkspaceMenuCommands {
@@ -52,6 +65,23 @@ impl Default for WorkspaceMenuCommands {
 
             next_pane: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_NEXT),
             prev_pane: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_PREV),
+
+            split_right: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_SPLIT_RIGHT),
+            split_left: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_SPLIT_LEFT),
+            split_up: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_SPLIT_UP),
+            split_down: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_SPLIT_DOWN),
+
+            move_active_tab_next_pane: CommandId::new(
+                crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_NEXT,
+            ),
+            move_active_tab_prev_pane: CommandId::new(
+                crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_PREV,
+            ),
+
+            resize_pane_right: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_RESIZE_RIGHT),
+            resize_pane_left: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_RESIZE_LEFT),
+            resize_pane_up: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_RESIZE_UP),
+            resize_pane_down: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_RESIZE_DOWN),
         }
     }
 }
@@ -147,6 +177,112 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
             MenuItem::Command {
                 command: cmds.prev_pane,
                 when: None,
+            },
+            MenuItem::Separator,
+            MenuItem::Submenu {
+                title: Arc::from("Split"),
+                when: None,
+                items: vec![
+                    MenuItem::Command {
+                        command: cmds.split_right,
+                        when: None,
+                    },
+                    MenuItem::Command {
+                        command: cmds.split_left,
+                        when: None,
+                    },
+                    MenuItem::Command {
+                        command: cmds.split_up,
+                        when: None,
+                    },
+                    MenuItem::Command {
+                        command: cmds.split_down,
+                        when: None,
+                    },
+                ],
+            },
+            MenuItem::Submenu {
+                title: Arc::from("Move Tab"),
+                when: None,
+                items: vec![
+                    MenuItem::Command {
+                        command: cmds.move_active_tab_next_pane,
+                        when: None,
+                    },
+                    MenuItem::Command {
+                        command: cmds.move_active_tab_prev_pane,
+                        when: None,
+                    },
+                    MenuItem::Separator,
+                    MenuItem::Command {
+                        command: CommandId::new(
+                            crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_LEFT,
+                        ),
+                        when: None,
+                    },
+                    MenuItem::Command {
+                        command: CommandId::new(
+                            crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_RIGHT,
+                        ),
+                        when: None,
+                    },
+                    MenuItem::Command {
+                        command: CommandId::new(
+                            crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_UP,
+                        ),
+                        when: None,
+                    },
+                    MenuItem::Command {
+                        command: CommandId::new(
+                            crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_DOWN,
+                        ),
+                        when: None,
+                    },
+                ],
+            },
+            MenuItem::Submenu {
+                title: Arc::from("Focus Pane"),
+                when: None,
+                items: vec![
+                    MenuItem::Command {
+                        command: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_FOCUS_LEFT),
+                        when: None,
+                    },
+                    MenuItem::Command {
+                        command: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_FOCUS_RIGHT),
+                        when: None,
+                    },
+                    MenuItem::Command {
+                        command: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_FOCUS_UP),
+                        when: None,
+                    },
+                    MenuItem::Command {
+                        command: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_FOCUS_DOWN),
+                        when: None,
+                    },
+                ],
+            },
+            MenuItem::Submenu {
+                title: Arc::from("Resize"),
+                when: None,
+                items: vec![
+                    MenuItem::Command {
+                        command: cmds.resize_pane_right,
+                        when: None,
+                    },
+                    MenuItem::Command {
+                        command: cmds.resize_pane_left,
+                        when: None,
+                    },
+                    MenuItem::Command {
+                        command: cmds.resize_pane_up,
+                        when: None,
+                    },
+                    MenuItem::Command {
+                        command: cmds.resize_pane_down,
+                        when: None,
+                    },
+                ],
             },
         ],
     });

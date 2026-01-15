@@ -1183,7 +1183,7 @@ impl MenubarMenuEntries {
 
                         let roving = RovingFocusProps {
                             enabled: true,
-                            wrap: true,
+                            wrap: false,
                             disabled: disabled_arc,
                             ..Default::default()
                         };
@@ -2118,7 +2118,7 @@ impl MenubarMenuEntries {
 
                                     let roving = RovingFocusProps {
                                         enabled: true,
-                                        wrap: true,
+                                        wrap: false,
                                         disabled: disabled_arc,
                                         ..Default::default()
                                     };
@@ -2130,12 +2130,19 @@ impl MenubarMenuEntries {
                                         trigger_registry_for_overlay.clone();
                                     let text_style = text_style_for_submenu.clone();
                                     let submenu_models_for_panel = submenu_for_panel.clone();
+                                    let labelled_by_element = cx
+                                        .app
+                                        .models_mut()
+                                        .read(&submenu_models_for_panel.trigger, |v| *v)
+                                        .ok()
+                                        .flatten();
                                     let item_ring = item_ring;
 
                                     let submenu_panel = menu::sub_content::submenu_panel_scroll_y_for_value_at(
                                         cx,
                                         open_value.clone(),
                                         placed,
+                                        labelled_by_element,
                                         move |layout| ContainerProps {
                                             layout,
                                             padding: Edges::all(Px(4.0)),

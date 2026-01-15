@@ -88,6 +88,15 @@ Docking hover selection SHOULD reuse headless collision strategies:
 
 This keeps docking hover selection aligned with other ecosystem DnD surfaces (sortable, node graph, etc.).
 
+#### Tab insertion index semantics
+
+When the hover target is a tab bar, docking derives `insert_index` using headless “insertion side” semantics
+(`InsertionSide::{Before,After}`) along the X axis:
+
+- pointer in the left half of the *over* tab rect inserts before that tab,
+- pointer in the right half inserts after that tab,
+- pointer beyond the last tab inserts at the end.
+
 ### 5) Multi-pointer readiness
 
 All docking drag state MUST be keyed by `PointerId` (ADR 0165/0166). No single-pointer global “current drag” state is allowed in the docking UI layer.
@@ -102,4 +111,3 @@ All docking drag state MUST be keyed by `PointerId` (ADR 0165/0166). No single-p
 
 1. Should we extract a shared helper for “internal cross-window `DragSession` ↔ headless collision registry” so docking is not the only consumer?
 2. Should the default activation threshold become configurable via `DockingInteractionSettings`, and should it be expressed in logical px, screen px, or a density-aware unit?
-

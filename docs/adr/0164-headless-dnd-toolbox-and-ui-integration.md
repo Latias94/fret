@@ -156,7 +156,7 @@ same-frame geometry or cross-component coordination.
 ### 3) Treat internal drag routing as mechanism-only; toolbox owns policy
 
 The runtime continues to route `Event::InternalDrag` using hit-testing and the existing internal-drag anchor override
-mechanism (`InternalDragRouteService`) when needed (e.g. docking tear-off).
+mechanism (`fret_ui::internal_drag`) when needed (e.g. docking tear-off).
 
 The toolbox does not change routing rules; it consumes a geometry registry snapshot and computes “over/collisions”.
 

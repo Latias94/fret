@@ -27,17 +27,17 @@ pub fn register_command_palette(registry: &mut CommandRegistry) {
         .with_default_keybindings([
             DefaultKeybinding {
                 platform: PlatformFilter::Windows,
-                chord: KeyChord::new(KeyCode::KeyP, ctrl_mods),
+                sequence: vec![KeyChord::new(KeyCode::KeyP, ctrl_mods)],
                 when: None,
             },
             DefaultKeybinding {
                 platform: PlatformFilter::Linux,
-                chord: KeyChord::new(KeyCode::KeyP, ctrl_mods),
+                sequence: vec![KeyChord::new(KeyCode::KeyP, ctrl_mods)],
                 when: None,
             },
             DefaultKeybinding {
                 platform: PlatformFilter::Macos,
-                chord: KeyChord::new(KeyCode::KeyP, meta_mods),
+                sequence: vec![KeyChord::new(KeyCode::KeyP, meta_mods)],
                 when: None,
             },
         ]);

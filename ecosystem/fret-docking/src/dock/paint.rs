@@ -2,10 +2,11 @@
 //
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
-use super::hit_test::{tab_close_rect, tab_rect_for_index, tab_scroll_for_node};
+use super::hit_test::{tab_close_rect, tab_scroll_for_node};
 use super::layout::{dock_hint_rects, drop_zone_rect, split_tab_bar};
 use super::manager::DockManager;
 use super::prelude_core::*;
+use super::tab_bar_geometry::TabBarGeometry;
 use fret_ui::retained_bridge::ResizeHandle;
 use fret_ui::retained_bridge::resizable_panel_group as resizable;
 
@@ -13,6 +14,7 @@ pub(super) struct PaintDockParams<'a> {
     pub(super) window: fret_core::AppWindowId,
     pub(super) layout: &'a std::collections::HashMap<DockNodeId, Rect>,
     pub(super) tab_titles: &'a HashMap<PanelKey, PreparedTabTitle>,
+    pub(super) tab_widths: &'a HashMap<DockNodeId, Arc<[Px]>>,
     pub(super) hovered_tab: Option<(DockNodeId, usize)>,
     pub(super) hovered_tab_close: bool,
     pub(super) pressed_tab_close: Option<(DockNodeId, usize)>,
@@ -40,6 +42,7 @@ pub(super) fn paint_dock(
         window,
         layout,
         tab_titles,
+        tab_widths,
         hovered_tab,
         hovered_tab_close,
         pressed_tab_close,
@@ -72,10 +75,15 @@ pub(super) fn paint_dock(
         });
 
         let scroll = tab_scroll_for_node(tab_scroll, node_id);
+        let tab_geom = tab_widths
+            .get(&node_id)
+            .filter(|w| w.len() == tabs.len())
+            .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
+            .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tabs.len()));
         scene.push(SceneOp::PushClipRect { rect: tab_bar });
 
         for (i, panel) in tabs.iter().enumerate() {
-            let tab_rect = tab_rect_for_index(tab_bar, i, scroll);
+            let tab_rect = tab_geom.tab_rect(i, scroll);
             if tab_rect.origin.x.0 + tab_rect.size.width.0 < tab_bar.origin.x.0
                 || tab_rect.origin.x.0 > tab_bar.origin.x.0 + tab_bar.size.width.0
             {
@@ -298,8 +306,10 @@ pub(super) fn paint_drop_overlay(
     target: Option<DockDropTarget>,
     window: fret_core::AppWindowId,
     bounds: Rect,
+    graph: &DockGraph,
     layout: &std::collections::HashMap<DockNodeId, Rect>,
     tab_scroll: &HashMap<DockNodeId, Px>,
+    tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
     scene: &mut Scene,
 ) {
     let Some(target) = target else {
@@ -342,7 +352,16 @@ pub(super) fn paint_drop_overlay(
                 });
                 if let Some(i) = target.insert_index {
                     let scroll = tab_scroll_for_node(tab_scroll, target.tabs);
-                    let x = tab_bar.origin.x.0 + DOCK_TAB_W.0 * i as f32 - scroll.0;
+                    let tab_count = match graph.node(target.tabs) {
+                        Some(DockNode::Tabs { tabs, .. }) => tabs.len(),
+                        _ => 0,
+                    };
+                    let geom = tab_widths
+                        .get(&target.tabs)
+                        .filter(|w| w.len() == tab_count)
+                        .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
+                        .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tab_count));
+                    let x = geom.insert_x(i.min(tab_count), scroll).0;
                     let marker = Rect::new(
                         Point::new(Px(x - 3.0), Px(tab_bar.origin.y.0 + 3.0)),
                         Size::new(Px(6.0), Px((tab_bar.size.height.0 - 6.0).max(0.0))),

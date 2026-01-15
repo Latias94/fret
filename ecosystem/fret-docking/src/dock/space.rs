@@ -2,9 +2,7 @@
 //
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
-use super::hit_test::{
-    hit_test_split_handle, hit_test_tab, tab_rect_for_index, tab_scroll_for_node,
-};
+use super::hit_test::{hit_test_split_handle, hit_test_tab, tab_scroll_for_node};
 use super::layout::{
     active_panel_content_bounds, compute_layout_map, dock_hint_rects, dock_space_regions,
     drop_zone_rect, float_zone, hidden_bounds, split_tab_bar,
@@ -22,6 +20,8 @@ use super::services::{
 use super::split_stabilize::{
     SplitSizeLock, apply_same_axis_locks, compute_same_axis_locks_for_split_drag,
 };
+use super::tab_bar_geometry::TabBarGeometry;
+use super::tab_bar_geometry::dock_tab_width_for_title;
 use super::viewport::{
     ViewportCaptureState, hit_test_active_viewport_panel, viewport_input_from_hit,
     viewport_input_from_hit_clamped,
@@ -51,6 +51,7 @@ pub struct DockSpace {
     hovered_tab_close: bool,
     pressed_tab_close: Option<(DockNodeId, usize, PanelKey)>,
     tab_scroll: HashMap<DockNodeId, Px>,
+    tab_widths: HashMap<DockNodeId, Arc<[Px]>>,
     tab_close_glyph: Option<PreparedTabTitle>,
     tab_text_style: TextStyle,
     tab_close_style: TextStyle,
@@ -111,6 +112,7 @@ impl DockSpace {
             hovered_tab_close: false,
             pressed_tab_close: None,
             tab_scroll: HashMap::new(),
+            tab_widths: HashMap::new(),
             tab_close_glyph: None,
             tab_text_style: TextStyle {
                 font: fret_core::FontId::default(),
@@ -298,7 +300,7 @@ impl DockSpace {
 
         let pad_x = theme.metric_required("metric.padding.md");
         let reserve = Px(DOCK_TAB_CLOSE_SIZE.0 + DOCK_TAB_CLOSE_GAP.0);
-        let inner_max_w = Px((DOCK_TAB_W.0 - pad_x.0 * 2.0 - reserve.0).max(0.0));
+        let inner_max_w = Px((DOCK_TAB_MAX_W.0 - pad_x.0 * 2.0 - reserve.0).max(0.0));
         let constraints = TextConstraints {
             max_width: Some(inner_max_w),
             wrap: TextWrap::None,
@@ -355,9 +357,22 @@ impl DockSpace {
         }
     }
 
-    fn max_tab_scroll(tab_bar: Rect, tab_count: usize) -> Px {
-        let total = DOCK_TAB_W.0 * tab_count as f32;
-        Px((total - tab_bar.size.width.0).max(0.0))
+    fn tab_bar_geometry_for_node(
+        &self,
+        tabs: DockNodeId,
+        tab_bar: Rect,
+        tab_count: usize,
+    ) -> TabBarGeometry {
+        self.tab_widths
+            .get(&tabs)
+            .filter(|w| w.len() == tab_count)
+            .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
+            .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tab_count))
+    }
+
+    fn max_tab_scroll(&self, tabs: DockNodeId, tab_bar: Rect, tab_count: usize) -> Px {
+        self.tab_bar_geometry_for_node(tabs, tab_bar, tab_count)
+            .max_scroll()
     }
 
     fn clamp_and_ensure_active_visible(
@@ -372,7 +387,8 @@ impl DockSpace {
             return;
         }
 
-        let max_scroll = Self::max_tab_scroll(tab_bar, tab_count);
+        let geom = self.tab_bar_geometry_for_node(tabs, tab_bar, tab_count);
+        let max_scroll = geom.max_scroll();
         let mut scroll = self.tab_scroll_for(tabs);
 
         if max_scroll.0 <= 0.0 {
@@ -380,17 +396,7 @@ impl DockSpace {
             return;
         }
 
-        scroll = Px(scroll.0.clamp(0.0, max_scroll.0));
-
-        let tab_left = DOCK_TAB_W.0 * active as f32 - scroll.0;
-        let tab_right = tab_left + DOCK_TAB_W.0;
-        if tab_left < 0.0 {
-            scroll = Px(DOCK_TAB_W.0 * active as f32);
-        } else if tab_right > tab_bar.size.width.0 {
-            scroll = Px(DOCK_TAB_W.0 * (active + 1) as f32 - tab_bar.size.width.0);
-        }
-
-        scroll = Px(scroll.0.clamp(0.0, max_scroll.0));
+        scroll = geom.ensure_tab_visible(scroll, active.min(tab_count.saturating_sub(1)));
         self.set_tab_scroll_for(tabs, scroll);
     }
 
@@ -526,40 +532,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
             fret_dnd::DndItemId(x)
         }
 
-        fn tab_insert_index(tab_bar: Rect, scroll: Px, tab_count: usize, position: Point) -> usize {
-            if tab_count == 0 {
-                return 0;
-            }
-
-            let rel_x = position.x.0 - tab_bar.origin.x.0 + scroll.0;
-            if rel_x <= 0.0 {
-                return 0;
-            }
-
-            let max_x = DOCK_TAB_W.0 * tab_count as f32;
-            if rel_x >= max_x {
-                return tab_count;
-            }
-
-            let over_index = (rel_x / DOCK_TAB_W.0).floor() as usize;
-            let over_rect = Rect {
-                origin: Point::new(
-                    Px(tab_bar.origin.x.0 + DOCK_TAB_W.0 * over_index as f32 - scroll.0),
-                    tab_bar.origin.y,
-                ),
-                size: Size::new(DOCK_TAB_W, tab_bar.size.height),
-            };
-            let side = fret_dnd::insertion_side_for_pointer(position, over_rect, fret_dnd::Axis::X);
-            over_index.saturating_add(match side {
-                fret_dnd::InsertionSide::Before => 0,
-                fret_dnd::InsertionSide::After => 1,
-            })
-        }
-
         fn dock_drop_target_via_dnd(
             graph: &DockGraph,
             layout: &HashMap<DockNodeId, Rect>,
             tab_scroll: &HashMap<DockNodeId, Px>,
+            tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
             position: Point,
         ) -> Option<HoverTarget> {
             #[derive(Debug, Clone, Copy)]
@@ -657,7 +634,14 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 } => Some(HoverTarget {
                     tabs,
                     zone: DropZone::Center,
-                    insert_index: Some(tab_insert_index(tab_bar, scroll, tab_count, position)),
+                    insert_index: Some({
+                        let geom = tab_widths
+                            .get(&tabs)
+                            .filter(|w| w.len() == tab_count)
+                            .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
+                            .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tab_count));
+                        geom.compute_insert_index(position, scroll)
+                    }),
                 }),
                 HoverKind::Zone { tabs, zone } => Some(HoverTarget {
                     tabs,
@@ -773,10 +757,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let mut mark_drag_tear_off_requested = false;
 
         {
-            cx.app
-                .with_global_mut(InternalDragRouteService::default, |routes, _app| {
-                    routes.set(self.window, fret_runtime::DRAG_KIND_DOCK_PANEL, cx.node);
-                });
+            fret_ui::internal_drag::set_route(
+                cx.app,
+                self.window,
+                fret_runtime::DRAG_KIND_DOCK_PANEL,
+                cx.node,
+            );
             let Some(dock) = cx.app.global_mut::<DockManager>() else {
                 return;
             };
@@ -891,6 +877,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     &dock.graph,
                                     &layout,
                                     &self.tab_scroll,
+                                    &self.tab_widths,
                                     theme,
                                     *position,
                                 )
@@ -918,13 +905,19 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     let tab_rect = layout
                                         .get(&tabs_node)
                                         .copied()
-                                        .map(split_tab_bar)
-                                        .map(|(bar, _content)| {
-                                            tab_rect_for_index(
-                                                bar,
-                                                tab_index,
-                                                self.tab_scroll_for(tabs_node),
-                                            )
+                                        .and_then(|rect| {
+                                            let (bar, _content) = split_tab_bar(rect);
+                                            let tab_count = match dock.graph.node(tabs_node) {
+                                                Some(DockNode::Tabs { tabs, .. }) => tabs.len(),
+                                                _ => 0,
+                                            };
+                                            (tab_index < tab_count).then(|| {
+                                                let scroll = self.tab_scroll_for(tabs_node);
+                                                self.tab_bar_geometry_for_node(
+                                                    tabs_node, bar, tab_count,
+                                                )
+                                                .tab_rect(tab_index, scroll)
+                                            })
                                         })
                                         .unwrap_or_else(|| Rect::new(*position, Size::default()));
                                     let tab_local = Point::new(
@@ -954,6 +947,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 &dock.graph,
                                 &layout,
                                 &self.tab_scroll,
+                                &self.tab_widths,
                                 theme,
                                 *position,
                             )
@@ -1148,6 +1142,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     &dock.graph,
                                     &layout,
                                     &self.tab_scroll,
+                                    &self.tab_widths,
                                     theme,
                                     *position,
                                 )
@@ -1309,7 +1304,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 *active,
                             );
 
-                            let max_scroll = Self::max_tab_scroll(tab_bar, tabs.len());
+                            let max_scroll = self.max_tab_scroll(node_id, tab_bar, tabs.len());
                             if max_scroll.0 <= 0.0 {
                                 scrolled_tabs = true;
                                 break;
@@ -1464,6 +1459,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 &dock.graph,
                                 &layout,
                                 &self.tab_scroll,
+                                &self.tab_widths,
                                 theme,
                                 *position,
                             )
@@ -1695,6 +1691,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                     &dock.graph,
                                                     &layout,
                                                     &self.tab_scroll,
+                                                    &self.tab_widths,
                                                     position,
                                                 )
                                                 .map(DockDropTarget::Dock);
@@ -1759,6 +1756,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 &dock.graph,
                                                 &layout,
                                                 &self.tab_scroll,
+                                                &self.tab_widths,
                                                 position,
                                             )
                                             .map(DockDropTarget::Dock);
@@ -2011,10 +2009,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
         self.last_bounds = cx.bounds;
         let hidden = hidden_bounds(Size::new(Px(0.0), Px(0.0)));
 
-        cx.app
-            .with_global_mut(InternalDragRouteService::default, |routes, _app| {
-                routes.set(self.window, fret_runtime::DRAG_KIND_DOCK_PANEL, cx.node);
-            });
+        fret_ui::internal_drag::set_route(
+            cx.app,
+            self.window,
+            fret_runtime::DRAG_KIND_DOCK_PANEL,
+            cx.node,
+        );
         if let Some(dock) = cx.app.global_mut::<DockManager>() {
             dock.register_dock_space_node(self.window, cx.node);
         }
@@ -2054,6 +2054,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 self.clamp_and_ensure_active_visible(node_id, tab_bar, tabs.len(), *active);
             }
             self.tab_scroll
+                .retain(|tabs_node, _| visible_tabs_nodes.contains(tabs_node));
+            self.tab_widths
                 .retain(|tabs_node, _| visible_tabs_nodes.contains(tabs_node));
         }
 
@@ -2095,10 +2097,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
         // This must be refreshed during paint/layout, not only during event handling, because
         // cross-window drag routing needs a reliable per-window anchor even when hit-testing is
         // over unrelated UI (ADR 0072) and even when no events have fired this frame.
-        cx.app
-            .with_global_mut(InternalDragRouteService::default, |routes, _app| {
-                routes.set(self.window, fret_runtime::DRAG_KIND_DOCK_PANEL, cx.node);
-            });
+        fret_ui::internal_drag::set_route(
+            cx.app,
+            self.window,
+            fret_runtime::DRAG_KIND_DOCK_PANEL,
+            cx.node,
+        );
         let overlay_hooks = cx
             .app
             .global::<DockViewportOverlayHooksService>()
@@ -2146,6 +2150,28 @@ impl<H: UiHost> Widget<H> for DockSpace {
             let hover = dock.hover.clone();
 
             self.rebuild_tab_titles(cx.services, theme, cx.scale_factor, &*dock, &layout_all);
+            self.tab_widths.clear();
+            for (&node_id, &_rect) in layout_all.iter() {
+                let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(node_id) else {
+                    continue;
+                };
+                if tabs.is_empty() {
+                    continue;
+                }
+                let close_glyph_present = self.tab_close_glyph.is_some();
+                let widths: Vec<Px> = tabs
+                    .iter()
+                    .map(|panel| {
+                        let title_width = self
+                            .tab_titles
+                            .get(panel)
+                            .map(|t| t.metrics.size.width)
+                            .unwrap_or(Px(0.0));
+                        dock_tab_width_for_title(theme, title_width, close_glyph_present)
+                    })
+                    .collect();
+                self.tab_widths.insert(node_id, Arc::from(widths));
+            }
 
             dock.clear_viewport_layout_for_window(self.window);
             for (&node_id, &rect) in layout_all.iter() {
@@ -2183,6 +2209,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     window: self.window,
                     layout: &root_layout,
                     tab_titles: &self.tab_titles,
+                    tab_widths: &self.tab_widths,
                     hovered_tab: self.hovered_tab,
                     hovered_tab_close: self.hovered_tab_close,
                     pressed_tab_close: self.pressed_tab_close.as_ref().map(|(n, i, _)| (*n, *i)),
@@ -2264,6 +2291,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         window: self.window,
                         layout,
                         tab_titles: &self.tab_titles,
+                        tab_widths: &self.tab_widths,
                         hovered_tab: self.hovered_tab,
                         hovered_tab_close: self.hovered_tab_close,
                         pressed_tab_close: self
@@ -2304,8 +2332,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 hover,
                 self.window,
                 cx.bounds,
+                &dock.graph,
                 &layout_all,
                 &self.tab_scroll,
+                &self.tab_widths,
                 cx.scene,
             );
 
