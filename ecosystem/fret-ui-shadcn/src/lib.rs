@@ -18,6 +18,7 @@ pub mod breadcrumb;
 pub mod button;
 pub mod button_group;
 pub mod calendar;
+pub mod calendar_range;
 pub mod card;
 pub mod checkbox;
 pub mod collapsible;
@@ -30,6 +31,7 @@ pub mod data_table;
 mod data_table_controls;
 mod data_table_recipes;
 pub mod date_picker;
+pub mod date_range_picker;
 pub mod dialog;
 pub mod drawer;
 pub mod dropdown_menu;
@@ -94,6 +96,7 @@ pub use button_group::{
     ButtonGroup, ButtonGroupItem, ButtonGroupKind, button_group_multiple, button_group_single,
 };
 pub use calendar::Calendar;
+pub use calendar_range::CalendarRange;
 pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle};
 pub use checkbox::{Checkbox, checkbox};
 pub use collapsible::{
@@ -110,6 +113,7 @@ pub use context_menu::{
     ContextMenuShortcut,
 };
 pub use data_grid_canvas::{DataGridCanvas, DataGridCanvasAxis};
+pub use fret_ui_headless::calendar::{DateRange, DateRangeSelection};
 /// Default high-performance data grid surface (canvas-rendered).
 ///
 /// This is the "performance ceiling" option for spreadsheet-scale density:
@@ -128,6 +132,7 @@ pub use data_table_controls::{
 };
 pub use data_table_recipes::{DataTablePagination, DataTableToolbar};
 pub use date_picker::DatePicker;
+pub use date_range_picker::DateRangePicker;
 pub use dialog::{
     Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 };
