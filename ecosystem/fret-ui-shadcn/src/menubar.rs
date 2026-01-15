@@ -3,16 +3,16 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle,
-    TextWrap,
+    Color, Corners, Edges, FontId, FontWeight, Px, Rect, SemanticsRole, Size, TextOverflow,
+    TextStyle, TextWrap,
 };
 use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis, ScrollProps,
-    SemanticsProps, SizeStyle, TextProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
+    Overflow, PositionStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
+    ScrollAxis, ScrollProps, SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -1218,12 +1218,30 @@ impl MenubarMenuEntries {
                         let (_content_id, content) =
                             menu::content_panel::menu_content_semantics_with_id(
                                 cx,
-                                LayoutStyle::default(),
+                                LayoutStyle {
+                                    position: PositionStyle::Absolute,
+                                    inset: InsetStyle {
+                                        left: Some(placed.origin.x),
+                                        top: Some(placed.origin.y),
+                                        ..Default::default()
+                                    },
+                                    size: SizeStyle {
+                                        width: Length::Px(placed.size.width),
+                                        height: Length::Px(placed.size.height),
+                                        ..Default::default()
+                                    },
+                                    overflow: Overflow::Clip,
+                                    ..Default::default()
+                                },
                                 move |cx, _content_id| {
                                     let theme = theme_for_content.clone();
+                                    let local_placed = Rect::new(
+                                        fret_core::Point::new(Px(0.0), Px(0.0)),
+                                        placed.size,
+                                    );
                                     vec![menu::content_panel::menu_panel_container_at(
                                         cx,
-                                        placed,
+                                        local_placed,
                                         move |layout| ContainerProps {
                                             layout,
                                             padding: Edges::all(Px(4.0)),

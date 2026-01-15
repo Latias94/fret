@@ -1524,6 +1524,17 @@ fn web_vs_fret_navigation_menu_demo_overlay_placement_matches() {
     ui.dispatch_event(
         &mut app,
         &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
         &Event::Pointer(PointerEvent::Down {
             pointer_id: fret_core::PointerId::default(),
             position: click_point,
@@ -1620,6 +1631,243 @@ fn web_vs_fret_navigation_menu_demo_overlay_placement_matches() {
     );
     assert_close(
         "navigation-menu-demo cross_delta",
+        actual_cross,
+        expected_cross,
+        1.5,
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_overlay_placement_matches() {
+    let web = read_web_golden_open("menubar-demo");
+    let theme = web_theme(&web);
+
+    let web_trigger = web_find_by_data_slot_and_state(&theme.root, "menubar-trigger", "open")
+        .unwrap_or_else(|| {
+            find_first(&theme.root, &|n| {
+                n.attrs
+                    .get("data-slot")
+                    .is_some_and(|v| v.as_str() == "menubar-trigger")
+            })
+            .expect("web trigger slot=menubar-trigger")
+        });
+
+    let web_portal_index = theme
+        .portals
+        .iter()
+        .position(|n| n.attrs.get("role").is_some_and(|v| v == "menu"))
+        .expect("web portal role=menu");
+    let web_portal_leaf = &theme.portals[web_portal_index];
+    let web_portal = theme
+        .portal_wrappers
+        .get(web_portal_index)
+        .unwrap_or(web_portal_leaf);
+
+    let web_side = find_attr_in_subtree(web_portal_leaf, "data-side")
+        .or_else(|| find_attr_in_subtree(web_portal, "data-side"))
+        .and_then(parse_side)
+        .unwrap_or_else(|| infer_side(web_trigger.rect, web_portal.rect));
+    let web_align = find_attr_in_subtree(web_portal_leaf, "data-align")
+        .or_else(|| find_attr_in_subtree(web_portal, "data-align"))
+        .and_then(parse_align)
+        .unwrap_or_else(|| infer_align(web_side, web_trigger.rect, web_portal.rect));
+
+    let expected_gap = rect_main_gap(web_side, web_trigger.rect, web_portal.rect);
+    let expected_cross = rect_cross_delta(web_side, web_align, web_trigger.rect, web_portal.rect);
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(1440.0), Px(900.0)),
+    );
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| {
+            let menubar = fret_ui_shadcn::Menubar::new(vec![
+                fret_ui_shadcn::MenubarMenu::new("File").entries(vec![
+                    fret_ui_shadcn::MenubarEntry::Item(fret_ui_shadcn::MenubarItem::new("New Tab")),
+                    fret_ui_shadcn::MenubarEntry::Item(fret_ui_shadcn::MenubarItem::new(
+                        "New Window",
+                    )),
+                    fret_ui_shadcn::MenubarEntry::Separator,
+                    fret_ui_shadcn::MenubarEntry::Item(fret_ui_shadcn::MenubarItem::new("Share")),
+                ]),
+            ])
+            .into_element(cx);
+            vec![pad_root(cx, Px(0.0), menubar)]
+        },
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("File"))
+        .expect("fret menubar trigger semantics (File)");
+    let click_point = Point::new(
+        Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+        Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| {
+                let menubar = fret_ui_shadcn::Menubar::new(vec![
+                    fret_ui_shadcn::MenubarMenu::new("File").entries(vec![
+                        fret_ui_shadcn::MenubarEntry::Item(fret_ui_shadcn::MenubarItem::new(
+                            "New Tab",
+                        )),
+                        fret_ui_shadcn::MenubarEntry::Item(fret_ui_shadcn::MenubarItem::new(
+                            "New Window",
+                        )),
+                        fret_ui_shadcn::MenubarEntry::Separator,
+                        fret_ui_shadcn::MenubarEntry::Item(fret_ui_shadcn::MenubarItem::new(
+                            "Share",
+                        )),
+                    ]),
+                ])
+                .into_element(cx);
+                vec![pad_root(cx, Px(0.0), menubar)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("File"))
+        .expect("fret menubar trigger semantics (File)");
+
+    let expected_portal_w = web_portal.rect.w;
+    let expected_portal_h = web_portal.rect.h;
+
+    let fret_trigger = WebRect {
+        x: trigger.bounds.origin.x.0,
+        y: trigger.bounds.origin.y.0,
+        w: trigger.bounds.size.width.0,
+        h: trigger.bounds.size.height.0,
+    };
+
+    let debug = std::env::var("FRET_DEBUG_OVERLAY_PLACEMENT")
+        .ok()
+        .is_some_and(|v| v == "1");
+
+    let portal = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Menu)
+        .min_by(|a, b| {
+            let rect_a = WebRect {
+                x: a.bounds.origin.x.0,
+                y: a.bounds.origin.y.0,
+                w: a.bounds.size.width.0,
+                h: a.bounds.size.height.0,
+            };
+            let rect_b = WebRect {
+                x: b.bounds.origin.x.0,
+                y: b.bounds.origin.y.0,
+                w: b.bounds.size.width.0,
+                h: b.bounds.size.height.0,
+            };
+
+            let score_for = |r: WebRect| {
+                let gap = rect_main_gap(web_side, fret_trigger, r);
+                let cross = rect_cross_delta(web_side, web_align, fret_trigger, r);
+                let size = (r.w - expected_portal_w).abs() + (r.h - expected_portal_h).abs();
+                (gap - expected_gap).abs() + (cross - expected_cross).abs() + 0.05 * size
+            };
+
+            let score_a = score_for(rect_a);
+            let score_b = score_for(rect_b);
+            score_a
+                .partial_cmp(&score_b)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .expect("fret menubar portal semantics (Menu)");
+
+    if debug {
+        let candidates: Vec<_> = snap
+            .nodes
+            .iter()
+            .filter(|n| n.role == SemanticsRole::Menu)
+            .collect();
+        eprintln!("menubar-demo fret Menu candidates: {}", candidates.len());
+        for (idx, n) in candidates.iter().enumerate().take(8) {
+            eprintln!("  [{idx}] bounds={:?} label={:?}", n.bounds, n.label);
+        }
+        eprintln!(
+            "menubar-demo web trigger={:?} web portal={:?}\n  fret trigger={:?}\n  selected portal={:?}",
+            web_trigger.rect, web_portal.rect, fret_trigger, portal.bounds
+        );
+        eprintln!(
+            "menubar-demo fret trigger flags={:?} root_count={} node_count={}",
+            trigger.flags,
+            snap.roots.len(),
+            snap.nodes.len()
+        );
+    }
+
+    let fret_portal = WebRect {
+        x: portal.bounds.origin.x.0,
+        y: portal.bounds.origin.y.0,
+        w: portal.bounds.size.width.0,
+        h: portal.bounds.size.height.0,
+    };
+
+    let actual_gap = rect_main_gap(web_side, fret_trigger, fret_portal);
+    let actual_cross = rect_cross_delta(web_side, web_align, fret_trigger, fret_portal);
+
+    assert_close("menubar-demo main_gap", actual_gap, expected_gap, 1.0);
+    assert_close(
+        "menubar-demo cross_delta",
         actual_cross,
         expected_cross,
         1.5,

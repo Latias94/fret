@@ -96,7 +96,9 @@ Recent fixes:
 
 - Root panel chrome now matches upstream `rounded-md` + `shadow-xs` (new-york-v4 baseline).
 - Menu panels now match upstream `rounded-md` + `p-1` and `shadow-md` / `shadow-lg` split.
-- Conformance gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_menubar_panel_chrome_matches`).
+- Conformance gates:
+  - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_menubar_panel_chrome_matches`).
+  - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_menubar_demo_overlay_placement_matches`).
 
 ### `NavigationMenu`
 
