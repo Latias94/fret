@@ -89,4 +89,7 @@ concepts and Fret building blocks they depend on.
     dropdown-menu/context-menu/menubar (in addition to hover-open + grace corridor).
   - (Done) `shadcn-web` open snapshots now cover non-click input pages like `command-dialog` (key chord; see `docs/shadcn-web-goldens.md` `--openKeys`).
   - (Done) `shadcn-web` open snapshots now cover nested submenu states for dropdown-menu/context-menu/menubar (see `docs/shadcn-web-goldens.md` `--openSteps`).
+  - (Next) `Select` / listbox width parity: upstream listbox content can grow beyond the trigger
+    width (min-width = trigger, but long items expand); Fret currently pins desired width to the
+    trigger, so listbox portal `w/h` conformance is not yet gated 1:1.
   - (Next) extend `shadcn-web` open snapshots for additional multi-step states (e.g. navigation-menu hover + content open, and other chained interactions).

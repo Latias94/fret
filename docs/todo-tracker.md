@@ -172,6 +172,9 @@ It complements (but does not replace) ADRs:
       activation semantics match web timelines consistently, without per-test patches).
   - Goldens to expand:
     - `goldens/shadcn-web/v4/new-york-v4/*.open.json`: add open snapshots for pages that require non-click input and/or submenu open states.
+    - `Select` width + scroll: add an open variant where long option text expands the content panel
+      beyond the trigger width (web uses min-width=trigger, not fixed width), then add a 1:1 size
+      gate once Fret can measure/estimate content width deterministically.
   - Fret gates to add:
     - behavior/semantics sequence parity: `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` (new scenarios).
     - placement/chrome parity: extend `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_*` to cover submenu content and multi-layer placement.

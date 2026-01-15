@@ -44,6 +44,8 @@ Fret mapping intent:
   - Trigger: ensure value slot truncation is always enabled (no premature ellipsis).
   - Trigger: chevron icon size/opacity and gap to value.
   - Content: `p-1`, `rounded-md`, `border`, `shadow-md`, max-height behavior.
+  - Content: web uses `min-width: trigger` (not `width: trigger`), so long items can expand the
+    listbox beyond the trigger width; Fret currently pins desired width to the trigger (not yet 1:1).
   - Items: `py-1.5`, `pl-2`, `pr-8`, `gap-2`, `rounded-sm`.
   - Selected indicator: absolute slot (`right-2`, `size-3.5`) + reserve `pr-8`.
   - Scroll buttons: `py-1` with centered `size-4` chevrons (only visible when scrollable).
