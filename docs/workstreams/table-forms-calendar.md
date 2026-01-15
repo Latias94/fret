@@ -97,7 +97,7 @@ As of the initial audit:
   - `DataGrid` is the recommended performance-ceiling surface (canvas-backed):
     - API alias: `fret-ui-shadcn::DataGrid` -> `DataGridCanvas` (see `ecosystem/fret-ui-shadcn/src/lib.rs`).
     - Implementation: `ecosystem/fret-ui-shadcn/src/data_grid_canvas.rs`.
-  - `DataGridElement` prototype exists at `ecosystem/fret-ui-shadcn/src/data_grid.rs`.
+  - `experimental::DataGridElement` prototype exists at `ecosystem/fret-ui-shadcn/src/data_grid.rs`.
     - It explores element-based 2D virtualization (rows + columns) and custom scrollbars.
   - `DataTable` and `DataGrid` used to be behind the `datagrid` crate feature; the gate has been removed because it had no heavy deps.
 - `ecosystem/fret-ui-kit`
@@ -188,7 +188,8 @@ We will pursue a Glide-style architecture for the “upper bound” DataGrid:
 - Interaction: selection/focus/caret/drag handles as lightweight overlay layers; in-place editing via a single floating editor (popover/portal).
 - API: `rows + columns + get_cell(row, col)` contract for on-demand data, with explicit revision/invalidation hooks.
 
-We keep the existing element-based `DataTable`/`DataGridElement` for “rich cell UI” scenarios and as a correctness reference.
+We keep the existing element-based `DataTable`/`experimental::DataGridElement` for "rich cell UI"
+scenarios and as a correctness reference.
 
 ## Consolidation Plan (Table/DataGrid Surfaces)
 
@@ -211,11 +212,10 @@ preserving specialized variants and performance ceilings.
   `fret-ui-kit` view: `ecosystem/fret-ui-shadcn/src/data_table.rs` calls
   `ecosystem/fret-ui-kit/src/declarative/table.rs::table_virtualized`.
 - `DataTable` is the stable name.
-  denies `deprecated`, so we keep this as a non-deprecated alias for now).
+- **Experimental grid prototype:** `experimental::DataGridElement` remains for rich cell UI and as a correctness/reference surface.
 - **Simple preset:** the older “simple table” surface is not kept as a separate public type; any “simple” usage
   should be expressed as a `DataTable` preset/config (keeps the public surface small and forces configurability).
 - **Default grid (performance ceiling):** `DataGrid` is an alias for `DataGridCanvas` (canvas-rendered; spreadsheet scale).
-- **Element-based 2D grid:** `DataGridElement` remains for rich cell UI and as a correctness/reference surface.
 
 ### Remaining decision gates
 
@@ -234,7 +234,7 @@ preserving specialized variants and performance ceilings.
 ### Definition of done (consolidation)
 
 - Docs: users can answer “which table do I use?” in < 30 seconds:
-  - `DataTable` (headless-backed) vs `DataGrid` (canvas performance ceiling) vs `DataGridElement` (rich cell UI).
+  - `DataTable` (headless-backed) vs `DataGrid` (canvas performance ceiling) vs `experimental::DataGridElement` (rich cell UI).
 - API: public exports are stable and consistent (`lib.rs` tells the truth).
 - Demos: at least one end-to-end demo validates:
   - sorting, filtering, pagination, selection, column visibility
@@ -276,7 +276,7 @@ Baseline observations (what we already have):
   - `fret-ui` provides `VirtualList` with fixed-measure support and visible-only key caching.
   - `fret-ui-kit`’s `declarative::table` configures fixed row height (`VirtualListMeasureMode::Fixed`) and uses `VirtualListKeyCacheMode::VisibleOnly`.
 - A TanStack-aligned headless engine already exists (`fret-ui-kit/headless::table`) and is memoized/unit-testable.
-- `fret-ui-shadcn`’s `DataGridElement` prototype performs 2D virtualization (rows + columns) by computing
+- `fret-ui-shadcn`’s `experimental::DataGridElement` prototype performs 2D virtualization (rows + columns) by computing
   visible ranges once per frame (via `fret-ui-kit::headless::grid_viewport`) and only instantiating
   visible cells (no per-row nested `VirtualList`).
 

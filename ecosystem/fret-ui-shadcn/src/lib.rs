@@ -34,6 +34,7 @@ pub mod dialog;
 pub mod drawer;
 pub mod dropdown_menu;
 pub mod empty;
+pub mod experimental;
 pub mod field;
 pub mod form;
 pub mod hover_card;
@@ -117,10 +118,8 @@ pub use data_grid_canvas::{DataGridCanvas, DataGridCanvasAxis};
 /// For business tables that need typical shadcn recipes (toolbar, column visibility, pagination),
 /// prefer [`DataTable`].
 ///
-/// Use [`DataGridElement`] only when you need rich per-cell UI for a small dataset; it is a
-/// prototype surface and is not designed for spreadsheet-scale workloads.
+/// For rich per-cell UI experiments, use [`experimental::DataGridElement`].
 pub type DataGrid = DataGridCanvas;
-pub use data_grid::{DataGrid as DataGridElement, DataGridRowState};
 pub use data_grid_canvas::DataGridCanvasOutput;
 pub use data_table::DataTable;
 pub use data_table_controls::{

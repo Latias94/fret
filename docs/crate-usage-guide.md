@@ -147,7 +147,7 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 
 - `DataTable`: business-table surface (headless filtering/sorting/pagination + virtualized rows; recipes like toolbar + pagination).
 - `DataGrid` (`DataGridCanvas`): performance ceiling (canvas-rendered, constant-ish UI node count; intended for spreadsheet-scale density).
-- `DataGridElement`: element-based prototype for rich per-cell UI; not intended for spreadsheet-scale workloads.
+- `experimental::DataGridElement`: element-based prototype for rich per-cell UI; not intended for spreadsheet-scale workloads.
 
 ### `fret-icons` + icon packs
 
