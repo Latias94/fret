@@ -60,6 +60,13 @@ impl ElementHostWidget {
                     None,
                 );
             }
+            ElementInstance::ViewCache(props) => {
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.layout.overflow, Overflow::Clip),
+                    None,
+                );
+            }
             ElementInstance::FocusScope(props) => {
                 paint_children_clipped_if(
                     cx,

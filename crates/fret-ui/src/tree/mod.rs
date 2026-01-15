@@ -68,6 +68,12 @@ impl InvalidationFlags {
     }
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+struct ViewCacheFlags {
+    enabled: bool,
+    contained_layout: bool,
+}
+
 struct Node<H: UiHost> {
     widget: Option<Box<dyn Widget<H>>>,
     element: Option<GlobalElementId>,
@@ -77,6 +83,7 @@ struct Node<H: UiHost> {
     measured_size: Size,
     invalidation: InvalidationFlags,
     paint_cache: Option<PaintCacheEntry>,
+    view_cache: ViewCacheFlags,
 }
 
 impl<H: UiHost> Node<H> {
@@ -94,6 +101,7 @@ impl<H: UiHost> Node<H> {
                 hit_test: true,
             },
             paint_cache: None,
+            view_cache: ViewCacheFlags::default(),
         }
     }
 
@@ -420,6 +428,7 @@ pub struct UiTree<H: UiHost> {
     debug_enabled: bool,
     debug_stats: UiDebugFrameStats,
 
+    view_cache_enabled: bool,
     paint_cache_policy: PaintCachePolicy,
     inspection_active: bool,
     paint_cache: PaintCacheState,
@@ -457,6 +466,7 @@ impl<H: UiHost> Default for UiTree<H> {
             viewport_roots: Vec::new(),
             debug_enabled: false,
             debug_stats: UiDebugFrameStats::default(),
+            view_cache_enabled: false,
             paint_cache_policy: PaintCachePolicy::Auto,
             inspection_active: false,
             paint_cache: PaintCacheState::default(),
@@ -512,6 +522,20 @@ impl<H: UiHost> UiTree<H> {
     pub(crate) fn set_node_element(&mut self, node: NodeId, element: Option<GlobalElementId>) {
         if let Some(n) = self.nodes.get_mut(node) {
             n.element = element;
+        }
+    }
+
+    pub(crate) fn set_node_view_cache_flags(
+        &mut self,
+        node: NodeId,
+        enabled: bool,
+        contained_layout: bool,
+    ) {
+        if let Some(n) = self.nodes.get_mut(node) {
+            n.view_cache = ViewCacheFlags {
+                enabled,
+                contained_layout,
+            };
         }
     }
 
@@ -594,6 +618,14 @@ impl<H: UiHost> UiTree<H> {
         self.paint_cache_policy
     }
 
+    pub fn set_view_cache_enabled(&mut self, enabled: bool) {
+        self.view_cache_enabled = enabled;
+    }
+
+    pub fn view_cache_enabled(&self) -> bool {
+        self.view_cache_enabled
+    }
+
     pub fn set_inspection_active(&mut self, active: bool) {
         self.inspection_active = active;
     }
@@ -616,6 +648,10 @@ impl<H: UiHost> UiTree<H> {
             PaintCachePolicy::Enabled => true,
             PaintCachePolicy::Disabled => false,
         }
+    }
+
+    fn view_cache_active(&self) -> bool {
+        self.view_cache_enabled && !self.inspection_active
     }
 
     /// Ingest the previous frame's recorded ops from `scene` for paint-cache replay.
@@ -1251,10 +1287,17 @@ impl<H: UiHost> UiTree<H> {
     }
 
     fn mark_invalidation(&mut self, node: NodeId, inv: Invalidation) {
+        let stop_at_view_cache = self.view_cache_active();
         let mut current = Some(node);
         while let Some(id) = current {
             if let Some(n) = self.nodes.get_mut(id) {
                 n.invalidation.mark(inv);
+                if stop_at_view_cache
+                    && n.view_cache.enabled
+                    && (inv == Invalidation::Paint || n.view_cache.contained_layout)
+                {
+                    break;
+                }
                 current = n.parent;
             } else {
                 break;

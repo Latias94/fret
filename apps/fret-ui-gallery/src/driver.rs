@@ -8,7 +8,7 @@ use fret_runtime::PlatformCapabilities;
 use fret_ui::action::{UiActionHost, UiActionHostAdapter};
 use fret_ui::declarative;
 use fret_ui::element::SemanticsProps;
-use fret_ui::{Invalidation, Theme, UiTree};
+use fret_ui::{Invalidation, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use fret_workspace::commands::{
@@ -141,6 +141,7 @@ impl UiGalleryDriver {
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
+        ui.set_view_cache_enabled(std::env::var_os("FRET_UI_GALLERY_VIEW_CACHE").is_some());
 
         UiGalleryWindowState {
             ui,
@@ -410,134 +411,122 @@ impl UiGalleryDriver {
                         return vec![cx.text("Hello, fret-ui-gallery")];
                     }
 
-                    cx.observe_model(&selected_page, Invalidation::Layout);
-                    cx.observe_model(&workspace_tabs, Invalidation::Layout);
-                    cx.observe_model(&workspace_dirty_tabs, Invalidation::Layout);
-                    cx.observe_model(&nav_query, Invalidation::Layout);
-                    cx.observe_model(&content_tab, Invalidation::Layout);
-                    cx.observe_model(&theme_preset, Invalidation::Layout);
-                    cx.observe_model(&theme_preset_open, Invalidation::Layout);
-                    cx.observe_model(&popover_open, Invalidation::Layout);
-                    cx.observe_model(&dialog_open, Invalidation::Layout);
-                    cx.observe_model(&alert_dialog_open, Invalidation::Layout);
-                    cx.observe_model(&sheet_open, Invalidation::Layout);
-                    cx.observe_model(&select_value, Invalidation::Layout);
-                    cx.observe_model(&select_open, Invalidation::Layout);
-                    cx.observe_model(&combobox_value, Invalidation::Layout);
-                    cx.observe_model(&combobox_open, Invalidation::Layout);
-                    cx.observe_model(&combobox_query, Invalidation::Layout);
-                    cx.observe_model(&date_picker_open, Invalidation::Layout);
-                    cx.observe_model(&date_picker_month, Invalidation::Layout);
-                    cx.observe_model(&date_picker_selected, Invalidation::Layout);
-                    cx.observe_model(&resizable_h_fractions, Invalidation::Layout);
-                    cx.observe_model(&resizable_v_fractions, Invalidation::Layout);
-                    cx.observe_model(&data_table_state, Invalidation::Layout);
-                    cx.observe_model(&data_grid_selected_row, Invalidation::Layout);
-                    cx.observe_model(&tabs_value, Invalidation::Layout);
-                    cx.observe_model(&accordion_value, Invalidation::Layout);
-                    cx.observe_model(&progress, Invalidation::Layout);
-                    cx.observe_model(&checkbox, Invalidation::Layout);
-                    cx.observe_model(&switch, Invalidation::Layout);
-                    cx.observe_model(&text_input, Invalidation::Layout);
-                    cx.observe_model(&text_area, Invalidation::Layout);
-                    cx.observe_model(&dropdown_open, Invalidation::Layout);
-                    cx.observe_model(&context_menu_open, Invalidation::Layout);
-                    cx.observe_model(&cmdk_open, Invalidation::Layout);
-                    cx.observe_model(&cmdk_query, Invalidation::Layout);
-                    cx.observe_model(&last_action, Invalidation::Layout);
+                    let theme = cx.theme().clone();
 
-                    let theme = Theme::global(&*cx.app).clone();
+                    let sidebar = cx.view_cache(
+                        {
+                            let mut layout = fret_ui::element::LayoutStyle::default();
+                            layout.size.width = fret_ui::element::Length::Px(Px(280.0));
+                            layout.size.height = fret_ui::element::Length::Fill;
+                            fret_ui::element::ViewCacheProps {
+                                layout,
+                                ..Default::default()
+                            }
+                        },
+                        |cx| {
+                            let selected = cx
+                                .get_model_cloned(&selected_page, Invalidation::Layout)
+                                .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+                            let query = cx
+                                .get_model_cloned(&nav_query, Invalidation::Layout)
+                                .unwrap_or_default();
 
-                    let selected = cx
-                        .app
-                        .models()
-                        .read(&selected_page, |v| v.clone())
-                        .ok()
-                        .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
-
-                    let query = cx
-                        .app
-                        .models()
-                        .read(&nav_query, |v| v.clone())
-                        .ok()
-                        .unwrap_or_default();
-
-                    let sidebar = cx.keyed("ui_gallery.sidebar", |cx| {
-                        if (bisect & BISECT_SIMPLE_SIDEBAR) != 0 {
-                            cx.container(
-                                decl_style::container_props(
+                            vec![if (bisect & BISECT_SIMPLE_SIDEBAR) != 0 {
+                                cx.container(
+                                    decl_style::container_props(
+                                        &theme,
+                                        ChromeRefinement::default()
+                                            .bg(ColorRef::Color(theme.color_required("muted")))
+                                            .p(Space::N4),
+                                        LayoutRefinement::default()
+                                            .w_px(MetricRef::Px(Px(280.0)))
+                                            .h_full(),
+                                    ),
+                                    |cx| vec![cx.text("Sidebar (disabled)")],
+                                )
+                            } else {
+                                ui::sidebar_view(
+                                    cx,
                                     &theme,
-                                    ChromeRefinement::default()
-                                        .bg(ColorRef::Color(theme.color_required("muted")))
-                                        .p(Space::N4),
-                                    LayoutRefinement::default()
-                                        .w_px(MetricRef::Px(Px(280.0)))
-                                        .h_full(),
-                                ),
-                                |cx| vec![cx.text("Sidebar (disabled)")],
-                            )
-                        } else {
-                            ui::sidebar_view(
-                                cx,
-                                &theme,
-                                selected.as_ref(),
-                                query.as_str(),
-                                nav_query.clone(),
-                            )
-                        }
-                    });
+                                    selected.as_ref(),
+                                    query.as_str(),
+                                    nav_query.clone(),
+                                )
+                            }]
+                        },
+                    );
 
-                    let content = cx.keyed(("ui_gallery.content", selected.as_ref()), |cx| {
-                        if (bisect & BISECT_SIMPLE_CONTENT) != 0 {
-                            cx.container(
-                                decl_style::container_props(
-                                    &theme,
-                                    ChromeRefinement::default()
-                                        .bg(ColorRef::Color(theme.color_required("background")))
-                                        .p(Space::N6),
-                                    LayoutRefinement::default().w_full().h_full(),
-                                ),
-                                |cx| vec![cx.text("Content (disabled)")],
-                            )
-                        } else {
-                            ui::content_view(
-                                cx,
-                                &theme,
-                                selected.as_ref(),
-                                content_tab.clone(),
-                                theme_preset.clone(),
-                                theme_preset_open.clone(),
-                                popover_open.clone(),
-                                dialog_open.clone(),
-                                alert_dialog_open.clone(),
-                                sheet_open.clone(),
-                                select_value.clone(),
-                                select_open.clone(),
-                                combobox_value.clone(),
-                                combobox_open.clone(),
-                                combobox_query.clone(),
-                                date_picker_open.clone(),
-                                date_picker_month.clone(),
-                                date_picker_selected.clone(),
-                                resizable_h_fractions.clone(),
-                                resizable_v_fractions.clone(),
-                                data_table_state.clone(),
-                                data_grid_selected_row.clone(),
-                                tabs_value.clone(),
-                                accordion_value.clone(),
-                                progress.clone(),
-                                checkbox.clone(),
-                                switch.clone(),
-                                text_input.clone(),
-                                text_area.clone(),
-                                dropdown_open.clone(),
-                                context_menu_open.clone(),
-                                cmdk_open.clone(),
-                                cmdk_query.clone(),
-                                last_action.clone(),
-                            )
-                        }
-                    });
+                    let content = cx.view_cache(
+                        {
+                            let mut layout = fret_ui::element::LayoutStyle::default();
+                            layout.size.width = fret_ui::element::Length::Fill;
+                            layout.size.height = fret_ui::element::Length::Fill;
+                            layout.flex.grow = 1.0;
+                            fret_ui::element::ViewCacheProps {
+                                layout,
+                                ..Default::default()
+                            }
+                        },
+                        |cx| {
+                            let selected = cx
+                                .get_model_cloned(&selected_page, Invalidation::Layout)
+                                .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+
+                            vec![cx.keyed(("ui_gallery.content", selected.as_ref()), |cx| {
+                                if (bisect & BISECT_SIMPLE_CONTENT) != 0 {
+                                    cx.container(
+                                        decl_style::container_props(
+                                            &theme,
+                                            ChromeRefinement::default()
+                                                .bg(ColorRef::Color(
+                                                    theme.color_required("background"),
+                                                ))
+                                                .p(Space::N6),
+                                            LayoutRefinement::default().w_full().h_full(),
+                                        ),
+                                        |cx| vec![cx.text("Content (disabled)")],
+                                    )
+                                } else {
+                                    ui::content_view(
+                                        cx,
+                                        &theme,
+                                        selected.as_ref(),
+                                        content_tab.clone(),
+                                        theme_preset.clone(),
+                                        theme_preset_open.clone(),
+                                        popover_open.clone(),
+                                        dialog_open.clone(),
+                                        alert_dialog_open.clone(),
+                                        sheet_open.clone(),
+                                        select_value.clone(),
+                                        select_open.clone(),
+                                        combobox_value.clone(),
+                                        combobox_open.clone(),
+                                        combobox_query.clone(),
+                                        date_picker_open.clone(),
+                                        date_picker_month.clone(),
+                                        date_picker_selected.clone(),
+                                        resizable_h_fractions.clone(),
+                                        resizable_v_fractions.clone(),
+                                        data_table_state.clone(),
+                                        data_grid_selected_row.clone(),
+                                        tabs_value.clone(),
+                                        accordion_value.clone(),
+                                        progress.clone(),
+                                        checkbox.clone(),
+                                        switch.clone(),
+                                        text_input.clone(),
+                                        text_area.clone(),
+                                        dropdown_open.clone(),
+                                        context_menu_open.clone(),
+                                        cmdk_open.clone(),
+                                        cmdk_query.clone(),
+                                        last_action.clone(),
+                                    )
+                                }
+                            })]
+                        },
+                    );
 
                     let menubar = shadcn::Menubar::new(vec![
                         shadcn::MenubarMenu::new("File")
@@ -574,18 +563,19 @@ impl UiGalleryDriver {
                     ])
                     .into_element(cx);
 
-                    let tab_strip = if (bisect & BISECT_DISABLE_TAB_STRIP) != 0 {
-                        cx.text("Tabs (disabled)")
-                    } else {
+                    let tab_strip = cx.keyed("ui_gallery.tab_strip", |cx| {
+                        if (bisect & BISECT_DISABLE_TAB_STRIP) != 0 {
+                            return cx.text("Tabs (disabled)");
+                        }
+
+                        let selected = cx
+                            .get_model_cloned(&selected_page, Invalidation::Layout)
+                            .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
                         let workspace_tab_ids = cx
-                            .app
-                            .models()
-                            .get_cloned(&workspace_tabs)
+                            .get_model_cloned(&workspace_tabs, Invalidation::Layout)
                             .unwrap_or_default();
                         let workspace_dirty_ids = cx
-                            .app
-                            .models()
-                            .get_cloned(&workspace_dirty_tabs)
+                            .get_model_cloned(&workspace_dirty_tabs, Invalidation::Layout)
                             .unwrap_or_default();
 
                         WorkspaceTabStrip::new(selected.clone())
@@ -612,7 +602,7 @@ impl UiGalleryDriver {
                                 .dirty(dirty)
                             }))
                             .into_element(cx)
-                    };
+                    });
 
                     let top_bar = WorkspaceTopBar::new()
                         .left(vec![menubar])
@@ -626,25 +616,23 @@ impl UiGalleryDriver {
                         ])
                         .into_element(cx);
 
-                    let status_last_action = cx
-                        .app
-                        .models()
-                        .get_cloned(&last_action)
-                        .unwrap_or_else(|| Arc::<str>::from("<none>"));
-                    let status_theme = cx
-                        .app
-                        .models()
-                        .get_cloned(&theme_preset)
-                        .flatten()
-                        .unwrap_or_else(|| Arc::<str>::from("<default>"));
+                    let status_bar = cx.keyed("ui_gallery.status_bar", |cx| {
+                        let status_last_action = cx
+                            .get_model_cloned(&last_action, Invalidation::Layout)
+                            .unwrap_or_else(|| Arc::<str>::from("<none>"));
+                        let status_theme = cx
+                            .get_model_cloned(&theme_preset, Invalidation::Layout)
+                            .flatten()
+                            .unwrap_or_else(|| Arc::<str>::from("<default>"));
 
-                    let status_bar = WorkspaceStatusBar::new()
-                        .left(vec![cx.text(format!(
-                            "last action: {}",
-                            status_last_action.as_ref()
-                        ))])
-                        .right(vec![cx.text(format!("theme: {}", status_theme.as_ref()))])
-                        .into_element(cx);
+                        WorkspaceStatusBar::new()
+                            .left(vec![cx.text(format!(
+                                "last action: {}",
+                                status_last_action.as_ref()
+                            ))])
+                            .right(vec![cx.text(format!("theme: {}", status_theme.as_ref()))])
+                            .into_element(cx)
+                    });
 
                     let mut center_layout = fret_ui::element::LayoutStyle::default();
                     center_layout.size.width = fret_ui::element::Length::Fill;

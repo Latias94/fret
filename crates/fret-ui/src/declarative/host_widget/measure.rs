@@ -164,6 +164,9 @@ impl ElementHostWidget {
             ElementInstance::Semantics(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }
+            ElementInstance::ViewCache(props) => {
+                self.measure_passthrough_box(cx, window, props.layout)
+            }
             ElementInstance::FocusScope(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }

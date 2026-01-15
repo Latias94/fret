@@ -416,6 +416,15 @@ fn mount_element<H: UiHost>(
         },
     );
 
+    match &element.kind {
+        ElementKind::ViewCache(props) => {
+            ui.set_node_view_cache_flags(node, true, props.contained_layout);
+        }
+        _ => {
+            ui.set_node_view_cache_flags(node, false, false);
+        }
+    }
+
     let instance = match element.kind {
         ElementKind::Container(p) => ElementInstance::Container(p),
         ElementKind::Semantics(p) => ElementInstance::Semantics(p),
@@ -423,6 +432,7 @@ fn mount_element<H: UiHost>(
         ElementKind::InteractivityGate(p) => ElementInstance::InteractivityGate(p),
         ElementKind::Opacity(p) => ElementInstance::Opacity(p),
         ElementKind::EffectLayer(p) => ElementInstance::EffectLayer(p),
+        ElementKind::ViewCache(p) => ElementInstance::ViewCache(p),
         ElementKind::VisualTransform(p) => ElementInstance::VisualTransform(p),
         ElementKind::RenderTransform(p) => ElementInstance::RenderTransform(p),
         ElementKind::Anchored(p) => ElementInstance::Anchored(p),

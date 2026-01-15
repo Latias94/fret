@@ -256,6 +256,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             | ElementInstance::VisualTransform(_)
             | ElementInstance::RenderTransform(_)
             | ElementInstance::Semantics(_)
+            | ElementInstance::ViewCache(_)
             | ElementInstance::FocusScope(_)
             | ElementInstance::InteractivityGate(_)
             | ElementInstance::PointerRegion(_)
@@ -432,6 +433,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             | ElementInstance::VisualTransform(_)
             | ElementInstance::RenderTransform(_)
             | ElementInstance::Semantics(_)
+            | ElementInstance::ViewCache(_)
             | ElementInstance::FocusScope(_)
             | ElementInstance::InteractivityGate(_)
             | ElementInstance::PointerRegion(_)
@@ -777,6 +779,7 @@ fn passthrough_wrapper_child<H: UiHost>(
         | ElementInstance::VisualTransform(_)
         | ElementInstance::RenderTransform(_)
         | ElementInstance::Semantics(_)
+        | ElementInstance::ViewCache(_)
         | ElementInstance::FocusScope(_) => {
             Some((child, ParentLayoutKind::PassthroughOverlayNoStretch))
         }

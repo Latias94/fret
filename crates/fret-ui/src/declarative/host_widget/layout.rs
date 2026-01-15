@@ -53,6 +53,7 @@ impl ElementHostWidget {
             ElementInstance::DismissibleLayer(_) => false,
             ElementInstance::Opacity(_) => false,
             ElementInstance::EffectLayer(_) => false,
+            ElementInstance::ViewCache(_) => false,
             ElementInstance::VisualTransform(_) => false,
             ElementInstance::RenderTransform(_) => false,
             ElementInstance::Anchored(_) => false,
@@ -68,6 +69,7 @@ impl ElementHostWidget {
             ElementInstance::InteractivityGate(p) => p.present && p.interactive,
             ElementInstance::DismissibleLayer(_) => true,
             ElementInstance::EffectLayer(_) => true,
+            ElementInstance::ViewCache(_) => true,
             ElementInstance::VisualTransform(_) => true,
             ElementInstance::RenderTransform(_) => true,
             ElementInstance::Anchored(_) => true,
@@ -108,6 +110,7 @@ impl ElementHostWidget {
             ElementInstance::InteractivityGate(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Opacity(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::EffectLayer(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::ViewCache(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::VisualTransform(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::RenderTransform(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Anchored(p) => matches!(p.layout.overflow, Overflow::Clip),
@@ -269,6 +272,17 @@ impl ElementHostWidget {
                 self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::Semantics(props) => {
+                if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    return size;
+                }
+
+                self.layout_positioned_container_impl(cx, window, props.layout)
+            }
+            ElementInstance::ViewCache(props) => {
                 if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
                     cx,
                     window,

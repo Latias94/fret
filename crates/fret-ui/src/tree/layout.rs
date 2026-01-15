@@ -80,6 +80,16 @@ impl<H: UiHost> UiTree<H> {
             );
         }
 
+        if pass_kind == LayoutPassKind::Final {
+            self.layout_contained_view_cache_roots_if_needed(
+                app,
+                services,
+                scale_factor,
+                pass_kind,
+                &mut viewport_cursor,
+            );
+        }
+
         if self.semantics_requested {
             self.semantics_requested = false;
             self.refresh_semantics_snapshot(app);
@@ -213,6 +223,36 @@ impl<H: UiHost> UiTree<H> {
     fn begin_layout_engine_frame(&mut self, app: &mut H) {
         self.layout_engine.begin_frame(app.frame_id());
         self.viewport_roots.clear();
+    }
+
+    fn layout_contained_view_cache_roots_if_needed(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        scale_factor: f32,
+        pass_kind: LayoutPassKind,
+        viewport_cursor: &mut usize,
+    ) {
+        if !self.view_cache_active() {
+            return;
+        }
+
+        let mut targets: Vec<(NodeId, Rect)> = Vec::new();
+        targets.reserve(16);
+        for (id, node) in self.nodes.iter() {
+            if !node.view_cache.enabled || !node.view_cache.contained_layout {
+                continue;
+            }
+            if !node.invalidation.layout {
+                continue;
+            }
+            targets.push((id, node.bounds));
+        }
+
+        for (root, bounds) in targets {
+            let _ = self.layout_in_with_pass_kind(app, services, root, bounds, scale_factor, pass_kind);
+            self.flush_viewport_roots_after_root(app, services, scale_factor, pass_kind, viewport_cursor);
+        }
     }
 
     fn maybe_dump_taffy_subtree(
