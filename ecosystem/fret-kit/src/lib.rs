@@ -15,6 +15,7 @@ use fret_app::App;
 pub use fret_ui_shadcn as shadcn;
 
 /// Re-export workspace-shell building blocks (editor-grade chrome) as `workspace`.
+#[cfg(all(not(target_arch = "wasm32"), feature = "workspace-shell"))]
 pub use fret_workspace as workspace;
 
 /// Re-export the `IconRegistry` type for app code that wants to install a custom icon pack.
@@ -30,7 +31,6 @@ pub use fret;
 pub mod prelude {
     pub use crate::shadcn;
     pub use crate::shadcn::prelude::*;
-    pub use crate::workspace;
 
     pub use fret_app::App;
     pub use fret_app::Effect;
@@ -40,9 +40,16 @@ pub mod prelude {
     pub use fret_ui::element::{AnyElement, HoverRegionProps, Length, SemanticsProps, TextProps};
     pub use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
 
+    #[cfg(all(not(target_arch = "wasm32"), feature = "workspace-shell"))]
+    pub use crate::workspace;
+
+    #[cfg(all(not(target_arch = "wasm32"), feature = "workspace-shell"))]
     pub use crate::workspace::layout::{WorkspaceLayout, WorkspaceLayoutV1};
+    #[cfg(all(not(target_arch = "wasm32"), feature = "workspace-shell"))]
     pub use crate::workspace::menu::{WorkspaceMenuCommands, workspace_default_menu_bar};
+    #[cfg(all(not(target_arch = "wasm32"), feature = "workspace-shell"))]
     pub use crate::workspace::tabs::{TabCycleMode, WorkspaceTabs, WorkspaceTabsV1};
+    #[cfg(all(not(target_arch = "wasm32"), feature = "workspace-shell"))]
     pub use crate::workspace::{
         WorkspaceFrame, WorkspaceStatusBar, WorkspaceTab, WorkspaceTabStrip, WorkspaceTopBar,
     };
