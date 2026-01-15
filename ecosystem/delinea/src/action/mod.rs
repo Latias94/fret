@@ -73,6 +73,16 @@ pub enum Action {
         axis: AxisId,
         window: Option<DataWindowY>,
     },
+    /// Sets an axis window using an ECharts-style percent range (0..=100).
+    ///
+    /// This is an input/authoring surface: the engine will compute the corresponding value window
+    /// from data extents, and (for multi-axis charts) the computation may be order-sensitive
+    /// (ECharts `dataZoomProcessor` semantics).
+    SetAxisWindowPercent {
+        axis: AxisId,
+        /// When `None`, clears percent mode for the axis.
+        range: Option<(f64, f64)>,
+    },
     SetDataWindowXFilterMode {
         axis: AxisId,
         mode: Option<FilterMode>,

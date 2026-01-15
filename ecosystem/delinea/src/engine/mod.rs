@@ -48,6 +48,11 @@ pub struct ChartState {
     pub link: LinkConfig,
     pub data_zoom_x: BTreeMap<crate::ids::AxisId, DataZoomXState>,
     pub data_window_y: BTreeMap<crate::ids::AxisId, window::DataWindowY>,
+    /// ECharts-like percent windows (0..=100) for axes.
+    ///
+    /// When present for an axis, the engine derives a value-space window from the effective
+    /// data extent and applies it in an order-sensitive way (X before Y within a grid).
+    pub axis_percent_windows: BTreeMap<crate::ids::AxisId, (f64, f64)>,
     pub axis_locks: BTreeMap<crate::ids::AxisId, AxisInteractionLocks>,
     pub visual_map_range:
         BTreeMap<crate::ids::VisualMapId, Option<crate::engine::model::VisualMapRange>>,
@@ -149,6 +154,130 @@ struct BrushLinkCache {
 }
 
 impl ChartEngine {
+    fn apply_percent_windows_pre_view(&mut self) {
+        let mut axis_extents_x: BTreeMap<crate::ids::AxisId, (f64, f64)> = BTreeMap::new();
+
+        for series in self.model.series.values() {
+            if !series.visible {
+                continue;
+            }
+            if !self.state.axis_percent_windows.contains_key(&series.x_axis) {
+                continue;
+            }
+
+            let Some(table) = self.datasets.dataset(series.dataset) else {
+                continue;
+            };
+            let Some(dataset) = self.model.datasets.get(&series.dataset) else {
+                continue;
+            };
+            let Some(x_col) = dataset.fields.get(&series.encode.x).copied() else {
+                continue;
+            };
+            let Some(x_values) = table.column_f64(x_col) else {
+                continue;
+            };
+
+            let mut range = self
+                .state
+                .dataset_row_ranges
+                .get(&series.dataset)
+                .copied()
+                .unwrap_or(crate::transform::RowRange {
+                    start: 0,
+                    end: table.row_count,
+                });
+            range.clamp_to_len(table.row_count);
+
+            let mut min = f64::INFINITY;
+            let mut max = f64::NEG_INFINITY;
+            for i in range.start..range.end {
+                let v = x_values.get(i).copied().unwrap_or(f64::NAN);
+                if !v.is_finite() {
+                    continue;
+                }
+                min = min.min(v);
+                max = max.max(v);
+            }
+            if !min.is_finite() || !max.is_finite() {
+                continue;
+            }
+
+            axis_extents_x
+                .entry(series.x_axis)
+                .and_modify(|ext| {
+                    ext.0 = ext.0.min(min);
+                    ext.1 = ext.1.max(max);
+                })
+                .or_insert((min, max));
+        }
+
+        for (axis, (start, end)) in self.state.axis_percent_windows.clone() {
+            let Some(axis_model) = self.model.axes.get(&axis) else {
+                continue;
+            };
+            if axis_model.kind != crate::spec::AxisKind::X {
+                continue;
+            }
+
+            let Some((mut dmin, mut dmax)) = axis_extents_x.get(&axis).copied() else {
+                continue;
+            };
+            if dmin > dmax {
+                core::mem::swap(&mut dmin, &mut dmax);
+            }
+
+            let range = self.axis_range(axis);
+            match range {
+                crate::spec::AxisRange::Fixed { min, max } => {
+                    dmin = min;
+                    dmax = max;
+                }
+                crate::spec::AxisRange::Auto
+                | crate::spec::AxisRange::LockMin { .. }
+                | crate::spec::AxisRange::LockMax { .. } => {
+                    if let Some(min) = range.locked_min() {
+                        dmin = min;
+                    }
+                    if let Some(max) = range.locked_max() {
+                        dmax = max;
+                    }
+                }
+            }
+            if !dmin.is_finite() || !dmax.is_finite() {
+                continue;
+            }
+
+            let span = dmax - dmin;
+            if !span.is_finite() || span <= 0.0 {
+                continue;
+            }
+
+            let mut a = (start / 100.0).clamp(0.0, 1.0);
+            let mut b = (end / 100.0).clamp(0.0, 1.0);
+            if a > b {
+                core::mem::swap(&mut a, &mut b);
+            }
+            let mut window = window::DataWindow {
+                min: dmin + span * a,
+                max: dmin + span * b,
+            };
+            window.clamp_non_degenerate();
+            window = window.apply_constraints(range.locked_min(), range.locked_max());
+
+            let entry = self
+                .state
+                .data_zoom_x
+                .entry(axis)
+                .or_insert(DataZoomXState {
+                    window: None,
+                    filter_mode: crate::spec::FilterMode::Filter,
+                });
+            if entry.window != Some(window) {
+                entry.window = Some(window);
+            }
+        }
+    }
     pub fn new(spec: crate::spec::ChartSpec) -> Result<Self, ModelError> {
         let id = spec.id;
         let model = ChartModel::from_spec(spec)?;
@@ -277,6 +406,7 @@ impl ChartEngine {
                 delta_px,
                 viewport_span_px,
             } => {
+                self.state.axis_percent_windows.remove(&axis);
                 self.apply_pan_from_base(axis, base, delta_px, viewport_span_px);
             }
             Action::PanDataWindowYFromBase {
@@ -285,6 +415,7 @@ impl ChartEngine {
                 delta_px,
                 viewport_span_px,
             } => {
+                self.state.axis_percent_windows.remove(&axis);
                 self.apply_pan_from_base(axis, base, delta_px, viewport_span_px);
             }
             Action::ZoomDataWindowXFromBase {
@@ -294,6 +425,7 @@ impl ChartEngine {
                 log2_scale,
                 viewport_span_px,
             } => {
+                self.state.axis_percent_windows.remove(&axis);
                 self.apply_zoom_from_base(axis, base, center_px, log2_scale, viewport_span_px);
             }
             Action::ZoomDataWindowYFromBase {
@@ -303,6 +435,7 @@ impl ChartEngine {
                 log2_scale,
                 viewport_span_px,
             } => {
+                self.state.axis_percent_windows.remove(&axis);
                 self.apply_zoom_from_base(axis, base, center_px, log2_scale, viewport_span_px);
             }
             Action::SetDataWindowXFromZoom {
@@ -311,6 +444,7 @@ impl ChartEngine {
                 window,
                 anchor,
             } => {
+                self.state.axis_percent_windows.remove(&axis);
                 self.apply_zoom_set_window(axis, base, window, anchor);
             }
             Action::SetDataWindowYFromZoom {
@@ -319,9 +453,11 @@ impl ChartEngine {
                 window,
                 anchor,
             } => {
+                self.state.axis_percent_windows.remove(&axis);
                 self.apply_zoom_set_window(axis, base, window, anchor);
             }
             Action::SetDataWindowX { axis, window } => {
+                self.state.axis_percent_windows.remove(&axis);
                 let range = self.axis_range(axis);
                 let default_mode = self
                     .model
@@ -349,6 +485,7 @@ impl ChartEngine {
                 self.marks_stage.mark_dirty();
             }
             Action::SetDataWindowY { axis, window } => {
+                self.state.axis_percent_windows.remove(&axis);
                 let range = self.axis_range(axis);
                 if let Some(mut window) = window {
                     window.clamp_non_degenerate();
@@ -356,6 +493,31 @@ impl ChartEngine {
                     self.state.data_window_y.insert(axis, window);
                 } else {
                     self.state.data_window_y.remove(&axis);
+                }
+                self.state.revision.bump();
+                self.marks_stage.mark_dirty();
+            }
+            Action::SetAxisWindowPercent { axis, range } => {
+                if let Some((a, b)) = range {
+                    if a.is_finite() && b.is_finite() {
+                        self.state.axis_percent_windows.insert(axis, (a, b));
+                        if let Some(axis_model) = self.model.axes.get(&axis) {
+                            match axis_model.kind {
+                                crate::spec::AxisKind::X => {
+                                    if let Some(st) = self.state.data_zoom_x.get_mut(&axis) {
+                                        st.window = None;
+                                    }
+                                }
+                                crate::spec::AxisKind::Y => {
+                                    self.state.data_window_y.remove(&axis);
+                                }
+                            }
+                        }
+                    } else {
+                        self.state.axis_percent_windows.remove(&axis);
+                    }
+                } else {
+                    self.state.axis_percent_windows.remove(&axis);
                 }
                 self.state.revision.bump();
                 self.marks_stage.mark_dirty();
@@ -387,6 +549,9 @@ impl ChartEngine {
                 y,
             } => {
                 let mut changed = false;
+
+                self.state.axis_percent_windows.remove(&x_axis);
+                self.state.axis_percent_windows.remove(&y_axis);
 
                 if !self.axis_is_fixed(x_axis) && !self.axis_locks(x_axis).zoom_locked {
                     let x_range = self.axis_range(x_axis);
@@ -452,6 +617,9 @@ impl ChartEngine {
                 y,
             } => {
                 let mut changed = false;
+
+                self.state.axis_percent_windows.remove(&x_axis);
+                self.state.axis_percent_windows.remove(&y_axis);
 
                 if !self.axis_is_fixed(x_axis) && !self.axis_locks(x_axis).zoom_locked {
                     let x_range = self.axis_range(x_axis);
@@ -874,6 +1042,10 @@ impl ChartEngine {
             return Err(EngineError::MissingViewport);
         }
 
+        // Apply percent window inputs early so the view rebuild and data-view requests can observe
+        // the derived X value windows (ECharts-class dataZoomProcessor ordering scaffold).
+        self.apply_percent_windows_pre_view();
+
         self.output.brush_selection_2d = self.state.brush_selection_2d;
         self.output.brush_x_row_ranges_by_series.clear();
 
@@ -929,7 +1101,7 @@ impl ChartEngine {
         let filter_result = self.filter_processor_stage.apply(
             &self.model,
             &self.datasets,
-            &self.state,
+            &mut self.state,
             &mut self.view,
             &self.data_view_stage,
         );

@@ -345,6 +345,15 @@ fn view_state_signature(model: &ChartModel, state: &ChartState) -> u64 {
         }
     }
 
+    // Percent windows are an input to the data participation pipeline even when the derived
+    // value windows are computed later in the staged filter plan (order-sensitive).
+    hash = fnv1a_step(hash, state.axis_percent_windows.len() as u64);
+    for (axis, (a, b)) in &state.axis_percent_windows {
+        hash = fnv1a_step(hash, axis.0);
+        hash = fnv1a_step(hash, a.to_bits());
+        hash = fnv1a_step(hash, b.to_bits());
+    }
+
     hash = fnv1a_step(hash, model.datasets.len() as u64);
     for dataset in model.datasets.keys() {
         hash = fnv1a_step(hash, dataset.0);

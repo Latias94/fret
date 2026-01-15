@@ -159,6 +159,7 @@ enum FilterPlanStepKind {
     XYWeakFilter,
     XRange,
     XIndices,
+    YPercent,
     YIndices,
 }
 
@@ -290,7 +291,7 @@ impl FilterProcessorStage {
         &mut self,
         model: &ChartModel,
         datasets: &DatasetStore,
-        state: &ChartState,
+        state: &mut ChartState,
         view: &mut ViewState,
         data_views: &DataViewStage,
     ) -> FilterProcessorResult {
@@ -348,6 +349,10 @@ impl FilterProcessorStage {
             });
             plan_steps.push(FilterPlanStep {
                 grid,
+                kind: FilterPlanStepKind::YPercent,
+            });
+            plan_steps.push(FilterPlanStep {
+                grid,
                 kind: FilterPlanStepKind::YIndices,
             });
         }
@@ -398,6 +403,15 @@ impl FilterProcessorStage {
                     &mut view_changed,
                     &mut x_indices_applied,
                     &mut x_indices_applied_series,
+                ),
+                FilterPlanStepKind::YPercent => apply_y_percent_for_grid(
+                    model,
+                    datasets,
+                    state,
+                    view,
+                    &view_series_index,
+                    &plan.series,
+                    &mut view_changed,
                 ),
                 FilterPlanStepKind::YIndices => apply_y_indices_for_grid(
                     model,
@@ -946,5 +960,205 @@ fn apply_y_indices_for_grid(
             series_view.x_policy.filter = Default::default();
         }
         *view_changed = true;
+    }
+}
+
+fn apply_y_percent_for_grid(
+    model: &ChartModel,
+    datasets: &DatasetStore,
+    state: &mut ChartState,
+    view: &mut ViewState,
+    view_series_index: &BTreeMap<SeriesId, usize>,
+    series: &[SeriesId],
+    view_changed: &mut bool,
+) {
+    let mut y_axes_in_grid: BTreeMap<crate::ids::AxisId, (f64, f64)> = BTreeMap::new();
+
+    for series_id in series {
+        let Some(series_model) = model.series.get(series_id) else {
+            continue;
+        };
+        if !series_model.visible {
+            continue;
+        }
+
+        let axis = series_model.y_axis;
+        let Some(_percent) = state.axis_percent_windows.get(&axis).copied() else {
+            continue;
+        };
+        // Only consider Y axes.
+        if !model
+            .axes
+            .get(&axis)
+            .is_some_and(|a| a.kind == crate::spec::AxisKind::Y)
+        {
+            continue;
+        }
+
+        let Some(series_view_index) = view_series_index.get(series_id).copied() else {
+            continue;
+        };
+        let series_view = &view.series[series_view_index];
+
+        // ECharts-class order sensitivity: when using percent windows, the Y extent should be
+        // computed based on data that have already been affected by X filtering. In v1, we scope
+        // the extent by the current selection and also apply the X predicate when it is active
+        // (including FilterMode::Empty which preserves row space but masks marks).
+        let x_filter_mode = series_view.x_filter_mode;
+        let x_filter = series_view.x_policy.filter;
+        let x_active = !matches!(x_filter_mode, FilterMode::None)
+            && (x_filter.min.is_some() || x_filter.max.is_some());
+
+        let Some(table) = datasets.dataset(series_model.dataset) else {
+            continue;
+        };
+        let Some(dataset) = model.datasets.get(&series_model.dataset) else {
+            continue;
+        };
+        let Some(x_col) = dataset.fields.get(&series_model.encode.x).copied() else {
+            continue;
+        };
+        let Some(y0_col) = dataset.fields.get(&series_model.encode.y).copied() else {
+            continue;
+        };
+        let y1_col = series_model
+            .encode
+            .y2
+            .and_then(|f| dataset.fields.get(&f).copied());
+
+        let Some(x_values) = table.column_f64(x_col) else {
+            continue;
+        };
+        let Some(y0_values) = table.column_f64(y0_col) else {
+            continue;
+        };
+        let y1_values = y1_col.and_then(|c| table.column_f64(c));
+
+        let len = table.row_count;
+        let view_len = series_view.selection.view_len(len);
+        if view_len == 0 {
+            continue;
+        }
+
+        let mut min = f64::INFINITY;
+        let mut max = f64::NEG_INFINITY;
+        for view_index in 0..view_len {
+            let Some(raw) = series_view.selection.get_raw_index(len, view_index) else {
+                continue;
+            };
+
+            if x_active {
+                let xv = x_values.get(raw).copied().unwrap_or(f64::NAN);
+                if !xv.is_finite() || !x_filter.contains(xv) {
+                    continue;
+                }
+            }
+
+            let y0 = y0_values.get(raw).copied().unwrap_or(f64::NAN);
+            if !y0.is_finite() {
+                continue;
+            }
+            if let Some(y1_values) = y1_values {
+                let y1 = y1_values.get(raw).copied().unwrap_or(f64::NAN);
+                if !y1.is_finite() {
+                    continue;
+                }
+                min = min.min(y0.min(y1));
+                max = max.max(y0.max(y1));
+            } else {
+                min = min.min(y0);
+                max = max.max(y0);
+            }
+        }
+
+        if !min.is_finite() || !max.is_finite() {
+            continue;
+        }
+
+        // Record extent; we will apply the percent mapping after we finalize the min/max across
+        // all series on the same axis.
+        y_axes_in_grid
+            .entry(axis)
+            .and_modify(|ext| {
+                ext.0 = ext.0.min(min);
+                ext.1 = ext.1.max(max);
+            })
+            .or_insert((min, max));
+    }
+
+    for (axis, (mut dmin, mut dmax)) in y_axes_in_grid {
+        let Some((start, end)) = state.axis_percent_windows.get(&axis).copied() else {
+            continue;
+        };
+        if dmin > dmax {
+            core::mem::swap(&mut dmin, &mut dmax);
+        }
+
+        let axis_range = model.axes.get(&axis).map(|a| a.range).unwrap_or_default();
+        match axis_range {
+            crate::spec::AxisRange::Fixed { min, max } => {
+                dmin = min;
+                dmax = max;
+            }
+            crate::spec::AxisRange::Auto
+            | crate::spec::AxisRange::LockMin { .. }
+            | crate::spec::AxisRange::LockMax { .. } => {
+                if let Some(min) = axis_range.locked_min() {
+                    dmin = min;
+                }
+                if let Some(max) = axis_range.locked_max() {
+                    dmax = max;
+                }
+            }
+        }
+        if !dmin.is_finite() || !dmax.is_finite() {
+            continue;
+        }
+
+        let span = dmax - dmin;
+        if !span.is_finite() || span <= 0.0 {
+            continue;
+        }
+
+        let mut a = (start / 100.0).clamp(0.0, 1.0);
+        let mut b = (end / 100.0).clamp(0.0, 1.0);
+        if a > b {
+            core::mem::swap(&mut a, &mut b);
+        }
+
+        let mut window = crate::engine::window::DataWindow {
+            min: dmin + span * a,
+            max: dmin + span * b,
+        };
+        window.clamp_non_degenerate();
+        window = window.apply_constraints(axis_range.locked_min(), axis_range.locked_max());
+
+        let prev = state.data_window_y.get(&axis).copied();
+        if prev != Some(window) {
+            state.data_window_y.insert(axis, window);
+        }
+
+        // Ensure the view reflects the new y filter for this axis so Y indices materialization and
+        // `empty` masks are based on the derived window within the same step.
+        for series_id in series {
+            let Some(series_model) = model.series.get(series_id) else {
+                continue;
+            };
+            if !series_model.visible || series_model.y_axis != axis {
+                continue;
+            }
+            let Some(series_view_index) = view_series_index.get(series_id).copied() else {
+                continue;
+            };
+            let series_view = &mut view.series[series_view_index];
+
+            let mode = series_view.y_filter_mode;
+            let next_filter =
+                crate::engine::window_policy::axis_filter_1d(axis_range, Some(window), mode);
+            if series_view.y_filter != next_filter {
+                series_view.y_filter = next_filter;
+                *view_changed = true;
+            }
+        }
     }
 }
