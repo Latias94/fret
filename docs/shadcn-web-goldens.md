@@ -51,6 +51,10 @@ Extract open overlay states that require non-click input (the script infers the 
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts context-menu-demo tooltip-demo hover-card-demo --modes=open --update --baseUrl=http://localhost:4020`
 
+Extract multiple open variants for a single page (writes `*.{variant}.open.json` alongside the base files):
+
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts sheet-side --modes=open --update --baseUrl=http://localhost:4020 --openVariants="right=[data-fret-golden-target] button[data-slot='sheet-trigger']:nth-of-type(2);bottom=[data-fret-golden-target] button[data-slot='sheet-trigger']:nth-of-type(3);left=[data-fret-golden-target] button[data-slot='sheet-trigger']:nth-of-type(4)"`
+
 Extract *all* routable new-york-v4 pages (defaults match `/view/[style]/[name]`: block+component+example):
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts --all --update --baseUrl=http://localhost:4020`
@@ -62,7 +66,7 @@ If you also extract open overlay states (`--modes=open` or `--open`), you will g
 `*.open.json` files alongside the base closed-mode goldens. In this repo, the current snapshot is:
 
 - `362` closed-mode files (`*.json`, excluding `*.open.json`)
-- `12` open-mode files (`*.open.json`)
+- `15` open-mode files (`*.open.json`)
 
 If the extracted `computedStyle` looks like browser defaults (e.g. `<button>` has `display:
 inline-block`, `borderTopWidth: 2px`), your dev server is likely not producing Tailwind utilities.
@@ -107,6 +111,7 @@ pixel diffs. See: `docs/audits/shadcn-web-layout-conformance.md`.
 - `--modes=closed,open` (default: `closed`)
 - `--open` (shorthand for `--modes=closed,open`)
 - `--openSelector=<css>` (optional override for the "open overlay" trigger)
+- `--openVariants="<variant>=<css>;..."` (optional; writes `name.<variant>.open.json` for each entry; overrides `--openSelector`)
 - `--openAction=click|hover|contextmenu|keys` (optional override for the "open overlay" action; default is inferred per page)
 - `--baseUrl=http://localhost:4000`
 - `--all` (env: `ALL_GOLDENS=1`)

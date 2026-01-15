@@ -12,6 +12,8 @@ type OpenAction = "click" | "hover" | "contextmenu" | "keys"
 type OpenPoint = { abs: { x: number; y: number }; rel: { x: number; y: number } }
 type OpenMeta = { action: OpenAction; selector: string; point: { x: number; y: number } }
 
+type OpenVariant = { variant: string; selector: string }
+
 type GoldenOptions = {
   baseUrl: string
   style: string
@@ -24,6 +26,7 @@ type GoldenOptions = {
   timeoutMs: number
   openSelector?: string
   openAction?: OpenAction
+  openVariants?: OpenVariant[]
   mergeThemes?: boolean
 }
 
@@ -32,6 +35,7 @@ type GoldenFile = {
   style: string
   name: string
   mode?: Mode
+  variant?: string
   themes: Record<string, unknown>
 }
 
@@ -68,6 +72,41 @@ function round3(v: number) {
 
 function ensureDir(dir: string) {
   fs.mkdirSync(dir, { recursive: true })
+}
+
+function parseOpenVariants(raw: string): OpenVariant[] {
+  const parts = raw
+    .split(";")
+    .map((p) => p.trim())
+    .filter(Boolean)
+
+  const out: OpenVariant[] = []
+  for (const part of parts) {
+    const eq = part.indexOf("=")
+    if (eq === -1) {
+      throw new Error(
+        `invalid --openVariants entry "${part}" (expected "<variant>=<css>")`
+      )
+    }
+    const variant = part.slice(0, eq).trim()
+    const selector = part.slice(eq + 1).trim()
+    if (!variant) {
+      throw new Error(`invalid --openVariants entry "${part}" (empty variant)`)
+    }
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(variant)) {
+      throw new Error(
+        `invalid --openVariants variant "${variant}" (expected [a-zA-Z0-9][a-zA-Z0-9_-]*)`
+      )
+    }
+    if (!selector) {
+      throw new Error(
+        `invalid --openVariants entry "${part}" (empty selector for variant=${variant})`
+      )
+    }
+    out.push({ variant, selector })
+  }
+
+  return out
 }
 
 function resolveBrowserExecutablePath(): string | undefined {
@@ -934,120 +973,132 @@ async function run(options: GoldenOptions): Promise<string[]> {
 
     for (const name of options.names) {
       for (const mode of options.modes) {
-        const suffix = mode === "closed" ? "" : `.${mode}`
-        const outPath = path.join(options.outDir, `${name}${suffix}.json`)
-        if (!options.update && fs.existsSync(outPath)) {
-          continue
-        }
+        const variants =
+          mode === "open" && options.openVariants && options.openVariants.length > 0
+            ? options.openVariants
+            : [null]
 
-        const out: GoldenFile = (() => {
-          if (options.mergeThemes && fs.existsSync(outPath)) {
-            const existing = JSON.parse(fs.readFileSync(outPath, "utf8")) as GoldenFile
-            const existingMode = existing.mode ?? "closed"
-            if (
-              existing.version !== 1 ||
-              existing.style !== options.style ||
-              existing.name !== name ||
-              existingMode !== mode
-            ) {
-              throw new Error(
-                `refusing to merge themes into ${outPath} (mismatched header)`
-              )
-            }
-            return existing
+        for (const variant of variants) {
+          const variantSuffix = variant ? `.${variant.variant}` : ""
+          const suffix = mode === "closed" ? "" : `${variantSuffix}.${mode}`
+          const outPath = path.join(options.outDir, `${name}${suffix}.json`)
+          if (!options.update && fs.existsSync(outPath)) {
+            continue
           }
 
-          return {
-            version: 1,
-            style: options.style,
-            name,
-            mode,
-            themes: {},
-          }
-        })()
-
-        let ok = true
-        for (const theme of options.themes) {
-          const url = `${options.baseUrl}/view/${options.style}/${name}`
-          try {
-            const page = pagesByTheme[theme]
-
-            if (debug) console.log(`- goto: ${name}${suffix} (${theme})`)
-            await page.goto(url, {
-              waitUntil: "networkidle2",
-              timeout: options.timeoutMs,
-            })
-            await page.waitForSelector("body", { timeout: 30000 })
-            if (debug) console.log(`- ensureGoldenTarget: ${name}${suffix} (${theme})`)
-            await ensureGoldenTarget(page)
-            await page.waitForSelector("[data-fret-golden-target]", { timeout: 30000 })
-            if (debug) console.log(`- injectCssLinks: ${name}${suffix} (${theme})`)
-            await injectCssLinks(page, cssInjectionUrls)
-
-            // Ensure stable geometry: shadcn overlays use enter/exit animations that can affect
-            // `getBoundingClientRect()` if captured mid-transition.
-            await disableMotion(page)
-
-            await page.evaluate(`(() => {
-              const indicator = document.querySelector("[data-tailwind-indicator]");
-              if (indicator) indicator.remove();
-            })()`)
-
-            await waitForFonts(page, Math.min(2000, options.timeoutMs))
-            if (debug) console.log(`- waitForShadcnStyles: ${name}${suffix} (${theme})`)
-            await waitForShadcnStyles(page, Math.min(30000, options.timeoutMs))
-
-            let openMeta: OpenMeta | null = null
-            if (mode === "open") {
-              const action = options.openAction ?? inferOpenAction(name)
-              openMeta = await openOverlay(
-                page,
-                name,
-                options.timeoutMs,
-                options.openSelector,
-                action
-              )
+          const out: GoldenFile = (() => {
+            if (options.mergeThemes && fs.existsSync(outPath)) {
+              const existing = JSON.parse(fs.readFileSync(outPath, "utf8")) as GoldenFile
+              const existingMode = existing.mode ?? "closed"
+              if (
+                existing.version !== 1 ||
+                existing.style !== options.style ||
+                existing.name !== name ||
+                existingMode !== mode
+              ) {
+                throw new Error(
+                  `refusing to merge themes into ${outPath} (mismatched header)`
+                )
+              }
+              return existing
             }
 
-            if (debug) console.log(`- extractOne: ${name}${suffix} (${theme})`)
-            const extracted = await extractOne(page)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            ;(extracted as any).open = openMeta
-            // Normalize a few floats that may slip through as high precision.
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            ;(extracted as any).devicePixelRatio = round3(
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              (extracted as any).devicePixelRatio
-            )
+            return {
+              version: 1,
+              style: options.style,
+              name,
+              mode,
+              variant: variant?.variant,
+              themes: {},
+            }
+          })()
 
-            ;(out.themes as Record<string, unknown>)[theme] = extracted
-          } catch (error) {
-            ok = false
-            const msg = `${name}${suffix} (${theme}): ${String(error)}`
-            failures.push(msg)
-            console.error(`! failed ${name}${suffix} (${theme})`)
-            console.error(`  url: ${url}`)
-            console.error(`  error: ${String(error)}`)
-
-            // Try to recover by recreating the page for this theme so later iterations can continue.
+          let ok = true
+          for (const theme of options.themes) {
+            const url = `${options.baseUrl}/view/${options.style}/${name}`
             try {
-              await pagesByTheme[theme].close()
-            } catch {
-              // ignore
-            }
-            const page = await browser.newPage()
-            page.setDefaultTimeout(options.timeoutMs)
-            await page.emulateMediaFeatures([
-              { name: "prefers-reduced-motion", value: "reduce" },
-            ])
-            await setThemeBeforeLoad(page, theme as Theme)
-            pagesByTheme[theme] = page
-          }
-        }
+              const page = pagesByTheme[theme]
 
-        if (ok) {
-          writeIfChanged(outPath, out, options.update)
-          console.log(`- wrote ${path.relative(process.cwd(), outPath)}`)
+              if (debug) console.log(`- goto: ${name}${suffix} (${theme})`)
+              await page.goto(url, {
+                waitUntil: "networkidle2",
+                timeout: options.timeoutMs,
+              })
+              await page.waitForSelector("body", { timeout: 30000 })
+              if (debug) {
+                console.log(`- ensureGoldenTarget: ${name}${suffix} (${theme})`)
+              }
+              await ensureGoldenTarget(page)
+              await page.waitForSelector("[data-fret-golden-target]", { timeout: 30000 })
+              if (debug) console.log(`- injectCssLinks: ${name}${suffix} (${theme})`)
+              await injectCssLinks(page, cssInjectionUrls)
+
+              // Ensure stable geometry: shadcn overlays use enter/exit animations that can affect
+              // `getBoundingClientRect()` if captured mid-transition.
+              await disableMotion(page)
+
+              await page.evaluate(`(() => {
+                const indicator = document.querySelector("[data-tailwind-indicator]");
+                if (indicator) indicator.remove();
+              })()`)
+
+              await waitForFonts(page, Math.min(2000, options.timeoutMs))
+              if (debug) console.log(`- waitForShadcnStyles: ${name}${suffix} (${theme})`)
+              await waitForShadcnStyles(page, Math.min(30000, options.timeoutMs))
+
+              let openMeta: OpenMeta | null = null
+              if (mode === "open") {
+                const action = options.openAction ?? inferOpenAction(name)
+                const selector = variant?.selector ?? options.openSelector
+                openMeta = await openOverlay(
+                  page,
+                  name,
+                  options.timeoutMs,
+                  selector,
+                  action
+                )
+              }
+
+              if (debug) console.log(`- extractOne: ${name}${suffix} (${theme})`)
+              const extracted = await extractOne(page)
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              ;(extracted as any).open = openMeta
+              // Normalize a few floats that may slip through as high precision.
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              ;(extracted as any).devicePixelRatio = round3(
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (extracted as any).devicePixelRatio
+              )
+
+              ;(out.themes as Record<string, unknown>)[theme] = extracted
+            } catch (error) {
+              ok = false
+              const msg = `${name}${suffix} (${theme}): ${String(error)}`
+              failures.push(msg)
+              console.error(`! failed ${name}${suffix} (${theme})`)
+              console.error(`  url: ${url}`)
+              console.error(`  error: ${String(error)}`)
+
+              // Try to recover by recreating the page for this theme so later iterations can continue.
+              try {
+                await pagesByTheme[theme].close()
+              } catch {
+                // ignore
+              }
+              const page = await browser.newPage()
+              page.setDefaultTimeout(options.timeoutMs)
+              await page.emulateMediaFeatures([
+                { name: "prefers-reduced-motion", value: "reduce" },
+              ])
+              await setThemeBeforeLoad(page, theme as Theme)
+              pagesByTheme[theme] = page
+            }
+          }
+
+          if (ok) {
+            writeIfChanged(outPath, out, options.update)
+            console.log(`- wrote ${path.relative(process.cwd(), outPath)}`)
+          }
         }
       }
     }
@@ -1126,6 +1177,13 @@ const openSelector =
   process.env.OPEN_SELECTOR ??
   undefined
 
+const openVariantsRaw =
+  (typeof flags.openVariants === "string" ? flags.openVariants : undefined) ??
+  process.env.OPEN_VARIANTS ??
+  undefined
+
+const openVariants = openVariantsRaw ? parseOpenVariants(openVariantsRaw) : undefined
+
 const openActionRaw =
   (typeof flags.openAction === "string" ? flags.openAction : undefined) ??
   process.env.OPEN_ACTION ??
@@ -1191,6 +1249,7 @@ try {
   console.log(`- timeoutMs: ${timeoutMs}`)
   console.log(`- update: ${update ? "yes" : "no (skip existing)"}`)
   console.log(`- all: ${all ? "yes" : "no"}`)
+  console.log(`- openVariants: ${openVariants?.length ?? 0}`)
 
   const finalNames = await resolveNames()
   console.log(`- names: ${finalNames.length}`)
@@ -1207,6 +1266,7 @@ try {
     timeoutMs,
     openSelector,
     openAction,
+    openVariants,
     mergeThemes: flags.mergeThemes === true || process.env.MERGE_THEMES === "1",
   })
 
