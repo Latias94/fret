@@ -11199,6 +11199,212 @@ fn scatter_large_mode_respects_y_empty_mask() {
 }
 
 #[test]
+fn scatter_large_mode_does_not_hit_y_empty_masked_outlier() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let zoom_id = crate::ids::DataZoomId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
+
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(viewport),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        data_zoom_y: vec![DataZoomYSpec {
+            id: zoom_id,
+            axis: y_axis,
+            filter_mode: FilterMode::Empty,
+            min_value_span: None,
+            max_value_span: None,
+        }],
+        tooltip: None,
+        axis_pointer: Some(AxisPointerSpec {
+            enabled: true,
+            trigger: crate::spec::AxisPointerTrigger::Item,
+            pointer_type: AxisPointerType::Line,
+            label: Default::default(),
+            snap: false,
+            trigger_distance_px: 2.0,
+            throttle_px: 0.0,
+        }),
+        visual_maps: vec![],
+        series: vec![SeriesSpec {
+            id: series_id,
+            name: None,
+            kind: SeriesKind::Scatter,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
+            bar_layout: Default::default(),
+            area_baseline: None,
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let mut table = DataTable::default();
+
+    let n = 50_000usize;
+    let mut xs = Vec::with_capacity(n);
+    let mut ys = Vec::with_capacity(n);
+    for i in 0..n {
+        xs.push(i as f64 / (n as f64 - 1.0));
+        ys.push(5.0);
+    }
+
+    let outlier = 25_000usize;
+    ys[outlier] = 1_000.0;
+
+    table.push_column(Column::F64(xs.clone()));
+    table.push_column(Column::F64(ys.clone()));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    engine.apply_action(Action::SetDataWindowY {
+        axis: y_axis,
+        window: Some(DataWindow {
+            min: 0.0,
+            max: 10.0,
+        }),
+    });
+
+    let mut measurer = NullTextMeasurer::default();
+    let mut steps = 0;
+    loop {
+        let step = engine
+            .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+            .unwrap();
+        steps += 1;
+        if !step.unfinished || steps > 256 {
+            break;
+        }
+    }
+    assert!(steps <= 256);
+
+    let Some(participation) = engine.participation().series_participation(series_id) else {
+        panic!("expected series participation");
+    };
+    assert!(participation.empty_mask.y_active);
+    assert!(
+        !participation
+            .empty_mask
+            .allows_raw_index(outlier, &xs, &ys, None),
+        "expected outlier to be masked under Y empty"
+    );
+
+    let marks = &engine.output().marks;
+    let node = marks
+        .nodes
+        .iter()
+        .find(|n| n.kind == crate::marks::MarkKind::Points && n.source_series == Some(series_id))
+        .expect("expected a points mark node");
+    let MarkPayloadRef::Points(points) = &node.payload else {
+        panic!("expected points payload");
+    };
+    assert!(points.points.end > points.points.start);
+
+    // Sanity: hovering on an emitted point hits.
+    let first_point_px = marks.arena.points[points.points.start];
+    engine.apply_action(Action::HoverAt {
+        point: first_point_px,
+    });
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(32_768, 0, 16))
+        .unwrap();
+    assert!(!step.unfinished);
+    assert!(
+        engine.output().axis_pointer.is_some(),
+        "expected item-trigger axis pointer output to be present when hovering on a mark"
+    );
+    assert!(
+        engine.output().hover.is_some(),
+        "expected output.hover to be present when hovering on a mark"
+    );
+
+    // Hover exactly where an unmasked outlier would be clamped to the Y window max in LOD mode.
+    // If `y.filterMode=Empty` masking were not respected, this would produce a hittable point on
+    // the y=10 boundary at `x=xs[outlier]`.
+    let x_window = engine
+        .output()
+        .axis_windows
+        .get(&x_axis)
+        .copied()
+        .unwrap_or_default();
+    let y_window = engine
+        .output()
+        .axis_windows
+        .get(&y_axis)
+        .copied()
+        .unwrap_or_default();
+    let hover_x = crate::engine::axis::x_px_at_data_in_rect(x_window, xs[outlier], viewport);
+    let hover_y = crate::engine::axis::y_px_at_data_in_rect(y_window, 10.0, viewport);
+
+    engine.apply_action(Action::HoverAt {
+        point: Point::new(Px(hover_x), Px(hover_y)),
+    });
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(32_768, 0, 16))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    assert!(
+        engine.output().axis_pointer.is_none(),
+        "expected masked outlier not to be hittable under y.filterMode=Empty"
+    );
+    assert!(
+        engine.output().hover.is_none(),
+        "expected output.hover to be none when hovering the masked outlier's would-be clamped location"
+    );
+}
+
+#[test]
 fn append_only_marks_rebuild_updates_lod_polyline_without_clearing_nodes() {
     let dataset_id = crate::ids::DatasetId::new(1);
     let grid_id = crate::ids::GridId::new(1);
