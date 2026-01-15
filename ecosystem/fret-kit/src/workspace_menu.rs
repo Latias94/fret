@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_runtime::{CommandId, CommandRegistry, MenuBar, MenuItem, Platform, format_chord};
+use fret_runtime::{CommandId, CommandRegistry, MenuBar, MenuItem, Platform, format_sequence};
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 
@@ -97,7 +97,7 @@ fn command_entry<H: UiHost>(
                 meta.default_keybindings
                     .iter()
                     .find(|kb| kb.platform.matches(opts.platform))
-                    .map(|kb| Arc::<str>::from(format_chord(opts.platform, kb.chord)))
+                    .map(|kb| Arc::<str>::from(format_sequence(opts.platform, &kb.sequence)))
             } else {
                 None
             };

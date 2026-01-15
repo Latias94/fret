@@ -64,7 +64,7 @@ pub const CMD_NODE_GRAPH_GROUP_RENAME: &str = "node_graph.group.rename";
 fn kb(platform: PlatformFilter, key: KeyCode, mods: Modifiers) -> DefaultKeybinding {
     DefaultKeybinding {
         platform,
-        chord: KeyChord::new(key, mods),
+        sequence: vec![KeyChord::new(key, mods)],
         when: None,
     }
 }

@@ -136,7 +136,15 @@ pub fn pane_move_active_tab_to_command(pane_id: &str) -> Option<CommandId> {
 fn kb(platform: PlatformFilter, key: KeyCode, mods: Modifiers) -> DefaultKeybinding {
     DefaultKeybinding {
         platform,
-        chord: KeyChord::new(key, mods),
+        sequence: vec![KeyChord::new(key, mods)],
+        when: None,
+    }
+}
+
+fn seq(platform: PlatformFilter, sequence: Vec<KeyChord>) -> DefaultKeybinding {
+    DefaultKeybinding {
+        platform,
+        sequence,
         when: None,
     }
 }
@@ -185,6 +193,22 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
             },
         )
     };
+
+    let win_ctrl_k = KeyChord::new(
+        KeyCode::KeyK,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+    );
+    let linux_ctrl_k = win_ctrl_k;
+    let mac_cmd_k = KeyChord::new(
+        KeyCode::KeyK,
+        Modifiers {
+            meta: true,
+            ..Default::default()
+        },
+    );
 
     registry.register(
         CommandId::new(CMD_WORKSPACE_TAB_NEXT),
@@ -282,28 +306,120 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
         CommandId::new(CMD_WORKSPACE_PANE_SPLIT_RIGHT),
         CommandMeta::new("Split Pane Right")
             .with_category("Workspace")
-            .with_keywords(["split", "pane", "right", "workspace"]),
+            .with_keywords(["split", "pane", "right", "workspace"])
+            .with_default_keybindings([
+                seq(
+                    PlatformFilter::Windows,
+                    vec![
+                        win_ctrl_k,
+                        KeyChord::new(KeyCode::ArrowRight, Modifiers::default()),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Linux,
+                    vec![
+                        linux_ctrl_k,
+                        KeyChord::new(KeyCode::ArrowRight, Modifiers::default()),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Macos,
+                    vec![
+                        mac_cmd_k,
+                        KeyChord::new(KeyCode::ArrowRight, Modifiers::default()),
+                    ],
+                ),
+            ]),
     );
 
     registry.register(
         CommandId::new(CMD_WORKSPACE_PANE_SPLIT_LEFT),
         CommandMeta::new("Split Pane Left")
             .with_category("Workspace")
-            .with_keywords(["split", "pane", "left", "workspace"]),
+            .with_keywords(["split", "pane", "left", "workspace"])
+            .with_default_keybindings([
+                seq(
+                    PlatformFilter::Windows,
+                    vec![
+                        win_ctrl_k,
+                        KeyChord::new(KeyCode::ArrowLeft, Modifiers::default()),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Linux,
+                    vec![
+                        linux_ctrl_k,
+                        KeyChord::new(KeyCode::ArrowLeft, Modifiers::default()),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Macos,
+                    vec![
+                        mac_cmd_k,
+                        KeyChord::new(KeyCode::ArrowLeft, Modifiers::default()),
+                    ],
+                ),
+            ]),
     );
 
     registry.register(
         CommandId::new(CMD_WORKSPACE_PANE_SPLIT_UP),
         CommandMeta::new("Split Pane Up")
             .with_category("Workspace")
-            .with_keywords(["split", "pane", "up", "workspace"]),
+            .with_keywords(["split", "pane", "up", "workspace"])
+            .with_default_keybindings([
+                seq(
+                    PlatformFilter::Windows,
+                    vec![
+                        win_ctrl_k,
+                        KeyChord::new(KeyCode::ArrowUp, Modifiers::default()),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Linux,
+                    vec![
+                        linux_ctrl_k,
+                        KeyChord::new(KeyCode::ArrowUp, Modifiers::default()),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Macos,
+                    vec![
+                        mac_cmd_k,
+                        KeyChord::new(KeyCode::ArrowUp, Modifiers::default()),
+                    ],
+                ),
+            ]),
     );
 
     registry.register(
         CommandId::new(CMD_WORKSPACE_PANE_SPLIT_DOWN),
         CommandMeta::new("Split Pane Down")
             .with_category("Workspace")
-            .with_keywords(["split", "pane", "down", "workspace"]),
+            .with_keywords(["split", "pane", "down", "workspace"])
+            .with_default_keybindings([
+                seq(
+                    PlatformFilter::Windows,
+                    vec![
+                        win_ctrl_k,
+                        KeyChord::new(KeyCode::ArrowDown, Modifiers::default()),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Linux,
+                    vec![
+                        linux_ctrl_k,
+                        KeyChord::new(KeyCode::ArrowDown, Modifiers::default()),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Macos,
+                    vec![
+                        mac_cmd_k,
+                        KeyChord::new(KeyCode::ArrowDown, Modifiers::default()),
+                    ],
+                ),
+            ]),
     );
 
     registry.register(
