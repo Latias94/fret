@@ -22,6 +22,7 @@ contracts early to avoid large rewrites later.
 ## Public crate surfaces (what to remember)
 
 We intentionally keep the *user-facing* story to a small set of crate names:
+these are the only crate names we treat as stable entry points; internal crates may be renamed or reshuffled.
 
 - `fret-kit`: desktop-first batteries-included app entry points.
 - `fret-ui-shadcn`: default component surface (shadcn/ui-aligned taxonomy + recipes).

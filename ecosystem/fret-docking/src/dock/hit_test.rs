@@ -134,10 +134,27 @@ pub(super) fn hit_test_drop_target(
 
 #[cfg(test)]
 fn compute_tab_insert_index(tab_bar: Rect, scroll: Px, tab_count: usize, position: Point) -> usize {
+    if tab_count == 0 {
+        return 0;
+    }
+
     let rel_x = position.x.0 - tab_bar.origin.x.0 + scroll.0;
-    let raw = (rel_x / DOCK_TAB_W.0) + 0.5;
-    let idx = raw.floor() as isize;
-    idx.clamp(0, tab_count as isize) as usize
+    if rel_x <= 0.0 {
+        return 0;
+    }
+
+    let max_x = DOCK_TAB_W.0 * tab_count as f32;
+    if rel_x >= max_x {
+        return tab_count;
+    }
+
+    let over_index = (rel_x / DOCK_TAB_W.0).floor() as usize;
+    let over_rect = tab_rect_for_index(tab_bar, over_index, scroll);
+    let side = fret_dnd::insertion_side_for_pointer(position, over_rect, fret_dnd::Axis::X);
+    over_index.saturating_add(match side {
+        fret_dnd::InsertionSide::Before => 0,
+        fret_dnd::InsertionSide::After => 1,
+    })
 }
 
 pub(super) fn hit_test_split_handle(

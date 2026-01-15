@@ -4,7 +4,7 @@ use std::hash::{Hash, Hasher};
 use fret_core::{AppWindowId, Point, PointerId, Rect};
 pub use fret_dnd::{
     ActivationConstraint, AutoScrollConfig, AutoScrollRequest, CollisionStrategy, DndCollision,
-    DndItemId, SensorOutput,
+    DndItemId, InsertionSide, SensorOutput, insertion_side_for_pointer,
 };
 use fret_dnd::{
     Draggable, Droppable, PointerSensor, RegistrySnapshot, SensorEvent, closest_center_collisions,
@@ -159,6 +159,37 @@ fn update_dnd<R>(
     f: impl FnOnce(&mut DndService) -> R,
 ) -> Option<R> {
     models.update(&svc.model, f).ok()
+}
+
+fn read_dnd<R>(
+    models: &ModelStore,
+    svc: &DndServiceModel,
+    f: impl FnOnce(&DndService) -> R,
+) -> Option<R> {
+    models.read(&svc.model, f).ok()
+}
+
+pub fn droppable_rect_in_scope(
+    models: &ModelStore,
+    svc: &DndServiceModel,
+    window: AppWindowId,
+    frame_id: FrameId,
+    scope: DndScopeId,
+    id: DndItemId,
+) -> Option<Rect> {
+    read_dnd(models, svc, |dnd| {
+        let window = dnd.registry.windows.get(&window)?;
+        if window.frame_id != frame_id {
+            return None;
+        }
+        let snapshot = window.scopes.get(&scope)?;
+        snapshot
+            .droppables
+            .iter()
+            .find(|d| d.id == id && !d.disabled)
+            .map(|d| d.rect)
+    })
+    .flatten()
 }
 
 pub fn register_droppable_rect_in_scope(

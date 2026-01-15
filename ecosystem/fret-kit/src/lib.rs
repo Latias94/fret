@@ -14,8 +14,16 @@ use fret_app::App;
 /// Re-export the default shadcn/ui surface as `shadcn`.
 pub use fret_ui_shadcn as shadcn;
 
+/// Re-export workspace-shell building blocks (editor-grade chrome) as `workspace`.
+#[cfg(feature = "workspace-shell")]
+pub use fret_workspace as workspace;
+
 /// Re-export the `IconRegistry` type for app code that wants to install a custom icon pack.
 pub use fret_icons::IconRegistry;
+
+pub mod workspace_menu;
+#[cfg(feature = "workspace-shell")]
+pub mod workspace_shell;
 
 /// Re-export the underlying `fret` facade (desktop builds).
 #[cfg(feature = "desktop")]
@@ -27,6 +35,7 @@ pub use fret;
 pub mod prelude {
     pub use crate::shadcn;
     pub use crate::shadcn::prelude::*;
+    pub use crate::workspace_menu::{MenubarFromRuntimeOptions, menubar_from_runtime};
 
     pub use fret_app::App;
     pub use fret_app::Effect;
@@ -35,6 +44,21 @@ pub mod prelude {
     pub use fret_runtime::Model;
     pub use fret_ui::element::{AnyElement, HoverRegionProps, Length, SemanticsProps, TextProps};
     pub use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
+
+    #[cfg(feature = "workspace-shell")]
+    pub use crate::workspace;
+    #[cfg(feature = "workspace-shell")]
+    pub use crate::workspace::layout::{WorkspaceLayout, WorkspaceLayoutV1};
+    #[cfg(feature = "workspace-shell")]
+    pub use crate::workspace::menu::{WorkspaceMenuCommands, workspace_default_menu_bar};
+    #[cfg(feature = "workspace-shell")]
+    pub use crate::workspace::tabs::{TabCycleMode, WorkspaceTabs, WorkspaceTabsV1};
+    #[cfg(feature = "workspace-shell")]
+    pub use crate::workspace::{
+        WorkspaceFrame, WorkspaceStatusBar, WorkspaceTab, WorkspaceTabStrip, WorkspaceTopBar,
+    };
+    #[cfg(feature = "workspace-shell")]
+    pub use crate::workspace_shell::workspace_shell;
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -302,6 +326,9 @@ pub fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(
 
     #[cfg(feature = "icons-radix")]
     let builder = builder.with_radix_icons();
+
+    #[cfg(feature = "preload-icon-svgs")]
+    let builder = builder.preload_icon_svgs_on_gpu_ready();
 
     builder.run().map_err(RunnerError::from)?;
     Ok(())

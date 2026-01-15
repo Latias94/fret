@@ -137,9 +137,18 @@ pub enum DockDragInversionPolicyV1 {
 
 impl SettingsFileV1 {
     pub fn docking_interaction_settings(&self) -> fret_runtime::DockingInteractionSettings {
+        let default_tab_drag_threshold_px = fret_runtime::DockingInteractionSettings::default()
+            .tab_drag_threshold
+            .0;
+        let tab_drag_threshold_px = if self.docking.tab_drag_threshold_px.is_finite() {
+            self.docking.tab_drag_threshold_px.max(0.0)
+        } else {
+            default_tab_drag_threshold_px
+        };
+
         fret_runtime::DockingInteractionSettings {
             drag_inversion: self.docking.drag_inversion.clone().into(),
-            tab_drag_threshold: fret_core::Px(self.docking.tab_drag_threshold_px),
+            tab_drag_threshold: fret_core::Px(tab_drag_threshold_px),
             ..Default::default()
         }
     }
@@ -173,5 +182,32 @@ impl From<DockDragInversionPolicyV1> for fret_runtime::DockDragInversionPolicy {
             DockDragInversionPolicyV1::DockByDefault => Self::DockByDefault,
             DockDragInversionPolicyV1::DockOnlyWhenModifier => Self::DockOnlyWhenModifier,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn docking_tab_drag_threshold_negative_is_clamped_to_zero() {
+        let mut settings = SettingsFileV1::default();
+        settings.docking.tab_drag_threshold_px = -1.0;
+
+        assert_eq!(
+            settings.docking_interaction_settings().tab_drag_threshold,
+            fret_core::Px(0.0)
+        );
+    }
+
+    #[test]
+    fn docking_tab_drag_threshold_nan_falls_back_to_default() {
+        let mut settings = SettingsFileV1::default();
+        settings.docking.tab_drag_threshold_px = f32::NAN;
+
+        assert_eq!(
+            settings.docking_interaction_settings().tab_drag_threshold,
+            fret_runtime::DockingInteractionSettings::default().tab_drag_threshold
+        );
     }
 }

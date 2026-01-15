@@ -10,7 +10,11 @@ homepage.workspace = true
 documentation.workspace = true
 publish = false
 
+[features]
+serde = ["dep:serde"]
+
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
+serde = { workspace = true, optional = true, features = ["rc"] }

@@ -16,6 +16,8 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 
+use crate::commands::{tab_activate_command, tab_close_command};
+
 fn fill_layout() -> LayoutStyle {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
@@ -123,7 +125,7 @@ impl WorkspaceTab {
 /// - This is not a replacement for shadcn `Tabs` (which targets in-page navigation semantics).
 #[derive(Debug, Clone)]
 pub struct WorkspaceTabStrip {
-    active: Arc<str>,
+    active: Option<Arc<str>>,
     tabs: Vec<WorkspaceTab>,
     height: Px,
 }
@@ -137,10 +139,23 @@ struct WorkspaceTabStripState {
 impl WorkspaceTabStrip {
     pub fn new(active: impl Into<Arc<str>>) -> Self {
         Self {
-            active: active.into(),
+            active: Some(active.into()),
             tabs: Vec::new(),
             height: Px(28.0),
         }
+    }
+
+    pub fn new_optional(active: Option<Arc<str>>) -> Self {
+        Self {
+            active,
+            tabs: Vec::new(),
+            height: Px(28.0),
+        }
+    }
+
+    pub fn active(mut self, active: Option<Arc<str>>) -> Self {
+        self.active = active;
+        self
     }
 
     pub fn height(mut self, height: Px) -> Self {
@@ -151,6 +166,29 @@ impl WorkspaceTabStrip {
     pub fn tabs(mut self, tabs: impl IntoIterator<Item = WorkspaceTab>) -> Self {
         self.tabs.extend(tabs);
         self
+    }
+
+    pub fn from_workspace_tabs(
+        state: &crate::tabs::WorkspaceTabs,
+        title: impl Fn(&str) -> Arc<str>,
+    ) -> Self {
+        let active = state.active().cloned();
+        let mut out = WorkspaceTabStrip::new_optional(active);
+        out.tabs = state
+            .tabs()
+            .iter()
+            .filter_map(|id| {
+                let activate = tab_activate_command(id.as_ref())?;
+                let mut tab = WorkspaceTab::new(id.clone(), title(id.as_ref()), activate);
+                if let Some(close) = tab_close_command(id.as_ref()) {
+                    tab = tab.close_command(close);
+                }
+                tab.dirty = state.is_dirty(id.as_ref());
+                Some(tab)
+            })
+            .collect();
+
+        out
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -227,8 +265,9 @@ impl WorkspaceTabStrip {
                                             let tab_command = tab.command.clone();
                                             let tab_close_command = tab.close_command.clone();
                                             let tab_dirty = tab.dirty;
-                                            let is_active =
-                                                tab_id.as_ref() == active.as_ref();
+                                            let is_active = active
+                                                .as_deref()
+                                                .is_some_and(|a| tab_id.as_ref() == a);
                                             let pos_in_set = (index as u32) + 1;
 
                                             let element = cx.keyed(tab_id.as_ref(), |cx| {
@@ -423,7 +462,7 @@ impl WorkspaceTabStrip {
                         },
                     );
 
-                    let active_changed = last_active.as_deref() != Some(active.as_ref());
+                    let active_changed = last_active.as_deref() != active.as_deref();
                     if active_changed {
                         if let (Some(scroll_id), Some(tab_id)) =
                             (scroll_element.get(), active_tab_element.get())
@@ -438,7 +477,7 @@ impl WorkspaceTabStrip {
                     }
 
                     cx.with_state(WorkspaceTabStripState::default, |state| {
-                        state.last_active = Some(active.clone());
+                        state.last_active = active.clone();
                     });
 
                     vec![root]
