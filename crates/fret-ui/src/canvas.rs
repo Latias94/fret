@@ -4,9 +4,9 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use fret_core::{
-    AttributedText, Color, Corners, DrawOrder, EffectChain, EffectMode, EffectQuality, Point, Px,
-    Rect, Scene, SceneOp, SvgFit, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
-    Transform2D,
+    AttributedText, Color, Corners, DrawOrder, EffectChain, EffectMode, EffectQuality, FontId,
+    FontWeight, Point, Px, Rect, Scene, SceneOp, SvgFit, TextConstraints, TextMetrics,
+    TextOverflow, TextSlant, TextStyle, TextWrap, Transform2D,
 };
 use fret_core::{PathCommand, PathConstraints, PathMetrics, PathStyle};
 use fret_runtime::ModelId;
@@ -480,6 +480,8 @@ impl Default for CanvasTextConstraints {
 pub(crate) struct CanvasCache {
     text_by_key: HashMap<CanvasTextCacheKey, HostedTextEntry>,
     text_used: HashSet<CanvasTextCacheKey>,
+    shared_text_by_fingerprint: HashMap<SharedTextFingerprintKey, SharedTextEntry>,
+    shared_text_frame: u64,
     path_by_key: HashMap<CanvasPathCacheKey, HostedPathEntry>,
     path_used: HashSet<CanvasPathCacheKey>,
     svg_by_key: HashMap<CanvasSvgCacheKey, HostedSvgEntry>,
@@ -488,6 +490,7 @@ pub(crate) struct CanvasCache {
 
 impl CanvasCache {
     pub(crate) fn begin_paint(&mut self) {
+        self.shared_text_frame = self.shared_text_frame.wrapping_add(1);
         self.text_used.clear();
         self.path_used.clear();
         self.svg_used.clear();
@@ -547,6 +550,8 @@ impl CanvasCache {
                 let _ = services.svg().unregister_svg(svg);
             }
         }
+
+        self.evict_shared_text(services);
     }
 
     pub(crate) fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
@@ -554,6 +559,9 @@ impl CanvasCache {
             if let Some(blob) = entry.blob.take() {
                 services.text().release(blob);
             }
+        }
+        for (_, entry) in self.shared_text_by_fingerprint.drain() {
+            services.text().release(entry.blob);
         }
         for (_, mut entry) in self.path_by_key.drain() {
             if let Some(path) = entry.path.take() {
@@ -568,6 +576,60 @@ impl CanvasCache {
         self.text_used.clear();
         self.path_used.clear();
         self.svg_used.clear();
+    }
+
+    fn evict_shared_text(&mut self, services: &mut dyn fret_core::UiServices) {
+        const SHARED_TEXT_KEEP_FRAMES: u64 = 120;
+        const SHARED_TEXT_MAX_ENTRIES: usize = 4096;
+
+        let now = self.shared_text_frame;
+        if self.shared_text_by_fingerprint.is_empty() {
+            return;
+        }
+
+        let mut to_remove: Vec<SharedTextFingerprintKey> = Vec::new();
+        for (key, entry) in &self.shared_text_by_fingerprint {
+            if entry.last_used_frame == now {
+                continue;
+            }
+            if now.saturating_sub(entry.last_used_frame) > SHARED_TEXT_KEEP_FRAMES {
+                to_remove.push(key.clone());
+            }
+        }
+
+        for key in to_remove {
+            if let Some(entry) = self.shared_text_by_fingerprint.remove(&key) {
+                services.text().release(entry.blob);
+            }
+        }
+
+        if self.shared_text_by_fingerprint.len() <= SHARED_TEXT_MAX_ENTRIES {
+            return;
+        }
+
+        let mut candidates: Vec<(u64, SharedTextFingerprintKey)> = self
+            .shared_text_by_fingerprint
+            .iter()
+            .filter_map(|(key, entry)| {
+                if entry.last_used_frame == now {
+                    None
+                } else {
+                    Some((entry.last_used_frame, key.clone()))
+                }
+            })
+            .collect();
+        candidates.sort_by_key(|(last_used, _)| *last_used);
+
+        let mut idx = 0usize;
+        while self.shared_text_by_fingerprint.len() > SHARED_TEXT_MAX_ENTRIES
+            && idx < candidates.len()
+        {
+            let key = candidates[idx].1.clone();
+            if let Some(entry) = self.shared_text_by_fingerprint.remove(&key) {
+                services.text().release(entry.blob);
+            }
+            idx += 1;
+        }
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -587,6 +649,55 @@ impl CanvasCache {
     ) -> TextMetrics {
         let raster_scale_factor = normalize_scale_factor(raster_scale_factor);
         let scale_bits = raster_scale_factor.to_bits();
+
+        if let HostedTextContent::Plain(text) = &content {
+            let shared_key = SharedTextFingerprintKey {
+                content: SharedTextContentKey::Plain(Arc::clone(text)),
+                style: TextStyleCacheKey::from_style(&style),
+                constraints: CanvasTextConstraintsKey::from_constraints(constraints),
+                font_stack_key,
+                scale_bits,
+            };
+
+            if let Some(entry) = self.shared_text_by_fingerprint.get_mut(&shared_key) {
+                entry.last_used_frame = self.shared_text_frame;
+                scene.push(SceneOp::Text {
+                    order,
+                    origin,
+                    text: entry.blob,
+                    color,
+                });
+                return entry.metrics;
+            }
+
+            let text_constraints = TextConstraints {
+                max_width: constraints.max_width,
+                wrap: constraints.wrap,
+                overflow: constraints.overflow,
+                scale_factor: raster_scale_factor,
+            };
+
+            let (blob, metrics) =
+                services
+                    .text()
+                    .prepare_str(text.as_ref(), &style, text_constraints);
+            self.shared_text_by_fingerprint.insert(
+                shared_key,
+                SharedTextEntry {
+                    blob,
+                    metrics,
+                    last_used_frame: self.shared_text_frame,
+                },
+            );
+
+            scene.push(SceneOp::Text {
+                order,
+                origin,
+                text: blob,
+                color,
+            });
+            return metrics;
+        }
 
         let cache_key = CanvasTextCacheKey { key, scale_bits };
         self.text_used.insert(cache_key);
@@ -771,6 +882,67 @@ impl CanvasCache {
 struct CanvasTextCacheKey {
     key: u64,
     scale_bits: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct TextStyleCacheKey {
+    font: FontId,
+    size_bits: u32,
+    weight: FontWeight,
+    slant: TextSlant,
+    line_height_bits: Option<u32>,
+    letter_spacing_em_bits: Option<u32>,
+}
+
+impl TextStyleCacheKey {
+    fn from_style(style: &TextStyle) -> Self {
+        Self {
+            font: style.font.clone(),
+            size_bits: style.size.0.to_bits(),
+            weight: style.weight,
+            slant: style.slant,
+            line_height_bits: style.line_height.map(|h| h.0.to_bits()),
+            letter_spacing_em_bits: style.letter_spacing_em.map(f32::to_bits),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct CanvasTextConstraintsKey {
+    max_width_bits: Option<u32>,
+    wrap: TextWrap,
+    overflow: TextOverflow,
+}
+
+impl CanvasTextConstraintsKey {
+    fn from_constraints(constraints: CanvasTextConstraints) -> Self {
+        Self {
+            max_width_bits: constraints.max_width.map(|w| w.0.to_bits()),
+            wrap: constraints.wrap,
+            overflow: constraints.overflow,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+enum SharedTextContentKey {
+    Plain(Arc<str>),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct SharedTextFingerprintKey {
+    content: SharedTextContentKey,
+    style: TextStyleCacheKey,
+    constraints: CanvasTextConstraintsKey,
+    font_stack_key: u64,
+    scale_bits: u32,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct SharedTextEntry {
+    blob: fret_core::TextBlobId,
+    metrics: TextMetrics,
+    last_used_frame: u64,
 }
 
 #[derive(Debug, Clone, PartialEq)]
