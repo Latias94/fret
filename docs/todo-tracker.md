@@ -162,6 +162,10 @@ It complements (but does not replace) ADRs:
       - `goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-keyboard-open-close.light.json`
     - Added Fret gates covering submenu ArrowRight open + ArrowLeft close + focus restore:
       `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs`.
+    - Added/updated Radix Vega timeline state gates for:
+      - tooltip hover open/close + Escape dismissal,
+      - hover-card hover-out (content remains mounted with `data-state=closed`),
+      - navigation-menu Escape close clears selected value.
   - Goldens to expand:
     - `goldens/shadcn-web/v4/new-york-v4/*.open.json`: add open snapshots for pages that require non-click input and/or submenu open states.
   - Fret gates to add:

@@ -150,6 +150,8 @@ fn parse_key_sequence(key: &str) -> Vec<KeyCode> {
             "ArrowDown" => KeyCode::ArrowDown,
             "Home" => KeyCode::Home,
             "End" => KeyCode::End,
+            "Enter" => KeyCode::Enter,
+            "Escape" => KeyCode::Escape,
             other => panic!("unsupported key in radix web action: {other:?}"),
         })
         .collect()
@@ -313,6 +315,20 @@ fn find_semantics<'a>(
         .unwrap_or_else(|| panic!("missing semantics node role={role:?} label={label:?}"))
 }
 
+fn find_semantics_by_role<'a>(
+    snap: &'a fret_core::SemanticsSnapshot,
+    role: SemanticsRole,
+) -> &'a fret_core::SemanticsNode {
+    snap.nodes
+        .iter()
+        .find(|n| n.role == role)
+        .unwrap_or_else(|| panic!("missing semantics node role={role:?}"))
+}
+
+fn has_semantics_role(snap: &fret_core::SemanticsSnapshot, role: SemanticsRole) -> bool {
+    snap.nodes.iter().any(|n| n.role == role)
+}
+
 fn window_bounds() -> Rect {
     Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -405,6 +421,1261 @@ fn has_dom_node_attr(node: &DomNode, key: &str, value: &str) -> bool {
     node.children
         .iter()
         .any(|child| has_dom_node_attr(child, key, value))
+}
+
+#[test]
+fn radix_web_alert_dialog_open_cancel_matches_fret() {
+    let golden = read_timeline("alert-dialog-example.alert-dialog.open-cancel.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.primitive, "alert-dialog");
+    assert_eq!(golden.scenario, "open-cancel");
+    assert!(golden.steps.len() >= 3);
+
+    let open_step = golden
+        .steps
+        .iter()
+        .find(|s| matches!(&s.action, Action::Click { target } if target == "alert-dialog-trigger"))
+        .expect("open step");
+    assert!(
+        has_dom_node_attr(&open_step.snapshot.dom, "role", "alertdialog"),
+        "web expected role=alertdialog to be present after open"
+    );
+
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
+        fret_ui_shadcn::AlertDialog::new(open.clone()).into_element(
+            cx,
+            |cx| {
+                fret_ui_shadcn::Button::new("Open AlertDialog")
+                    .toggle_model(open.clone())
+                    .into_element(cx)
+            },
+            |cx| fret_ui_shadcn::AlertDialogContent::new(vec![cx.text("Content")]).into_element(cx),
+        )
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let trigger = find_semantics(&snap, SemanticsRole::Button, "Open AlertDialog");
+    click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert!(
+        has_semantics_role(&snap, SemanticsRole::AlertDialog),
+        "expected alert dialog semantics after open"
+    );
+    assert!(app.models().get_copied(&open).unwrap_or(false));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::Escape,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(3),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    assert!(!app.models().get_copied(&open).unwrap_or(false));
+}
+
+#[test]
+fn radix_web_dialog_open_close_matches_fret() {
+    let golden = read_timeline("dialog-example.dialog.open-close.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.primitive, "dialog");
+    assert_eq!(golden.scenario, "open-close");
+    assert!(golden.steps.len() >= 3);
+
+    let open_step = golden
+        .steps
+        .iter()
+        .find(|s| matches!(&s.action, Action::Click { target } if target == "dialog-trigger"))
+        .expect("open step");
+    assert!(
+        has_dom_node_attr(&open_step.snapshot.dom, "role", "dialog"),
+        "web expected role=dialog to be present after open"
+    );
+
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
+        fret_ui_shadcn::Dialog::new(open.clone()).into_element(
+            cx,
+            |cx| {
+                fret_ui_shadcn::Button::new("Open Dialog")
+                    .toggle_model(open.clone())
+                    .into_element(cx)
+            },
+            |cx| fret_ui_shadcn::DialogContent::new(vec![cx.text("Hello")]).into_element(cx),
+        )
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let trigger = find_semantics(&snap, SemanticsRole::Button, "Open Dialog");
+    click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert!(
+        has_semantics_role(&snap, SemanticsRole::Dialog),
+        "expected dialog semantics after open"
+    );
+    assert!(app.models().get_copied(&open).unwrap_or(false));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::Escape,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(3),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    assert!(!app.models().get_copied(&open).unwrap_or(false));
+}
+
+#[test]
+fn radix_web_dropdown_menu_open_navigate_select_matches_fret() {
+    let golden = read_timeline("dropdown-menu-example.dropdown-menu.open-navigate-select.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.primitive, "dropdown-menu");
+    assert_eq!(golden.scenario, "open-navigate-select");
+    assert!(golden.steps.len() >= 3);
+
+    let press_step = golden
+        .steps
+        .iter()
+        .find(|s| matches!(&s.action, Action::Press { key } if key == "ArrowDown,Enter"))
+        .expect("press step");
+    assert!(
+        !has_dom_node_attr(
+            &press_step.snapshot.dom,
+            "data-slot",
+            "dropdown-menu-content"
+        ),
+        "web expected menu to be closed after ArrowDown,Enter"
+    );
+
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
+        fret_ui_shadcn::DropdownMenu::new(open.clone()).into_element(
+            cx,
+            |cx| {
+                fret_ui_shadcn::Button::new("Open")
+                    .toggle_model(open.clone())
+                    .into_element(cx)
+            },
+            |_cx| {
+                vec![fret_ui_shadcn::DropdownMenuEntry::Group(
+                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
+                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                            fret_ui_shadcn::DropdownMenuItem::new("My Account"),
+                        ),
+                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                            fret_ui_shadcn::DropdownMenuItem::new("Profile"),
+                        ),
+                    ]),
+                )]
+            },
+        )
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let trigger = find_semantics(&snap, SemanticsRole::Button, "Open");
+    click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    assert!(app.models().get_copied(&open).unwrap_or(false));
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let focused_role = snap.nodes.iter().find(|n| n.flags.focused).map(|n| n.role);
+    assert_eq!(
+        focused_role,
+        Some(SemanticsRole::Menu),
+        "expected focus to move to the menu content after opening"
+    );
+
+    let keys = parse_key_sequence("ArrowDown,Enter");
+    for (idx, key) in keys.into_iter().enumerate() {
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        if matches!(key, KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space) {
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &Event::KeyUp {
+                    key,
+                    modifiers: Modifiers::default(),
+                },
+            );
+        }
+        timers.ingest_effects(&mut app);
+        timers.fire_all(&mut ui, &mut app, &mut services);
+
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(3 + idx as u64),
+            true,
+            |cx| vec![build(cx, &open)],
+        );
+
+        if idx == 0 {
+            let snap = ui
+                .semantics_snapshot()
+                .cloned()
+                .expect("semantics snapshot");
+            let focused_role = snap.nodes.iter().find(|n| n.flags.focused).map(|n| n.role);
+            assert_eq!(
+                focused_role,
+                Some(SemanticsRole::MenuItem),
+                "expected ArrowDown to focus the first menu item"
+            );
+        }
+    }
+
+    assert!(
+        !app.models().get_copied(&open).unwrap_or(false),
+        "selecting a dropdown-menu item should close the menu"
+    );
+}
+
+#[test]
+fn radix_web_context_menu_open_close_matches_fret() {
+    let golden = read_timeline("context-menu-example.context-menu.context-open-close.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.primitive, "context-menu");
+    assert_eq!(golden.scenario, "context-open-close");
+    assert!(golden.steps.len() >= 3);
+
+    let open_step = golden
+        .steps
+        .iter()
+        .find(
+            |s| matches!(&s.action, Action::Click { target } if target == "contextmenu:rightclick"),
+        )
+        .expect("open step");
+    assert!(
+        has_dom_node_attr(&open_step.snapshot.dom, "data-slot", "context-menu-content"),
+        "web expected context menu content to be present after open"
+    );
+
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
+        fret_ui_shadcn::ContextMenu::new(open.clone()).into_element(
+            cx,
+            |cx| fret_ui_shadcn::Button::new("Right click here").into_element(cx),
+            |_cx| {
+                vec![
+                    fret_ui_shadcn::ContextMenuEntry::Item(fret_ui_shadcn::ContextMenuItem::new(
+                        "Copy",
+                    )),
+                    fret_ui_shadcn::ContextMenuEntry::Item(fret_ui_shadcn::ContextMenuItem::new(
+                        "Cut",
+                    )),
+                ]
+            },
+        )
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let trigger = find_semantics(&snap, SemanticsRole::Button, "Right click here");
+    right_click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    assert!(app.models().get_copied(&open).unwrap_or(false));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::Escape,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(3),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    assert!(!app.models().get_copied(&open).unwrap_or(false));
+}
+
+#[test]
+fn radix_web_menubar_open_navigate_close_matches_fret() {
+    let golden = read_timeline("menubar-example.menubar.open-navigate-close.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.primitive, "menubar");
+    assert_eq!(golden.scenario, "open-navigate-close");
+    assert!(golden.steps.len() >= 3);
+
+    let press_step = golden
+        .steps
+        .iter()
+        .find(|s| matches!(&s.action, Action::Press { key } if key == "ArrowDown,Escape"))
+        .expect("press step");
+    assert!(
+        !has_dom_node_attr(&press_step.snapshot.dom, "data-slot", "menubar-content"),
+        "web expected menubar content to be closed after ArrowDown,Escape"
+    );
+
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    let build = |cx: &mut ElementContext<'_, App>| {
+        use fret_ui_shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu};
+
+        Menubar::new(vec![
+            MenubarMenu::new("File").entries(vec![
+                MenubarEntry::Group(MenubarGroup::new(vec![
+                    MenubarEntry::Item(MenubarItem::new("Profile")),
+                    MenubarEntry::Item(MenubarItem::new("Billing")),
+                ])),
+                MenubarEntry::Separator,
+                MenubarEntry::Group(MenubarGroup::new(vec![MenubarEntry::Item(
+                    MenubarItem::new("Settings"),
+                )])),
+            ]),
+            MenubarMenu::new("Edit").entries(vec![MenubarEntry::Group(MenubarGroup::new(vec![
+                MenubarEntry::Item(MenubarItem::new("Undo")),
+                MenubarEntry::Item(MenubarItem::new("Redo")),
+            ]))]),
+        ])
+        .into_element(cx)
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build(cx)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let file = find_semantics(&snap, SemanticsRole::MenuItem, "File");
+    click_center(&mut ui, &mut app, &mut services, bounds_center(file.bounds));
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| vec![build(cx)],
+    );
+
+    let keys = parse_key_sequence("ArrowDown,Escape");
+    for (idx, key) in keys.into_iter().enumerate() {
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        timers.ingest_effects(&mut app);
+        timers.fire_all(&mut ui, &mut app, &mut services);
+
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(3 + idx as u64),
+            true,
+            |cx| vec![build(cx)],
+        );
+    }
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let file = find_semantics(&snap, SemanticsRole::MenuItem, "File");
+    assert!(
+        !file.flags.expanded,
+        "expected menubar menu to be closed after Escape"
+    );
+}
+
+#[test]
+fn radix_web_navigation_menu_open_close_matches_fret() {
+    let golden = read_timeline("navigation-menu-example.navigation-menu.open-close.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.primitive, "navigation-menu");
+    assert_eq!(golden.scenario, "open-close");
+    assert!(golden.steps.len() >= 3);
+
+    let open_step = golden
+        .steps
+        .iter()
+        .find(|s| matches!(&s.action, Action::Click { target } if target == "navigation-menu-trigger"))
+        .expect("open step");
+    assert!(
+        has_dom_node_attr(&open_step.snapshot.dom, "aria-expanded", "true"),
+        "web expected aria-expanded=true after open"
+    );
+
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let model: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    let build = |cx: &mut ElementContext<'_, App>, model: &Model<Option<Arc<str>>>| {
+        fret_ui_shadcn::NavigationMenu::new(model.clone())
+            .items(vec![
+                fret_ui_shadcn::NavigationMenuItem::new("alpha", "Alpha", vec![cx.text("A")]),
+                fret_ui_shadcn::NavigationMenuItem::new("beta", "Beta", vec![cx.text("B")]),
+            ])
+            .into_element(cx)
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build(cx, &model)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let alpha = find_semantics(&snap, SemanticsRole::Button, "Alpha");
+    click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(alpha.bounds),
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| vec![build(cx, &model)],
+    );
+
+    assert_eq!(
+        app.models()
+            .read(&model, |v| v.clone())
+            .unwrap_or_default()
+            .as_deref(),
+        Some("alpha")
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::Escape,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(3),
+        true,
+        |cx| vec![build(cx, &model)],
+    );
+
+    assert_eq!(
+        app.models()
+            .read(&model, |v| v.clone())
+            .unwrap_or_default()
+            .as_deref(),
+        None
+    );
+}
+
+#[test]
+fn radix_web_popover_open_close_matches_fret() {
+    let golden = read_timeline("popover-example.popover.open-close.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.primitive, "popover");
+    assert_eq!(golden.scenario, "open-close");
+    assert!(golden.steps.len() >= 3);
+
+    let open_step = golden
+        .steps
+        .iter()
+        .find(|s| matches!(&s.action, Action::Click { target } if target == "popover-trigger"))
+        .expect("open step");
+    assert!(
+        has_dom_node_attr(&open_step.snapshot.dom, "data-slot", "popover-content"),
+        "web expected popover content to be present after open"
+    );
+
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
+        fret_ui_shadcn::Popover::new(open.clone()).into_element(
+            cx,
+            |cx| {
+                fret_ui_shadcn::Button::new("Open Popover")
+                    .toggle_model(open.clone())
+                    .into_element(cx)
+            },
+            |cx| fret_ui_shadcn::PopoverContent::new(vec![cx.text("Hello")]).into_element(cx),
+        )
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let trigger = find_semantics(&snap, SemanticsRole::Button, "Open Popover");
+    click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    assert!(app.models().get_copied(&open).unwrap_or(false));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::Escape,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(3),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    assert!(!app.models().get_copied(&open).unwrap_or(false));
+}
+
+#[test]
+fn radix_web_select_open_navigate_select_matches_fret() {
+    let golden = read_timeline("select-example.select.open-navigate-select.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.primitive, "select");
+    assert_eq!(golden.scenario, "open-navigate-select");
+    assert!(golden.steps.len() >= 3);
+
+    let open_step = golden
+        .steps
+        .iter()
+        .find(|s| matches!(&s.action, Action::Click { target } if target == "select-trigger"))
+        .expect("open step");
+    assert!(
+        has_dom_node_attr(&open_step.snapshot.dom, "role", "listbox"),
+        "web expected role=listbox after open"
+    );
+
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let value: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+    let open: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    let build =
+        |cx: &mut ElementContext<'_, App>, value: &Model<Option<Arc<str>>>, open: &Model<bool>| {
+            fret_ui_shadcn::Select::new(value.clone(), open.clone())
+                .a11y_label("Select")
+                .items([
+                    fret_ui_shadcn::SelectItem::new("apple", "Apple"),
+                    fret_ui_shadcn::SelectItem::new("banana", "Banana"),
+                    fret_ui_shadcn::SelectItem::new("blueberry", "Blueberry"),
+                    fret_ui_shadcn::SelectItem::new("grapes", "Grapes"),
+                    fret_ui_shadcn::SelectItem::new("pineapple", "Pineapple"),
+                ])
+                .into_element(cx)
+        };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build(cx, &value, &open)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let combobox = find_semantics_by_role(&snap, SemanticsRole::ComboBox);
+    click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(combobox.bounds),
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| vec![build(cx, &value, &open)],
+    );
+
+    assert!(app.models().get_copied(&open).unwrap_or(false));
+
+    let keys = parse_key_sequence("ArrowDown,ArrowDown,Enter");
+    for (idx, key) in keys.into_iter().enumerate() {
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        timers.ingest_effects(&mut app);
+        timers.fire_all(&mut ui, &mut app, &mut services);
+
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(3 + idx as u64),
+            true,
+            |cx| vec![build(cx, &value, &open)],
+        );
+    }
+
+    assert!(
+        !app.models().get_copied(&open).unwrap_or(false),
+        "expected select listbox to close after Enter"
+    );
+}
+
+#[test]
+fn radix_web_tooltip_hover_show_hide_matches_fret() {
+    let golden = read_timeline("tooltip-example.tooltip.hover-show-hide.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.primitive, "tooltip");
+    assert_eq!(golden.scenario, "hover-show-hide");
+    assert!(golden.steps.len() >= 3);
+
+    let open_step = golden
+        .steps
+        .iter()
+        .find(|s| matches!(&s.action, Action::Hover { target } if target == "tooltip-trigger"))
+        .expect("open step");
+    assert!(
+        has_dom_node_attr(&open_step.snapshot.dom, "role", "tooltip"),
+        "web expected role=tooltip after open"
+    );
+
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    let build = |cx: &mut ElementContext<'_, App>| {
+        let trigger = fret_ui_shadcn::Button::new("Hover").into_element(cx);
+        let content = fret_ui_shadcn::TooltipContent::new(vec![cx.text("Tip")]).into_element(cx);
+        fret_ui_shadcn::Tooltip::new(trigger, content)
+            .open_delay_frames(0)
+            .close_delay_frames(0)
+            .into_element(cx)
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build(cx)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let trigger = find_semantics(&snap, SemanticsRole::Button, "Hover");
+    move_pointer(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| vec![build(cx)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert!(
+        has_semantics_role(&snap, SemanticsRole::Tooltip),
+        "expected tooltip semantics after hover"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::Escape,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(3),
+        true,
+        |cx| vec![build(cx)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert!(
+        !has_semantics_role(&snap, SemanticsRole::Tooltip),
+        "expected tooltip to be dismissed after Escape"
+    );
+}
+
+#[test]
+fn radix_web_hover_card_hover_matches_fret() {
+    let golden = read_timeline("hover-card-example.hover-card.hover.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.primitive, "hover-card");
+    assert_eq!(golden.scenario, "hover");
+    assert!(golden.steps.len() >= 3);
+
+    let open_step = golden
+        .steps
+        .iter()
+        .find(|s| matches!(&s.action, Action::Hover { target } if target == "hover-card-trigger"))
+        .expect("open step");
+    assert!(
+        has_dom_node_attr(&open_step.snapshot.dom, "data-slot", "hover-card-content"),
+        "web expected hover-card content to be present after hover"
+    );
+
+    let close_step = golden
+        .steps
+        .iter()
+        .find(|s| matches!(&s.action, Action::Hover { target } if target == "mouse-away"))
+        .expect("close step");
+    assert!(
+        has_dom_node_attr(&close_step.snapshot.dom, "data-slot", "hover-card-content")
+            && has_dom_node_attr(&close_step.snapshot.dom, "data-state", "closed"),
+        "web expected hover-card content to remain mounted with data-state=closed after hover out"
+    );
+
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let build = |cx: &mut ElementContext<'_, App>| {
+        let trigger = fret_ui_shadcn::Button::new("@nextjs").into_element(cx);
+        let content = cx.semantics(
+            SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("HoverCardContent")),
+                ..Default::default()
+            },
+            |cx| {
+                vec![fret_ui_shadcn::HoverCardContent::new(vec![cx.text("card")]).into_element(cx)]
+            },
+        );
+
+        fret_ui_shadcn::HoverCard::new(trigger, content)
+            .open(Some(open.clone()))
+            .open_delay_frames(0)
+            .close_delay_frames(0)
+            .into_element(cx)
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build(cx)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let trigger = find_semantics(&snap, SemanticsRole::Button, "@nextjs");
+    move_pointer(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| vec![build(cx)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let content = find_semantics(&snap, SemanticsRole::Panel, "HoverCardContent");
+    assert_eq!(content.label.as_deref(), Some("HoverCardContent"));
+
+    move_pointer(
+        &mut ui,
+        &mut app,
+        &mut services,
+        Point::new(Px(0.0), Px(0.0)),
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(3),
+        true,
+        |cx| vec![build(cx)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let content_present = snap
+        .nodes
+        .iter()
+        .any(|n| n.role == SemanticsRole::Panel && n.label.as_deref() == Some("HoverCardContent"));
+    assert!(
+        content_present,
+        "expected hover-card content to remain mounted during close (data-state=closed in web golden)"
+    );
+    let open_now = app.models_mut().read(&open, |v| *v).unwrap_or(false);
+    assert!(
+        !open_now,
+        "expected hover-card open state to be false after hover out"
+    );
 }
 
 #[test]
@@ -1620,26 +2891,24 @@ fn radix_web_context_menu_submenu_keyboard_open_close_matches_fret() {
                         ContextMenuEntry::Item(ContextMenuItem::new("Copy")),
                         ContextMenuEntry::Item(ContextMenuItem::new("Cut")),
                     ])),
-                    ContextMenuEntry::Item(
-                        ContextMenuItem::new("More Tools").submenu(vec![
-                            ContextMenuEntry::Group(ContextMenuGroup::new(vec![
-                                ContextMenuEntry::Item(ContextMenuItem::new("Save Page...")),
-                                ContextMenuEntry::Item(ContextMenuItem::new("Create Shortcut...")),
-                                ContextMenuEntry::Item(ContextMenuItem::new("Name Window...")),
-                            ])),
-                            ContextMenuEntry::Separator,
-                            ContextMenuEntry::Group(ContextMenuGroup::new(vec![
-                                ContextMenuEntry::Item(ContextMenuItem::new("Developer Tools")),
-                            ])),
-                            ContextMenuEntry::Separator,
-                            ContextMenuEntry::Group(ContextMenuGroup::new(vec![
+                    ContextMenuEntry::Item(ContextMenuItem::new("More Tools").submenu(vec![
+                        ContextMenuEntry::Group(ContextMenuGroup::new(vec![
+                            ContextMenuEntry::Item(ContextMenuItem::new("Save Page...")),
+                            ContextMenuEntry::Item(ContextMenuItem::new("Create Shortcut...")),
+                            ContextMenuEntry::Item(ContextMenuItem::new("Name Window...")),
+                        ])),
+                        ContextMenuEntry::Separator,
+                        ContextMenuEntry::Group(ContextMenuGroup::new(vec![
+                            ContextMenuEntry::Item(ContextMenuItem::new("Developer Tools")),
+                        ])),
+                        ContextMenuEntry::Separator,
+                        ContextMenuEntry::Group(ContextMenuGroup::new(vec![
                                 ContextMenuEntry::Item(
                                     ContextMenuItem::new("Delete")
                                         .variant(ContextMenuItemVariant::Destructive),
                                 ),
                             ])),
-                        ]),
-                    ),
+                    ])),
                 ]
             },
         )

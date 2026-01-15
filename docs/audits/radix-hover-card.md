@@ -34,10 +34,16 @@ Key upstream concepts:
 - Pass: Text selection containment (`hasSelectionRef`) is modeled by tracking the active non-empty
   text selection at the window runtime level and suppressing close while a selection exists in the
   hover card overlay root.
+- Note: The Radix Vega web golden keeps hover-card content mounted on hover-out while flipping
+  `data-state` from `open` to `closed`. Fret mirrors this outcome via presence/motion (content can
+  remain mounted during close), and the state gate asserts `open=false` after hover-out while the
+  content remains present.
 
 ## Conformance gates
 
 - `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs` validates hover-card placement
   (popper gap + cross-axis delta) against the Radix Vega web golden
   (`goldens/radix-web/v4/radix-vega/hover-card-example.hover-card.hover.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates hover open/close
+  outcomes against the Radix Vega web golden timeline.
 - Run: `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
