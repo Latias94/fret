@@ -22,6 +22,35 @@ pub(super) fn tab_rect_for_index(tab_bar: Rect, index: usize, scroll: Px) -> Rec
     }
 }
 
+pub(super) fn compute_tab_insert_index(
+    tab_bar: Rect,
+    scroll: Px,
+    tab_count: usize,
+    position: Point,
+) -> usize {
+    if tab_count == 0 {
+        return 0;
+    }
+
+    let rel_x = position.x.0 - tab_bar.origin.x.0 + scroll.0;
+    if rel_x <= 0.0 {
+        return 0;
+    }
+
+    let max_x = DOCK_TAB_W.0 * tab_count as f32;
+    if rel_x >= max_x {
+        return tab_count;
+    }
+
+    let over_index = (rel_x / DOCK_TAB_W.0).floor() as usize;
+    let over_rect = tab_rect_for_index(tab_bar, over_index, scroll);
+    let side = fret_dnd::insertion_side_for_pointer(position, over_rect, fret_dnd::Axis::X);
+    over_index.saturating_add(match side {
+        fret_dnd::InsertionSide::Before => 0,
+        fret_dnd::InsertionSide::After => 1,
+    })
+}
+
 pub(super) fn tab_close_rect(theme: fret_ui::ThemeSnapshot, tab_rect: Rect) -> Rect {
     let pad = theme.metric_required("metric.padding.sm").0.max(0.0);
     let x = tab_rect.origin.x.0 + tab_rect.size.width.0 - pad - DOCK_TAB_CLOSE_SIZE.0;
@@ -130,31 +159,6 @@ pub(super) fn hit_test_drop_target(
         });
     }
     None
-}
-
-#[cfg(test)]
-fn compute_tab_insert_index(tab_bar: Rect, scroll: Px, tab_count: usize, position: Point) -> usize {
-    if tab_count == 0 {
-        return 0;
-    }
-
-    let rel_x = position.x.0 - tab_bar.origin.x.0 + scroll.0;
-    if rel_x <= 0.0 {
-        return 0;
-    }
-
-    let max_x = DOCK_TAB_W.0 * tab_count as f32;
-    if rel_x >= max_x {
-        return tab_count;
-    }
-
-    let over_index = (rel_x / DOCK_TAB_W.0).floor() as usize;
-    let over_rect = tab_rect_for_index(tab_bar, over_index, scroll);
-    let side = fret_dnd::insertion_side_for_pointer(position, over_rect, fret_dnd::Axis::X);
-    over_index.saturating_add(match side {
-        fret_dnd::InsertionSide::Before => 0,
-        fret_dnd::InsertionSide::After => 1,
-    })
 }
 
 pub(super) fn hit_test_split_handle(

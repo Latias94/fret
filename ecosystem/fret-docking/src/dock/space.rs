@@ -3,7 +3,8 @@
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
 use super::hit_test::{
-    hit_test_split_handle, hit_test_tab, tab_rect_for_index, tab_scroll_for_node,
+    compute_tab_insert_index, hit_test_split_handle, hit_test_tab, tab_rect_for_index,
+    tab_scroll_for_node,
 };
 use super::layout::{
     active_panel_content_bounds, compute_layout_map, dock_hint_rects, dock_space_regions,
@@ -526,36 +527,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
             fret_dnd::DndItemId(x)
         }
 
-        fn tab_insert_index(tab_bar: Rect, scroll: Px, tab_count: usize, position: Point) -> usize {
-            if tab_count == 0 {
-                return 0;
-            }
-
-            let rel_x = position.x.0 - tab_bar.origin.x.0 + scroll.0;
-            if rel_x <= 0.0 {
-                return 0;
-            }
-
-            let max_x = DOCK_TAB_W.0 * tab_count as f32;
-            if rel_x >= max_x {
-                return tab_count;
-            }
-
-            let over_index = (rel_x / DOCK_TAB_W.0).floor() as usize;
-            let over_rect = Rect {
-                origin: Point::new(
-                    Px(tab_bar.origin.x.0 + DOCK_TAB_W.0 * over_index as f32 - scroll.0),
-                    tab_bar.origin.y,
-                ),
-                size: Size::new(DOCK_TAB_W, tab_bar.size.height),
-            };
-            let side = fret_dnd::insertion_side_for_pointer(position, over_rect, fret_dnd::Axis::X);
-            over_index.saturating_add(match side {
-                fret_dnd::InsertionSide::Before => 0,
-                fret_dnd::InsertionSide::After => 1,
-            })
-        }
-
         fn dock_drop_target_via_dnd(
             graph: &DockGraph,
             layout: &HashMap<DockNodeId, Rect>,
@@ -657,7 +628,9 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 } => Some(HoverTarget {
                     tabs,
                     zone: DropZone::Center,
-                    insert_index: Some(tab_insert_index(tab_bar, scroll, tab_count, position)),
+                    insert_index: Some(compute_tab_insert_index(
+                        tab_bar, scroll, tab_count, position,
+                    )),
                 }),
                 HoverKind::Zone { tabs, zone } => Some(HoverTarget {
                     tabs,
