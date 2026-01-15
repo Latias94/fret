@@ -1,7 +1,7 @@
 use fret_app::App;
 use fret_core::{
-    AppWindowId, Event, FrameId, KeyCode, Modifiers, MouseButtons, Point, PointerEvent,
-    PointerType, Px, Rect, Scene, SceneOp, SemanticsRole, Size as CoreSize,
+    AppWindowId, Event, FrameId, KeyCode, Modifiers, MouseButton, MouseButtons, Point,
+    PointerEvent, PointerType, Px, Rect, Scene, SceneOp, SemanticsRole, Size as CoreSize,
 };
 use fret_runtime::Model;
 use fret_ui::ElementContext;
@@ -338,6 +338,45 @@ fn assert_close(label: &str, actual: f32, expected: f32, tol: f32) {
     );
 }
 
+fn bounds_center(r: Rect) -> Point {
+    Point::new(
+        Px(r.origin.x.0 + r.size.width.0 * 0.5),
+        Px(r.origin.y.0 + r.size.height.0 * 0.5),
+    )
+}
+
+fn right_click_center(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    center: Point,
+) {
+    ui.dispatch_event(
+        app,
+        services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId(0),
+            position: center,
+            button: MouseButton::Right,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    ui.dispatch_event(
+        app,
+        services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId(0),
+            position: center,
+            button: MouseButton::Right,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+}
+
 fn assert_overlay_chrome_matches(
     web_name: &str,
     web_portal_role: &str,
@@ -379,6 +418,92 @@ fn assert_overlay_chrome_matches(
     );
 
     let _ = app.models_mut().update(&open, |v| *v = true);
+    let build_frame2 = build.clone();
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| vec![build_frame2(cx, &open)],
+    );
+
+    let (snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+
+    let overlay = largest_semantics_node(&snap, fret_role)
+        .unwrap_or_else(|| panic!("missing fret semantics node: {fret_role:?}"));
+
+    let quad =
+        find_best_chrome_quad(&scene, overlay.bounds).expect("painted quad for overlay panel");
+    for (idx, edge) in quad.border.iter().enumerate() {
+        assert_close(&format!("{web_name} border[{idx}]"), *edge, web_border, 0.6);
+    }
+    for (idx, corner) in quad.corners.iter().enumerate() {
+        assert_close(
+            &format!("{web_name} radius[{idx}]"),
+            *corner,
+            web_radius,
+            1.0,
+        );
+    }
+}
+
+fn assert_context_menu_chrome_matches(
+    web_name: &str,
+    web_portal_role: &str,
+    fret_role: SemanticsRole,
+    trigger_label: &str,
+    build: impl Fn(&mut ElementContext<'_, App>, &Model<bool>) -> AnyElement + Clone,
+) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+
+    let web_portal = find_portal_by_role(theme, web_portal_role).expect("web portal root by role");
+    let web_border = web_border_width_px(web_portal).expect("web borderTopWidth px");
+    let web_radius = web_corner_radius_effective_px(web_portal).expect("web radius px");
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(640.0), Px(480.0)),
+    );
+
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    let build_frame1 = build.clone();
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build_frame1(cx, &open)],
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some(trigger_label))
+        .unwrap_or_else(|| panic!("missing trigger semantics node: Button {trigger_label:?}"));
+    right_click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+
     let build_frame2 = build.clone();
     render_frame(
         &mut ui,
@@ -791,6 +916,27 @@ fn web_vs_fret_hover_card_panel_chrome_matches() {
             fret_ui_shadcn::HoverCard::new(trigger_el, content_el)
                 .open(Some(open.clone()))
                 .into_element(cx)
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_panel_chrome_matches() {
+    assert_context_menu_chrome_matches(
+        "context-menu-demo",
+        "menu",
+        SemanticsRole::Menu,
+        "Right click here",
+        |cx, open| {
+            fret_ui_shadcn::ContextMenu::new(open.clone()).into_element(
+                cx,
+                |cx| fret_ui_shadcn::Button::new("Right click here").into_element(cx),
+                |_cx| {
+                    vec![fret_ui_shadcn::ContextMenuEntry::Item(
+                        fret_ui_shadcn::ContextMenuItem::new("Copy"),
+                    )]
+                },
+            )
         },
     );
 }

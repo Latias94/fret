@@ -69,6 +69,20 @@ Recent fixes:
 
 - Destructive item focus tint now matches upstream (`destructive/10` in light, `destructive/20` in dark) via seeded theme tokens.
 
+### `ContextMenu`
+
+- Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/context-menu.tsx`
+- Fret: `ecosystem/fret-ui-shadcn/src/context_menu.rs`
+- Gaps to check:
+  - Content: `p-1`, `rounded-md`, `border`, `shadow-md`, max-height behavior.
+  - SubContent: `rounded-md`, `border`, `shadow-lg`, and submenu focus/close rules.
+  - Item rows: `rounded-sm` + focus tint + destructive variant tint.
+
+Recent fixes:
+
+- Panel chrome now matches upstream `rounded-md` (radius token) and `shadow-md` / `shadow-lg` split.
+- Conformance gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_context_menu_panel_chrome_matches`).
+
 ### `Input`
 
 - Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/input.tsx`

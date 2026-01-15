@@ -729,7 +729,8 @@ fn context_menu_submenu_panel<H: UiHost>(
 
     let border = theme.color_required("border");
     let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
-    let shadow = decl_style::shadow_sm(&theme, radius_sm);
+    let radius_md = MetricRef::radius(Radius::Md).resolve(&theme);
+    let shadow = decl_style::shadow_lg(&theme, radius_md);
     let ring = decl_style::focus_ring(&theme, radius_sm);
     let pad_x = MetricRef::space(Space::N3).resolve(&theme);
     let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
@@ -764,7 +765,7 @@ fn context_menu_submenu_panel<H: UiHost>(
             shadow: Some(shadow),
             border: Edges::all(Px(1.0)),
             border_color: Some(border),
-            corner_radii: fret_core::Corners::all(radius_sm),
+            corner_radii: fret_core::Corners::all(radius_md),
         },
         move |cx| {
             let mut item_ix: usize = 0;
@@ -1488,7 +1489,8 @@ impl ContextMenu {
 
                     let border = theme.color_required("border");
                     let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
-                    let shadow = decl_style::shadow_sm(&theme, radius_sm);
+                    let radius_md = MetricRef::radius(Radius::Md).resolve(&theme);
+                    let shadow = decl_style::shadow_md(&theme, radius_md);
                     let ring = decl_style::focus_ring(&theme, radius_sm);
                     let pad_x = MetricRef::space(Space::N3).resolve(&theme);
                     let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
@@ -1573,7 +1575,7 @@ impl ContextMenu {
                                             shadow: Some(shadow),
                                             border: Edges::all(Px(1.0)),
                                             border_color: Some(border),
-                                            corner_radii: fret_core::Corners::all(radius_sm),
+                                            corner_radii: fret_core::Corners::all(radius_md),
                                         },
                                         move |cx| {
                                             let content_focus_id_for_panel =
