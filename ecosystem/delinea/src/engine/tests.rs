@@ -5912,6 +5912,127 @@ fn data_zoom_y_filter_mode_empty_keeps_band_visible_when_interval_intersects_win
 }
 
 #[test]
+fn data_zoom_y_filter_mode_empty_masks_bar_marks_outside_window() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let zoom_id = crate::ids::DataZoomId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let value_field = crate::ids::FieldId::new(1);
+    let category_field = crate::ids::FieldId::new(2);
+
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(200.0)),
+    );
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(viewport),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: value_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: category_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: crate::scale::AxisScale::Category(crate::scale::CategoryAxisScale {
+                    categories: vec!["A".into(), "B".into(), "C".into(), "D".into()],
+                }),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        data_zoom_y: vec![DataZoomYSpec {
+            id: zoom_id,
+            axis: y_axis,
+            filter_mode: FilterMode::Empty,
+            min_value_span: None,
+            max_value_span: None,
+        }],
+        tooltip: None,
+        axis_pointer: None,
+        visual_maps: vec![],
+        series: vec![SeriesSpec {
+            id: series_id,
+            name: None,
+            kind: SeriesKind::Bar,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: category_field,
+                y: value_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
+            bar_layout: Default::default(),
+            area_baseline: None,
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(vec![1.0, 100.0, 3.0, 4.0]));
+    table.push_column(Column::F64(vec![0.0, 1.0, 2.0, 3.0]));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    engine.apply_action(Action::SetDataWindowY {
+        axis: y_axis,
+        window: Some(DataWindow {
+            min: 0.0,
+            max: 10.0,
+        }),
+    });
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let marks = &engine.output().marks;
+    let node = marks
+        .nodes
+        .iter()
+        .find(|n| n.kind == crate::marks::MarkKind::Rect && n.source_series == Some(series_id))
+        .expect("expected rect marks for bar series");
+    let MarkPayloadRef::Rect(r) = &node.payload else {
+        panic!("expected rect payload");
+    };
+    let indices = &marks.arena.rect_data_indices[r.rects.clone()];
+    assert!(
+        !indices.contains(&1),
+        "expected y-empty to mask the out-of-window bar sample"
+    );
+}
+
+#[test]
 fn data_zoom_x_filter_mode_empty_breaks_band_into_segments_for_interleaved_out_of_window_points() {
     let dataset_id = crate::ids::DatasetId::new(1);
     let zoom_id = crate::ids::DataZoomId::new(1);

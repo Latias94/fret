@@ -652,15 +652,22 @@ impl MarksStage {
                             return false;
                         }
 
-                        finished_scan = minmax_per_pixel_step_selection(
+                        finished_scan = minmax_per_pixel_step_selection_with(
                             &mut self.cursor,
                             scratch,
                             x,
-                            y0,
                             &bounds,
                             viewport,
                             &selection,
                             points_budget,
+                            |i| {
+                                if (empty_mask.x_active || empty_mask.y_active)
+                                    && !empty_mask.allows_raw_index(i, x, y0, None)
+                                {
+                                    return f64::NAN;
+                                }
+                                y0.get(i).copied().unwrap_or(f64::NAN)
+                            },
                         );
                     }
 
@@ -1030,6 +1037,11 @@ impl MarksStage {
                         let xi = x.get(i).copied().unwrap_or(f64::NAN);
                         let yi = y0.get(i).copied().unwrap_or(f64::NAN);
                         if !xi.is_finite() || !yi.is_finite() {
+                            continue;
+                        }
+                        if (empty_mask.x_active || empty_mask.y_active)
+                            && !empty_mask.allows_raw_index(i, x, y0, None)
+                        {
                             continue;
                         }
                         if xi < x_window.min || xi > x_window.max {
@@ -1527,6 +1539,11 @@ impl MarksStage {
                         let xi = x.get(i).copied().unwrap_or(f64::NAN);
                         let yi = y0.get(i).copied().unwrap_or(f64::NAN);
                         if !xi.is_finite() || !yi.is_finite() {
+                            continue;
+                        }
+                        if (empty_mask.x_active || empty_mask.y_active)
+                            && !empty_mask.allows_raw_index(i, x, y0, None)
+                        {
                             continue;
                         }
                         if !view_x_filter.contains(xi) {
