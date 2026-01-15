@@ -3,8 +3,8 @@ use std::time::{Duration, Instant};
 
 use fret_canvas::spatial::DefaultIndexWithBackrefs;
 use fret_canvas::wires::{
-    bezier_wire_distance2, bezier_wire_distance2_polyline_adaptive, wire_aabb,
     DEFAULT_BEZIER_FLATTEN_TOLERANCE_SCREEN_PX, DEFAULT_BEZIER_HIT_TEST_STEPS,
+    bezier_wire_distance2, bezier_wire_distance2_polyline_adaptive, wire_aabb,
 };
 
 #[cfg(feature = "kurbo")]
