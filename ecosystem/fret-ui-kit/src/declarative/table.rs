@@ -385,6 +385,14 @@ pub fn table_virtualized<H: UiHost, TData>(
         .or_else(|| theme.color_by_key("primary"))
         .unwrap_or(row_active);
     let ring = emphasize_border(ring, 0.9);
+    let row_hover_bg = Color {
+        a: row_hover.a.min(0.12),
+        ..row_hover
+    };
+    let row_active_bg = Color {
+        a: row_active.a.min(0.18),
+        ..row_active
+    };
     let radius = theme.metric_required("metric.radius.md");
 
     let row_h = props
@@ -1638,11 +1646,9 @@ pub fn table_virtualized<H: UiHost, TData>(
 
                                                                 let is_active = active_index.get() == Some(i);
                                                                 let bg = if st.pressed {
-                                                                    Some(row_active)
-                                                                } else if is_active {
-                                                                    Some(row_hover)
+                                                                    Some(row_active_bg)
                                                                 } else if st.hovered {
-                                                                    Some(row_hover)
+                                                                    Some(row_hover_bg)
                                                                 } else {
                                                                     None
                                                                 };
@@ -1662,6 +1668,19 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                 vec![cx.container(
                                                                     ContainerProps {
                                                                         background: bg,
+                                                                        border: if is_active {
+                                                                            Edges {
+                                                                                left: Px(2.0),
+                                                                                ..Default::default()
+                                                                            }
+                                                                        } else {
+                                                                            Edges::default()
+                                                                        },
+                                                                        border_color: if is_active {
+                                                                            Some(ring)
+                                                                        } else {
+                                                                            None
+                                                                        },
                                                                         layout: LayoutStyle {
                                                                             size:
                                                                                 fret_ui::element::SizeStyle {
@@ -2150,11 +2169,9 @@ pub fn table_virtualized<H: UiHost, TData>(
 
                                                     let is_active = active_index.get() == Some(i);
                                                     let bg = if is_selected || (enabled && st.pressed) {
-                                                        Some(row_active)
-                                                    } else if is_active {
-                                                        Some(row_hover)
+                                                        Some(row_active_bg)
                                                     } else if enabled && st.hovered {
-                                                        Some(row_hover)
+                                                        Some(row_hover_bg)
                                                     } else {
                                                         None
                                                     };
@@ -2162,6 +2179,19 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                     vec![cx.container(
                                                         ContainerProps {
                                                             background: bg,
+                                                            border: if is_active {
+                                                                Edges {
+                                                                    left: Px(2.0),
+                                                                    ..Default::default()
+                                                                }
+                                                            } else {
+                                                                Edges::default()
+                                                            },
+                                                            border_color: if is_active {
+                                                                Some(ring)
+                                                            } else {
+                                                                None
+                                                            },
                                                             layout: LayoutStyle {
                                                                 size: fret_ui::element::SizeStyle {
                                                                     height: Length::Px(row_h),
