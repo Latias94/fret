@@ -97,6 +97,8 @@ Notes on API mapping:
 - Interaction test: `dropdown_menu_submenu_opens_on_hover_and_closes_on_leave`
 - Keyboard test: `dropdown_menu_submenu_opens_on_arrow_right_without_pointer_move`
 - Direction test: `dropdown_menu_align_start_respects_direction_provider`
+- Web placement gate (submenu): `web_vs_fret_dropdown_menu_demo_submenu_overlay_placement_matches`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu.open.json`).
 
 ## Follow-ups (recommended)
 
