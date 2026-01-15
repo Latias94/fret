@@ -28,6 +28,7 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 
 | ADR | ADR Status | Implementation Alignment | Notes |
 | --- | --- | --- | --- |
+| [`0171-workspace-shell-tabs-and-pane-layout.md`](0171-workspace-shell-tabs-and-pane-layout.md) | Proposed | Aligned (with known gaps) | Workspace chrome building blocks live in `ecosystem/fret-workspace/src/lib.rs` with a tab model + snapshots (`ecosystem/fret-workspace/src/tabs.rs`) and a versioned pane layout snapshot (`ecosystem/fret-workspace/src/layout.rs`). `fret-kit` re-exports this as a user-facing entry point (`ecosystem/fret-kit/src/lib.rs`). Gap: focus + command routing for “active pane” is app-owned today (no shared arbiter yet). |
 | [`0001-app-effects.md`](0001-app-effects.md) | Accepted | Aligned | Effects queue + redraw coalescing: `crates/fret-app/src/app.rs` (`push_effect`, `flush_effects`); bounded fixed-point draining: `crates/fret-launch/src/runner/desktop/mod.rs` and `crates/fret-launch/src/runner/web.rs`. |
 | [`0002-display-list.md`](0002-display-list.md) | Accepted | Aligned | `SceneOp` contract: `crates/fret-core/src/scene.rs`; renderer preserves op iteration order: `crates/fret-render/src/renderer/render_scene/encode/mod.rs`. |
 | [`0003-platform-boundary.md`](0003-platform-boundary.md) | Superseded | N/A (superseded) | Superseded ADR; do not implement new work against this contract. |
