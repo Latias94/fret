@@ -82,7 +82,7 @@ fn nav_menu_viewport_border(theme: &Theme) -> Color {
 fn nav_menu_viewport_side_offset(theme: &Theme) -> Px {
     theme
         .metric_by_key("component.navigation_menu.viewport.side_offset")
-        .unwrap_or_else(|| MetricRef::space(Space::N2).resolve(theme))
+        .unwrap_or_else(|| MetricRef::space(Space::N1p5).resolve(theme))
 }
 
 fn nav_menu_viewport_window_margin(theme: &Theme) -> Px {
@@ -546,12 +546,19 @@ impl NavigationMenu {
         let viewport_border = nav_menu_viewport_border(&theme);
         let viewport_radius = theme
             .metric_by_key("component.navigation_menu.viewport.radius")
-            .unwrap_or_else(|| MetricRef::radius(Radius::Lg).resolve(&theme));
-        let viewport_pad = theme
-            .metric_by_key("component.navigation_menu.viewport.padding")
-            .unwrap_or_else(|| MetricRef::space(Space::N4).resolve(&theme));
+            .unwrap_or_else(|| MetricRef::radius(Radius::Md).resolve(&theme));
         let root_gap = MetricRef::space(Space::N3).resolve(&theme);
         let content_switch_slide_px = nav_menu_content_switch_slide_px(&theme);
+        let viewport_shadow = decl_style::shadow_sm(&theme, viewport_radius);
+        let content_pad_y = MetricRef::space(Space::N2).resolve(&theme);
+        let content_pad_left = MetricRef::space(Space::N2).resolve(&theme);
+        let content_pad_right = MetricRef::space(Space::N2p5).resolve(&theme);
+        let content_padding = Edges {
+            top: content_pad_y,
+            right: content_pad_right,
+            bottom: content_pad_y,
+            left: content_pad_left,
+        };
 
         let root_props = decl_style::container_props(&theme, chrome, layout);
 
@@ -839,15 +846,15 @@ impl NavigationMenu {
                 let content_switch = content_switch.clone();
                 let content_switch_slide_px = content_switch_slide_px;
 
-                let viewport_props = if viewport_enabled {
+                let panel_props = if viewport_enabled {
                     ContainerProps {
                         layout: LayoutStyle {
                             overflow: fret_ui::element::Overflow::Clip,
                             ..Default::default()
                         },
-                        padding: Edges::all(viewport_pad),
+                        padding: Edges::all(Px(0.0)),
                         background: Some(viewport_bg),
-                        shadow: None,
+                        shadow: Some(viewport_shadow),
                         border: Edges::all(Px(1.0)),
                         border_color: Some(viewport_border),
                         corner_radii: Corners::all(viewport_radius),
@@ -855,15 +862,15 @@ impl NavigationMenu {
                 } else {
                     ContainerProps {
                         layout: LayoutStyle {
-                            overflow: fret_ui::element::Overflow::Visible,
+                            overflow: fret_ui::element::Overflow::Clip,
                             ..Default::default()
                         },
                         padding: Edges::all(Px(0.0)),
-                        background: None,
-                        shadow: None,
-                        border: Edges::all(Px(0.0)),
-                        border_color: None,
-                        corner_radii: Corners::all(Px(0.0)),
+                        background: Some(viewport_bg),
+                        shadow: Some(viewport_shadow),
+                        border: Edges::all(Px(1.0)),
+                        border_color: Some(viewport_border),
+                        corner_radii: Corners::all(viewport_radius),
                     }
                 };
 
@@ -909,10 +916,11 @@ impl NavigationMenu {
 
                         let root_state_for_hover = root_state_for_viewport.clone();
                         let value_for_hover = value_for_hover.clone();
-                        let viewport_props = viewport_props;
+                        let panel_props = panel_props;
                         let viewport_children = viewport_children;
                         let content_switch = content_switch;
                         let content_switch_slide_px = content_switch_slide_px;
+                        let content_padding = content_padding;
 
                         let content =
                             radix_navigation_menu::navigation_menu_viewport_content_pressable_with_id_props(
@@ -939,10 +947,18 @@ impl NavigationMenu {
                                     },
                                 ));
 
-                                let children = vec![cx.container(viewport_props, move |cx| {
+                                let children = vec![cx.container(panel_props, move |cx| {
                                     let Some((t, forward, from_children)) = content_switch.clone()
                                     else {
-                                        return viewport_children.clone();
+                                        let children = viewport_children.clone();
+                                        return vec![cx.container(
+                                            ContainerProps {
+                                                layout: LayoutStyle::default(),
+                                                padding: content_padding,
+                                                ..Default::default()
+                                            },
+                                            move |_cx| children,
+                                        )];
                                     };
 
                                     let to_children = viewport_children.clone();
@@ -979,6 +995,29 @@ impl NavigationMenu {
                                             let from_opacity = 1.0 - t;
                                             let to_opacity = t;
 
+                                            let from_children = vec![cx.container(
+                                                ContainerProps {
+                                                    layout: LayoutStyle::default(),
+                                                    padding: content_padding,
+                                                    ..Default::default()
+                                                },
+                                                {
+                                                    let from_children = from_children.clone();
+                                                    move |_cx| from_children
+                                                },
+                                            )];
+                                            let to_children = vec![cx.container(
+                                                ContainerProps {
+                                                    layout: LayoutStyle::default(),
+                                                    padding: content_padding,
+                                                    ..Default::default()
+                                                },
+                                                {
+                                                    let to_children = to_children.clone();
+                                                    move |_cx| to_children
+                                                },
+                                            )];
+
                                             let from = overlay_motion::wrap_opacity_and_render_transform_with_layouts(
                                                 cx,
                                                 layer_layout,
@@ -990,7 +1029,7 @@ impl NavigationMenu {
                                                         Px(0.0),
                                                     )),
                                                 },
-                                                from_children.clone(),
+                                                from_children,
                                             );
 
                                             let to = overlay_motion::wrap_opacity_and_render_transform_with_layouts(
@@ -1004,7 +1043,7 @@ impl NavigationMenu {
                                                         Px(0.0),
                                                     )),
                                                 },
-                                                to_children.clone(),
+                                                to_children,
                                             );
 
                                             vec![from, to]

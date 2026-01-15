@@ -88,6 +88,11 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - `cargo nextest run -p fret-ui-shadcn navigation_menu_viewport_align_start_respects_direction_provider`
 - Radix Web overlay geometry gate: `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
   (`radix_web_navigation_menu_open_geometry_matches_fret`).
+- shadcn-web gates:
+  - Chrome: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
+    (`web_vs_fret_navigation_menu_demo_panel_chrome_matches`; consumes `goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.open.json`).
+  - Placement: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
+    (`web_vs_fret_navigation_menu_demo_overlay_placement_matches`; consumes `goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.open.json`).
 
 ## Follow-ups (recommended)
 

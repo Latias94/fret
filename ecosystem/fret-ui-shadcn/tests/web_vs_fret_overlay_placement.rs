@@ -171,6 +171,19 @@ fn find_first<'a>(node: &'a WebNode, pred: &impl Fn(&'a WebNode) -> bool) -> Opt
     None
 }
 
+fn web_find_by_data_slot_and_state<'a>(
+    root: &'a WebNode,
+    slot: &str,
+    state: &str,
+) -> Option<&'a WebNode> {
+    find_first(root, &|n| {
+        n.attrs.get("data-slot").is_some_and(|v| v.as_str() == slot)
+            && n.attrs
+                .get("data-state")
+                .is_some_and(|v| v.as_str() == state)
+    })
+}
+
 fn find_attr_in_subtree<'a>(node: &'a WebNode, key: &str) -> Option<&'a str> {
     node.attrs.get(key).map(String::as_str).or_else(|| {
         for child in &node.children {
@@ -1428,6 +1441,185 @@ fn web_vs_fret_hover_card_demo_overlay_placement_matches() {
     assert_close("hover-card-demo main_gap", actual_gap, expected_gap, 1.0);
     assert_close(
         "hover-card-demo cross_delta",
+        actual_cross,
+        expected_cross,
+        1.5,
+    );
+}
+
+#[test]
+fn web_vs_fret_navigation_menu_demo_overlay_placement_matches() {
+    let web = read_web_golden_open("navigation-menu-demo");
+    let theme = web_theme(&web);
+
+    let web_trigger =
+        web_find_by_data_slot_and_state(&theme.root, "navigation-menu-trigger", "open")
+            .unwrap_or_else(|| {
+                find_first(&theme.root, &|n| {
+                    n.attrs
+                        .get("data-slot")
+                        .is_some_and(|v| v.as_str() == "navigation-menu-trigger")
+                })
+                .expect("web trigger slot=navigation-menu-trigger")
+            });
+    let web_content =
+        web_find_by_data_slot_and_state(&theme.root, "navigation-menu-content", "open")
+            .expect("web content slot=navigation-menu-content state=open");
+
+    let web_side = infer_side(web_trigger.rect, web_content.rect);
+    let web_align = infer_align(web_side, web_trigger.rect, web_content.rect);
+    let expected_gap = rect_main_gap(web_side, web_trigger.rect, web_content.rect);
+    let expected_cross = rect_cross_delta(web_side, web_align, web_trigger.rect, web_content.rect);
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(1440.0), Px(900.0)),
+    );
+
+    let model: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+    let root_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+        Rc::new(Cell::new(None));
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| {
+            let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+                .viewport(false)
+                .indicator(false)
+                .items(vec![fret_ui_shadcn::NavigationMenuItem::new(
+                    "home",
+                    "Home",
+                    vec![cx.text("Content")],
+                )])
+                .into_element(cx);
+            root_id_out.set(Some(el.id));
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Home"))
+        .expect("fret trigger semantics (Home)");
+    let click_point = Point::new(
+        Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+        Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| {
+                let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+                    .viewport(false)
+                    .indicator(false)
+                    .items(vec![fret_ui_shadcn::NavigationMenuItem::new(
+                        "home",
+                        "Home",
+                        vec![cx.text("Content")],
+                    )])
+                    .into_element(cx);
+                root_id_out.set(Some(el.id));
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let root_id = root_id_out.get().expect("navigation menu root id");
+    let content_id = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "web-vs-fret-nav-menu-query",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_viewport_content_id(
+                cx, root_id, "home",
+            )
+        },
+    )
+    .expect("fret nav menu content id");
+    let content_bounds = fret_ui::elements::bounds_for_element(&mut app, window, content_id)
+        .expect("fret nav menu content bounds");
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Home"))
+        .expect("fret trigger semantics (Home)");
+
+    let fret_trigger = WebRect {
+        x: trigger.bounds.origin.x.0,
+        y: trigger.bounds.origin.y.0,
+        w: trigger.bounds.size.width.0,
+        h: trigger.bounds.size.height.0,
+    };
+    let fret_content = WebRect {
+        x: content_bounds.origin.x.0,
+        y: content_bounds.origin.y.0,
+        w: content_bounds.size.width.0,
+        h: content_bounds.size.height.0,
+    };
+
+    let actual_gap = rect_main_gap(web_side, fret_trigger, fret_content);
+    let actual_cross = rect_cross_delta(web_side, web_align, fret_trigger, fret_content);
+
+    assert_close(
+        "navigation-menu-demo main_gap",
+        actual_gap,
+        expected_gap,
+        1.0,
+    );
+    assert_close(
+        "navigation-menu-demo cross_delta",
         actual_cross,
         expected_cross,
         1.5,

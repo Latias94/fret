@@ -98,6 +98,21 @@ Recent fixes:
 - Menu panels now match upstream `rounded-md` + `p-1` and `shadow-md` / `shadow-lg` split.
 - Conformance gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_menubar_panel_chrome_matches`).
 
+### `NavigationMenu`
+
+- Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/navigation-menu.tsx`
+- Fret: `ecosystem/fret-ui-shadcn/src/navigation_menu.rs`
+- Gaps to check:
+  - `viewport=false` content panel: `rounded-md border shadow` with `mt-1.5` offset and `p-2 pr-2.5`.
+  - `viewport=true` viewport panel: `rounded-md border shadow` with zoom motion `zoom-in-90` / `zoom-out-95`.
+
+Recent fixes:
+
+- `viewport=false` chrome/placement now match shadcn-web `navigation-menu-demo` open snapshot.
+- Conformance gates:
+  - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_navigation_menu_demo_panel_chrome_matches`).
+  - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_navigation_menu_demo_overlay_placement_matches`).
+
 ### `Input`
 
 - Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/input.tsx`
