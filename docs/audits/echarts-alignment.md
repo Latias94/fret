@@ -64,6 +64,7 @@ Status symbols:
 ### Components & interaction semantics
 
 - `[x]` dataZoom X inside + slider UI (`fret-chart`) (ADR 1129 / ADR 1138)
+  - v1 option adapter seeds initial windows via `dataZoom.startValue/endValue` and `dataZoom.start/end` (percent, mapped from raw data extents).
 - `[~]` dataZoom Y + 2D zoom semantics (v1 boundary + opt-in filtering) (ADR 1136 / ADR 1150)
 - `[x]` AxisPointer (axis-trigger + item-trigger) baseline (ADR 1133)
 - `[~]` Tooltip formatting contract (structured rows + hooks; missing rich text/HTML parity) (ADR 1148)

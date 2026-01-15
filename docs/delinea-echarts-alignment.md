@@ -100,7 +100,7 @@ single “at a glance” view of:
 
 - ECharts reference: `repo-ref/echarts/src/component/dataZoom/AxisProxy.ts`, `repo-ref/echarts/src/component/dataZoom/dataZoomProcessor.ts`
 - ADR(s): `docs/adr/1129-delinea-transform-pipeline-and-datazoom-semantics.md`, `docs/adr/1138-delinea-datazoom-component-composition-and-span-policy.md`
-- Evidence: `ecosystem/delinea/src/engine/window.rs` (span limits), `ecosystem/delinea/src/engine/mod.rs` (interaction action routing), `ecosystem/fret-chart/src/retained/canvas.rs` (inside + slider gestures)
+- Evidence: `ecosystem/delinea/src/engine/window.rs` (span limits), `ecosystem/delinea/src/engine/mod.rs` (interaction action routing), `ecosystem/fret-chart/src/retained/canvas.rs` (inside + slider gestures), `ecosystem/fret-chart/src/echarts/mod.rs` (option adapter window seeding via `dataZoom.startValue/endValue` and `dataZoom.start/end`)
 - Validation (desktop): `cargo run -p fret-demo --bin fret-demo -- chart_multi_axis_demo`
 - Validation (wasm): `cargo run -p fretboard -- dev web --demo chart_multi_axis_demo`
 - What to validate (P0):
