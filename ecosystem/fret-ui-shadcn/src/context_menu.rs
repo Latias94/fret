@@ -2238,7 +2238,7 @@ impl ContextMenu {
                     let menu_pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
                     let menu_row_height = Px(menu_font_line_height.0 + menu_pad_y.0 * 2.0);
                     let desired_h =
-                        estimated_menu_panel_height_for_entries(&entries, menu_row_height, max_h);
+                        estimated_menu_panel_height_for_entries(&entries_flat, menu_row_height, max_h);
                     let desired = Size::new(desired_w, desired_h);
 
                     let layout = popper::popper_content_layout_sized(
