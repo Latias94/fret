@@ -25,6 +25,7 @@ use std::time::Duration;
 use time::Date;
 
 const ENV_UI_GALLERY_BISECT: &str = "FRET_UI_GALLERY_BISECT";
+const ENV_UI_GALLERY_START_PAGE: &str = "FRET_UI_GALLERY_START_PAGE";
 
 const BISECT_MINIMAL_ROOT: u32 = 1 << 0;
 const BISECT_DISABLE_OVERLAY_CONTROLLER: u32 = 1 << 1;
@@ -45,6 +46,24 @@ fn ui_gallery_bisect_flags() -> u32 {
             .and_then(|v| v.parse::<u32>().ok())
             .unwrap_or(0)
     })
+}
+
+fn ui_gallery_start_page() -> Option<Arc<str>> {
+    let id = std::env::var(ENV_UI_GALLERY_START_PAGE).ok()?;
+    if id.trim().is_empty() {
+        return None;
+    }
+
+    let id = id.trim();
+    let known = NAV_GROUPS
+        .iter()
+        .flat_map(|group| group.items.iter())
+        .any(|item| item.id == id);
+    if known {
+        Some(Arc::<str>::from(id))
+    } else {
+        None
+    }
 }
 
 const CMD_NAV_SELECT_PREFIX: &str = "ui_gallery.nav.select.";
@@ -325,14 +344,23 @@ struct UiGalleryDriver;
 
 impl UiGalleryDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> UiGalleryWindowState {
-        let selected_page = app.models_mut().insert(Arc::<str>::from(PAGE_INTRO));
-        let workspace_tabs = app.models_mut().insert(vec![
+        let start_page = ui_gallery_start_page().unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+        let selected_page = app.models_mut().insert(start_page.clone());
+
+        let mut workspace_tabs_init = vec![
             Arc::<str>::from(PAGE_INTRO),
             Arc::<str>::from(PAGE_LAYOUT),
             Arc::<str>::from(PAGE_BUTTON),
             Arc::<str>::from(PAGE_OVERLAY),
             Arc::<str>::from(PAGE_COMMAND),
-        ]);
+        ];
+        if !workspace_tabs_init
+            .iter()
+            .any(|page| page.as_ref() == start_page.as_ref())
+        {
+            workspace_tabs_init.push(start_page);
+        }
+        let workspace_tabs = app.models_mut().insert(workspace_tabs_init);
         let workspace_dirty_tabs = app
             .models_mut()
             .insert(vec![Arc::<str>::from(PAGE_OVERLAY)]);
@@ -726,78 +754,82 @@ impl UiGalleryDriver {
                         .ok()
                         .unwrap_or_default();
 
-                    let sidebar = if (bisect & BISECT_SIMPLE_SIDEBAR) != 0 {
-                        cx.container(
-                            decl_style::container_props(
+                    let sidebar = cx.keyed("ui_gallery.sidebar", |cx| {
+                        if (bisect & BISECT_SIMPLE_SIDEBAR) != 0 {
+                            cx.container(
+                                decl_style::container_props(
+                                    &theme,
+                                    ChromeRefinement::default()
+                                        .bg(ColorRef::Color(theme.color_required("muted")))
+                                        .p(Space::N4),
+                                    LayoutRefinement::default()
+                                        .w_px(MetricRef::Px(Px(280.0)))
+                                        .h_full(),
+                                ),
+                                |cx| vec![cx.text("Sidebar (disabled)")],
+                            )
+                        } else {
+                            sidebar_view(
+                                cx,
                                 &theme,
-                                ChromeRefinement::default()
-                                    .bg(ColorRef::Color(theme.color_required("muted")))
-                                    .p(Space::N4),
-                                LayoutRefinement::default()
-                                    .w_px(MetricRef::Px(Px(280.0)))
-                                    .h_full(),
-                            ),
-                            |cx| vec![cx.text("Sidebar (disabled)")],
-                        )
-                    } else {
-                        sidebar_view(
-                            cx,
-                            &theme,
-                            selected.as_ref(),
-                            query.as_str(),
-                            nav_query.clone(),
-                        )
-                    };
+                                selected.as_ref(),
+                                query.as_str(),
+                                nav_query.clone(),
+                            )
+                        }
+                    });
 
-                    let content = if (bisect & BISECT_SIMPLE_CONTENT) != 0 {
-                        cx.container(
-                            decl_style::container_props(
+                    let content = cx.keyed(("ui_gallery.content", selected.as_ref()), |cx| {
+                        if (bisect & BISECT_SIMPLE_CONTENT) != 0 {
+                            cx.container(
+                                decl_style::container_props(
+                                    &theme,
+                                    ChromeRefinement::default()
+                                        .bg(ColorRef::Color(theme.color_required("background")))
+                                        .p(Space::N6),
+                                    LayoutRefinement::default().w_full().h_full(),
+                                ),
+                                |cx| vec![cx.text("Content (disabled)")],
+                            )
+                        } else {
+                            content_view(
+                                cx,
                                 &theme,
-                                ChromeRefinement::default()
-                                    .bg(ColorRef::Color(theme.color_required("background")))
-                                    .p(Space::N6),
-                                LayoutRefinement::default().w_full().h_full(),
-                            ),
-                            |cx| vec![cx.text("Content (disabled)")],
-                        )
-                    } else {
-                        content_view(
-                            cx,
-                            &theme,
-                            selected.as_ref(),
-                            content_tab.clone(),
-                            theme_preset.clone(),
-                            theme_preset_open.clone(),
-                            popover_open.clone(),
-                            dialog_open.clone(),
-                            alert_dialog_open.clone(),
-                            sheet_open.clone(),
-                            select_value.clone(),
-                            select_open.clone(),
-                            combobox_value.clone(),
-                            combobox_open.clone(),
-                            combobox_query.clone(),
-                            date_picker_open.clone(),
-                            date_picker_month.clone(),
-                            date_picker_selected.clone(),
-                            resizable_h_fractions.clone(),
-                            resizable_v_fractions.clone(),
-                            data_table_state.clone(),
-                            data_grid_selected_row.clone(),
-                            tabs_value.clone(),
-                            accordion_value.clone(),
-                            progress.clone(),
-                            checkbox.clone(),
-                            switch.clone(),
-                            text_input.clone(),
-                            text_area.clone(),
-                            dropdown_open.clone(),
-                            context_menu_open.clone(),
-                            cmdk_open.clone(),
-                            cmdk_query.clone(),
-                            last_action.clone(),
-                        )
-                    };
+                                selected.as_ref(),
+                                content_tab.clone(),
+                                theme_preset.clone(),
+                                theme_preset_open.clone(),
+                                popover_open.clone(),
+                                dialog_open.clone(),
+                                alert_dialog_open.clone(),
+                                sheet_open.clone(),
+                                select_value.clone(),
+                                select_open.clone(),
+                                combobox_value.clone(),
+                                combobox_open.clone(),
+                                combobox_query.clone(),
+                                date_picker_open.clone(),
+                                date_picker_month.clone(),
+                                date_picker_selected.clone(),
+                                resizable_h_fractions.clone(),
+                                resizable_v_fractions.clone(),
+                                data_table_state.clone(),
+                                data_grid_selected_row.clone(),
+                                tabs_value.clone(),
+                                accordion_value.clone(),
+                                progress.clone(),
+                                checkbox.clone(),
+                                switch.clone(),
+                                text_input.clone(),
+                                text_area.clone(),
+                                dropdown_open.clone(),
+                                context_menu_open.clone(),
+                                cmdk_open.clone(),
+                                cmdk_query.clone(),
+                                last_action.clone(),
+                            )
+                        }
+                    });
 
                     let menubar = shadcn::Menubar::new(vec![
                         shadcn::MenubarMenu::new("File").entries(vec![
@@ -977,48 +1009,53 @@ fn sidebar_view(
 
     let mut nav_sections: Vec<AnyElement> = Vec::new();
     for group in NAV_GROUPS {
-        let mut group_items: Vec<AnyElement> = Vec::new();
-        for item in group.items {
-            if !UiGalleryDriver::matches_query(query, item) {
-                continue;
+        let group_sections = cx.keyed(group.title, |cx| {
+            let mut group_items: Vec<AnyElement> = Vec::new();
+            for item in group.items {
+                if !UiGalleryDriver::matches_query(query, item) {
+                    continue;
+                }
+
+                let is_selected = selected == item.id;
+                let variant = if is_selected {
+                    shadcn::ButtonVariant::Secondary
+                } else {
+                    shadcn::ButtonVariant::Ghost
+                };
+
+                group_items.push(cx.keyed(item.id, |cx| {
+                    shadcn::Button::new(item.label)
+                        .variant(variant)
+                        .on_click(item.command)
+                        .refine_layout(LayoutRefinement::default().w_full())
+                        .into_element(cx)
+                }));
             }
 
-            let is_selected = selected == item.id;
-            let variant = if is_selected {
-                shadcn::ButtonVariant::Secondary
-            } else {
-                shadcn::ButtonVariant::Ghost
-            };
+            if group_items.is_empty() {
+                return Vec::new();
+            }
 
-            group_items.push(
-                shadcn::Button::new(item.label)
-                    .variant(variant)
-                    .on_click(item.command)
-                    .refine_layout(LayoutRefinement::default().w_full())
-                    .into_element(cx),
-            );
-        }
+            vec![
+                cx.text_props(TextProps {
+                    layout: Default::default(),
+                    text: Arc::from(group.title),
+                    style: None,
+                    color: Some(theme.color_required("muted-foreground")),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                }),
+                stack::vstack(
+                    cx,
+                    stack::VStackProps::default()
+                        .layout(LayoutRefinement::default().w_full())
+                        .gap(Space::N1),
+                    |_cx| group_items,
+                ),
+            ]
+        });
 
-        if group_items.is_empty() {
-            continue;
-        }
-
-        nav_sections.push(cx.text_props(TextProps {
-            layout: Default::default(),
-            text: Arc::from(group.title),
-            style: None,
-            color: Some(theme.color_required("muted-foreground")),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-        }));
-
-        nav_sections.push(stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N1),
-            |_cx| group_items,
-        ));
+        nav_sections.extend(group_sections);
     }
 
     let nav_body = stack::vstack(
@@ -2767,6 +2804,393 @@ pub fn build_driver() -> impl WinitAppDriver {
     UiGalleryDriver::default()
 }
 
+#[cfg(test)]
+mod stack_overflow_tests {
+    use super::*;
+    use fret_core::scene::Scene;
+    use fret_core::{
+        PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle, Point, Px, Rect,
+        Size, SvgId, SvgService, TextBlobId, TextConstraints, TextInput, TextMetrics, TextService,
+    };
+    use fret_runtime::FrameId;
+    use fret_ui::ElementRuntime;
+    use slotmap::SlotMap;
+
+    #[derive(Default)]
+    struct DummyServices {
+        text_blobs: SlotMap<TextBlobId, ()>,
+        svgs: SlotMap<SvgId, ()>,
+        paths: SlotMap<PathId, ()>,
+    }
+
+    impl TextService for DummyServices {
+        fn prepare(
+            &mut self,
+            input: &TextInput,
+            constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            let text = input.text();
+            let char_w = 7.5;
+            let line_h = 16.0;
+            let mut w = Px(text.chars().count() as f32 * char_w);
+            if let Some(max) = constraints.max_width {
+                w = Px(w.0.min(max.0));
+            }
+            let metrics = TextMetrics {
+                size: Size::new(w, Px(line_h)),
+                baseline: Px(line_h * 0.8),
+            };
+            let id = self.text_blobs.insert(());
+            (id, metrics)
+        }
+
+        fn release(&mut self, blob: TextBlobId) {
+            let _ = self.text_blobs.remove(blob);
+        }
+    }
+
+    impl SvgService for DummyServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            self.svgs.insert(())
+        }
+
+        fn unregister_svg(&mut self, svg: SvgId) -> bool {
+            self.svgs.remove(svg).is_some()
+        }
+    }
+
+    impl PathService for DummyServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            let id = self.paths.insert(());
+            (id, PathMetrics::default())
+        }
+
+        fn release(&mut self, path: PathId) {
+            let _ = self.paths.remove(path);
+        }
+    }
+
+    fn drive_frame(
+        app: &mut App,
+        services: &mut DummyServices,
+        window: AppWindowId,
+        state: &mut UiGalleryWindowState,
+        bounds: Rect,
+    ) {
+        UiGalleryDriver::render_ui(app, services, window, state, bounds);
+        state.ui.layout_all(app, services, bounds, 1.0);
+        let mut scene = Scene::default();
+        state.ui.paint_all(app, services, bounds, &mut scene, 1.0);
+    }
+
+    fn ui_tree_stats(ui: &UiTree<App>, root: fret_core::NodeId) -> (usize, usize) {
+        let mut max_depth: usize = 0;
+        let mut node_count: usize = 0;
+
+        let mut stack: Vec<(fret_core::NodeId, usize)> = vec![(root, 0)];
+        while let Some((node, depth)) = stack.pop() {
+            node_count = node_count.saturating_add(1);
+            max_depth = max_depth.max(depth);
+            for child in ui.children(node) {
+                stack.push((child, depth + 1));
+            }
+        }
+
+        (node_count, max_depth)
+    }
+
+    #[test]
+    fn nav_to_datatable_does_not_stack_overflow_without_gc_sweep() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(1024.0), Px(768.0)),
+        );
+
+        let mut app = build_app();
+        app.set_frame_id(FrameId(1));
+        app.with_global_mut(ElementRuntime::new, |runtime, _app| {
+            runtime.set_gc_lag_frames(10_000);
+        });
+
+        let mut state = UiGalleryDriver::build_ui(&mut app, window);
+        let mut services = DummyServices::default();
+
+        eprintln!("frame1: intro");
+        drive_frame(&mut app, &mut services, window, &mut state, bounds);
+        if let Some(root) = state.root {
+            let (nodes, depth) = ui_tree_stats(&state.ui, root);
+            eprintln!("frame1: ui_tree nodes={nodes} max_depth={depth}");
+        }
+
+        let cmd = CommandId::new(CMD_NAV_DATA_TABLE);
+        eprintln!("nav: data_table");
+        assert!(UiGalleryDriver::handle_nav_command(&mut app, &state, &cmd));
+
+        app.set_frame_id(FrameId(2));
+        eprintln!("frame2: data_table");
+        drive_frame(&mut app, &mut services, window, &mut state, bounds);
+        if let Some(root) = state.root {
+            let (nodes, depth) = ui_tree_stats(&state.ui, root);
+            eprintln!("frame2: ui_tree nodes={nodes} max_depth={depth}");
+        }
+    }
+
+    #[test]
+    fn nav_to_datatable_does_not_stack_overflow_with_immediate_gc_sweep() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(1024.0), Px(768.0)),
+        );
+
+        let mut app = build_app();
+        app.set_frame_id(FrameId(1));
+        app.with_global_mut(ElementRuntime::new, |runtime, _app| {
+            runtime.set_gc_lag_frames(0);
+        });
+
+        let mut state = UiGalleryDriver::build_ui(&mut app, window);
+        let mut services = DummyServices::default();
+
+        eprintln!("frame1: intro");
+        drive_frame(&mut app, &mut services, window, &mut state, bounds);
+
+        let cmd = CommandId::new(CMD_NAV_DATA_TABLE);
+        eprintln!("nav: data_table");
+        assert!(UiGalleryDriver::handle_nav_command(&mut app, &state, &cmd));
+
+        app.set_frame_id(FrameId(2));
+        eprintln!("frame2: data_table (gc sweep)");
+        drive_frame(&mut app, &mut services, window, &mut state, bounds);
+    }
+
+    #[test]
+    #[ignore]
+    fn nav_to_datatable_does_not_stack_overflow_with_wgpu_renderer_services() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(1024.0), Px(768.0)),
+        );
+
+        let wgpu = pollster::block_on(fret_render::WgpuContext::new()).unwrap();
+        let mut renderer = fret_render::Renderer::new(&wgpu.adapter, &wgpu.device);
+
+        let format = wgpu::TextureFormat::Bgra8UnormSrgb;
+        let viewport_size = (1024u32, 768u32);
+        let target = wgpu.device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("ui-gallery test target"),
+            size: wgpu::Extent3d {
+                width: viewport_size.0,
+                height: viewport_size.1,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
+        });
+        let view = target.create_view(&wgpu::TextureViewDescriptor::default());
+
+        let mut app = build_app();
+        app.set_frame_id(FrameId(1));
+        app.with_global_mut(ElementRuntime::new, |runtime, _app| {
+            runtime.set_gc_lag_frames(0);
+        });
+
+        let mut state = UiGalleryDriver::build_ui(&mut app, window);
+
+        eprintln!("frame1: intro (render/layout/paint/render_scene)");
+        UiGalleryDriver::render_ui(&mut app, &mut renderer, window, &mut state, bounds);
+        state.ui.layout_all(&mut app, &mut renderer, bounds, 1.0);
+        let mut scene = Scene::default();
+        state
+            .ui
+            .paint_all(&mut app, &mut renderer, bounds, &mut scene, 1.0);
+        let cmd = renderer.render_scene(
+            &wgpu.device,
+            &wgpu.queue,
+            fret_render::RenderSceneParams {
+                format,
+                target_view: &view,
+                scene: &scene,
+                clear: fret_render::ClearColor::default(),
+                scale_factor: 1.0,
+                viewport_size,
+            },
+        );
+        wgpu.queue.submit([cmd]);
+
+        let cmd_nav = CommandId::new(CMD_NAV_DATA_TABLE);
+        eprintln!("nav: data_table");
+        assert!(UiGalleryDriver::handle_nav_command(
+            &mut app, &state, &cmd_nav
+        ));
+
+        app.set_frame_id(FrameId(2));
+        eprintln!("frame2: data_table (render/layout/paint/render_scene)");
+        UiGalleryDriver::render_ui(&mut app, &mut renderer, window, &mut state, bounds);
+        state.ui.layout_all(&mut app, &mut renderer, bounds, 1.0);
+        scene.clear();
+        state
+            .ui
+            .paint_all(&mut app, &mut renderer, bounds, &mut scene, 1.0);
+        let cmd = renderer.render_scene(
+            &wgpu.device,
+            &wgpu.queue,
+            fret_render::RenderSceneParams {
+                format,
+                target_view: &view,
+                scene: &scene,
+                clear: fret_render::ClearColor::default(),
+                scale_factor: 1.0,
+                viewport_size,
+            },
+        );
+        wgpu.queue.submit([cmd]);
+    }
+
+    #[test]
+    #[ignore]
+    fn nav_to_datatable_repro_on_small_stack() {
+        #[stacksafe::stacksafe]
+        fn render_ui_stacksafe(
+            app: &mut App,
+            services: &mut fret_render::Renderer,
+            window: AppWindowId,
+            state: &mut UiGalleryWindowState,
+            bounds: Rect,
+        ) {
+            UiGalleryDriver::render_ui(app, services, window, state, bounds);
+        }
+
+        let join = std::thread::Builder::new()
+            .name("ui-gallery-small-stack".to_string())
+            .stack_size(1024 * 1024)
+            .spawn(|| {
+                stacksafe::set_minimum_stack_size(2 * 1024 * 1024);
+                stacksafe::set_stack_allocation_size(8 * 1024 * 1024);
+
+                let window = AppWindowId::default();
+                let bounds = Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(1024.0), Px(768.0)),
+                );
+
+                let wgpu = pollster::block_on(fret_render::WgpuContext::new()).unwrap();
+                let mut renderer = fret_render::Renderer::new(&wgpu.adapter, &wgpu.device);
+
+                let format = wgpu::TextureFormat::Bgra8UnormSrgb;
+                let viewport_size = (1024u32, 768u32);
+                let target = wgpu.device.create_texture(&wgpu::TextureDescriptor {
+                    label: Some("ui-gallery small-stack test target"),
+                    size: wgpu::Extent3d {
+                        width: viewport_size.0,
+                        height: viewport_size.1,
+                        depth_or_array_layers: 1,
+                    },
+                    mip_level_count: 1,
+                    sample_count: 1,
+                    dimension: wgpu::TextureDimension::D2,
+                    format,
+                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                        | wgpu::TextureUsages::TEXTURE_BINDING,
+                    view_formats: &[],
+                });
+                let view = target.create_view(&wgpu::TextureViewDescriptor::default());
+
+                let mut app = build_app();
+                app.set_frame_id(FrameId(1));
+                app.with_global_mut(ElementRuntime::new, |runtime, _app| {
+                    let lag = std::env::var("FRET_UI_GALLERY_SMALL_STACK_GC_LAG")
+                        .ok()
+                        .and_then(|v| v.parse::<u64>().ok())
+                        .unwrap_or(2);
+                    runtime.set_gc_lag_frames(lag);
+                });
+
+                let mut state = UiGalleryDriver::build_ui(&mut app, window);
+
+                eprintln!("frame1: intro (small stack)");
+                UiGalleryDriver::render_ui(&mut app, &mut renderer, window, &mut state, bounds);
+                eprintln!("frame1: after render_ui (small stack)");
+                eprintln!("frame1: before layout_all (small stack)");
+                state.ui.layout_all(&mut app, &mut renderer, bounds, 1.0);
+                eprintln!("frame1: after layout_all (small stack)");
+                let mut scene = Scene::default();
+                state
+                    .ui
+                    .paint_all(&mut app, &mut renderer, bounds, &mut scene, 1.0);
+                eprintln!("frame1: after paint_all (small stack)");
+                let cmd = renderer.render_scene(
+                    &wgpu.device,
+                    &wgpu.queue,
+                    fret_render::RenderSceneParams {
+                        format,
+                        target_view: &view,
+                        scene: &scene,
+                        clear: fret_render::ClearColor::default(),
+                        scale_factor: 1.0,
+                        viewport_size,
+                    },
+                );
+                eprintln!("frame1: after render_scene (small stack)");
+                wgpu.queue.submit([cmd]);
+                eprintln!("frame1: after submit (small stack)");
+
+                let cmd_nav = CommandId::new(CMD_NAV_DATA_TABLE);
+                eprintln!("nav: data_table (small stack)");
+                assert!(UiGalleryDriver::handle_nav_command(
+                    &mut app, &state, &cmd_nav
+                ));
+
+                app.set_frame_id(FrameId(2));
+                if let Ok(flags) = std::env::var("FRET_UI_GALLERY_SMALL_STACK_BISECT") {
+                    eprintln!("apply bisect for frame2: {flags}");
+                    unsafe {
+                        std::env::set_var(ENV_UI_GALLERY_BISECT, flags);
+                    }
+                }
+                eprintln!("frame2: data_table (small stack)");
+                render_ui_stacksafe(&mut app, &mut renderer, window, &mut state, bounds);
+                eprintln!("frame2: after render_ui (small stack)");
+                eprintln!("frame2: before layout_all (small stack)");
+                state.ui.layout_all(&mut app, &mut renderer, bounds, 1.0);
+                eprintln!("frame2: after layout_all (small stack)");
+                scene.clear();
+                state
+                    .ui
+                    .paint_all(&mut app, &mut renderer, bounds, &mut scene, 1.0);
+                eprintln!("frame2: after paint_all (small stack)");
+                let cmd = renderer.render_scene(
+                    &wgpu.device,
+                    &wgpu.queue,
+                    fret_render::RenderSceneParams {
+                        format,
+                        target_view: &view,
+                        scene: &scene,
+                        clear: fret_render::ClearColor::default(),
+                        scale_factor: 1.0,
+                        viewport_size,
+                    },
+                );
+                eprintln!("frame2: after render_scene (small stack)");
+                wgpu.queue.submit([cmd]);
+                eprintln!("frame2: after submit (small stack)");
+            })
+            .unwrap();
+        join.join().unwrap();
+    }
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 pub fn run() -> anyhow::Result<()> {
     let _ = tracing_subscriber::fmt()
@@ -2850,6 +3274,7 @@ impl WinitAppDriver for UiGalleryDriver {
         }
 
         if state.ui.dispatch_command(app, services, &command) {
+            app.request_redraw(window);
             return;
         }
 
@@ -3042,5 +3467,145 @@ impl WinitAppDriver for UiGalleryDriver {
         state: &mut Self::WindowState,
     ) -> Option<Arc<fret_core::SemanticsSnapshot>> {
         state.ui.semantics_snapshot_arc()
+    }
+}
+
+#[cfg(test)]
+mod stack_overflow_repro_tests {
+    use super::*;
+    use fret_core::{
+        PathConstraints, PathMetrics, PathService, PathStyle, Point, Px, Rect, Size, SvgId,
+        SvgService, TextBlobId, TextConstraints, TextMetrics, TextService,
+    };
+    use std::process::Command;
+
+    const ENV_CHILD_REPRO: &str = "FRET_UI_GALLERY_STACK_OVERFLOW_CHILD";
+
+    #[derive(Default)]
+    struct FakeUiServices;
+
+    impl TextService for FakeUiServices {
+        fn prepare(
+            &mut self,
+            _input: &fret_core::TextInput,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeUiServices {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (fret_core::PathId, PathMetrics) {
+            (fret_core::PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
+    }
+
+    impl SvgService for FakeUiServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            false
+        }
+    }
+
+    fn run_datatable_layout(configure_stacksafe: bool) {
+        if configure_stacksafe {
+            stacksafe::set_minimum_stack_size(2 * 1024 * 1024);
+            stacksafe::set_stack_allocation_size(8 * 1024 * 1024);
+        }
+
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let mut state = UiGalleryDriver::build_ui(&mut app, window);
+        let _ = app.models_mut().update(&state.selected_page, |v| {
+            *v = Arc::<str>::from(PAGE_DATA_TABLE);
+        });
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(1280.0), Px(720.0)),
+        );
+        let mut services = FakeUiServices::default();
+
+        UiGalleryDriver::render_ui(&mut app, &mut services, window, &mut state, bounds);
+
+        let mut frame =
+            fret_ui::UiFrameCx::new(&mut state.ui, &mut app, &mut services, window, bounds, 1.0);
+        frame.layout_all();
+    }
+
+    #[test]
+    fn child_repro_unconfigured() {
+        if std::env::var(ENV_CHILD_REPRO).is_err() {
+            return;
+        }
+
+        let _ = std::thread::Builder::new()
+            .name("ui-gallery-stack-overflow-repro".into())
+            .stack_size(512 * 1024)
+            .spawn(|| run_datatable_layout(false))
+            .unwrap()
+            .join();
+    }
+
+    #[test]
+    fn child_repro_configured() {
+        if std::env::var(ENV_CHILD_REPRO).is_err() {
+            return;
+        }
+
+        let _ = std::thread::Builder::new()
+            .name("ui-gallery-stack-overflow-repro".into())
+            .stack_size(512 * 1024)
+            .spawn(|| run_datatable_layout(true))
+            .unwrap()
+            .join();
+    }
+
+    #[test]
+    #[ignore]
+    fn datatable_layout_stack_overflow_repro() {
+        let exe = std::env::current_exe().expect("test exe path");
+
+        let status_unconfigured = Command::new(&exe)
+            .arg("--exact")
+            .arg("stack_overflow_repro_tests::child_repro_unconfigured")
+            .env(ENV_CHILD_REPRO, "1")
+            .status()
+            .expect("spawn child repro (unconfigured)");
+
+        assert!(
+            !status_unconfigured.success(),
+            "expected unconfigured child to fail (stack overflow); status={status_unconfigured:?}"
+        );
+
+        let status_configured = Command::new(&exe)
+            .arg("--exact")
+            .arg("stack_overflow_repro_tests::child_repro_configured")
+            .env(ENV_CHILD_REPRO, "1")
+            .status()
+            .expect("spawn child repro (configured)");
+
+        assert!(
+            status_configured.success(),
+            "expected configured child to succeed; status={status_configured:?}"
+        );
     }
 }
