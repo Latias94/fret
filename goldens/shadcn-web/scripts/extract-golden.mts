@@ -19,7 +19,7 @@ type KeyChord = { modifiers: string[]; key: string }
 type OpenStep =
   | { action: "wait"; waitMs: number }
   | { action: Exclude<OpenAction, "keys">; selector: string }
-  | { action: "keys"; selector: string; keys: KeyChord }
+  | { action: "keys"; selector: string; keys: KeyChord[] }
 
 type GoldenOptions = {
   baseUrl: string
@@ -187,6 +187,29 @@ function parseOpenKeys(raw: string): KeyChord {
   return { modifiers: dedupedMods, key }
 }
 
+function parseKeySequence(raw: string): KeyChord[] {
+  const v = raw.trim()
+  if (!v) {
+    throw new Error(`invalid key sequence "${raw}" (empty)`)
+  }
+
+  // Treat any "+" as a chord spec (e.g. "Shift+F10", "Control+KeyJ").
+  if (v.includes("+")) {
+    return [parseOpenKeys(v)]
+  }
+
+  const tokens = v
+    .split(/[,\s]+/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+
+  if (tokens.length === 0) {
+    throw new Error(`invalid key sequence "${raw}" (empty)`)
+  }
+
+  return tokens.map((t) => ({ modifiers: [], key: normalizeKeyToken(t) }))
+}
+
 function parseOpenSteps(raw: string, openKeys: KeyChord | undefined): OpenStep[] {
   const parts = raw
     .split(";")
@@ -223,12 +246,33 @@ function parseOpenSteps(raw: string, openKeys: KeyChord | undefined): OpenStep[]
     }
 
     if (actionRaw === "keys") {
-      if (!openKeys) {
+      let selector = valueRaw
+      let keysSpec: string | undefined
+
+      const at = valueRaw.indexOf("@")
+      if (at !== -1) {
+        selector = valueRaw.slice(0, at).trim()
+        keysSpec = valueRaw.slice(at + 1).trim()
+        if (!selector || !keysSpec) {
+          throw new Error(
+            `invalid --openSteps entry "${part}" (expected "keys=<selector>@<keys>")`
+          )
+        }
+      }
+
+      const keys = keysSpec
+        ? parseKeySequence(keysSpec)
+        : openKeys
+          ? [openKeys]
+          : null
+
+      if (!keys) {
         throw new Error(
-          `invalid --openSteps entry "${part}" (action=keys requires --openKeys=... or OPEN_KEYS=...)`
+          `invalid --openSteps entry "${part}" (action=keys requires "<selector>@<keys>" or --openKeys=... / OPEN_KEYS=...)`
         )
       }
-      out.push({ action: "keys", selector: valueRaw, keys: openKeys })
+
+      out.push({ action: "keys", selector, keys })
       continue
     }
 
@@ -771,12 +815,14 @@ async function applyOpenSteps(
       await page.mouse.click(point.x, point.y, { button: "right", delay: 10 })
     } else if (step.action === "keys") {
       await page.focus(step.selector)
-      for (const mod of step.keys.modifiers) {
-        await page.keyboard.down(mod)
-      }
-      await page.keyboard.press(step.keys.key)
-      for (const mod of [...step.keys.modifiers].reverse()) {
-        await page.keyboard.up(mod)
+      for (const chord of step.keys) {
+        for (const mod of chord.modifiers) {
+          await page.keyboard.down(mod)
+        }
+        await page.keyboard.press(chord.key)
+        for (const mod of [...chord.modifiers].reverse()) {
+          await page.keyboard.up(mod)
+        }
       }
     } else {
       await page.mouse.click(point.x, point.y, { button: "left", delay: 10 })
