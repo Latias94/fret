@@ -1,12 +1,17 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
+use fret_core::{
+    Color, Corners, Edges, Point, Px, Rect, SemanticsRole, TextOverflow, TextStyle, TextWrap,
+};
 use fret_runtime::CommandId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     PressableA11y, PressableProps, ScrollAxis, ScrollProps, SemanticsProps, TextProps,
 };
+use fret_ui::elements::GlobalElementId;
+use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 
 fn fill_layout() -> LayoutStyle {
@@ -41,6 +46,7 @@ pub struct WorkspaceTab {
     pub id: Arc<str>,
     pub title: Arc<str>,
     pub command: CommandId,
+    pub close_command: Option<CommandId>,
     pub dirty: bool,
 }
 
@@ -54,8 +60,14 @@ impl WorkspaceTab {
             id: id.into(),
             title: title.into(),
             command: command.into(),
+            close_command: None,
             dirty: false,
         }
+    }
+
+    pub fn close_command(mut self, command: impl Into<CommandId>) -> Self {
+        self.close_command = Some(command.into());
+        self
     }
 
     pub fn dirty(mut self, dirty: bool) -> Self {
@@ -74,6 +86,14 @@ pub struct WorkspaceTabStrip {
     active: Arc<str>,
     tabs: Vec<WorkspaceTab>,
     height: Px,
+}
+
+#[derive(Default)]
+struct WorkspaceTabStripState {
+    scroll: ScrollHandle,
+    last_active: Option<Arc<str>>,
+    scroll_element: Option<GlobalElementId>,
+    tab_elements: HashMap<Arc<str>, GlobalElementId>,
 }
 
 impl WorkspaceTabStrip {
@@ -126,40 +146,42 @@ impl WorkspaceTabStrip {
                 ..Default::default()
             },
             |cx| {
-                vec![cx.container(
-                    ContainerProps {
-                        layout: row_layout(self.height),
-                        padding: Edges::all(Px(2.0)),
-                        background: bar_bg,
-                        border: Edges {
-                            bottom: Px(1.0),
-                            ..Edges::all(Px(0.0))
-                        },
-                        border_color: bar_border,
-                        ..Default::default()
-                    },
-                    |cx| {
-                        vec![cx.scroll(
-                            ScrollProps {
-                                layout: fill_layout(),
-                                axis: ScrollAxis::X,
-                                scroll_handle: None,
-                                probe_unbounded: true,
+                cx.with_state(WorkspaceTabStripState::default, |state| {
+                    state.tab_elements.clear();
+                    vec![cx.container(
+                        ContainerProps {
+                            layout: row_layout(self.height),
+                            padding: Edges::all(Px(2.0)),
+                            background: bar_bg,
+                            border: Edges {
+                                bottom: Px(1.0),
+                                ..Edges::all(Px(0.0))
                             },
-                            |cx| {
-                                vec![cx.flex(
-                                    FlexProps {
-                                        layout: fill_layout(),
-                                        direction: fret_core::Axis::Horizontal,
-                                        gap: Px(2.0),
-                                        justify: MainAlign::Start,
-                                        align: CrossAlign::Center,
-                                        ..Default::default()
-                                    },
-                                    |cx| {
-                                        tabs.into_iter()
-                                            .enumerate()
-                                            .map(|(index, tab)| {
+                            border_color: bar_border,
+                            ..Default::default()
+                        },
+                        |cx| {
+                            vec![cx.scroll(
+                                ScrollProps {
+                                    layout: fill_layout(),
+                                    axis: ScrollAxis::X,
+                                    scroll_handle: Some(state.scroll.clone()),
+                                    probe_unbounded: true,
+                                },
+                                |cx| {
+                                    vec![cx.flex(
+                                        FlexProps {
+                                            layout: fill_layout(),
+                                            direction: fret_core::Axis::Horizontal,
+                                            gap: Px(2.0),
+                                            justify: MainAlign::Start,
+                                            align: CrossAlign::Center,
+                                            ..Default::default()
+                                        },
+                                        |cx| {
+                                            tabs.into_iter()
+                                                .enumerate()
+                                                .map(|(index, tab)| {
                                                 let is_active = tab.id.as_ref() == active.as_ref();
                                                 let command = tab.command.clone();
                                                 let title_for_a11y = tab.title.clone();
@@ -244,12 +266,13 @@ impl WorkspaceTabStrip {
                                                 )
                                             })
                                             .collect()
-                                    },
-                                )]
-                            },
-                        )]
-                    },
-                )]
+                                        },
+                                    )]
+                                },
+                            )]
+                        },
+                    )]
+                })
             },
         )
     }

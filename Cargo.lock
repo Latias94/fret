@@ -1049,6 +1049,7 @@ name = "fret-docking"
 version = "0.1.0"
 dependencies = [
  "fret-core",
+ "fret-dnd",
  "fret-runtime",
  "fret-ui",
  "slotmap",
@@ -1151,6 +1152,7 @@ dependencies = [
  "fret-app",
  "fret-bootstrap",
  "fret-core",
+ "fret-icons",
  "fret-launch",
  "fret-runtime",
  "fret-ui",
@@ -1442,9 +1444,11 @@ dependencies = [
  "fret-markdown",
  "fret-runtime",
  "fret-ui",
+ "fret-ui-headless",
  "fret-ui-kit",
  "fret-ui-shadcn",
  "fret-workspace",
+ "time",
  "tracing",
  "tracing-subscriber",
  "winit",
