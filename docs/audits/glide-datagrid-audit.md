@@ -140,6 +140,18 @@ Updated baseline (stable, 3 iterations, median; output moved off repo disk):
 | 1m × 200 (fixed) | 39×14 / 546 | 0.005 | 10.290 | 33060 |
 | 1m × 200 (variable) | 30×13 / 390 | 0.009 | 9.610 | 23700 |
 
+Text caching improvement (shared plain-text blobs, 3 iterations, median):
+
+- Commit: (working tree changes not committed yet)
+- Output: `G:\\sccache\\bench\\canvas-datagrid\\20260115-093254\\summary_agg.csv`
+
+| Case | Grid compute median (ms) | Renderer `prepare_text` median (ms) |
+| --- | --- | --- |
+| 200k × 200 (fixed) | 0.003 | 4.940 |
+| 200k × 200 (variable) | 0.006 | 4.590 |
+| 1m × 200 (fixed) | 0.004 | 5.830 |
+| 1m × 200 (variable) | 0.006 | 4.710 |
+
 Interpretation:
 
 - Grid viewport/visible list math is already “in the noise” on high-end hardware.
