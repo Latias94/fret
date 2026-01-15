@@ -8,6 +8,9 @@ pub const CMD_WORKSPACE_TAB_NEXT: &str = "workspace.tab.next";
 pub const CMD_WORKSPACE_TAB_PREV: &str = "workspace.tab.prev";
 pub const CMD_WORKSPACE_TAB_CLOSE: &str = "workspace.tab.close";
 
+pub const CMD_WORKSPACE_PANE_NEXT: &str = "workspace.pane.next";
+pub const CMD_WORKSPACE_PANE_PREV: &str = "workspace.pane.prev";
+
 /// Prefix for "activate a specific tab" commands.
 ///
 /// This is intentionally a prefix-based command family so apps can implement their own tab models
@@ -25,6 +28,23 @@ pub const CMD_WORKSPACE_TAB_CLOSE_PREFIX: &str = "workspace.tab.close.";
 /// This is prefix-based so apps can use their own stable pane IDs (strings) without adding a
 /// dedicated runtime enum payload surface.
 pub const CMD_WORKSPACE_PANE_ACTIVATE_PREFIX: &str = "workspace.pane.activate.";
+
+/// Prefix for "split the active pane and create a new pane" commands.
+///
+/// Shape: `workspace.pane.split.<axis>.<side>.<new_pane_id>`
+/// - `<axis>`: `horizontal` / `vertical`
+/// - `<side>`: `first` / `second`
+///
+/// Notes:
+/// - This command family is intentionally prefix-based so apps can pick their own pane ID scheme.
+/// - `WorkspaceWindowLayout::apply_command` uses a default split fraction (0.5). Apps that need
+///   custom split sizing should call `split_active_pane` directly.
+pub const CMD_WORKSPACE_PANE_SPLIT_PREFIX: &str = "workspace.pane.split.";
+
+/// Prefix for "move active tab to a specific pane" commands.
+///
+/// Shape: `workspace.pane.move_active_tab_to.<pane_id>`
+pub const CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_TO_PREFIX: &str = "workspace.pane.move_active_tab_to.";
 
 pub fn tab_activate_command(id: &str) -> Option<CommandId> {
     let id = id.trim();
@@ -53,6 +73,40 @@ pub fn pane_activate_command(id: &str) -> Option<CommandId> {
     }
     Some(CommandId::new(Arc::<str>::from(format!(
         "{CMD_WORKSPACE_PANE_ACTIVATE_PREFIX}{id}"
+    ))))
+}
+
+pub fn pane_split_command(
+    axis: fret_core::Axis,
+    side: crate::layout::SplitSide,
+    new_pane_id: &str,
+) -> Option<CommandId> {
+    let id = new_pane_id.trim();
+    if id.is_empty() {
+        return None;
+    }
+
+    let axis = match axis {
+        fret_core::Axis::Horizontal => "horizontal",
+        fret_core::Axis::Vertical => "vertical",
+    };
+    let side = match side {
+        crate::layout::SplitSide::First => "first",
+        crate::layout::SplitSide::Second => "second",
+    };
+
+    Some(CommandId::new(Arc::<str>::from(format!(
+        "{CMD_WORKSPACE_PANE_SPLIT_PREFIX}{axis}.{side}.{id}"
+    ))))
+}
+
+pub fn pane_move_active_tab_to_command(pane_id: &str) -> Option<CommandId> {
+    let id = pane_id.trim();
+    if id.is_empty() {
+        return None;
+    }
+    Some(CommandId::new(Arc::<str>::from(format!(
+        "{CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_TO_PREFIX}{id}"
     ))))
 }
 
@@ -143,5 +197,19 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
                 linux_ctrl(KeyCode::KeyW, false),
                 mac_cmd(KeyCode::KeyW),
             ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_NEXT),
+        CommandMeta::new("Next Pane")
+            .with_category("Workspace")
+            .with_keywords(["pane", "next", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_PREV),
+        CommandMeta::new("Previous Pane")
+            .with_category("Workspace")
+            .with_keywords(["pane", "previous", "workspace"]),
     );
 }

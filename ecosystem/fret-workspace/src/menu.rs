@@ -24,6 +24,9 @@ pub struct WorkspaceMenuCommands {
     pub next_tab: CommandId,
     pub prev_tab: CommandId,
     pub close_tab: CommandId,
+
+    pub next_pane: CommandId,
+    pub prev_pane: CommandId,
 }
 
 impl Default for WorkspaceMenuCommands {
@@ -46,6 +49,9 @@ impl Default for WorkspaceMenuCommands {
             next_tab: CommandId::new(crate::commands::CMD_WORKSPACE_TAB_NEXT),
             prev_tab: CommandId::new(crate::commands::CMD_WORKSPACE_TAB_PREV),
             close_tab: CommandId::new(crate::commands::CMD_WORKSPACE_TAB_CLOSE),
+
+            next_pane: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_NEXT),
+            prev_pane: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_PREV),
         }
     }
 }
@@ -131,6 +137,15 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
             MenuItem::Separator,
             MenuItem::Command {
                 command: cmds.close_tab,
+                when: None,
+            },
+            MenuItem::Separator,
+            MenuItem::Command {
+                command: cmds.next_pane,
+                when: None,
+            },
+            MenuItem::Command {
+                command: cmds.prev_pane,
                 when: None,
             },
         ],

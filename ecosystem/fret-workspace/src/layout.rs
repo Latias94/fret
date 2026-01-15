@@ -23,6 +23,12 @@ pub struct WorkspaceWindowLayout {
     pub active_pane: Option<Arc<str>>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SplitSide {
+    First,
+    Second,
+}
+
 impl WorkspaceWindowLayout {
     pub fn new(id: impl Into<Arc<str>>, root_pane_id: impl Into<Arc<str>>) -> Self {
         let root_pane_id: Arc<str> = root_pane_id.into();
@@ -45,12 +51,117 @@ impl WorkspaceWindowLayout {
         true
     }
 
+    pub fn split_active_pane(
+        &mut self,
+        axis: Axis,
+        side: SplitSide,
+        fraction: f32,
+        new_pane_id: impl Into<Arc<str>>,
+    ) -> bool {
+        let Some(active) = self.active_pane.clone() else {
+            return false;
+        };
+        let new_pane_id: Arc<str> = new_pane_id.into();
+        if active.as_ref() == new_pane_id.as_ref() {
+            return false;
+        }
+
+        if self.pane_tree.find_pane(new_pane_id.as_ref()).is_some() {
+            return false;
+        }
+
+        let ok = self.pane_tree.split_leaf(
+            active.as_ref(),
+            axis,
+            fraction,
+            side,
+            WorkspacePaneTree::leaf(new_pane_id.clone()),
+        );
+        if ok {
+            self.active_pane = Some(new_pane_id);
+        }
+        ok
+    }
+
+    pub fn focus_next_pane(&mut self) -> bool {
+        self.focus_adjacent_pane(true)
+    }
+
+    pub fn focus_prev_pane(&mut self) -> bool {
+        self.focus_adjacent_pane(false)
+    }
+
+    fn focus_adjacent_pane(&mut self, forward: bool) -> bool {
+        let mut ids: Vec<Arc<str>> = Vec::new();
+        self.pane_tree.collect_leaf_ids(&mut ids);
+        if ids.is_empty() {
+            return false;
+        }
+
+        let active = self.active_pane.clone();
+        let next = match active {
+            None => ids[0].clone(),
+            Some(active) => {
+                let index = ids
+                    .iter()
+                    .position(|id| id.as_ref() == active.as_ref())
+                    .unwrap_or(0);
+                let next = if forward {
+                    ids[(index + 1) % ids.len()].clone()
+                } else {
+                    ids[(index + ids.len() - 1) % ids.len()].clone()
+                };
+                next
+            }
+        };
+
+        self.active_pane = Some(next);
+        true
+    }
+
+    pub fn move_active_tab_to_pane(&mut self, target_pane_id: &str) -> bool {
+        let Some(source_id) = self.active_pane.clone() else {
+            return false;
+        };
+        if source_id.as_ref() == target_pane_id {
+            return false;
+        }
+
+        let Some(active_tab) = self
+            .pane_tree
+            .find_pane(source_id.as_ref())
+            .and_then(|p| p.tabs.active().cloned())
+        else {
+            return false;
+        };
+
+        let Some(source) = self.pane_tree.find_pane_mut(source_id.as_ref()) else {
+            return false;
+        };
+        if !source.tabs.close(active_tab.as_ref()) {
+            return false;
+        }
+
+        let Some(target) = self.pane_tree.find_pane_mut(target_pane_id) else {
+            return false;
+        };
+        target.tabs.open_and_activate(active_tab);
+        self.active_pane = Some(target.id.clone());
+        true
+    }
+
     pub fn active_pane_mut(&mut self) -> Option<&mut WorkspacePaneLayout> {
         let active = self.active_pane.clone()?;
         self.pane_tree.find_pane_mut(active.as_ref())
     }
 
     pub fn apply_command(&mut self, command: &CommandId) -> bool {
+        match command.as_str() {
+            crate::commands::CMD_WORKSPACE_PANE_NEXT => return self.focus_next_pane(),
+            crate::commands::CMD_WORKSPACE_PANE_PREV => return self.focus_prev_pane(),
+            _ => {}
+        }
+
         if let Some(id) = command
             .as_str()
             .strip_prefix(crate::commands::CMD_WORKSPACE_PANE_ACTIVATE_PREFIX)
@@ -60,6 +171,44 @@ impl WorkspaceWindowLayout {
                 return false;
             }
             return self.activate_pane(id);
+        }
+
+        if let Some(pane_id) = command
+            .as_str()
+            .strip_prefix(crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_TO_PREFIX)
+        {
+            let pane_id = pane_id.trim();
+            if pane_id.is_empty() {
+                return false;
+            }
+            return self.move_active_tab_to_pane(pane_id);
+        }
+
+        if let Some(rest) = command
+            .as_str()
+            .strip_prefix(crate::commands::CMD_WORKSPACE_PANE_SPLIT_PREFIX)
+        {
+            let rest = rest.trim();
+            let mut parts = rest.splitn(3, '.');
+            let axis = parts.next().unwrap_or_default();
+            let side = parts.next().unwrap_or_default();
+            let new_pane_id = parts.next().unwrap_or_default().trim();
+            if new_pane_id.is_empty() {
+                return false;
+            }
+
+            let axis = match axis {
+                "horizontal" => Axis::Horizontal,
+                "vertical" => Axis::Vertical,
+                _ => return false,
+            };
+            let side = match side {
+                "first" => SplitSide::First,
+                "second" => SplitSide::Second,
+                _ => return false,
+            };
+
+            return self.split_active_pane(axis, side, 0.5, Arc::<str>::from(new_pane_id));
         }
 
         if self.active_pane.is_none() {
@@ -132,6 +281,49 @@ impl WorkspacePaneTree {
         match self {
             WorkspacePaneTree::Leaf(pane) => Some(&pane.id),
             WorkspacePaneTree::Split { a, .. } => a.first_leaf_id(),
+        }
+    }
+
+    pub fn collect_leaf_ids(&self, into: &mut Vec<Arc<str>>) {
+        match self {
+            WorkspacePaneTree::Leaf(pane) => into.push(pane.id.clone()),
+            WorkspacePaneTree::Split { a, b, .. } => {
+                a.collect_leaf_ids(into);
+                b.collect_leaf_ids(into);
+            }
+        }
+    }
+
+    pub fn split_leaf(
+        &mut self,
+        pane_id: &str,
+        axis: Axis,
+        fraction: f32,
+        side: SplitSide,
+        new_subtree: WorkspacePaneTree,
+    ) -> bool {
+        match self {
+            WorkspacePaneTree::Leaf(pane) => {
+                if pane.id.as_ref() != pane_id {
+                    return false;
+                }
+                let existing = std::mem::replace(self, WorkspacePaneTree::leaf(""));
+                let (a, b) = match side {
+                    SplitSide::First => (new_subtree, existing),
+                    SplitSide::Second => (existing, new_subtree),
+                };
+                *self = WorkspacePaneTree::Split {
+                    axis,
+                    fraction: clamp_fraction(fraction),
+                    a: Box::new(a),
+                    b: Box::new(b),
+                };
+                true
+            }
+            WorkspacePaneTree::Split { a, b, .. } => {
+                a.split_leaf(pane_id, axis, fraction, side, new_subtree.clone())
+                    || b.split_leaf(pane_id, axis, fraction, side, new_subtree)
+            }
         }
     }
 }
@@ -325,5 +517,101 @@ mod tests {
         let cmd = crate::commands::pane_activate_command("p2").unwrap();
         assert!(window.apply_command(&cmd));
         assert_eq!(window.active_pane_id().unwrap().as_ref(), "p2");
+    }
+
+    #[test]
+    fn split_active_pane_creates_new_pane_and_sets_active() {
+        let mut window = WorkspaceWindowLayout::new("main", "p1");
+        window
+            .pane_tree
+            .find_pane_mut("p1")
+            .unwrap()
+            .tabs
+            .open_and_activate(Arc::<str>::from("a"));
+
+        assert!(window.split_active_pane(Axis::Horizontal, SplitSide::Second, 0.6, "p2"));
+        assert_eq!(window.active_pane_id().unwrap().as_ref(), "p2");
+        assert!(window.pane_tree.find_pane("p1").is_some());
+        assert!(window.pane_tree.find_pane("p2").is_some());
+    }
+
+    #[test]
+    fn split_leaf_rejects_unknown_leaf() {
+        let mut tree = WorkspacePaneTree::leaf("p1");
+        assert!(!tree.split_leaf(
+            "missing",
+            Axis::Vertical,
+            0.5,
+            SplitSide::Second,
+            WorkspacePaneTree::leaf("p2")
+        ));
+    }
+
+    #[test]
+    fn focus_next_prev_cycles_leaf_order() {
+        let mut window = WorkspaceWindowLayout::new("main", "p1");
+        window.pane_tree = WorkspacePaneTree::split(
+            Axis::Horizontal,
+            0.5,
+            WorkspacePaneTree::leaf("p1"),
+            WorkspacePaneTree::leaf("p2"),
+        );
+        window.active_pane = Some(Arc::<str>::from("p1"));
+
+        assert!(window.focus_next_pane());
+        assert_eq!(window.active_pane_id().unwrap().as_ref(), "p2");
+        assert!(window.focus_next_pane());
+        assert_eq!(window.active_pane_id().unwrap().as_ref(), "p1");
+
+        assert!(window.focus_prev_pane());
+        assert_eq!(window.active_pane_id().unwrap().as_ref(), "p2");
+    }
+
+    #[test]
+    fn move_active_tab_to_pane_moves_tab_and_focuses_target() {
+        let mut window = WorkspaceWindowLayout::new("main", "p1");
+        window.pane_tree = WorkspacePaneTree::split(
+            Axis::Horizontal,
+            0.5,
+            WorkspacePaneTree::leaf("p1"),
+            WorkspacePaneTree::leaf("p2"),
+        );
+        window.active_pane = Some(Arc::<str>::from("p1"));
+
+        window
+            .pane_tree
+            .find_pane_mut("p1")
+            .unwrap()
+            .tabs
+            .open_and_activate(Arc::<str>::from("a"));
+        window
+            .pane_tree
+            .find_pane_mut("p2")
+            .unwrap()
+            .tabs
+            .open_and_activate(Arc::<str>::from("b"));
+
+        assert!(window.move_active_tab_to_pane("p2"));
+        assert_eq!(window.active_pane_id().unwrap().as_ref(), "p2");
+        assert!(window.pane_tree.find_pane("p2").unwrap().tabs.is_dirty("a") == false);
+        assert!(
+            window
+                .pane_tree
+                .find_pane("p1")
+                .unwrap()
+                .tabs
+                .tabs()
+                .is_empty()
+        );
+        assert!(
+            window
+                .pane_tree
+                .find_pane("p2")
+                .unwrap()
+                .tabs
+                .tabs()
+                .iter()
+                .any(|t| t.as_ref() == "a")
+        );
     }
 }
