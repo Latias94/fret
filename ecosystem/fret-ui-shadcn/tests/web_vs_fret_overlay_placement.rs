@@ -1118,7 +1118,7 @@ fn web_vs_fret_dropdown_menu_demo_overlay_placement_matches() {
 fn web_vs_fret_dropdown_menu_demo_submenu_overlay_placement_matches() {
     use fret_ui_shadcn::{Button, DropdownMenu, DropdownMenuEntry, DropdownMenuItem};
 
-    let web = read_web_golden_open("dropdown-menu-demo.submenu");
+    let web = read_web_golden_open("dropdown-menu-demo.submenu-kbd");
     let theme = web_theme(&web);
 
     let web_sub_menu = web_portal_node_by_data_slot(theme, "dropdown-menu-sub-content");
@@ -1663,7 +1663,7 @@ fn web_vs_fret_context_menu_demo_overlay_placement_matches() {
 fn web_vs_fret_context_menu_demo_submenu_overlay_placement_matches() {
     use fret_ui_shadcn::{Button, ButtonVariant, ContextMenu, ContextMenuEntry, ContextMenuItem};
 
-    let web = read_web_golden_open("context-menu-demo.submenu");
+    let web = read_web_golden_open("context-menu-demo.submenu-kbd");
     let theme = web_theme(&web);
 
     let web_sub_menu = web_portal_node_by_data_slot(theme, "context-menu-sub-content");
@@ -2668,7 +2668,7 @@ fn web_vs_fret_menubar_demo_overlay_placement_matches() {
 fn web_vs_fret_menubar_demo_submenu_overlay_placement_matches() {
     use fret_ui_shadcn::{MenubarEntry, MenubarItem, MenubarMenu};
 
-    let web = read_web_golden_open("menubar-demo.submenu");
+    let web = read_web_golden_open("menubar-demo.submenu-kbd");
     let theme = web_theme(&web);
 
     let web_sub_menu = web_portal_node_by_data_slot(theme, "menubar-sub-content");
