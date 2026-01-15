@@ -6571,6 +6571,98 @@ fn data_zoom_y_filter_mode_empty_masks_scatter_marks_without_culling_x_selection
 }
 
 #[test]
+fn data_zoom_y_filter_mode_empty_masks_scatter_marks_within_window_under_x_weakfilter() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+
+    let mut spec = basic_spec();
+    spec.viewport = Some(Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(160.0)),
+    ));
+    spec.series[0].kind = SeriesKind::Scatter;
+    spec.series[0].stack = None;
+    spec.data_zoom_x.push(DataZoomXSpec {
+        id: crate::ids::DataZoomId::new(1),
+        axis: x_axis,
+        filter_mode: FilterMode::WeakFilter,
+        min_value_span: None,
+        max_value_span: None,
+    });
+    spec.data_zoom_y.push(DataZoomYSpec {
+        id: crate::ids::DataZoomId::new(2),
+        axis: y_axis,
+        filter_mode: FilterMode::Empty,
+        min_value_span: None,
+        max_value_span: None,
+    });
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let xs: Vec<f64> = (0..=9).map(|v| v as f64).collect();
+    let ys: Vec<f64> = xs.clone();
+
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(xs.clone()));
+    table.push_column(Column::F64(ys.clone()));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    // Partially overlapping windows:
+    // - X selects [2,8]
+    // - Y empty masks [4,6]
+    // Expected:
+    // - selection is the X-filtered row space
+    // - marks are emitted only for the Y-window subset
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x_axis,
+        window: Some(DataWindow { min: 2.0, max: 8.0 }),
+    });
+    engine.apply_action(Action::SetDataWindowY {
+        axis: y_axis,
+        window: Some(DataWindow { min: 4.0, max: 6.0 }),
+    });
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let Some(participation) = engine.participation().series_participation(series_id) else {
+        panic!("expected series participation");
+    };
+    assert_eq!(
+        participation.selection,
+        RowSelection::Range(RowRange { start: 2, end: 9 }),
+        "expected Y Empty to preserve the X-filtered row selection space"
+    );
+
+    let mask = participation.empty_mask;
+    assert!(!mask.x_active);
+    assert!(mask.y_active);
+
+    let marks = &engine.output().marks;
+    let node = marks
+        .nodes
+        .iter()
+        .find(|n| n.kind == MarkKind::Points && n.source_series == Some(series_id))
+        .expect("expected a points mark node");
+    let MarkPayloadRef::Points(points) = &node.payload else {
+        panic!("expected points payload");
+    };
+    assert_eq!(points.points.end - points.points.start, 3);
+
+    let indices = &marks.arena.data_indices[points.points.clone()];
+    assert_eq!(
+        indices,
+        &[4, 5, 6],
+        "expected y=empty to mask points outside the y window while keeping selection intact"
+    );
+}
+
+#[test]
 fn data_zoom_y_filter_mode_empty_keeps_band_visible_when_interval_intersects_window() {
     let dataset_id = crate::ids::DatasetId::new(1);
     let zoom_id = crate::ids::DataZoomId::new(1);
