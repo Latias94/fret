@@ -4105,6 +4105,179 @@ fn axis_pointer_tooltip_respects_y_empty_mask_for_scatter_series() {
 }
 
 #[test]
+fn axis_pointer_tooltip_respects_y_empty_mask_under_x_weakfilter_for_scatter_series() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let zoom_x_id = crate::ids::DataZoomId::new(1);
+    let zoom_y_id = crate::ids::DataZoomId::new(2);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
+
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(400.0), Px(240.0)),
+    );
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(viewport),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![DataZoomXSpec {
+            id: zoom_x_id,
+            axis: x_axis,
+            filter_mode: FilterMode::WeakFilter,
+            min_value_span: None,
+            max_value_span: None,
+        }],
+        data_zoom_y: vec![DataZoomYSpec {
+            id: zoom_y_id,
+            axis: y_axis,
+            filter_mode: FilterMode::Empty,
+            min_value_span: None,
+            max_value_span: None,
+        }],
+        tooltip: None,
+        axis_pointer: Some(AxisPointerSpec {
+            enabled: true,
+            trigger: crate::spec::AxisPointerTrigger::Axis,
+            pointer_type: AxisPointerType::Line,
+            label: Default::default(),
+            snap: false,
+            trigger_distance_px: 10_000.0,
+            throttle_px: 0.0,
+        }),
+        visual_maps: vec![],
+        series: vec![SeriesSpec {
+            id: series_id,
+            name: None,
+            kind: SeriesKind::Scatter,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
+            bar_layout: Default::default(),
+            area_baseline: None,
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let xs: Vec<f64> = (0..=9).map(|v| v as f64).collect();
+    let ys: Vec<f64> = xs.clone();
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(xs));
+    table.push_column(Column::F64(ys));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x_axis,
+        window: Some(DataWindow { min: 2.0, max: 8.0 }),
+    });
+    engine.apply_action(Action::SetDataWindowY {
+        axis: y_axis,
+        window: Some(DataWindow { min: 4.0, max: 6.0 }),
+    });
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    // Sample at x=3.0: selection contains it (x=weakFilter), but the y-empty mask must treat it as
+    // missing (y=3 is outside [4,6]).
+    let trigger_window = engine
+        .output()
+        .axis_windows
+        .get(&x_axis)
+        .copied()
+        .unwrap_or_default();
+    let hover_x = crate::engine::axis::x_px_at_data_in_rect(trigger_window, 3.0, viewport);
+    engine.apply_action(Action::HoverAt {
+        point: Point::new(Px(hover_x), Px(120.0)),
+    });
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(32_768, 0, 16))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let axis_pointer = engine.output().axis_pointer.as_ref().unwrap();
+    let crate::TooltipOutput::Axis(axis) = &axis_pointer.tooltip else {
+        panic!("expected axis-trigger tooltip payload");
+    };
+    assert!((axis.axis_value - 3.0).abs() < 1e-4);
+    let entry = axis
+        .series
+        .iter()
+        .find(|e| e.series == series_id)
+        .expect("missing tooltip entry");
+    assert!(matches!(entry.value, crate::TooltipSeriesValue::Missing));
+
+    // Sample at x=5.0: inside the y-empty window, so it must be present.
+    let hover_x = crate::engine::axis::x_px_at_data_in_rect(trigger_window, 5.0, viewport);
+    engine.apply_action(Action::HoverAt {
+        point: Point::new(Px(hover_x), Px(120.0)),
+    });
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(32_768, 0, 16))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let axis_pointer = engine.output().axis_pointer.as_ref().unwrap();
+    let crate::TooltipOutput::Axis(axis) = &axis_pointer.tooltip else {
+        panic!("expected axis-trigger tooltip payload");
+    };
+    assert!((axis.axis_value - 5.0).abs() < 1e-4);
+    let entry = axis
+        .series
+        .iter()
+        .find(|e| e.series == series_id)
+        .expect("missing tooltip entry");
+    assert!(matches!(entry.value, crate::TooltipSeriesValue::Scalar(v) if (v - 5.0).abs() < 1e-6));
+}
+
+#[test]
 fn axis_pointer_tooltip_respects_y_empty_mask_for_bar_series() {
     let dataset_id = crate::ids::DatasetId::new(1);
     let grid_id = crate::ids::GridId::new(1);
