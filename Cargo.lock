@@ -1528,6 +1528,7 @@ name = "fret-workspace"
 version = "0.1.0"
 dependencies = [
  "fret-core",
+ "fret-runtime",
  "fret-ui",
 ]
 

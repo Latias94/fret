@@ -12,7 +12,9 @@ use fret_ui::element::SemanticsProps;
 use fret_ui::{Invalidation, Theme, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
-use fret_workspace::{WorkspaceFrame, WorkspaceStatusBar, WorkspaceTopBar};
+use fret_workspace::{
+    WorkspaceFrame, WorkspaceStatusBar, WorkspaceTab, WorkspaceTabStrip, WorkspaceTopBar,
+};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -528,9 +530,35 @@ impl UiGalleryDriver {
                     ])
                     .into_element(cx);
 
+                    let tab_strip = WorkspaceTabStrip::new(selected.clone())
+                        .tabs([
+                            WorkspaceTab::new(PAGE_INTRO, "Intro", CommandId::from(CMD_NAV_INTRO)),
+                            WorkspaceTab::new(
+                                PAGE_LAYOUT,
+                                "Layout",
+                                CommandId::from(CMD_NAV_LAYOUT),
+                            ),
+                            WorkspaceTab::new(
+                                PAGE_BUTTON,
+                                "Button",
+                                CommandId::from(CMD_NAV_BUTTON),
+                            ),
+                            WorkspaceTab::new(
+                                PAGE_OVERLAY,
+                                "Overlay",
+                                CommandId::from(CMD_NAV_OVERLAY),
+                            ),
+                            WorkspaceTab::new(
+                                PAGE_COMMAND,
+                                "Command",
+                                CommandId::from(CMD_NAV_COMMAND),
+                            ),
+                        ])
+                        .into_element(cx);
+
                     let top_bar = WorkspaceTopBar::new()
                         .left(vec![menubar])
-                        .center(vec![cx.text(format!("Page: {}", selected.as_ref()))])
+                        .center(vec![tab_strip])
                         .right(vec![
                             shadcn::Button::new("Command palette")
                                 .variant(shadcn::ButtonVariant::Outline)
