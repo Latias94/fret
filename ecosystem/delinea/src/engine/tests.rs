@@ -16769,3 +16769,79 @@ fn band_missing_upper_breaks_and_preserves_pairing() {
     assert_eq!(by_variant.get(&3).cloned(), Some(vec![3, 4]));
     assert_eq!(by_variant.get(&4).cloned(), Some(vec![3, 4]));
 }
+
+#[test]
+fn percent_y_extent_is_scoped_by_x_percent_window() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+
+    let mut spec = basic_spec();
+    spec.viewport = Some(Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(400.0), Px(240.0)),
+    ));
+    spec.data_zoom_x.push(DataZoomXSpec {
+        id: crate::ids::DataZoomId::new(1),
+        axis: x_axis,
+        filter_mode: FilterMode::Filter,
+        min_value_span: None,
+        max_value_span: None,
+    });
+    spec.data_zoom_y.push(DataZoomYSpec {
+        id: crate::ids::DataZoomId::new(2),
+        axis: y_axis,
+        filter_mode: FilterMode::Filter,
+        min_value_span: None,
+        max_value_span: None,
+    });
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let xs: Vec<f64> = (0..=100).map(|i| i as f64).collect();
+    let ys: Vec<f64> = xs
+        .iter()
+        .copied()
+        .map(|x| if x < 30.0 || x > 70.0 { 1000.0 } else { x })
+        .collect();
+
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(xs));
+    table.push_column(Column::F64(ys));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    engine.apply_action(Action::SetAxisWindowPercent {
+        axis: x_axis,
+        range: Some((30.0, 70.0)),
+    });
+    engine.apply_action(Action::SetAxisWindowPercent {
+        axis: y_axis,
+        range: Some((0.0, 100.0)),
+    });
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let x_window = engine
+        .state()
+        .data_zoom_x
+        .get(&x_axis)
+        .and_then(|s| s.window)
+        .expect("expected x window");
+    assert!((x_window.min - 30.0).abs() < 1e-9);
+    assert!((x_window.max - 70.0).abs() < 1e-9);
+
+    let y_window = engine
+        .state()
+        .data_window_y
+        .get(&y_axis)
+        .copied()
+        .expect("expected y window");
+    assert!(
+        (y_window.max - 70.0).abs() < 1e-9,
+        "expected Y percent extent to ignore out-of-window outliers (got {y_window:?})"
+    );
+}
