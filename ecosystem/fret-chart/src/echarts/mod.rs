@@ -72,6 +72,8 @@ struct EchartsOption {
     #[serde(default)]
     dataset: Option<DatasetOrDatasets>,
     #[serde(default)]
+    grid: Option<GridOrGrids>,
+    #[serde(default)]
     series: Vec<EchartsSeries>,
     #[serde(default)]
     tooltip: Option<EchartsTooltip>,
@@ -112,6 +114,26 @@ struct EchartsAxis {
     #[serde(default)]
     grid_index: Option<usize>,
 }
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum GridOrGrids {
+    One(EchartsGrid),
+    Many(Vec<EchartsGrid>),
+}
+
+impl GridOrGrids {
+    fn to_len(&self) -> usize {
+        match self {
+            Self::One(_) => 1,
+            Self::Many(v) => v.len(),
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct EchartsGrid {}
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -358,7 +380,7 @@ fn translate_option(option: &EchartsOption) -> Result<TranslatedChart> {
 }
 
 fn translate_option_with_dataset(option: &EchartsOption) -> Result<TranslatedChart> {
-    let grid_id = GridId::new(1);
+    let grid_count_from_option = option.grid.as_ref().map(|g| g.to_len()).unwrap_or(0);
 
     let datasets = option
         .dataset
@@ -380,6 +402,18 @@ fn translate_option_with_dataset(option: &EchartsOption) -> Result<TranslatedCha
         .map(|a| a.to_vec())
         .unwrap_or_else(|| vec![EchartsAxis::default()]);
 
+    let mut required_grid_count = grid_count_from_option.max(1);
+    for axis in x_axes.iter().chain(y_axes.iter()) {
+        if let Some(i) = axis.grid_index {
+            required_grid_count = required_grid_count.max(i.saturating_add(1));
+        }
+    }
+
+    let grid_ids: Vec<GridId> = (0..required_grid_count)
+        .map(|i| GridId::new(1 + i as u64))
+        .collect();
+    let grids: Vec<GridSpec> = grid_ids.iter().copied().map(|id| GridSpec { id }).collect();
+
     let x_ids: Vec<AxisId> = (0..x_axes.len())
         .map(|i| AxisId::new(1 + i as u64))
         .collect();
@@ -390,15 +424,16 @@ fn translate_option_with_dataset(option: &EchartsOption) -> Result<TranslatedCha
     let mut axes: Vec<AxisSpec> = Vec::with_capacity(x_axes.len() + y_axes.len());
 
     for (i, axis) in x_axes.iter().enumerate() {
-        if axis.grid_index.unwrap_or(0) != 0 {
-            return Err(EchartsError::Unsupported("xAxis.gridIndex != 0"));
-        }
+        let grid_index = axis.grid_index.unwrap_or(0);
+        let grid = *grid_ids
+            .get(grid_index)
+            .ok_or(EchartsError::Invalid("xAxis.gridIndex out of range"))?;
         let axis_type = axis.kind.as_deref();
         axes.push(AxisSpec {
             id: x_ids[i],
             name: axis.name.clone(),
             kind: AxisKind::X,
-            grid: grid_id,
+            grid,
             position: None,
             scale: match axis_type {
                 Some("time") => AxisScale::Time(Default::default()),
@@ -411,9 +446,10 @@ fn translate_option_with_dataset(option: &EchartsOption) -> Result<TranslatedCha
     }
 
     for (i, axis) in y_axes.iter().enumerate() {
-        if axis.grid_index.unwrap_or(0) != 0 {
-            return Err(EchartsError::Unsupported("yAxis.gridIndex != 0"));
-        }
+        let grid_index = axis.grid_index.unwrap_or(0);
+        let grid = *grid_ids
+            .get(grid_index)
+            .ok_or(EchartsError::Invalid("yAxis.gridIndex out of range"))?;
         let axis_type = axis.kind.as_deref();
         if matches!(axis_type, Some("category")) {
             return Err(EchartsError::Unsupported(
@@ -424,7 +460,7 @@ fn translate_option_with_dataset(option: &EchartsOption) -> Result<TranslatedCha
             id: y_ids[i],
             name: axis.name.clone(),
             kind: AxisKind::Y,
-            grid: grid_id,
+            grid,
             position: None,
             scale: match axis_type {
                 Some("time") => AxisScale::Time(Default::default()),
@@ -579,9 +615,6 @@ fn translate_option_with_dataset(option: &EchartsOption) -> Result<TranslatedCha
         if !matches!(axis_type, Some("category")) {
             continue;
         }
-        if axis.grid_index.unwrap_or(0) != 0 {
-            return Err(EchartsError::Unsupported("xAxis.gridIndex != 0"));
-        }
 
         let mut categories: Vec<String> = Vec::new();
         let mut seen: BTreeSet<String> = BTreeSet::new();
@@ -637,7 +670,7 @@ fn translate_option_with_dataset(option: &EchartsOption) -> Result<TranslatedCha
         id: ChartId::new(1),
         viewport: None,
         datasets: dataset_specs,
-        grids: vec![GridSpec { id: grid_id }],
+        grids,
         axes,
         data_zoom_x: Vec::new(),
         data_zoom_y: Vec::new(),
@@ -1481,6 +1514,52 @@ mod tests {
         let table = &translated.datasets[0].1;
         let x = table.columns[x_col].as_f64().expect("f64 column");
         assert_eq!(x, &vec![0.0, 1.0, 2.0]);
+    }
+
+    #[test]
+    fn translate_dataset_multi_grid_axis_binding() {
+        let json = r#"
+        {
+          "grid": [{}, {}],
+          "dataset": {
+            "dimensions": ["x", "y0", "y1"],
+            "source": [[0, 1, 10], [1, 2, 20], [2, 3, 30]]
+          },
+          "xAxis": [
+            { "type": "value", "gridIndex": 0 },
+            { "type": "value", "gridIndex": 1 }
+          ],
+          "yAxis": [
+            { "type": "value", "gridIndex": 0 },
+            { "type": "value", "gridIndex": 1 }
+          ],
+          "series": [
+            { "type": "line", "encode": { "x": "x", "y": "y0" }, "xAxisIndex": 0, "yAxisIndex": 0 },
+            { "type": "scatter", "encode": { "x": "x", "y": "y1" }, "xAxisIndex": 1, "yAxisIndex": 1 }
+          ]
+        }
+        "#;
+
+        let translated = translate_json_str(json).expect("translate");
+        assert_eq!(translated.spec.grids.len(), 2);
+        assert_eq!(translated.spec.grids[0].id, GridId::new(1));
+        assert_eq!(translated.spec.grids[1].id, GridId::new(2));
+
+        let x1 = translated
+            .spec
+            .axes
+            .iter()
+            .find(|a| a.id == AxisId::new(2))
+            .expect("xAxis[1]");
+        assert_eq!(x1.grid, GridId::new(2));
+
+        let y1 = translated
+            .spec
+            .axes
+            .iter()
+            .find(|a| a.id == AxisId::new(4))
+            .expect("yAxis[1]");
+        assert_eq!(y1.grid, GridId::new(2));
     }
 
     #[test]
