@@ -1,8 +1,6 @@
 #[cfg(not(target_arch = "wasm32"))]
 use anyhow::Context as _;
 use fret_app::{App, CommandId, CommandMeta, Effect, Model, WhenExpr, WindowRequest};
-#[cfg(not(target_arch = "wasm32"))]
-use fret_bootstrap::BootstrapBuilder;
 use fret_core::{
     AppWindowId, Corners, Edges, Event, FileDialogFilter, FileDialogOptions, FileDialogToken,
     FontId, KeyCode, Px, Rect, SemanticsRole, TextStyle, UiServices,
@@ -1874,14 +1872,6 @@ pub fn run() -> anyhow::Result<()> {
     let app = build_app();
     let config = build_runner_config();
 
-    let builder = BootstrapBuilder::new(app, ComponentsGalleryDriver)
-        .configure(move |c| {
-            *c = config;
-        })
-        .with_default_config_files()
-        .context("load layered config files (settings/keymap)")?
-        .with_lucide_icons()
-        .preload_icon_svgs_on_gpu_ready();
-
-    builder.run().map_err(anyhow::Error::from)
+    fret_kit::run_native_demo(config, app, ComponentsGalleryDriver)
+        .context("run components_gallery app")
 }
