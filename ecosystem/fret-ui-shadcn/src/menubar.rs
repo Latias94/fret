@@ -1216,7 +1216,7 @@ impl MenubarMenuEntries {
                             menu::content_panel::menu_content_semantics_with_id(
                                 cx,
                                 LayoutStyle::default(),
-                                move |cx| {
+                                move |cx, _content_id| {
                                     let theme = theme_for_content.clone();
                                     vec![menu::content_panel::menu_panel_container_at(
                                         cx,

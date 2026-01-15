@@ -918,6 +918,8 @@ impl DropdownMenu {
                 let align_leading_icons = self.align_leading_icons;
                 let content_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let content_focus_id_for_children = content_focus_id.clone();
+                let first_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+                let last_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let direction = direction_prim::use_direction_in_scope(cx, None);
 
                 let (overlay_children, dismissible_on_pointer_move) =
@@ -1054,6 +1056,9 @@ impl DropdownMenu {
                     let submenu_for_content = submenu.clone();
                     let submenu_for_panel = submenu.clone();
 
+                    let first_item_focus_id_for_items = first_item_focus_id.clone();
+                    let last_item_focus_id_for_items = last_item_focus_id.clone();
+
                     // Match Radix: `role=menu` is on the content panel element (not a fullscreen
                     // wrapper). We keep the popper wrapper for arrow hit-test expansion, but
                     // position it locally inside the menu semantics node.
@@ -1075,10 +1080,10 @@ impl DropdownMenu {
 
                     let placed_local = Rect::new(Point::new(Px(0.0), Px(0.0)), placed.size);
 
-                    let (_content_id, content) = menu::content_panel::menu_content_semantics_with_id(
+                    let (content_id, content) = menu::content_panel::menu_content_semantics_with_id(
                         cx,
                         content_layout,
-                        move |cx| {
+                        move |cx, _content_id| {
                             vec![popper_content::popper_wrapper_at(
                                 cx,
                                 placed_local,
@@ -1131,8 +1136,6 @@ impl DropdownMenu {
                                             ..Default::default()
                                         },
                                         move |cx| {
-                                            let content_focus_id_for_scroll =
-                                                content_focus_id_for_children.clone();
                                             let roving = menu::content::menu_roving_group_apg_prefix_typeahead(
                                                 cx,
                                                 RovingFlexProps {
@@ -1307,6 +1310,10 @@ impl DropdownMenu {
                                                                     );
 
                                                                     if !disabled {
+                                                                        if first_item_focus_id_for_items.get().is_none() {
+                                                                            first_item_focus_id_for_items.set(Some(item_id));
+                                                                        }
+                                                                        last_item_focus_id_for_items.set(Some(item_id));
                                                                         menu::checkbox_item::wire_toggle_on_activate(
                                                                             cx,
                                                                             checked.clone(),
@@ -1428,6 +1435,10 @@ impl DropdownMenu {
                                                                     );
 
                                                                     if !disabled {
+                                                                        if first_item_focus_id_for_items.get().is_none() {
+                                                                            first_item_focus_id_for_items.set(Some(item_id));
+                                                                        }
+                                                                        last_item_focus_id_for_items.set(Some(item_id));
                                                                         menu::radio_group::wire_select_on_activate(
                                                                             cx,
                                                                             group_value.clone(),
@@ -1578,6 +1589,13 @@ impl DropdownMenu {
                                                                     )
                                                                     .unwrap_or(false);
 
+                                                                if !disabled {
+                                                                    if first_item_focus_id_for_items.get().is_none() {
+                                                                        first_item_focus_id_for_items.set(Some(item_id));
+                                                                    }
+                                                                    last_item_focus_id_for_items.set(Some(item_id));
+                                                                }
+
                                                                 if !has_submenu && !disabled {
                                                                     cx.pressable_dispatch_command_opt(command);
                                                                     if close_on_select {
@@ -1726,9 +1744,6 @@ impl DropdownMenu {
                                                     out
                                                 },
                                             );
-                                            if content_focus_id_for_scroll.get().is_none() {
-                                                content_focus_id_for_scroll.set(Some(roving.id));
-                                            }
                                             vec![roving]
                                         },
                                         )
@@ -1744,6 +1759,36 @@ impl DropdownMenu {
                                 },
                             )]
                         },
+                    );
+                    content_focus_id_for_children.set(Some(content_id));
+                    cx.key_on_key_down_for(
+                        content_id,
+                        Arc::new({
+                            let first_item_focus_id = first_item_focus_id.clone();
+                            let last_item_focus_id = last_item_focus_id.clone();
+                            move |host, _cx, it| {
+                                if it.repeat {
+                                    return false;
+                                }
+                                match it.key {
+                                    fret_core::KeyCode::ArrowDown => {
+                                        let Some(target) = first_item_focus_id.get() else {
+                                            return false;
+                                        };
+                                        host.request_focus(target);
+                                        true
+                                    }
+                                    fret_core::KeyCode::ArrowUp => {
+                                        let Some(target) = last_item_focus_id.get() else {
+                                            return false;
+                                        };
+                                        host.request_focus(target);
+                                        true
+                                    }
+                                    _ => false,
+                                }
+                            }
+                        }),
                     );
 
                     let content =

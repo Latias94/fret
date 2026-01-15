@@ -434,6 +434,7 @@ pub struct NavigationMenuViewportOverlayRenderOutput {
 pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     root_id: GlobalElementId,
+    value_model: Model<Option<Arc<str>>>,
     open_model: Model<bool>,
     presence: OverlayPresence,
     selected_value: Option<&str>,
@@ -494,14 +495,23 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
         vec![overlay_content]
     });
 
+    let open_model_for_request = open_model.clone();
+    let open_model_for_dismiss = open_model.clone();
     let mut request = OverlayRequest::dismissible_popover(
         root_id,
         root_id,
-        open_model,
+        open_model_for_request,
         presence,
         overlay_children,
     );
     request.root_name = Some(overlay_root_name);
+    request.dismissible_on_dismiss_request = Some(Arc::new({
+        let open_model = open_model_for_dismiss;
+        move |host, _cx, _reason| {
+            let _ = host.models_mut().update(&open_model, |v| *v = false);
+            let _ = host.models_mut().update(&value_model, |v| *v = None);
+        }
+    }));
     OverlayController::request(cx, request);
 
     computed_layout

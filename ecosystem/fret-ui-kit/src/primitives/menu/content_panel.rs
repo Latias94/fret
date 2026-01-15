@@ -21,7 +21,7 @@ use fret_ui::{ElementContext, UiHost};
 pub fn menu_content_semantics_with_id<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     layout: LayoutStyle,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    f: impl FnOnce(&mut ElementContext<'_, H>, GlobalElementId) -> Vec<AnyElement>,
 ) -> (GlobalElementId, AnyElement) {
     let element = cx.semantics_with_id(
         SemanticsProps {
@@ -29,7 +29,7 @@ pub fn menu_content_semantics_with_id<H: UiHost>(
             role: SemanticsRole::Menu,
             ..Default::default()
         },
-        move |cx, _id| f(cx),
+        move |cx, id| f(cx, id),
     );
     (element.id, element)
 }
@@ -43,7 +43,7 @@ pub fn menu_content_semantics_id<H: UiHost>(
     overlay_root_name: &str,
 ) -> GlobalElementId {
     cx.with_root_name(overlay_root_name, |cx| {
-        menu_content_semantics_with_id::<H>(cx, LayoutStyle::default(), |_cx| Vec::new()).0
+        menu_content_semantics_with_id::<H>(cx, LayoutStyle::default(), |_cx, _id| Vec::new()).0
     })
 }
 
@@ -99,7 +99,7 @@ pub fn menu_panel_at<H: UiHost>(
     };
 
     let local_placed = Rect::new(Point::new(Px(0.0), Px(0.0)), placed.size);
-    menu_content_semantics_with_id(cx, layout, move |cx| {
+    menu_content_semantics_with_id(cx, layout, move |cx, _id| {
         vec![menu_panel_container_at(
             cx,
             local_placed,

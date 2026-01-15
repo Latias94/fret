@@ -1541,7 +1541,7 @@ impl ContextMenu {
                     let (_content_id, content) = menu::content_panel::menu_content_semantics_with_id(
                         cx,
                         content_layout,
-                        move |cx| {
+                        move |cx, _content_id| {
                             vec![popper_content::popper_wrapper_at(
                                 cx,
                                 placed_local,

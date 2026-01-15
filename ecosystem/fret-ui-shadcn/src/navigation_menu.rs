@@ -888,6 +888,7 @@ impl NavigationMenu {
                 radix_navigation_menu::navigation_menu_request_viewport_overlay(
                     cx,
                     root_id,
+                    value_model.clone(),
                     open_model.clone(),
                     overlay_presence,
                     selected_for_overlay.as_deref(),

@@ -55,6 +55,8 @@ Fret does not use React context nor CSS variables. Outcomes are composed via:
 - Pass: Delay/skipDelay/closeDelay timers match Radix defaults and intent.
 - Pass: Trigger pointer-move gating after Escape close matches Radix's "do not reopen immediately".
 - Pass: Value model supports controlled/uncontrolled selection (Radix `useControllableState`).
+- Pass: Dismissal (Escape/outside) clears both the `open` model and the selected value, matching
+  Radix's "closed = empty value" behavior.
 - Pass: Viewport/indicator overlay wiring is available as a reusable primitives helper
   (`navigation_menu_request_viewport_overlay(...)`); recipes remain responsible for skin/layout.
 - Pass: Trigger `aria-controls` relationships can be derived deterministically from the overlay root
@@ -73,3 +75,5 @@ Fret does not use React context nor CSS variables. Outcomes are composed via:
 
 - Radix Web overlay geometry parity: `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs`
   (`radix_web_navigation_menu_open_geometry_matches_fret`).
+- Radix Web state parity: `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs`
+  (`radix_web_navigation_menu_open_close_matches_fret`).
