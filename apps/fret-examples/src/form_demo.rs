@@ -17,8 +17,9 @@ use fret_ui_kit::headless::form_state::{FormState, FormValidateMode};
 use fret_ui_kit::headless::form_validation::{first_error, required_trimmed};
 use fret_ui_shadcn::button::{Button, ButtonSize, ButtonVariant};
 use fret_ui_shadcn::stack;
-use fret_ui_shadcn::{Form, FormField, Input, Select, SelectItem, Space};
+use fret_ui_shadcn::{DatePicker, Form, FormField, Input, Select, SelectItem, Space};
 use std::sync::Arc;
+use time::Date;
 
 struct DemoWindowState {
     ui: UiTree<App>,
@@ -28,6 +29,7 @@ struct DemoWindowState {
     email: Model<String>,
     role: Model<Option<Arc<str>>>,
     role_open: Model<bool>,
+    start_date: Model<Option<Date>>,
     status: Model<Arc<str>>,
 }
 
@@ -40,6 +42,7 @@ impl FormDemoDriver {
         let email = app.models_mut().insert(String::new());
         let role = app.models_mut().insert(None);
         let role_open = app.models_mut().insert(false);
+        let start_date = app.models_mut().insert(None::<Date>);
 
         let mut form_state = FormState::default();
         form_state.validate_mode = FormValidateMode::OnSubmit;
@@ -60,6 +63,9 @@ impl FormDemoDriver {
         registry.register_field("role", role.clone(), None, |v| {
             v.is_none().then(|| Arc::from("Role is required"))
         });
+        registry.register_field("start_date", start_date.clone(), None, |v| {
+            v.is_none().then(|| Arc::from("Start date is required"))
+        });
         registry.register_into_form_state(app, &form_state);
 
         let mut ui: UiTree<App> = UiTree::new();
@@ -73,6 +79,7 @@ impl FormDemoDriver {
             email,
             role,
             role_open,
+            start_date,
             status,
         }
     }
@@ -147,6 +154,7 @@ impl WinitAppDriver for FormDemoDriver {
                 let _ = app.models_mut().update(&state.email, |v| v.clear());
                 let _ = app.models_mut().update(&state.role, |v| *v = None);
                 let _ = app.models_mut().update(&state.role_open, |v| *v = false);
+                let _ = app.models_mut().update(&state.start_date, |v| *v = None);
                 let _ = app.models_mut().update(&state.form_state, |st| st.reset());
                 state
                     .registry
@@ -215,6 +223,7 @@ impl WinitAppDriver for FormDemoDriver {
         let email = state.email.clone();
         let role = state.role.clone();
         let role_open = state.role_open.clone();
+        let start_date = state.start_date.clone();
         let form_state = state.form_state.clone();
         let status = state.status.clone();
         let root =
@@ -224,6 +233,7 @@ impl WinitAppDriver for FormDemoDriver {
                     cx.observe_model(&name, Invalidation::Layout);
                     cx.observe_model(&email, Invalidation::Layout);
                     cx.observe_model(&role, Invalidation::Layout);
+                    cx.observe_model(&start_date, Invalidation::Layout);
                     cx.observe_model(&status, Invalidation::Layout);
 
                     let theme = Theme::global(&*cx.app).clone();
@@ -306,6 +316,23 @@ impl WinitAppDriver for FormDemoDriver {
                                 ],
                             )
                             .label("Role")
+                            .into_element(cx),
+                            FormField::new(
+                                form_state.clone(),
+                                "start_date",
+                                vec![
+                                    DatePicker::new_controllable(
+                                        cx,
+                                        Some(start_date.clone()),
+                                        None,
+                                        None,
+                                        false,
+                                    )
+                                    .placeholder("Pick a start date")
+                                    .into_element(cx),
+                                ],
+                            )
+                            .label("Start date")
                             .into_element(cx),
                         ])
                         .into_element(cx)
