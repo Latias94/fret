@@ -70,6 +70,8 @@ struct EchartsOption {
     #[serde(default)]
     y_axis: Option<AxisOrAxes>,
     #[serde(default)]
+    dataset: Option<DatasetOrDatasets>,
+    #[serde(default)]
     series: Vec<EchartsSeries>,
     #[serde(default)]
     tooltip: Option<EchartsTooltip>,
@@ -89,9 +91,16 @@ impl AxisOrAxes {
             Self::Many(v) => v.first(),
         }
     }
+
+    fn to_vec(&self) -> Vec<EchartsAxis> {
+        match self {
+            Self::One(a) => vec![a.clone()],
+            Self::Many(v) => v.clone(),
+        }
+    }
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct EchartsAxis {
     #[serde(default, rename = "type")]
@@ -100,6 +109,8 @@ struct EchartsAxis {
     data: Option<Vec<String>>,
     #[serde(default)]
     name: Option<String>,
+    #[serde(default)]
+    grid_index: Option<usize>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -130,6 +141,14 @@ struct EchartsSeries {
     #[serde(default)]
     data: Option<Vec<serde_json::Value>>,
     #[serde(default)]
+    dataset_index: Option<usize>,
+    #[serde(default)]
+    x_axis_index: Option<usize>,
+    #[serde(default)]
+    y_axis_index: Option<usize>,
+    #[serde(default)]
+    encode: Option<EchartsSeriesEncode>,
+    #[serde(default)]
     large: Option<bool>,
     #[serde(default)]
     large_threshold: Option<u32>,
@@ -137,6 +156,47 @@ struct EchartsSeries {
     progressive: Option<u32>,
     #[serde(default)]
     progressive_threshold: Option<u32>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct EchartsSeriesEncode {
+    #[serde(default)]
+    x: Option<EncodeDim>,
+    #[serde(default)]
+    y: Option<EncodeDim>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+enum EncodeDim {
+    Index(usize),
+    Name(String),
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum DatasetOrDatasets {
+    One(EchartsDataset),
+    Many(Vec<EchartsDataset>),
+}
+
+impl DatasetOrDatasets {
+    fn to_vec(&self) -> Vec<EchartsDataset> {
+        match self {
+            Self::One(d) => vec![d.clone()],
+            Self::Many(v) => v.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct EchartsDataset {
+    #[serde(default)]
+    dimensions: Option<Vec<String>>,
+    #[serde(default)]
+    source: Option<Vec<Vec<serde_json::Value>>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -178,6 +238,10 @@ pub fn translate_json_str(option_json: &str) -> Result<TranslatedChart> {
 fn translate_option(option: &EchartsOption) -> Result<TranslatedChart> {
     if option.series.is_empty() {
         return Err(EchartsError::Invalid("missing `series`"));
+    }
+
+    if option.dataset.is_some() {
+        return translate_option_with_dataset(option);
     }
 
     let grid_id = GridId::new(1);
@@ -275,6 +339,269 @@ fn translate_option(option: &EchartsOption) -> Result<TranslatedChart> {
     }
 
     Ok(TranslatedChart { spec, datasets })
+}
+
+fn translate_option_with_dataset(option: &EchartsOption) -> Result<TranslatedChart> {
+    let grid_id = GridId::new(1);
+
+    let datasets = option
+        .dataset
+        .as_ref()
+        .map(|d| d.to_vec())
+        .unwrap_or_default();
+    if datasets.is_empty() {
+        return Err(EchartsError::Invalid("missing `dataset`"));
+    }
+
+    let x_axes: Vec<EchartsAxis> = option
+        .x_axis
+        .as_ref()
+        .map(|a| a.to_vec())
+        .unwrap_or_else(|| vec![EchartsAxis::default()]);
+    let y_axes: Vec<EchartsAxis> = option
+        .y_axis
+        .as_ref()
+        .map(|a| a.to_vec())
+        .unwrap_or_else(|| vec![EchartsAxis::default()]);
+
+    let x_ids: Vec<AxisId> = (0..x_axes.len())
+        .map(|i| AxisId::new(1 + i as u64))
+        .collect();
+    let y_ids: Vec<AxisId> = (0..y_axes.len())
+        .map(|i| AxisId::new(1 + x_axes.len() as u64 + i as u64))
+        .collect();
+
+    let mut axes: Vec<AxisSpec> = Vec::with_capacity(x_axes.len() + y_axes.len());
+
+    for (i, axis) in x_axes.iter().enumerate() {
+        if axis.grid_index.unwrap_or(0) != 0 {
+            return Err(EchartsError::Unsupported("xAxis.gridIndex != 0"));
+        }
+        let axis_type = axis.kind.as_deref();
+        if matches!(axis_type, Some("category")) {
+            return Err(EchartsError::Unsupported(
+                "xAxis.type = 'category' with dataset (v1 subset)",
+            ));
+        }
+        axes.push(AxisSpec {
+            id: x_ids[i],
+            name: axis.name.clone(),
+            kind: AxisKind::X,
+            grid: grid_id,
+            position: None,
+            scale: match axis_type {
+                Some("time") => AxisScale::Time(Default::default()),
+                None | Some("value") => AxisScale::Value(ValueAxisScale),
+                Some(_) => return Err(EchartsError::Unsupported("xAxis.type")),
+            },
+            range: None,
+        });
+    }
+
+    for (i, axis) in y_axes.iter().enumerate() {
+        if axis.grid_index.unwrap_or(0) != 0 {
+            return Err(EchartsError::Unsupported("yAxis.gridIndex != 0"));
+        }
+        let axis_type = axis.kind.as_deref();
+        if matches!(axis_type, Some("category")) {
+            return Err(EchartsError::Unsupported(
+                "yAxis.type = 'category' with dataset (v1 subset)",
+            ));
+        }
+        axes.push(AxisSpec {
+            id: y_ids[i],
+            name: axis.name.clone(),
+            kind: AxisKind::Y,
+            grid: grid_id,
+            position: None,
+            scale: match axis_type {
+                Some("time") => AxisScale::Time(Default::default()),
+                None | Some("value") => AxisScale::Value(ValueAxisScale),
+                Some(_) => return Err(EchartsError::Unsupported("yAxis.type")),
+            },
+            range: None,
+        });
+    }
+
+    let tooltip = translate_tooltip(option.tooltip.as_ref())?;
+
+    let mut out_datasets: Vec<(DatasetId, DataTable)> = Vec::with_capacity(datasets.len());
+    let mut dataset_specs: Vec<DatasetSpec> = Vec::with_capacity(datasets.len());
+    let mut dataset_fields_by_index: Vec<Vec<FieldId>> = Vec::with_capacity(datasets.len());
+    let mut dataset_dimensions_by_index: Vec<Option<Vec<String>>> =
+        Vec::with_capacity(datasets.len());
+
+    let mut next_field_id = 1u64;
+
+    for (dataset_index, ds) in datasets.iter().enumerate() {
+        let Some(source) = ds.source.as_ref() else {
+            return Err(EchartsError::Invalid(
+                "dataset.source is required (v1 subset)",
+            ));
+        };
+        if source.is_empty() {
+            return Err(EchartsError::Invalid("dataset.source is empty"));
+        }
+
+        let width = source[0].len();
+        if width == 0 {
+            return Err(EchartsError::Invalid("dataset.source row has zero width"));
+        }
+
+        for row in source.iter().skip(1) {
+            if row.len() != width {
+                return Err(EchartsError::Invalid(
+                    "dataset.source rows must have consistent width",
+                ));
+            }
+        }
+
+        let mut columns: Vec<Vec<f64>> = vec![Vec::with_capacity(source.len()); width];
+        for row in source {
+            for (col, v) in row.iter().enumerate() {
+                columns[col].push(parse_f64_value(v));
+            }
+        }
+
+        let mut table = DataTable::default();
+        for col in columns {
+            table.push_column(Column::F64(col));
+        }
+
+        let dataset_id = DatasetId::new((dataset_index as u64).saturating_add(1));
+        let mut fields: Vec<FieldSpec> = Vec::with_capacity(width);
+        let mut field_ids: Vec<FieldId> = Vec::with_capacity(width);
+        for col in 0..width {
+            let id = FieldId::new(next_field_id);
+            next_field_id = next_field_id.saturating_add(1);
+            fields.push(FieldSpec { id, column: col });
+            field_ids.push(id);
+        }
+
+        out_datasets.push((dataset_id, table));
+        dataset_specs.push(DatasetSpec {
+            id: dataset_id,
+            fields,
+        });
+        dataset_fields_by_index.push(field_ids);
+        dataset_dimensions_by_index.push(ds.dimensions.clone());
+    }
+
+    let mut spec = ChartSpec {
+        id: ChartId::new(1),
+        viewport: None,
+        datasets: dataset_specs,
+        grids: vec![GridSpec { id: grid_id }],
+        axes,
+        data_zoom_x: Vec::new(),
+        data_zoom_y: Vec::new(),
+        tooltip,
+        axis_pointer: Some(Default::default()),
+        visual_maps: Vec::new(),
+        series: Vec::new(),
+    };
+
+    for (series_index, series) in option.series.iter().enumerate() {
+        if series.data.is_some() {
+            return Err(EchartsError::Unsupported(
+                "series.data with dataset (v1 subset)",
+            ));
+        }
+
+        let kind = match series.kind.as_deref().unwrap_or("line") {
+            "line" => SeriesKind::Line,
+            "scatter" => SeriesKind::Scatter,
+            "bar" => SeriesKind::Bar,
+            _ => return Err(EchartsError::Unsupported("series.type")),
+        };
+
+        let dataset_index = series.dataset_index.unwrap_or(0);
+        let Some(dataset) = spec.datasets.get(dataset_index) else {
+            return Err(EchartsError::Invalid("series.datasetIndex out of range"));
+        };
+        let Some(field_ids) = dataset_fields_by_index.get(dataset_index) else {
+            return Err(EchartsError::Invalid("series.datasetIndex out of range"));
+        };
+
+        let encode_x = series
+            .encode
+            .as_ref()
+            .and_then(|e| e.x.as_ref())
+            .cloned()
+            .unwrap_or(EncodeDim::Index(0));
+        let encode_y = series
+            .encode
+            .as_ref()
+            .and_then(|e| e.y.as_ref())
+            .cloned()
+            .unwrap_or(EncodeDim::Index(1));
+
+        let x_col = resolve_encode_dim(
+            &encode_x,
+            dataset_dimensions_by_index
+                .get(dataset_index)
+                .and_then(|v| v.as_ref()),
+        )?;
+        let y_col = resolve_encode_dim(
+            &encode_y,
+            dataset_dimensions_by_index
+                .get(dataset_index)
+                .and_then(|v| v.as_ref()),
+        )?;
+
+        let x_field = field_ids.get(x_col).copied().ok_or_else(|| {
+            EchartsError::Invalid("series.encode.x column out of range for dataset")
+        })?;
+        let y_field = field_ids.get(y_col).copied().ok_or_else(|| {
+            EchartsError::Invalid("series.encode.y column out of range for dataset")
+        })?;
+
+        let x_axis_index = series.x_axis_index.unwrap_or(0);
+        let y_axis_index = series.y_axis_index.unwrap_or(0);
+        let x_axis = *x_ids
+            .get(x_axis_index)
+            .ok_or(EchartsError::Invalid("series.xAxisIndex out of range"))?;
+        let y_axis = *y_ids
+            .get(y_axis_index)
+            .ok_or(EchartsError::Invalid("series.yAxisIndex out of range"))?;
+
+        let series_id = SeriesId::new((series_index as u64).saturating_add(1));
+        spec.series.push(SeriesSpec {
+            id: series_id,
+            name: series.name.clone(),
+            kind,
+            dataset: dataset.id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
+            bar_layout: Default::default(),
+            area_baseline: None,
+            lod: {
+                let lod = SeriesLodSpecV1 {
+                    large: series.large,
+                    large_threshold: series.large_threshold,
+                    progressive: series.progressive,
+                    progressive_threshold: series.progressive_threshold,
+                };
+                let any = lod.large.is_some()
+                    || lod.large_threshold.is_some()
+                    || lod.progressive.is_some()
+                    || lod.progressive_threshold.is_some();
+                any.then_some(lod)
+            },
+        });
+    }
+
+    Ok(TranslatedChart {
+        spec,
+        datasets: out_datasets,
+    })
 }
 
 fn translate_tooltip(tooltip: Option<&EchartsTooltip>) -> Result<Option<TooltipSpecV1>> {
@@ -559,6 +886,24 @@ fn extract_series(option: &EchartsOption) -> Result<Vec<ParsedSeries>> {
     Ok(out)
 }
 
+fn resolve_encode_dim(dim: &EncodeDim, dimensions: Option<&[String]>) -> Result<usize> {
+    match dim {
+        EncodeDim::Index(i) => Ok(*i),
+        EncodeDim::Name(name) => {
+            let Some(dims) = dimensions else {
+                return Err(EchartsError::Unsupported(
+                    "series.encode by name without dataset.dimensions (v1 subset)",
+                ));
+            };
+            dims.iter()
+                .position(|d| d == name)
+                .ok_or(EchartsError::Invalid(
+                    "series.encode dimension name not found",
+                ))
+        }
+    }
+}
+
 fn parse_x_value(v: &serde_json::Value) -> Result<XValue> {
     match v {
         serde_json::Value::Number(n) => Ok(XValue::Number(n.as_f64().unwrap_or(f64::NAN))),
@@ -617,6 +962,40 @@ mod tests {
         let translated = translate_json_str(json).expect("translate");
         assert_eq!(translated.datasets.len(), 1);
         assert_eq!(translated.datasets[0].1.row_count, 3);
+    }
+
+    #[test]
+    fn translate_dataset_encode_and_axis_indices() {
+        let json = r#"
+        {
+          "dataset": {
+            "dimensions": ["x", "y"],
+            "source": [[0, 1], [1, 2], [2, 3]]
+          },
+          "xAxis": [{ "type": "value" }, { "type": "value", "name": "X2" }],
+          "yAxis": [{ "type": "value" }, { "type": "value", "name": "Y2" }],
+          "series": [
+            {
+              "type": "scatter",
+              "datasetIndex": 0,
+              "xAxisIndex": 1,
+              "yAxisIndex": 1,
+              "encode": { "x": "x", "y": "y" }
+            }
+          ]
+        }
+        "#;
+
+        let translated = translate_json_str(json).expect("translate");
+        assert_eq!(translated.datasets.len(), 1);
+        assert_eq!(translated.datasets[0].1.row_count, 3);
+        assert_eq!(translated.spec.datasets.len(), 1);
+        assert_eq!(translated.spec.datasets[0].fields.len(), 2);
+        assert_eq!(translated.spec.axes.len(), 4);
+
+        let series = &translated.spec.series[0];
+        assert_eq!(series.x_axis, AxisId::new(2));
+        assert_eq!(series.y_axis, AxisId::new(4));
     }
 
     #[test]
