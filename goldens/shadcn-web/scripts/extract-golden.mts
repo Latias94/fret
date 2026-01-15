@@ -16,6 +16,11 @@ type OpenVariant = { variant: string; selector: string }
 
 type KeyChord = { modifiers: string[]; key: string }
 
+type OpenStep =
+  | { action: "wait"; waitMs: number }
+  | { action: Exclude<OpenAction, "keys">; selector: string }
+  | { action: "keys"; selector: string; keys: KeyChord }
+
 type GoldenOptions = {
   baseUrl: string
   style: string
@@ -29,6 +34,7 @@ type GoldenOptions = {
   openSelector?: string
   openAction?: OpenAction
   openKeys?: KeyChord
+  openSteps?: OpenStep[]
   openVariants?: OpenVariant[]
   mergeThemes?: boolean
 }
@@ -179,6 +185,67 @@ function parseOpenKeys(raw: string): KeyChord {
   }
 
   return { modifiers: dedupedMods, key }
+}
+
+function parseOpenSteps(raw: string, openKeys: KeyChord | undefined): OpenStep[] {
+  const parts = raw
+    .split(";")
+    .map((p) => p.trim())
+    .filter(Boolean)
+
+  const out: OpenStep[] = []
+  for (const part of parts) {
+    const eq = part.indexOf("=")
+    if (eq === -1) {
+      throw new Error(
+        `invalid --openSteps entry "${part}" (expected "<action>=<value>")`
+      )
+    }
+
+    const actionRaw = part.slice(0, eq).trim()
+    const valueRaw = part.slice(eq + 1).trim()
+
+    if (actionRaw === "wait") {
+      const waitMs = Number(valueRaw)
+      if (!Number.isFinite(waitMs) || waitMs < 0) {
+        throw new Error(
+          `invalid --openSteps wait="${valueRaw}" (expected non-negative ms)`
+        )
+      }
+      out.push({ action: "wait", waitMs })
+      continue
+    }
+
+    if (!valueRaw) {
+      throw new Error(
+        `invalid --openSteps entry "${part}" (empty value for action=${actionRaw})`
+      )
+    }
+
+    if (actionRaw === "keys") {
+      if (!openKeys) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (action=keys requires --openKeys=... or OPEN_KEYS=...)`
+        )
+      }
+      out.push({ action: "keys", selector: valueRaw, keys: openKeys })
+      continue
+    }
+
+    if (
+      actionRaw !== "click" &&
+      actionRaw !== "hover" &&
+      actionRaw !== "contextmenu"
+    ) {
+      throw new Error(
+        `invalid --openSteps action "${actionRaw}" (expected click|hover|contextmenu|keys|wait)`
+      )
+    }
+
+    out.push({ action: actionRaw, selector: valueRaw } as OpenStep)
+  }
+
+  return out
 }
 
 function resolveBrowserExecutablePath(): string | undefined {
@@ -628,6 +695,115 @@ async function openOverlay(
     selector: openedSelector,
     point: { x: openedPoint.rel.x, y: openedPoint.rel.y },
   } satisfies OpenMeta
+}
+
+async function openOverlayOutsideCounts(
+  page: puppeteer.Page,
+  rootSel: string
+): Promise<{ popperWrapper: number; roleMenu: number; roleDialog: number; dataStateOpen: number }> {
+  const expr = `(() => {
+    const root = document.querySelector(${JSON.stringify(rootSel)}) || document.body;
+    const outsideCount = (sel) =>
+      Array.from(document.querySelectorAll(sel)).filter((el) => !root.contains(el)).length;
+
+    return {
+      popperWrapper: outsideCount("[data-radix-popper-content-wrapper]"),
+      roleMenu: outsideCount("[role='menu']"),
+      roleDialog: outsideCount("[role='dialog']"),
+      dataStateOpen: outsideCount("[data-state='open']"),
+    };
+  })()`
+  return (await page.evaluate(expr)) as {
+    popperWrapper: number
+    roleMenu: number
+    roleDialog: number
+    dataStateOpen: number
+  }
+}
+
+async function applyOpenSteps(
+  page: puppeteer.Page,
+  name: string,
+  timeoutMs: number,
+  steps: OpenStep[],
+  rootSel: string
+) {
+  const debug = process.env.DEBUG_GOLDENS === "1"
+
+  for (const [idx, step] of steps.entries()) {
+    if (step.action === "wait") {
+      if (debug) console.log(`- openSteps: ${name} step[${idx}] wait ${step.waitMs}ms`)
+      await new Promise((r) => setTimeout(r, step.waitMs))
+      continue
+    }
+
+    const baseline = await openOverlayOutsideCounts(page, rootSel)
+
+    if (debug) {
+      console.log(
+        `- openSteps: ${name} step[${idx}] ${step.action} ${step.selector} (baseline popper=${baseline.popperWrapper}, menu=${baseline.roleMenu})`
+      )
+    }
+
+    const point = await (async () => {
+      const expr = `(() => {
+        const rootSel = ${JSON.stringify(rootSel)};
+        const sel = ${JSON.stringify(step.selector)};
+
+        const root = document.querySelector(rootSel) || document.body;
+        const el = document.querySelector(sel);
+        if (!el || !(el instanceof Element)) return null;
+
+        el.scrollIntoView({ block: "center", inline: "center" });
+        const r = el.getBoundingClientRect();
+        return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+      })()`
+      return (await page.evaluate(expr)) as { x: number; y: number } | null
+    })()
+
+    if (!point) {
+      throw new Error(`openSteps failed for ${name}: selector not found: ${step.selector}`)
+    }
+
+    if (step.action === "hover") {
+      await page.mouse.move(point.x, point.y, { steps: 4 })
+    } else if (step.action === "contextmenu") {
+      await page.mouse.click(point.x, point.y, { button: "right", delay: 10 })
+    } else if (step.action === "keys") {
+      await page.focus(step.selector)
+      for (const mod of step.keys.modifiers) {
+        await page.keyboard.down(mod)
+      }
+      await page.keyboard.press(step.keys.key)
+      for (const mod of [...step.keys.modifiers].reverse()) {
+        await page.keyboard.up(mod)
+      }
+    } else {
+      await page.mouse.click(point.x, point.y, { button: "left", delay: 10 })
+    }
+
+    // Wait for a new portal-ish surface to appear (submenu, nested menu, etc.).
+    const waitExpr = `(() => {
+      const root = document.querySelector(${JSON.stringify(rootSel)}) || document.body;
+      const outsideCount = (sel) =>
+        Array.from(document.querySelectorAll(sel)).filter((el) => !root.contains(el)).length;
+
+      const popperWrapper = outsideCount("[data-radix-popper-content-wrapper]");
+      const roleMenu = outsideCount("[role='menu']");
+      const roleDialog = outsideCount("[role='dialog']");
+      const dataStateOpen = outsideCount("[data-state='open']");
+
+      return (
+        popperWrapper > ${baseline.popperWrapper} ||
+        roleMenu > ${baseline.roleMenu} ||
+        roleDialog > ${baseline.roleDialog} ||
+        dataStateOpen > ${baseline.dataStateOpen}
+      );
+    })()`
+
+    await waitForExpr(page, waitExpr, Math.min(timeoutMs, 2500))
+    await waitForFonts(page, Math.min(2000, timeoutMs))
+  }
 }
 
 function inferOpenAction(name: string): OpenAction {
@@ -1156,6 +1332,16 @@ async function run(options: GoldenOptions): Promise<string[]> {
                   action,
                   keys
                 )
+
+                if (options.openSteps && options.openSteps.length > 0) {
+                  await applyOpenSteps(
+                    page,
+                    name,
+                    options.timeoutMs,
+                    options.openSteps,
+                    "[data-fret-golden-target]"
+                  )
+                }
               }
 
               if (debug) console.log(`- extractOne: ${name}${suffix} (${theme})`)
@@ -1306,6 +1492,13 @@ const openKeysRaw =
 
 const openKeys = openKeysRaw ? parseOpenKeys(openKeysRaw) : undefined
 
+const openStepsRaw =
+  (typeof flags.openSteps === "string" ? flags.openSteps : undefined) ??
+  process.env.OPEN_STEPS ??
+  undefined
+
+const openSteps = openStepsRaw ? parseOpenSteps(openStepsRaw, openKeys) : undefined
+
 const defaultNames = ["button-default", "tabs-demo"]
 const all = flags.all === true || process.env.ALL_GOLDENS === "1"
 
@@ -1357,6 +1550,7 @@ try {
   console.log(`- all: ${all ? "yes" : "no"}`)
   console.log(`- openVariants: ${openVariants?.length ?? 0}`)
   console.log(`- openKeys: ${openKeys ? `${openKeys.modifiers.join("+")}+${openKeys.key}` : ""}`)
+  console.log(`- openSteps: ${openSteps?.length ?? 0}`)
 
   const finalNames = await resolveNames()
   console.log(`- names: ${finalNames.length}`)
@@ -1374,6 +1568,7 @@ try {
     openSelector,
     openAction,
     openKeys,
+    openSteps,
     openVariants,
     mergeThemes: flags.mergeThemes === true || process.env.MERGE_THEMES === "1",
   })
