@@ -928,8 +928,62 @@ fn translate_data_zoom_v1(
     let mut y_specs: Vec<DataZoomYSpec> = Vec::new();
     let mut actions: Vec<Action> = Vec::new();
 
-    let mut x_bound: BTreeSet<usize> = BTreeSet::new();
-    let mut y_bound: BTreeSet<usize> = BTreeSet::new();
+    #[derive(Debug, Clone, Copy)]
+    struct ZoomAxisAccum {
+        filter_mode: Option<FilterMode>,
+        min_value_span: Option<f64>,
+        max_value_span: Option<f64>,
+        window: Option<DataWindow>,
+    }
+
+    impl ZoomAxisAccum {
+        fn apply(
+            &mut self,
+            filter_mode: FilterMode,
+            min_value_span: Option<f64>,
+            max_value_span: Option<f64>,
+            window: Option<DataWindow>,
+        ) -> Result<()> {
+            if let Some(existing) = self.filter_mode
+                && existing != filter_mode
+            {
+                return Err(EchartsError::Unsupported(
+                    "multiple dataZoom components with different filterMode for the same axis (v1 subset)",
+                ));
+            }
+
+            if let (Some(existing), Some(next)) = (self.min_value_span, min_value_span)
+                && existing != next
+            {
+                return Err(EchartsError::Unsupported(
+                    "multiple dataZoom components with different minValueSpan for the same axis (v1 subset)",
+                ));
+            }
+
+            if let (Some(existing), Some(next)) = (self.max_value_span, max_value_span)
+                && existing != next
+            {
+                return Err(EchartsError::Unsupported(
+                    "multiple dataZoom components with different maxValueSpan for the same axis (v1 subset)",
+                ));
+            }
+
+            self.filter_mode = Some(filter_mode);
+            if min_value_span.is_some() {
+                self.min_value_span = min_value_span;
+            }
+            if max_value_span.is_some() {
+                self.max_value_span = max_value_span;
+            }
+            if window.is_some() {
+                self.window = window;
+            }
+            Ok(())
+        }
+    }
+
+    let mut x_accum: BTreeMap<usize, ZoomAxisAccum> = BTreeMap::new();
+    let mut y_accum: BTreeMap<usize, ZoomAxisAccum> = BTreeMap::new();
 
     for entry in zoom.to_vec() {
         let _kind = entry.kind.as_deref().unwrap_or("inside");
@@ -953,58 +1007,84 @@ fn translate_data_zoom_v1(
 
         if let Some(indices) = entry.x_axis_index.as_ref() {
             for axis_index in indices.to_vec() {
-                let axis = *x_axes
-                    .get(axis_index)
-                    .ok_or(EchartsError::Invalid("dataZoom.xAxisIndex out of range"))?;
-                if !x_bound.insert(axis_index) {
-                    return Err(EchartsError::Unsupported(
-                        "multiple dataZoom components target the same xAxis (v1 subset)",
-                    ));
+                if x_axes.get(axis_index).is_none() {
+                    return Err(EchartsError::Invalid("dataZoom.xAxisIndex out of range"));
                 }
-                let id = delinea::ids::DataZoomId::new(next_id);
-                next_id = next_id.saturating_add(1);
-                x_specs.push(DataZoomXSpec {
-                    id,
-                    axis,
-                    filter_mode,
-                    min_value_span: entry.min_value_span,
-                    max_value_span: entry.max_value_span,
-                });
-                if let Some(w) = window {
-                    actions.push(Action::SetDataWindowX {
-                        axis,
-                        window: Some(w),
-                    });
-                }
+                x_accum
+                    .entry(axis_index)
+                    .or_insert(ZoomAxisAccum {
+                        filter_mode: None,
+                        min_value_span: None,
+                        max_value_span: None,
+                        window: None,
+                    })
+                    .apply(
+                        filter_mode,
+                        entry.min_value_span,
+                        entry.max_value_span,
+                        window,
+                    )?;
             }
         }
 
         if let Some(indices) = entry.y_axis_index.as_ref() {
             for axis_index in indices.to_vec() {
-                let axis = *y_axes
-                    .get(axis_index)
-                    .ok_or(EchartsError::Invalid("dataZoom.yAxisIndex out of range"))?;
-                if !y_bound.insert(axis_index) {
-                    return Err(EchartsError::Unsupported(
-                        "multiple dataZoom components target the same yAxis (v1 subset)",
-                    ));
+                if y_axes.get(axis_index).is_none() {
+                    return Err(EchartsError::Invalid("dataZoom.yAxisIndex out of range"));
                 }
-                let id = delinea::ids::DataZoomId::new(next_id);
-                next_id = next_id.saturating_add(1);
-                y_specs.push(DataZoomYSpec {
-                    id,
-                    axis,
-                    filter_mode,
-                    min_value_span: entry.min_value_span,
-                    max_value_span: entry.max_value_span,
-                });
-                if let Some(w) = window {
-                    actions.push(Action::SetDataWindowY {
-                        axis,
-                        window: Some(w),
-                    });
-                }
+                y_accum
+                    .entry(axis_index)
+                    .or_insert(ZoomAxisAccum {
+                        filter_mode: None,
+                        min_value_span: None,
+                        max_value_span: None,
+                        window: None,
+                    })
+                    .apply(
+                        filter_mode,
+                        entry.min_value_span,
+                        entry.max_value_span,
+                        window,
+                    )?;
             }
+        }
+    }
+
+    for (axis_index, acc) in x_accum {
+        let axis = x_axes[axis_index];
+        let id = delinea::ids::DataZoomId::new(next_id);
+        next_id = next_id.saturating_add(1);
+        x_specs.push(DataZoomXSpec {
+            id,
+            axis,
+            filter_mode: acc.filter_mode.unwrap_or(FilterMode::Filter),
+            min_value_span: acc.min_value_span,
+            max_value_span: acc.max_value_span,
+        });
+        if let Some(w) = acc.window {
+            actions.push(Action::SetDataWindowX {
+                axis,
+                window: Some(w),
+            });
+        }
+    }
+
+    for (axis_index, acc) in y_accum {
+        let axis = y_axes[axis_index];
+        let id = delinea::ids::DataZoomId::new(next_id);
+        next_id = next_id.saturating_add(1);
+        y_specs.push(DataZoomYSpec {
+            id,
+            axis,
+            filter_mode: acc.filter_mode.unwrap_or(FilterMode::Filter),
+            min_value_span: acc.min_value_span,
+            max_value_span: acc.max_value_span,
+        });
+        if let Some(w) = acc.window {
+            actions.push(Action::SetDataWindowY {
+                axis,
+                window: Some(w),
+            });
         }
     }
 
@@ -1846,5 +1926,53 @@ mod tests {
             )),
             "expected SetDataWindowY action"
         );
+    }
+
+    #[test]
+    fn translate_multiple_datazoom_same_axis_is_accepted_when_compatible() {
+        let json = r#"
+        {
+          "xAxis": { "type": "value" },
+          "yAxis": { "type": "value" },
+          "dataZoom": [
+            { "type": "inside", "xAxisIndex": 0, "filterMode": "filter" },
+            { "type": "slider", "xAxisIndex": 0, "filterMode": "filter", "startValue": 1, "endValue": 3 }
+          ],
+          "series": [
+            { "type": "scatter", "data": [[0, 0], [1, 10], [2, 20], [3, 30], [4, 40]] }
+          ]
+        }
+        "#;
+
+        let translated = translate_json_str(json).expect("translate");
+        assert_eq!(translated.spec.data_zoom_x.len(), 1);
+        assert!(
+            translated.actions.iter().any(|a| matches!(
+                a,
+                Action::SetDataWindowX { window: Some(w), .. }
+                    if (w.min - 1.0).abs() < 1e-9 && (w.max - 3.0).abs() < 1e-9
+            )),
+            "expected SetDataWindowX action"
+        );
+    }
+
+    #[test]
+    fn translate_multiple_datazoom_same_axis_rejects_conflicting_filter_mode() {
+        let json = r#"
+        {
+          "xAxis": { "type": "value" },
+          "yAxis": { "type": "value" },
+          "dataZoom": [
+            { "type": "inside", "xAxisIndex": 0, "filterMode": "filter" },
+            { "type": "slider", "xAxisIndex": 0, "filterMode": "empty" }
+          ],
+          "series": [
+            { "type": "scatter", "data": [[0, 0], [1, 10]] }
+          ]
+        }
+        "#;
+
+        let err = translate_json_str(json).unwrap_err();
+        assert!(matches!(err, EchartsError::Unsupported(_)));
     }
 }
