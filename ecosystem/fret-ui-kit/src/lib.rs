@@ -8,6 +8,8 @@
 //! the public component surface.
 
 pub mod declarative;
+#[cfg(feature = "dnd")]
+pub mod dnd;
 pub mod headless;
 pub mod overlay;
 pub mod overlay_controller;

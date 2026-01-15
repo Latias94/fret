@@ -95,20 +95,29 @@ pub trait ViewportOverlay3dHooks: Send + Sync + 'static {
 /// Stores the optional app-owned `ViewportOverlay3dHooks` instance.
 #[derive(Default)]
 pub struct ViewportOverlay3dHooksService {
-    hooks: Option<Arc<dyn ViewportOverlay3dHooks>>,
+    hooks: Vec<Arc<dyn ViewportOverlay3dHooks>>,
 }
 
 impl ViewportOverlay3dHooksService {
     pub fn set(&mut self, hooks: Arc<dyn ViewportOverlay3dHooks>) {
-        self.hooks = Some(hooks);
+        self.hooks.clear();
+        self.hooks.push(hooks);
+    }
+
+    pub fn push(&mut self, hooks: Arc<dyn ViewportOverlay3dHooks>) {
+        self.hooks.push(hooks);
     }
 
     pub fn clear(&mut self) {
-        self.hooks = None;
+        self.hooks.clear();
     }
 
     pub fn hooks(&self) -> Option<Arc<dyn ViewportOverlay3dHooks>> {
-        self.hooks.clone()
+        self.hooks.last().cloned()
+    }
+
+    pub fn hooks_all(&self) -> &[Arc<dyn ViewportOverlay3dHooks>] {
+        &self.hooks
     }
 }
 
@@ -125,9 +134,9 @@ pub fn record_viewport_overlay_3d(
 ) {
     let hooks = app
         .global::<ViewportOverlay3dHooksService>()
-        .and_then(|svc| svc.hooks());
-    if let Some(hooks) = hooks {
-        hooks.record(app, window, target, pass, ctx);
+        .map(|svc| svc.hooks_all().to_vec());
+    for hook in hooks.into_iter().flatten() {
+        hook.record(app, window, target, pass, ctx);
     }
 }
 

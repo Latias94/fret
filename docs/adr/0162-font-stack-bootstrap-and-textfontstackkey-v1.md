@@ -20,8 +20,8 @@ The repository already has globals intended for this boundary:
 - `TextFontFamilyConfig` (user-configurable family candidates).
 - `TextFontStackKey` (stable key that participates in renderer text cache keys).
 
-Runner wiring is currently inconsistent (e.g. web runner publishes globals ad-hoc instead of using a shared bootstrap helper),
-and the default bundled font set for Web/WASM is not sufficient to bootstrap a general-purpose UI framework (currently mono-only).
+Runner wiring must remain consistent (e.g. web runner and desktop runner should publish the same globals through the same helper),
+and Web/WASM needs a deterministic bootstrap story because system font discovery is not available.
 
 GPUI/Zed provides a useful reference: it has an explicit `fallback_font_stack` and a platform text system boundary, ensuring that
 font resolution failures degrade predictably and that fallback remains deterministic (see `repo-ref/zed/crates/gpui/src/text_system.rs`).
@@ -79,15 +79,27 @@ Notes:
 Baseline contract for Web/WASM:
 
 - The runner must inject at least one bundled font set on startup via `Effect::TextAddFonts`.
-- The `fret-fonts` crate provides a **minimal bootstrap font set** (not “complete coverage”).
+- The `fret-fonts` crate provides **role-based bundles** (not “complete coverage”).
 
 Minimum requirement for `fret-fonts::default_fonts()` (v1):
 
 - one **UI sans** font (or subset) suitable for labels and UI controls,
 - one **monospace** font (or subset) for developer tooling / code-like surfaces,
-- future (tracked): an **emoji/color** fallback font for deterministic emoji rendering.
+- optional: an **emoji/color** fallback font for deterministic emoji rendering,
+- optional: a **CJK** fallback font for "no tofu" baseline in East Asian UIs.
 
 This ADR does not mandate which exact font families are bundled; it mandates the roles and the bootstrap wiring.
+
+#### Bundled font tiers (recommended)
+
+To keep WASM payload size controllable while still supporting real apps, `fret-fonts` is expected to expose bundles as
+separate feature flags:
+
+- **Bootstrap**: small UI sans + monospace baseline (recommended default for web demos and starter templates).
+- **Emoji**: a color emoji font bundle (opt-in; can be large).
+- **CJK lite**: a small subset to cover common simplified Chinese UI strings (opt-in; can be medium).
+
+The runner should allow toggling these tiers via crate features (e.g. `fret-launch` / `fret-demo-web`) or app settings.
 
 ### 4) `TextFontStackKey` invalidation contract
 
@@ -118,6 +130,9 @@ This ADR does not mandate which exact font families are bundled; it mandates the
    - Long term we should converge on a single source of truth for generic families + fallback ordering to avoid “key vs behavior” drift.
 
 3) Emoji policy:
-   - Decide a baseline color glyph strategy and conformance string (variation selectors, ZWJ sequences, flags).
-   - Ensure the policy participates in cache keys.
+   - Baseline pipeline and cache-key rules are tracked by ADR 0167.
+   - Keep conformance coverage for variation selectors, ZWJ sequences, flags, and keycaps.
 
+4) CJK baseline:
+   - Decide whether we want additional region/script bundles beyond "cjk-lite" (JP/KR/TC, Arabic, Devanagari, etc.),
+     and keep them opt-in to avoid unbounded wasm payload growth.

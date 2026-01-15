@@ -149,6 +149,13 @@ Tool rendering is intentionally engine-pass for Tier A:
 We keep this boundary explicit but recommend a standard “registration” and “per-frame record” shape so multiple tool
 ecosystems can participate without bespoke boilerplate.
 
+In v1, the runner hook service supports multiple hooks (`ViewportOverlay3dHooksService::push`) and provides a small
+immediate-mode helper for the common "upload + record" overlay pattern:
+
+- install: `install_viewport_overlay_3d_immediate(app)`
+- per-frame upload: `upload_viewport_overlay_3d_immediate(...) -> Overlay3dPipelines`
+- per-pass record: `record_viewport_overlay_3d(...)` (replays all registered hooks)
+
 ### 4) Tool-specific read/write boundaries remain tool-owned
 
 Some tools need to read or write domain values:

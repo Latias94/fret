@@ -118,8 +118,16 @@ impl PointerSensor {
         }
     }
 
+    pub fn is_tracking(&self, pointer_id: PointerId) -> bool {
+        self.states.contains_key(&pointer_id)
+    }
+
     pub fn set_constraint(&mut self, constraint: ActivationConstraint) {
         self.constraint = constraint;
+    }
+
+    pub fn clear_pointer(&mut self, pointer_id: PointerId) {
+        self.states.remove(&pointer_id);
     }
 
     pub fn is_active(&self, pointer_id: PointerId) -> bool {

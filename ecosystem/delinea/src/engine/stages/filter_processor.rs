@@ -147,6 +147,7 @@ impl FilterProcessorStage {
             // dataZoom are `WeakFilter` and the Y window is active. This is correctness-critical
             // for the subset because X-only range slicing cannot represent weakFilter semantics.
             if filter_mode == crate::spec::FilterMode::WeakFilter {
+                let mut requested_xy_weak_filter = false;
                 let y_filter_mode = model
                     .data_zoom_y_by_axis
                     .get(&series.y_axis)
@@ -203,21 +204,24 @@ impl FilterProcessorStage {
                             crate::spec::FilterMode::WeakFilter,
                         );
 
-                        match series.kind {
-                            crate::spec::SeriesKind::Band => {
-                                let _ = data_view.request_xy_weak_filter_band_for_series(
+                        requested_xy_weak_filter = match series.kind {
+                            crate::spec::SeriesKind::Band => data_view
+                                .request_xy_weak_filter_band_for_series(
                                     model, datasets, view, *series_id, base_range, x_filter,
                                     y_filter,
-                                );
-                            }
-                            _ => {
-                                let _ = data_view.request_xy_weak_filter_for_series(
-                                    model, datasets, view, *series_id, base_range, x_filter,
-                                    y_filter,
-                                );
-                            }
-                        }
+                                ),
+                            _ => data_view.request_xy_weak_filter_for_series(
+                                model, datasets, view, *series_id, base_range, x_filter, y_filter,
+                            ),
+                        };
                     }
+                }
+
+                // When the XY weakFilter subset is active, do not request an X-only indices view.
+                // The X-only filter predicate cannot represent weakFilter semantics and can also
+                // interfere with the XY materialization ordering.
+                if requested_xy_weak_filter {
+                    continue;
                 }
             }
 
@@ -527,20 +531,29 @@ fn apply_xy_weak_filter_for_grid(
             ),
         };
 
+        let series_view = &mut view.series[series_view_index];
+
+        if series_view.x_policy.filter != Default::default() {
+            series_view.x_policy.filter = Default::default();
+            *view_changed = true;
+        }
+
         if let Some(sel) = sel {
             *xy_weak_filter_applied_series = xy_weak_filter_applied_series.saturating_add(1);
-            let series_view = &mut view.series[series_view_index];
             if series_view.selection != sel {
                 series_view.selection = sel;
-                *view_changed = true;
-            }
-            if series_view.x_policy.filter != Default::default() {
-                series_view.x_policy.filter = Default::default();
                 *view_changed = true;
             }
         } else {
             *xy_weak_filter_pending = true;
             *xy_weak_filter_pending_series = xy_weak_filter_pending_series.saturating_add(1);
+
+            // While the indices view is materializing, preserve a stable base row space. X-only
+            // slicing cannot represent weakFilter semantics.
+            if series_view.selection != RowSelection::Range(base_range) {
+                series_view.selection = RowSelection::Range(base_range);
+                *view_changed = true;
+            }
         }
     }
 }
