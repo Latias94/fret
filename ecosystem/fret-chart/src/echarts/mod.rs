@@ -394,11 +394,6 @@ fn translate_option_with_dataset(option: &EchartsOption) -> Result<TranslatedCha
             return Err(EchartsError::Unsupported("xAxis.gridIndex != 0"));
         }
         let axis_type = axis.kind.as_deref();
-        if matches!(axis_type, Some("category")) {
-            return Err(EchartsError::Unsupported(
-                "xAxis.type = 'category' with dataset (v1 subset)",
-            ));
-        }
         axes.push(AxisSpec {
             id: x_ids[i],
             name: axis.name.clone(),
@@ -407,6 +402,7 @@ fn translate_option_with_dataset(option: &EchartsOption) -> Result<TranslatedCha
             position: None,
             scale: match axis_type {
                 Some("time") => AxisScale::Time(Default::default()),
+                Some("category") => AxisScale::Value(ValueAxisScale),
                 None | Some("value") => AxisScale::Value(ValueAxisScale),
                 Some(_) => return Err(EchartsError::Unsupported("xAxis.type")),
             },
@@ -445,6 +441,8 @@ fn translate_option_with_dataset(option: &EchartsOption) -> Result<TranslatedCha
     let mut dataset_specs: Vec<DatasetSpec> = Vec::with_capacity(datasets.len());
     let mut dataset_fields_by_index: Vec<Vec<FieldId>> = Vec::with_capacity(datasets.len());
     let mut dataset_dimensions_by_index: Vec<Vec<String>> = Vec::with_capacity(datasets.len());
+    let mut dataset_rows_by_index: Vec<Vec<Vec<serde_json::Value>>> =
+        Vec::with_capacity(datasets.len());
 
     let mut next_field_id = 1u64;
 
@@ -454,21 +452,23 @@ fn translate_option_with_dataset(option: &EchartsOption) -> Result<TranslatedCha
         dataset_specs.push(parsed.spec);
         dataset_fields_by_index.push(parsed.field_ids);
         dataset_dimensions_by_index.push(parsed.dimensions);
+        dataset_rows_by_index.push(parsed.rows);
     }
 
-    let mut spec = ChartSpec {
-        id: ChartId::new(1),
-        viewport: None,
-        datasets: dataset_specs,
-        grids: vec![GridSpec { id: grid_id }],
-        axes,
-        data_zoom_x: Vec::new(),
-        data_zoom_y: Vec::new(),
-        tooltip,
-        axis_pointer: Some(Default::default()),
-        visual_maps: Vec::new(),
-        series: Vec::new(),
-    };
+    #[derive(Debug, Clone)]
+    struct SeriesDraft {
+        series_index: usize,
+        kind: SeriesKind,
+        name: Option<String>,
+        dataset_index: usize,
+        x_col: usize,
+        y_col: usize,
+        x_axis_index: usize,
+        y_axis_index: usize,
+        lod: Option<SeriesLodSpecV1>,
+    }
+
+    let mut drafts: Vec<SeriesDraft> = Vec::with_capacity(option.series.len());
 
     for (series_index, series) in option.series.iter().enumerate() {
         if series.data.is_some() {
@@ -485,9 +485,6 @@ fn translate_option_with_dataset(option: &EchartsOption) -> Result<TranslatedCha
         };
 
         let dataset_index = series.dataset_index.unwrap_or(0);
-        let Some(dataset) = spec.datasets.get(dataset_index) else {
-            return Err(EchartsError::Invalid("series.datasetIndex out of range"));
-        };
         let Some(field_ids) = dataset_fields_by_index.get(dataset_index) else {
             return Err(EchartsError::Invalid("series.datasetIndex out of range"));
         };
@@ -518,15 +515,176 @@ fn translate_option_with_dataset(option: &EchartsOption) -> Result<TranslatedCha
                 .map(|v| v.as_slice()),
         )?;
 
-        let x_field = field_ids.get(x_col).copied().ok_or_else(|| {
-            EchartsError::Invalid("series.encode.x column out of range for dataset")
-        })?;
-        let y_field = field_ids.get(y_col).copied().ok_or_else(|| {
-            EchartsError::Invalid("series.encode.y column out of range for dataset")
-        })?;
+        if x_col >= field_ids.len() {
+            return Err(EchartsError::Invalid(
+                "series.encode.x column out of range for dataset",
+            ));
+        }
+        if y_col >= field_ids.len() {
+            return Err(EchartsError::Invalid(
+                "series.encode.y column out of range for dataset",
+            ));
+        }
 
         let x_axis_index = series.x_axis_index.unwrap_or(0);
         let y_axis_index = series.y_axis_index.unwrap_or(0);
+
+        let lod = {
+            let lod = SeriesLodSpecV1 {
+                large: series.large,
+                large_threshold: series.large_threshold,
+                progressive: series.progressive,
+                progressive_threshold: series.progressive_threshold,
+            };
+            let any = lod.large.is_some()
+                || lod.large_threshold.is_some()
+                || lod.progressive.is_some()
+                || lod.progressive_threshold.is_some();
+            any.then_some(lod)
+        };
+
+        drafts.push(SeriesDraft {
+            series_index,
+            kind,
+            name: series.name.clone(),
+            dataset_index,
+            x_col,
+            y_col,
+            x_axis_index,
+            y_axis_index,
+            lod,
+        });
+    }
+
+    fn category_label(v: &serde_json::Value) -> Option<String> {
+        match v {
+            serde_json::Value::Null => None,
+            serde_json::Value::String(s) => Some(s.clone()),
+            serde_json::Value::Number(n) => Some(n.to_string()),
+            serde_json::Value::Bool(b) => Some(b.to_string()),
+            other => Some(other.to_string()),
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    struct CategoryAxisPlan {
+        categories: Vec<String>,
+        explicit_data: bool,
+        index_by_label: BTreeMap<String, usize>,
+    }
+
+    let mut category_plans: BTreeMap<usize, CategoryAxisPlan> = BTreeMap::new();
+    for (axis_index, axis) in x_axes.iter().enumerate() {
+        let axis_type = axis.kind.as_deref();
+        if !matches!(axis_type, Some("category")) {
+            continue;
+        }
+        if axis.grid_index.unwrap_or(0) != 0 {
+            return Err(EchartsError::Unsupported("xAxis.gridIndex != 0"));
+        }
+
+        let mut categories: Vec<String> = Vec::new();
+        let mut seen: BTreeSet<String> = BTreeSet::new();
+        let explicit_data = axis.data.as_ref().is_some_and(|d| !d.is_empty());
+
+        if let Some(data) = axis.data.as_ref() {
+            for c in data {
+                if seen.insert(c.clone()) {
+                    categories.push(c.clone());
+                }
+            }
+        }
+
+        if !explicit_data {
+            for d in drafts.iter().filter(|d| d.x_axis_index == axis_index) {
+                let Some(rows) = dataset_rows_by_index.get(d.dataset_index) else {
+                    continue;
+                };
+                for row in rows {
+                    let Some(v) = row.get(d.x_col) else {
+                        continue;
+                    };
+                    let Some(label) = category_label(v) else {
+                        continue;
+                    };
+                    if seen.insert(label.clone()) {
+                        categories.push(label);
+                    }
+                }
+            }
+        }
+
+        if categories.is_empty() {
+            return Err(EchartsError::Invalid("category xAxis has no categories"));
+        }
+
+        let mut index_by_label: BTreeMap<String, usize> = BTreeMap::new();
+        for (i, c) in categories.iter().enumerate() {
+            index_by_label.insert(c.clone(), i);
+        }
+
+        category_plans.insert(
+            axis_index,
+            CategoryAxisPlan {
+                categories,
+                explicit_data,
+                index_by_label,
+            },
+        );
+    }
+
+    let mut spec = ChartSpec {
+        id: ChartId::new(1),
+        viewport: None,
+        datasets: dataset_specs,
+        grids: vec![GridSpec { id: grid_id }],
+        axes,
+        data_zoom_x: Vec::new(),
+        data_zoom_y: Vec::new(),
+        tooltip,
+        axis_pointer: Some(Default::default()),
+        visual_maps: Vec::new(),
+        series: Vec::new(),
+    };
+
+    // Update X axis scales after dataset-driven category planning.
+    for (axis_index, axis) in x_axes.iter().enumerate() {
+        let axis_id = x_ids
+            .get(axis_index)
+            .copied()
+            .ok_or(EchartsError::Invalid("xAxis index out of range"))?;
+
+        let Some(target) = spec.axes.iter_mut().find(|a| a.id == axis_id) else {
+            continue;
+        };
+
+        if let Some(plan) = category_plans.get(&axis_index) {
+            target.scale = AxisScale::Category(CategoryAxisScale {
+                categories: plan.categories.clone(),
+            });
+        }
+    }
+
+    // For category X axes, create derived numeric X columns that map category -> index.
+    let mut derived_x_field_by_key: BTreeMap<(usize, usize, usize), FieldId> = BTreeMap::new();
+
+    for d in &drafts {
+        let dataset_index = d.dataset_index;
+        let Some(dataset_spec) = spec.datasets.get_mut(dataset_index) else {
+            return Err(EchartsError::Invalid("series.datasetIndex out of range"));
+        };
+        let Some((_dataset_id, table)) = out_datasets.get_mut(dataset_index) else {
+            return Err(EchartsError::Invalid("series.datasetIndex out of range"));
+        };
+        let Some(field_ids) = dataset_fields_by_index.get_mut(dataset_index) else {
+            return Err(EchartsError::Invalid("series.datasetIndex out of range"));
+        };
+        let Some(rows) = dataset_rows_by_index.get(dataset_index) else {
+            return Err(EchartsError::Invalid("series.datasetIndex out of range"));
+        };
+
+        let x_axis_index = d.x_axis_index;
+        let y_axis_index = d.y_axis_index;
         let x_axis = *x_ids
             .get(x_axis_index)
             .ok_or(EchartsError::Invalid("series.xAxisIndex out of range"))?;
@@ -534,12 +692,79 @@ fn translate_option_with_dataset(option: &EchartsOption) -> Result<TranslatedCha
             .get(y_axis_index)
             .ok_or(EchartsError::Invalid("series.yAxisIndex out of range"))?;
 
-        let series_id = SeriesId::new((series_index as u64).saturating_add(1));
+        let base_x_field = field_ids
+            .get(d.x_col)
+            .copied()
+            .ok_or(EchartsError::Invalid(
+                "series.encode.x column out of range for dataset",
+            ))?;
+        let y_field = field_ids
+            .get(d.y_col)
+            .copied()
+            .ok_or(EchartsError::Invalid(
+                "series.encode.y column out of range for dataset",
+            ))?;
+
+        let x_field = if let Some(plan) = category_plans.get(&x_axis_index) {
+            let key = (dataset_index, d.x_col, x_axis_index);
+            if let Some(field) = derived_x_field_by_key.get(&key).copied() {
+                field
+            } else {
+                let mut codes: Vec<f64> = Vec::with_capacity(rows.len());
+                for row in rows {
+                    let v = row.get(d.x_col).unwrap_or(&serde_json::Value::Null);
+                    let code = if plan.explicit_data {
+                        match v {
+                            serde_json::Value::Number(n) => n
+                                .as_i64()
+                                .and_then(|i| (i >= 0).then_some(i as usize))
+                                .and_then(|i| (i < plan.categories.len()).then_some(i))
+                                .map(|i| i as f64)
+                                .unwrap_or(f64::NAN),
+                            serde_json::Value::String(s) => plan
+                                .index_by_label
+                                .get(s)
+                                .copied()
+                                .map(|i| i as f64)
+                                .unwrap_or(f64::NAN),
+                            _ => f64::NAN,
+                        }
+                    } else {
+                        category_label(v)
+                            .and_then(|label| plan.index_by_label.get(&label).copied())
+                            .map(|i| i as f64)
+                            .unwrap_or(f64::NAN)
+                    };
+                    codes.push(code);
+                }
+
+                table.push_column(Column::F64(codes));
+                let column = table.columns.len().saturating_sub(1);
+
+                let derived_id = FieldId::new(next_field_id);
+                next_field_id = next_field_id.saturating_add(1);
+                dataset_spec.fields.push(FieldSpec {
+                    id: derived_id,
+                    column,
+                });
+                field_ids.push(derived_id);
+                derived_x_field_by_key.insert(key, derived_id);
+
+                // Silence unused warning for base field (helps debugging / future extensions).
+                let _ = base_x_field;
+
+                derived_id
+            }
+        } else {
+            base_x_field
+        };
+
+        let series_id = SeriesId::new((d.series_index as u64).saturating_add(1));
         spec.series.push(SeriesSpec {
             id: series_id,
-            name: series.name.clone(),
-            kind,
-            dataset: dataset.id,
+            name: d.name.clone(),
+            kind: d.kind,
+            dataset: dataset_spec.id,
             encode: SeriesEncode {
                 x: x_field,
                 y: y_field,
@@ -551,19 +776,7 @@ fn translate_option_with_dataset(option: &EchartsOption) -> Result<TranslatedCha
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
-            lod: {
-                let lod = SeriesLodSpecV1 {
-                    large: series.large,
-                    large_threshold: series.large_threshold,
-                    progressive: series.progressive,
-                    progressive_threshold: series.progressive_threshold,
-                };
-                let any = lod.large.is_some()
-                    || lod.large_threshold.is_some()
-                    || lod.progressive.is_some()
-                    || lod.progressive_threshold.is_some();
-                any.then_some(lod)
-            },
+            lod: d.lod,
         });
     }
 
@@ -879,6 +1092,7 @@ struct ParsedDatasetV1 {
     spec: DatasetSpec,
     field_ids: Vec<FieldId>,
     dimensions: Vec<String>,
+    rows: Vec<Vec<serde_json::Value>>,
 }
 
 fn parse_dataset_v1(
@@ -911,7 +1125,7 @@ fn parse_dataset_v1(
 
     let mut dimensions = ds.dimensions.clone().unwrap_or_default();
 
-    let (row_count, width, columns) = match source {
+    let (row_count, width, columns, rows) = match source {
         DatasetSource::Rows(rows) => {
             if rows.is_empty() {
                 return Err(EchartsError::Invalid("dataset.source is empty"));
@@ -960,12 +1174,15 @@ fn parse_dataset_v1(
             }
 
             let mut columns: Vec<Vec<f64>> = vec![Vec::with_capacity(data_rows.len()); width];
+            let mut normalized_rows: Vec<Vec<serde_json::Value>> =
+                Vec::with_capacity(data_rows.len());
             for row in data_rows {
+                normalized_rows.push(row.clone());
                 for (col, v) in row.iter().enumerate() {
                     columns[col].push(parse_f64_value(v));
                 }
             }
-            (data_rows.len(), width, columns)
+            (data_rows.len(), width, columns, normalized_rows)
         }
         DatasetSource::Objects(rows) => {
             if rows.is_empty() {
@@ -988,14 +1205,18 @@ fn parse_dataset_v1(
 
             let width = dimensions.len();
             let mut columns: Vec<Vec<f64>> = vec![Vec::with_capacity(rows.len()); width];
+            let mut normalized_rows: Vec<Vec<serde_json::Value>> = Vec::with_capacity(rows.len());
             for row in rows {
+                let mut out_row: Vec<serde_json::Value> = Vec::with_capacity(width);
                 for (col, key) in dimensions.iter().enumerate() {
                     let v = row.get(key).unwrap_or(&serde_json::Value::Null);
+                    out_row.push(v.clone());
                     columns[col].push(parse_f64_value(v));
                 }
+                normalized_rows.push(out_row);
             }
 
-            (rows.len(), width, columns)
+            (rows.len(), width, columns, normalized_rows)
         }
     };
 
@@ -1027,6 +1248,7 @@ fn parse_dataset_v1(
         },
         field_ids,
         dimensions,
+        rows,
     })
 }
 
@@ -1169,6 +1391,96 @@ mod tests {
         assert_eq!(translated.datasets.len(), 1);
         assert_eq!(translated.datasets[0].1.row_count, 3);
         assert_eq!(translated.spec.datasets[0].fields.len(), 2);
+    }
+
+    #[test]
+    fn translate_dataset_category_x_axis_from_source() {
+        let json = r#"
+        {
+          "dataset": {
+            "source": [["cat", "y"], ["A", 1], ["B", 2], ["C", 3]]
+          },
+          "xAxis": { "type": "category" },
+          "yAxis": { "type": "value" },
+          "series": [
+            { "type": "scatter", "encode": { "x": "cat", "y": "y" } }
+          ]
+        }
+        "#;
+
+        let translated = translate_json_str(json).expect("translate");
+        assert_eq!(translated.datasets.len(), 1);
+        assert_eq!(translated.datasets[0].1.row_count, 3);
+
+        let axis = translated
+            .spec
+            .axes
+            .iter()
+            .find(|a| a.kind == AxisKind::X)
+            .expect("x axis");
+        let AxisScale::Category(scale) = &axis.scale else {
+            panic!("expected category x axis");
+        };
+        assert_eq!(scale.categories, vec!["A", "B", "C"]);
+
+        let series = &translated.spec.series[0];
+        let dataset = &translated.spec.datasets[0];
+        let x_field = series.encode.x;
+        let x_col = dataset
+            .fields
+            .iter()
+            .find(|f| f.id == x_field)
+            .expect("x field")
+            .column;
+
+        let table = &translated.datasets[0].1;
+        let x = table.columns[x_col].as_f64().expect("f64 column");
+        assert_eq!(x, &vec![0.0, 1.0, 2.0]);
+    }
+
+    #[test]
+    fn translate_dataset_category_x_axis_with_explicit_data() {
+        let json = r#"
+        {
+          "dataset": {
+            "source": [[0, 1], [1, 2], [2, 3]]
+          },
+          "xAxis": { "type": "category", "data": ["A", "B", "C"] },
+          "yAxis": { "type": "value" },
+          "series": [
+            { "type": "line", "encode": { "x": 0, "y": 1 } }
+          ]
+        }
+        "#;
+
+        let translated = translate_json_str(json).expect("translate");
+        assert_eq!(translated.datasets.len(), 1);
+        assert_eq!(translated.datasets[0].1.row_count, 3);
+
+        let axis = translated
+            .spec
+            .axes
+            .iter()
+            .find(|a| a.kind == AxisKind::X)
+            .expect("x axis");
+        let AxisScale::Category(scale) = &axis.scale else {
+            panic!("expected category x axis");
+        };
+        assert_eq!(scale.categories, vec!["A", "B", "C"]);
+
+        let series = &translated.spec.series[0];
+        let dataset = &translated.spec.datasets[0];
+        let x_field = series.encode.x;
+        let x_col = dataset
+            .fields
+            .iter()
+            .find(|f| f.id == x_field)
+            .expect("x field")
+            .column;
+
+        let table = &translated.datasets[0].1;
+        let x = table.columns[x_col].as_f64().expect("f64 column");
+        assert_eq!(x, &vec![0.0, 1.0, 2.0]);
     }
 
     #[test]
