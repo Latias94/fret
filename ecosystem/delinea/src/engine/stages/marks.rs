@@ -680,53 +680,61 @@ impl MarksStage {
                             &mut marks.arena.points,
                             &mut marks.arena.data_indices,
                         );
-                        let base_order = self.series_index as u32;
                         let id = series_mark_id(series.id, 0);
                         let node_index = marks.nodes.iter().position(|n| n.id == id);
-
-                        let mut created = false;
-                        let node_index = if let Some(i) = node_index {
-                            i
-                        } else {
-                            if budget.take_marks(1) == 0 {
-                                return false;
+                        if range.is_empty() {
+                            if let Some(i) = node_index {
+                                marks.nodes.remove(i);
+                                marks.revision.bump();
                             }
-                            created = true;
-                            marks.nodes.push(MarkNode {
-                                id,
-                                parent: None,
-                                layer: crate::ids::LayerId(1),
-                                order: MarkOrderKey(base_order.saturating_mul(2)),
-                                kind: MarkKind::Points,
-                                source_series: Some(series.id),
-                                payload: MarkPayloadRef::Points(MarkPointsRef {
-                                    points: range.clone(),
-                                    fill: None,
-                                    opacity_mul: None,
-                                    radius_mul: None,
-                                    stroke: None,
-                                }),
-                            });
-                            marks.nodes.len() - 1
-                        };
+                            self.finalized = true;
+                        } else {
+                            let base_order = self.series_index as u32;
 
-                        if let Some(node) = marks.nodes.get_mut(node_index) {
-                            let MarkPayloadRef::Points(p) = &mut node.payload else {
-                                return false;
+                            let mut created = false;
+                            let node_index = if let Some(i) = node_index {
+                                i
+                            } else {
+                                if budget.take_marks(1) == 0 {
+                                    return false;
+                                }
+                                created = true;
+                                marks.nodes.push(MarkNode {
+                                    id,
+                                    parent: None,
+                                    layer: crate::ids::LayerId(1),
+                                    order: MarkOrderKey(base_order.saturating_mul(2)),
+                                    kind: MarkKind::Points,
+                                    source_series: Some(series.id),
+                                    payload: MarkPayloadRef::Points(MarkPointsRef {
+                                        points: range.clone(),
+                                        fill: None,
+                                        opacity_mul: None,
+                                        radius_mul: None,
+                                        stroke: None,
+                                    }),
+                                });
+                                marks.nodes.len() - 1
                             };
-                            p.points = range.clone();
-                            p.fill = None;
-                            p.opacity_mul = None;
-                            p.radius_mul = None;
-                            p.stroke = None;
-                        }
 
-                        stats.points_emitted += (range.end - range.start) as u64;
-                        if created {
-                            stats.marks_emitted += 1;
+                            if let Some(node) = marks.nodes.get_mut(node_index) {
+                                let MarkPayloadRef::Points(p) = &mut node.payload else {
+                                    return false;
+                                };
+                                p.points = range.clone();
+                                p.fill = None;
+                                p.opacity_mul = None;
+                                p.radius_mul = None;
+                                p.stroke = None;
+                            }
+
+                            stats.points_emitted += (range.end - range.start) as u64;
+                            if created {
+                                stats.marks_emitted += 1;
+                            }
+                            marks.revision.bump();
+                            self.finalized = true;
                         }
-                        marks.revision.bump();
-                        self.finalized = true;
                     }
 
                     {
