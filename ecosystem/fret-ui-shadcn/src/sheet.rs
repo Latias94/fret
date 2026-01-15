@@ -483,7 +483,29 @@ impl SheetContent {
         };
         let layout = base_layout.merge(self.layout);
 
-        let props = decl_style::container_props(&theme, chrome, layout);
+        let props = {
+            let mut props = decl_style::container_props(&theme, chrome, layout);
+            let border_w = props.border.top;
+            props.border = match side {
+                SheetSide::Left => Edges {
+                    right: border_w,
+                    ..Edges::all(Px(0.0))
+                },
+                SheetSide::Right => Edges {
+                    left: border_w,
+                    ..Edges::all(Px(0.0))
+                },
+                SheetSide::Top => Edges {
+                    bottom: border_w,
+                    ..Edges::all(Px(0.0))
+                },
+                SheetSide::Bottom => Edges {
+                    top: border_w,
+                    ..Edges::all(Px(0.0))
+                },
+            };
+            props
+        };
         let children = self.children;
         let container = shadcn_layout::container_vstack_gap(
             cx,
