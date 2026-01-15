@@ -4,6 +4,7 @@
 //! - It is policy-heavy and will iterate faster than `crates/fret-ui`.
 //! - It should not expand the `fret-ui` runtime contract surface (ADR 0066).
 
+pub mod commands;
 mod frame;
 mod tab_strip;
 

@@ -12,12 +12,40 @@ use fret_ui::element::SemanticsProps;
 use fret_ui::{Invalidation, Theme, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_workspace::commands::{
+    CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_PREFIX, CMD_WORKSPACE_TAB_NEXT,
+    CMD_WORKSPACE_TAB_PREV,
+};
 use fret_workspace::{
     WorkspaceFrame, WorkspaceStatusBar, WorkspaceTab, WorkspaceTabStrip, WorkspaceTopBar,
 };
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::time::Duration;
 use time::Date;
+
+const ENV_UI_GALLERY_BISECT: &str = "FRET_UI_GALLERY_BISECT";
+
+const BISECT_MINIMAL_ROOT: u32 = 1 << 0;
+const BISECT_DISABLE_OVERLAY_CONTROLLER: u32 = 1 << 1;
+const BISECT_DISABLE_TOASTER: u32 = 1 << 2;
+const BISECT_DISABLE_TAB_STRIP: u32 = 1 << 3;
+const BISECT_SIMPLE_SIDEBAR: u32 = 1 << 4;
+const BISECT_SIMPLE_CONTENT: u32 = 1 << 5;
+const BISECT_DISABLE_SIDEBAR_SCROLL: u32 = 1 << 6;
+const BISECT_DISABLE_CONTENT_SCROLL: u32 = 1 << 7;
+const BISECT_DISABLE_MARKDOWN: u32 = 1 << 8;
+const BISECT_DISABLE_TABS: u32 = 1 << 9;
+
+fn ui_gallery_bisect_flags() -> u32 {
+    static FLAGS: OnceLock<u32> = OnceLock::new();
+    *FLAGS.get_or_init(|| {
+        std::env::var(ENV_UI_GALLERY_BISECT)
+            .ok()
+            .and_then(|v| v.parse::<u32>().ok())
+            .unwrap_or(0)
+    })
+}
 
 const CMD_NAV_SELECT_PREFIX: &str = "ui_gallery.nav.select.";
 const CMD_DATA_GRID_ROW_PREFIX: &str = "ui_gallery.data_grid.row.";
@@ -255,6 +283,8 @@ struct UiGalleryWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
     selected_page: Model<Arc<str>>,
+    workspace_tabs: Model<Vec<Arc<str>>>,
+    workspace_dirty_tabs: Model<Vec<Arc<str>>>,
     nav_query: Model<String>,
     content_tab: Model<Option<Arc<str>>>,
     theme_preset: Model<Option<Arc<str>>>,
@@ -296,6 +326,16 @@ struct UiGalleryDriver;
 impl UiGalleryDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> UiGalleryWindowState {
         let selected_page = app.models_mut().insert(Arc::<str>::from(PAGE_INTRO));
+        let workspace_tabs = app.models_mut().insert(vec![
+            Arc::<str>::from(PAGE_INTRO),
+            Arc::<str>::from(PAGE_LAYOUT),
+            Arc::<str>::from(PAGE_BUTTON),
+            Arc::<str>::from(PAGE_OVERLAY),
+            Arc::<str>::from(PAGE_COMMAND),
+        ]);
+        let workspace_dirty_tabs = app
+            .models_mut()
+            .insert(vec![Arc::<str>::from(PAGE_OVERLAY)]);
         let nav_query = app.models_mut().insert(String::new());
         let content_tab = app.models_mut().insert(Some(Arc::<str>::from("preview")));
         let theme_preset = app
@@ -352,6 +392,8 @@ impl UiGalleryDriver {
             ui,
             root: None,
             selected_page,
+            workspace_tabs,
+            workspace_dirty_tabs,
             nav_query,
             content_tab,
             theme_preset,
@@ -398,8 +440,113 @@ impl UiGalleryDriver {
         };
 
         let page: Arc<str> = Arc::from(page);
+        let page_for_tabs = page.clone();
         let _ = app.models_mut().update(&state.selected_page, |v| *v = page);
+        let _ = app.models_mut().update(&state.workspace_tabs, |tabs| {
+            if !tabs.iter().any(|t| t.as_ref() == page_for_tabs.as_ref()) {
+                tabs.push(page_for_tabs);
+            }
+        });
         true
+    }
+
+    fn handle_workspace_tab_command(
+        app: &mut App,
+        state: &UiGalleryWindowState,
+        command: &CommandId,
+    ) -> bool {
+        let close_tab_by_id = |app: &mut App, tab_id: Arc<str>| -> bool {
+            let selected = app
+                .models()
+                .get_cloned(&state.selected_page)
+                .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+
+            let mut closed = false;
+            let mut next_selected: Option<Arc<str>> = None;
+
+            let _ = app.models_mut().update(&state.workspace_tabs, |tabs| {
+                let Some(index) = tabs.iter().position(|t| t.as_ref() == tab_id.as_ref()) else {
+                    return;
+                };
+                if tabs.len() <= 1 {
+                    return;
+                }
+
+                tabs.remove(index);
+                closed = true;
+
+                if selected.as_ref() == tab_id.as_ref() {
+                    let next_index = index.min(tabs.len().saturating_sub(1));
+                    next_selected = tabs.get(next_index).cloned();
+                }
+            });
+
+            if !closed {
+                return false;
+            }
+
+            let _ = app
+                .models_mut()
+                .update(&state.workspace_dirty_tabs, |dirty| {
+                    dirty.retain(|t| t.as_ref() != tab_id.as_ref());
+                });
+
+            if let Some(next) = next_selected {
+                let _ = app.models_mut().update(&state.selected_page, |v| *v = next);
+            }
+
+            true
+        };
+
+        match command.as_str() {
+            CMD_WORKSPACE_TAB_NEXT | CMD_WORKSPACE_TAB_PREV => {
+                let selected = app
+                    .models()
+                    .get_cloned(&state.selected_page)
+                    .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+                let tabs = app
+                    .models()
+                    .get_cloned(&state.workspace_tabs)
+                    .unwrap_or_default();
+                if tabs.is_empty() {
+                    return false;
+                }
+                let Some(index) = tabs.iter().position(|t| t.as_ref() == selected.as_ref()) else {
+                    return false;
+                };
+
+                let next_index = if command.as_str() == CMD_WORKSPACE_TAB_NEXT {
+                    (index + 1) % tabs.len()
+                } else {
+                    (index + tabs.len() - 1) % tabs.len()
+                };
+                if let Some(next) = tabs.get(next_index).cloned() {
+                    let _ = app.models_mut().update(&state.selected_page, |v| *v = next);
+                    return true;
+                }
+                false
+            }
+            CMD_WORKSPACE_TAB_CLOSE => {
+                let selected = app
+                    .models()
+                    .get_cloned(&state.selected_page)
+                    .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+                close_tab_by_id(app, selected)
+            }
+            _ => {
+                if let Some(suffix) = command
+                    .as_str()
+                    .strip_prefix(CMD_WORKSPACE_TAB_CLOSE_PREFIX)
+                {
+                    let suffix = suffix.trim();
+                    if suffix.is_empty() {
+                        return false;
+                    }
+                    return close_tab_by_id(app, Arc::<str>::from(suffix));
+                }
+                false
+            }
+        }
     }
 
     fn handle_gallery_command(app: &mut App, state: &UiGalleryWindowState, command: &CommandId) {
@@ -480,8 +627,11 @@ impl UiGalleryDriver {
         bounds: fret_core::Rect,
     ) {
         OverlayController::begin_frame(app, window);
+        let bisect = ui_gallery_bisect_flags();
 
         let selected_page = state.selected_page.clone();
+        let workspace_tabs = state.workspace_tabs.clone();
+        let workspace_dirty_tabs = state.workspace_dirty_tabs.clone();
         let nav_query = state.nav_query.clone();
         let content_tab = state.content_tab.clone();
         let theme_preset = state.theme_preset.clone();
@@ -520,7 +670,13 @@ impl UiGalleryDriver {
         let root =
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
                 .render_root("fret-ui-gallery", |cx| {
+                    if (bisect & BISECT_MINIMAL_ROOT) != 0 {
+                        return vec![cx.text("Hello, fret-ui-gallery")];
+                    }
+
                     cx.observe_model(&selected_page, Invalidation::Layout);
+                    cx.observe_model(&workspace_tabs, Invalidation::Layout);
+                    cx.observe_model(&workspace_dirty_tabs, Invalidation::Layout);
                     cx.observe_model(&nav_query, Invalidation::Layout);
                     cx.observe_model(&content_tab, Invalidation::Layout);
                     cx.observe_model(&theme_preset, Invalidation::Layout);
@@ -570,49 +726,78 @@ impl UiGalleryDriver {
                         .ok()
                         .unwrap_or_default();
 
-                    let sidebar = sidebar_view(
-                        cx,
-                        &theme,
-                        selected.as_ref(),
-                        query.as_str(),
-                        nav_query.clone(),
-                    );
-                    let content = content_view(
-                        cx,
-                        &theme,
-                        selected.as_ref(),
-                        content_tab.clone(),
-                        theme_preset.clone(),
-                        theme_preset_open.clone(),
-                        popover_open.clone(),
-                        dialog_open.clone(),
-                        alert_dialog_open.clone(),
-                        sheet_open.clone(),
-                        select_value.clone(),
-                        select_open.clone(),
-                        combobox_value.clone(),
-                        combobox_open.clone(),
-                        combobox_query.clone(),
-                        date_picker_open.clone(),
-                        date_picker_month.clone(),
-                        date_picker_selected.clone(),
-                        resizable_h_fractions.clone(),
-                        resizable_v_fractions.clone(),
-                        data_table_state.clone(),
-                        data_grid_selected_row.clone(),
-                        tabs_value.clone(),
-                        accordion_value.clone(),
-                        progress.clone(),
-                        checkbox.clone(),
-                        switch.clone(),
-                        text_input.clone(),
-                        text_area.clone(),
-                        dropdown_open.clone(),
-                        context_menu_open.clone(),
-                        cmdk_open.clone(),
-                        cmdk_query.clone(),
-                        last_action.clone(),
-                    );
+                    let sidebar = if (bisect & BISECT_SIMPLE_SIDEBAR) != 0 {
+                        cx.container(
+                            decl_style::container_props(
+                                &theme,
+                                ChromeRefinement::default()
+                                    .bg(ColorRef::Color(theme.color_required("muted")))
+                                    .p(Space::N4),
+                                LayoutRefinement::default()
+                                    .w_px(MetricRef::Px(Px(280.0)))
+                                    .h_full(),
+                            ),
+                            |cx| vec![cx.text("Sidebar (disabled)")],
+                        )
+                    } else {
+                        sidebar_view(
+                            cx,
+                            &theme,
+                            selected.as_ref(),
+                            query.as_str(),
+                            nav_query.clone(),
+                        )
+                    };
+
+                    let content = if (bisect & BISECT_SIMPLE_CONTENT) != 0 {
+                        cx.container(
+                            decl_style::container_props(
+                                &theme,
+                                ChromeRefinement::default()
+                                    .bg(ColorRef::Color(theme.color_required("background")))
+                                    .p(Space::N6),
+                                LayoutRefinement::default().w_full().h_full(),
+                            ),
+                            |cx| vec![cx.text("Content (disabled)")],
+                        )
+                    } else {
+                        content_view(
+                            cx,
+                            &theme,
+                            selected.as_ref(),
+                            content_tab.clone(),
+                            theme_preset.clone(),
+                            theme_preset_open.clone(),
+                            popover_open.clone(),
+                            dialog_open.clone(),
+                            alert_dialog_open.clone(),
+                            sheet_open.clone(),
+                            select_value.clone(),
+                            select_open.clone(),
+                            combobox_value.clone(),
+                            combobox_open.clone(),
+                            combobox_query.clone(),
+                            date_picker_open.clone(),
+                            date_picker_month.clone(),
+                            date_picker_selected.clone(),
+                            resizable_h_fractions.clone(),
+                            resizable_v_fractions.clone(),
+                            data_table_state.clone(),
+                            data_grid_selected_row.clone(),
+                            tabs_value.clone(),
+                            accordion_value.clone(),
+                            progress.clone(),
+                            checkbox.clone(),
+                            switch.clone(),
+                            text_input.clone(),
+                            text_area.clone(),
+                            dropdown_open.clone(),
+                            context_menu_open.clone(),
+                            cmdk_open.clone(),
+                            cmdk_query.clone(),
+                            last_action.clone(),
+                        )
+                    };
 
                     let menubar = shadcn::Menubar::new(vec![
                         shadcn::MenubarMenu::new("File").entries(vec![
@@ -645,31 +830,44 @@ impl UiGalleryDriver {
                     ])
                     .into_element(cx);
 
-                    let tab_strip = WorkspaceTabStrip::new(selected.clone())
-                        .tabs([
-                            WorkspaceTab::new(PAGE_INTRO, "Intro", CommandId::from(CMD_NAV_INTRO)),
-                            WorkspaceTab::new(
-                                PAGE_LAYOUT,
-                                "Layout",
-                                CommandId::from(CMD_NAV_LAYOUT),
-                            ),
-                            WorkspaceTab::new(
-                                PAGE_BUTTON,
-                                "Button",
-                                CommandId::from(CMD_NAV_BUTTON),
-                            ),
-                            WorkspaceTab::new(
-                                PAGE_OVERLAY,
-                                "Overlay",
-                                CommandId::from(CMD_NAV_OVERLAY),
-                            ),
-                            WorkspaceTab::new(
-                                PAGE_COMMAND,
-                                "Command",
-                                CommandId::from(CMD_NAV_COMMAND),
-                            ),
-                        ])
-                        .into_element(cx);
+                    let tab_strip = if (bisect & BISECT_DISABLE_TAB_STRIP) != 0 {
+                        cx.text("Tabs (disabled)")
+                    } else {
+                        let workspace_tab_ids = cx
+                            .app
+                            .models()
+                            .get_cloned(&workspace_tabs)
+                            .unwrap_or_default();
+                        let workspace_dirty_ids = cx
+                            .app
+                            .models()
+                            .get_cloned(&workspace_dirty_tabs)
+                            .unwrap_or_default();
+
+                        WorkspaceTabStrip::new(selected.clone())
+                            .tabs(workspace_tab_ids.iter().map(|tab_id| {
+                                let (title, _origin, _docs, _usage) = page_meta(tab_id.as_ref());
+                                let dirty = workspace_dirty_ids
+                                    .iter()
+                                    .any(|d| d.as_ref() == tab_id.as_ref());
+                                WorkspaceTab::new(
+                                    tab_id.clone(),
+                                    title,
+                                    CommandId::new(format!(
+                                        "{}{}",
+                                        CMD_NAV_SELECT_PREFIX,
+                                        tab_id.as_ref()
+                                    )),
+                                )
+                                .close_command(CommandId::new(format!(
+                                    "{}{}",
+                                    CMD_WORKSPACE_TAB_CLOSE_PREFIX,
+                                    tab_id.as_ref()
+                                )))
+                                .dirty(dirty)
+                            }))
+                            .into_element(cx)
+                    };
 
                     let top_bar = WorkspaceTopBar::new()
                         .left(vec![menubar])
@@ -731,12 +929,18 @@ impl UiGalleryDriver {
                             },
                             |_cx| vec![frame],
                         ),
-                        shadcn::Toaster::new().into_element(cx),
+                        if (bisect & BISECT_DISABLE_TOASTER) != 0 {
+                            cx.text("")
+                        } else {
+                            shadcn::Toaster::new().into_element(cx)
+                        },
                     ]
                 });
 
         state.ui.set_root(root);
-        OverlayController::render(&mut state.ui, app, services, window, bounds);
+        if (bisect & BISECT_DISABLE_OVERLAY_CONTROLLER) == 0 {
+            OverlayController::render(&mut state.ui, app, services, window, bounds);
+        }
         state.root = Some(root);
     }
 }
@@ -748,6 +952,8 @@ fn sidebar_view(
     query: &str,
     nav_query: Model<String>,
 ) -> AnyElement {
+    let bisect = ui_gallery_bisect_flags();
+
     let title_row = stack::hstack(
         cx,
         stack::HStackProps::default()
@@ -815,15 +1021,20 @@ fn sidebar_view(
         ));
     }
 
-    let nav_scroll = shadcn::ScrollArea::new(vec![stack::vstack(
+    let nav_body = stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N4),
         |_cx| nav_sections,
-    )])
-    .refine_layout(LayoutRefinement::default().w_full().h_full())
-    .into_element(cx);
+    );
+    let nav_scroll = if (bisect & BISECT_DISABLE_SIDEBAR_SCROLL) != 0 {
+        nav_body
+    } else {
+        shadcn::ScrollArea::new(vec![nav_body])
+            .refine_layout(LayoutRefinement::default().w_full().h_full())
+            .into_element(cx)
+    };
 
     let container = cx.container(
         decl_style::container_props(
@@ -885,6 +1096,8 @@ fn content_view(
     cmdk_query: Model<String>,
     last_action: Model<Arc<str>>,
 ) -> AnyElement {
+    let bisect = ui_gallery_bisect_flags();
+
     let (title, origin, docs_md, usage_md) = page_meta(selected);
 
     let header = stack::hstack(
@@ -962,28 +1175,51 @@ fn content_view(
         cmdk_query,
         last_action,
     );
-    let docs_panel = markdown::Markdown::new(Arc::from(docs_md)).into_element(cx);
-    let usage_panel = markdown::Markdown::new(Arc::from(usage_md)).into_element(cx);
+    let docs_panel = if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
+        cx.text(docs_md)
+    } else {
+        markdown::Markdown::new(Arc::from(docs_md)).into_element(cx)
+    };
+    let usage_panel = if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
+        cx.text(usage_md)
+    } else {
+        markdown::Markdown::new(Arc::from(usage_md)).into_element(cx)
+    };
 
-    let tabs = shadcn::Tabs::new(content_tab)
-        .refine_layout(LayoutRefinement::default().w_full())
-        .list_full_width(true)
-        .items([
-            shadcn::TabsItem::new("preview", "Preview", vec![preview_panel]),
-            shadcn::TabsItem::new("usage", "Usage", vec![usage_panel]),
-            shadcn::TabsItem::new("docs", "Notes", vec![docs_panel]),
-        ])
-        .into_element(cx);
+    let tabs = if (bisect & BISECT_DISABLE_TABS) != 0 {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .gap(Space::N6),
+            |_cx| vec![preview_panel, usage_panel, docs_panel],
+        )
+    } else {
+        shadcn::Tabs::new(content_tab)
+            .refine_layout(LayoutRefinement::default().w_full())
+            .list_full_width(true)
+            .items([
+                shadcn::TabsItem::new("preview", "Preview", vec![preview_panel]),
+                shadcn::TabsItem::new("usage", "Usage", vec![usage_panel]),
+                shadcn::TabsItem::new("docs", "Notes", vec![docs_panel]),
+            ])
+            .into_element(cx)
+    };
 
-    let content = shadcn::ScrollArea::new(vec![stack::vstack(
+    let body = stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N6),
         |_cx| vec![header, tabs],
-    )])
-    .refine_layout(LayoutRefinement::default().w_full().h_full())
-    .into_element(cx);
+    );
+    let content = if (bisect & BISECT_DISABLE_CONTENT_SCROLL) != 0 {
+        body
+    } else {
+        shadcn::ScrollArea::new(vec![body])
+            .refine_layout(LayoutRefinement::default().w_full().h_full())
+            .into_element(cx)
+    };
 
     cx.container(
         decl_style::container_props(
@@ -1537,9 +1773,7 @@ fn preview_data_table(
                         .sort_by(|a: &DemoProcessRow, b: &DemoProcessRow| a.cpu.cmp(&b.cpu))
                         .size(90.0),
                     fret_ui_headless::table::ColumnDef::new("mem_mb")
-                        .sort_by(|a: &DemoProcessRow, b: &DemoProcessRow| {
-                            a.mem_mb.cmp(&b.mem_mb)
-                        })
+                        .sort_by(|a: &DemoProcessRow, b: &DemoProcessRow| a.mem_mb.cmp(&b.mem_mb))
                         .size(110.0),
                 ]);
 
@@ -2515,6 +2749,9 @@ pub fn build_app() -> App {
             .with_keywords(["settings", "preferences"]),
     );
 
+    fret_workspace::commands::register_workspace_commands(app.commands_mut());
+    fret_app::install_command_default_keybindings_into_keymap(&mut app);
+
     app
 }
 
@@ -2613,6 +2850,11 @@ impl WinitAppDriver for UiGalleryDriver {
         }
 
         if state.ui.dispatch_command(app, services, &command) {
+            return;
+        }
+
+        if Self::handle_workspace_tab_command(app, state, &command) {
+            app.request_redraw(window);
             return;
         }
 
