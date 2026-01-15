@@ -275,6 +275,11 @@ pub struct SemanticsProps {
     pub role: SemanticsRole,
     pub label: Option<Arc<str>>,
     pub value: Option<Arc<str>>,
+    /// Whether this semantics wrapper participates in focus traversal.
+    ///
+    /// Note: this is intentionally separate from pointer hit-testing. `Semantics` remains
+    /// input-transparent; use `Pressable` when you need pointer-driven focus.
+    pub focusable: bool,
     pub disabled: bool,
     pub selected: bool,
     pub expanded: Option<bool>,
@@ -307,6 +312,7 @@ impl Default for SemanticsProps {
             role: SemanticsRole::Generic,
             label: None,
             value: None,
+            focusable: false,
             disabled: false,
             selected: false,
             expanded: None,

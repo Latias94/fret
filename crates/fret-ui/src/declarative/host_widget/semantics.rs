@@ -41,6 +41,9 @@ impl ElementHostWidget {
                 if let Some(value) = props.value.as_ref() {
                     cx.set_value(value.as_ref().to_string());
                 }
+                if props.focusable && !props.disabled {
+                    cx.set_focusable(true);
+                }
                 if props.disabled {
                     cx.set_disabled(true);
                 }
@@ -169,7 +172,7 @@ impl ElementHostWidget {
                     cx.push_controlled(node);
                 }
                 cx.set_disabled(!props.enabled);
-                cx.set_focusable(props.enabled);
+                cx.set_focusable(props.enabled && props.focusable);
                 cx.set_invokable(props.enabled);
                 cx.set_collection_position(props.a11y.pos_in_set, props.a11y.set_size);
             }
