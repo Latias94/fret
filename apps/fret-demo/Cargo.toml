@@ -14,17 +14,26 @@ default-run = "fret-demo"
 [features]
 alloc-profile = ["fret-examples/alloc-profile"]
 mathjax-svg = ["fret-examples/mathjax-svg"]
-hotpatch = ["fret-examples/hotpatch", "fret-bootstrap/hotpatch-subsecond"]
+hotpatch = [
+    "fret-examples/hotpatch",
+    "dep:fret-app",
+    "dep:fret-bootstrap",
+    "dep:fret-core",
+    "dep:fret-runtime",
+    "dep:fret-ui",
+    "dep:fret-ui-kit",
+    "dep:fret-ui-shadcn",
+]
 node-graph-demos = ["fret-examples/node-graph-demos"]
-layout-engine-v2 = ["fret-examples/layout-engine-v2", "fret-ui/layout-engine-v2"]
+layout-engine-v2 = ["fret-examples/layout-engine-v2"]
 
 [dependencies]
 anyhow.workspace = true
 fret-examples = { path = "../fret-examples" }
-fret-app = { path = "../../crates/fret-app" }
-fret-core = { path = "../../crates/fret-core" }
-fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver", "ui-app-command-palette", "icons-lucide"] }
-fret-runtime = { path = "../../crates/fret-runtime" }
-fret-ui = { path = "../../crates/fret-ui" }
-fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
-fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
+fret-app = { path = "../../crates/fret-app", optional = true }
+fret-core = { path = "../../crates/fret-core", optional = true }
+fret-runtime = { path = "../../crates/fret-runtime", optional = true }
+fret-ui = { path = "../../crates/fret-ui", optional = true }
+fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", optional = true }
+fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn", optional = true }
+fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", optional = true, features = ["ui-app-driver", "ui-app-command-palette", "icons-lucide"] }
