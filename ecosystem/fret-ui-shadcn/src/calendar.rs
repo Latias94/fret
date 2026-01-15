@@ -451,8 +451,13 @@ fn calendar_icon_button<H: UiHost>(
         }));
 
         let mut pressable_layout = LayoutStyle::default();
-        pressable_layout.size.width = Length::Px(theme.metric_required("metric.size.lg"));
-        pressable_layout.size.height = Length::Px(theme.metric_required("metric.size.lg"));
+        let icon_button_size = match size {
+            ButtonSize::IconSm => theme.metric_required("component.size.sm.icon_button.size"),
+            ButtonSize::IconLg => theme.metric_required("component.size.lg.icon_button.size"),
+            _ => theme.metric_required("component.size.md.icon_button.size"),
+        };
+        pressable_layout.size.width = Length::Px(icon_button_size);
+        pressable_layout.size.height = Length::Px(icon_button_size);
 
         let bg = if st.pressed {
             bg_pressed
