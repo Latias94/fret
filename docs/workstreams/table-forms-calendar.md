@@ -142,17 +142,20 @@ As of the initial audit:
 - [x] Add a demo page in `apps/fret-examples` to validate interaction outcomes (`apps/fret-examples/src/datatable_demo.rs`).
 - [x] Add recipe controls: `DataTableToolbar` + `DataTablePagination` (wires `global_filter`, `column_visibility`, `pagination`).
 - [x] Add baseline keyboard navigation for `DataTable` (focusable list container + active-descendant + Arrow/Home/End/Page keys; Enter/Space toggles).
+- [x] Add range selection + typeahead navigation for `DataTable` (headless-aligned, widget-agnostic).
 
 ### M3 — Forms (headless + shadcn wrappers)
 
 - [x] Headless `FormState` core (dirty/touched/errors/submitting).
 - [x] Validation hooks (sync v1): field registry + submit lifecycle + revalidate-on-change glue (`fret-ui-kit::declarative::form::FormRegistry`).
-- [ ] shadcn wrappers (`Form`, `FormField`, integration with `Input`, `Textarea`, `Select`).
+- [x] shadcn wrappers (`Form`, `FormField`, and control decoration for `Input`/`Textarea`/`Select`-style triggers).
 
 ### M4 — Calendar / Date Picker
 
 - [x] Calendar date math core (month grid + month navigation).
 - [x] shadcn `Calendar` surface + `DatePicker` recipe (`Popover` + `Calendar`).
+- [x] DatePicker trigger formatting (PPP-style, shadcn-aligned default; customizable).
+- [x] Validate `FormField` decoration against `DatePicker` trigger (button/pressable) in `form_demo`.
 - [ ] Keyboard/a11y outcomes review against APG; add targeted tests where feasible.
 
 ### M5 — CanvasDataGrid (performance ceiling)
@@ -313,3 +316,6 @@ Likely next optimizations (if we need “million-row spreadsheet” class perfor
 - 2026-01-14: Started implementing shadcn `Calendar` + `DatePicker` (Calendar WIP; `time` dependency added to `fret-ui-shadcn`).
 - 2026-01-14: Removed the long-lived `fret-ui-kit` `table` feature gate (kept the feature as a no-op compatibility flag) and updated ADR/docs accordingly.
 - 2026-01-15: Enabled focus traversal for semantics wrappers (`SemanticsProps.focusable`) and made `Pressable` semantics respect `PressableProps.focusable`; wired `DataTable` keyboard navigation + active-descendant in `fret-ui-kit::declarative::table::table_virtualized` with tests.
+- 2026-01-15: Added shadcn `FormField` helper to reduce wiring boilerplate; auto-decorates common controls (a11y labels + destructive focus/border on error).
+- 2026-01-15: Extended `DataTable` interaction outcomes (range select + typeahead) and added `ColumnHelper::accessor_str` to support string-based typeahead.
+- 2026-01-15: Updated `DatePicker` trigger label formatting (PPP-style default) and added `form_demo` fields (`Role` select + `Start date` picker) to validate `FormField` decoration.
