@@ -87,4 +87,5 @@ concepts and Fret building blocks they depend on.
 - Golden conformance expansion:
   - (Done) `radix-web` timeline scenarios now cover submenu keyboard open/close for
     dropdown-menu/context-menu/menubar (in addition to hover-open + grace corridor).
-  - (Next) extend `shadcn-web` open snapshots for pages that require non-click input and/or nested submenu open states beyond the current demo set.
+  - (Done) `shadcn-web` open snapshots now cover non-click input pages like `command-dialog` (key chord; see `docs/shadcn-web-goldens.md` `--openKeys`).
+  - (Next) extend `shadcn-web` open snapshots for nested submenu states (and other non-trivial open sequences) beyond the current demo set.

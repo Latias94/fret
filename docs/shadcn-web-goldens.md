@@ -49,7 +49,11 @@ Extract both closed + open overlay states (writes `*.open.json` alongside the ba
 
 Extract open overlay states that require non-click input (the script infers the right open action per page):
 
-`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts context-menu-demo tooltip-demo hover-card-demo --modes=open --update --baseUrl=http://localhost:4020`
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts context-menu-demo tooltip-demo hover-card-demo command-dialog --modes=open --update --baseUrl=http://localhost:4020`
+
+If a page opens via a keyboard chord, you can override the keys used for `openAction=keys`:
+
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts command-dialog --modes=open --update --baseUrl=http://localhost:4020 --openKeys=Control+KeyJ`
 
 Extract multiple open variants for a single page (writes `*.{variant}.open.json` alongside the base files):
 
@@ -66,7 +70,7 @@ If you also extract open overlay states (`--modes=open` or `--open`), you will g
 `*.open.json` files alongside the base closed-mode goldens. In this repo, the current snapshot is:
 
 - `362` closed-mode files (`*.json`, excluding `*.open.json`)
-- `15` open-mode files (`*.open.json`)
+- `16` open-mode files (`*.open.json`)
 
 If the extracted `computedStyle` looks like browser defaults (e.g. `<button>` has `display:
 inline-block`, `borderTopWidth: 2px`), your dev server is likely not producing Tailwind utilities.
@@ -113,6 +117,7 @@ pixel diffs. See: `docs/audits/shadcn-web-layout-conformance.md`.
 - `--openSelector=<css>` (optional override for the "open overlay" trigger)
 - `--openVariants="<variant>=<css>;..."` (optional; writes `name.<variant>.open.json` for each entry; overrides `--openSelector`)
 - `--openAction=click|hover|contextmenu|keys` (optional override for the "open overlay" action; default is inferred per page)
+- `--openKeys=<chord>` (optional; only used when `openAction=keys`; e.g. `Control+KeyJ` or `Meta+KeyJ`; env: `OPEN_KEYS`)
 - `--baseUrl=http://localhost:4000`
 - `--all` (env: `ALL_GOLDENS=1`)
 - `--types=registry:block,registry:component,registry:example` (env: `TYPES=...`)

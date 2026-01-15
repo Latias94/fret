@@ -14,6 +14,8 @@ type OpenMeta = { action: OpenAction; selector: string; point: { x: number; y: n
 
 type OpenVariant = { variant: string; selector: string }
 
+type KeyChord = { modifiers: string[]; key: string }
+
 type GoldenOptions = {
   baseUrl: string
   style: string
@@ -26,6 +28,7 @@ type GoldenOptions = {
   timeoutMs: number
   openSelector?: string
   openAction?: OpenAction
+  openKeys?: KeyChord
   openVariants?: OpenVariant[]
   mergeThemes?: boolean
 }
@@ -107,6 +110,75 @@ function parseOpenVariants(raw: string): OpenVariant[] {
   }
 
   return out
+}
+
+function normalizeKeyToken(raw: string): string {
+  const v = raw.trim()
+  if (!v) return v
+
+  const lower = v.toLowerCase()
+  if (lower === "ctrl" || lower === "control") return "Control"
+  if (lower === "cmd" || lower === "command" || lower === "meta" || lower === "win")
+    return "Meta"
+  if (lower === "alt" || lower === "option") return "Alt"
+  if (lower === "shift") return "Shift"
+
+  // Let callers pass Puppeteer key codes directly (e.g. "KeyJ", "Digit1", "F10").
+  if (/^(Key[A-Z]|Digit[0-9]|F[0-9]{1,2}|Arrow(Up|Down|Left|Right))$/.test(v)) return v
+
+  if (/^[a-zA-Z]$/.test(v)) return `Key${v.toUpperCase()}`
+  if (/^[0-9]$/.test(v)) return `Digit${v}`
+
+  // Common named keys.
+  if (
+    [
+      "Enter",
+      "Escape",
+      "Tab",
+      "Backspace",
+      "Delete",
+      "Space",
+      "Home",
+      "End",
+      "PageUp",
+      "PageDown",
+    ].includes(v)
+  ) {
+    return v
+  }
+
+  throw new Error(`invalid key token "${raw}"`)
+}
+
+function parseOpenKeys(raw: string): KeyChord {
+  const parts = raw
+    .split("+")
+    .map((p) => p.trim())
+    .filter(Boolean)
+
+  if (parts.length === 0) {
+    throw new Error(`invalid --openKeys="${raw}" (empty chord)`)
+  }
+
+  const norm = parts.map(normalizeKeyToken)
+  const key = norm[norm.length - 1]
+  const modifiers = norm.slice(0, -1)
+
+  for (const m of modifiers) {
+    if (m !== "Shift" && m !== "Control" && m !== "Alt" && m !== "Meta") {
+      throw new Error(
+        `invalid --openKeys="${raw}" (modifier "${m}" must be Shift|Control|Alt|Meta)`
+      )
+    }
+  }
+
+  // De-dupe modifiers while preserving order.
+  const dedupedMods: string[] = []
+  for (const m of modifiers) {
+    if (!dedupedMods.includes(m)) dedupedMods.push(m)
+  }
+
+  return { modifiers: dedupedMods, key }
 }
 
 function resolveBrowserExecutablePath(): string | undefined {
@@ -372,7 +444,8 @@ async function openOverlay(
   name: string,
   timeoutMs: number,
   openSelector: string | undefined,
-  openAction: OpenAction
+  openAction: OpenAction,
+  openKeys: KeyChord | undefined
 ) {
   const rootSel = "[data-fret-golden-target]"
   const debug = process.env.DEBUG_GOLDENS === "1"
@@ -423,6 +496,10 @@ async function openOverlay(
       `${rootSel} button`,
       `${rootSel}`
     )
+  } else if (openAction === "keys") {
+    // Keyboard-triggered pages may not render a clickable trigger (e.g. `command-dialog`).
+    // Focus a stable node so the page receives key events.
+    selectorCandidates.push(`${rootSel}`)
   } else {
     selectorCandidates.push(
       `${rootSel} [role='combobox'][aria-expanded='false']`,
@@ -497,10 +574,20 @@ async function openOverlay(
         })
       } else if (openAction === "keys") {
         await page.focus(sel)
-        // Prefer the cross-platform "Shift+F10" policy for context menus, otherwise try Enter.
-        await page.keyboard.down("Shift")
-        await page.keyboard.press("F10")
-        await page.keyboard.up("Shift")
+        if (openKeys) {
+          for (const mod of openKeys.modifiers) {
+            await page.keyboard.down(mod)
+          }
+          await page.keyboard.press(openKeys.key)
+          for (const mod of [...openKeys.modifiers].reverse()) {
+            await page.keyboard.up(mod)
+          }
+        } else {
+          // Default key open policy: "Shift+F10" (common cross-platform context menu shortcut).
+          await page.keyboard.down("Shift")
+          await page.keyboard.press("F10")
+          await page.keyboard.up("Shift")
+        }
       } else {
         await page.mouse.click(point.abs.x, point.abs.y, {
           button: "left",
@@ -546,7 +633,14 @@ async function openOverlay(
 function inferOpenAction(name: string): OpenAction {
   if (name === "context-menu-demo") return "contextmenu"
   if (name === "tooltip-demo" || name === "hover-card-demo") return "hover"
+  if (name === "command-dialog") return "keys"
   return "click"
+}
+
+function inferOpenKeys(name: string): KeyChord | null {
+  // `command-dialog` toggles on keydown: (metaKey || ctrlKey) + "j".
+  if (name === "command-dialog") return parseOpenKeys("Control+KeyJ")
+  return null
 }
 
 async function disableMotion(page: puppeteer.Page) {
@@ -1050,12 +1144,17 @@ async function run(options: GoldenOptions): Promise<string[]> {
               if (mode === "open") {
                 const action = options.openAction ?? inferOpenAction(name)
                 const selector = variant?.selector ?? options.openSelector
+                const keys =
+                  action === "keys"
+                    ? options.openKeys ?? inferOpenKeys(name) ?? undefined
+                    : undefined
                 openMeta = await openOverlay(
                   page,
                   name,
                   options.timeoutMs,
                   selector,
-                  action
+                  action,
+                  keys
                 )
               }
 
@@ -1200,6 +1299,13 @@ const openAction = (() => {
   )
 })()
 
+const openKeysRaw =
+  (typeof flags.openKeys === "string" ? flags.openKeys : undefined) ??
+  process.env.OPEN_KEYS ??
+  undefined
+
+const openKeys = openKeysRaw ? parseOpenKeys(openKeysRaw) : undefined
+
 const defaultNames = ["button-default", "tabs-demo"]
 const all = flags.all === true || process.env.ALL_GOLDENS === "1"
 
@@ -1250,6 +1356,7 @@ try {
   console.log(`- update: ${update ? "yes" : "no (skip existing)"}`)
   console.log(`- all: ${all ? "yes" : "no"}`)
   console.log(`- openVariants: ${openVariants?.length ?? 0}`)
+  console.log(`- openKeys: ${openKeys ? `${openKeys.modifiers.join("+")}+${openKeys.key}` : ""}`)
 
   const finalNames = await resolveNames()
   console.log(`- names: ${finalNames.length}`)
@@ -1266,6 +1373,7 @@ try {
     timeoutMs,
     openSelector,
     openAction,
+    openKeys,
     openVariants,
     mergeThemes: flags.mergeThemes === true || process.env.MERGE_THEMES === "1",
   })
