@@ -2,10 +2,7 @@
 //
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
-use super::hit_test::{
-    compute_tab_insert_index, hit_test_split_handle, hit_test_tab, tab_rect_for_index,
-    tab_scroll_for_node,
-};
+use super::hit_test::{hit_test_split_handle, hit_test_tab, tab_scroll_for_node};
 use super::layout::{
     active_panel_content_bounds, compute_layout_map, dock_hint_rects, dock_space_regions,
     drop_zone_rect, float_zone, hidden_bounds, split_tab_bar,
@@ -23,6 +20,7 @@ use super::services::{
 use super::split_stabilize::{
     SplitSizeLock, apply_same_axis_locks, compute_same_axis_locks_for_split_drag,
 };
+use super::tab_bar_geometry::TabBarGeometry;
 use super::viewport::{
     ViewportCaptureState, hit_test_active_viewport_panel, viewport_input_from_hit,
     viewport_input_from_hit_clamped,
@@ -357,8 +355,7 @@ impl DockSpace {
     }
 
     fn max_tab_scroll(tab_bar: Rect, tab_count: usize) -> Px {
-        let total = DOCK_TAB_W.0 * tab_count as f32;
-        Px((total - tab_bar.size.width.0).max(0.0))
+        TabBarGeometry::fixed(tab_bar, tab_count).max_scroll()
     }
 
     fn clamp_and_ensure_active_visible(
@@ -373,7 +370,8 @@ impl DockSpace {
             return;
         }
 
-        let max_scroll = Self::max_tab_scroll(tab_bar, tab_count);
+        let geom = TabBarGeometry::fixed(tab_bar, tab_count);
+        let max_scroll = geom.max_scroll();
         let mut scroll = self.tab_scroll_for(tabs);
 
         if max_scroll.0 <= 0.0 {
@@ -381,17 +379,7 @@ impl DockSpace {
             return;
         }
 
-        scroll = Px(scroll.0.clamp(0.0, max_scroll.0));
-
-        let tab_left = DOCK_TAB_W.0 * active as f32 - scroll.0;
-        let tab_right = tab_left + DOCK_TAB_W.0;
-        if tab_left < 0.0 {
-            scroll = Px(DOCK_TAB_W.0 * active as f32);
-        } else if tab_right > tab_bar.size.width.0 {
-            scroll = Px(DOCK_TAB_W.0 * (active + 1) as f32 - tab_bar.size.width.0);
-        }
-
-        scroll = Px(scroll.0.clamp(0.0, max_scroll.0));
+        scroll = geom.ensure_tab_visible(scroll, active.min(tab_count.saturating_sub(1)));
         self.set_tab_scroll_for(tabs, scroll);
     }
 
@@ -628,9 +616,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 } => Some(HoverTarget {
                     tabs,
                     zone: DropZone::Center,
-                    insert_index: Some(compute_tab_insert_index(
-                        tab_bar, scroll, tab_count, position,
-                    )),
+                    insert_index: Some(
+                        TabBarGeometry::fixed(tab_bar, tab_count)
+                            .compute_insert_index(position, scroll),
+                    ),
                 }),
                 HoverKind::Zone { tabs, zone } => Some(HoverTarget {
                     tabs,
@@ -893,13 +882,17 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     let tab_rect = layout
                                         .get(&tabs_node)
                                         .copied()
-                                        .map(split_tab_bar)
-                                        .map(|(bar, _content)| {
-                                            tab_rect_for_index(
-                                                bar,
-                                                tab_index,
-                                                self.tab_scroll_for(tabs_node),
-                                            )
+                                        .and_then(|rect| {
+                                            let (bar, _content) = split_tab_bar(rect);
+                                            let tab_count = match dock.graph.node(tabs_node) {
+                                                Some(DockNode::Tabs { tabs, .. }) => tabs.len(),
+                                                _ => 0,
+                                            };
+                                            (tab_index < tab_count).then(|| {
+                                                let scroll = self.tab_scroll_for(tabs_node);
+                                                TabBarGeometry::fixed(bar, tab_count)
+                                                    .tab_rect(tab_index, scroll)
+                                            })
                                         })
                                         .unwrap_or_else(|| Rect::new(*position, Size::default()));
                                     let tab_local = Point::new(
@@ -2283,6 +2276,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 hover,
                 self.window,
                 cx.bounds,
+                &dock.graph,
                 &layout_all,
                 &self.tab_scroll,
                 cx.scene,

@@ -1,4 +1,4 @@
-use super::hit_test::{hit_test_drop_target, tab_rect_for_index};
+use super::hit_test::hit_test_drop_target;
 use super::layout::{
     active_panel_content_bounds, compute_layout_map, dock_hint_rects, dock_space_regions,
     split_tab_bar,
@@ -7,6 +7,7 @@ use super::prelude_core::*;
 use super::prelude_runtime::*;
 use super::prelude_ui::*;
 use super::split_stabilize::{apply_same_axis_locks, compute_same_axis_locks_for_split_drag};
+use super::tab_bar_geometry::TabBarGeometry;
 use super::{
     DockManager, DockPanelContentService, DockPanelRegistry, DockPanelRegistryService, DockSpace,
     render_and_bind_dock_panels,
@@ -209,7 +210,12 @@ impl DockViewportHarness {
         );
         let root_rect = layout.get(&root).copied().expect("expected root rect");
         let (tab_bar, _content) = split_tab_bar(root_rect);
-        let tab_rect = tab_rect_for_index(tab_bar, index, Px(0.0));
+        let tab_count = match self.app.global::<DockManager>().unwrap().graph.node(root) {
+            Some(DockNode::Tabs { tabs, .. }) => tabs.len(),
+            _ => 0,
+        }
+        .max(index + 1);
+        let tab_rect = TabBarGeometry::fixed(tab_bar, tab_count).tab_rect(index, Px(0.0));
         Point::new(Px(tab_rect.origin.x.0 + 2.0), Px(tab_rect.origin.y.0 + 2.0))
     }
 }
@@ -2932,7 +2938,7 @@ fn dock_tab_bar_insert_index_respects_before_after_halves() {
     let (tab_bar, _content) = split_tab_bar(rect);
     let scroll = Px(0.0);
 
-    let tab_b = tab_rect_for_index(tab_bar, 1, scroll);
+    let tab_b = TabBarGeometry::fixed(tab_bar, 3).tab_rect(1, scroll);
     let y = Px(tab_b.origin.y.0 + tab_b.size.height.0 * 0.5);
 
     let left_half = Point::new(Px(tab_b.origin.x.0 + tab_b.size.width.0 * 0.25), y);
@@ -3001,7 +3007,7 @@ fn dock_tab_drop_emits_insert_index_based_on_over_tab_halves() {
     let (tab_bar, _content) = split_tab_bar(dock_bounds);
     let scroll = Px(0.0);
 
-    let over_rect = tab_rect_for_index(tab_bar, 1, scroll);
+    let over_rect = TabBarGeometry::fixed(tab_bar, 3).tab_rect(1, scroll);
     let y = Px(over_rect.origin.y.0 + over_rect.size.height.0 * 0.5);
 
     let check_drop = |app: &mut TestHost,
@@ -3196,7 +3202,7 @@ fn dock_tab_drop_reorders_tabs_when_applying_move_panel() {
     let (tab_bar, _content) = split_tab_bar(dock_bounds);
     let scroll = Px(0.0);
 
-    let over_rect = tab_rect_for_index(tab_bar, 1, scroll);
+    let over_rect = TabBarGeometry::fixed(tab_bar, 3).tab_rect(1, scroll);
     let y = Px(over_rect.origin.y.0 + over_rect.size.height.0 * 0.5);
 
     let left_half = Point::new(Px(over_rect.origin.x.0 + over_rect.size.width.0 * 0.25), y);
