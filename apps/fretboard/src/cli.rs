@@ -59,6 +59,7 @@ Usage:
   fretboard diag latest [--dir <dir>]
   fretboard diag script <script.json> [--dir <dir>] [--script-path <path>] [--script-trigger-path <path>]
   fretboard diag run <script.json> [--dir <dir>] [--timeout-ms <ms>] [--poll-ms <ms>] [--script-path <path>] [--script-trigger-path <path>] [--script-result-path <path>] [--script-result-trigger-path <path>]
+  fretboard diag suite <ui-gallery|script.json...> [--dir <dir>] [--timeout-ms <ms>] [--poll-ms <ms>] [--script-path <path>] [--script-trigger-path <path>] [--script-result-path <path>] [--script-result-trigger-path <path>]
   fretboard list native-demos
   fretboard list web-demos
   fretboard dev native [--bin <name> | --choose] [--hotpatch] [--hotpatch-trigger-path <path>] [--hotpatch-poll-ms <ms>] [-- <args...>]
@@ -85,6 +86,7 @@ Examples:
   fretboard diag latest                    # prints the most recent diagnostics bundle path
   fretboard diag script ./script.json      # writes `target/fret-diag/script.json` and touches `target/fret-diag/script.touch`
   fretboard diag run ./script.json         # pushes script and waits for `script.result.json` (exit 0 on pass, 1 on fail/timeout)
+  fretboard diag suite ui-gallery          # runs `tools/diag-scripts/ui-gallery-*.json` sequentially (app must be running)
   fretboard dev native --hotpatch-devserver ws://127.0.0.1:8080/_dioxus
   fretboard dev native --bin hotpatch_smoke_demo --hotpatch-dx
   fretboard dev web --demo plot_demo

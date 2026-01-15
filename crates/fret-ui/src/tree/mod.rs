@@ -1457,6 +1457,7 @@ impl<H: UiHost> UiTree<H> {
                 let mut set_size: Option<u32> = None;
                 let mut label: Option<String> = None;
                 let mut value: Option<String> = None;
+                let mut test_id: Option<String> = None;
                 let mut text_selection: Option<(u32, u32)> = None;
                 let mut text_composition: Option<(u32, u32)> = None;
                 let mut labelled_by: Vec<NodeId> = Vec::new();
@@ -1484,6 +1485,7 @@ impl<H: UiHost> UiTree<H> {
                         flags: &mut flags,
                         label: &mut label,
                         value: &mut value,
+                        test_id: &mut test_id,
                         text_selection: &mut text_selection,
                         text_composition: &mut text_composition,
                         actions: &mut actions,
@@ -1516,6 +1518,7 @@ impl<H: UiHost> UiTree<H> {
                     role,
                     bounds,
                     flags,
+                    test_id,
                     active_descendant,
                     pos_in_set,
                     set_size,

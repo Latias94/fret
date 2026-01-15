@@ -21,6 +21,44 @@ pub(super) fn handle_roving_flex<H: UiHost>(
         )
     }
 
+    fn is_roving_group_wrapper_instance(
+        instance: &crate::declarative::frame::ElementInstance,
+    ) -> bool {
+        match instance {
+            crate::declarative::frame::ElementInstance::Semantics(props) => matches!(
+                props.role,
+                fret_core::SemanticsRole::Group | fret_core::SemanticsRole::RadioGroup
+            ),
+            _ => false,
+        }
+    }
+
+    fn collect_roving_items_in_subtree<H: UiHost>(
+        app: &mut H,
+        window: AppWindowId,
+        node: NodeId,
+        out: &mut Vec<NodeId>,
+    ) {
+        let children =
+            crate::declarative::mount::children_for_node_in_window_frame(app, window, node);
+        for child in children {
+            let Some(record) =
+                crate::declarative::frame::element_record_for_node(app, window, child)
+            else {
+                continue;
+            };
+
+            if is_roving_item_instance(&record.instance) {
+                out.push(child);
+                continue;
+            }
+
+            // Within a group wrapper subtree, we want to pick up all focusable items in visual
+            // order, even if they are nested under layout containers (e.g. Flex).
+            collect_roving_items_in_subtree(app, window, child, out);
+        }
+    }
+
     struct RovingHookHost<'a, H: UiHost> {
         app: &'a mut H,
         window: AppWindowId,
@@ -127,8 +165,12 @@ pub(super) fn handle_roving_flex<H: UiHost>(
         return;
     }
 
-    // Roving flex items are expected to be direct children of the roving container.
-    let mut roving_items: Vec<NodeId> = Vec::with_capacity(len);
+    // By default, roving items are expected to be direct children of the roving container.
+    //
+    // Some composite widgets (e.g. menu `Group`/`RadioGroup`) introduce structural wrappers for
+    // semantics while keeping the same visual/interaction model. For those wrappers, we collect
+    // roving items from their descendant subtree.
+    let mut roving_items: Vec<NodeId> = Vec::new();
     for &child in cx.children {
         let Some(record) =
             crate::declarative::frame::element_record_for_node(cx.app, window, child)
@@ -137,6 +179,10 @@ pub(super) fn handle_roving_flex<H: UiHost>(
         };
         if is_roving_item_instance(&record.instance) {
             roving_items.push(child);
+            continue;
+        }
+        if is_roving_group_wrapper_instance(&record.instance) {
+            collect_roving_items_in_subtree(cx.app, window, child, &mut roving_items);
         }
     }
     if roving_items.is_empty() {

@@ -5,8 +5,8 @@ pub(super) use crate::action;
 pub(super) use crate::action::{ActivateReason, DismissReason, KeyDownCx};
 pub(super) use crate::element::{
     AnyElement, ContainerProps, CrossAlign, EffectLayerProps, ElementKind, FlexProps,
-    FocusScopeProps, HoverRegionProps, LayoutStyle, Length, MainAlign, Overflow,
-    PointerRegionProps, PressableProps, SpacerProps, SpinnerProps, StackProps, TextProps,
+    FocusScopeProps, HoverRegionProps, InternalDragRegionProps, LayoutStyle, Length, MainAlign,
+    Overflow, PointerRegionProps, PressableProps, SpacerProps, SpinnerProps, StackProps, TextProps,
     VisualTransformProps,
 };
 pub(super) use crate::elements::{ElementContext, GlobalElementId, NodeEntry};

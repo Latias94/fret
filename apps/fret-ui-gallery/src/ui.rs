@@ -1,11 +1,8 @@
 use fret_app::{App, CommandId, Model};
-use fret_core::SemanticsRole;
 use fret_markdown as markdown;
 use fret_ui::Theme;
-use fret_ui::element::SemanticsProps;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
-use std::time::Duration;
 use time::Date;
 
 use crate::{docs::*, spec::*};
@@ -28,7 +25,7 @@ fn matches_query(query: &str, item: &NavItemSpec) -> bool {
         .any(|t| t.to_ascii_lowercase().contains(&q_lower))
 }
 
-fn sidebar_view(
+pub(crate) fn sidebar_view(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
     selected: &str,
@@ -56,6 +53,7 @@ fn sidebar_view(
     let query_input = shadcn::Input::new(nav_query)
         .a11y_label("Search components")
         .placeholder("Search… (id / tag)")
+        .placeholder("Search (id / tag)")
         .into_element(cx);
 
     let mut nav_sections: Vec<AnyElement> = Vec::new();
@@ -148,7 +146,7 @@ fn sidebar_view(
     container
 }
 
-fn content_view(
+pub(crate) fn content_view(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
     selected: &str,
@@ -321,7 +319,9 @@ fn content_view(
     )
 }
 
-fn page_meta(selected: &str) -> (&'static str, &'static str, &'static str, &'static str) {
+pub(crate) fn page_meta(
+    selected: &str,
+) -> (&'static str, &'static str, &'static str, &'static str) {
     match selected {
         PAGE_LAYOUT => (
             "Layout / Stacks & Constraints",
@@ -1149,13 +1149,16 @@ fn preview_menus(
         |cx| {
             shadcn::Button::new("DropdownMenu")
                 .variant(shadcn::ButtonVariant::Outline)
+                .test_id("ui-gallery-dropdown-trigger")
                 .toggle_model(dropdown_open.clone())
                 .into_element(cx)
         },
         |_cx| {
             vec![
                 shadcn::DropdownMenuEntry::Item(
-                    shadcn::DropdownMenuItem::new("Apple").on_select(CMD_MENU_DROPDOWN_APPLE),
+                    shadcn::DropdownMenuItem::new("Apple")
+                        .test_id("ui-gallery-dropdown-item-apple")
+                        .on_select(CMD_MENU_DROPDOWN_APPLE),
                 ),
                 shadcn::DropdownMenuEntry::Item(
                     shadcn::DropdownMenuItem::new("Orange").on_select(CMD_MENU_DROPDOWN_ORANGE),
@@ -1173,12 +1176,15 @@ fn preview_menus(
         |cx| {
             shadcn::Button::new("ContextMenu (right click)")
                 .variant(shadcn::ButtonVariant::Outline)
+                .test_id("ui-gallery-context-trigger")
                 .into_element(cx)
         },
         |_cx| {
             vec![
                 shadcn::ContextMenuEntry::Item(
-                    shadcn::ContextMenuItem::new("Action").on_select(CMD_MENU_CONTEXT_ACTION),
+                    shadcn::ContextMenuItem::new("Action")
+                        .test_id("ui-gallery-context-item-action")
+                        .on_select(CMD_MENU_CONTEXT_ACTION),
                 ),
                 shadcn::ContextMenuEntry::Separator,
                 shadcn::ContextMenuEntry::Item(
@@ -1332,6 +1338,7 @@ fn preview_overlay(
         |cx| {
             shadcn::Button::new("Dialog")
                 .variant(shadcn::ButtonVariant::Outline)
+                .test_id("ui-gallery-dialog-trigger")
                 .toggle_model(dialog_open.clone())
                 .into_element(cx)
         },
@@ -1346,6 +1353,7 @@ fn preview_overlay(
                 shadcn::DialogFooter::new(vec![
                     shadcn::Button::new("Close")
                         .variant(shadcn::ButtonVariant::Secondary)
+                        .test_id("ui-gallery-dialog-close")
                         .toggle_model(dialog_open.clone())
                         .into_element(cx),
                 ])

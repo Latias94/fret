@@ -363,6 +363,89 @@ fn declarative_pointer_region_can_handle_pinch_gesture() {
 }
 
 #[test]
+fn declarative_internal_drag_region_can_handle_internal_drag_events() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let counter = app.models_mut().insert(0u32);
+    let drag_kind = fret_runtime::DragKindId(0x465245545F494452); // "FRET_IDR"
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "internal-drag-region-basic",
+        |cx| {
+            let counter = counter.clone();
+            let mut props = crate::element::InternalDragRegionProps::default();
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+            vec![cx.internal_drag_region(props, |cx| {
+                cx.internal_drag_region_on_internal_drag(Arc::new(
+                    move |host: &mut dyn crate::action::UiDragActionHost,
+                          acx: crate::action::ActionCx,
+                          drag: crate::action::InternalDragCx| {
+                        let Some(session) = host.drag(drag.pointer_id) else {
+                            return false;
+                        };
+                        if session.kind != drag_kind {
+                            return false;
+                        }
+                        if drag.kind == fret_core::InternalDragKind::Over {
+                            let _ = host
+                                .models_mut()
+                                .update(&counter, |v: &mut u32| *v = v.saturating_add(1));
+                            host.request_redraw(acx.window);
+                            return true;
+                        }
+                        false
+                    },
+                ));
+                vec![cx.text("drop target")]
+            })]
+        },
+    );
+
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        drag_kind,
+        window,
+        Point::new(Px(4.0), Px(4.0)),
+        (),
+    );
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+    }
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::InternalDrag(fret_core::InternalDragEvent {
+            pointer_id: fret_core::PointerId(0),
+            position: Point::new(Px(10.0), Px(10.0)),
+            kind: fret_core::InternalDragKind::Over,
+            modifiers: Modifiers::default(),
+        }),
+    );
+
+    let value = app.models_mut().read(&counter, |v| *v).unwrap_or_default();
+    assert_eq!(value, 1);
+}
+
+#[test]
 fn selectable_text_drag_autoscrolls_scroll_container() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

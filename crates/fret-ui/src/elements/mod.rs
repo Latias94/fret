@@ -13,6 +13,8 @@ pub use queries::{
     bounds_for_element, node_for_element, root_bounds_for_element, visual_bounds_for_element,
     with_element_cx,
 };
+#[cfg(feature = "diagnostics")]
+pub use runtime::WindowElementDiagnosticsSnapshot;
 pub use runtime::{ContinuousFrames, ElementRuntime, WindowElementState};
 
 pub(crate) use access::{

@@ -3,21 +3,20 @@
   "steps": [
     {
       "type": "click",
-      "target": { "kind": "role_and_name", "role": "button", "name": "DropdownMenu" }
+      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-trigger" }
     },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "role_and_name", "role": "menu_item", "name": "Apple" }
+        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-item-apple" }
       },
       "timeout_frames": 60
     },
     {
       "type": "click",
-      "target": { "kind": "role_and_name", "role": "menu_item", "name": "Apple" }
+      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-item-apple" }
     },
     { "type": "capture_bundle", "label": "ui-gallery-dropdown-apple" }
   ]
 }
-

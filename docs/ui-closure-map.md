@@ -287,6 +287,7 @@ Validation anchors:
 **Contract**
 
 - Observability strategy: `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`
+- Diagnostics snapshot + scripted interaction tests: `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 
 **Code entry points**
 
@@ -336,7 +337,9 @@ This is the “do it now or pay later” list, ordered by expected rewrite cost.
    - Contract: `docs/adr/0084-multi-window-degradation-policy.md`
 
 2. **UI inspector surface**
-   - Decide a minimal, stable inspector data shape and a demo inspector UI surface (ADR 0036).
+   - Decide a minimal, stable inspector data shape and a scripted interaction test harness surface:
+     - `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
+     - (observability strategy baseline): `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`
 
 3. **Placement solver expansion**
    - Arrow positioning (ADR 0066 says P1); add when renderer/shape semantics are stable enough.

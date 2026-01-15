@@ -5,7 +5,9 @@ use fret_runtime::CommandId;
 
 use crate::commands::{
     CMD_WORKSPACE_TAB_ACTIVATE_PREFIX, CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_PREFIX,
-    CMD_WORKSPACE_TAB_NEXT, CMD_WORKSPACE_TAB_PREV,
+    CMD_WORKSPACE_TAB_MOVE_AFTER_PREFIX, CMD_WORKSPACE_TAB_MOVE_BEFORE_PREFIX,
+    CMD_WORKSPACE_TAB_MOVE_LEFT, CMD_WORKSPACE_TAB_MOVE_RIGHT, CMD_WORKSPACE_TAB_NEXT,
+    CMD_WORKSPACE_TAB_PREV,
 };
 
 #[cfg(feature = "serde")]
@@ -279,7 +281,31 @@ impl WorkspaceTabs {
                 };
                 return self.close(active.as_ref());
             }
+            CMD_WORKSPACE_TAB_MOVE_LEFT => return self.move_active_by(-1),
+            CMD_WORKSPACE_TAB_MOVE_RIGHT => return self.move_active_by(1),
             _ => {}
+        }
+
+        if let Some(id) = command
+            .as_str()
+            .strip_prefix(CMD_WORKSPACE_TAB_MOVE_BEFORE_PREFIX)
+        {
+            let id = id.trim();
+            if id.is_empty() {
+                return false;
+            }
+            return self.move_active_relative_to(id, false);
+        }
+
+        if let Some(id) = command
+            .as_str()
+            .strip_prefix(CMD_WORKSPACE_TAB_MOVE_AFTER_PREFIX)
+        {
+            let id = id.trim();
+            if id.is_empty() {
+                return false;
+            }
+            return self.move_active_relative_to(id, true);
         }
 
         if let Some(id) = command
@@ -305,6 +331,78 @@ impl WorkspaceTabs {
         }
 
         false
+    }
+
+    fn move_active_relative_to(&mut self, target_id: &str, after: bool) -> bool {
+        if self.tabs.len() <= 1 {
+            return false;
+        }
+
+        if self.active.is_none() {
+            if let Some(first) = self.tabs.first().cloned() {
+                return self.activate(first);
+            }
+        }
+
+        let Some(active) = self.active.clone() else {
+            return false;
+        };
+
+        if active.as_ref() == target_id {
+            return false;
+        }
+
+        let Some(active_index) = self.tabs.iter().position(|t| t.as_ref() == active.as_ref())
+        else {
+            return false;
+        };
+
+        if !self.tabs.iter().any(|t| t.as_ref() == target_id) {
+            return false;
+        }
+
+        let item = self.tabs.remove(active_index);
+
+        // Recompute after removal to avoid index adjustment edge cases.
+        let Some(mut target_index) = self.tabs.iter().position(|t| t.as_ref() == target_id) else {
+            return false;
+        };
+        if after {
+            target_index += 1;
+        }
+        target_index = target_index.min(self.tabs.len());
+        self.tabs.insert(target_index, item);
+        true
+    }
+
+    fn move_active_by(&mut self, delta: isize) -> bool {
+        if self.tabs.len() <= 1 {
+            return false;
+        }
+
+        if self.active.is_none() {
+            if let Some(first) = self.tabs.first().cloned() {
+                return self.activate(first);
+            }
+        }
+
+        let Some(active) = self.active.clone() else {
+            return false;
+        };
+
+        let Some(index) = self.tabs.iter().position(|t| t.as_ref() == active.as_ref()) else {
+            return false;
+        };
+
+        let new_index_i = index as isize + delta;
+        let new_index = new_index_i.clamp(0, (self.tabs.len() - 1) as isize) as usize;
+        if new_index == index {
+            return false;
+        }
+
+        let item = self.tabs.remove(index);
+        self.tabs.insert(new_index, item);
+        true
     }
 
     fn touch_mru(&mut self, id: Arc<str>) {
@@ -395,5 +493,58 @@ mod tests {
         assert_eq!(restored.tabs().len(), 3);
         assert!(restored.is_dirty("b"));
         assert_eq!(restored.mru().first().unwrap().as_ref(), "a");
+    }
+
+    #[test]
+    fn move_active_left_right_reorders_tab_list_without_changing_active() {
+        let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
+        for id in tabs(&["a", "b", "c"]) {
+            state.open_and_activate(id);
+        }
+        assert_eq!(state.tabs()[0].as_ref(), "a");
+        assert_eq!(state.tabs()[1].as_ref(), "b");
+        assert_eq!(state.tabs()[2].as_ref(), "c");
+        assert_eq!(state.active().unwrap().as_ref(), "c");
+
+        assert!(state.apply_command(&CommandId::from(CMD_WORKSPACE_TAB_MOVE_LEFT)));
+        assert_eq!(state.active().unwrap().as_ref(), "c");
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["a", "c", "b"]
+        );
+
+        assert!(state.apply_command(&CommandId::from(CMD_WORKSPACE_TAB_MOVE_RIGHT)));
+        assert_eq!(state.active().unwrap().as_ref(), "c");
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["a", "b", "c"]
+        );
+    }
+
+    #[test]
+    fn move_active_before_after_reorders_relative_to_target() {
+        use crate::commands::{tab_move_active_after_command, tab_move_active_before_command};
+
+        let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
+        for id in tabs(&["a", "b", "c", "d"]) {
+            state.open_and_activate(id);
+        }
+        assert_eq!(state.active().unwrap().as_ref(), "d");
+
+        let cmd = tab_move_active_before_command("b").unwrap();
+        assert!(state.apply_command(&cmd));
+        assert_eq!(state.active().unwrap().as_ref(), "d");
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["a", "d", "b", "c"]
+        );
+
+        let cmd = tab_move_active_after_command("c").unwrap();
+        assert!(state.apply_command(&cmd));
+        assert_eq!(state.active().unwrap().as_ref(), "d");
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["a", "b", "c", "d"]
+        );
     }
 }

@@ -687,12 +687,7 @@ fn assert_hover_overlay_chrome_matches(
     let quad = find_best_chrome_quad(&scene, overlay.bounds).expect("painted quad for overlay");
 
     for (idx, edge) in quad.border.iter().enumerate() {
-        assert_close(
-            &format!("{web_name} border[{idx}]"),
-            *edge,
-            web_border,
-            0.6,
-        );
+        assert_close(&format!("{web_name} border[{idx}]"), *edge, web_border, 0.6);
     }
     for (idx, corner) in quad.corners.iter().enumerate() {
         assert_close(

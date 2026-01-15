@@ -198,6 +198,7 @@ impl ElementHostWidget {
             }
             ElementInstance::Image(_)
             | ElementInstance::PointerRegion(_)
+            | ElementInstance::InternalDragRegion(_)
             | ElementInstance::HoverRegion(_)
             | ElementInstance::Spinner(_)
             | ElementInstance::Opacity(_)

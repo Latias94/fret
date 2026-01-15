@@ -154,6 +154,7 @@ pub struct Button {
     on_activate: Option<OnActivate>,
     toggle_model: Option<fret_runtime::Model<bool>>,
     disabled: bool,
+    test_id: Option<Arc<str>>,
     variant: ButtonVariant,
     size: ButtonSize,
     chrome: ChromeRefinement,
@@ -169,6 +170,7 @@ impl std::fmt::Debug for Button {
             .field("on_activate", &self.on_activate.is_some())
             .field("toggle_model", &self.toggle_model.is_some())
             .field("disabled", &self.disabled)
+            .field("test_id", &self.test_id)
             .field("variant", &self.variant)
             .field("size", &self.size)
             .field("chrome", &self.chrome)
@@ -187,6 +189,7 @@ impl Button {
             on_activate: None,
             toggle_model: None,
             disabled: false,
+            test_id: None,
             variant: ButtonVariant::default(),
             size: ButtonSize::default(),
             chrome: ChromeRefinement::default(),
@@ -216,6 +219,11 @@ impl Button {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
         self
     }
 
@@ -257,6 +265,7 @@ impl Button {
             };
 
             let mut base_layout = self.layout;
+            let test_id = self.test_id.clone();
             let is_icon_button = matches!(
                 self.size,
                 ButtonSize::Icon | ButtonSize::IconSm | ButtonSize::IconLg
@@ -362,6 +371,7 @@ impl Button {
                     focus_ring: Some(decl_style::focus_ring(&theme, radius)),
                     a11y: PressableA11y {
                         label: Some(a11y_label.clone()),
+                        test_id: test_id.clone(),
                         ..Default::default()
                     },
                     ..Default::default()

@@ -474,6 +474,7 @@ pub struct SemanticsCx<'a, H: UiHost> {
     pub(crate) flags: &'a mut SemanticsFlags,
     pub(crate) label: &'a mut Option<String>,
     pub(crate) value: &'a mut Option<String>,
+    pub(crate) test_id: &'a mut Option<String>,
     pub(crate) text_selection: &'a mut Option<(u32, u32)>,
     pub(crate) text_composition: &'a mut Option<(u32, u32)>,
     pub(crate) actions: &'a mut fret_core::SemanticsActions,
@@ -496,6 +497,14 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
 
     pub fn set_label(&mut self, label: impl Into<String>) {
         *self.label = Some(label.into());
+    }
+
+    pub fn set_test_id(&mut self, id: impl Into<String>) {
+        *self.test_id = Some(id.into());
+    }
+
+    pub fn clear_test_id(&mut self) {
+        *self.test_id = None;
     }
 
     pub fn set_value(&mut self, value: impl Into<String>) {

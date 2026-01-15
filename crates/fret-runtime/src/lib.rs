@@ -45,7 +45,7 @@ pub use input::{
     InputContext, InputDispatchPhase, KeyChord, Platform, format_chord, format_sequence,
 };
 pub use keymap::{BindingV1, KeySpecV1, KeymapError, KeymapFileV1};
-pub use keymap::{DefaultKeybinding, Keymap, KeymapService, PlatformFilter};
+pub use keymap::{DefaultKeybinding, Keymap, KeymapContinuation, KeymapService, PlatformFilter};
 pub use menu::{Menu, MenuBar, MenuItem};
 pub use model::{Model, ModelCx, ModelHost, ModelId, ModelStore, ModelUpdateError, WeakModel};
 pub use platform_completion::PlatformCompletion;

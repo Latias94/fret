@@ -219,60 +219,76 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
             }
 
-            let prev_run_id = read_script_result_run_id(&resolved_script_result_path).unwrap_or(0);
-
             let src = resolve_path(&workspace_root, PathBuf::from(src));
-            write_script(&src, &resolved_script_path)?;
-            touch(&resolved_script_trigger_path)?;
+            let result = run_script_and_wait(
+                &src,
+                &resolved_script_path,
+                &resolved_script_trigger_path,
+                &resolved_script_result_path,
+                &resolved_script_result_trigger_path,
+                timeout_ms,
+                poll_ms,
+            )?;
+            report_result_and_exit(&result);
+        }
+        "suite" => {
+            if rest.is_empty() {
+                return Err(
+                    "missing suite name or script paths (try: fretboard diag suite ui-gallery)"
+                        .to_string(),
+                );
+            }
 
-            let deadline = Instant::now() + Duration::from_millis(timeout_ms);
-            loop {
-                if Instant::now() >= deadline {
-                    eprintln!(
-                        "timeout waiting for script result (result: {}, trigger: {})",
-                        resolved_script_result_path.display(),
-                        resolved_script_result_trigger_path.display()
-                    );
-                    std::process::exit(1);
-                }
+            let scripts: Vec<PathBuf> = if rest.len() == 1 && rest[0] == "ui-gallery" {
+                [
+                    "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
+                    "tools/diag-scripts/ui-gallery-context-menu-right-click.json",
+                    "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
+                    "tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json",
+                ]
+                .into_iter()
+                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                .collect()
+            } else {
+                rest.into_iter()
+                    .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                    .collect()
+            };
 
-                if let Some(result) = read_script_result(&resolved_script_result_path) {
-                    let run_id = result.get("run_id").and_then(|v| v.as_u64()).unwrap_or(0);
-                    if run_id > prev_run_id {
-                        let stage = result
-                            .get("stage")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("unknown");
-                        match stage {
-                            "passed" => {
-                                println!("PASS (run_id={run_id})");
-                                std::process::exit(0);
-                            }
-                            "failed" => {
-                                let reason = result
-                                    .get("reason")
-                                    .and_then(|v| v.as_str())
-                                    .unwrap_or("unknown");
-                                let last_bundle_dir = result
-                                    .get("last_bundle_dir")
-                                    .and_then(|v| v.as_str())
-                                    .unwrap_or("");
-                                if last_bundle_dir.is_empty() {
-                                    eprintln!("FAIL (run_id={run_id}) reason={reason}");
-                                } else {
-                                    eprintln!(
-                                        "FAIL (run_id={run_id}) reason={reason} last_bundle_dir={last_bundle_dir}"
-                                    );
-                                }
-                                std::process::exit(1);
-                            }
-                            _ => {}
-                        }
+            for src in scripts {
+                let result = run_script_and_wait(
+                    &src,
+                    &resolved_script_path,
+                    &resolved_script_trigger_path,
+                    &resolved_script_result_path,
+                    &resolved_script_result_trigger_path,
+                    timeout_ms,
+                    poll_ms,
+                )?;
+                match result.stage.as_deref() {
+                    Some("passed") => println!("PASS {} (run_id={})", src.display(), result.run_id),
+                    Some("failed") => {
+                        eprintln!(
+                            "FAIL {} (run_id={}) reason={} last_bundle_dir={}",
+                            src.display(),
+                            result.run_id,
+                            result.reason.as_deref().unwrap_or("unknown"),
+                            result.last_bundle_dir.as_deref().unwrap_or("")
+                        );
+                        std::process::exit(1);
+                    }
+                    _ => {
+                        eprintln!(
+                            "unexpected script stage for {}: {:?}",
+                            src.display(),
+                            result
+                        );
+                        std::process::exit(1);
                     }
                 }
-
-                std::thread::sleep(Duration::from_millis(poll_ms.max(1)));
             }
+
+            std::process::exit(0);
         }
         other => Err(format!("unknown diag subcommand: {other}")),
     }
@@ -354,4 +370,90 @@ fn read_script_result(path: &Path) -> Option<serde_json::Value> {
 
 fn read_script_result_run_id(path: &Path) -> Option<u64> {
     read_script_result(path)?.get("run_id")?.as_u64()
+}
+
+#[derive(Debug, Clone)]
+struct ScriptResultSummary {
+    run_id: u64,
+    stage: Option<String>,
+    reason: Option<String>,
+    last_bundle_dir: Option<String>,
+}
+
+fn run_script_and_wait(
+    src: &Path,
+    script_path: &Path,
+    script_trigger_path: &Path,
+    script_result_path: &Path,
+    script_result_trigger_path: &Path,
+    timeout_ms: u64,
+    poll_ms: u64,
+) -> Result<ScriptResultSummary, String> {
+    let prev_run_id = read_script_result_run_id(script_result_path).unwrap_or(0);
+
+    write_script(src, script_path)?;
+    touch(script_trigger_path)?;
+
+    let deadline = Instant::now() + Duration::from_millis(timeout_ms);
+    loop {
+        if Instant::now() >= deadline {
+            return Err(format!(
+                "timeout waiting for script result (result: {}, trigger: {})",
+                script_result_path.display(),
+                script_result_trigger_path.display()
+            ));
+        }
+
+        if let Some(result) = read_script_result(script_result_path) {
+            let run_id = result.get("run_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if run_id > prev_run_id {
+                let stage = result
+                    .get("stage")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+                let reason = result
+                    .get("reason")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+                let last_bundle_dir = result
+                    .get("last_bundle_dir")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+                return Ok(ScriptResultSummary {
+                    run_id,
+                    stage,
+                    reason,
+                    last_bundle_dir,
+                });
+            }
+        }
+
+        std::thread::sleep(Duration::from_millis(poll_ms.max(1)));
+    }
+}
+
+fn report_result_and_exit(result: &ScriptResultSummary) -> ! {
+    match result.stage.as_deref() {
+        Some("passed") => {
+            println!("PASS (run_id={})", result.run_id);
+            std::process::exit(0);
+        }
+        Some("failed") => {
+            let reason = result.reason.as_deref().unwrap_or("unknown");
+            let last_bundle_dir = result.last_bundle_dir.as_deref().unwrap_or("");
+            if last_bundle_dir.is_empty() {
+                eprintln!("FAIL (run_id={}) reason={reason}", result.run_id);
+            } else {
+                eprintln!(
+                    "FAIL (run_id={}) reason={reason} last_bundle_dir={last_bundle_dir}",
+                    result.run_id
+                );
+            }
+            std::process::exit(1);
+        }
+        _ => {
+            eprintln!("unexpected script stage: {:?}", result);
+            std::process::exit(1);
+        }
+    }
 }

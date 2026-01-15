@@ -81,6 +81,7 @@ pub struct DropdownMenuItem {
     pub close_on_select: bool,
     pub command: Option<CommandId>,
     pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
     pub trailing: Option<AnyElement>,
     pub variant: DropdownMenuItemVariant,
     pub submenu: Option<Vec<DropdownMenuEntry>>,
@@ -98,6 +99,7 @@ impl DropdownMenuItem {
             close_on_select: true,
             command: None,
             a11y_label: None,
+            test_id: None,
             trailing: None,
             variant: DropdownMenuItemVariant::Default,
             submenu: None,
@@ -146,6 +148,11 @@ impl DropdownMenuItem {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
         self
     }
 
@@ -1608,6 +1615,7 @@ impl DropdownMenu {
                                                             .a11y_label
                                                             .clone()
                                                             .or_else(|| Some(label.clone()));
+                                                        let test_id = item.test_id.clone();
                                                         let disabled = item.disabled;
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
@@ -1682,13 +1690,14 @@ impl DropdownMenu {
                                                                         &value,
                                                                     )
                                                                 });
-                                                                let a11y =
+                                                                let mut a11y =
                                                                     menu::item::menu_item_a11y_with_controls(
                                                                         a11y_label,
                                                                         has_submenu
                                                                             .then_some(is_open_submenu),
                                                                         controls,
                                                                     );
+                                                                a11y.test_id = test_id.clone();
                                                                 let props = PressableProps {
                                                                     layout: {
                                                                         let mut layout = LayoutStyle::default();

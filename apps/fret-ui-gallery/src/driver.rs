@@ -540,20 +540,24 @@ impl UiGalleryDriver {
                     });
 
                     let menubar = shadcn::Menubar::new(vec![
-                        shadcn::MenubarMenu::new("File").entries(vec![
-                            shadcn::MenubarEntry::Group(shadcn::MenubarGroup::new(vec![
-                                shadcn::MenubarEntry::Item(
-                                    shadcn::MenubarItem::new("Open").on_select(CMD_APP_OPEN),
-                                ),
-                                shadcn::MenubarEntry::Item(
-                                    shadcn::MenubarItem::new("Save").on_select(CMD_APP_SAVE),
-                                ),
-                                shadcn::MenubarEntry::Item(
-                                    shadcn::MenubarItem::new("Settings")
-                                        .on_select(CMD_APP_SETTINGS),
-                                ),
-                            ])),
-                        ]),
+                        shadcn::MenubarMenu::new("File")
+                            .test_id("ui-gallery-menubar-file")
+                            .entries(vec![shadcn::MenubarEntry::Group(
+                                shadcn::MenubarGroup::new(vec![
+                                    shadcn::MenubarEntry::Item(
+                                        shadcn::MenubarItem::new("Open")
+                                            .test_id("ui-gallery-menubar-open")
+                                            .on_select(CMD_APP_OPEN),
+                                    ),
+                                    shadcn::MenubarEntry::Item(
+                                        shadcn::MenubarItem::new("Save").on_select(CMD_APP_SAVE),
+                                    ),
+                                    shadcn::MenubarEntry::Item(
+                                        shadcn::MenubarItem::new("Settings")
+                                            .on_select(CMD_APP_SETTINGS),
+                                    ),
+                                ]),
+                            )]),
                         shadcn::MenubarMenu::new("View").entries(vec![
                             shadcn::MenubarEntry::Group(shadcn::MenubarGroup::new(vec![
                                 shadcn::MenubarEntry::Item(

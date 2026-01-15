@@ -73,6 +73,10 @@ By default bundles go under `target/fret-diag/<timestamp>/` and `target/fret-dia
 
    - `cargo run -p fretboard -- diag run .\\script.json`
 
+   Or run a pre-defined suite (the app must be running):
+
+   - `cargo run -p fretboard -- diag suite ui-gallery`
+
 5. The app executes **one step per frame** (deterministic), and (by default) auto-dumps after actions.
    Use `cargo run -p fretboard -- diag latest` to grab the newest bundle.
 
@@ -278,6 +282,15 @@ When you use `fretboard diag run`, the running app writes a small status file:
 
 - `script.result.json`: `{run_id, stage, reason, last_bundle_dir, ...}`
 - `script.result.touch`: touched whenever the result is updated (useful for external watchers)
+
+`fretboard diag suite` runs multiple scripts sequentially using the same mechanism.
+
+## Regression suites (starter)
+
+The `tools/diag-scripts/` directory contains curated scripts intended to become a baseline suite.
+For the UI gallery, run:
+
+- `cargo run -p fretboard -- diag suite ui-gallery`
 
 ## Troubleshooting
 

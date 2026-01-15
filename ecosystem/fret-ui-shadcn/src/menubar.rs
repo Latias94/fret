@@ -84,6 +84,7 @@ pub struct MenubarItem {
     pub close_on_select: bool,
     pub command: Option<CommandId>,
     pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
     pub trailing: Option<AnyElement>,
     pub variant: MenubarItemVariant,
 }
@@ -100,6 +101,7 @@ impl MenubarItem {
             close_on_select: true,
             command: None,
             a11y_label: None,
+            test_id: None,
             trailing: None,
             variant: MenubarItemVariant::Default,
         }
@@ -131,6 +133,11 @@ impl MenubarItem {
 
     pub fn close_on_select(mut self, close: bool) -> Self {
         self.close_on_select = close;
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
         self
     }
 
@@ -858,6 +865,7 @@ struct MenubarMenuState {
 pub struct MenubarMenu {
     label: Arc<str>,
     disabled: bool,
+    test_id: Option<Arc<str>>,
     window_margin: Px,
     side_offset: Px,
     typeahead_timeout_ticks: u64,
@@ -880,10 +888,16 @@ impl MenubarMenu {
         Self {
             label: label.into(),
             disabled: false,
+            test_id: None,
             window_margin: Px(8.0),
             side_offset: Px(8.0),
             typeahead_timeout_ticks: 30,
         }
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
     }
 
     pub fn entries(self, entries: Vec<MenubarEntry>) -> MenubarMenuEntries {
@@ -987,6 +1001,7 @@ impl MenubarMenuEntries {
             };
 
             let label = self.menu.label.clone();
+            let test_id = self.menu.test_id.clone();
 
             cx.pressable_with_id_props(|cx, st, trigger_id| {
                 if enabled {
@@ -1061,6 +1076,7 @@ impl MenubarMenuEntries {
                     a11y: PressableA11y {
                         role: Some(SemanticsRole::MenuItem),
                         label: Some(label.clone()),
+                        test_id: test_id.clone(),
                         expanded: Some(is_open),
                         controls_element: Some(content_id_for_trigger.0),
                         ..Default::default()
@@ -1607,16 +1623,16 @@ impl MenubarMenuEntries {
 
                                                             let item_enabled =
                                                                 !item.disabled && enabled;
-                                                            let focusable =
-                                                                active.is_some_and(|a| a == idx);
-                                                            let label = item.label.clone();
-                                                              let a11y_label =
-                                                                   item.a11y_label.clone();
-                                                               let command = item.command.clone();
-                                                              let trailing = item.trailing.clone();
-                                                              let leading = item.leading.clone();
-                                                              let close_on_select = item.close_on_select;
-                                                            let variant = item.variant;
+                                                             let focusable =
+                                                                 active.is_some_and(|a| a == idx);
+                                                             let label = item.label.clone();
+                                                               let a11y_label =
+                                                                    item.a11y_label.clone();
+                                                                let command = item.command.clone();
+                                                               let trailing = item.trailing.clone();
+                                                               let leading = item.leading.clone();
+                                                               let close_on_select = item.close_on_select;
+                                                             let variant = item.variant;
                                                                let open = open_for_overlay.clone();
                                                                let group_active =
                                                                    group_active_for_content.clone();
@@ -1662,16 +1678,17 @@ impl MenubarMenuEntries {
                                                                       None
                                                                   };
 
-                                                              let submenu_for_item =
-                                                                  submenu_for_content.clone();
-                                                              let trigger_registry =
-                                                                  trigger_registry_for_overlay_for_content.clone();
-                                                             let value = item.value.clone();
-                                                              let pad_left =
-                                                                  if item.inset { pad_x_inset } else { pad_x };
-                                                              let theme = theme.clone();
-                                                              let overlay_root_name_for_controls =
-                                                                  overlay_root_name_for_controls.clone();
+                                                               let submenu_for_item =
+                                                                   submenu_for_content.clone();
+                                                               let trigger_registry =
+                                                                   trigger_registry_for_overlay_for_content.clone();
+                                                              let value = item.value.clone();
+                                                              let test_id = item.test_id.clone();
+                                                               let pad_left =
+                                                                   if item.inset { pad_x_inset } else { pad_x };
+                                                               let theme = theme.clone();
+                                                               let overlay_root_name_for_controls =
+                                                                   overlay_root_name_for_controls.clone();
                                                               out.push(cx.keyed(value.clone(), move |cx| {
                                                                   cx.pressable_with_id_props(move |cx, st, item_id| {
                                                                     let geometry_hint = submenu_desired_for_hint.map(|desired| {
@@ -1766,14 +1783,16 @@ impl MenubarMenuEntries {
                                                                                     &value,
                                                                                 )
                                                                             });
-                                                                            menu::item::menu_item_a11y_with_controls(
+                                                                            let mut a11y = menu::item::menu_item_a11y_with_controls(
                                                                                 a11y_label.or_else(|| {
                                                                                     Some(label.clone())
                                                                                 }),
                                                                                 expanded,
                                                                                 controls,
                                                                             )
-                                                                            .with_collection_position(
+                                                                            ;
+                                                                            a11y.test_id = test_id.clone();
+                                                                            a11y.with_collection_position(
                                                                                 collection_index,
                                                                                 item_count,
                                                                             )
@@ -2469,6 +2488,7 @@ impl MenubarMenuEntries {
                                                                         let focusable = active.is_some_and(|a| a == idx);
                                                                         let label = item.label.clone();
                                                                         let a11y_label = item.a11y_label.clone();
+                                                                        let test_id = item.test_id.clone();
                                                                         let command = item.command.clone();
                                                                         let trailing = item.trailing.clone();
                                                                         let leading = item.leading.clone();
@@ -2551,14 +2571,20 @@ impl MenubarMenuEntries {
                                                                                     enabled: item_enabled,
                                                                                     focusable,
                                                                                     focus_ring: Some(item_ring),
-                                                                                    a11y: menu::item::menu_item_a11y(
-                                                                                        a11y_label.or_else(|| Some(label.clone())),
-                                                                                        None,
-                                                                                    )
-                                                                                    .with_collection_position(
-                                                                                        collection_index,
-                                                                                        item_count,
-                                                                                    ),
+                                                                                    a11y: {
+                                                                                        let mut a11y =
+                                                                                            menu::item::menu_item_a11y(
+                                                                                                a11y_label.or_else(|| {
+                                                                                                    Some(label.clone())
+                                                                                                }),
+                                                                                                None,
+                                                                                            );
+                                                                                        a11y.test_id = test_id.clone();
+                                                                                        a11y.with_collection_position(
+                                                                                            collection_index,
+                                                                                            item_count,
+                                                                                        )
+                                                                                    },
                                                                                     ..Default::default()
                                                                                 };
 

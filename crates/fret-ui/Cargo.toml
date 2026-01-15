@@ -15,6 +15,7 @@ layout-engine-v2 = []
 compat-policy-shortcuts = []
 compat-retained-widgets = []
 unstable-retained-bridge = []
+diagnostics = []
 
 [dependencies]
 fret-core = { path = "../fret-core" }

@@ -22,4 +22,3 @@ fn main() {
         println!("cargo:rustc-link-arg=-Wl,--stack,{reserve_bytes}");
     }
 }
-

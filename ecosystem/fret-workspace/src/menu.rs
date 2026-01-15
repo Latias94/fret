@@ -166,6 +166,15 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
             },
             MenuItem::Separator,
             MenuItem::Command {
+                command: CommandId::new(crate::commands::CMD_WORKSPACE_TAB_MOVE_LEFT),
+                when: None,
+            },
+            MenuItem::Command {
+                command: CommandId::new(crate::commands::CMD_WORKSPACE_TAB_MOVE_RIGHT),
+                when: None,
+            },
+            MenuItem::Separator,
+            MenuItem::Command {
                 command: cmds.close_tab,
                 when: None,
             },
