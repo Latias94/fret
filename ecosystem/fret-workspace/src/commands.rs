@@ -11,6 +11,14 @@ pub const CMD_WORKSPACE_TAB_CLOSE: &str = "workspace.tab.close";
 pub const CMD_WORKSPACE_PANE_NEXT: &str = "workspace.pane.next";
 pub const CMD_WORKSPACE_PANE_PREV: &str = "workspace.pane.prev";
 
+pub const CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_NEXT: &str = "workspace.pane.move_active_tab.next";
+pub const CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_PREV: &str = "workspace.pane.move_active_tab.prev";
+
+pub const CMD_WORKSPACE_PANE_RESIZE_RIGHT: &str = "workspace.pane.resize.right";
+pub const CMD_WORKSPACE_PANE_RESIZE_LEFT: &str = "workspace.pane.resize.left";
+pub const CMD_WORKSPACE_PANE_RESIZE_UP: &str = "workspace.pane.resize.up";
+pub const CMD_WORKSPACE_PANE_RESIZE_DOWN: &str = "workspace.pane.resize.down";
+
 /// Prefix for "activate a specific tab" commands.
 ///
 /// This is intentionally a prefix-based command family so apps can implement their own tab models
@@ -211,5 +219,47 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
         CommandMeta::new("Previous Pane")
             .with_category("Workspace")
             .with_keywords(["pane", "previous", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_NEXT),
+        CommandMeta::new("Move Active Tab to Next Pane")
+            .with_category("Workspace")
+            .with_keywords(["move", "tab", "pane", "next", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_PREV),
+        CommandMeta::new("Move Active Tab to Previous Pane")
+            .with_category("Workspace")
+            .with_keywords(["move", "tab", "pane", "previous", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_RESIZE_RIGHT),
+        CommandMeta::new("Resize Pane Right")
+            .with_category("Workspace")
+            .with_keywords(["resize", "pane", "right", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_RESIZE_LEFT),
+        CommandMeta::new("Resize Pane Left")
+            .with_category("Workspace")
+            .with_keywords(["resize", "pane", "left", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_RESIZE_UP),
+        CommandMeta::new("Resize Pane Up")
+            .with_category("Workspace")
+            .with_keywords(["resize", "pane", "up", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_RESIZE_DOWN),
+        CommandMeta::new("Resize Pane Down")
+            .with_category("Workspace")
+            .with_keywords(["resize", "pane", "down", "workspace"]),
     );
 }

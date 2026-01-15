@@ -6,6 +6,8 @@ use fret_runtime::CommandId;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+const DEFAULT_PANE_RESIZE_STEP_FRACTION: f32 = 0.05;
+
 /// A lightweight "workspace shell" layout that can be persisted by apps.
 ///
 /// This intentionally does not embed docking internals:
@@ -150,6 +152,54 @@ impl WorkspaceWindowLayout {
         true
     }
 
+    pub fn move_active_tab_to_next_pane(&mut self) -> bool {
+        self.move_active_tab_to_adjacent_pane(true)
+    }
+
+    pub fn move_active_tab_to_prev_pane(&mut self) -> bool {
+        self.move_active_tab_to_adjacent_pane(false)
+    }
+
+    fn move_active_tab_to_adjacent_pane(&mut self, forward: bool) -> bool {
+        if self.active_pane.is_none() {
+            self.active_pane = self.pane_tree.first_leaf_id().cloned();
+        }
+
+        let Some(active) = self.active_pane.clone() else {
+            return false;
+        };
+
+        let mut ids: Vec<Arc<str>> = Vec::new();
+        self.pane_tree.collect_leaf_ids(&mut ids);
+        if ids.len() < 2 {
+            return false;
+        }
+
+        let index = ids
+            .iter()
+            .position(|id| id.as_ref() == active.as_ref())
+            .unwrap_or(0);
+        let target = if forward {
+            ids[(index + 1) % ids.len()].clone()
+        } else {
+            ids[(index + ids.len() - 1) % ids.len()].clone()
+        };
+
+        self.move_active_tab_to_pane(target.as_ref())
+    }
+
+    pub fn resize_active_pane(&mut self, axis: Axis, delta_fraction: f32) -> bool {
+        if self.active_pane.is_none() {
+            self.active_pane = self.pane_tree.first_leaf_id().cloned();
+        }
+        let Some(active) = self.active_pane.clone() else {
+            return false;
+        };
+
+        self.pane_tree
+            .resize_leaf_nearest_split(active.as_ref(), axis, delta_fraction)
+    }
+
     pub fn active_pane_mut(&mut self) -> Option<&mut WorkspacePaneLayout> {
         let active = self.active_pane.clone()?;
         self.pane_tree.find_pane_mut(active.as_ref())
@@ -159,6 +209,26 @@ impl WorkspaceWindowLayout {
         match command.as_str() {
             crate::commands::CMD_WORKSPACE_PANE_NEXT => return self.focus_next_pane(),
             crate::commands::CMD_WORKSPACE_PANE_PREV => return self.focus_prev_pane(),
+            crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_NEXT => {
+                return self.move_active_tab_to_next_pane();
+            }
+            crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_PREV => {
+                return self.move_active_tab_to_prev_pane();
+            }
+            crate::commands::CMD_WORKSPACE_PANE_RESIZE_RIGHT => {
+                return self
+                    .resize_active_pane(Axis::Horizontal, DEFAULT_PANE_RESIZE_STEP_FRACTION);
+            }
+            crate::commands::CMD_WORKSPACE_PANE_RESIZE_LEFT => {
+                return self
+                    .resize_active_pane(Axis::Horizontal, -DEFAULT_PANE_RESIZE_STEP_FRACTION);
+            }
+            crate::commands::CMD_WORKSPACE_PANE_RESIZE_UP => {
+                return self.resize_active_pane(Axis::Vertical, DEFAULT_PANE_RESIZE_STEP_FRACTION);
+            }
+            crate::commands::CMD_WORKSPACE_PANE_RESIZE_DOWN => {
+                return self.resize_active_pane(Axis::Vertical, -DEFAULT_PANE_RESIZE_STEP_FRACTION);
+            }
             _ => {}
         }
 
@@ -323,6 +393,62 @@ impl WorkspacePaneTree {
             WorkspacePaneTree::Split { a, b, .. } => {
                 a.split_leaf(pane_id, axis, fraction, side, new_subtree.clone())
                     || b.split_leaf(pane_id, axis, fraction, side, new_subtree)
+            }
+        }
+    }
+
+    pub fn resize_leaf_nearest_split(
+        &mut self,
+        pane_id: &str,
+        axis: Axis,
+        delta_fraction: f32,
+    ) -> bool {
+        let (_contains, resized) =
+            self.resize_leaf_nearest_split_impl(pane_id, axis, delta_fraction);
+        resized
+    }
+
+    fn resize_leaf_nearest_split_impl(
+        &mut self,
+        pane_id: &str,
+        axis: Axis,
+        delta_fraction: f32,
+    ) -> (bool, bool) {
+        match self {
+            WorkspacePaneTree::Leaf(pane) => (pane.id.as_ref() == pane_id, false),
+            WorkspacePaneTree::Split {
+                axis: node_axis,
+                fraction,
+                a,
+                b,
+            } => {
+                let (contains_a, resized_a) =
+                    a.resize_leaf_nearest_split_impl(pane_id, axis, delta_fraction);
+                if contains_a {
+                    if resized_a {
+                        return (true, true);
+                    }
+                    if *node_axis == axis {
+                        *fraction = clamp_fraction(*fraction + delta_fraction);
+                        return (true, true);
+                    }
+                    return (true, false);
+                }
+
+                let (contains_b, resized_b) =
+                    b.resize_leaf_nearest_split_impl(pane_id, axis, delta_fraction);
+                if contains_b {
+                    if resized_b {
+                        return (true, true);
+                    }
+                    if *node_axis == axis {
+                        *fraction = clamp_fraction(*fraction - delta_fraction);
+                        return (true, true);
+                    }
+                    return (true, false);
+                }
+
+                (false, false)
             }
         }
     }
@@ -613,5 +739,81 @@ mod tests {
                 .iter()
                 .any(|t| t.as_ref() == "a")
         );
+    }
+
+    #[test]
+    fn move_active_tab_to_next_prev_pane_wraps() {
+        let mut window = WorkspaceWindowLayout::new("main", "p1");
+        window.pane_tree = WorkspacePaneTree::split(
+            Axis::Horizontal,
+            0.5,
+            WorkspacePaneTree::leaf("p1"),
+            WorkspacePaneTree::leaf("p2"),
+        );
+        window.active_pane = Some(Arc::<str>::from("p1"));
+
+        window
+            .pane_tree
+            .find_pane_mut("p1")
+            .unwrap()
+            .tabs
+            .open_and_activate(Arc::<str>::from("a"));
+
+        assert!(window.move_active_tab_to_next_pane());
+        assert_eq!(window.active_pane_id().unwrap().as_ref(), "p2");
+
+        assert!(window.move_active_tab_to_next_pane());
+        assert_eq!(window.active_pane_id().unwrap().as_ref(), "p1");
+
+        window
+            .pane_tree
+            .find_pane_mut("p1")
+            .unwrap()
+            .tabs
+            .open_and_activate(Arc::<str>::from("b"));
+
+        assert!(window.move_active_tab_to_prev_pane());
+        assert_eq!(window.active_pane_id().unwrap().as_ref(), "p2");
+    }
+
+    #[test]
+    fn resize_active_pane_adjusts_nearest_matching_split_fraction() {
+        let mut window = WorkspaceWindowLayout::new("main", "p1");
+        window.pane_tree = WorkspacePaneTree::split(
+            Axis::Vertical,
+            0.5,
+            WorkspacePaneTree::split(
+                Axis::Horizontal,
+                0.6,
+                WorkspacePaneTree::leaf("p1"),
+                WorkspacePaneTree::leaf("p2"),
+            ),
+            WorkspacePaneTree::leaf("p3"),
+        );
+
+        window.active_pane = Some(Arc::<str>::from("p1"));
+        assert!(window.resize_active_pane(Axis::Horizontal, 0.1));
+        let WorkspacePaneTree::Split { a, fraction, .. } = &window.pane_tree else {
+            panic!("expected root split");
+        };
+        assert!(
+            (*fraction - 0.5).abs() < 1e-6,
+            "vertical split should remain unchanged"
+        );
+
+        let WorkspacePaneTree::Split { fraction, .. } = a.as_ref() else {
+            panic!("expected nested split");
+        };
+        assert!((*fraction - 0.7).abs() < 1e-6);
+
+        window.active_pane = Some(Arc::<str>::from("p2"));
+        assert!(window.resize_active_pane(Axis::Horizontal, 0.1));
+        let WorkspacePaneTree::Split { a, .. } = &window.pane_tree else {
+            panic!("expected root split");
+        };
+        let WorkspacePaneTree::Split { fraction, .. } = a.as_ref() else {
+            panic!("expected nested split");
+        };
+        assert!((*fraction - 0.6).abs() < 1e-6);
     }
 }
