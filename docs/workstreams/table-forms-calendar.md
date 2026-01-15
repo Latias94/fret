@@ -139,7 +139,7 @@ As of the initial audit:
 - [x] Implement `DataTable` composition in `ecosystem/fret-ui-shadcn`.
 - [x] Remove the `datagrid` feature gate (no heavy deps).
 - [x] Add headless-backed `DataTable`.
-- [x] Add a demo page in `apps/fret-examples` to validate interaction outcomes (`apps/fret-examples/src/tanstack_datatable_demo.rs`).
+- [x] Add a demo page in `apps/fret-examples` to validate interaction outcomes (`apps/fret-examples/src/datatable_demo.rs`).
 - [x] Add recipe controls: `DataTableToolbar` + `DataTablePagination` (wires `global_filter`, `column_visibility`, `pagination`).
 
 ### M3 — Forms (headless + shadcn wrappers)
@@ -303,7 +303,7 @@ Likely next optimizations (if we need “million-row spreadsheet” class perfor
 - 2026-01-13: Completed initial audit of existing table/datagrid/forms/calendar surfaces (see “Current Code Surfaces”).
 - 2026-01-13: Removed `fret-ui-shadcn` `datagrid` feature gate and validated with `cargo check -p fret-ui-shadcn` and `cargo nextest run -p fret-ui-shadcn`.
 - 2026-01-13: Hardened `DataTable`/`DataGrid` vertical virtualization options for fixed row height (`VirtualListMeasureMode::Fixed` + `VirtualListKeyCacheMode::VisibleOnly`).
-- 2026-01-13: Added headless-backed `DataTable` native demo (`apps/fret-examples/src/tanstack_datatable_demo.rs`).
+- 2026-01-13: Added headless-backed `DataTable` native demo (`apps/fret-examples/src/datatable_demo.rs`).
 - 2026-01-13: Extended `headless::grid_viewport` to support “count + key_fn” axes (no need to allocate a `Vec<K>` for fixed/identity-key axes).
 - 2026-01-13: Refactored `fret-ui-shadcn` `DataGrid` prototype to use `Scroll` + `headless::grid_viewport` (single range computation per frame; absolute-positioned visible cells).
 - 2026-01-14: Started implementing shadcn `Calendar` + `DatePicker` (Calendar WIP; `time` dependency added to `fret-ui-shadcn`).
