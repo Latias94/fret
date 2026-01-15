@@ -11,7 +11,7 @@ use delinea::ids::{AxisId, ChartId, DatasetId, FieldId, GridId, SeriesId};
 use delinea::scale::{AxisScale, CategoryAxisScale, ValueAxisScale};
 use delinea::spec::{
     AxisKind, AxisSpec, ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode, SeriesKind,
-    SeriesSpec, TooltipSpecV1,
+    SeriesLodSpecV1, SeriesSpec, TooltipSpecV1,
 };
 
 use serde::Deserialize;
@@ -129,6 +129,14 @@ struct EchartsSeries {
     name: Option<String>,
     #[serde(default)]
     data: Option<Vec<serde_json::Value>>,
+    #[serde(default)]
+    large: Option<bool>,
+    #[serde(default)]
+    large_threshold: Option<u32>,
+    #[serde(default)]
+    progressive: Option<u32>,
+    #[serde(default)]
+    progressive_threshold: Option<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -142,6 +150,7 @@ struct ParsedSeries {
     kind: SeriesKind,
     name: Option<String>,
     points: Vec<(XValue, f64)>,
+    lod: Option<SeriesLodSpecV1>,
 }
 
 #[derive(Debug, Clone)]
@@ -261,7 +270,7 @@ fn translate_option(option: &EchartsOption) -> Result<TranslatedChart> {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
-            lod: None,
+            lod: s.lod,
         });
     }
 
@@ -531,6 +540,19 @@ fn extract_series(option: &EchartsOption) -> Result<Vec<ParsedSeries>> {
             kind,
             name: series.name.clone(),
             points,
+            lod: {
+                let lod = SeriesLodSpecV1 {
+                    large: series.large,
+                    large_threshold: series.large_threshold,
+                    progressive: series.progressive,
+                    progressive_threshold: series.progressive_threshold,
+                };
+                let any = lod.large.is_some()
+                    || lod.large_threshold.is_some()
+                    || lod.progressive.is_some()
+                    || lod.progressive_threshold.is_some();
+                any.then_some(lod)
+            },
         });
     }
 
@@ -641,5 +663,34 @@ mod tests {
         let mut engine = delinea::engine::ChartEngine::new(spec).expect("engine");
         let (dataset_id, table) = translated.datasets.into_iter().next().expect("dataset");
         engine.datasets_mut().insert(dataset_id, table);
+    }
+
+    #[test]
+    fn translate_series_lod_knobs() {
+        let json = r#"
+        {
+          "xAxis": { "type": "value" },
+          "yAxis": { "type": "value" },
+          "series": [
+            {
+              "type": "scatter",
+              "name": "A",
+              "data": [[0, 1], [1, 2], [2, 3]],
+              "large": true,
+              "largeThreshold": 123,
+              "progressive": 456,
+              "progressiveThreshold": 789
+            }
+          ]
+        }
+        "#;
+
+        let translated = translate_json_str(json).expect("translate");
+        let series = &translated.spec.series[0];
+        let lod = series.lod.expect("expected lod knobs");
+        assert_eq!(lod.large, Some(true));
+        assert_eq!(lod.large_threshold, Some(123));
+        assert_eq!(lod.progressive, Some(456));
+        assert_eq!(lod.progressive_threshold, Some(789));
     }
 }
