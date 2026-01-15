@@ -17,7 +17,10 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use crate::declarative::model_watch::ModelWatchExt as _;
 use crate::declarative::stack;
 use crate::dnd;
-use crate::dnd::{ActivationConstraint, CollisionStrategy, DndItemId, DndScopeId, SensorOutput};
+use crate::dnd::{
+    ActivationConstraint, Axis, CollisionStrategy, DndItemId, DndScopeId, InsertionSide,
+    SensorOutput, insertion_side_for_pointer,
+};
 use crate::{Items, Justify, LayoutRefinement, Space};
 
 const DRAG_KIND_SORTABLE_REORDER: DragKindId = DragKindId(100);
@@ -311,9 +314,28 @@ pub fn sortable_reorder_list<H: UiHost>(
                         let Some(over_index) = ids.iter().position(|&v| v == over) else {
                             return;
                         };
+
+                        let over_rect = dnd::droppable_rect_in_scope(
+                            host.models(),
+                            &dnd_on_up,
+                            action_cx.window,
+                            frame_id,
+                            scope,
+                            over,
+                        );
+                        let side = over_rect
+                            .map(|rect| insertion_side_for_pointer(up.position, rect, Axis::Y))
+                            .unwrap_or(InsertionSide::Before);
+                        let mut insert_at = over_index.saturating_add(match side {
+                            InsertionSide::Before => 0,
+                            InsertionSide::After => 1,
+                        });
+                        if active_index < insert_at {
+                            insert_at = insert_at.saturating_sub(1);
+                        }
+
                         let item = ids.remove(active_index);
-                        let insert_at = over_index.min(ids.len());
-                        ids.insert(insert_at, item);
+                        ids.insert(insert_at.min(ids.len()), item);
                         moved = true;
                     });
                 }
@@ -549,7 +571,11 @@ mod tests {
         };
 
         let start = center(rects[0]);
-        let target = center(rects[2]);
+        // Drop on the lower half of the target row so we insert "after" the `over` item.
+        let target = Point::new(
+            Px(rects[2].origin.x.0 + rects[2].size.width.0 * 0.5),
+            Px(rects[2].origin.y.0 + rects[2].size.height.0 * 0.75),
+        );
 
         bump_tick(&mut app);
         ui.dispatch_event(
@@ -628,6 +654,142 @@ mod tests {
 
         let after = app.models().get_cloned(&items).unwrap_or_default();
         assert_eq!(after, vec![DndItemId(2), DndItemId(3), DndItemId(1)]);
+    }
+
+    #[test]
+    fn sortable_reorder_inserts_before_over_when_dropping_on_upper_half() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let items = app
+            .models_mut()
+            .insert(vec![DndItemId(1), DndItemId(2), DndItemId(3)]);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let row_ids: Rc<RefCell<Vec<fret_ui::GlobalElementId>>> = Rc::new(RefCell::new(Vec::new()));
+
+        for _ in 0..2 {
+            bump_tick(&mut app);
+            bump_frame(&mut app);
+            let root = render(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                items.clone(),
+                &row_ids,
+                SortableReorderListProps {
+                    row_height: Px(32.0),
+                    activation: ActivationConstraint::Distance { px: 6.0 },
+                    collision_strategy: CollisionStrategy::ClosestCenter,
+                },
+            );
+            ui.set_root(root);
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        }
+
+        let elements = row_ids.borrow().clone();
+        let nodes = elements
+            .iter()
+            .map(|&el| fret_ui::elements::node_for_element(&mut app, window, el).expect("node"))
+            .collect::<Vec<_>>();
+        let rects = nodes
+            .iter()
+            .map(|&n| ui.debug_node_bounds(n).expect("bounds"))
+            .collect::<Vec<_>>();
+
+        let start = Point::new(
+            Px(rects[0].origin.x.0 + rects[0].size.width.0 * 0.5),
+            Px(rects[0].origin.y.0 + rects[0].size.height.0 * 0.5),
+        );
+        // Drop on the upper half of the target row so we insert "before" the `over` item.
+        let target = Point::new(
+            Px(rects[2].origin.x.0 + rects[2].size.width.0 * 0.5),
+            Px(rects[2].origin.y.0 + rects[2].size.height.0 * 0.25),
+        );
+
+        bump_tick(&mut app);
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: start,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        bump_tick(&mut app);
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: target,
+                buttons: MouseButtons {
+                    left: true,
+                    ..Default::default()
+                },
+                modifiers: Modifiers::default(),
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        bump_tick(&mut app);
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: target,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        bump_tick(&mut app);
+        bump_frame(&mut app);
+        let root = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            items.clone(),
+            &row_ids,
+            SortableReorderListProps {
+                row_height: Px(32.0),
+                activation: ActivationConstraint::Distance { px: 6.0 },
+                collision_strategy: CollisionStrategy::ClosestCenter,
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let after = app.models().get_cloned(&items).unwrap_or_default();
+        assert_eq!(after, vec![DndItemId(2), DndItemId(1), DndItemId(3)]);
     }
 
     #[test]
