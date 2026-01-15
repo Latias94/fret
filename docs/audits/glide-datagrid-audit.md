@@ -152,6 +152,18 @@ Text caching improvement (shared plain-text blobs, 3 iterations, median):
 | 1m × 200 (fixed) | 0.004 | 5.830 |
 | 1m × 200 (variable) | 0.006 | 4.710 |
 
+Text draw-call improvement (coalesce adjacent text draws, 3 iterations, median):
+
+- Commit: (working tree changes not committed yet)
+- Output: `G:\\sccache\\bench\\canvas-datagrid\\20260115-100710\\summary_agg.csv`
+
+| Case | Renderer `prepare_text` median (ms) | Renderer `draws` median |
+| --- | --- | --- |
+| 200k × 200 (fixed) | 4.980 | 366 |
+| 200k × 200 (variable) | 5.030 | 366 |
+| 1m × 200 (fixed) | 5.240 | 366 |
+| 1m × 200 (variable) | 3.980 | 366 |
+
 Interpretation:
 
 - Grid viewport/visible list math is already “in the noise” on high-end hardware.
