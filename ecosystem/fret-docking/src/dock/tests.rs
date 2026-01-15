@@ -2144,6 +2144,116 @@ fn pending_dock_drag_arbitration_is_pointer_keyed() {
 }
 
 #[test]
+fn docking_tab_drag_threshold_is_configurable_via_settings() {
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    harness
+        .app
+        .set_global(fret_runtime::DockingInteractionSettings {
+            tab_drag_threshold: Px(1000.0),
+            ..Default::default()
+        });
+
+    let tab_pos = harness.tab_point(0);
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: tab_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    let move_pos = Point::new(Px(tab_pos.x.0 + 40.0), tab_pos.y);
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position: move_pos,
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    assert!(
+        harness.app.drag(fret_core::PointerId(0)).is_none(),
+        "expected large threshold to prevent activation",
+    );
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Up {
+            position: move_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    harness
+        .app
+        .set_global(fret_runtime::DockingInteractionSettings {
+            tab_drag_threshold: Px(0.0),
+            ..Default::default()
+        });
+
+    let tab_pos = harness.tab_point(0);
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: tab_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position: tab_pos,
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let drag = harness
+        .app
+        .drag(fret_core::PointerId(0))
+        .and_then(|d| d.payload::<DockPanelDragPayload>().map(|_| d));
+    assert!(
+        drag.is_some_and(|d| d.dragging),
+        "expected zero threshold to activate immediately on first move",
+    );
+}
+
+#[test]
 fn dock_drag_requests_animation_frames_while_dragging() {
     let mut harness = DockViewportHarness::new();
     harness.layout();

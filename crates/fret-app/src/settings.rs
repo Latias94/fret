@@ -83,10 +83,20 @@ impl SettingsFileV1 {
     }
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct DockingSettingsV1 {
     pub drag_inversion: DockDragInversionSettingsV1,
+    pub tab_drag_threshold_px: f32,
+}
+
+impl Default for DockingSettingsV1 {
+    fn default() -> Self {
+        Self {
+            drag_inversion: DockDragInversionSettingsV1::default(),
+            tab_drag_threshold_px: 6.0,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -129,6 +139,7 @@ impl SettingsFileV1 {
     pub fn docking_interaction_settings(&self) -> fret_runtime::DockingInteractionSettings {
         fret_runtime::DockingInteractionSettings {
             drag_inversion: self.docking.drag_inversion.clone().into(),
+            tab_drag_threshold: fret_core::Px(self.docking.tab_drag_threshold_px),
         }
     }
 }
