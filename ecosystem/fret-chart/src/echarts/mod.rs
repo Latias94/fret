@@ -196,7 +196,23 @@ struct EchartsDataset {
     #[serde(default)]
     dimensions: Option<Vec<String>>,
     #[serde(default)]
-    source: Option<Vec<Vec<serde_json::Value>>>,
+    source: Option<DatasetSource>,
+    #[serde(default)]
+    source_header: Option<DatasetSourceHeader>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+enum DatasetSource {
+    Rows(Vec<Vec<serde_json::Value>>),
+    Objects(Vec<serde_json::Map<String, serde_json::Value>>),
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+enum DatasetSourceHeader {
+    Num(u8),
+    Str(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -428,63 +444,16 @@ fn translate_option_with_dataset(option: &EchartsOption) -> Result<TranslatedCha
     let mut out_datasets: Vec<(DatasetId, DataTable)> = Vec::with_capacity(datasets.len());
     let mut dataset_specs: Vec<DatasetSpec> = Vec::with_capacity(datasets.len());
     let mut dataset_fields_by_index: Vec<Vec<FieldId>> = Vec::with_capacity(datasets.len());
-    let mut dataset_dimensions_by_index: Vec<Option<Vec<String>>> =
-        Vec::with_capacity(datasets.len());
+    let mut dataset_dimensions_by_index: Vec<Vec<String>> = Vec::with_capacity(datasets.len());
 
     let mut next_field_id = 1u64;
 
     for (dataset_index, ds) in datasets.iter().enumerate() {
-        let Some(source) = ds.source.as_ref() else {
-            return Err(EchartsError::Invalid(
-                "dataset.source is required (v1 subset)",
-            ));
-        };
-        if source.is_empty() {
-            return Err(EchartsError::Invalid("dataset.source is empty"));
-        }
-
-        let width = source[0].len();
-        if width == 0 {
-            return Err(EchartsError::Invalid("dataset.source row has zero width"));
-        }
-
-        for row in source.iter().skip(1) {
-            if row.len() != width {
-                return Err(EchartsError::Invalid(
-                    "dataset.source rows must have consistent width",
-                ));
-            }
-        }
-
-        let mut columns: Vec<Vec<f64>> = vec![Vec::with_capacity(source.len()); width];
-        for row in source {
-            for (col, v) in row.iter().enumerate() {
-                columns[col].push(parse_f64_value(v));
-            }
-        }
-
-        let mut table = DataTable::default();
-        for col in columns {
-            table.push_column(Column::F64(col));
-        }
-
-        let dataset_id = DatasetId::new((dataset_index as u64).saturating_add(1));
-        let mut fields: Vec<FieldSpec> = Vec::with_capacity(width);
-        let mut field_ids: Vec<FieldId> = Vec::with_capacity(width);
-        for col in 0..width {
-            let id = FieldId::new(next_field_id);
-            next_field_id = next_field_id.saturating_add(1);
-            fields.push(FieldSpec { id, column: col });
-            field_ids.push(id);
-        }
-
-        out_datasets.push((dataset_id, table));
-        dataset_specs.push(DatasetSpec {
-            id: dataset_id,
-            fields,
-        });
-        dataset_fields_by_index.push(field_ids);
-        dataset_dimensions_by_index.push(ds.dimensions.clone());
+        let parsed = parse_dataset_v1(dataset_index, ds, &mut next_field_id)?;
+        out_datasets.push((parsed.id, parsed.table));
+        dataset_specs.push(parsed.spec);
+        dataset_fields_by_index.push(parsed.field_ids);
+        dataset_dimensions_by_index.push(parsed.dimensions);
     }
 
     let mut spec = ChartSpec {
@@ -540,13 +509,13 @@ fn translate_option_with_dataset(option: &EchartsOption) -> Result<TranslatedCha
             &encode_x,
             dataset_dimensions_by_index
                 .get(dataset_index)
-                .and_then(|v| v.as_ref()),
+                .map(|v| v.as_slice()),
         )?;
         let y_col = resolve_encode_dim(
             &encode_y,
             dataset_dimensions_by_index
                 .get(dataset_index)
-                .and_then(|v| v.as_ref()),
+                .map(|v| v.as_slice()),
         )?;
 
         let x_field = field_ids.get(x_col).copied().ok_or_else(|| {
@@ -904,6 +873,163 @@ fn resolve_encode_dim(dim: &EncodeDim, dimensions: Option<&[String]>) -> Result<
     }
 }
 
+struct ParsedDatasetV1 {
+    id: DatasetId,
+    table: DataTable,
+    spec: DatasetSpec,
+    field_ids: Vec<FieldId>,
+    dimensions: Vec<String>,
+}
+
+fn parse_dataset_v1(
+    dataset_index: usize,
+    ds: &EchartsDataset,
+    next_field_id: &mut u64,
+) -> Result<ParsedDatasetV1> {
+    let Some(source) = ds.source.as_ref() else {
+        return Err(EchartsError::Invalid(
+            "dataset.source is required (v1 subset)",
+        ));
+    };
+
+    let header_mode = match ds.source_header.as_ref() {
+        None => "auto",
+        Some(DatasetSourceHeader::Num(0)) => "none",
+        Some(DatasetSourceHeader::Num(1)) => "header",
+        Some(DatasetSourceHeader::Num(_)) => {
+            return Err(EchartsError::Unsupported(
+                "dataset.sourceHeader (only 0/1/'auto')",
+            ));
+        }
+        Some(DatasetSourceHeader::Str(s)) if s == "auto" => "auto",
+        Some(DatasetSourceHeader::Str(_)) => {
+            return Err(EchartsError::Unsupported(
+                "dataset.sourceHeader (only 0/1/'auto')",
+            ));
+        }
+    };
+
+    let mut dimensions = ds.dimensions.clone().unwrap_or_default();
+
+    let (row_count, width, columns) = match source {
+        DatasetSource::Rows(rows) => {
+            if rows.is_empty() {
+                return Err(EchartsError::Invalid("dataset.source is empty"));
+            }
+
+            let mut data_start = 0usize;
+            let header_candidate_is_strings = rows[0].iter().all(|v| v.is_string());
+            let has_header = match header_mode {
+                "header" => true,
+                "none" => false,
+                _ => header_candidate_is_strings,
+            };
+
+            if has_header {
+                if !header_candidate_is_strings {
+                    return Err(EchartsError::Invalid(
+                        "dataset.source header row must be strings (v1 subset)",
+                    ));
+                }
+                dimensions = rows[0]
+                    .iter()
+                    .map(|v| v.as_str().unwrap_or_default().to_string())
+                    .collect();
+                data_start = 1;
+            }
+
+            if data_start >= rows.len() {
+                return Err(EchartsError::Invalid("dataset.source has no data rows"));
+            }
+
+            let data_rows = &rows[data_start..];
+            let width = data_rows[0].len();
+            if width == 0 {
+                return Err(EchartsError::Invalid("dataset.source row has zero width"));
+            }
+            for row in data_rows.iter().skip(1) {
+                if row.len() != width {
+                    return Err(EchartsError::Invalid(
+                        "dataset.source rows must have consistent width",
+                    ));
+                }
+            }
+
+            if dimensions.is_empty() {
+                dimensions = (0..width).map(|i| format!("dim{i}")).collect();
+            }
+
+            let mut columns: Vec<Vec<f64>> = vec![Vec::with_capacity(data_rows.len()); width];
+            for row in data_rows {
+                for (col, v) in row.iter().enumerate() {
+                    columns[col].push(parse_f64_value(v));
+                }
+            }
+            (data_rows.len(), width, columns)
+        }
+        DatasetSource::Objects(rows) => {
+            if rows.is_empty() {
+                return Err(EchartsError::Invalid("dataset.source is empty"));
+            }
+
+            if dimensions.is_empty() {
+                let mut keys: BTreeSet<String> = BTreeSet::new();
+                for row in rows {
+                    for k in row.keys() {
+                        keys.insert(k.clone());
+                    }
+                }
+                dimensions = keys.into_iter().collect();
+            }
+
+            if dimensions.is_empty() {
+                return Err(EchartsError::Invalid("dataset.dimensions is empty"));
+            }
+
+            let width = dimensions.len();
+            let mut columns: Vec<Vec<f64>> = vec![Vec::with_capacity(rows.len()); width];
+            for row in rows {
+                for (col, key) in dimensions.iter().enumerate() {
+                    let v = row.get(key).unwrap_or(&serde_json::Value::Null);
+                    columns[col].push(parse_f64_value(v));
+                }
+            }
+
+            (rows.len(), width, columns)
+        }
+    };
+
+    let mut table = DataTable::default();
+    for col in columns {
+        table.push_column(Column::F64(col));
+    }
+
+    let dataset_id = DatasetId::new((dataset_index as u64).saturating_add(1));
+    let mut fields: Vec<FieldSpec> = Vec::with_capacity(width);
+    let mut field_ids: Vec<FieldId> = Vec::with_capacity(width);
+    for col in 0..width {
+        let id = FieldId::new(*next_field_id);
+        *next_field_id = (*next_field_id).saturating_add(1);
+        fields.push(FieldSpec { id, column: col });
+        field_ids.push(id);
+    }
+
+    if table.row_count != row_count {
+        return Err(EchartsError::Invalid("dataset.source rowCount mismatch"));
+    }
+
+    Ok(ParsedDatasetV1 {
+        id: dataset_id,
+        table,
+        spec: DatasetSpec {
+            id: dataset_id,
+            fields,
+        },
+        field_ids,
+        dimensions,
+    })
+}
+
 fn parse_x_value(v: &serde_json::Value) -> Result<XValue> {
     match v {
         serde_json::Value::Number(n) => Ok(XValue::Number(n.as_f64().unwrap_or(f64::NAN))),
@@ -996,6 +1122,53 @@ mod tests {
         let series = &translated.spec.series[0];
         assert_eq!(series.x_axis, AxisId::new(2));
         assert_eq!(series.y_axis, AxisId::new(4));
+    }
+
+    #[test]
+    fn translate_dataset_source_header_auto() {
+        let json = r#"
+        {
+          "dataset": {
+            "sourceHeader": "auto",
+            "source": [["x", "y"], [0, 1], [1, 2], [2, 3]]
+          },
+          "xAxis": { "type": "value" },
+          "yAxis": { "type": "value" },
+          "series": [
+            { "type": "line", "encode": { "x": "x", "y": "y" } }
+          ]
+        }
+        "#;
+
+        let translated = translate_json_str(json).expect("translate");
+        assert_eq!(translated.datasets.len(), 1);
+        assert_eq!(translated.datasets[0].1.row_count, 3);
+        assert_eq!(translated.spec.datasets[0].fields.len(), 2);
+    }
+
+    #[test]
+    fn translate_dataset_source_object_rows() {
+        let json = r#"
+        {
+          "dataset": {
+            "source": [
+              { "x": 0, "y": 1 },
+              { "x": 1, "y": 2 },
+              { "x": 2, "y": 3 }
+            ]
+          },
+          "xAxis": { "type": "value" },
+          "yAxis": { "type": "value" },
+          "series": [
+            { "type": "scatter", "encode": { "x": "x", "y": "y" } }
+          ]
+        }
+        "#;
+
+        let translated = translate_json_str(json).expect("translate");
+        assert_eq!(translated.datasets.len(), 1);
+        assert_eq!(translated.datasets[0].1.row_count, 3);
+        assert_eq!(translated.spec.datasets[0].fields.len(), 2);
     }
 
     #[test]
