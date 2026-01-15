@@ -115,7 +115,7 @@ pub use data_grid_canvas::{DataGridCanvas, DataGridCanvasAxis};
 pub type DataGrid = DataGridCanvas;
 pub use data_grid::{DataGrid as DataGridElement, DataGridRowState};
 pub use data_grid_canvas::DataGridCanvasOutput;
-pub use data_table::{DataTable, DataTableTanstack};
+pub use data_table::DataTable;
 pub use data_table_controls::{
     DataTableColumnOption, DataTableGlobalFilterInput, DataTableRowState, DataTableViewOptionItem,
     DataTableViewOptions,

@@ -229,8 +229,3 @@ impl DataTable {
         })
     }
 }
-
-/// Backwards-compatible name for the previous `DataTableTanstack`.
-///
-/// Prefer `DataTable` for new code.
-pub type DataTableTanstack = DataTable;

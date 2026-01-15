@@ -93,7 +93,7 @@ As of the initial audit:
   - `DataTable` is headless-backed (ADR 0101) and rendered via the shared declarative table view:
     `ecosystem/fret-ui-shadcn/src/data_table.rs` -> `ecosystem/fret-ui-kit/src/declarative/table.rs::table_virtualized`.
     - It provides: fixed header + vertical virtualization + the headless pipeline (sorting/filtering/pagination/selection/visibility).
-    - `DataTableTanstack` is kept as a compatibility alias (`pub type DataTableTanstack = DataTable;`).
+    - Public surface: `DataTable`.
   - `DataGrid` is the recommended performance-ceiling surface (canvas-backed):
     - API alias: `fret-ui-shadcn::DataGrid` -> `DataGridCanvas` (see `ecosystem/fret-ui-shadcn/src/lib.rs`).
     - Implementation: `ecosystem/fret-ui-shadcn/src/data_grid_canvas.rs`.
@@ -138,7 +138,7 @@ As of the initial audit:
 
 - [x] Implement `DataTable` composition in `ecosystem/fret-ui-shadcn`.
 - [x] Remove the `datagrid` feature gate (no heavy deps).
-- [x] Add headless-backed `DataTable` (formerly `DataTableTanstack`).
+- [x] Add headless-backed `DataTable`.
 - [x] Add a demo page in `apps/fret-examples` to validate interaction outcomes (`apps/fret-examples/src/tanstack_datatable_demo.rs`).
 - [x] Add recipe controls: `DataTableToolbar` + `DataTablePagination` (wires `global_filter`, `column_visibility`, `pagination`).
 
@@ -210,7 +210,7 @@ preserving specialized variants and performance ceilings.
 - **Default table recipe:** `fret-ui-shadcn::DataTable` is backed by the headless engine (ADR 0101) via the shared
   `fret-ui-kit` view: `ecosystem/fret-ui-shadcn/src/data_table.rs` calls
   `ecosystem/fret-ui-kit/src/declarative/table.rs::table_virtualized`.
-- **Compatibility alias:** `pub type DataTableTanstack = DataTable;` remains for one migration window (shadcn crate
+- `DataTable` is the stable name.
   denies `deprecated`, so we keep this as a non-deprecated alias for now).
 - **Simple preset:** the older “simple table” surface is not kept as a separate public type; any “simple” usage
   should be expressed as a `DataTable` preset/config (keeps the public surface small and forces configurability).
