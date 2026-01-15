@@ -261,6 +261,7 @@ fn translate_option(option: &EchartsOption) -> Result<TranslatedChart> {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         });
     }
 

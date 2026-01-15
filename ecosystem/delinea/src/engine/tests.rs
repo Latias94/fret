@@ -83,6 +83,7 @@ fn basic_spec() -> ChartSpec {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     }
 }
@@ -160,6 +161,7 @@ fn bar_emits_rect_batch() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -266,6 +268,7 @@ fn bar_filter_mode_none_culls_categories_outside_x_window() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -371,6 +374,7 @@ fn horizontal_bar_emits_rect_batch() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -479,6 +483,7 @@ fn stacked_bar_uses_stack_base() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
             SeriesSpec {
                 id: series_b,
@@ -496,6 +501,7 @@ fn stacked_bar_uses_stack_base() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
         ],
     };
@@ -635,6 +641,7 @@ fn grouped_bars_have_distinct_x_offsets() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
             SeriesSpec {
                 id: series_b,
@@ -652,6 +659,7 @@ fn grouped_bars_have_distinct_x_offsets() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
         ],
     };
@@ -789,6 +797,7 @@ fn stacked_and_grouped_bars_share_and_separate_slots() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
             SeriesSpec {
                 id: series_b,
@@ -806,6 +815,7 @@ fn stacked_and_grouped_bars_share_and_separate_slots() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
             SeriesSpec {
                 id: series_c,
@@ -823,6 +833,7 @@ fn stacked_and_grouped_bars_share_and_separate_slots() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
         ],
     };
@@ -973,6 +984,7 @@ fn grouped_bars_order_slots_by_first_occurrence_across_stacks() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
             SeriesSpec {
                 id: series_b,
@@ -990,6 +1002,7 @@ fn grouped_bars_order_slots_by_first_occurrence_across_stacks() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
             SeriesSpec {
                 id: series_c,
@@ -1007,6 +1020,7 @@ fn grouped_bars_order_slots_by_first_occurrence_across_stacks() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
             SeriesSpec {
                 id: series_d,
@@ -1024,6 +1038,7 @@ fn grouped_bars_order_slots_by_first_occurrence_across_stacks() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
             SeriesSpec {
                 id: series_e,
@@ -1041,6 +1056,7 @@ fn grouped_bars_order_slots_by_first_occurrence_across_stacks() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
         ],
     };
@@ -2182,6 +2198,7 @@ fn data_zoom_y_filter_mode_filter_ignores_x_window_when_x_filter_mode_none() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -2307,6 +2324,7 @@ fn data_zoom_y_filter_mode_filter_ignores_x_window_when_x_filter_mode_empty() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -2437,6 +2455,7 @@ fn data_zoom_x_filter_mode_empty_masks_scatter_marks_without_culling_row_selecti
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
         tooltip: None,
         axis_pointer: None,
@@ -2578,6 +2597,7 @@ fn data_zoom_y_filter_mode_filter_respects_x_window_when_x_filter_mode_filter() 
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -2699,6 +2719,7 @@ fn data_zoom_y_filter_mode_filter_respects_x_window_when_x_filter_mode_weakfilte
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -2821,6 +2842,7 @@ fn data_zoom_xy_filter_mode_filter_applies_x_indices_before_y_indices_in_same_fr
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -3131,6 +3153,7 @@ fn visual_map_can_emit_stroke_width_for_scatter_buckets() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -3248,6 +3271,7 @@ fn band_emits_two_polylines() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -3367,6 +3391,7 @@ fn stacked_area_emits_two_polylines() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -3484,6 +3509,7 @@ fn row_range_limits_mark_indices() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -3592,6 +3618,7 @@ fn x_window_limits_mark_indices() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -3715,6 +3742,7 @@ fn category_x_window_updates_axis_window_and_rounds_axis_pointer_value() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -3870,6 +3898,7 @@ fn axis_pointer_tooltip_respects_y_empty_mask_for_line_series() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
             SeriesSpec {
                 id: series_b,
@@ -3887,6 +3916,7 @@ fn axis_pointer_tooltip_respects_y_empty_mask_for_line_series() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
         ],
     };
@@ -4034,6 +4064,7 @@ fn axis_pointer_tooltip_respects_y_empty_mask_for_scatter_series() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
             SeriesSpec {
                 id: series_b,
@@ -4051,6 +4082,7 @@ fn axis_pointer_tooltip_respects_y_empty_mask_for_scatter_series() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
         ],
     };
@@ -4208,6 +4240,7 @@ fn axis_pointer_tooltip_respects_y_empty_mask_for_band_series() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
             SeriesSpec {
                 id: series_b,
@@ -4225,6 +4258,7 @@ fn axis_pointer_tooltip_respects_y_empty_mask_for_band_series() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
         ],
     };
@@ -4393,6 +4427,7 @@ fn axis_pointer_tooltip_respects_y_empty_mask_under_x_weakfilter_for_scatter_ser
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -4566,6 +4601,7 @@ fn axis_pointer_tooltip_respects_x_empty_mask_when_marks_are_empty_but_selection
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -4749,6 +4785,7 @@ fn axis_pointer_tooltip_respects_x_empty_mask_under_y_filtered_selection_for_lin
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -4922,6 +4959,7 @@ fn axis_pointer_tooltip_respects_x_empty_mask_under_y_filtered_selection_for_ban
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -5091,6 +5129,7 @@ fn axis_pointer_item_trigger_returns_none_when_marks_are_empty_under_x_empty_mas
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -5232,6 +5271,7 @@ fn axis_pointer_item_trigger_returns_none_when_line_marks_are_empty_under_x_empt
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -5377,6 +5417,7 @@ fn axis_pointer_item_trigger_returns_none_when_band_marks_are_empty_under_x_empt
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -5511,6 +5552,7 @@ fn axis_pointer_item_trigger_is_suppressed_for_y_empty_masked_line_samples() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -5670,6 +5712,7 @@ fn axis_pointer_item_trigger_does_not_hit_clamped_y_empty_gap_for_line_series() 
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -5841,6 +5884,7 @@ fn axis_pointer_tooltip_respects_y_empty_mask_for_bar_series() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
             SeriesSpec {
                 id: series_b,
@@ -5858,6 +5902,7 @@ fn axis_pointer_tooltip_respects_y_empty_mask_for_bar_series() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
         ],
     };
@@ -5985,6 +6030,7 @@ fn axis_fixed_overrides_data_window_for_marks() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -6096,6 +6142,7 @@ fn set_series_visible_hides_marks() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -6175,6 +6222,7 @@ fn set_series_visibility_batch_bumps_visual_revision_once() {
         stack_strategy: Default::default(),
         bar_layout: Default::default(),
         area_baseline: None,
+        lod: None,
     });
 
     let mut engine = ChartEngine::new(spec).unwrap();
@@ -6260,6 +6308,7 @@ fn axis_lock_min_filters_bounds_to_prevent_y_compression() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -6387,6 +6436,7 @@ fn data_window_filter_mode_none_keeps_y_bounds_global() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -6539,6 +6589,7 @@ fn data_window_filter_mode_resets_to_spec_default() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -6658,6 +6709,7 @@ fn data_zoom_x_filter_mode_empty_preserves_base_row_selection_for_monotonic_x() 
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -6777,6 +6829,7 @@ fn filter_mode_empty_line_marks_respect_indices_selection_from_y_filter() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -6909,6 +6962,7 @@ fn filter_mode_empty_does_not_cull_y_filtered_row_selection_by_x_window() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -7035,6 +7089,7 @@ fn data_zoom_x_filter_mode_weakfilter_matches_filter_for_monotonic_x() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -7154,6 +7209,7 @@ fn data_zoom_xy_filter_mode_weakfilter_drops_only_same_side_outliers() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -7291,6 +7347,7 @@ fn data_zoom_xy_filter_mode_weakfilter_prefers_xy_indices_over_x_only_indices_fo
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -7445,6 +7502,7 @@ fn data_zoom_xy_filter_mode_weakfilter_keeps_mixed_side_outliers_for_scatter() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -7596,6 +7654,7 @@ fn data_zoom_xy_filter_mode_weakfilter_drops_only_same_side_outliers_for_band() 
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -7720,6 +7779,7 @@ fn data_zoom_x_filter_mode_none_vs_filter_vs_empty_y_axis_window_semantics() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             }],
         };
 
@@ -7865,6 +7925,7 @@ fn data_zoom_x_filter_mode_empty_breaks_line_into_segments_for_interleaved_out_o
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -7995,6 +8056,7 @@ fn data_zoom_x_filter_mode_empty_keeps_axis_windows_stable_when_line_marks_are_e
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -8155,6 +8217,7 @@ fn data_zoom_x_filter_mode_empty_with_y_filter_keeps_axis_windows_stable_when_li
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -8311,6 +8374,7 @@ fn data_zoom_x_filter_mode_empty_keeps_axis_windows_stable_when_band_marks_are_e
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -8476,6 +8540,7 @@ fn data_zoom_x_filter_mode_empty_with_y_filter_keeps_axis_windows_stable_when_ba
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -8629,6 +8694,7 @@ fn data_zoom_x_filter_mode_empty_keeps_axis_windows_stable_when_scatter_lod_mark
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -8778,6 +8844,7 @@ fn data_zoom_y_filter_mode_empty_breaks_line_into_segments_for_interleaved_out_o
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -9171,6 +9238,7 @@ fn data_zoom_y_filter_mode_empty_keeps_band_visible_when_interval_intersects_win
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -9302,6 +9370,7 @@ fn data_zoom_y_filter_mode_filter_culls_band_rows_by_interval_intersection() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -9422,6 +9491,7 @@ fn data_zoom_y_filter_mode_empty_masks_bar_marks_outside_window() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -9544,6 +9614,7 @@ fn data_zoom_x_filter_mode_empty_breaks_band_into_segments_for_interleaved_out_o
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -9687,6 +9758,7 @@ fn set_data_window_x_inserts_state_with_spec_default_filter_mode() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -9799,6 +9871,7 @@ fn hover_does_not_rebuild_marks() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -9905,6 +9978,7 @@ fn axis_pointer_is_emitted_when_hit_is_close_enough() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -10023,6 +10097,7 @@ fn axis_pointer_item_trigger_is_suppressed_when_far_from_series() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -10139,6 +10214,7 @@ fn axis_pointer_axis_trigger_emits_multi_series_tooltip() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
             SeriesSpec {
                 id: series_b,
@@ -10156,6 +10232,7 @@ fn axis_pointer_axis_trigger_emits_multi_series_tooltip() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
         ],
     };
@@ -10282,6 +10359,7 @@ fn output_hover_is_gated_by_axis_trigger_marker_distance() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -10405,6 +10483,7 @@ fn axis_pointer_axis_trigger_respects_x_filter_for_non_monotonic_x() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -10533,6 +10612,7 @@ fn axis_pointer_axis_trigger_emits_range_for_band_series() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -10652,6 +10732,7 @@ fn axis_pointer_axis_trigger_samples_scatter_by_nearest_point() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -10788,6 +10869,7 @@ fn axis_pointer_axis_trigger_handles_indices_selection_from_y_filter() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
             SeriesSpec {
                 id: series_b,
@@ -10805,6 +10887,7 @@ fn axis_pointer_axis_trigger_handles_indices_selection_from_y_filter() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
         ],
     };
@@ -10943,6 +11026,7 @@ fn axis_pointer_axis_trigger_uses_nearest_x_index_for_large_non_monotonic_views(
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -11082,6 +11166,7 @@ fn data_zoom_x_filter_mode_materializes_indices_selection_for_large_non_monotoni
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -11220,6 +11305,7 @@ fn data_zoom_x_then_y_filter_materializes_indices_in_order_for_large_non_monoton
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -11392,6 +11478,7 @@ fn filter_plan_isolated_per_grid_for_x_indices_materialization() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
             SeriesSpec {
                 id: series2_id,
@@ -11409,6 +11496,7 @@ fn filter_plan_isolated_per_grid_for_x_indices_materialization() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
         ],
     };
@@ -11556,6 +11644,7 @@ fn axis_pointer_axis_trigger_handles_non_monotonic_x_by_nearest_sample() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
             SeriesSpec {
                 id: series_b,
@@ -11573,6 +11662,7 @@ fn axis_pointer_axis_trigger_handles_non_monotonic_x_by_nearest_sample() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
         ],
     };
@@ -11705,6 +11795,7 @@ fn axis_pointer_axis_trigger_includes_placeholders_for_missing_series_values() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
             SeriesSpec {
                 id: series_b,
@@ -11722,6 +11813,7 @@ fn axis_pointer_axis_trigger_includes_placeholders_for_missing_series_values() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
         ],
     };
@@ -11844,6 +11936,7 @@ fn axis_pointer_item_trigger_snaps_to_hit_point_when_enabled() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -11951,6 +12044,7 @@ fn axis_pointer_axis_trigger_snaps_axis_value_to_nearest_sample_when_enabled() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -12081,6 +12175,7 @@ fn axis_pointer_axis_trigger_uses_first_visible_series_as_primary() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
             SeriesSpec {
                 id: series_b,
@@ -12098,6 +12193,7 @@ fn axis_pointer_axis_trigger_uses_first_visible_series_as_primary() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
         ],
     };
@@ -12230,6 +12326,7 @@ fn axis_pointer_axis_trigger_snaps_category_y_to_band_center_when_enabled() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -12363,6 +12460,7 @@ fn axis_pointer_axis_trigger_emits_shadow_rect_for_category_trigger_axis() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -12489,6 +12587,7 @@ fn axis_pointer_shadow_rect_respects_category_band_edges_under_x_window() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -12629,6 +12728,7 @@ fn category_x_filter_culls_marks_for_non_monotonic_line_and_samples_first_duplic
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -12803,6 +12903,7 @@ fn category_x_filter_materializes_indices_for_scatter_and_respects_base_row_rang
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -12947,6 +13048,7 @@ fn scatter_emits_point_marks() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -13061,6 +13163,7 @@ fn scatter_filter_mode_none_culls_points_outside_x_window() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -13179,6 +13282,7 @@ fn scatter_large_mode_is_pixel_bounded() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -13226,6 +13330,260 @@ fn scatter_large_mode_is_pixel_bounded() {
         "emitted={emitted} width={width_px}"
     );
     assert!(emitted > 0);
+}
+
+#[test]
+fn scatter_large_threshold_can_force_large_mode() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
+
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(20.0), Px(100.0)),
+    );
+
+    let mut spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(viewport),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        data_zoom_y: vec![],
+        tooltip: None,
+        axis_pointer: None,
+        visual_maps: vec![],
+        series: vec![SeriesSpec {
+            id: series_id,
+            name: None,
+            kind: SeriesKind::Scatter,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
+            bar_layout: Default::default(),
+            area_baseline: None,
+            lod: None,
+        }],
+    };
+
+    let n = 1_000usize;
+    let mut table = DataTable::default();
+    let mut xs = Vec::with_capacity(n);
+    let mut ys = Vec::with_capacity(n);
+    for i in 0..n {
+        xs.push(i as f64 / (n as f64 - 1.0));
+        ys.push(((i as f64) * 0.01).sin());
+    }
+    table.push_column(Column::F64(xs));
+    table.push_column(Column::F64(ys));
+
+    let mut engine = ChartEngine::new(spec.clone()).unwrap();
+    engine.datasets_mut().insert(dataset_id, table.clone());
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let marks = &engine.output().marks;
+    let node = marks
+        .nodes
+        .iter()
+        .find(|n| n.kind == crate::marks::MarkKind::Points && n.source_series == Some(series_id))
+        .expect("expected a points mark node");
+    let MarkPayloadRef::Points(points) = &node.payload else {
+        panic!("expected points payload");
+    };
+    let emitted_default = points.points.end - points.points.start;
+    assert_eq!(emitted_default, n, "expected all points to be emitted");
+
+    spec.series[0].lod = Some(crate::spec::SeriesLodSpecV1 {
+        large: Some(true),
+        large_threshold: Some(1),
+        ..Default::default()
+    });
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    engine.datasets_mut().insert(dataset_id, table);
+
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let marks = &engine.output().marks;
+    let node = marks
+        .nodes
+        .iter()
+        .find(|n| n.kind == crate::marks::MarkKind::Points && n.source_series == Some(series_id))
+        .expect("expected a points mark node");
+    let MarkPayloadRef::Points(points) = &node.payload else {
+        panic!("expected points payload");
+    };
+    let emitted_forced = points.points.end - points.points.start;
+
+    let width_px = viewport.size.width.0.max(1.0).ceil() as usize;
+    assert!(emitted_forced <= width_px * 4, "emitted={emitted_forced}");
+    assert!(
+        emitted_forced < emitted_default,
+        "forced={emitted_forced} default={emitted_default}"
+    );
+}
+
+#[test]
+fn scatter_progressive_can_force_multiple_steps() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
+
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(viewport),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        data_zoom_y: vec![],
+        tooltip: None,
+        axis_pointer: None,
+        visual_maps: vec![],
+        series: vec![SeriesSpec {
+            id: series_id,
+            name: None,
+            kind: SeriesKind::Scatter,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
+            bar_layout: Default::default(),
+            area_baseline: None,
+            lod: Some(crate::spec::SeriesLodSpecV1 {
+                large: Some(true),
+                large_threshold: Some(1),
+                progressive: Some(512),
+                progressive_threshold: Some(1),
+            }),
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let mut table = DataTable::default();
+
+    let n = 5_000usize;
+    let mut xs = Vec::with_capacity(n);
+    let mut ys = Vec::with_capacity(n);
+    for i in 0..n {
+        xs.push(i as f64 / (n as f64 - 1.0));
+        ys.push(((i as f64) * 0.01).sin());
+    }
+    table.push_column(Column::F64(xs));
+    table.push_column(Column::F64(ys));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    let mut measurer = NullTextMeasurer::default();
+    let mut steps = 0;
+    loop {
+        let step = engine
+            .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+            .unwrap();
+        steps += 1;
+        if !step.unfinished || steps > 256 {
+            break;
+        }
+    }
+
+    assert!(steps > 1, "expected progressive to require multiple steps");
+    assert!(steps <= 256);
 }
 
 #[test]
@@ -13308,6 +13666,7 @@ fn scatter_large_mode_respects_y_empty_mask() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -13484,6 +13843,7 @@ fn scatter_large_mode_does_not_hit_y_empty_masked_outlier() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -13678,6 +14038,7 @@ fn append_only_marks_rebuild_updates_lod_polyline_without_clearing_nodes() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -13856,6 +14217,7 @@ fn bar_item_trigger_does_not_hit_y_empty_masked_outlier() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -14050,6 +14412,7 @@ fn axis_pointer_shadow_rect_is_emitted_for_category_axis_when_bar_is_y_empty_mas
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -14201,6 +14564,7 @@ fn data_zoom_x_filter_mode_empty_masks_bar_marks_without_culling_row_selection()
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -14367,6 +14731,7 @@ fn axis_pointer_tooltip_respects_x_empty_mask_for_bar_when_marks_are_empty_but_s
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -14537,6 +14902,7 @@ fn axis_pointer_item_trigger_returns_none_for_bar_under_x_empty_mask_when_marks_
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -14710,6 +15076,7 @@ fn axis_pointer_item_trigger_returns_none_for_stacked_bar_under_x_empty_mask_whe
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
             SeriesSpec {
                 id: series_b,
@@ -14727,6 +15094,7 @@ fn axis_pointer_item_trigger_returns_none_for_stacked_bar_under_x_empty_mask_whe
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
         ],
     };
@@ -14880,6 +15248,7 @@ fn axis_pointer_item_trigger_returns_none_for_horizontal_bar_under_x_empty_mask_
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -15036,6 +15405,7 @@ fn axis_pointer_axis_trigger_emits_shadow_and_missing_tooltip_for_stacked_bar_un
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
             SeriesSpec {
                 id: series_b,
@@ -15053,6 +15423,7 @@ fn axis_pointer_axis_trigger_emits_shadow_and_missing_tooltip_for_stacked_bar_un
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
         ],
     };
@@ -15237,6 +15608,7 @@ fn axis_pointer_axis_trigger_emits_shadow_and_missing_tooltip_for_horizontal_bar
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -15397,6 +15769,7 @@ fn line_large_mode_is_pixel_bounded() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -15519,6 +15892,7 @@ fn lod_scatter_large_mode_is_budget_invariant() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -15638,6 +16012,7 @@ fn lod_line_large_mode_is_budget_invariant() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -15759,6 +16134,7 @@ fn lod_bar_mode_is_budget_invariant() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 
@@ -15917,6 +16293,7 @@ fn stacked_line_series_offsets_y() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
             SeriesSpec {
                 id: series_b,
@@ -15934,6 +16311,7 @@ fn stacked_line_series_offsets_y() {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
         ],
     };
@@ -16053,6 +16431,7 @@ fn stack_strategy_samesign_separates_positive_and_negative() {
                 stack_strategy: crate::spec::StackStrategy::SameSign,
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
             SeriesSpec {
                 id: series_neg,
@@ -16070,6 +16449,7 @@ fn stack_strategy_samesign_separates_positive_and_negative() {
                 stack_strategy: crate::spec::StackStrategy::SameSign,
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
         ],
     };
@@ -16348,6 +16728,7 @@ fn band_missing_upper_breaks_and_preserves_pairing() {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     };
 

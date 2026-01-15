@@ -255,16 +255,17 @@ single “at a glance” view of:
 
 - ECharts reference: `large`, `progressive`, sampling/decimation knobs per series type
 - ADR(s): `docs/adr/1132-delinea-large-data-and-progressive-rendering.md`
-- Evidence: `ecosystem/delinea/src/engine/lod/*` + stage budgets
+- Evidence: `ecosystem/delinea/src/spec/mod.rs` (`SeriesSpec.lod`), `ecosystem/delinea/src/engine/lod/*` + stage budgets
 - v1 invariants (P0 baseline):
   - Line-family (line/area/band): min/max-per-pixel bucketing over the plot width, emitting `<= 4 * plot_width_px`
     points for monotonic-X inputs (preserves spikes while staying pixel-bounded).
-  - Scatter: exact mode for small datasets; large mode (`visible_len > 20_000`) switches to pixel-bounded LOD.
+  - Scatter: exact mode for small datasets; large mode (default: `visible_len > 20_000`) switches to pixel-bounded LOD.
+    The threshold and progressive cap are configurable via `SeriesSpec.lod` (v1 subset).
   - Bar: exact mode (one rect per visible row); no pixel-bounded LOD yet (performance is budgeted but output size is not).
   - LOD outputs preserve index identity: `points.len() == data_indices.len()` and indices refer to raw rows.
 - Tests (headless):
   - `ecosystem/delinea/src/engine/lod/minmax_per_pixel.rs` (unit invariants for finalize ordering + bounds)
-  - `ecosystem/delinea/src/engine/tests.rs` (`scatter_large_mode_is_pixel_bounded`, `line_large_mode_is_pixel_bounded`, `lod_scatter_large_mode_is_budget_invariant`, `lod_line_large_mode_is_budget_invariant`, `lod_bar_mode_is_budget_invariant`)
+  - `ecosystem/delinea/src/engine/tests.rs` (`scatter_large_mode_is_pixel_bounded`, `scatter_large_threshold_can_force_large_mode`, `scatter_progressive_can_force_multiple_steps`, `line_large_mode_is_pixel_bounded`, `lod_scatter_large_mode_is_budget_invariant`, `lod_line_large_mode_is_budget_invariant`, `lod_bar_mode_is_budget_invariant`)
 - Conformance doc: `docs/delinea-lod-conformance.md`
 - Validation harness (native, v1):
   - `cargo run -p fret-demo --bin chart_stress_demo`
@@ -272,8 +273,8 @@ single “at a glance” view of:
     - `FRET_CHART_STRESS_POINTS` (default: 1_000_000)
     - `FRET_CHART_STRESS_EXIT_AFTER_FRAMES`
 - Missing vs ECharts:
-  - Explicit per-series-kind knobs aligned with ECharts (`large`, `largeThreshold`, `progressive`, etc),
-    especially for bar/stacked scenarios.
+  - Full option-schema parity is not a goal; however, per-series LOD knobs are still partial:
+    `SeriesSpec.lod` exists (v1 subset, scatter wired), but line/bar/stacked scenarios need more coverage.
   - A benchmark/conformance harness that can gate frame-time regressions on CI (richer invariants than
     the current manual stress demo).
 

@@ -631,7 +631,24 @@ impl MarksStage {
                 y_window.clamp_non_degenerate();
 
                 let visible_len = selection.view_len(table.row_count);
-                let use_lod = visible_len > SCATTER_LARGE_MODE_VISIBLE_LEN_THRESHOLD;
+                let large_threshold = series
+                    .lod
+                    .large_threshold
+                    .map(|v| v as usize)
+                    .unwrap_or(SCATTER_LARGE_MODE_VISIBLE_LEN_THRESHOLD);
+                let large_enabled = series.lod.large != Some(false);
+                let use_lod = large_enabled && visible_len > large_threshold;
+
+                let progressive_cap = series.lod.progressive.and_then(|cap| {
+                    let cap = (cap.max(1)) as usize;
+                    let threshold = series
+                        .lod
+                        .progressive_threshold
+                        .map(|v| v as usize)
+                        .unwrap_or(large_threshold);
+                    (visible_len >= threshold).then_some(cap)
+                });
+                let mut progressive_spent = 0usize;
 
                 if use_lod {
                     let width_px = viewport.size.width.0.max(1.0).ceil() as usize;
@@ -649,10 +666,20 @@ impl MarksStage {
 
                     let mut finished_scan = false;
                     while !finished_scan {
-                        let points_budget = budget.take_points(4096) as usize;
+                        let mut request = 4096usize;
+                        if let Some(cap) = progressive_cap {
+                            let remaining = cap.saturating_sub(progressive_spent);
+                            if remaining == 0 {
+                                return false;
+                            }
+                            request = request.min(remaining);
+                        }
+
+                        let points_budget = budget.take_points(request as u32) as usize;
                         if points_budget == 0 {
                             return false;
                         }
+                        progressive_spent = progressive_spent.saturating_add(points_budget);
 
                         finished_scan = minmax_per_pixel_step_selection_with(
                             &mut self.cursor,
@@ -671,6 +698,13 @@ impl MarksStage {
                                 y0.get(i).copied().unwrap_or(f64::NAN)
                             },
                         );
+
+                        if let Some(cap) = progressive_cap
+                            && progressive_spent >= cap
+                            && !finished_scan
+                        {
+                            return false;
+                        }
                     }
 
                     if !self.finalized {

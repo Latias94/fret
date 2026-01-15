@@ -28,8 +28,12 @@ This preserves spikes while staying stable under large data.
 
 Implementation: `ecosystem/delinea/src/engine/stages/marks.rs`
 
-- If `visible_len <= 20_000`, emit all visible points (exact mode).
-- If `visible_len > 20_000`, switch to the same min/max-per-pixel strategy as line-family.
+- Default threshold: `20_000` visible rows.
+- If `visible_len <= threshold`, emit all visible points (exact mode).
+- If `visible_len > threshold`, switch to the same min/max-per-pixel strategy as line-family.
+- Threshold and progressive cap are configurable via `SeriesSpec.lod` (v1 subset):
+  - `large` / `large_threshold`
+  - `progressive` / `progressive_threshold` (forces multi-step building even with large `WorkBudget`)
 
 ### Bar: exact rectangles (not pixel-bounded)
 
@@ -83,6 +87,8 @@ Given the same spec, dataset, state, and viewport:
 
 - `ecosystem/delinea/src/engine/tests.rs`
   - `scatter_large_mode_is_pixel_bounded`
+  - `scatter_large_threshold_can_force_large_mode`
+  - `scatter_progressive_can_force_multiple_steps`
   - `line_large_mode_is_pixel_bounded`
   - `lod_scatter_large_mode_is_budget_invariant`
   - `lod_line_large_mode_is_budget_invariant`
@@ -101,6 +107,6 @@ Environment knobs:
 
 ## Follow-ups (P1)
 
-- Expose spec knobs aligned with ECharts (`large`, `largeThreshold`, `progressive`, `progressiveThreshold`).
+- Extend per-series knobs coverage (`SeriesSpec.lod` exists; wiring beyond scatter is still pending).
 - Add optional higher-fidelity sampling (e.g. LTTB) for moderate sizes.
 - Add a benchmark harness that can gate frame-time regressions on CI.

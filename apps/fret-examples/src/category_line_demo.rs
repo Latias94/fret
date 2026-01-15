@@ -126,6 +126,7 @@ impl CategoryLineDemoDriver {
                     stack_strategy: Default::default(),
                     bar_layout: Default::default(),
                     area_baseline: None,
+                    lod: None,
                 },
                 SeriesSpec {
                     id: series_scatter_id,
@@ -143,6 +144,7 @@ impl CategoryLineDemoDriver {
                     stack_strategy: Default::default(),
                     bar_layout: Default::default(),
                     area_baseline: None,
+                    lod: None,
                 },
             ],
         };

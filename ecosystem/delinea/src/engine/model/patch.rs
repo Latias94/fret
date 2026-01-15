@@ -408,6 +408,14 @@ impl ChartPatch {
                         model.revs.bump_visual();
                         report.marks_changed = true;
                     }
+
+                    if let Some(lod) = series.lod
+                        && existing.lod != lod
+                    {
+                        existing.lod = lod;
+                        model.revs.bump_visual();
+                        report.marks_changed = true;
+                    }
                 }
                 SeriesOp::Remove { id } => {
                     if model.series.remove(&id).is_some() {
@@ -677,6 +685,7 @@ pub struct SeriesPatch {
     pub bar_layout: crate::spec::BarLayoutSpec,
     pub visible: Option<bool>,
     pub area_baseline: Option<AreaBaseline>,
+    pub lod: Option<crate::spec::SeriesLodSpecV1>,
 }
 
 impl From<SeriesPatch> for SeriesModel {
@@ -694,6 +703,7 @@ impl From<SeriesPatch> for SeriesModel {
             visible: p.visible.unwrap_or(true),
             area_baseline: p.area_baseline.unwrap_or_default(),
             bar_layout: p.bar_layout,
+            lod: p.lod.unwrap_or_default(),
         }
     }
 }

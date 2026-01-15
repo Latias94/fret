@@ -391,6 +391,7 @@ impl ChartModel {
                     visible: true,
                     area_baseline: series.area_baseline.unwrap_or_default(),
                     bar_layout: series.bar_layout,
+                    lod: series.lod.unwrap_or_default(),
                 },
             );
         }
@@ -720,6 +721,7 @@ pub struct SeriesModel {
     pub visible: bool,
     pub area_baseline: AreaBaseline,
     pub bar_layout: crate::spec::BarLayoutSpec,
+    pub lod: crate::spec::SeriesLodSpecV1,
 }
 
 fn sanitize_px(v: f32, default: f32) -> f32 {

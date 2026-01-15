@@ -236,6 +236,7 @@ impl ChartStressDriver {
                     stack_strategy: Default::default(),
                     bar_layout: Default::default(),
                     area_baseline: None,
+                    lod: None,
                 },
                 SeriesSpec {
                     id: SeriesId::new(2),
@@ -253,6 +254,7 @@ impl ChartStressDriver {
                     stack_strategy: Default::default(),
                     bar_layout: Default::default(),
                     area_baseline: None,
+                    lod: None,
                 },
             ],
         };
