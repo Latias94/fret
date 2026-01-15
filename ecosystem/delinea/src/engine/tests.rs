@@ -7440,6 +7440,165 @@ fn data_zoom_x_filter_mode_empty_keeps_axis_windows_stable_when_line_marks_are_e
 }
 
 #[test]
+fn data_zoom_x_filter_mode_empty_with_y_filter_keeps_axis_windows_stable_when_line_marks_are_empty()
+{
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let zoom_x_id = crate::ids::DataZoomId::new(1);
+    let zoom_y_id = crate::ids::DataZoomId::new(2);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
+
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(160.0)),
+    );
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(viewport),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![DataZoomXSpec {
+            id: zoom_x_id,
+            axis: x_axis,
+            filter_mode: FilterMode::Empty,
+            min_value_span: None,
+            max_value_span: None,
+        }],
+        data_zoom_y: vec![DataZoomYSpec {
+            id: zoom_y_id,
+            axis: y_axis,
+            filter_mode: FilterMode::Filter,
+            min_value_span: None,
+            max_value_span: None,
+        }],
+        tooltip: None,
+        axis_pointer: None,
+        visual_maps: vec![],
+        series: vec![SeriesSpec {
+            id: series_id,
+            name: None,
+            kind: SeriesKind::Line,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
+            bar_layout: Default::default(),
+            area_baseline: None,
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let xs: Vec<f64> = (0..10).map(|i| i as f64).collect();
+    let ys: Vec<f64> = xs.clone();
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(xs));
+    table.push_column(Column::F64(ys));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    engine.apply_action(Action::SetDatasetRowRange {
+        dataset: dataset_id,
+        range: Some(RowRange { start: 0, end: 5 }),
+    });
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x_axis,
+        window: Some(DataWindow { min: 5.0, max: 9.0 }),
+    });
+    engine.apply_action(Action::SetDataWindowY {
+        axis: y_axis,
+        window: Some(DataWindow { min: 1.0, max: 3.0 }),
+    });
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let Some(participation) = engine.participation().series_participation(series_id) else {
+        panic!("expected series participation");
+    };
+    assert_eq!(participation.x_filter_mode, FilterMode::Empty);
+    assert!(participation.empty_mask.x_active);
+    assert_eq!(
+        participation.selection,
+        RowSelection::Indices(vec![1, 2, 3].into()),
+        "expected y=filter to cull selection even when x is represented as an empty mask"
+    );
+
+    let x_window = engine
+        .output()
+        .axis_windows
+        .get(&x_axis)
+        .copied()
+        .unwrap_or_default();
+    assert!((x_window.min - 5.0).abs() < 1e-6);
+    assert!((x_window.max - 9.0).abs() < 1e-6);
+
+    let y_window = engine
+        .output()
+        .axis_windows
+        .get(&y_axis)
+        .copied()
+        .unwrap_or_default();
+    assert!((y_window.min - 1.0).abs() < 1e-6);
+    assert!((y_window.max - 3.0).abs() < 1e-6);
+
+    assert!(
+        !engine
+            .output()
+            .marks
+            .nodes
+            .iter()
+            .any(|n| n.source_series == Some(series_id)),
+        "expected no marks to be emitted when x-empty mask is fully disjoint"
+    );
+}
+
+#[test]
 fn data_zoom_x_filter_mode_empty_keeps_axis_windows_stable_when_band_marks_are_empty() {
     let dataset_id = crate::ids::DatasetId::new(1);
     let zoom_id = crate::ids::DataZoomId::new(1);
@@ -7593,6 +7752,172 @@ fn data_zoom_x_filter_mode_empty_keeps_axis_windows_stable_when_band_marks_are_e
             .iter()
             .any(|n| n.source_series == Some(series_id)),
         "expected no marks to be emitted under x-empty disjoint mask"
+    );
+}
+
+#[test]
+fn data_zoom_x_filter_mode_empty_with_y_filter_keeps_axis_windows_stable_when_band_marks_are_empty()
+{
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let zoom_x_id = crate::ids::DataZoomId::new(1);
+    let zoom_y_id = crate::ids::DataZoomId::new(2);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y0_field = crate::ids::FieldId::new(2);
+    let y1_field = crate::ids::FieldId::new(3);
+
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(160.0)),
+    );
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(viewport),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y0_field,
+                    column: 1,
+                },
+                FieldSpec {
+                    id: y1_field,
+                    column: 2,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![DataZoomXSpec {
+            id: zoom_x_id,
+            axis: x_axis,
+            filter_mode: FilterMode::Empty,
+            min_value_span: None,
+            max_value_span: None,
+        }],
+        data_zoom_y: vec![DataZoomYSpec {
+            id: zoom_y_id,
+            axis: y_axis,
+            filter_mode: FilterMode::Filter,
+            min_value_span: None,
+            max_value_span: None,
+        }],
+        tooltip: None,
+        axis_pointer: None,
+        visual_maps: vec![],
+        series: vec![SeriesSpec {
+            id: series_id,
+            name: None,
+            kind: SeriesKind::Band,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y0_field,
+                y2: Some(y1_field),
+            },
+            x_axis,
+            y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
+            bar_layout: Default::default(),
+            area_baseline: None,
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let xs: Vec<f64> = (0..10).map(|i| i as f64).collect();
+    let y0: Vec<f64> = xs.clone();
+    let y1: Vec<f64> = xs.iter().map(|v| v + 1.0).collect();
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(xs));
+    table.push_column(Column::F64(y0));
+    table.push_column(Column::F64(y1));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    engine.apply_action(Action::SetDatasetRowRange {
+        dataset: dataset_id,
+        range: Some(RowRange { start: 0, end: 5 }),
+    });
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x_axis,
+        window: Some(DataWindow { min: 5.0, max: 9.0 }),
+    });
+    engine.apply_action(Action::SetDataWindowY {
+        axis: y_axis,
+        window: Some(DataWindow { min: 0.0, max: 1.0 }),
+    });
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let Some(participation) = engine.participation().series_participation(series_id) else {
+        panic!("expected series participation");
+    };
+    assert_eq!(participation.x_filter_mode, FilterMode::Empty);
+    assert!(participation.empty_mask.x_active);
+    assert_eq!(
+        participation.selection,
+        RowSelection::Indices(vec![0, 1].into()),
+        "expected y=filter to cull band rows by interval intersection"
+    );
+
+    let x_window = engine
+        .output()
+        .axis_windows
+        .get(&x_axis)
+        .copied()
+        .unwrap_or_default();
+    assert!((x_window.min - 5.0).abs() < 1e-6);
+    assert!((x_window.max - 9.0).abs() < 1e-6);
+
+    let y_window = engine
+        .output()
+        .axis_windows
+        .get(&y_axis)
+        .copied()
+        .unwrap_or_default();
+    assert!((y_window.min - 0.0).abs() < 1e-6);
+    assert!((y_window.max - 1.0).abs() < 1e-6);
+
+    assert!(
+        !engine
+            .output()
+            .marks
+            .nodes
+            .iter()
+            .any(|n| n.source_series == Some(series_id)),
+        "expected no marks to be emitted when x-empty mask is fully disjoint"
     );
 }
 
