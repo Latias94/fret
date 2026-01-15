@@ -141,6 +141,18 @@ Modifiers (axis locks, clamp-to-rect) and auto-scroll computations:
 - return transformed translations or “requests” (data-only),
 - MUST NOT perform scrolling, layout mutation, or model updates directly.
 
+### 7) Sortable insertion semantics (before/after)
+
+For sortable/reorder use-cases, the toolbox defines a stable, UI-agnostic “insertion line” semantic:
+
+- `InsertionSide::{Before,After}` is computed by splitting the *over* droppable’s rect into halves
+  along a caller-provided axis:
+  - `Axis::X`: left half → `Before`, right half → `After`
+  - `Axis::Y`: top half → `Before`, bottom half → `After`
+
+This is intentionally minimal and deterministic. Higher-level layers may build richer policies
+(e.g. insertion lines, ghost items, RTL support, axis locks) on top.
+
 ### 7) Multi-window composition remains owned by internal drag routing
 
 Cross-window DnD remains owned by the runner/runtime internal drag routing (ADR 0041). The headless toolbox
@@ -176,12 +188,13 @@ operates **per window**:
 
 ## Implementation Notes (Evidence)
 
-- Headless toolbox modules: `ecosystem/fret-dnd/src/{activation.rs,collision.rs,modifier.rs,registry.rs,scroll.rs}`.
+- Headless toolbox modules: `ecosystem/fret-dnd/src/{activation.rs,collision.rs,modifier.rs,registry.rs,scroll.rs,sortable.rs}`.
 - Deterministic rect picking helper: `ecosystem/fret-dnd/src/rect_index.rs`.
-- Docking consumer using the rect index: `ecosystem/fret-docking/src/dock/space.rs`.
+- Sortable insertion helpers: `ecosystem/fret-dnd/src/sortable.rs`.
+- Docking consumers: hover collisions and tab insertion index (`ecosystem/fret-docking/src/dock/space.rs`), end-to-end insert index assertion via `InternalDrag` (`ecosystem/fret-docking/src/dock/tests.rs`).
 
 ## Open Questions
 
 1. Do we need “multi-rect droppables” in the core snapshot, or should that remain a domain-level abstraction?
 2. When should we introduce keyboard sensors and focus semantics (a11y baseline), and where should those live?
-3. Should we standardize an “insertion line” semantic (before/after) beyond collision IDs for sortable lists?
+3. When do we need insertion semantics beyond `InsertionSide` (e.g. insertion lines independent of droppable rects, RTL, virtualization windows)?
