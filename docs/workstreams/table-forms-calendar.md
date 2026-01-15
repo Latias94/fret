@@ -226,6 +226,8 @@ preserving specialized variants and performance ceilings.
 
 - Profile and validate pagination + filtering at scale (now that we have a `TableViewOutput` contract for bounds),
   and confirm it behaves well under rapid filter input.
+- Lock pagination reset rules in tests (global filter / sorting / column visibility reset `page_index` to 0; out-of-range
+  indices are clamped by the table view output).
 - Profile and validate large-table performance:
   - stable `items_revision` and cache invalidation behavior,
   - overscan defaults for typical inspector/admin tables,
