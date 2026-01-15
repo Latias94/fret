@@ -2665,6 +2665,202 @@ fn web_vs_fret_menubar_demo_overlay_placement_matches() {
 }
 
 #[test]
+fn web_vs_fret_menubar_demo_submenu_overlay_placement_matches() {
+    use fret_ui_shadcn::{MenubarEntry, MenubarItem, MenubarMenu};
+
+    let web = read_web_golden_open("menubar-demo.submenu");
+    let theme = web_theme(&web);
+
+    let web_sub_menu = web_portal_node_by_data_slot(theme, "menubar-sub-content");
+    let web_sub_trigger = web_portal_node_by_data_slot(theme, "menubar-sub-trigger");
+
+    let expected_dx = web_sub_menu.rect.x - rect_right(web_sub_trigger.rect);
+    let expected_dy = web_sub_menu.rect.y - web_sub_trigger.rect.y;
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(1440.0), Px(900.0)),
+    );
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| {
+            let menubar =
+                fret_ui_shadcn::Menubar::new(vec![MenubarMenu::new("File").entries(vec![
+                    MenubarEntry::Item(MenubarItem::new("New Tab")),
+                    MenubarEntry::Item(MenubarItem::new("New Window")),
+                    MenubarEntry::Separator,
+                    MenubarEntry::Submenu(MenubarItem::new("Share").submenu(vec![
+                        MenubarEntry::Item(MenubarItem::new("Email Link")),
+                        MenubarEntry::Item(MenubarItem::new("Messages")),
+                        MenubarEntry::Item(MenubarItem::new("Notes")),
+                    ])),
+                ])])
+                .into_element(cx);
+            vec![pad_root(cx, Px(0.0), menubar)]
+        },
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("File"))
+        .expect("fret menubar trigger semantics (File)");
+    let click_point = Point::new(
+        Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+        Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| {
+                let menubar =
+                    fret_ui_shadcn::Menubar::new(vec![MenubarMenu::new("File").entries(vec![
+                        MenubarEntry::Item(MenubarItem::new("New Tab")),
+                        MenubarEntry::Item(MenubarItem::new("New Window")),
+                        MenubarEntry::Separator,
+                        MenubarEntry::Submenu(MenubarItem::new("Share").submenu(vec![
+                            MenubarEntry::Item(MenubarItem::new("Email Link")),
+                            MenubarEntry::Item(MenubarItem::new("Messages")),
+                            MenubarEntry::Item(MenubarItem::new("Notes")),
+                        ])),
+                    ])])
+                    .into_element(cx);
+                vec![pad_root(cx, Px(0.0), menubar)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Share"))
+        .expect("fret submenu trigger semantics (Share)");
+    ui.set_focus(Some(trigger.id));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::ArrowRight,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + settle_frames + tick),
+            request_semantics,
+            |cx| {
+                let menubar =
+                    fret_ui_shadcn::Menubar::new(vec![MenubarMenu::new("File").entries(vec![
+                        MenubarEntry::Item(MenubarItem::new("New Tab")),
+                        MenubarEntry::Item(MenubarItem::new("New Window")),
+                        MenubarEntry::Separator,
+                        MenubarEntry::Submenu(MenubarItem::new("Share").submenu(vec![
+                            MenubarEntry::Item(MenubarItem::new("Email Link")),
+                            MenubarEntry::Item(MenubarItem::new("Messages")),
+                            MenubarEntry::Item(MenubarItem::new("Notes")),
+                        ])),
+                    ])])
+                    .into_element(cx);
+                vec![pad_root(cx, Px(0.0), menubar)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Share"))
+        .expect("fret submenu trigger semantics (Share, final)");
+
+    let menus: Vec<_> = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Menu)
+        .collect();
+    assert!(
+        menus.len() >= 2,
+        "expected at least 2 menu panels after opening submenu; got {}",
+        menus.len()
+    );
+
+    let _root_menu = menus
+        .iter()
+        .find(|m| fret_rect_contains(m.bounds, trigger.bounds))
+        .expect("root menu contains sub-trigger");
+    let submenu = menus
+        .iter()
+        .find(|m| !fret_rect_contains(m.bounds, trigger.bounds))
+        .expect("submenu menu does not contain sub-trigger");
+
+    let actual_dx =
+        submenu.bounds.origin.x.0 - (trigger.bounds.origin.x.0 + trigger.bounds.size.width.0);
+    let actual_dy = submenu.bounds.origin.y.0 - trigger.bounds.origin.y.0;
+
+    assert_close("menubar-demo.submenu dx", actual_dx, expected_dx, 2.0);
+    assert_close("menubar-demo.submenu dy", actual_dy, expected_dy, 2.0);
+}
+
+#[test]
 fn web_vs_fret_dialog_demo_overlay_center_matches() {
     use fret_ui_shadcn::{Button, ButtonVariant, Dialog, DialogContent};
 
