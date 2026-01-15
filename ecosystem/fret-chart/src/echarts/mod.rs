@@ -6,12 +6,14 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use delinea::Action;
 use delinea::data::{Column, DataTable};
+use delinea::engine::window::DataWindow;
 use delinea::ids::{AxisId, ChartId, DatasetId, FieldId, GridId, SeriesId};
 use delinea::scale::{AxisScale, CategoryAxisScale, ValueAxisScale};
 use delinea::spec::{
-    AxisKind, AxisSpec, ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode, SeriesKind,
-    SeriesLodSpecV1, SeriesSpec, TooltipSpecV1,
+    AxisKind, AxisSpec, ChartSpec, DataZoomXSpec, DataZoomYSpec, DatasetSpec, FieldSpec,
+    FilterMode, GridSpec, SeriesEncode, SeriesKind, SeriesLodSpecV1, SeriesSpec, TooltipSpecV1,
 };
 
 use serde::Deserialize;
@@ -54,6 +56,7 @@ impl From<serde_json::Error> for EchartsError {
 pub struct TranslatedChart {
     pub spec: ChartSpec,
     pub datasets: Vec<(DatasetId, DataTable)>,
+    pub actions: Vec<Action>,
 }
 
 impl TranslatedChart {
@@ -77,6 +80,8 @@ struct EchartsOption {
     series: Vec<EchartsSeries>,
     #[serde(default)]
     tooltip: Option<EchartsTooltip>,
+    #[serde(default)]
+    data_zoom: Option<DataZoomOrDataZooms>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -237,6 +242,59 @@ enum DatasetSourceHeader {
     Str(String),
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum DataZoomOrDataZooms {
+    One(EchartsDataZoom),
+    Many(Vec<EchartsDataZoom>),
+}
+
+impl DataZoomOrDataZooms {
+    fn to_vec(&self) -> Vec<EchartsDataZoom> {
+        match self {
+            Self::One(v) => vec![v.clone()],
+            Self::Many(v) => v.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct EchartsDataZoom {
+    #[serde(default, rename = "type")]
+    kind: Option<String>,
+    #[serde(default)]
+    x_axis_index: Option<AxisIndexOrIndices>,
+    #[serde(default)]
+    y_axis_index: Option<AxisIndexOrIndices>,
+    #[serde(default)]
+    filter_mode: Option<String>,
+    #[serde(default)]
+    start_value: Option<serde_json::Value>,
+    #[serde(default)]
+    end_value: Option<serde_json::Value>,
+    #[serde(default)]
+    min_value_span: Option<f64>,
+    #[serde(default)]
+    max_value_span: Option<f64>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+enum AxisIndexOrIndices {
+    One(usize),
+    Many(Vec<usize>),
+}
+
+impl AxisIndexOrIndices {
+    fn to_vec(&self) -> Vec<usize> {
+        match self {
+            Self::One(v) => vec![*v],
+            Self::Many(v) => v.clone(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 enum XValue {
     Number(f64),
@@ -316,6 +374,8 @@ fn translate_option(option: &EchartsOption) -> Result<TranslatedChart> {
     let datasets = vec![(dataset_id, table)];
 
     let tooltip = translate_tooltip(option.tooltip.as_ref())?;
+    let (data_zoom_x, data_zoom_y, actions) =
+        translate_data_zoom_v1(option.data_zoom.as_ref(), &[x_axis_id], &[y_axis_id])?;
 
     let mut spec = ChartSpec {
         id: ChartId::new(1),
@@ -345,8 +405,8 @@ fn translate_option(option: &EchartsOption) -> Result<TranslatedChart> {
                 range: None,
             },
         ],
-        data_zoom_x: Vec::new(),
-        data_zoom_y: Vec::new(),
+        data_zoom_x,
+        data_zoom_y,
         tooltip,
         axis_pointer: Some(Default::default()),
         visual_maps: Vec::new(),
@@ -376,7 +436,11 @@ fn translate_option(option: &EchartsOption) -> Result<TranslatedChart> {
         });
     }
 
-    Ok(TranslatedChart { spec, datasets })
+    Ok(TranslatedChart {
+        spec,
+        datasets,
+        actions,
+    })
 }
 
 fn translate_option_with_dataset(option: &EchartsOption) -> Result<TranslatedChart> {
@@ -666,14 +730,17 @@ fn translate_option_with_dataset(option: &EchartsOption) -> Result<TranslatedCha
         );
     }
 
+    let (data_zoom_x, data_zoom_y, actions) =
+        translate_data_zoom_v1(option.data_zoom.as_ref(), &x_ids, &y_ids)?;
+
     let mut spec = ChartSpec {
         id: ChartId::new(1),
         viewport: None,
         datasets: dataset_specs,
         grids,
         axes,
-        data_zoom_x: Vec::new(),
-        data_zoom_y: Vec::new(),
+        data_zoom_x,
+        data_zoom_y,
         tooltip,
         axis_pointer: Some(Default::default()),
         visual_maps: Vec::new(),
@@ -681,7 +748,7 @@ fn translate_option_with_dataset(option: &EchartsOption) -> Result<TranslatedCha
     };
 
     // Update X axis scales after dataset-driven category planning.
-    for (axis_index, axis) in x_axes.iter().enumerate() {
+    for (axis_index, _axis) in x_axes.iter().enumerate() {
         let axis_id = x_ids
             .get(axis_index)
             .copied()
@@ -816,6 +883,7 @@ fn translate_option_with_dataset(option: &EchartsOption) -> Result<TranslatedCha
     Ok(TranslatedChart {
         spec,
         datasets: out_datasets,
+        actions,
     })
 }
 
@@ -844,6 +912,103 @@ fn translate_tooltip(tooltip: Option<&EchartsTooltip>) -> Result<Option<TooltipS
         ));
     }
     Ok(Some(TooltipSpecV1::default()))
+}
+
+fn translate_data_zoom_v1(
+    zoom: Option<&DataZoomOrDataZooms>,
+    x_axes: &[AxisId],
+    y_axes: &[AxisId],
+) -> Result<(Vec<DataZoomXSpec>, Vec<DataZoomYSpec>, Vec<Action>)> {
+    let Some(zoom) = zoom else {
+        return Ok((Vec::new(), Vec::new(), Vec::new()));
+    };
+
+    let mut next_id = 1u64;
+    let mut x_specs: Vec<DataZoomXSpec> = Vec::new();
+    let mut y_specs: Vec<DataZoomYSpec> = Vec::new();
+    let mut actions: Vec<Action> = Vec::new();
+
+    let mut x_bound: BTreeSet<usize> = BTreeSet::new();
+    let mut y_bound: BTreeSet<usize> = BTreeSet::new();
+
+    for entry in zoom.to_vec() {
+        let _kind = entry.kind.as_deref().unwrap_or("inside");
+
+        let filter_mode = match entry.filter_mode.as_deref().unwrap_or("filter") {
+            "filter" => FilterMode::Filter,
+            "weakFilter" => FilterMode::WeakFilter,
+            "empty" => FilterMode::Empty,
+            "none" => FilterMode::None,
+            _ => return Err(EchartsError::Unsupported("dataZoom.filterMode")),
+        };
+
+        let start_value = entry.start_value.as_ref().map(parse_f64_value);
+        let end_value = entry.end_value.as_ref().map(parse_f64_value);
+        let window = match (start_value, end_value) {
+            (Some(a), Some(b)) if a.is_finite() && b.is_finite() => {
+                Some(DataWindow { min: a, max: b })
+            }
+            _ => None,
+        };
+
+        if let Some(indices) = entry.x_axis_index.as_ref() {
+            for axis_index in indices.to_vec() {
+                let axis = *x_axes
+                    .get(axis_index)
+                    .ok_or(EchartsError::Invalid("dataZoom.xAxisIndex out of range"))?;
+                if !x_bound.insert(axis_index) {
+                    return Err(EchartsError::Unsupported(
+                        "multiple dataZoom components target the same xAxis (v1 subset)",
+                    ));
+                }
+                let id = delinea::ids::DataZoomId::new(next_id);
+                next_id = next_id.saturating_add(1);
+                x_specs.push(DataZoomXSpec {
+                    id,
+                    axis,
+                    filter_mode,
+                    min_value_span: entry.min_value_span,
+                    max_value_span: entry.max_value_span,
+                });
+                if let Some(w) = window {
+                    actions.push(Action::SetDataWindowX {
+                        axis,
+                        window: Some(w),
+                    });
+                }
+            }
+        }
+
+        if let Some(indices) = entry.y_axis_index.as_ref() {
+            for axis_index in indices.to_vec() {
+                let axis = *y_axes
+                    .get(axis_index)
+                    .ok_or(EchartsError::Invalid("dataZoom.yAxisIndex out of range"))?;
+                if !y_bound.insert(axis_index) {
+                    return Err(EchartsError::Unsupported(
+                        "multiple dataZoom components target the same yAxis (v1 subset)",
+                    ));
+                }
+                let id = delinea::ids::DataZoomId::new(next_id);
+                next_id = next_id.saturating_add(1);
+                y_specs.push(DataZoomYSpec {
+                    id,
+                    axis,
+                    filter_mode,
+                    min_value_span: entry.min_value_span,
+                    max_value_span: entry.max_value_span,
+                });
+                if let Some(w) = window {
+                    actions.push(Action::SetDataWindowY {
+                        axis,
+                        window: Some(w),
+                    });
+                }
+            }
+        }
+    }
+
+    Ok((x_specs, y_specs, actions))
 }
 
 fn build_y_scale(y_axis: Option<&EchartsAxis>) -> Result<AxisScale> {
@@ -1467,8 +1632,8 @@ mod tests {
             .column;
 
         let table = &translated.datasets[0].1;
-        let x = table.columns[x_col].as_f64().expect("f64 column");
-        assert_eq!(x, &vec![0.0, 1.0, 2.0]);
+        let x = table.column_f64(x_col).expect("f64 column");
+        assert_eq!(x, &[0.0, 1.0, 2.0]);
     }
 
     #[test]
@@ -1512,8 +1677,8 @@ mod tests {
             .column;
 
         let table = &translated.datasets[0].1;
-        let x = table.columns[x_col].as_f64().expect("f64 column");
-        assert_eq!(x, &vec![0.0, 1.0, 2.0]);
+        let x = table.column_f64(x_col).expect("f64 column");
+        assert_eq!(x, &[0.0, 1.0, 2.0]);
     }
 
     #[test]
@@ -1635,5 +1800,51 @@ mod tests {
         assert_eq!(lod.large_threshold, Some(123));
         assert_eq!(lod.progressive, Some(456));
         assert_eq!(lod.progressive_threshold, Some(789));
+    }
+
+    #[test]
+    fn translate_data_zoom_start_end_value_to_specs_and_actions() {
+        let json = r#"
+        {
+          "xAxis": { "type": "value" },
+          "yAxis": { "type": "value" },
+          "dataZoom": [
+            { "type": "inside", "xAxisIndex": 0, "filterMode": "empty", "startValue": 1, "endValue": 3 },
+            { "type": "slider", "yAxisIndex": 0, "filterMode": "filter", "startValue": 10, "endValue": 30 }
+          ],
+          "series": [
+            { "type": "scatter", "data": [[0, 0], [1, 10], [2, 20], [3, 30], [4, 40]] }
+          ]
+        }
+        "#;
+
+        let translated = translate_json_str(json).expect("translate");
+        assert_eq!(translated.spec.data_zoom_x.len(), 1);
+        assert_eq!(
+            translated.spec.data_zoom_x[0].filter_mode,
+            FilterMode::Empty
+        );
+        assert_eq!(translated.spec.data_zoom_y.len(), 1);
+        assert_eq!(
+            translated.spec.data_zoom_y[0].filter_mode,
+            FilterMode::Filter
+        );
+
+        assert!(
+            translated.actions.iter().any(|a| matches!(
+                a,
+                Action::SetDataWindowX { window: Some(w), .. }
+                    if (w.min - 1.0).abs() < 1e-9 && (w.max - 3.0).abs() < 1e-9
+            )),
+            "expected SetDataWindowX action"
+        );
+        assert!(
+            translated.actions.iter().any(|a| matches!(
+                a,
+                Action::SetDataWindowY { window: Some(w), .. }
+                    if (w.min - 10.0).abs() < 1e-9 && (w.max - 30.0).abs() < 1e-9
+            )),
+            "expected SetDataWindowY action"
+        );
     }
 }
