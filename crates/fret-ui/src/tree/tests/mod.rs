@@ -211,3 +211,4 @@ mod scroll_into_view;
 mod semantics_focus_shortcuts;
 mod stack_safety;
 mod transforms;
+mod view_cache;

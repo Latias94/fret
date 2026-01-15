@@ -250,8 +250,15 @@ impl<H: UiHost> UiTree<H> {
         }
 
         for (root, bounds) in targets {
-            let _ = self.layout_in_with_pass_kind(app, services, root, bounds, scale_factor, pass_kind);
-            self.flush_viewport_roots_after_root(app, services, scale_factor, pass_kind, viewport_cursor);
+            let _ =
+                self.layout_in_with_pass_kind(app, services, root, bounds, scale_factor, pass_kind);
+            self.flush_viewport_roots_after_root(
+                app,
+                services,
+                scale_factor,
+                pass_kind,
+                viewport_cursor,
+            );
         }
     }
 
