@@ -68,6 +68,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix Dialog:
 
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn sheet::tests`
+- Shadcn Web chrome gates: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
+  (`web_vs_fret_sheet_demo_panel_chrome_matches`, `web_vs_fret_sheet_side_panel_chrome_matches`).
 
 ## Follow-ups (recommended)
 

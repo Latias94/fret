@@ -167,3 +167,34 @@ Recent fixes:
 - Gaps to check:
   - Overlay: `bg-black/50` (not fully opaque).
   - Content: centered, `rounded-lg`, `border`, `p-6`, `shadow-lg`, close button slot.
+
+Conformance gates:
+
+- Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+  (`web_vs_fret_dialog_demo_panel_chrome_matches`).
+
+### `AlertDialog`
+
+- Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/alert-dialog.tsx`
+- Fret: `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`
+- Gaps to check:
+  - Safety defaults: overlay click-to-dismiss disabled by default.
+  - Cancel focus preference (first `AlertDialogCancel`).
+
+Conformance gates:
+
+- Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+  (`web_vs_fret_alert_dialog_demo_panel_chrome_matches`).
+
+### `Sheet`
+
+- Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sheet.tsx`
+- Fret: `ecosystem/fret-ui-shadcn/src/sheet.rs`
+- Gaps to check:
+  - Side-specific border edge (right=`border-l`, left=`border-r`, top=`border-b`, bottom=`border-t`).
+  - Side-specific sizing (`sm:max-w-sm` for left/right) and motion.
+
+Conformance gates:
+
+- Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+  (`web_vs_fret_sheet_demo_panel_chrome_matches`, `web_vs_fret_sheet_side_panel_chrome_matches`).

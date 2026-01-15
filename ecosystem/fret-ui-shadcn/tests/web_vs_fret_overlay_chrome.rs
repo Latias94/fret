@@ -133,21 +133,43 @@ fn parse_px(s: &str) -> Option<f32> {
     v.parse::<f32>().ok()
 }
 
-fn web_border_width_px(node: &WebNode) -> Option<f32> {
-    node.computed_style
-        .get("borderTopWidth")
-        .map(String::as_str)
-        .and_then(parse_px)
+fn web_border_widths_px(node: &WebNode) -> Option<[f32; 4]> {
+    Some([
+        node.computed_style
+            .get("borderTopWidth")
+            .map(String::as_str)
+            .and_then(parse_px)?,
+        node.computed_style
+            .get("borderRightWidth")
+            .map(String::as_str)
+            .and_then(parse_px)?,
+        node.computed_style
+            .get("borderBottomWidth")
+            .map(String::as_str)
+            .and_then(parse_px)?,
+        node.computed_style
+            .get("borderLeftWidth")
+            .map(String::as_str)
+            .and_then(parse_px)?,
+    ])
 }
 
-fn web_corner_radius_effective_px(node: &WebNode) -> Option<f32> {
-    let raw = node
-        .computed_style
-        .get("borderTopLeftRadius")
-        .map(String::as_str)
-        .and_then(parse_px)?;
+fn web_corner_radii_effective_px(node: &WebNode) -> Option<[f32; 4]> {
     let max = node.rect.w.min(node.rect.h) * 0.5;
-    Some(raw.min(max))
+    let radius = |key: &str| {
+        node.computed_style
+            .get(key)
+            .map(String::as_str)
+            .and_then(parse_px)
+            .map(|v| v.min(max))
+    };
+
+    Some([
+        radius("borderTopLeftRadius")?,
+        radius("borderTopRightRadius")?,
+        radius("borderBottomRightRadius")?,
+        radius("borderBottomLeftRadius")?,
+    ])
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -447,8 +469,8 @@ fn assert_overlay_chrome_matches(
     let theme = web_theme(&web);
 
     let web_portal = find_portal_by_role(theme, web_portal_role).expect("web portal root by role");
-    let web_border = web_border_width_px(web_portal).expect("web borderTopWidth px");
-    let web_radius = web_corner_radius_effective_px(web_portal).expect("web radius px");
+    let web_border = web_border_widths_px(web_portal).expect("web border widths px");
+    let web_radius = web_corner_radii_effective_px(web_portal).expect("web radius px");
 
     let window = AppWindowId::default();
     let mut app = App::new();
@@ -498,13 +520,18 @@ fn assert_overlay_chrome_matches(
     let quad =
         find_best_chrome_quad(&scene, overlay.bounds).expect("painted quad for overlay panel");
     for (idx, edge) in quad.border.iter().enumerate() {
-        assert_close(&format!("{web_name} border[{idx}]"), *edge, web_border, 0.6);
+        assert_close(
+            &format!("{web_name} border[{idx}]"),
+            *edge,
+            web_border[idx],
+            0.6,
+        );
     }
     for (idx, corner) in quad.corners.iter().enumerate() {
         assert_close(
             &format!("{web_name} radius[{idx}]"),
             *corner,
-            web_radius,
+            web_radius[idx],
             1.0,
         );
     }
@@ -522,8 +549,8 @@ fn assert_click_overlay_chrome_matches(
     let theme = web_theme(&web);
 
     let web_portal = find_portal_by_role(theme, web_portal_role).expect("web portal root by role");
-    let web_border = web_border_width_px(web_portal).expect("web borderTopWidth px");
-    let web_radius = web_corner_radius_effective_px(web_portal).expect("web radius px");
+    let web_border = web_border_widths_px(web_portal).expect("web border widths px");
+    let web_radius = web_corner_radii_effective_px(web_portal).expect("web radius px");
 
     let window = AppWindowId::default();
     let mut app = App::new();
@@ -587,13 +614,18 @@ fn assert_click_overlay_chrome_matches(
     let quad =
         find_best_chrome_quad(&scene, overlay.bounds).expect("painted quad for overlay panel");
     for (idx, edge) in quad.border.iter().enumerate() {
-        assert_close(&format!("{web_name} border[{idx}]"), *edge, web_border, 0.6);
+        assert_close(
+            &format!("{web_name} border[{idx}]"),
+            *edge,
+            web_border[idx],
+            0.6,
+        );
     }
     for (idx, corner) in quad.corners.iter().enumerate() {
         assert_close(
             &format!("{web_name} radius[{idx}]"),
             *corner,
-            web_radius,
+            web_radius[idx],
             1.0,
         );
     }
@@ -610,8 +642,8 @@ fn assert_context_menu_chrome_matches(
     let theme = web_theme(&web);
 
     let web_portal = find_portal_by_role(theme, web_portal_role).expect("web portal root by role");
-    let web_border = web_border_width_px(web_portal).expect("web borderTopWidth px");
-    let web_radius = web_corner_radius_effective_px(web_portal).expect("web radius px");
+    let web_border = web_border_widths_px(web_portal).expect("web border widths px");
+    let web_radius = web_corner_radii_effective_px(web_portal).expect("web radius px");
 
     let window = AppWindowId::default();
     let mut app = App::new();
@@ -676,13 +708,18 @@ fn assert_context_menu_chrome_matches(
     let quad =
         find_best_chrome_quad(&scene, overlay.bounds).expect("painted quad for overlay panel");
     for (idx, edge) in quad.border.iter().enumerate() {
-        assert_close(&format!("{web_name} border[{idx}]"), *edge, web_border, 0.6);
+        assert_close(
+            &format!("{web_name} border[{idx}]"),
+            *edge,
+            web_border[idx],
+            0.6,
+        );
     }
     for (idx, corner) in quad.corners.iter().enumerate() {
         assert_close(
             &format!("{web_name} radius[{idx}]"),
             *corner,
-            web_radius,
+            web_radius[idx],
             1.0,
         );
     }
@@ -706,8 +743,8 @@ fn assert_navigation_menu_content_chrome_matches(
 
     let web_content = find_by_data_slot_and_state(&theme.root, web_slot, web_state)
         .unwrap_or_else(|| panic!("missing web node data-slot={web_slot} data-state={web_state}"));
-    let web_border = web_border_width_px(web_content).expect("web borderTopWidth px");
-    let web_radius = web_corner_radius_effective_px(web_content).expect("web radius px");
+    let web_border = web_border_widths_px(web_content).expect("web border widths px");
+    let web_radius = web_corner_radii_effective_px(web_content).expect("web radius px");
 
     let window = AppWindowId::default();
     let mut app = App::new();
@@ -789,13 +826,18 @@ fn assert_navigation_menu_content_chrome_matches(
         find_best_chrome_quad(&scene, target).expect("painted quad for navigation-menu content");
 
     for (idx, edge) in quad.border.iter().enumerate() {
-        assert_close(&format!("{web_name} border[{idx}]"), *edge, web_border, 0.6);
+        assert_close(
+            &format!("{web_name} border[{idx}]"),
+            *edge,
+            web_border[idx],
+            0.6,
+        );
     }
     for (idx, corner) in quad.corners.iter().enumerate() {
         assert_close(
             &format!("{web_name} radius[{idx}]"),
             *corner,
-            web_radius,
+            web_radius[idx],
             1.0,
         );
     }
@@ -805,7 +847,7 @@ fn find_best_chrome_quad_by_size(
     scene: &Scene,
     expected_w: f32,
     expected_h: f32,
-    expected_border: f32,
+    expected_border: [f32; 4],
 ) -> Option<PaintedQuad> {
     let mut best: Option<PaintedQuad> = None;
     let mut best_score = f32::INFINITY;
@@ -827,7 +869,7 @@ fn find_best_chrome_quad_by_size(
         if !has_background && !has_border(&border) {
             continue;
         }
-        if expected_border > 0.01 && !has_border(&border) {
+        if has_border(&expected_border) && !has_border(&border) {
             continue;
         }
 
@@ -869,8 +911,8 @@ fn assert_overlay_chrome_matches_by_portal_slot(
                 .is_some_and(|v| v == web_portal_slot)
         })
         .unwrap_or_else(|| panic!("missing web portal slot={web_portal_slot} for {web_name}"));
-    let web_border = web_border_width_px(web_portal).expect("web borderTopWidth px");
-    let web_radius = web_corner_radius_effective_px(web_portal).expect("web radius px");
+    let web_border = web_border_widths_px(web_portal).expect("web border widths px");
+    let web_radius = web_corner_radii_effective_px(web_portal).expect("web radius px");
     let web_w = web_portal.rect.w;
     let web_h = web_portal.rect.h;
 
@@ -919,13 +961,18 @@ fn assert_overlay_chrome_matches_by_portal_slot(
     let quad = find_best_chrome_quad_by_size(&scene, web_w, web_h, web_border)
         .expect("painted quad for overlay panel");
     for (idx, edge) in quad.border.iter().enumerate() {
-        assert_close(&format!("{web_name} border[{idx}]"), *edge, web_border, 0.6);
+        assert_close(
+            &format!("{web_name} border[{idx}]"),
+            *edge,
+            web_border[idx],
+            0.6,
+        );
     }
     for (idx, corner) in quad.corners.iter().enumerate() {
         assert_close(
             &format!("{web_name} radius[{idx}]"),
             *corner,
-            web_radius,
+            web_radius[idx],
             1.0,
         );
     }
@@ -986,8 +1033,8 @@ fn assert_hover_overlay_chrome_matches(
                 .is_some_and(|v| v == web_portal_slot)
         })
         .unwrap_or_else(|| panic!("missing web portal slot={web_portal_slot} for {web_name}"));
-    let web_border = web_border_width_px(web_portal).expect("web borderTopWidth px");
-    let web_radius = web_corner_radius_effective_px(web_portal).expect("web radius px");
+    let web_border = web_border_widths_px(web_portal).expect("web border widths px");
+    let web_radius = web_corner_radii_effective_px(web_portal).expect("web radius px");
 
     let window = AppWindowId::default();
     let mut app = App::new();
@@ -1074,16 +1121,102 @@ fn assert_hover_overlay_chrome_matches(
     let quad = find_best_chrome_quad(&scene, overlay.bounds).expect("painted quad for overlay");
 
     for (idx, edge) in quad.border.iter().enumerate() {
-        assert_close(&format!("{web_name} border[{idx}]"), *edge, web_border, 0.6);
+        assert_close(
+            &format!("{web_name} border[{idx}]"),
+            *edge,
+            web_border[idx],
+            0.6,
+        );
     }
     for (idx, corner) in quad.corners.iter().enumerate() {
         assert_close(
             &format!("{web_name} radius[{idx}]"),
             *corner,
-            web_radius,
+            web_radius[idx],
             1.0,
         );
     }
+}
+
+#[test]
+fn web_vs_fret_dialog_demo_panel_chrome_matches() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Dialog, DialogContent};
+
+    assert_overlay_chrome_matches(
+        "dialog-demo",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Dialog::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    Button::new("Open Dialog")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| DialogContent::new(vec![cx.text("Edit profile")]).into_element(cx),
+            )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_alert_dialog_demo_panel_chrome_matches() {
+    use fret_ui_shadcn::{AlertDialog, AlertDialogContent, Button, ButtonVariant};
+
+    assert_overlay_chrome_matches(
+        "alert-dialog-demo",
+        "alertdialog",
+        SemanticsRole::AlertDialog,
+        |cx, open| {
+            AlertDialog::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    Button::new("Show Dialog")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| {
+                    AlertDialogContent::new(vec![cx.text("Are you absolutely sure?")])
+                        .into_element(cx)
+                },
+            )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_sheet_demo_panel_chrome_matches() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent};
+
+    assert_overlay_chrome_matches("sheet-demo", "dialog", SemanticsRole::Dialog, |cx, open| {
+        Sheet::new(open.clone()).into_element(
+            cx,
+            |cx| {
+                Button::new("Open")
+                    .variant(ButtonVariant::Outline)
+                    .into_element(cx)
+            },
+            |cx| SheetContent::new(vec![cx.text("Edit profile")]).into_element(cx),
+        )
+    });
+}
+
+#[test]
+fn web_vs_fret_sheet_side_panel_chrome_matches() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent, SheetSide};
+
+    assert_overlay_chrome_matches("sheet-side", "dialog", SemanticsRole::Dialog, |cx, open| {
+        Sheet::new(open.clone()).side(SheetSide::Top).into_element(
+            cx,
+            |cx| {
+                Button::new("top")
+                    .variant(ButtonVariant::Outline)
+                    .into_element(cx)
+            },
+            |cx| SheetContent::new(vec![cx.text("Edit profile")]).into_element(cx),
+        )
+    });
 }
 
 #[test]
