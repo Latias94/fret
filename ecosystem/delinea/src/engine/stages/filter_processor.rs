@@ -793,6 +793,7 @@ fn apply_y_indices_for_grid(
             crate::spec::SeriesKind::Scatter
                 | crate::spec::SeriesKind::Line
                 | crate::spec::SeriesKind::Area
+                | crate::spec::SeriesKind::Band
         ) {
             continue;
         }
@@ -854,17 +855,35 @@ fn apply_y_indices_for_grid(
         let Some(x_col) = dataset.fields.get(&series_model.encode.x).copied() else {
             continue;
         };
-        let Some(y_col) = dataset.fields.get(&series_model.encode.y).copied() else {
+        let Some(y0_col) = dataset.fields.get(&series_model.encode.y).copied() else {
             continue;
+        };
+        let y1_col = if series_model.kind == crate::spec::SeriesKind::Band {
+            let Some(y1_field) = series_model.encode.y2 else {
+                continue;
+            };
+            let Some(y1_col) = dataset.fields.get(&y1_field).copied() else {
+                continue;
+            };
+            Some(y1_col)
+        } else {
+            None
         };
         let Some(x) = table.column_f64(x_col) else {
             continue;
         };
-        let Some(y) = table.column_f64(y_col) else {
+        let Some(y0) = table.column_f64(y0_col) else {
             continue;
         };
+        let y1 = y1_col.and_then(|c| table.column_f64(c));
+        if y1_col.is_some() && y1.is_none() {
+            continue;
+        }
 
-        let len = x.len().min(y.len());
+        let len = match y1 {
+            Some(y1) => x.len().min(y0.len()).min(y1.len()),
+            None => x.len().min(y0.len()),
+        };
         let view_len = base_selection.view_len(len);
         if view_len == 0 {
             continue;
@@ -895,14 +914,22 @@ fn apply_y_indices_for_grid(
                 continue;
             };
             let xi = x.get(raw_index).copied().unwrap_or(f64::NAN);
-            let yi = y.get(raw_index).copied().unwrap_or(f64::NAN);
-            if !xi.is_finite() || !yi.is_finite() {
+            if !xi.is_finite() {
                 continue;
             }
             if x_filter_should_cull_selection && x_filter_active && !x_filter.contains(xi) {
                 continue;
             }
-            if !y_filter.contains(yi) {
+
+            let y_ok = if let Some(y1) = y1 {
+                let y0i = y0.get(raw_index).copied().unwrap_or(f64::NAN);
+                let y1i = y1.get(raw_index).copied().unwrap_or(f64::NAN);
+                y0i.is_finite() && y1i.is_finite() && y_filter.intersects_interval(y0i, y1i)
+            } else {
+                let yi = y0.get(raw_index).copied().unwrap_or(f64::NAN);
+                yi.is_finite() && y_filter.contains(yi)
+            };
+            if !y_ok {
                 continue;
             }
             indices.push(raw_index.min(u32::MAX as usize) as u32);
