@@ -1351,11 +1351,10 @@ fn web_vs_fret_dropdown_menu_demo_overlay_placement_matches() {
     );
 }
 
-#[test]
-fn web_vs_fret_dropdown_menu_demo_submenu_overlay_placement_matches() {
+fn assert_dropdown_menu_demo_submenu_overlay_placement_matches(web_name: &str) {
     use fret_ui_shadcn::{Button, DropdownMenu, DropdownMenuEntry, DropdownMenuItem};
 
-    let web = read_web_golden_open("dropdown-menu-demo.submenu-kbd");
+    let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
 
     let web_sub_menu = web_portal_node_by_data_slot(theme, "dropdown-menu-sub-content");
@@ -1526,16 +1525,36 @@ fn web_vs_fret_dropdown_menu_demo_submenu_overlay_placement_matches() {
     let actual_w = submenu.bounds.size.width.0;
     let actual_h = submenu.bounds.size.height.0;
 
-    assert_close("dropdown-menu-demo.submenu dx", actual_dx, expected_dx, 2.0);
-    assert_close("dropdown-menu-demo.submenu dy", actual_dy, expected_dy, 2.0);
-    assert_close("dropdown-menu-demo.submenu w", actual_w, expected_w, 2.0);
-    assert_close("dropdown-menu-demo.submenu h", actual_h, expected_h, 2.0);
+    assert_close(
+        &format!("{web_name} submenu dx"),
+        actual_dx,
+        expected_dx,
+        2.0,
+    );
+    assert_close(
+        &format!("{web_name} submenu dy"),
+        actual_dy,
+        expected_dy,
+        2.0,
+    );
+    assert_close(&format!("{web_name} submenu w"), actual_w, expected_w, 2.0);
+    assert_close(&format!("{web_name} submenu h"), actual_h, expected_h, 2.0);
 
     // Ensure the root menu is also present (guards against selecting some unrelated menu).
     assert!(
         root_menu.bounds.size.width.0 > 0.0 && root_menu.bounds.size.height.0 > 0.0,
         "expected root menu bounds to be non-zero"
     );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_submenu_overlay_placement_matches() {
+    assert_dropdown_menu_demo_submenu_overlay_placement_matches("dropdown-menu-demo.submenu-kbd");
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_submenu_hover_overlay_placement_matches() {
+    assert_dropdown_menu_demo_submenu_overlay_placement_matches("dropdown-menu-demo.submenu");
 }
 
 #[test]
@@ -1949,9 +1968,8 @@ fn web_vs_fret_context_menu_demo_overlay_placement_matches() {
     );
 }
 
-#[test]
-fn web_vs_fret_context_menu_demo_submenu_overlay_placement_matches() {
-    let web = read_web_golden_open("context-menu-demo.submenu-kbd");
+fn assert_context_menu_demo_submenu_overlay_placement_matches(web_name: &str) {
+    let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
 
     let web_sub_menu = web_portal_node_by_data_slot(theme, "context-menu-sub-content");
@@ -2150,10 +2168,30 @@ fn web_vs_fret_context_menu_demo_submenu_overlay_placement_matches() {
     let actual_w = submenu.bounds.size.width.0;
     let actual_h = submenu.bounds.size.height.0;
 
-    assert_close("context-menu-demo.submenu dx", actual_dx, expected_dx, 2.0);
-    assert_close("context-menu-demo.submenu dy", actual_dy, expected_dy, 2.0);
-    assert_close("context-menu-demo.submenu w", actual_w, expected_w, 2.0);
-    assert_close("context-menu-demo.submenu h", actual_h, expected_h, 2.0);
+    assert_close(
+        &format!("{web_name} submenu dx"),
+        actual_dx,
+        expected_dx,
+        2.0,
+    );
+    assert_close(
+        &format!("{web_name} submenu dy"),
+        actual_dy,
+        expected_dy,
+        2.0,
+    );
+    assert_close(&format!("{web_name} submenu w"), actual_w, expected_w, 2.0);
+    assert_close(&format!("{web_name} submenu h"), actual_h, expected_h, 2.0);
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_submenu_overlay_placement_matches() {
+    assert_context_menu_demo_submenu_overlay_placement_matches("context-menu-demo.submenu-kbd");
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_submenu_hover_overlay_placement_matches() {
+    assert_context_menu_demo_submenu_overlay_placement_matches("context-menu-demo.submenu");
 }
 
 #[test]
@@ -2935,9 +2973,8 @@ fn web_vs_fret_menubar_demo_overlay_placement_matches() {
     );
 }
 
-#[test]
-fn web_vs_fret_menubar_demo_submenu_overlay_placement_matches() {
-    let web = read_web_golden_open("menubar-demo.submenu-kbd");
+fn assert_menubar_demo_submenu_overlay_placement_matches(web_name: &str) {
+    let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
 
     let web_sub_menu = web_portal_node_by_data_slot(theme, "menubar-sub-content");
@@ -3114,10 +3151,30 @@ fn web_vs_fret_menubar_demo_submenu_overlay_placement_matches() {
     let actual_w = submenu.bounds.size.width.0;
     let actual_h = submenu.bounds.size.height.0;
 
-    assert_close("menubar-demo.submenu dx", actual_dx, expected_dx, 2.0);
-    assert_close("menubar-demo.submenu dy", actual_dy, expected_dy, 2.0);
-    assert_close("menubar-demo.submenu w", actual_w, expected_w, 2.0);
-    assert_close("menubar-demo.submenu h", actual_h, expected_h, 2.0);
+    assert_close(
+        &format!("{web_name} submenu dx"),
+        actual_dx,
+        expected_dx,
+        2.0,
+    );
+    assert_close(
+        &format!("{web_name} submenu dy"),
+        actual_dy,
+        expected_dy,
+        2.0,
+    );
+    assert_close(&format!("{web_name} submenu w"), actual_w, expected_w, 2.0);
+    assert_close(&format!("{web_name} submenu h"), actual_h, expected_h, 2.0);
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_submenu_overlay_placement_matches() {
+    assert_menubar_demo_submenu_overlay_placement_matches("menubar-demo.submenu-kbd");
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_submenu_hover_overlay_placement_matches() {
+    assert_menubar_demo_submenu_overlay_placement_matches("menubar-demo.submenu");
 }
 
 #[test]
