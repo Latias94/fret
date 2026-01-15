@@ -478,13 +478,11 @@ fn translate_option(option: &EchartsOption) -> Result<TranslatedChart> {
         });
     }
 
-    let axis_extents = compute_axis_extents(&spec, &datasets);
     let axis_grids = compute_axis_grids(&spec);
     let (data_zoom_x, data_zoom_y, actions) = translate_data_zoom_v1(
         option.data_zoom.as_ref(),
         &[x_axis_id],
         &[y_axis_id],
-        &axis_extents,
         &axis_grids,
     )?;
     spec.data_zoom_x = data_zoom_x;
@@ -931,15 +929,9 @@ fn translate_option_with_dataset(option: &EchartsOption) -> Result<TranslatedCha
         });
     }
 
-    let axis_extents = compute_axis_extents(&spec, &out_datasets);
     let axis_grids = compute_axis_grids(&spec);
-    let (data_zoom_x, data_zoom_y, actions) = translate_data_zoom_v1(
-        option.data_zoom.as_ref(),
-        &x_ids,
-        &y_ids,
-        &axis_extents,
-        &axis_grids,
-    )?;
+    let (data_zoom_x, data_zoom_y, actions) =
+        translate_data_zoom_v1(option.data_zoom.as_ref(), &x_ids, &y_ids, &axis_grids)?;
     spec.data_zoom_x = data_zoom_x;
     spec.data_zoom_y = data_zoom_y;
 
@@ -981,7 +973,6 @@ fn translate_data_zoom_v1(
     zoom: Option<&DataZoomOrDataZooms>,
     x_axes: &[AxisId],
     y_axes: &[AxisId],
-    axis_extents: &BTreeMap<AxisId, (f64, f64)>,
     axis_grids: &BTreeMap<AxisId, GridId>,
 ) -> Result<(Vec<DataZoomXSpec>, Vec<DataZoomYSpec>, Vec<Action>)> {
     let Some(zoom) = zoom else {
@@ -994,11 +985,17 @@ fn translate_data_zoom_v1(
     let mut actions: Vec<Action> = Vec::new();
 
     #[derive(Debug, Clone, Copy)]
+    enum ZoomWindowInput {
+        Value { start: f64, end: f64 },
+        Percent { start: f64, end: f64 },
+    }
+
+    #[derive(Debug, Clone, Copy)]
     struct ZoomAxisAccum {
         filter_mode: Option<FilterMode>,
         min_value_span: Option<f64>,
         max_value_span: Option<f64>,
-        window: Option<DataWindow>,
+        window: Option<ZoomWindowInput>,
     }
 
     impl ZoomAxisAccum {
@@ -1007,7 +1004,7 @@ fn translate_data_zoom_v1(
             filter_mode: FilterMode,
             min_value_span: Option<f64>,
             max_value_span: Option<f64>,
-            window: Option<DataWindow>,
+            window: Option<ZoomWindowInput>,
         ) -> Result<()> {
             if let Some(existing) = self.filter_mode
                 && existing != filter_mode
@@ -1082,12 +1079,6 @@ fn translate_data_zoom_v1(
             _ => return Err(EchartsError::Unsupported("dataZoom.filterMode")),
         };
 
-        #[derive(Debug, Clone, Copy)]
-        enum ZoomWindowInput {
-            Value { start: f64, end: f64 },
-            Percent { start: f64, end: f64 },
-        }
-
         let window_input = {
             let range_mode = entry
                 .range_mode
@@ -1148,49 +1139,6 @@ fn translate_data_zoom_v1(
             if x_axes.get(axis_index).is_none() {
                 return Err(EchartsError::Invalid("dataZoom.xAxisIndex out of range"));
             }
-
-            let axis = x_axes[axis_index];
-            let window = match window_input {
-                None => None,
-                Some(ZoomWindowInput::Value { start, end }) => Some(DataWindow {
-                    min: start,
-                    max: end,
-                }),
-                Some(ZoomWindowInput::Percent { start, end }) => {
-                    match axis_extents.get(&axis).copied() {
-                        None => {
-                            // Best-effort v1: if we cannot infer a data extent for the axis, we
-                            // still install the dataZoom spec but skip initial window seeding.
-                            None
-                        }
-                        Some((base_min, base_max)) => {
-                            if !base_min.is_finite() || !base_max.is_finite() {
-                                return Err(EchartsError::Unsupported(
-                                    "dataZoom.start/end requires a finite data extent for the target axis (v1 subset)",
-                                ));
-                            }
-
-                            let (base_min, base_max) = if base_min <= base_max {
-                                (base_min, base_max)
-                            } else {
-                                (base_max, base_min)
-                            };
-                            let span = base_max - base_min;
-
-                            let mut a = (start / 100.0).clamp(0.0, 1.0);
-                            let mut b = (end / 100.0).clamp(0.0, 1.0);
-                            if a > b {
-                                core::mem::swap(&mut a, &mut b);
-                            }
-
-                            Some(DataWindow {
-                                min: base_min + span * a,
-                                max: base_min + span * b,
-                            })
-                        }
-                    }
-                }
-            };
             x_accum
                 .entry(axis_index)
                 .or_insert(ZoomAxisAccum {
@@ -1203,7 +1151,7 @@ fn translate_data_zoom_v1(
                     filter_mode,
                     entry.min_value_span,
                     entry.max_value_span,
-                    window,
+                    window_input,
                 )?;
         }
 
@@ -1211,45 +1159,6 @@ fn translate_data_zoom_v1(
             if y_axes.get(axis_index).is_none() {
                 return Err(EchartsError::Invalid("dataZoom.yAxisIndex out of range"));
             }
-
-            let axis = y_axes[axis_index];
-            let window = match window_input {
-                None => None,
-                Some(ZoomWindowInput::Value { start, end }) => Some(DataWindow {
-                    min: start,
-                    max: end,
-                }),
-                Some(ZoomWindowInput::Percent { start, end }) => {
-                    match axis_extents.get(&axis).copied() {
-                        None => None,
-                        Some((base_min, base_max)) => {
-                            if !base_min.is_finite() || !base_max.is_finite() {
-                                return Err(EchartsError::Unsupported(
-                                    "dataZoom.start/end requires a finite data extent for the target axis (v1 subset)",
-                                ));
-                            }
-
-                            let (base_min, base_max) = if base_min <= base_max {
-                                (base_min, base_max)
-                            } else {
-                                (base_max, base_min)
-                            };
-                            let span = base_max - base_min;
-
-                            let mut a = (start / 100.0).clamp(0.0, 1.0);
-                            let mut b = (end / 100.0).clamp(0.0, 1.0);
-                            if a > b {
-                                core::mem::swap(&mut a, &mut b);
-                            }
-
-                            Some(DataWindow {
-                                min: base_min + span * a,
-                                max: base_min + span * b,
-                            })
-                        }
-                    }
-                }
-            };
             y_accum
                 .entry(axis_index)
                 .or_insert(ZoomAxisAccum {
@@ -1262,7 +1171,7 @@ fn translate_data_zoom_v1(
                     filter_mode,
                     entry.min_value_span,
                     entry.max_value_span,
-                    window,
+                    window_input,
                 )?;
         }
     }
@@ -1279,10 +1188,21 @@ fn translate_data_zoom_v1(
             max_value_span: acc.max_value_span,
         });
         if let Some(w) = acc.window {
-            actions.push(Action::SetDataWindowX {
-                axis,
-                window: Some(w),
-            });
+            match w {
+                ZoomWindowInput::Value { start, end } => actions.push(Action::SetDataWindowX {
+                    axis,
+                    window: Some(DataWindow {
+                        min: start,
+                        max: end,
+                    }),
+                }),
+                ZoomWindowInput::Percent { start, end } => {
+                    actions.push(Action::SetAxisWindowPercent {
+                        axis,
+                        range: Some((start, end)),
+                    })
+                }
+            }
         }
     }
 
@@ -1298,86 +1218,25 @@ fn translate_data_zoom_v1(
             max_value_span: acc.max_value_span,
         });
         if let Some(w) = acc.window {
-            actions.push(Action::SetDataWindowY {
-                axis,
-                window: Some(w),
-            });
+            match w {
+                ZoomWindowInput::Value { start, end } => actions.push(Action::SetDataWindowY {
+                    axis,
+                    window: Some(DataWindow {
+                        min: start,
+                        max: end,
+                    }),
+                }),
+                ZoomWindowInput::Percent { start, end } => {
+                    actions.push(Action::SetAxisWindowPercent {
+                        axis,
+                        range: Some((start, end)),
+                    })
+                }
+            }
         }
     }
 
     Ok((x_specs, y_specs, actions))
-}
-
-fn compute_axis_extents(
-    spec: &ChartSpec,
-    datasets: &[(DatasetId, DataTable)],
-) -> BTreeMap<AxisId, (f64, f64)> {
-    let tables_by_id: BTreeMap<DatasetId, &DataTable> =
-        datasets.iter().map(|(id, t)| (*id, t)).collect();
-
-    let mut field_to_column_by_dataset: BTreeMap<DatasetId, BTreeMap<FieldId, usize>> =
-        BTreeMap::new();
-    for ds in &spec.datasets {
-        let mut map: BTreeMap<FieldId, usize> = BTreeMap::new();
-        for f in &ds.fields {
-            map.insert(f.id, f.column);
-        }
-        field_to_column_by_dataset.insert(ds.id, map);
-    }
-
-    fn scan_finite_extent(values: &[f64]) -> Option<(f64, f64)> {
-        let mut min = f64::INFINITY;
-        let mut max = f64::NEG_INFINITY;
-        for &v in values {
-            if !v.is_finite() {
-                continue;
-            }
-            min = min.min(v);
-            max = max.max(v);
-        }
-        if min.is_finite() && max.is_finite() {
-            Some((min, max))
-        } else {
-            None
-        }
-    }
-
-    let mut out: BTreeMap<AxisId, (f64, f64)> = BTreeMap::new();
-
-    for s in &spec.series {
-        let Some(table) = tables_by_id.get(&s.dataset) else {
-            continue;
-        };
-        let Some(fields) = field_to_column_by_dataset.get(&s.dataset) else {
-            continue;
-        };
-
-        let mut apply_field = |axis: AxisId, field: FieldId| {
-            let Some(&col) = fields.get(&field) else {
-                return;
-            };
-            let Some(values) = table.column_f64(col) else {
-                return;
-            };
-            let Some((min, max)) = scan_finite_extent(values) else {
-                return;
-            };
-            out.entry(axis)
-                .and_modify(|ext| {
-                    ext.0 = ext.0.min(min);
-                    ext.1 = ext.1.max(max);
-                })
-                .or_insert((min, max));
-        };
-
-        apply_field(s.x_axis, s.encode.x);
-        apply_field(s.y_axis, s.encode.y);
-        if let Some(y2) = s.encode.y2 {
-            apply_field(s.y_axis, y2);
-        }
-    }
-
-    out
 }
 
 fn compute_axis_grids(spec: &ChartSpec) -> BTreeMap<AxisId, GridId> {
@@ -2241,10 +2100,10 @@ mod tests {
         assert!(
             translated.actions.iter().any(|a| matches!(
                 a,
-                Action::SetDataWindowX { window: Some(w), .. }
-                    if (w.min - 1.0).abs() < 1e-9 && (w.max - 3.0).abs() < 1e-9
+                Action::SetAxisWindowPercent { range: Some((start, end)), .. }
+                    if (start - 25.0).abs() < 1e-9 && (end - 75.0).abs() < 1e-9
             )),
-            "expected SetDataWindowX action for percent window"
+            "expected SetAxisWindowPercent action for percent window"
         );
     }
 
@@ -2429,8 +2288,8 @@ mod tests {
         assert!(
             translated.actions.iter().any(|a| matches!(
                 a,
-                Action::SetDataWindowX { window: Some(w), .. }
-                    if (w.min - 1.0).abs() < 1e-9 && (w.max - 3.0).abs() < 1e-9
+                Action::SetAxisWindowPercent { range: Some((start, end)), .. }
+                    if (start - 25.0).abs() < 1e-9 && (end - 75.0).abs() < 1e-9
             )),
             "expected start/end percent to win under rangeMode=percent"
         );
