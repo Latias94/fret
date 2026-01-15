@@ -145,7 +145,10 @@ pub use field::{
     Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend,
     FieldLegendVariant, FieldOrientation, FieldSeparator, FieldSet, FieldTitle,
 };
-pub use form::{Form, FormControl, FormDescription, FormItem, FormLabel, FormMessage, form};
+pub use form::{
+    Form, FormControl, FormDescription, FormErrorVisibility, FormField, FormItem, FormLabel,
+    FormMessage, form,
+};
 pub use fret_ui_kit::declarative::table::TableViewOutput as DataTableViewOutput;
 pub use hover_card::{
     HoverCard, HoverCardAlign, HoverCardAnchor, HoverCardContent, HoverCardSide, HoverCardTrigger,

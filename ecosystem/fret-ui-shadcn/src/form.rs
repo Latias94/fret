@@ -7,6 +7,9 @@
 //! - `FormItem` maps to `Field` (label + control + description + message).
 //! - `FormMessage` maps to `FieldError` (destructive text).
 
+#[path = "form_field.rs"]
+mod form_field;
+
 pub use crate::field::Field as FormItem;
 pub use crate::field::FieldContent as FormControl;
 pub use crate::field::FieldDescription as FormDescription;
@@ -14,3 +17,4 @@ pub use crate::field::FieldError as FormMessage;
 pub use crate::field::FieldLabel as FormLabel;
 pub use crate::field::FieldSet as Form;
 pub use crate::field::field_set as form;
+pub use form_field::{FormErrorVisibility, FormField};
