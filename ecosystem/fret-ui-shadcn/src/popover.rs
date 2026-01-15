@@ -92,6 +92,7 @@ pub struct Popover {
     modal: bool,
     auto_focus: bool,
     initial_focus: Option<fret_ui::elements::GlobalElementId>,
+    initial_focus_from_cell: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
     anchor_override: Option<fret_ui::elements::GlobalElementId>,
     on_dismiss_request: Option<OnDismissRequest>,
 }
@@ -108,6 +109,10 @@ impl std::fmt::Debug for Popover {
             .field("modal", &self.modal)
             .field("auto_focus", &self.auto_focus)
             .field("initial_focus", &self.initial_focus)
+            .field(
+                "initial_focus_from_cell",
+                &self.initial_focus_from_cell.is_some(),
+            )
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .finish()
     }
@@ -130,6 +135,7 @@ impl Popover {
             modal: false,
             auto_focus: false,
             initial_focus: None,
+            initial_focus_from_cell: None,
             anchor_override: None,
             on_dismiss_request: None,
         }
@@ -233,6 +239,18 @@ impl Popover {
 
     pub fn initial_focus(mut self, element: fret_ui::elements::GlobalElementId) -> Self {
         self.initial_focus = Some(element);
+        self
+    }
+
+    /// Uses an initial focus target that is only known while building the content subtree.
+    ///
+    /// This is useful for popovers that want to focus a specific descendant (e.g. a selected day
+    /// in a date picker) without hard-coding element IDs.
+    pub(crate) fn initial_focus_from_cell(
+        mut self,
+        cell: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+    ) -> Self {
+        self.initial_focus_from_cell = Some(cell);
         self
     }
 
@@ -507,6 +525,10 @@ impl Popover {
                 });
 
                 let initial_focus = if let Some(id) = self.initial_focus {
+                    Some(id)
+                } else if let Some(cell) = self.initial_focus_from_cell.as_ref()
+                    && let Some(id) = cell.get()
+                {
                     Some(id)
                 } else if self.auto_focus {
                     None
