@@ -69,6 +69,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - `cargo nextest run -p fret-ui-shadcn dialog::tests`
 - Shadcn Web chrome gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
   (`web_vs_fret_dialog_demo_panel_chrome_matches`).
+- Shadcn Web placement gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
+  (`web_vs_fret_dialog_demo_overlay_center_matches`).
 - Radix Web overlay geometry gate: `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
   (`radix_web_dialog_open_geometry_matches_fret`).
 

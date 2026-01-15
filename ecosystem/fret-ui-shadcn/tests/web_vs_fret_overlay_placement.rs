@@ -652,6 +652,371 @@ fn assert_overlay_placement_matches(
     );
 }
 
+fn assert_centered_overlay_placement_matches(
+    web_name: &str,
+    web_portal_role: &str,
+    fret_portal_role: SemanticsRole,
+    build: impl Fn(&mut ElementContext<'_, App>, &Model<bool>) -> AnyElement + Clone,
+) {
+    let debug = std::env::var("FRET_DEBUG_OVERLAY_PLACEMENT")
+        .ok()
+        .is_some_and(|v| v == "1");
+
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+
+    let web_portal_index = theme
+        .portals
+        .iter()
+        .position(|n| n.attrs.get("role").is_some_and(|v| v == web_portal_role))
+        .unwrap_or_else(|| panic!("missing web portal role={web_portal_role} for {web_name}"));
+    let web_portal_leaf = &theme.portals[web_portal_index];
+    let web_portal = theme
+        .portal_wrappers
+        .get(web_portal_index)
+        .unwrap_or(web_portal_leaf);
+
+    let expected_center_x = rect_center_x(web_portal.rect);
+    let expected_center_y = rect_center_y(web_portal.rect);
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(1440.0), Px(900.0)),
+    );
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let build_frame1 = build.clone();
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let content = build_frame1(cx, &open);
+            vec![pad_root(cx, Px(0.0), content)]
+        },
+    );
+
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    let build_frame2 = build.clone();
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        false,
+        |cx| {
+            let content = build_frame2(cx, &open);
+            vec![pad_root(cx, Px(0.0), content)]
+        },
+    );
+
+    let build_frame3 = build.clone();
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(3),
+        false,
+        |cx| {
+            let content = build_frame3(cx, &open);
+            vec![pad_root(cx, Px(0.0), content)]
+        },
+    );
+
+    let build_frame4 = build.clone();
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(4),
+        true,
+        |cx| {
+            let content = build_frame4(cx, &open);
+            vec![pad_root(cx, Px(0.0), content)]
+        },
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+
+    let expected_portal_w = web_portal.rect.w;
+    let expected_portal_h = web_portal.rect.h;
+    let portal = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == fret_portal_role)
+        .min_by(|a, b| {
+            let rect_a = WebRect {
+                x: a.bounds.origin.x.0,
+                y: a.bounds.origin.y.0,
+                w: a.bounds.size.width.0,
+                h: a.bounds.size.height.0,
+            };
+            let rect_b = WebRect {
+                x: b.bounds.origin.x.0,
+                y: b.bounds.origin.y.0,
+                w: b.bounds.size.width.0,
+                h: b.bounds.size.height.0,
+            };
+
+            let score_for = |r: WebRect| {
+                let center = (rect_center_x(r) - expected_center_x).abs()
+                    + (rect_center_y(r) - expected_center_y).abs();
+                let size = (r.w - expected_portal_w).abs() + (r.h - expected_portal_h).abs();
+                center + 0.02 * size
+            };
+
+            let score_a = score_for(rect_a);
+            let score_b = score_for(rect_b);
+            score_a
+                .partial_cmp(&score_b)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .unwrap_or_else(|| panic!("missing fret portal role={fret_portal_role:?} for {web_name}"));
+
+    let fret_portal = WebRect {
+        x: portal.bounds.origin.x.0,
+        y: portal.bounds.origin.y.0,
+        w: portal.bounds.size.width.0,
+        h: portal.bounds.size.height.0,
+    };
+
+    if debug {
+        eprintln!(
+            "{web_name} web portal={:?} expected_center=({}, {})",
+            web_portal.rect, expected_center_x, expected_center_y
+        );
+        eprintln!("{web_name} selected fret portal={:?}", fret_portal);
+    }
+
+    assert_close(
+        &format!("{web_name} center_x"),
+        rect_center_x(fret_portal),
+        expected_center_x,
+        2.0,
+    );
+    assert_close(
+        &format!("{web_name} center_y"),
+        rect_center_y(fret_portal),
+        expected_center_y,
+        2.0,
+    );
+}
+
+fn assert_viewport_anchored_overlay_placement_matches(
+    web_name: &str,
+    web_portal_role: &str,
+    fret_portal_role: SemanticsRole,
+    build: impl Fn(&mut ElementContext<'_, App>, &Model<bool>) -> AnyElement + Clone,
+) {
+    let debug = std::env::var("FRET_DEBUG_OVERLAY_PLACEMENT")
+        .ok()
+        .is_some_and(|v| v == "1");
+
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+
+    let web_portal_index = theme
+        .portals
+        .iter()
+        .position(|n| n.attrs.get("role").is_some_and(|v| v == web_portal_role))
+        .unwrap_or_else(|| panic!("missing web portal role={web_portal_role} for {web_name}"));
+    let web_portal_leaf = &theme.portals[web_portal_index];
+    let web_portal = theme
+        .portal_wrappers
+        .get(web_portal_index)
+        .unwrap_or(web_portal_leaf);
+
+    let expected_left = web_portal.rect.x;
+    let expected_top = web_portal.rect.y;
+    let expected_right = 1440.0 - rect_right(web_portal.rect);
+    let expected_bottom = 900.0 - rect_bottom(web_portal.rect);
+
+    let anchor_tol = 2.0;
+    let anchor_left = expected_left.abs() <= anchor_tol;
+    let anchor_top = expected_top.abs() <= anchor_tol;
+    let anchor_right = expected_right.abs() <= anchor_tol;
+    let anchor_bottom = expected_bottom.abs() <= anchor_tol;
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(1440.0), Px(900.0)),
+    );
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let build_frame1 = build.clone();
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let content = build_frame1(cx, &open);
+            vec![pad_root(cx, Px(0.0), content)]
+        },
+    );
+
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    for frame_id in 2..=4 {
+        let request_semantics = frame_id == 4;
+        let build_frame = build.clone();
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame_id as u64),
+            request_semantics,
+            |cx| {
+                let content = build_frame(cx, &open);
+                vec![pad_root(cx, Px(0.0), content)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+
+    let expected_portal_w = web_portal.rect.w;
+    let expected_portal_h = web_portal.rect.h;
+    let portal = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == fret_portal_role)
+        .min_by(|a, b| {
+            let rect_a = WebRect {
+                x: a.bounds.origin.x.0,
+                y: a.bounds.origin.y.0,
+                w: a.bounds.size.width.0,
+                h: a.bounds.size.height.0,
+            };
+            let rect_b = WebRect {
+                x: b.bounds.origin.x.0,
+                y: b.bounds.origin.y.0,
+                w: b.bounds.size.width.0,
+                h: b.bounds.size.height.0,
+            };
+
+            let score_for = |r: WebRect| {
+                let left = r.x;
+                let top = r.y;
+                let right = 1440.0 - rect_right(r);
+                let bottom = 900.0 - rect_bottom(r);
+
+                let mut score = 0.0;
+                if anchor_left {
+                    score += (left - expected_left).abs();
+                }
+                if anchor_top {
+                    score += (top - expected_top).abs();
+                }
+                if anchor_right {
+                    score += (right - expected_right).abs();
+                }
+                if anchor_bottom {
+                    score += (bottom - expected_bottom).abs();
+                }
+
+                let size = (r.w - expected_portal_w).abs() + (r.h - expected_portal_h).abs();
+                score + 0.02 * size
+            };
+
+            let score_a = score_for(rect_a);
+            let score_b = score_for(rect_b);
+            score_a
+                .partial_cmp(&score_b)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .unwrap_or_else(|| panic!("missing fret portal role={fret_portal_role:?} for {web_name}"));
+
+    let fret_portal = WebRect {
+        x: portal.bounds.origin.x.0,
+        y: portal.bounds.origin.y.0,
+        w: portal.bounds.size.width.0,
+        h: portal.bounds.size.height.0,
+    };
+
+    let actual_left = fret_portal.x;
+    let actual_top = fret_portal.y;
+    let actual_right = 1440.0 - rect_right(fret_portal);
+    let actual_bottom = 900.0 - rect_bottom(fret_portal);
+
+    if debug {
+        eprintln!(
+            "{web_name} anchors: left={anchor_left} top={anchor_top} right={anchor_right} bottom={anchor_bottom}"
+        );
+        eprintln!(
+            "{web_name} web portal={:?} expected_insets=(l={expected_left}, t={expected_top}, r={expected_right}, b={expected_bottom})",
+            web_portal.rect
+        );
+        eprintln!(
+            "{web_name} fret portal={:?} actual_insets=(l={actual_left}, t={actual_top}, r={actual_right}, b={actual_bottom})",
+            fret_portal
+        );
+    }
+
+    if anchor_left {
+        assert_close(
+            &format!("{web_name} inset_left"),
+            actual_left,
+            expected_left,
+            2.0,
+        );
+    }
+    if anchor_top {
+        assert_close(
+            &format!("{web_name} inset_top"),
+            actual_top,
+            expected_top,
+            2.0,
+        );
+    }
+    if anchor_right {
+        assert_close(
+            &format!("{web_name} inset_right"),
+            actual_right,
+            expected_right,
+            2.0,
+        );
+    }
+    if anchor_bottom {
+        assert_close(
+            &format!("{web_name} inset_bottom"),
+            actual_bottom,
+            expected_bottom,
+            2.0,
+        );
+    }
+}
+
 #[test]
 fn web_vs_fret_popover_demo_overlay_placement_matches() {
     assert_overlay_placement_matches(
@@ -1871,5 +2236,96 @@ fn web_vs_fret_menubar_demo_overlay_placement_matches() {
         actual_cross,
         expected_cross,
         1.5,
+    );
+}
+
+#[test]
+fn web_vs_fret_dialog_demo_overlay_center_matches() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Dialog, DialogContent};
+
+    assert_centered_overlay_placement_matches(
+        "dialog-demo",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Dialog::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    Button::new("Open Dialog")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| DialogContent::new(vec![cx.text("Edit profile")]).into_element(cx),
+            )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_alert_dialog_demo_overlay_center_matches() {
+    use fret_ui_shadcn::{AlertDialog, AlertDialogContent, Button, ButtonVariant};
+
+    assert_centered_overlay_placement_matches(
+        "alert-dialog-demo",
+        "alertdialog",
+        SemanticsRole::AlertDialog,
+        |cx, open| {
+            AlertDialog::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    Button::new("Show Dialog")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| {
+                    AlertDialogContent::new(vec![cx.text("Are you absolutely sure?")])
+                        .into_element(cx)
+                },
+            )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_sheet_demo_overlay_insets_match() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent};
+
+    assert_viewport_anchored_overlay_placement_matches(
+        "sheet-demo",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Sheet::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    Button::new("Open")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| SheetContent::new(vec![cx.text("Edit profile")]).into_element(cx),
+            )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_sheet_side_top_overlay_insets_match() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent, SheetSide};
+
+    assert_viewport_anchored_overlay_placement_matches(
+        "sheet-side",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Sheet::new(open.clone()).side(SheetSide::Top).into_element(
+                cx,
+                |cx| {
+                    Button::new("top")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| SheetContent::new(vec![cx.text("Edit profile")]).into_element(cx),
+            )
+        },
     );
 }
