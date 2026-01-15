@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "steps": [
+    {
+      "type": "click",
+      "target": { "kind": "role_and_name", "role": "button", "name": "DropdownMenu" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "menu_item", "name": "Apple" }
+      },
+      "timeout_frames": 60
+    },
+    {
+      "type": "click",
+      "target": { "kind": "role_and_name", "role": "menu_item", "name": "Apple" }
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-dropdown-apple" }
+  ]
+}
+

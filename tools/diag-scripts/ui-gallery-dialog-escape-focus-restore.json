@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "steps": [
+    {
+      "type": "click",
+      "target": { "kind": "role_and_name", "role": "button", "name": "Dialog" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "role_and_path",
+          "role": "button",
+          "name": "Close",
+          "ancestors": [{ "role": "dialog", "name": "Dialog" }]
+        }
+      },
+      "timeout_frames": 60
+    },
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "role_and_name", "role": "button", "name": "Dialog" }
+      },
+      "timeout_frames": 60
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-dialog-escape-focus-restore" }
+  ]
+}
+

@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "steps": [
+    {
+      "type": "click",
+      "button": "right",
+      "target": {
+        "kind": "role_and_name",
+        "role": "button",
+        "name": "ContextMenu (right click)"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "menu_item", "name": "Action" }
+      },
+      "timeout_frames": 60
+    },
+    {
+      "type": "click",
+      "target": { "kind": "role_and_name", "role": "menu_item", "name": "Action" }
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-context-action" }
+  ]
+}
+

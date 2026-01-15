@@ -6,6 +6,7 @@ pub enum SemanticsRole {
     Generic,
     Window,
     Panel,
+    Group,
     Dialog,
     AlertDialog,
     Alert,
@@ -61,6 +62,10 @@ pub struct SemanticsNode {
     pub role: SemanticsRole,
     pub bounds: Rect,
     pub flags: SemanticsFlags,
+    /// Debug/test-only identifier for deterministic automation.
+    ///
+    /// This MUST NOT be mapped into platform accessibility name/label fields by default.
+    pub test_id: Option<String>,
     /// When this node retains actual keyboard focus but another descendant is the current
     /// "active item" (e.g. composite widgets using `aria-activedescendant`), this points to that
     /// active descendant node.
@@ -279,6 +284,7 @@ mod tests {
             role: SemanticsRole::TextField,
             bounds: Rect::default(),
             flags: SemanticsFlags::default(),
+            test_id: None,
             active_descendant: None,
             pos_in_set: None,
             set_size: None,
@@ -316,6 +322,7 @@ mod tests {
             role: SemanticsRole::TextField,
             bounds: Rect::default(),
             flags: SemanticsFlags::default(),
+            test_id: None,
             active_descendant: None,
             pos_in_set: None,
             set_size: None,
@@ -343,6 +350,7 @@ mod tests {
             role: SemanticsRole::TextField,
             bounds: Rect::default(),
             flags: SemanticsFlags::default(),
+            test_id: None,
             active_descendant: None,
             pos_in_set: None,
             set_size: None,
@@ -370,6 +378,7 @@ mod tests {
             role: SemanticsRole::TextField,
             bounds: Rect::default(),
             flags: SemanticsFlags::default(),
+            test_id: None,
             active_descendant: None,
             pos_in_set: None,
             set_size: None,

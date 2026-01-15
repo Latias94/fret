@@ -65,6 +65,11 @@ These hooks must be:
 - disabled by default in production,
 - cheap when disabled (no heavy string allocation).
 
+Follow-up (tooling contract, non-normative):
+
+- The concrete, versioned “diagnostics bundle” shape and scripted interaction test harness are defined in
+  `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`.
+
 ### 4) Renderer metrics are standardized
 
 Define a stable set of renderer metrics that can be exported for profiling:

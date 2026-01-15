@@ -1,0 +1,1819 @@
+use fret_app::{App, ModelId};
+use fret_core::{
+    AppWindowId, Event, KeyCode, Modifiers, MouseButton, MouseButtons, NodeId, Point, PointerEvent,
+    PointerId, PointerType, Rect, Scene, SemanticsRole,
+};
+use fret_ui::elements::ElementRuntime;
+use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
+use serde::{Deserialize, Serialize};
+use slotmap::Key as _;
+use std::collections::{HashMap, HashSet, VecDeque};
+use std::path::{Path, PathBuf};
+
+#[derive(Debug, Clone)]
+pub struct UiDiagnosticsConfig {
+    pub enabled: bool,
+    pub out_dir: PathBuf,
+    pub trigger_path: PathBuf,
+    pub max_events: usize,
+    pub max_snapshots: usize,
+    pub capture_semantics: bool,
+    pub script_path: PathBuf,
+    pub script_trigger_path: PathBuf,
+    pub script_result_path: PathBuf,
+    pub script_result_trigger_path: PathBuf,
+    pub script_auto_dump: bool,
+    pub redact_text: bool,
+    pub max_debug_string_bytes: usize,
+}
+
+impl Default for UiDiagnosticsConfig {
+    fn default() -> Self {
+        let enabled = std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty());
+        let out_dir = std::env::var_os("FRET_DIAG_DIR")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from("target").join("fret-diag"));
+        let trigger_path = std::env::var_os("FRET_DIAG_TRIGGER_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| out_dir.join("trigger.touch"));
+
+        let max_events = std::env::var("FRET_DIAG_MAX_EVENTS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(2000);
+        let max_snapshots = std::env::var("FRET_DIAG_MAX_SNAPSHOTS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(300);
+        let capture_semantics = env_flag_default_true("FRET_DIAG_SEMANTICS");
+        let script_path = std::env::var_os("FRET_DIAG_SCRIPT_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| out_dir.join("script.json"));
+        let script_trigger_path = std::env::var_os("FRET_DIAG_SCRIPT_TRIGGER_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| out_dir.join("script.touch"));
+        let script_result_path = std::env::var_os("FRET_DIAG_SCRIPT_RESULT_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| out_dir.join("script.result.json"));
+        let script_result_trigger_path = std::env::var_os("FRET_DIAG_SCRIPT_RESULT_TRIGGER_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| out_dir.join("script.result.touch"));
+        let script_auto_dump = env_flag_default_true("FRET_DIAG_SCRIPT_AUTO_DUMP");
+        let redact_text = env_flag_default_true("FRET_DIAG_REDACT_TEXT");
+        let max_debug_string_bytes = std::env::var("FRET_DIAG_MAX_DEBUG_STRING_BYTES")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(4096);
+
+        Self {
+            enabled,
+            out_dir,
+            trigger_path,
+            max_events,
+            max_snapshots,
+            capture_semantics,
+            script_path,
+            script_trigger_path,
+            script_result_path,
+            script_result_trigger_path,
+            script_auto_dump,
+            redact_text,
+            max_debug_string_bytes,
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct UiDiagnosticsService {
+    cfg: UiDiagnosticsConfig,
+    per_window: HashMap<AppWindowId, WindowRing>,
+    last_trigger_mtime: Option<std::time::SystemTime>,
+    last_script_trigger_mtime: Option<std::time::SystemTime>,
+    pending_script: Option<UiActionScriptV1>,
+    pending_script_run_id: Option<u64>,
+    active_scripts: HashMap<AppWindowId, ActiveScript>,
+    pending_force_dump_label: Option<String>,
+    last_dump_dir: Option<PathBuf>,
+    last_script_run_id: u64,
+}
+
+impl UiDiagnosticsService {
+    pub fn is_enabled(&self) -> bool {
+        self.cfg.enabled
+    }
+
+    pub fn wants_inspection_active(&self, window: AppWindowId) -> bool {
+        if !self.is_enabled() {
+            return false;
+        }
+        self.pending_script.is_some() || self.active_scripts.contains_key(&window)
+    }
+
+    pub fn drive_script_for_window(
+        &mut self,
+        window: AppWindowId,
+        semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+    ) -> UiScriptFrameOutput {
+        if !self.is_enabled() {
+            return UiScriptFrameOutput::default();
+        }
+
+        self.poll_script_trigger();
+
+        if !self.active_scripts.contains_key(&window)
+            && let Some(script) = self.pending_script.clone()
+        {
+            let run_id = self.pending_script_run_id.take().unwrap_or(0);
+            self.pending_script = None;
+            self.active_scripts.insert(
+                window,
+                ActiveScript {
+                    script,
+                    run_id,
+                    next_step: 0,
+                    wait_frames_remaining: 0,
+                    wait_until: None,
+                },
+            );
+            self.write_script_result(UiScriptResultV1 {
+                schema_version: 1,
+                run_id,
+                updated_unix_ms: unix_ms_now(),
+                window: Some(window.data().as_ffi()),
+                stage: UiScriptStageV1::Running,
+                step_index: Some(0),
+                reason: None,
+                last_bundle_dir: self
+                    .last_dump_dir
+                    .as_ref()
+                    .map(|p| display_path(&self.cfg.out_dir, p)),
+            });
+        }
+
+        let Some(mut active) = self.active_scripts.remove(&window) else {
+            return UiScriptFrameOutput::default();
+        };
+
+        if active.next_step >= active.script.steps.len() {
+            return UiScriptFrameOutput::default();
+        }
+
+        if active.wait_frames_remaining > 0 {
+            active.wait_frames_remaining = active.wait_frames_remaining.saturating_sub(1);
+            self.active_scripts.insert(window, active);
+            return UiScriptFrameOutput {
+                request_redraw: true,
+                ..UiScriptFrameOutput::default()
+            };
+        }
+
+        let step_index = active.next_step;
+        let step = active.script.steps.get(step_index).cloned();
+        let Some(step) = step else {
+            return UiScriptFrameOutput::default();
+        };
+
+        let mut output = UiScriptFrameOutput::default();
+        let mut force_dump_label: Option<String> = None;
+        let mut stop_script = false;
+        let mut failure_reason: Option<String> = None;
+
+        match step {
+            UiActionStepV1::WaitFrames { n } => {
+                active.wait_frames_remaining = n;
+                active.wait_until = None;
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+            }
+            UiActionStepV1::CaptureBundle { label } => {
+                force_dump_label =
+                    Some(label.unwrap_or_else(|| format!("script-step-{step_index:04}-capture")));
+                active.wait_until = None;
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+            }
+            UiActionStepV1::PressKey {
+                key,
+                modifiers,
+                repeat,
+            } => {
+                if let Some(key) = parse_key_code(&key) {
+                    output
+                        .events
+                        .extend(press_key_events(key, modifiers, repeat));
+                    active.wait_until = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                    if self.cfg.script_auto_dump {
+                        force_dump_label = Some(format!("script-step-{step_index:04}-press_key"));
+                    }
+                } else {
+                    force_dump_label =
+                        Some(format!("script-step-{step_index:04}-press_key-unknown-key"));
+                    stop_script = true;
+                    failure_reason = Some(format!("unknown_key: {key}"));
+                    output.request_redraw = true;
+                }
+            }
+            UiActionStepV1::TypeText { text } => {
+                output.events.push(Event::TextInput(text));
+                active.wait_until = None;
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+                if self.cfg.script_auto_dump {
+                    force_dump_label = Some(format!("script-step-{step_index:04}-type_text"));
+                }
+            }
+            UiActionStepV1::WaitUntil {
+                predicate,
+                timeout_frames,
+            } => {
+                if let Some(snapshot) = semantics_snapshot {
+                    let state = match active.wait_until.take() {
+                        Some(mut state) if state.step_index == step_index => {
+                            state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                            state
+                        }
+                        _ => WaitUntilState {
+                            step_index,
+                            remaining_frames: timeout_frames,
+                        },
+                    };
+
+                    if eval_predicate(snapshot, &predicate) {
+                        active.wait_until = None;
+                        active.next_step = active.next_step.saturating_add(1);
+                        output.request_redraw = true;
+                    } else if state.remaining_frames == 0 {
+                        force_dump_label =
+                            Some(format!("script-step-{step_index:04}-wait_until-timeout"));
+                        stop_script = true;
+                        failure_reason = Some("wait_until_timeout".to_string());
+                        active.wait_until = None;
+                        output.request_redraw = true;
+                    } else {
+                        active.wait_until = Some(WaitUntilState {
+                            step_index: state.step_index,
+                            remaining_frames: state.remaining_frames.saturating_sub(1),
+                        });
+                        output.request_redraw = true;
+                    }
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-wait_until-no-semantics"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("no_semantics_snapshot".to_string());
+                    output.request_redraw = true;
+                    active.wait_until = None;
+                }
+            }
+            UiActionStepV1::Assert { predicate } => {
+                active.wait_until = None;
+                if let Some(snapshot) = semantics_snapshot {
+                    if eval_predicate(snapshot, &predicate) {
+                        active.next_step = active.next_step.saturating_add(1);
+                        output.request_redraw = true;
+                    } else {
+                        force_dump_label =
+                            Some(format!("script-step-{step_index:04}-assert-failed"));
+                        stop_script = true;
+                        failure_reason = Some("assert_failed".to_string());
+                        output.request_redraw = true;
+                    }
+                } else {
+                    force_dump_label =
+                        Some(format!("script-step-{step_index:04}-assert-no-semantics"));
+                    stop_script = true;
+                    failure_reason = Some("no_semantics_snapshot".to_string());
+                    output.request_redraw = true;
+                }
+            }
+            UiActionStepV1::Click { target, button } => {
+                let Some(snapshot) = semantics_snapshot else {
+                    self.active_scripts.insert(window, active);
+                    output.request_redraw = true;
+                    return output;
+                };
+                let Some(node) = select_semantics_node(snapshot, &target) else {
+                    self.active_scripts.insert(window, active);
+                    output.request_redraw = true;
+                    return output;
+                };
+
+                let pos = center_of_rect(node.bounds);
+                output.events.extend(click_events(pos, button));
+
+                active.wait_until = None;
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+                if self.cfg.script_auto_dump {
+                    force_dump_label = Some(format!("script-step-{step_index:04}-click"));
+                }
+            }
+        }
+
+        if let Some(label) = force_dump_label {
+            self.request_force_dump(label);
+        }
+        if stop_script {
+            self.write_script_result(UiScriptResultV1 {
+                schema_version: 1,
+                run_id: active.run_id,
+                updated_unix_ms: unix_ms_now(),
+                window: Some(window.data().as_ffi()),
+                stage: UiScriptStageV1::Failed,
+                step_index: Some(step_index as u32),
+                reason: failure_reason,
+                last_bundle_dir: self
+                    .last_dump_dir
+                    .as_ref()
+                    .map(|p| display_path(&self.cfg.out_dir, p)),
+            });
+        } else if active.next_step >= active.script.steps.len() {
+            self.write_script_result(UiScriptResultV1 {
+                schema_version: 1,
+                run_id: active.run_id,
+                updated_unix_ms: unix_ms_now(),
+                window: Some(window.data().as_ffi()),
+                stage: UiScriptStageV1::Passed,
+                step_index: Some(active.next_step.saturating_sub(1) as u32),
+                reason: None,
+                last_bundle_dir: self
+                    .last_dump_dir
+                    .as_ref()
+                    .map(|p| display_path(&self.cfg.out_dir, p)),
+            });
+        } else if active.next_step < active.script.steps.len() {
+            self.active_scripts.insert(window, active);
+        }
+        output
+    }
+
+    pub fn clear_window(&mut self, window: AppWindowId) {
+        self.per_window.remove(&window);
+        self.active_scripts.remove(&window);
+    }
+
+    pub fn record_model_changes(&mut self, window: AppWindowId, changed: &[ModelId]) {
+        if !self.is_enabled() {
+            return;
+        }
+        let ring = self.per_window.entry(window).or_default();
+        ring.last_changed_models = changed.iter().map(|id| id.data().as_ffi()).collect();
+    }
+
+    pub fn record_global_changes(&mut self, window: AppWindowId, changed: &[std::any::TypeId]) {
+        if !self.is_enabled() {
+            return;
+        }
+        let ring = self.per_window.entry(window).or_default();
+        ring.last_changed_globals = changed.iter().map(|t| format!("{t:?}")).collect();
+    }
+
+    pub fn record_event(&mut self, app: &App, window: AppWindowId, event: &Event) {
+        if !self.is_enabled() {
+            return;
+        }
+
+        let ring = self.per_window.entry(window).or_default();
+        ring.update_pointer_position(event);
+
+        let mut recorded = RecordedUiEventV1::from_event(app, window, event, self.cfg.redact_text);
+        truncate_string_bytes(&mut recorded.debug, self.cfg.max_debug_string_bytes);
+        ring.push_event(&self.cfg, recorded);
+    }
+
+    pub fn record_snapshot(
+        &mut self,
+        app: &App,
+        window: AppWindowId,
+        bounds: Rect,
+        scale_factor: f32,
+        ui: &UiTree<App>,
+        element_runtime: Option<&ElementRuntime>,
+        scene: &Scene,
+    ) {
+        if !self.is_enabled() {
+            return;
+        }
+
+        let ring = self.per_window.entry(window).or_default();
+        let hit_test = ring
+            .last_pointer_position
+            .map(|pos| UiHitTestSnapshotV1::from_hit_test(pos, ui.debug_hit_test(pos)));
+
+        let element_diag = element_runtime
+            .and_then(|runtime| runtime.diagnostics_snapshot(window))
+            .map(ElementDiagnosticsSnapshotV1::from_runtime);
+
+        let semantics = self
+            .cfg
+            .capture_semantics
+            .then(|| ui.semantics_snapshot())
+            .flatten()
+            .map(|snap| {
+                UiSemanticsSnapshotV1::from_snapshot(
+                    snap,
+                    self.cfg.redact_text,
+                    self.cfg.max_debug_string_bytes,
+                )
+            });
+
+        let snapshot = UiDiagnosticsSnapshotV1 {
+            schema_version: 1,
+            tick_id: app.tick_id().0,
+            frame_id: app.frame_id().0,
+            window: window.data().as_ffi(),
+            timestamp_unix_ms: unix_ms_now(),
+            scale_factor,
+            window_bounds: RectV1::from(bounds),
+            scene_ops: scene.ops_len() as u64,
+            debug: UiTreeDebugSnapshotV1::from_tree(ui, hit_test, element_diag, semantics),
+            changed_models: std::mem::take(&mut ring.last_changed_models),
+            changed_globals: std::mem::take(&mut ring.last_changed_globals),
+        };
+
+        ring.push_snapshot(&self.cfg, snapshot);
+    }
+
+    pub fn maybe_dump_if_triggered(&mut self) -> Option<PathBuf> {
+        if !self.is_enabled() {
+            return None;
+        }
+
+        if let Some(label) = self.pending_force_dump_label.take() {
+            return self.dump_bundle(Some(&label));
+        }
+
+        let modified = match std::fs::metadata(&self.cfg.trigger_path).and_then(|m| m.modified()) {
+            Ok(modified) => modified,
+            Err(_) => {
+                if let Some(dir) = self.cfg.trigger_path.parent() {
+                    let _ = std::fs::create_dir_all(dir);
+                }
+                if std::fs::OpenOptions::new()
+                    .create(true)
+                    .write(true)
+                    .open(&self.cfg.trigger_path)
+                    .is_ok()
+                    && let Ok(modified) =
+                        std::fs::metadata(&self.cfg.trigger_path).and_then(|m| m.modified())
+                {
+                    self.last_trigger_mtime = Some(modified);
+                }
+                return None;
+            }
+        };
+        if self.last_trigger_mtime.is_some_and(|prev| prev >= modified) {
+            return None;
+        }
+        self.last_trigger_mtime = Some(modified);
+
+        self.dump_bundle(None)
+    }
+
+    fn request_force_dump(&mut self, label: String) {
+        self.pending_force_dump_label = Some(sanitize_label(&label));
+    }
+
+    fn poll_script_trigger(&mut self) {
+        let modified =
+            match std::fs::metadata(&self.cfg.script_trigger_path).and_then(|m| m.modified()) {
+                Ok(modified) => modified,
+                Err(_) => {
+                    if let Some(dir) = self.cfg.script_trigger_path.parent() {
+                        let _ = std::fs::create_dir_all(dir);
+                    }
+                    if std::fs::OpenOptions::new()
+                        .create(true)
+                        .write(true)
+                        .open(&self.cfg.script_trigger_path)
+                        .is_ok()
+                        && let Ok(modified) = std::fs::metadata(&self.cfg.script_trigger_path)
+                            .and_then(|m| m.modified())
+                    {
+                        self.last_script_trigger_mtime = Some(modified);
+                    }
+                    return;
+                }
+            };
+        if self
+            .last_script_trigger_mtime
+            .is_some_and(|prev| prev >= modified)
+        {
+            return;
+        }
+        self.last_script_trigger_mtime = Some(modified);
+
+        let bytes = std::fs::read(&self.cfg.script_path).ok();
+        let Some(bytes) = bytes else {
+            return;
+        };
+        let script: UiActionScriptV1 = match serde_json::from_slice(&bytes) {
+            Ok(s) => s,
+            Err(_) => return,
+        };
+        if script.schema_version != 1 {
+            return;
+        }
+        let run_id = self.next_script_run_id();
+        self.pending_script = Some(script);
+        self.pending_script_run_id = Some(run_id);
+        self.write_script_result(UiScriptResultV1 {
+            schema_version: 1,
+            run_id,
+            updated_unix_ms: unix_ms_now(),
+            window: None,
+            stage: UiScriptStageV1::Queued,
+            step_index: None,
+            reason: None,
+            last_bundle_dir: self
+                .last_dump_dir
+                .as_ref()
+                .map(|p| display_path(&self.cfg.out_dir, p)),
+        });
+    }
+
+    fn dump_bundle(&mut self, label: Option<&str>) -> Option<PathBuf> {
+        let ts = unix_ms_now();
+        let mut dir_name = ts.to_string();
+        if let Some(label) = label {
+            if !label.is_empty() {
+                dir_name = format!("{dir_name}-{label}");
+            }
+        }
+
+        let dir = self.cfg.out_dir.join(dir_name);
+        if std::fs::create_dir_all(&dir).is_err() {
+            return None;
+        }
+
+        let bundle = UiDiagnosticsBundleV1::from_service(ts, &dir, self);
+
+        if write_json(dir.join("bundle.json"), &bundle).is_err() {
+            return None;
+        }
+        let _ = write_latest_pointer(&self.cfg.out_dir, &dir);
+        self.last_dump_dir = Some(dir.clone());
+        Some(dir)
+    }
+
+    fn next_script_run_id(&mut self) -> u64 {
+        let mut id = unix_ms_now();
+        if id <= self.last_script_run_id {
+            id = self.last_script_run_id.saturating_add(1);
+        }
+        self.last_script_run_id = id;
+        id
+    }
+
+    fn write_script_result(&self, result: UiScriptResultV1) {
+        if !self.is_enabled() {
+            return;
+        }
+        let _ = write_json(self.cfg.script_result_path.clone(), &result);
+        let _ = touch_file(&self.cfg.script_result_trigger_path);
+    }
+}
+
+#[derive(Default)]
+struct WindowRing {
+    last_pointer_position: Option<Point>,
+    events: VecDeque<RecordedUiEventV1>,
+    snapshots: VecDeque<UiDiagnosticsSnapshotV1>,
+    last_changed_models: Vec<u64>,
+    last_changed_globals: Vec<String>,
+}
+
+impl WindowRing {
+    fn update_pointer_position(&mut self, event: &Event) {
+        let Some(pointer) = event.pointer_event() else {
+            return;
+        };
+        self.last_pointer_position = Some(pointer.position());
+    }
+
+    fn push_event(&mut self, cfg: &UiDiagnosticsConfig, event: RecordedUiEventV1) {
+        self.events.push_back(event);
+        while self.events.len() > cfg.max_events {
+            self.events.pop_front();
+        }
+    }
+
+    fn push_snapshot(&mut self, cfg: &UiDiagnosticsConfig, snapshot: UiDiagnosticsSnapshotV1) {
+        self.snapshots.push_back(snapshot);
+        while self.snapshots.len() > cfg.max_snapshots {
+            self.snapshots.pop_front();
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UiDiagnosticsBundleV1 {
+    pub schema_version: u32,
+    pub exported_unix_ms: u64,
+    pub out_dir: String,
+    pub config: UiDiagnosticsBundleConfigV1,
+    pub windows: Vec<UiDiagnosticsWindowBundleV1>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UiDiagnosticsBundleConfigV1 {
+    pub trigger_path: String,
+    pub max_events: usize,
+    pub max_snapshots: usize,
+    pub capture_semantics: bool,
+    pub script_path: String,
+    pub script_trigger_path: String,
+    pub script_result_path: String,
+    pub script_result_trigger_path: String,
+    pub script_auto_dump: bool,
+    pub redact_text: bool,
+    pub max_debug_string_bytes: usize,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UiDiagnosticsWindowBundleV1 {
+    pub window: u64,
+    pub events: Vec<RecordedUiEventV1>,
+    pub snapshots: Vec<UiDiagnosticsSnapshotV1>,
+}
+
+impl UiDiagnosticsBundleV1 {
+    fn from_service(exported_unix_ms: u64, out_dir: &Path, svc: &UiDiagnosticsService) -> Self {
+        Self {
+            schema_version: 1,
+            exported_unix_ms,
+            out_dir: sanitize_path_for_bundle(&svc.cfg.out_dir, out_dir),
+            config: UiDiagnosticsBundleConfigV1 {
+                trigger_path: sanitize_path_for_bundle(&svc.cfg.out_dir, &svc.cfg.trigger_path),
+                max_events: svc.cfg.max_events,
+                max_snapshots: svc.cfg.max_snapshots,
+                capture_semantics: svc.cfg.capture_semantics,
+                script_path: sanitize_path_for_bundle(&svc.cfg.out_dir, &svc.cfg.script_path),
+                script_trigger_path: sanitize_path_for_bundle(
+                    &svc.cfg.out_dir,
+                    &svc.cfg.script_trigger_path,
+                ),
+                script_result_path: sanitize_path_for_bundle(
+                    &svc.cfg.out_dir,
+                    &svc.cfg.script_result_path,
+                ),
+                script_result_trigger_path: sanitize_path_for_bundle(
+                    &svc.cfg.out_dir,
+                    &svc.cfg.script_result_trigger_path,
+                ),
+                script_auto_dump: svc.cfg.script_auto_dump,
+                redact_text: svc.cfg.redact_text,
+                max_debug_string_bytes: svc.cfg.max_debug_string_bytes,
+            },
+            windows: svc
+                .per_window
+                .iter()
+                .map(|(window, ring)| UiDiagnosticsWindowBundleV1 {
+                    window: window.data().as_ffi(),
+                    events: ring.events.iter().cloned().collect(),
+                    snapshots: ring.snapshots.iter().cloned().collect(),
+                })
+                .collect(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiDiagnosticsSnapshotV1 {
+    pub schema_version: u32,
+    pub tick_id: u64,
+    pub frame_id: u64,
+    pub window: u64,
+    pub timestamp_unix_ms: u64,
+    pub scale_factor: f32,
+    pub window_bounds: RectV1,
+    pub scene_ops: u64,
+
+    pub changed_models: Vec<u64>,
+    pub changed_globals: Vec<String>,
+
+    pub debug: UiTreeDebugSnapshotV1,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiActionScriptV1 {
+    pub schema_version: u32,
+    pub steps: Vec<UiActionStepV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum UiActionStepV1 {
+    Click {
+        target: UiSelectorV1,
+        #[serde(default)]
+        button: UiMouseButtonV1,
+    },
+    PressKey {
+        key: String,
+        #[serde(default)]
+        modifiers: UiKeyModifiersV1,
+        #[serde(default)]
+        repeat: bool,
+    },
+    TypeText {
+        text: String,
+    },
+    WaitFrames {
+        n: u32,
+    },
+    WaitUntil {
+        predicate: UiPredicateV1,
+        timeout_frames: u32,
+    },
+    Assert {
+        predicate: UiPredicateV1,
+    },
+    CaptureBundle {
+        label: Option<String>,
+    },
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiMouseButtonV1 {
+    Left,
+    Right,
+    Middle,
+}
+
+impl Default for UiMouseButtonV1 {
+    fn default() -> Self {
+        Self::Left
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
+pub struct UiKeyModifiersV1 {
+    #[serde(default)]
+    pub shift: bool,
+    #[serde(default)]
+    pub ctrl: bool,
+    #[serde(default)]
+    pub alt: bool,
+    #[serde(default)]
+    pub meta: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum UiPredicateV1 {
+    Exists { target: UiSelectorV1 },
+    FocusIs { target: UiSelectorV1 },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum UiSelectorV1 {
+    RoleAndName {
+        role: String,
+        name: String,
+    },
+    RoleAndPath {
+        role: String,
+        name: String,
+        /// Ancestors ordered from outermost -> innermost.
+        ancestors: Vec<UiRoleAndNameV1>,
+    },
+    TestId {
+        id: String,
+    },
+    NodeId {
+        node: u64,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiRoleAndNameV1 {
+    pub role: String,
+    pub name: String,
+}
+
+#[derive(Debug, Default)]
+pub struct UiScriptFrameOutput {
+    pub events: Vec<Event>,
+    pub request_redraw: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiScriptResultV1 {
+    pub schema_version: u32,
+    pub run_id: u64,
+    pub updated_unix_ms: u64,
+    pub window: Option<u64>,
+    pub stage: UiScriptStageV1,
+    pub step_index: Option<u32>,
+    pub reason: Option<String>,
+    pub last_bundle_dir: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiScriptStageV1 {
+    Queued,
+    Running,
+    Passed,
+    Failed,
+}
+
+#[derive(Debug, Clone)]
+struct ActiveScript {
+    script: UiActionScriptV1,
+    run_id: u64,
+    next_step: usize,
+    wait_frames_remaining: u32,
+    wait_until: Option<WaitUntilState>,
+}
+
+#[derive(Debug, Clone)]
+struct WaitUntilState {
+    step_index: usize,
+    remaining_frames: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiTreeDebugSnapshotV1 {
+    pub stats: UiFrameStatsV1,
+    pub layers_in_paint_order: Vec<UiLayerInfoV1>,
+    pub hit_test: Option<UiHitTestSnapshotV1>,
+    pub element_runtime: Option<ElementDiagnosticsSnapshotV1>,
+    pub semantics: Option<UiSemanticsSnapshotV1>,
+}
+
+impl UiTreeDebugSnapshotV1 {
+    fn from_tree(
+        ui: &UiTree<App>,
+        hit_test: Option<UiHitTestSnapshotV1>,
+        element_runtime: Option<ElementDiagnosticsSnapshotV1>,
+        semantics: Option<UiSemanticsSnapshotV1>,
+    ) -> Self {
+        Self {
+            stats: UiFrameStatsV1::from_stats(ui.debug_stats()),
+            layers_in_paint_order: ui
+                .debug_layers_in_paint_order()
+                .into_iter()
+                .map(UiLayerInfoV1::from_layer)
+                .collect(),
+            hit_test,
+            element_runtime,
+            semantics,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiSemanticsSnapshotV1 {
+    pub window: u64,
+    pub roots: Vec<UiSemanticsRootV1>,
+    pub barrier_root: Option<u64>,
+    pub focus: Option<u64>,
+    pub captured: Option<u64>,
+    pub nodes: Vec<UiSemanticsNodeV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiSemanticsRootV1 {
+    pub root: u64,
+    pub visible: bool,
+    pub blocks_underlay_input: bool,
+    pub hit_testable: bool,
+    pub z_index: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiSemanticsNodeV1 {
+    pub id: u64,
+    pub parent: Option<u64>,
+    pub role: String,
+    pub bounds: RectV1,
+    pub flags: UiSemanticsFlagsV1,
+    pub test_id: Option<String>,
+    pub active_descendant: Option<u64>,
+    pub pos_in_set: Option<u32>,
+    pub set_size: Option<u32>,
+    pub label: Option<String>,
+    pub value: Option<String>,
+    pub text_selection: Option<(u32, u32)>,
+    pub text_composition: Option<(u32, u32)>,
+    pub actions: UiSemanticsActionsV1,
+    pub labelled_by: Vec<u64>,
+    pub described_by: Vec<u64>,
+    pub controls: Vec<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiSemanticsFlagsV1 {
+    pub focused: bool,
+    pub captured: bool,
+    pub disabled: bool,
+    pub selected: bool,
+    pub expanded: bool,
+    pub checked: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiSemanticsActionsV1 {
+    pub focus: bool,
+    pub invoke: bool,
+    pub set_value: bool,
+    pub set_text_selection: bool,
+}
+
+impl UiSemanticsSnapshotV1 {
+    fn from_snapshot(
+        snapshot: &fret_core::SemanticsSnapshot,
+        redact_text: bool,
+        max_string_bytes: usize,
+    ) -> Self {
+        Self {
+            window: snapshot.window.data().as_ffi(),
+            roots: snapshot
+                .roots
+                .iter()
+                .map(|r| UiSemanticsRootV1 {
+                    root: key_to_u64(r.root),
+                    visible: r.visible,
+                    blocks_underlay_input: r.blocks_underlay_input,
+                    hit_testable: r.hit_testable,
+                    z_index: r.z_index,
+                })
+                .collect(),
+            barrier_root: snapshot.barrier_root.map(key_to_u64),
+            focus: snapshot.focus.map(key_to_u64),
+            captured: snapshot.captured.map(key_to_u64),
+            nodes: snapshot
+                .nodes
+                .iter()
+                .map(|n| UiSemanticsNodeV1::from_node(n, redact_text, max_string_bytes))
+                .collect(),
+        }
+    }
+}
+
+impl UiSemanticsNodeV1 {
+    fn from_node(
+        node: &fret_core::SemanticsNode,
+        redact_text: bool,
+        max_string_bytes: usize,
+    ) -> Self {
+        let mut label = node
+            .label
+            .as_deref()
+            .map(|s| maybe_redact_string(s, redact_text));
+        let mut value = node
+            .value
+            .as_deref()
+            .map(|s| maybe_redact_string(s, redact_text));
+        let mut test_id = node.test_id.clone();
+
+        if let Some(s) = &mut label {
+            truncate_string_bytes(s, max_string_bytes);
+        }
+        if let Some(s) = &mut value {
+            truncate_string_bytes(s, max_string_bytes);
+        }
+        if let Some(s) = &mut test_id {
+            truncate_string_bytes(s, max_string_bytes);
+        }
+
+        Self {
+            id: key_to_u64(node.id),
+            parent: node.parent.map(key_to_u64),
+            role: semantics_role_label(node.role).to_string(),
+            bounds: RectV1::from(node.bounds),
+            flags: UiSemanticsFlagsV1 {
+                focused: node.flags.focused,
+                captured: node.flags.captured,
+                disabled: node.flags.disabled,
+                selected: node.flags.selected,
+                expanded: node.flags.expanded,
+                checked: node.flags.checked,
+            },
+            test_id,
+            active_descendant: node.active_descendant.map(key_to_u64),
+            pos_in_set: node.pos_in_set,
+            set_size: node.set_size,
+            label,
+            value,
+            text_selection: node.text_selection,
+            text_composition: node.text_composition,
+            actions: UiSemanticsActionsV1 {
+                focus: node.actions.focus,
+                invoke: node.actions.invoke,
+                set_value: node.actions.set_value,
+                set_text_selection: node.actions.set_text_selection,
+            },
+            labelled_by: node.labelled_by.iter().copied().map(key_to_u64).collect(),
+            described_by: node.described_by.iter().copied().map(key_to_u64).collect(),
+            controls: node.controls.iter().copied().map(key_to_u64).collect(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiFrameStatsV1 {
+    pub layout_time_us: u64,
+    pub paint_time_us: u64,
+    pub layout_nodes_visited: u32,
+    pub layout_nodes_performed: u32,
+    pub paint_nodes: u32,
+    pub paint_nodes_performed: u32,
+    pub paint_cache_hits: u32,
+    pub paint_cache_misses: u32,
+    pub paint_cache_replayed_ops: u32,
+    pub layout_engine_solves: u64,
+    pub layout_engine_solve_time_us: u64,
+    pub layout_engine_widget_fallback_solves: u64,
+    pub focused_node: Option<u64>,
+    pub captured_node: Option<u64>,
+}
+
+impl UiFrameStatsV1 {
+    fn from_stats(stats: UiDebugFrameStats) -> Self {
+        Self {
+            layout_time_us: stats.layout_time.as_micros() as u64,
+            paint_time_us: stats.paint_time.as_micros() as u64,
+            layout_nodes_visited: stats.layout_nodes_visited,
+            layout_nodes_performed: stats.layout_nodes_performed,
+            paint_nodes: stats.paint_nodes,
+            paint_nodes_performed: stats.paint_nodes_performed,
+            paint_cache_hits: stats.paint_cache_hits,
+            paint_cache_misses: stats.paint_cache_misses,
+            paint_cache_replayed_ops: stats.paint_cache_replayed_ops,
+            layout_engine_solves: stats.layout_engine_solves,
+            layout_engine_solve_time_us: stats.layout_engine_solve_time.as_micros() as u64,
+            layout_engine_widget_fallback_solves: stats.layout_engine_widget_fallback_solves,
+            focused_node: stats.focus.map(key_to_u64),
+            captured_node: stats.captured.map(key_to_u64),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiLayerInfoV1 {
+    pub id: String,
+    pub root: u64,
+    pub visible: bool,
+    pub blocks_underlay_input: bool,
+    pub hit_testable: bool,
+    pub wants_pointer_down_outside_events: bool,
+    pub wants_pointer_move_events: bool,
+    pub wants_timer_events: bool,
+}
+
+impl UiLayerInfoV1 {
+    fn from_layer(layer: UiDebugLayerInfo) -> Self {
+        Self {
+            id: format!("{:?}", layer.id),
+            root: key_to_u64(layer.root),
+            visible: layer.visible,
+            blocks_underlay_input: layer.blocks_underlay_input,
+            hit_testable: layer.hit_testable,
+            wants_pointer_down_outside_events: layer.wants_pointer_down_outside_events,
+            wants_pointer_move_events: layer.wants_pointer_move_events,
+            wants_timer_events: layer.wants_timer_events,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiHitTestSnapshotV1 {
+    pub position: PointV1,
+    pub hit: Option<u64>,
+    pub active_layer_roots: Vec<u64>,
+    pub barrier_root: Option<u64>,
+}
+
+impl UiHitTestSnapshotV1 {
+    fn from_hit_test(position: Point, hit_test: UiDebugHitTest) -> Self {
+        Self {
+            position: PointV1::from(position),
+            hit: hit_test.hit.map(key_to_u64),
+            active_layer_roots: hit_test
+                .active_layer_roots
+                .into_iter()
+                .map(key_to_u64)
+                .collect(),
+            barrier_root: hit_test.barrier_root.map(key_to_u64),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementDiagnosticsSnapshotV1 {
+    pub focused_element: Option<u64>,
+    pub active_text_selection: Option<(u64, u64)>,
+    pub hovered_pressable: Option<u64>,
+    pub pressed_pressable: Option<u64>,
+    pub hovered_hover_region: Option<u64>,
+    pub wants_continuous_frames: bool,
+    pub observed_models: Vec<ElementObservedModelsV1>,
+    pub observed_globals: Vec<ElementObservedGlobalsV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementObservedModelsV1 {
+    pub element: u64,
+    pub models: Vec<(u64, String)>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementObservedGlobalsV1 {
+    pub element: u64,
+    pub globals: Vec<(String, String)>,
+}
+
+impl ElementDiagnosticsSnapshotV1 {
+    fn from_runtime(snapshot: fret_ui::elements::WindowElementDiagnosticsSnapshot) -> Self {
+        Self {
+            focused_element: snapshot.focused_element.map(|id| id.0),
+            active_text_selection: snapshot.active_text_selection.map(|(a, b)| (a.0, b.0)),
+            hovered_pressable: snapshot.hovered_pressable.map(|id| id.0),
+            pressed_pressable: snapshot.pressed_pressable.map(|id| id.0),
+            hovered_hover_region: snapshot.hovered_hover_region.map(|id| id.0),
+            wants_continuous_frames: snapshot.wants_continuous_frames,
+            observed_models: snapshot
+                .observed_models
+                .into_iter()
+                .map(|(element, list)| ElementObservedModelsV1 {
+                    element: element.0,
+                    models: list
+                        .into_iter()
+                        .map(|(id, inv)| (id, invalidation_label(inv).to_string()))
+                        .collect(),
+                })
+                .collect(),
+            observed_globals: snapshot
+                .observed_globals
+                .into_iter()
+                .map(|(element, list)| ElementObservedGlobalsV1 {
+                    element: element.0,
+                    globals: list
+                        .into_iter()
+                        .map(|(id, inv)| (id, invalidation_label(inv).to_string()))
+                        .collect(),
+                })
+                .collect(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RecordedUiEventV1 {
+    pub tick_id: u64,
+    pub frame_id: u64,
+    pub window: u64,
+    pub kind: String,
+    pub position: Option<PointV1>,
+    pub debug: String,
+}
+
+impl RecordedUiEventV1 {
+    fn from_event(app: &App, window: AppWindowId, event: &Event, redact_text: bool) -> Self {
+        let kind = event_kind(event);
+        let position = event.pointer_event().map(|p| PointV1::from(p.position()));
+        let debug = event_debug_string(event, redact_text);
+
+        Self {
+            tick_id: app.tick_id().0,
+            frame_id: app.frame_id().0,
+            window: window.data().as_ffi(),
+            kind,
+            position,
+            debug,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct PointV1 {
+    pub x: f32,
+    pub y: f32,
+}
+
+impl From<Point> for PointV1 {
+    fn from(value: Point) -> Self {
+        Self {
+            x: value.x.0,
+            y: value.y.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct RectV1 {
+    pub x: f32,
+    pub y: f32,
+    pub w: f32,
+    pub h: f32,
+}
+
+impl From<Rect> for RectV1 {
+    fn from(value: Rect) -> Self {
+        Self {
+            x: value.origin.x.0,
+            y: value.origin.y.0,
+            w: value.size.width.0,
+            h: value.size.height.0,
+        }
+    }
+}
+
+fn invalidation_label(inv: Invalidation) -> &'static str {
+    match inv {
+        Invalidation::Paint => "paint",
+        Invalidation::Layout => "layout",
+        Invalidation::HitTest => "hit_test",
+    }
+}
+
+fn event_kind(event: &Event) -> String {
+    match event {
+        Event::Pointer(p) => format!("pointer.{}", p.kind()),
+        Event::KeyDown { .. } => "key.down".to_string(),
+        Event::KeyUp { .. } => "key.up".to_string(),
+        Event::TextInput(_) => "text.input".to_string(),
+        Event::Ime(_) => "ime".to_string(),
+        Event::Timer { .. } => "timer".to_string(),
+        Event::WindowCloseRequested => "window.close_requested".to_string(),
+        other => format!("{other:?}")
+            .split_whitespace()
+            .next()
+            .unwrap_or("event")
+            .to_string(),
+    }
+}
+
+fn event_debug_string(event: &Event, redact_text: bool) -> String {
+    if !redact_text {
+        return format!("{event:?}");
+    }
+
+    match event {
+        Event::TextInput(text) => format!("TextInput(len={})", text.len()),
+        Event::Ime(_) => "Ime(<redacted>)".to_string(),
+        _ => format!("{event:?}"),
+    }
+}
+
+fn unix_ms_now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::SystemTime::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or_default()
+}
+
+fn env_flag_default_true(name: &str) -> bool {
+    let Ok(v) = std::env::var(name) else {
+        return true;
+    };
+    let v = v.trim().to_ascii_lowercase();
+    if v.is_empty() {
+        return true;
+    }
+    !matches!(v.as_str(), "0" | "false" | "no" | "off")
+}
+
+fn semantics_role_label(role: SemanticsRole) -> &'static str {
+    match role {
+        SemanticsRole::Generic => "generic",
+        SemanticsRole::Window => "window",
+        SemanticsRole::Panel => "panel",
+        SemanticsRole::Dialog => "dialog",
+        SemanticsRole::AlertDialog => "alert_dialog",
+        SemanticsRole::Alert => "alert",
+        SemanticsRole::Button => "button",
+        SemanticsRole::Checkbox => "checkbox",
+        SemanticsRole::Switch => "switch",
+        SemanticsRole::Slider => "slider",
+        SemanticsRole::ComboBox => "combo_box",
+        SemanticsRole::RadioGroup => "radio_group",
+        SemanticsRole::RadioButton => "radio_button",
+        SemanticsRole::TabList => "tab_list",
+        SemanticsRole::Tab => "tab",
+        SemanticsRole::TabPanel => "tab_panel",
+        SemanticsRole::MenuBar => "menu_bar",
+        SemanticsRole::Menu => "menu",
+        SemanticsRole::MenuItem => "menu_item",
+        SemanticsRole::MenuItemCheckbox => "menu_item_checkbox",
+        SemanticsRole::MenuItemRadio => "menu_item_radio",
+        SemanticsRole::Tooltip => "tooltip",
+        SemanticsRole::Text => "text",
+        SemanticsRole::TextField => "text_field",
+        SemanticsRole::List => "list",
+        SemanticsRole::ListItem => "list_item",
+        SemanticsRole::ListBox => "list_box",
+        SemanticsRole::ListBoxOption => "list_box_option",
+        SemanticsRole::TreeItem => "tree_item",
+        SemanticsRole::Viewport => "viewport",
+        _ => "unknown",
+    }
+}
+
+fn parse_semantics_role(s: &str) -> Option<SemanticsRole> {
+    let s = s.trim().to_ascii_lowercase();
+    Some(match s.as_str() {
+        "generic" => SemanticsRole::Generic,
+        "window" => SemanticsRole::Window,
+        "panel" => SemanticsRole::Panel,
+        "dialog" => SemanticsRole::Dialog,
+        "alert_dialog" => SemanticsRole::AlertDialog,
+        "alert" => SemanticsRole::Alert,
+        "button" => SemanticsRole::Button,
+        "checkbox" => SemanticsRole::Checkbox,
+        "switch" => SemanticsRole::Switch,
+        "slider" => SemanticsRole::Slider,
+        "combo_box" => SemanticsRole::ComboBox,
+        "radio_group" => SemanticsRole::RadioGroup,
+        "radio_button" => SemanticsRole::RadioButton,
+        "tab_list" => SemanticsRole::TabList,
+        "tab" => SemanticsRole::Tab,
+        "tab_panel" => SemanticsRole::TabPanel,
+        "menu_bar" => SemanticsRole::MenuBar,
+        "menu" => SemanticsRole::Menu,
+        "menu_item" => SemanticsRole::MenuItem,
+        "menu_item_checkbox" => SemanticsRole::MenuItemCheckbox,
+        "menu_item_radio" => SemanticsRole::MenuItemRadio,
+        "tooltip" => SemanticsRole::Tooltip,
+        "text" => SemanticsRole::Text,
+        "text_field" => SemanticsRole::TextField,
+        "list" => SemanticsRole::List,
+        "list_item" => SemanticsRole::ListItem,
+        "list_box" => SemanticsRole::ListBox,
+        "list_box_option" => SemanticsRole::ListBoxOption,
+        "tree_item" => SemanticsRole::TreeItem,
+        "viewport" => SemanticsRole::Viewport,
+        _ => return None,
+    })
+}
+
+fn select_semantics_node<'a>(
+    snapshot: &'a fret_core::SemanticsSnapshot,
+    selector: &UiSelectorV1,
+) -> Option<&'a fret_core::SemanticsNode> {
+    let index = SemanticsIndex::new(snapshot);
+
+    match selector {
+        UiSelectorV1::NodeId { node } => index
+            .by_id
+            .get(node)
+            .copied()
+            .filter(|n| index.is_selectable(n.id.data().as_ffi())),
+        UiSelectorV1::RoleAndName { role, name } => {
+            let role = parse_semantics_role(role)?;
+            pick_best_match(
+                snapshot.nodes.iter().filter(|n| {
+                    let id = n.id.data().as_ffi();
+                    index.is_selectable(id)
+                        && n.role == role
+                        && n.label.as_deref().is_some_and(|label| label == name)
+                }),
+                &index,
+            )
+        }
+        UiSelectorV1::RoleAndPath {
+            role,
+            name,
+            ancestors,
+        } => {
+            let role = parse_semantics_role(role)?;
+
+            let mut parsed_ancestors: Vec<(SemanticsRole, &str)> =
+                Vec::with_capacity(ancestors.len());
+            for a in ancestors {
+                parsed_ancestors.push((parse_semantics_role(&a.role)?, a.name.as_str()));
+            }
+
+            pick_best_match(
+                snapshot.nodes.iter().filter(|n| {
+                    let id = n.id.data().as_ffi();
+                    index.is_selectable(id)
+                        && n.role == role
+                        && n.label.as_deref().is_some_and(|label| label == name)
+                        && index.ancestors_match_subsequence(n.parent, &parsed_ancestors)
+                }),
+                &index,
+            )
+        }
+        UiSelectorV1::TestId { id } => pick_best_match(
+            snapshot.nodes.iter().filter(|n| {
+                let node_id = n.id.data().as_ffi();
+                index.is_selectable(node_id) && n.test_id.as_deref().is_some_and(|v| v == id)
+            }),
+            &index,
+        ),
+    }
+}
+
+struct SemanticsIndex<'a> {
+    by_id: HashMap<u64, &'a fret_core::SemanticsNode>,
+    visible_ids: HashSet<u64>,
+    barrier_root: Option<u64>,
+    root_z_index: HashMap<u64, u32>,
+}
+
+impl<'a> SemanticsIndex<'a> {
+    fn new(snapshot: &'a fret_core::SemanticsSnapshot) -> Self {
+        let mut by_id: HashMap<u64, &'a fret_core::SemanticsNode> = HashMap::new();
+        let mut children: HashMap<u64, Vec<u64>> = HashMap::new();
+
+        for n in &snapshot.nodes {
+            let id = n.id.data().as_ffi();
+            by_id.insert(id, n);
+            if let Some(parent) = n.parent {
+                children.entry(parent.data().as_ffi()).or_default().push(id);
+            }
+        }
+
+        let mut root_z_index: HashMap<u64, u32> = HashMap::new();
+        for r in &snapshot.roots {
+            root_z_index.insert(r.root.data().as_ffi(), r.z_index);
+        }
+
+        let barrier_root = snapshot.barrier_root.map(|n| n.data().as_ffi());
+
+        let mut visible_ids: HashSet<u64> = HashSet::new();
+        for root in snapshot.roots.iter().filter(|r| r.visible) {
+            collect_subtree_ids(root.root.data().as_ffi(), &children, &mut visible_ids);
+        }
+
+        Self {
+            by_id,
+            visible_ids,
+            barrier_root,
+            root_z_index,
+        }
+    }
+
+    fn is_selectable(&self, id: u64) -> bool {
+        if !self.visible_ids.contains(&id) {
+            return false;
+        }
+        if let Some(barrier) = self.barrier_root {
+            return self.is_descendant_of_or_self(id, barrier);
+        }
+        true
+    }
+
+    fn is_descendant_of_or_self(&self, mut id: u64, ancestor: u64) -> bool {
+        if id == ancestor {
+            return true;
+        }
+        while let Some(node) = self.by_id.get(&id).copied() {
+            let Some(parent) = node.parent else {
+                return false;
+            };
+            id = parent.data().as_ffi();
+            if id == ancestor {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Match `ancestors` (outermost -> innermost) as an ordered subsequence along the parent chain.
+    fn ancestors_match_subsequence(
+        &self,
+        start_parent: Option<NodeId>,
+        ancestors: &[(SemanticsRole, &str)],
+    ) -> bool {
+        let mut cur = start_parent.and_then(|p| self.by_id.get(&p.data().as_ffi()).copied());
+
+        for (want_role, want_name) in ancestors.iter().rev() {
+            let mut found = false;
+            while let Some(node) = cur {
+                if node.role == *want_role
+                    && node
+                        .label
+                        .as_deref()
+                        .is_some_and(|label| label == *want_name)
+                {
+                    found = true;
+                    cur = node
+                        .parent
+                        .and_then(|p| self.by_id.get(&p.data().as_ffi()).copied());
+                    break;
+                }
+                cur = node
+                    .parent
+                    .and_then(|p| self.by_id.get(&p.data().as_ffi()).copied());
+            }
+            if !found {
+                return false;
+            }
+        }
+
+        true
+    }
+
+    fn root_z_for(&self, id: u64) -> u32 {
+        let mut cur = Some(id);
+        while let Some(node_id) = cur {
+            if let Some(z) = self.root_z_index.get(&node_id).copied() {
+                return z;
+            }
+            cur = self
+                .by_id
+                .get(&node_id)
+                .and_then(|n| n.parent.map(|p| p.data().as_ffi()));
+        }
+        0
+    }
+
+    fn depth_for(&self, id: u64) -> u32 {
+        let mut depth = 0u32;
+        let mut cur = Some(id);
+        while let Some(node_id) = cur {
+            let Some(node) = self.by_id.get(&node_id).copied() else {
+                break;
+            };
+            let Some(parent) = node.parent else {
+                break;
+            };
+            depth = depth.saturating_add(1);
+            cur = Some(parent.data().as_ffi());
+        }
+        depth
+    }
+}
+
+fn collect_subtree_ids(root: u64, children: &HashMap<u64, Vec<u64>>, out: &mut HashSet<u64>) {
+    let mut stack: Vec<u64> = vec![root];
+    while let Some(id) = stack.pop() {
+        if !out.insert(id) {
+            continue;
+        }
+        if let Some(kids) = children.get(&id) {
+            stack.extend(kids.iter().copied());
+        }
+    }
+}
+
+fn pick_best_match<'a>(
+    nodes: impl Iterator<Item = &'a fret_core::SemanticsNode>,
+    index: &SemanticsIndex<'a>,
+) -> Option<&'a fret_core::SemanticsNode> {
+    let mut best: Option<(&'a fret_core::SemanticsNode, (u32, u32, u64))> = None;
+    for n in nodes {
+        let id = n.id.data().as_ffi();
+        let rank = (index.root_z_for(id), index.depth_for(id), id);
+        match best {
+            None => best = Some((n, rank)),
+            Some((_, best_rank)) if rank > best_rank => best = Some((n, rank)),
+            _ => {}
+        }
+    }
+    best.map(|(n, _)| n)
+}
+
+fn eval_predicate(snapshot: &fret_core::SemanticsSnapshot, pred: &UiPredicateV1) -> bool {
+    match pred {
+        UiPredicateV1::Exists { target } => select_semantics_node(snapshot, target).is_some(),
+        UiPredicateV1::FocusIs { target } => {
+            let Some(focus) = snapshot.focus else {
+                return false;
+            };
+            let Some(node) = select_semantics_node(snapshot, target) else {
+                return false;
+            };
+            node.id == focus
+        }
+    }
+}
+
+fn center_of_rect(rect: Rect) -> Point {
+    let x = rect.origin.x + rect.size.width * 0.5;
+    let y = rect.origin.y + rect.size.height * 0.5;
+    Point::new(x, y)
+}
+
+fn click_events(position: Point, button: UiMouseButtonV1) -> [Event; 3] {
+    let pointer_id = PointerId(0);
+    let modifiers = Modifiers::default();
+    let pointer_type = PointerType::Mouse;
+
+    let move_event = Event::Pointer(PointerEvent::Move {
+        pointer_id,
+        position,
+        buttons: MouseButtons::default(),
+        modifiers,
+        pointer_type,
+    });
+    let button = match button {
+        UiMouseButtonV1::Left => MouseButton::Left,
+        UiMouseButtonV1::Right => MouseButton::Right,
+        UiMouseButtonV1::Middle => MouseButton::Middle,
+    };
+    let down = Event::Pointer(PointerEvent::Down {
+        pointer_id,
+        position,
+        button,
+        modifiers,
+        click_count: 1,
+        pointer_type,
+    });
+    let up = Event::Pointer(PointerEvent::Up {
+        pointer_id,
+        position,
+        button,
+        modifiers,
+        click_count: 1,
+        pointer_type,
+    });
+
+    [move_event, down, up]
+}
+
+fn press_key_events(key: KeyCode, modifiers: UiKeyModifiersV1, repeat: bool) -> [Event; 2] {
+    let modifiers = Modifiers {
+        shift: modifiers.shift,
+        ctrl: modifiers.ctrl,
+        alt: modifiers.alt,
+        meta: modifiers.meta,
+        ..Modifiers::default()
+    };
+    let down = Event::KeyDown {
+        key,
+        modifiers,
+        repeat,
+    };
+    let up = Event::KeyUp { key, modifiers };
+    [down, up]
+}
+
+fn parse_key_code(key: &str) -> Option<KeyCode> {
+    let key = key.trim().to_ascii_lowercase();
+    match key.as_str() {
+        "escape" | "esc" => Some(KeyCode::Escape),
+        "enter" | "return" => Some(KeyCode::Enter),
+        "tab" => Some(KeyCode::Tab),
+        "space" => Some(KeyCode::Space),
+        "arrow_up" | "up" => Some(KeyCode::ArrowUp),
+        "arrow_down" | "down" => Some(KeyCode::ArrowDown),
+        "arrow_left" | "left" => Some(KeyCode::ArrowLeft),
+        "arrow_right" | "right" => Some(KeyCode::ArrowRight),
+        "home" => Some(KeyCode::Home),
+        "end" => Some(KeyCode::End),
+        "page_up" => Some(KeyCode::PageUp),
+        "page_down" => Some(KeyCode::PageDown),
+        _ => None,
+    }
+}
+
+fn key_to_u64(key: NodeId) -> u64 {
+    key.data().as_ffi()
+}
+
+fn write_json<T: Serialize>(path: PathBuf, value: &T) -> Result<(), std::io::Error> {
+    let Some(parent) = path.parent() else {
+        return Ok(());
+    };
+    std::fs::create_dir_all(parent)?;
+    let bytes = serde_json::to_vec_pretty(value).unwrap_or_default();
+    std::fs::write(path, bytes)
+}
+
+fn truncate_string_bytes(s: &mut String, max_bytes: usize) {
+    if s.len() <= max_bytes {
+        return;
+    }
+    if max_bytes == 0 {
+        s.clear();
+        return;
+    }
+
+    let suffix = "...";
+    if max_bytes <= suffix.len() {
+        let mut idx = max_bytes;
+        while idx > 0 && !s.is_char_boundary(idx) {
+            idx -= 1;
+        }
+        s.truncate(idx);
+        return;
+    }
+
+    let mut idx = max_bytes - suffix.len();
+    while idx > 0 && !s.is_char_boundary(idx) {
+        idx -= 1;
+    }
+    s.truncate(idx);
+    s.push_str(suffix);
+}
+
+fn write_latest_pointer(out_dir: &Path, export_dir: &Path) -> Result<(), std::io::Error> {
+    let path = out_dir.join("latest.txt");
+    let Some(parent) = path.parent() else {
+        return Ok(());
+    };
+    std::fs::create_dir_all(parent)?;
+    let rel = export_dir.strip_prefix(out_dir).unwrap_or(export_dir);
+    std::fs::write(path, rel.to_string_lossy().as_bytes())
+}
+
+fn touch_file(path: &Path) -> Result<(), std::io::Error> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    use std::io::Write as _;
+    let mut f = std::fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(path)?;
+    writeln!(f, "{}", unix_ms_now())?;
+    let _ = f.flush();
+    Ok(())
+}
+
+fn display_path(base_dir: &Path, path: &Path) -> String {
+    if let Ok(rel) = path.strip_prefix(base_dir) {
+        return rel.to_string_lossy().to_string();
+    }
+    path.to_string_lossy().to_string()
+}
+
+fn maybe_redact_string(s: &str, redact_text: bool) -> String {
+    if !redact_text {
+        return s.to_string();
+    }
+    format!("<redacted len={}>", s.len())
+}
+
+fn sanitize_label(label: &str) -> String {
+    let mut out = String::with_capacity(label.len());
+    for c in label.chars() {
+        if c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.') {
+            out.push(c);
+        } else if matches!(c, ' ' | ':' | '/' | '\\') {
+            out.push('_');
+        }
+    }
+    if out.is_empty() {
+        "bundle".to_string()
+    } else {
+        out
+    }
+}
+
+fn sanitize_path_for_bundle(base_dir: &Path, path: &Path) -> String {
+    if let Ok(rel) = path.strip_prefix(base_dir) {
+        return rel.to_string_lossy().to_string();
+    }
+    path.file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_default()
+}
+
+trait PointerEventExt {
+    fn kind(&self) -> &'static str;
+    fn position(&self) -> Point;
+}
+
+impl PointerEventExt for fret_core::PointerEvent {
+    fn kind(&self) -> &'static str {
+        match self {
+            fret_core::PointerEvent::Down { .. } => "down",
+            fret_core::PointerEvent::Up { .. } => "up",
+            fret_core::PointerEvent::Move { .. } => "move",
+            fret_core::PointerEvent::Wheel { .. } => "wheel",
+            fret_core::PointerEvent::PinchGesture { .. } => "pinch_gesture",
+        }
+    }
+
+    fn position(&self) -> Point {
+        match self {
+            fret_core::PointerEvent::Down { position, .. } => *position,
+            fret_core::PointerEvent::Up { position, .. } => *position,
+            fret_core::PointerEvent::Move { position, .. } => *position,
+            fret_core::PointerEvent::Wheel { position, .. } => *position,
+            fret_core::PointerEvent::PinchGesture { position, .. } => *position,
+        }
+    }
+}
+
+trait EventPointerExt {
+    fn pointer_event(&self) -> Option<&fret_core::PointerEvent>;
+}
+
+impl EventPointerExt for Event {
+    fn pointer_event(&self) -> Option<&fret_core::PointerEvent> {
+        match self {
+            Event::Pointer(p) => Some(p),
+            _ => None,
+        }
+    }
+}
