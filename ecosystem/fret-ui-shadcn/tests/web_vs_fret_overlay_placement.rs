@@ -813,6 +813,12 @@ fn assert_centered_overlay_placement_matches(
         2.0,
     );
     assert_close(
+        &format!("{web_name} width"),
+        fret_portal.w,
+        expected_portal_w,
+        2.0,
+    );
+    assert_close(
         &format!("{web_name} center_y"),
         rect_center_y(fret_portal),
         expected_center_y,
@@ -2255,7 +2261,14 @@ fn web_vs_fret_dialog_demo_overlay_center_matches() {
                         .variant(ButtonVariant::Outline)
                         .into_element(cx)
                 },
-                |cx| DialogContent::new(vec![cx.text("Edit profile")]).into_element(cx),
+                |cx| {
+                    DialogContent::new(vec![cx.text("Edit profile")])
+                        .refine_layout(
+                            fret_ui_kit::LayoutRefinement::default()
+                                .max_w(fret_ui_kit::MetricRef::Px(Px(425.0))),
+                        )
+                        .into_element(cx)
+                },
             )
         },
     );
