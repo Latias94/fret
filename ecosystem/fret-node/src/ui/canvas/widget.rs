@@ -10319,6 +10319,7 @@ mod tests {
     mod connect_conformance;
     mod connection_mode_conformance;
     mod hit_testing_conformance;
+    mod insert_node_drag_conformance;
     mod interaction_conformance;
     mod internals_conformance;
     mod invalidation_ordering_conformance;
