@@ -1,0 +1,113 @@
+use delinea::data::DataTable;
+use delinea::engine::model::ModelError;
+use delinea::ids::{DatasetId, GridId};
+use delinea::spec::ChartSpec;
+use fret_core::{NodeId, Px, Rect, Size};
+use fret_ui::layout_pass::LayoutPassKind;
+use fret_ui::retained_bridge::{LayoutCx, UiTreeRetainedExt as _, Widget};
+use fret_ui::{UiHost, UiTree};
+
+use crate::multi_grid::split_chart_spec_by_grid;
+
+use super::ChartCanvas;
+
+#[derive(Debug, Clone, Copy)]
+pub struct UniformGrid {
+    pub columns: usize,
+    pub gap: Px,
+}
+
+impl UniformGrid {
+    pub fn new(columns: usize) -> Self {
+        Self {
+            columns: columns.max(1),
+            gap: Px(0.0),
+        }
+    }
+
+    pub fn with_gap(mut self, gap: Px) -> Self {
+        self.gap = gap;
+        self
+    }
+
+    pub fn create_node<H: UiHost>(ui: &mut UiTree<H>, grid: UniformGrid) -> NodeId {
+        ui.create_node_retained(grid)
+    }
+}
+
+impl<H: UiHost> Widget<H> for UniformGrid {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        let child_count = cx.children.len();
+        if child_count == 0 {
+            return cx.available;
+        }
+
+        let columns = self.columns.max(1).min(child_count);
+        let rows = child_count.div_ceil(columns);
+
+        let gap = self.gap.0.max(0.0);
+        let total_gap_x = gap * (columns.saturating_sub(1) as f32);
+        let total_gap_y = gap * (rows.saturating_sub(1) as f32);
+
+        let cell_w = ((cx.available.width.0 - total_gap_x) / columns.max(1) as f32).max(0.0);
+        let cell_h = ((cx.available.height.0 - total_gap_y) / rows.max(1) as f32).max(0.0);
+
+        let origin = cx.bounds.origin;
+        let is_final = cx.pass_kind == LayoutPassKind::Final;
+
+        for (i, child) in cx.children.iter().copied().enumerate() {
+            let col = i % columns;
+            let row = i / columns;
+
+            let x = origin.x.0 + (cell_w + gap) * (col as f32);
+            let y = origin.y.0 + (cell_h + gap) * (row as f32);
+
+            let rect = Rect::new(
+                fret_core::Point::new(Px(x), Px(y)),
+                Size::new(Px(cell_w), Px(cell_h)),
+            );
+
+            if is_final {
+                let _ = cx.layout_viewport_root(child, rect);
+            } else {
+                let _ = cx.layout_in(child, rect);
+            }
+        }
+
+        cx.available
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct MultiGridChartCanvasNodes {
+    pub root: NodeId,
+    pub canvases: Vec<(GridId, NodeId)>,
+}
+
+pub fn create_multi_grid_chart_canvas_nodes<H: UiHost>(
+    ui: &mut UiTree<H>,
+    spec: ChartSpec,
+    datasets: &[(DatasetId, DataTable)],
+    layout: UniformGrid,
+) -> Result<MultiGridChartCanvasNodes, ModelError> {
+    let split = split_chart_spec_by_grid(&spec)?;
+    let mut canvases: Vec<(GridId, NodeId)> = Vec::with_capacity(split.len());
+    for entry in split {
+        let mut canvas = ChartCanvas::new(entry.spec)?;
+        for (dataset_id, table) in datasets {
+            canvas
+                .engine_mut()
+                .datasets_mut()
+                .insert(*dataset_id, table.clone());
+        }
+        let node = ChartCanvas::create_node(ui, canvas);
+        canvases.push((entry.grid, node));
+    }
+
+    let root = UniformGrid::create_node(ui, layout);
+    for (_, node) in &canvases {
+        ui.add_child(root, *node);
+    }
+
+    Ok(MultiGridChartCanvasNodes { root, canvases })
+}
