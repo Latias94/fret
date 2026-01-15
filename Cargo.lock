@@ -1049,6 +1049,7 @@ name = "fret-docking"
 version = "0.1.0"
 dependencies = [
  "fret-core",
+ "fret-dnd",
  "fret-runtime",
  "fret-ui",
  "slotmap",
@@ -1141,6 +1142,22 @@ dependencies = [
  "fret-core",
  "fret-icons",
  "rust-embed",
+]
+
+[[package]]
+name = "fret-kit"
+version = "0.1.0"
+dependencies = [
+ "fret",
+ "fret-app",
+ "fret-bootstrap",
+ "fret-core",
+ "fret-icons",
+ "fret-launch",
+ "fret-runtime",
+ "fret-ui",
+ "fret-ui-shadcn",
+ "thiserror 2.0.17",
 ]
 
 [[package]]
@@ -1427,8 +1444,11 @@ dependencies = [
  "fret-markdown",
  "fret-runtime",
  "fret-ui",
+ "fret-ui-headless",
  "fret-ui-kit",
  "fret-ui-shadcn",
+ "fret-workspace",
+ "time",
  "tracing",
  "tracing-subscriber",
  "winit",
@@ -1505,6 +1525,15 @@ version = "0.1.0"
 dependencies = [
  "fret-core",
  "glam",
+]
+
+[[package]]
+name = "fret-workspace"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-runtime",
+ "fret-ui",
 ]
 
 [[package]]

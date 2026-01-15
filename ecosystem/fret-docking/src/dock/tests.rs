@@ -1,6 +1,7 @@
-use super::hit_test::hit_test_drop_target;
+use super::hit_test::{hit_test_drop_target, tab_rect_for_index};
 use super::layout::{
     active_panel_content_bounds, compute_layout_map, dock_hint_rects, dock_space_regions,
+    split_tab_bar,
 };
 use super::prelude_core::*;
 use super::prelude_runtime::*;
@@ -1828,6 +1829,7 @@ fn dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
         DockPanelDragPayload {
             panel: PanelKey::new("core.viewport"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
         },
     );
@@ -1867,6 +1869,112 @@ fn dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
 }
 
 #[test]
+fn pending_dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let (_chrome, dock_bounds) = dock_space_regions(bounds);
+    let root = harness
+        .app
+        .global::<DockManager>()
+        .and_then(|dock| dock.graph.window_root(harness.window))
+        .expect("expected dock window root");
+    let layout = compute_layout_map(
+        &harness.app.global::<DockManager>().unwrap().graph,
+        root,
+        dock_bounds,
+    );
+    let root_rect = layout.get(&root).copied().expect("expected root rect");
+    let (tab_bar, _content) = split_tab_bar(root_rect);
+    let tab_rect = tab_rect_for_index(tab_bar, 0, Px(0.0));
+    let tab_pos = Point::new(Px(tab_rect.origin.x.0 + 2.0), Px(tab_rect.origin.y.0 + 2.0));
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: tab_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    assert!(
+        harness.app.drag(fret_core::PointerId(0)).is_none(),
+        "pending tab press should not start a cross-window drag session yet",
+    );
+
+    let position = harness.viewport_point();
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position,
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Wheel {
+            position,
+            delta: Point::new(Px(0.0), Px(12.0)),
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let effects = harness.app.take_effects();
+    assert!(
+        !effects
+            .iter()
+            .any(|e| matches!(e, Effect::ViewportInput(_))),
+        "pending dock drag must suppress viewport hover/wheel forwarding (ADR 0072), got: {effects:?}",
+    );
+
+    let activate_pos = Point::new(Px(tab_pos.x.0 + 20.0), tab_pos.y);
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position: activate_pos,
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let drag = harness
+        .app
+        .drag(fret_core::PointerId(0))
+        .and_then(|d| d.payload::<DockPanelDragPayload>().map(|_| d))
+        .expect("expected pending dock drag to create a DragSession after activation");
+    assert!(
+        drag.dragging,
+        "expected drag session to start in dragging state"
+    );
+}
+
+#[test]
 fn dock_drag_requests_animation_frames_while_dragging() {
     let mut harness = DockViewportHarness::new();
     harness.layout();
@@ -1879,6 +1987,7 @@ fn dock_drag_requests_animation_frames_while_dragging() {
         DockPanelDragPayload {
             panel: PanelKey::new("core.viewport"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
         },
     );
@@ -2147,6 +2256,7 @@ fn dock_tab_drop_outside_window_requests_float() {
         DockPanelDragPayload {
             panel: PanelKey::new("core.hierarchy"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
         },
     );
@@ -2216,6 +2326,7 @@ fn dock_tab_drop_outside_window_does_not_request_tear_off_twice() {
         DockPanelDragPayload {
             panel: PanelKey::new("core.hierarchy"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
         },
     );
@@ -2305,6 +2416,7 @@ fn dock_tab_drop_outside_window_floats_in_window_when_tear_off_disabled() {
         DockPanelDragPayload {
             panel: PanelKey::new("core.hierarchy"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
         },
     );
@@ -2377,6 +2489,7 @@ fn dock_tab_drop_outside_window_floats_in_window_when_multi_window_is_disabled()
         DockPanelDragPayload {
             panel: PanelKey::new("core.hierarchy"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
         },
     );
@@ -2453,6 +2566,7 @@ fn dock_tab_drop_outside_routes_to_dock_space() {
         DockPanelDragPayload {
             panel: PanelKey::new("core.hierarchy"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
         },
     );

@@ -43,6 +43,29 @@ pub use window_overlays::{
 
 pub use window_overlays::TOAST_VIEWPORT_FOCUS_COMMAND;
 
+/// Common imports for component/app code using `fret-ui-kit`.
+///
+/// Recommended: `use fret_ui_kit::prelude::*;`
+pub mod prelude {
+    pub use crate::declarative::prelude::*;
+    pub use crate::declarative::{stack, style};
+
+    #[cfg(feature = "icons")]
+    pub use crate::declarative::icon;
+    #[cfg(feature = "icons")]
+    pub use fret_icons::IconId;
+
+    pub use crate::{
+        ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Size, Space, StyledExt,
+    };
+    pub use crate::{OverlayController, OverlayKind, OverlayPresence, OverlayRequest};
+
+    pub use fret_core::{AppWindowId, Px, TextOverflow, TextWrap, UiServices};
+    pub use fret_runtime::{CommandId, Model};
+    pub use fret_ui::element::{AnyElement, TextProps};
+    pub use fret_ui::{ElementContext, Invalidation, Theme, UiHost, UiTree};
+}
+
 /// Attempts to handle a window-scoped command that targets `fret-ui-kit` overlay substrates.
 ///
 /// This is intended to be called by app drivers after `UiTree::dispatch_command` returns `false`.

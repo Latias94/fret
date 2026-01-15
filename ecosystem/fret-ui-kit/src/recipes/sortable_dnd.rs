@@ -3,14 +3,11 @@
 //! This is intentionally not a "full component": it focuses on the DnD policy wiring and keeps
 //! visuals/content fully caller-owned.
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use fret_core::{Modifiers, MouseButton, Point, PointerId, Px};
-use fret_dnd::{
-    ActivationConstraint, CollisionStrategy, DndItemId, Droppable, PointerSensor, RegistrySnapshot,
-    SensorEvent, SensorOutput, closest_center_collisions, pointer_within_collisions,
-};
-use fret_runtime::Model;
+use fret_runtime::{DragKindId, Model, TickId};
 use fret_ui::action::{
     OnPointerDown, OnPointerMove, OnPointerUp, PointerDownCx, PointerMoveCx, PointerUpCx,
 };
@@ -19,7 +16,11 @@ use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::declarative::model_watch::ModelWatchExt as _;
 use crate::declarative::stack;
+use crate::dnd;
+use crate::dnd::{ActivationConstraint, CollisionStrategy, DndItemId, DndScopeId, SensorOutput};
 use crate::{Items, Justify, LayoutRefinement, Space};
+
+const DRAG_KIND_SORTABLE_REORDER: DragKindId = DragKindId(100);
 
 #[derive(Debug, Clone, Copy)]
 pub struct SortableReorderListProps {
@@ -38,14 +39,18 @@ impl Default for SortableReorderListProps {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct SortablePointerState {
+    start_tick: TickId,
+    start_position: Point,
+    active: DndItemId,
+    over: DndItemId,
+    dragging: bool,
+}
+
 #[derive(Debug, Default, Clone)]
 struct SortableDndState {
-    sensor: PointerSensor,
-    droppables: Vec<Droppable>,
-    pointer_id: Option<PointerId>,
-    active: Option<DndItemId>,
-    over: Option<DndItemId>,
-    dragging: bool,
+    pointers: HashMap<PointerId, SortablePointerState>,
 }
 
 #[derive(Debug, Default)]
@@ -66,21 +71,6 @@ fn get_state_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<SortableD
     model
 }
 
-fn collisions_for(
-    strategy: CollisionStrategy,
-    droppables: &[Droppable],
-    pointer: Point,
-) -> Vec<fret_dnd::DndCollision> {
-    let snapshot = RegistrySnapshot {
-        draggables: Vec::new(),
-        droppables: droppables.to_vec(),
-    };
-    match strategy {
-        CollisionStrategy::PointerWithin => pointer_within_collisions(&snapshot, pointer),
-        CollisionStrategy::ClosestCenter => closest_center_collisions(&snapshot, pointer),
-    }
-}
-
 /// Sortable/reorder helper:
 /// - renders a list driven by `items` (a `Vec<DndItemId>`),
 /// - captures pointer and tracks a per-pointer `PointerSensor`,
@@ -88,7 +78,7 @@ fn collisions_for(
 ///
 /// Notes:
 /// - This is a minimal MVP intended to validate `fret-dnd` policy wiring.
-/// - Geometry is sourced from `last_visual_bounds_for_element`, so the first frame may not have
+/// - Geometry is sourced from `last_bounds_for_element` (prev-bounds snapshot), so the first frame may not have
 ///   droppable rects yet. Most use-sites will naturally render continuously during interactions.
 #[allow(clippy::too_many_arguments)]
 pub fn sortable_reorder_list<H: UiHost>(
@@ -105,6 +95,9 @@ pub fn sortable_reorder_list<H: UiHost>(
 
     let ids = cx.watch_model(&items).layout().cloned().unwrap_or_default();
     let state = get_state_model(cx);
+    let dnd = dnd::dnd_service_model(cx);
+    let frame_id = cx.frame_id;
+    let scope = DndScopeId(cx.root_id().0);
 
     let theme = Theme::global(&*cx.app);
     let list_bg = theme
@@ -121,10 +114,13 @@ pub fn sortable_reorder_list<H: UiHost>(
         .unwrap_or_else(|| theme.color_required("accent"));
 
     let state_snapshot = cx.watch_model(&state).paint().cloned().unwrap_or_default();
-    let active = state_snapshot.active;
-    let over = state_snapshot.over;
+    let (active, over) = state_snapshot
+        .pointers
+        .iter()
+        .min_by_key(|(pointer_id, _)| pointer_id.0)
+        .map(|(_, st)| (Some(st.active), Some(st.over)))
+        .unwrap_or((None, None));
 
-    let mut droppables: Vec<Droppable> = Vec::new();
     let mut children: Vec<AnyElement> = Vec::new();
 
     for id in ids {
@@ -132,6 +128,9 @@ pub fn sortable_reorder_list<H: UiHost>(
         let state_on_move = state.clone();
         let state_on_up = state.clone();
         let items_on_up = items.clone();
+        let dnd_on_down = dnd.clone();
+        let dnd_on_move = dnd.clone();
+        let dnd_on_up = dnd.clone();
 
         let el = cx.keyed(id.0, |cx| {
             let mut pr = PointerRegionProps::default();
@@ -151,17 +150,25 @@ pub fn sortable_reorder_list<H: UiHost>(
                 host.capture_pointer();
 
                 let _ = host.models_mut().update(&state_on_down, |st| {
-                    st.sensor.set_constraint(activation);
-                    let _ = st.sensor.handle(SensorEvent::Down {
-                        pointer_id: down.pointer_id,
-                        position: down.position,
-                        tick: down.tick_id.0,
-                    });
-                    st.pointer_id = Some(down.pointer_id);
-                    st.active = Some(id);
-                    st.over = Some(id);
-                    st.dragging = false;
+                    st.pointers.insert(
+                        down.pointer_id,
+                        SortablePointerState {
+                            start_tick: down.tick_id,
+                            start_position: down.position,
+                            active: id,
+                            over: id,
+                            dragging: false,
+                        },
+                    );
                 });
+                dnd::clear_pending_pointer_in_scope(
+                    host.models_mut(),
+                    &dnd_on_down,
+                    action_cx.window,
+                    DRAG_KIND_SORTABLE_REORDER,
+                    scope,
+                    down.pointer_id,
+                );
                 host.request_redraw(action_cx.window);
                 true
             });
@@ -174,45 +181,84 @@ pub fn sortable_reorder_list<H: UiHost>(
                 }
 
                 let mut outcome = MoveOutcome::Ignore;
+
+                let mut pointer_state: Option<SortablePointerState> = None;
                 let _ = host.models_mut().update(&state_on_move, |st| {
-                    if st.pointer_id != Some(mv.pointer_id) {
+                    let Some(state) = st.pointers.get(&mv.pointer_id).copied() else {
                         return;
-                    }
+                    };
 
                     if !mv.buttons.left {
-                        st.pointer_id = None;
-                        st.active = None;
-                        st.over = None;
-                        st.dragging = false;
-                        st.sensor.clear_pointer(mv.pointer_id);
+                        st.pointers.remove(&mv.pointer_id);
                         outcome = MoveOutcome::Canceled;
                         return;
                     }
 
-                    st.sensor.set_constraint(activation);
-                    let sensor = st.sensor.handle(SensorEvent::Move {
-                        pointer_id: mv.pointer_id,
-                        position: mv.position,
-                        tick: mv.tick_id.0,
-                    });
-
-                    if matches!(
-                        sensor,
-                        SensorOutput::DragStart { .. } | SensorOutput::DragMove { .. }
-                    ) {
-                        st.dragging = true;
-                    }
-
-                    if st.dragging {
-                        let cols = collisions_for(collision_strategy, &st.droppables, mv.position);
-                        st.over = cols.first().map(|c| c.id);
-                        outcome = MoveOutcome::Updated;
-                    }
+                    pointer_state = Some(state);
                 });
+
+                if matches!(outcome, MoveOutcome::Canceled) {
+                    dnd::clear_pending_pointer_in_scope(
+                        host.models_mut(),
+                        &dnd_on_move,
+                        _action_cx.window,
+                        DRAG_KIND_SORTABLE_REORDER,
+                        scope,
+                        mv.pointer_id,
+                    );
+                    host.release_pointer_capture();
+                    host.request_redraw(_action_cx.window);
+                    return true;
+                }
+
+                let Some(pointer_state) = pointer_state else {
+                    return false;
+                };
+
+                let dnd_update = dnd::update_pending_drag_move_in_scope(
+                    host.models_mut(),
+                    &dnd_on_move,
+                    _action_cx.window,
+                    frame_id,
+                    DRAG_KIND_SORTABLE_REORDER,
+                    scope,
+                    mv.pointer_id,
+                    pointer_state.start_tick,
+                    pointer_state.start_position,
+                    mv.position,
+                    mv.tick_id,
+                    activation,
+                    collision_strategy,
+                    None,
+                );
+
+                if matches!(
+                    dnd_update.sensor,
+                    SensorOutput::DragStart { .. } | SensorOutput::DragMove { .. }
+                ) {
+                    let _ = host.models_mut().update(&state_on_move, |st| {
+                        let Some(state) = st.pointers.get_mut(&mv.pointer_id) else {
+                            return;
+                        };
+                        state.dragging = true;
+                        if let Some(over) = dnd_update.over {
+                            state.over = over;
+                        }
+                        outcome = MoveOutcome::Updated;
+                    });
+                }
 
                 match outcome {
                     MoveOutcome::Ignore => false,
                     MoveOutcome::Canceled => {
+                        dnd::clear_pending_pointer_in_scope(
+                            host.models_mut(),
+                            &dnd_on_move,
+                            _action_cx.window,
+                            DRAG_KIND_SORTABLE_REORDER,
+                            scope,
+                            mv.pointer_id,
+                        );
                         host.release_pointer_capture();
                         host.request_redraw(_action_cx.window);
                         true
@@ -231,27 +277,30 @@ pub fn sortable_reorder_list<H: UiHost>(
 
                 let mut moved = false;
                 let mut reorder: Option<(DndItemId, DndItemId)> = None;
+                let mut had_pointer = false;
 
                 let _ = host.models_mut().update(&state_on_up, |st| {
-                    if st.pointer_id != Some(up.pointer_id) {
+                    let Some(state) = st.pointers.remove(&up.pointer_id) else {
                         return;
+                    };
+                    had_pointer = true;
+                    if state.dragging && state.active != state.over {
+                        reorder = Some((state.active, state.over));
                     }
-
-                    if st.dragging {
-                        if let (Some(active), Some(over)) = (st.active, st.over)
-                            && active != over
-                        {
-                            reorder = Some((active, over));
-                        }
-                    }
-
-                    st.pointer_id = None;
-                    st.active = None;
-                    st.over = None;
-                    st.dragging = false;
-                    st.sensor.clear_pointer(up.pointer_id);
                 });
 
+                if !had_pointer {
+                    return false;
+                }
+
+                dnd::clear_pending_pointer_in_scope(
+                    host.models_mut(),
+                    &dnd_on_up,
+                    action_cx.window,
+                    DRAG_KIND_SORTABLE_REORDER,
+                    scope,
+                    up.pointer_id,
+                );
                 host.release_pointer_capture();
 
                 if let Some((active, over)) = reorder {
@@ -299,12 +348,17 @@ pub fn sortable_reorder_list<H: UiHost>(
                     |cx| {
                         let element = cx.root_id();
                         if let Some(rect) = cx.last_bounds_for_element(element) {
-                            droppables.push(Droppable {
+                            dnd::register_droppable_rect_in_scope(
+                                cx.app.models_mut(),
+                                &dnd,
+                                cx.window,
+                                cx.frame_id,
+                                scope,
                                 id,
                                 rect,
-                                disabled: false,
-                                z_index: 0,
-                            });
+                                0,
+                                false,
+                            );
                         }
                         row_contents(cx, id)
                     },
@@ -314,11 +368,6 @@ pub fn sortable_reorder_list<H: UiHost>(
 
         children.push(el);
     }
-
-    let _ = cx.app.models_mut().update(&state, |st| {
-        st.sensor.set_constraint(activation);
-        st.droppables = droppables;
-    });
 
     stack::vstack(
         cx,
@@ -392,9 +441,33 @@ mod tests {
         }
     }
 
-    fn bump(app: &mut App) {
+    fn bump_tick(app: &mut App) {
         app.set_tick_id(TickId(app.tick_id().0.saturating_add(1)));
+    }
+
+    fn bump_frame(app: &mut App) {
         app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+    }
+
+    fn render(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut FakeServices,
+        window: AppWindowId,
+        bounds: Rect,
+        items: Model<Vec<DndItemId>>,
+        row_ids: &Rc<RefCell<Vec<fret_ui::GlobalElementId>>>,
+        props: SortableReorderListProps,
+    ) -> fret_core::NodeId {
+        let row_ids = row_ids.clone();
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "sortable", |cx| {
+            row_ids.borrow_mut().clear();
+            let el = sortable_reorder_list(cx, items, props, |cx, id| {
+                row_ids.borrow_mut().push(cx.root_id());
+                vec![cx.text(format!("Item {}", id.0))]
+            });
+            vec![el]
+        })
     }
 
     #[test]
@@ -423,37 +496,10 @@ mod tests {
 
         let row_ids: Rc<RefCell<Vec<fret_ui::GlobalElementId>>> = Rc::new(RefCell::new(Vec::new()));
 
-        fn render(
-            ui: &mut UiTree<App>,
-            app: &mut App,
-            services: &mut FakeServices,
-            window: AppWindowId,
-            bounds: Rect,
-            items: Model<Vec<DndItemId>>,
-            row_ids: Rc<RefCell<Vec<fret_ui::GlobalElementId>>>,
-        ) -> fret_core::NodeId {
-            fret_ui::declarative::render_root(ui, app, services, window, bounds, "sortable", |cx| {
-                row_ids.borrow_mut().clear();
-                let el = sortable_reorder_list(
-                    cx,
-                    items,
-                    SortableReorderListProps {
-                        row_height: Px(32.0),
-                        activation: ActivationConstraint::Distance { px: 6.0 },
-                        collision_strategy: CollisionStrategy::ClosestCenter,
-                    },
-                    |cx, id| {
-                        row_ids.borrow_mut().push(cx.root_id());
-                        vec![cx.text(format!("Item {}", id.0))]
-                    },
-                );
-                vec![el]
-            })
-        }
-
         // Needs two frames: geometry comes from `last_bounds_for_element` (prev-bounds snapshot).
         for _ in 0..2 {
-            bump(&mut app);
+            bump_tick(&mut app);
+            bump_frame(&mut app);
             let root = render(
                 &mut ui,
                 &mut app,
@@ -461,7 +507,12 @@ mod tests {
                 window,
                 bounds,
                 items.clone(),
-                row_ids.clone(),
+                &row_ids,
+                SortableReorderListProps {
+                    row_height: Px(32.0),
+                    activation: ActivationConstraint::Distance { px: 6.0 },
+                    collision_strategy: CollisionStrategy::ClosestCenter,
+                },
             );
             ui.set_root(root);
             ui.layout_all(&mut app, &mut services, bounds, 1.0);
@@ -500,7 +551,7 @@ mod tests {
         let start = center(rects[0]);
         let target = center(rects[2]);
 
-        bump(&mut app);
+        bump_tick(&mut app);
         ui.dispatch_event(
             &mut app,
             &mut services,
@@ -518,7 +569,7 @@ mod tests {
             "expected pointer to be captured after down"
         );
 
-        bump(&mut app);
+        bump_tick(&mut app);
         ui.dispatch_event(
             &mut app,
             &mut services,
@@ -538,7 +589,7 @@ mod tests {
             "expected pointer to remain captured during move"
         );
 
-        bump(&mut app);
+        bump_tick(&mut app);
         ui.dispatch_event(
             &mut app,
             &mut services,
@@ -556,7 +607,8 @@ mod tests {
             "expected pointer capture to be released after up"
         );
 
-        bump(&mut app);
+        bump_tick(&mut app);
+        bump_frame(&mut app);
         let root = render(
             &mut ui,
             &mut app,
@@ -564,12 +616,239 @@ mod tests {
             window,
             bounds,
             items.clone(),
-            row_ids.clone(),
+            &row_ids,
+            SortableReorderListProps {
+                row_height: Px(32.0),
+                activation: ActivationConstraint::Distance { px: 6.0 },
+                collision_strategy: CollisionStrategy::ClosestCenter,
+            },
         );
         ui.set_root(root);
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         let after = app.models().get_cloned(&items).unwrap_or_default();
         assert_eq!(after, vec![DndItemId(2), DndItemId(3), DndItemId(1)]);
+    }
+
+    #[test]
+    fn sortable_reorder_does_not_move_without_activation() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let items = app
+            .models_mut()
+            .insert(vec![DndItemId(1), DndItemId(2), DndItemId(3)]);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let row_ids: Rc<RefCell<Vec<fret_ui::GlobalElementId>>> = Rc::new(RefCell::new(Vec::new()));
+
+        for _ in 0..2 {
+            bump_tick(&mut app);
+            bump_frame(&mut app);
+            let root = render(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                items.clone(),
+                &row_ids,
+                SortableReorderListProps {
+                    row_height: Px(32.0),
+                    activation: ActivationConstraint::Distance { px: 9999.0 },
+                    collision_strategy: CollisionStrategy::ClosestCenter,
+                },
+            );
+            ui.set_root(root);
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        }
+
+        let elements = row_ids.borrow().clone();
+        let nodes = elements
+            .iter()
+            .map(|&el| fret_ui::elements::node_for_element(&mut app, window, el).expect("node"))
+            .collect::<Vec<_>>();
+        let rects = nodes
+            .iter()
+            .map(|&n| ui.debug_node_bounds(n).expect("bounds"))
+            .collect::<Vec<_>>();
+
+        let center = |r: Rect| {
+            Point::new(
+                Px(r.origin.x.0 + r.size.width.0 * 0.5),
+                Px(r.origin.y.0 + r.size.height.0 * 0.5),
+            )
+        };
+        let start = center(rects[0]);
+        let small_move = Point::new(Px(start.x.0 + 2.0), start.y);
+
+        bump_tick(&mut app);
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: start,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        assert!(ui.captured_for(PointerId(0)).is_some());
+
+        bump_tick(&mut app);
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: small_move,
+                buttons: MouseButtons {
+                    left: true,
+                    ..Default::default()
+                },
+                modifiers: Modifiers::default(),
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        assert!(ui.captured_for(PointerId(0)).is_some());
+
+        bump_tick(&mut app);
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: small_move,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        assert!(ui.captured_for(PointerId(0)).is_none());
+
+        let after = app.models().get_cloned(&items).unwrap_or_default();
+        assert_eq!(after, vec![DndItemId(1), DndItemId(2), DndItemId(3)]);
+    }
+
+    #[test]
+    fn sortable_reorder_clears_state_on_buttons_release() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let items = app
+            .models_mut()
+            .insert(vec![DndItemId(1), DndItemId(2), DndItemId(3)]);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let row_ids: Rc<RefCell<Vec<fret_ui::GlobalElementId>>> = Rc::new(RefCell::new(Vec::new()));
+
+        for _ in 0..2 {
+            bump_tick(&mut app);
+            bump_frame(&mut app);
+            let root = render(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                items.clone(),
+                &row_ids,
+                SortableReorderListProps {
+                    row_height: Px(32.0),
+                    activation: ActivationConstraint::Distance { px: 6.0 },
+                    collision_strategy: CollisionStrategy::ClosestCenter,
+                },
+            );
+            ui.set_root(root);
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        }
+
+        let elements = row_ids.borrow().clone();
+        let nodes = elements
+            .iter()
+            .map(|&el| fret_ui::elements::node_for_element(&mut app, window, el).expect("node"))
+            .collect::<Vec<_>>();
+        let rects = nodes
+            .iter()
+            .map(|&n| ui.debug_node_bounds(n).expect("bounds"))
+            .collect::<Vec<_>>();
+
+        let center = |r: Rect| {
+            Point::new(
+                Px(r.origin.x.0 + r.size.width.0 * 0.5),
+                Px(r.origin.y.0 + r.size.height.0 * 0.5),
+            )
+        };
+        let start = center(rects[0]);
+
+        bump_tick(&mut app);
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: start,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        assert!(ui.captured_for(PointerId(0)).is_some());
+
+        bump_tick(&mut app);
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: start,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        assert!(
+            ui.captured_for(PointerId(0)).is_none(),
+            "expected capture release when buttons are no longer pressed"
+        );
+
+        let after = app.models().get_cloned(&items).unwrap_or_default();
+        assert_eq!(after, vec![DndItemId(1), DndItemId(2), DndItemId(3)]);
     }
 }
