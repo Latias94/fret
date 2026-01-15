@@ -303,6 +303,9 @@ pub fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(
     #[cfg(feature = "icons-radix")]
     let builder = builder.with_radix_icons();
 
+    #[cfg(feature = "preload-icon-svgs")]
+    let builder = builder.preload_icon_svgs_on_gpu_ready();
+
     builder.run().map_err(RunnerError::from)?;
     Ok(())
 }
