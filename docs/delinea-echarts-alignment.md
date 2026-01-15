@@ -404,7 +404,7 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 - AxisPointer/tooltip sampling respects X filtering even for non-monotonic X (never samples out-of-window points).
   - Evidence: `ecosystem/delinea/src/engine/mod.rs`, `ecosystem/delinea/src/engine/tests.rs` (`axis_pointer_tooltip_respects_y_empty_mask_under_x_weakfilter_for_scatter_series`)
 - AxisPointer/tooltip sampling respects `FilterMode::Empty` masks even when the underlying row selection is non-empty.
-  - Evidence: `ecosystem/delinea/src/engine/tests.rs` (`axis_pointer_tooltip_respects_y_empty_mask_for_scatter_series`, `axis_pointer_tooltip_respects_y_empty_mask_under_x_weakfilter_for_scatter_series`)
+  - Evidence: `ecosystem/delinea/src/engine/tests.rs` (`axis_pointer_tooltip_respects_y_empty_mask_for_scatter_series`, `axis_pointer_tooltip_respects_y_empty_mask_under_x_weakfilter_for_scatter_series`, `axis_pointer_tooltip_respects_x_empty_mask_when_marks_are_empty_but_selection_is_not`)
 - Y dataZoom is mapping-only in v1 (no row filtering) (ADR 1136).
 - 2D zoom is expressed as a paired window write (`Action::SetViewWindow2DFromZoom`) without introducing
   sparse selections (ADR 1136).
