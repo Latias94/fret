@@ -65,7 +65,7 @@ Status symbols:
 
 - `[x]` dataZoom X inside + slider UI (`fret-chart`) (ADR 1129 / ADR 1138)
   - v1 option adapter seeds initial windows via `dataZoom.startValue/endValue` and `dataZoom.start/end` (percent, mapped from raw data extents).
-  - v1 subset: when no `xAxisIndex`/`yAxisIndex` is specified, defaults to `xAxisIndex=0`.
+  - v1 subset: when no `xAxisIndex`/`yAxisIndex` is specified, defaults by `orient` (`horizontal` -> `xAxisIndex=0`, `vertical` -> `yAxisIndex=0`).
 - `[~]` dataZoom Y + 2D zoom semantics (v1 boundary + opt-in filtering) (ADR 1136 / ADR 1150)
 - `[x]` AxisPointer (axis-trigger + item-trigger) baseline (ADR 1133)
 - `[~]` Tooltip formatting contract (structured rows + hooks; missing rich text/HTML parity) (ADR 1148)

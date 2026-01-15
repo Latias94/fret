@@ -264,6 +264,8 @@ struct EchartsDataZoom {
     #[serde(default, rename = "type")]
     kind: Option<String>,
     #[serde(default)]
+    orient: Option<String>,
+    #[serde(default)]
     x_axis_index: Option<AxisIndexOrIndices>,
     #[serde(default)]
     y_axis_index: Option<AxisIndexOrIndices>,
@@ -1003,6 +1005,10 @@ fn translate_data_zoom_v1(
 
     for entry in zoom.to_vec() {
         let _kind = entry.kind.as_deref().unwrap_or("inside");
+        let orient = entry.orient.as_deref().unwrap_or("horizontal");
+        if !matches!(orient, "horizontal" | "vertical") {
+            return Err(EchartsError::Unsupported("dataZoom.orient"));
+        }
 
         let filter_mode = match entry.filter_mode.as_deref().unwrap_or("filter") {
             "filter" => FilterMode::Filter,
@@ -1042,10 +1048,24 @@ fn translate_data_zoom_v1(
         // v1 subset: if no axis is specified, default to the first X axis (ECharts auto-targets
         // a parallel axis by orient; see DataZoomModel._fillAutoTargetAxisByOrient).
         let default_x_axis_index = AxisIndexOrIndices::One(0);
+        let default_y_axis_index = AxisIndexOrIndices::One(0);
         let x_axis_index = if entry.x_axis_index.is_none() && entry.y_axis_index.is_none() {
-            Some(&default_x_axis_index)
+            match orient {
+                "horizontal" => Some(&default_x_axis_index),
+                "vertical" => None,
+                _ => None,
+            }
         } else {
             entry.x_axis_index.as_ref()
+        };
+        let y_axis_index = if entry.x_axis_index.is_none() && entry.y_axis_index.is_none() {
+            match orient {
+                "vertical" => Some(&default_y_axis_index),
+                "horizontal" => None,
+                _ => None,
+            }
+        } else {
+            entry.y_axis_index.as_ref()
         };
 
         if let Some(indices) = x_axis_index {
@@ -1110,7 +1130,7 @@ fn translate_data_zoom_v1(
             }
         }
 
-        if let Some(indices) = entry.y_axis_index.as_ref() {
+        if let Some(indices) = y_axis_index {
             for axis_index in indices.to_vec() {
                 if y_axes.get(axis_index).is_none() {
                     return Err(EchartsError::Invalid("dataZoom.yAxisIndex out of range"));
@@ -2175,6 +2195,34 @@ mod tests {
                     if (w.min - 1.0).abs() < 1e-9 && (w.max - 3.0).abs() < 1e-9
             )),
             "expected SetDataWindowX action"
+        );
+    }
+
+    #[test]
+    fn translate_data_zoom_defaults_to_first_y_axis_when_orient_is_vertical() {
+        let json = r#"
+        {
+          "xAxis": { "type": "value" },
+          "yAxis": { "type": "value" },
+          "dataZoom": [
+            { "type": "slider", "orient": "vertical", "filterMode": "filter", "startValue": 10, "endValue": 30 }
+          ],
+          "series": [
+            { "type": "scatter", "data": [[0, 0], [1, 10], [2, 20], [3, 30], [4, 40]] }
+          ]
+        }
+        "#;
+
+        let translated = translate_json_str(json).expect("translate");
+        assert_eq!(translated.spec.data_zoom_x.len(), 0);
+        assert_eq!(translated.spec.data_zoom_y.len(), 1);
+        assert!(
+            translated.actions.iter().any(|a| matches!(
+                a,
+                Action::SetDataWindowY { window: Some(w), .. }
+                    if (w.min - 10.0).abs() < 1e-9 && (w.max - 30.0).abs() < 1e-9
+            )),
+            "expected SetDataWindowY action"
         );
     }
 
