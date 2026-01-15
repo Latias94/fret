@@ -31,6 +31,14 @@ pub enum SplitSide {
     Second,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SplitMode {
+    /// Create a new pane without cloning any tab state.
+    Empty,
+    /// Clone the active tab (if any) into the new pane.
+    CloneActiveTab,
+}
+
 impl WorkspaceWindowLayout {
     pub fn new(id: impl Into<Arc<str>>, root_pane_id: impl Into<Arc<str>>) -> Self {
         let root_pane_id: Arc<str> = root_pane_id.into();
@@ -83,6 +91,54 @@ impl WorkspaceWindowLayout {
             self.active_pane = Some(new_pane_id);
         }
         ok
+    }
+
+    pub fn split_active_pane_auto(
+        &mut self,
+        axis: Axis,
+        side: SplitSide,
+        fraction: f32,
+        mode: SplitMode,
+    ) -> bool {
+        if self.active_pane.is_none() {
+            self.active_pane = self.pane_tree.first_leaf_id().cloned();
+        }
+
+        let Some(active) = self.active_pane.clone() else {
+            return false;
+        };
+
+        let active_tab = self
+            .pane_tree
+            .find_pane(active.as_ref())
+            .and_then(|p| p.tabs.active().cloned());
+
+        let new_pane_id = self.generate_next_pane_id();
+        let ok = self.split_active_pane(axis, side, fraction, new_pane_id.clone());
+        if !ok {
+            return false;
+        }
+
+        if mode == SplitMode::CloneActiveTab {
+            if let Some(tab) = active_tab {
+                if let Some(pane) = self.pane_tree.find_pane_mut(new_pane_id.as_ref()) {
+                    pane.tabs.open_and_activate(tab);
+                }
+            }
+        }
+
+        true
+    }
+
+    fn generate_next_pane_id(&self) -> Arc<str> {
+        let prefix = format!("{}.pane.", self.id);
+        for i in 1u32.. {
+            let candidate = format!("{prefix}{i}");
+            if self.pane_tree.find_pane(&candidate).is_none() {
+                return Arc::<str>::from(candidate);
+            }
+        }
+        unreachable!("u32 pane id counter exhausted")
     }
 
     pub fn focus_next_pane(&mut self) -> bool {
@@ -228,6 +284,38 @@ impl WorkspaceWindowLayout {
             }
             crate::commands::CMD_WORKSPACE_PANE_RESIZE_DOWN => {
                 return self.resize_active_pane(Axis::Vertical, -DEFAULT_PANE_RESIZE_STEP_FRACTION);
+            }
+            crate::commands::CMD_WORKSPACE_PANE_SPLIT_RIGHT => {
+                return self.split_active_pane_auto(
+                    Axis::Horizontal,
+                    SplitSide::Second,
+                    0.5,
+                    SplitMode::CloneActiveTab,
+                );
+            }
+            crate::commands::CMD_WORKSPACE_PANE_SPLIT_LEFT => {
+                return self.split_active_pane_auto(
+                    Axis::Horizontal,
+                    SplitSide::First,
+                    0.5,
+                    SplitMode::CloneActiveTab,
+                );
+            }
+            crate::commands::CMD_WORKSPACE_PANE_SPLIT_UP => {
+                return self.split_active_pane_auto(
+                    Axis::Vertical,
+                    SplitSide::First,
+                    0.5,
+                    SplitMode::CloneActiveTab,
+                );
+            }
+            crate::commands::CMD_WORKSPACE_PANE_SPLIT_DOWN => {
+                return self.split_active_pane_auto(
+                    Axis::Vertical,
+                    SplitSide::Second,
+                    0.5,
+                    SplitMode::CloneActiveTab,
+                );
             }
             _ => {}
         }
@@ -815,5 +903,50 @@ mod tests {
             panic!("expected nested split");
         };
         assert!((*fraction - 0.6).abs() < 1e-6);
+    }
+
+    #[test]
+    fn split_pane_allocates_id_and_clones_active_tab() {
+        let mut window = WorkspaceWindowLayout::new("w", "p1");
+        window.active_pane = Some(Arc::<str>::from("p1"));
+        window
+            .pane_tree
+            .find_pane_mut("p1")
+            .unwrap()
+            .tabs
+            .open_and_activate(Arc::<str>::from("a"));
+
+        assert!(window.apply_command(&CommandId::from(
+            crate::commands::CMD_WORKSPACE_PANE_SPLIT_RIGHT
+        )));
+        assert_eq!(window.active_pane_id().unwrap().as_ref(), "w.pane.1");
+
+        let new_pane = window.pane_tree.find_pane("w.pane.1").unwrap();
+        assert_eq!(new_pane.tabs.active().unwrap().as_ref(), "a");
+
+        let old_pane = window.pane_tree.find_pane("p1").unwrap();
+        assert!(old_pane.tabs.tabs().iter().any(|t| t.as_ref() == "a"));
+    }
+
+    #[test]
+    fn split_pane_auto_id_increments() {
+        let mut window = WorkspaceWindowLayout::new("w", "p1");
+        window.active_pane = Some(Arc::<str>::from("p1"));
+        window
+            .pane_tree
+            .find_pane_mut("p1")
+            .unwrap()
+            .tabs
+            .open_and_activate(Arc::<str>::from("a"));
+
+        assert!(window.apply_command(&CommandId::from(
+            crate::commands::CMD_WORKSPACE_PANE_SPLIT_DOWN
+        )));
+        assert_eq!(window.active_pane_id().unwrap().as_ref(), "w.pane.1");
+
+        assert!(window.apply_command(&CommandId::from(
+            crate::commands::CMD_WORKSPACE_PANE_SPLIT_DOWN
+        )));
+        assert_eq!(window.active_pane_id().unwrap().as_ref(), "w.pane.2");
     }
 }

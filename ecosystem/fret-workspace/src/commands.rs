@@ -19,6 +19,11 @@ pub const CMD_WORKSPACE_PANE_RESIZE_LEFT: &str = "workspace.pane.resize.left";
 pub const CMD_WORKSPACE_PANE_RESIZE_UP: &str = "workspace.pane.resize.up";
 pub const CMD_WORKSPACE_PANE_RESIZE_DOWN: &str = "workspace.pane.resize.down";
 
+pub const CMD_WORKSPACE_PANE_SPLIT_RIGHT: &str = "workspace.pane.split.right";
+pub const CMD_WORKSPACE_PANE_SPLIT_LEFT: &str = "workspace.pane.split.left";
+pub const CMD_WORKSPACE_PANE_SPLIT_UP: &str = "workspace.pane.split.up";
+pub const CMD_WORKSPACE_PANE_SPLIT_DOWN: &str = "workspace.pane.split.down";
+
 /// Prefix for "activate a specific tab" commands.
 ///
 /// This is intentionally a prefix-based command family so apps can implement their own tab models
@@ -261,5 +266,33 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
         CommandMeta::new("Resize Pane Down")
             .with_category("Workspace")
             .with_keywords(["resize", "pane", "down", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_SPLIT_RIGHT),
+        CommandMeta::new("Split Pane Right")
+            .with_category("Workspace")
+            .with_keywords(["split", "pane", "right", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_SPLIT_LEFT),
+        CommandMeta::new("Split Pane Left")
+            .with_category("Workspace")
+            .with_keywords(["split", "pane", "left", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_SPLIT_UP),
+        CommandMeta::new("Split Pane Up")
+            .with_category("Workspace")
+            .with_keywords(["split", "pane", "up", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_SPLIT_DOWN),
+        CommandMeta::new("Split Pane Down")
+            .with_category("Workspace")
+            .with_keywords(["split", "pane", "down", "workspace"]),
     );
 }
