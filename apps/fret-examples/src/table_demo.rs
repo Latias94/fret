@@ -519,6 +519,7 @@ impl WinitAppDriver for TableDemoDriver {
                                                     &scroll,
                                                     1,
                                                     &|row: &DemoRow, _i| RowKey(row.id as u64),
+                                                    None,
                                                     fret_ui_kit::declarative::table::TableViewProps {
                                                         overscan: 8,
                                                         column_resize_mode:

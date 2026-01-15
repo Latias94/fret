@@ -1,5 +1,5 @@
-use fret_core::{Color, Corners, CursorIcon, Edges, KeyCode, Modifiers, Px, SemanticsRole};
-use fret_runtime::{CommandId, Model};
+use fret_core::{Color, Corners, CursorIcon, Edges, KeyCode, Px, SemanticsRole};
+use fret_runtime::{CommandId, Effect, Model, TimerToken};
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, Overflow, PointerRegionProps, PressableA11y,
     PressableProps, ScrollAxis, ScrollProps, SemanticsProps,
@@ -13,6 +13,7 @@ use fret_core::time::Instant;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::sync::Arc;
+use std::time::Duration;
 
 use crate::declarative::action_hooks::ActionHooksExt;
 use crate::declarative::collection_semantics::CollectionSemanticsExt as _;
@@ -28,6 +29,9 @@ use crate::headless::table::{
     is_row_expanded, is_row_selected, order_column_refs_for_grouping, order_columns,
     pagination_bounds, sort_grouped_row_indices_in_place, split_pinned_columns,
 };
+use crate::headless::typeahead::{TypeaheadBuffer, match_prefix_arc_str};
+
+const TABLE_TYPEAHEAD_TIMEOUT: Duration = Duration::from_millis(750);
 
 fn resolve_table_colors(theme: &Theme) -> (Color, Color, Color, Color, Color) {
     let table_bg = theme
@@ -231,6 +235,41 @@ mod tests {
         assert_eq!(state.pagination.page_index, 0);
         assert!(state.sorting.is_empty());
     }
+
+    #[test]
+    fn collect_leaf_keys_skips_group_rows() {
+        let meta = vec![
+            TableNavRowMeta {
+                row_key: RowKey(1),
+                kind: TableNavRowKind::Leaf,
+                label: Arc::from("Alpha"),
+            },
+            TableNavRowMeta {
+                row_key: RowKey(2),
+                kind: TableNavRowKind::Group,
+                label: Arc::from("Group"),
+            },
+            TableNavRowMeta {
+                row_key: RowKey(3),
+                kind: TableNavRowKind::Leaf,
+                label: Arc::from("Beta"),
+            },
+        ];
+
+        assert_eq!(table_collect_leaf_keys(&meta), vec![RowKey(1), RowKey(3)]);
+        assert_eq!(
+            table_collect_leaf_keys_in_range(&meta, 0, 2),
+            vec![RowKey(1), RowKey(3)]
+        );
+        assert_eq!(
+            table_collect_leaf_keys_in_range(&meta, 1, 1),
+            Vec::<RowKey>::new()
+        );
+        assert_eq!(
+            table_collect_leaf_keys_in_range(&meta, 99, 100),
+            vec![RowKey(3)]
+        );
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -335,18 +374,63 @@ enum TableNavRowKind {
     Group,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct TableNavRowMeta {
     row_key: RowKey,
     kind: TableNavRowKind,
+    label: Arc<str>,
 }
 
-#[derive(Default)]
+fn table_collect_leaf_keys(meta: &[TableNavRowMeta]) -> Vec<RowKey> {
+    meta.iter()
+        .filter(|m| m.kind == TableNavRowKind::Leaf)
+        .map(|m| m.row_key)
+        .collect()
+}
+
+fn table_collect_leaf_keys_in_range(meta: &[TableNavRowMeta], a: usize, b: usize) -> Vec<RowKey> {
+    if meta.is_empty() {
+        return Vec::new();
+    }
+
+    let a = a.min(meta.len().saturating_sub(1));
+    let b = b.min(meta.len().saturating_sub(1));
+    let (a, b) = if a <= b { (a, b) } else { (b, a) };
+
+    meta.iter()
+        .enumerate()
+        .filter_map(|(idx, m)| {
+            if idx >= a && idx <= b && m.kind == TableNavRowKind::Leaf {
+                Some(m.row_key)
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
 struct TableKeyboardNavState {
     active_index: Rc<Cell<Option<usize>>>,
+    anchor_index: Rc<Cell<Option<usize>>>,
     row_meta: Rc<RefCell<Arc<[TableNavRowMeta]>>>,
     active_element: Rc<Cell<Option<fret_ui::GlobalElementId>>>,
     active_command: Rc<RefCell<Option<CommandId>>>,
+    typeahead: Rc<RefCell<TypeaheadBuffer>>,
+    typeahead_timer: Rc<Cell<Option<TimerToken>>>,
+}
+
+impl Default for TableKeyboardNavState {
+    fn default() -> Self {
+        Self {
+            active_index: Rc::default(),
+            anchor_index: Rc::default(),
+            row_meta: Rc::default(),
+            active_element: Rc::default(),
+            active_command: Rc::default(),
+            typeahead: Rc::new(RefCell::new(TypeaheadBuffer::new(0))),
+            typeahead_timer: Rc::default(),
+        }
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -358,6 +442,7 @@ pub fn table_virtualized<H: UiHost, TData>(
     vertical_scroll: &VirtualListScrollHandle,
     items_revision: u64,
     row_key_at: &dyn Fn(&TData, usize) -> RowKey,
+    typeahead_label_at: Option<Arc<dyn Fn(&TData, usize) -> Arc<str> + Send + Sync>>,
     props: TableViewProps,
     on_row_activate: impl Fn(&Row<'_, TData>) -> Option<CommandId>,
     mut render_header_cell: impl FnMut(
@@ -865,27 +950,56 @@ pub fn table_virtualized<H: UiHost, TData>(
 
     let rendered_rows = Cell::new(0usize);
 
-    let (active_index, row_meta, active_element, active_command) =
-        cx.with_state(TableKeyboardNavState::default, |st| {
-            (
-                st.active_index.clone(),
-                st.row_meta.clone(),
-                st.active_element.clone(),
-                st.active_command.clone(),
-            )
-        });
+    let (
+        active_index,
+        anchor_index,
+        row_meta,
+        active_element,
+        active_command,
+        typeahead,
+        typeahead_timer,
+    ) = cx.with_state(TableKeyboardNavState::default, |st| {
+        (
+            st.active_index.clone(),
+            st.anchor_index.clone(),
+            st.row_meta.clone(),
+            st.active_element.clone(),
+            st.active_command.clone(),
+            st.typeahead.clone(),
+            st.typeahead_timer.clone(),
+        )
+    });
 
     {
+        let typeahead_label_at = typeahead_label_at.clone();
+        let typeahead_facet_str_fn = visible_columns.iter().find_map(|c| c.facet_str_fn.clone());
         let next_meta: Arc<[TableNavRowMeta]> = page_display_rows
             .iter()
             .map(|row| match row {
-                DisplayRow::Leaf { row_key, .. } => TableNavRowMeta {
-                    row_key: *row_key,
-                    kind: TableNavRowKind::Leaf,
-                },
-                DisplayRow::Group { row_key, .. } => TableNavRowMeta {
+                DisplayRow::Leaf {
+                    data_index,
+                    row_key,
+                    ..
+                } => {
+                    let label = typeahead_label_at
+                        .as_ref()
+                        .map(|f| f(&data[*data_index], *data_index))
+                        .or_else(|| {
+                            typeahead_facet_str_fn
+                                .as_ref()
+                                .map(|f| Arc::<str>::from(f(&data[*data_index]).to_string()))
+                        })
+                        .unwrap_or_else(|| Arc::from(""));
+                    TableNavRowMeta {
+                        row_key: *row_key,
+                        kind: TableNavRowKind::Leaf,
+                        label,
+                    }
+                }
+                DisplayRow::Group { row_key, label, .. } => TableNavRowMeta {
                     row_key: *row_key,
                     kind: TableNavRowKind::Group,
+                    label: label.clone(),
                 },
             })
             .collect::<Vec<_>>()
@@ -911,18 +1025,17 @@ pub fn table_virtualized<H: UiHost, TData>(
 
     let key_handler: fret_ui::action::OnKeyDown = {
         let active_index = active_index.clone();
+        let anchor_index = anchor_index.clone();
         let row_meta = row_meta.clone();
         let active_command = active_command.clone();
         let vertical_scroll = vertical_scroll.clone();
         let state = state.clone();
         let enable_row_selection = props.enable_row_selection;
         let single_row_selection = props.single_row_selection;
+        let typeahead = typeahead.clone();
+        let typeahead_timer = typeahead_timer.clone();
 
         Arc::new(move |host, action_cx, down| {
-            if down.modifiers != Modifiers::default() {
-                return false;
-            }
-
             let meta = row_meta.borrow().clone();
             let len = meta.len();
             if len == 0 {
@@ -934,14 +1047,68 @@ pub fn table_virtualized<H: UiHost, TData>(
             }
 
             let current = active_index.get().unwrap_or(0).min(len.saturating_sub(1));
+            let has_disallowed_mods = down.modifiers.alt || down.modifiers.alt_gr;
+            if has_disallowed_mods {
+                return false;
+            }
+            let primary = (down.modifiers.ctrl || down.modifiers.meta) && !down.modifiers.alt_gr;
+
+            let cancel_typeahead_timer = |host: &mut dyn fret_ui::action::UiFocusActionHost| {
+                if let Some(token) = typeahead_timer.get() {
+                    host.push_effect(Effect::CancelTimer { token });
+                    typeahead_timer.set(None);
+                }
+            };
+            let clear_typeahead = |host: &mut dyn fret_ui::action::UiFocusActionHost| {
+                typeahead.borrow_mut().clear();
+                cancel_typeahead_timer(host);
+            };
 
             match down.key {
+                KeyCode::KeyA if primary && enable_row_selection && !single_row_selection => {
+                    let leaf_keys = table_collect_leaf_keys(&meta);
+                    if leaf_keys.is_empty() {
+                        return false;
+                    }
+
+                    let all_selected = host
+                        .models_mut()
+                        .read(&state, |st| {
+                            leaf_keys.iter().all(|k| st.row_selection.contains(k))
+                        })
+                        .ok()
+                        .unwrap_or(false);
+
+                    let _ = host.models_mut().update(&state, move |st| {
+                        if down.modifiers.shift {
+                            st.row_selection.clear();
+                            return;
+                        }
+
+                        if all_selected {
+                            for k in &leaf_keys {
+                                st.row_selection.remove(k);
+                            }
+                        } else {
+                            for k in &leaf_keys {
+                                st.row_selection.insert(*k);
+                            }
+                        }
+                    });
+                    clear_typeahead(host);
+                    host.request_redraw(action_cx.window);
+                    true
+                }
                 KeyCode::ArrowDown
                 | KeyCode::ArrowUp
                 | KeyCode::Home
                 | KeyCode::End
                 | KeyCode::PageDown
                 | KeyCode::PageUp => {
+                    if primary {
+                        return false;
+                    }
+
                     let page = 10usize;
                     let next = match down.key {
                         KeyCode::ArrowDown => (current + 1).min(len.saturating_sub(1)),
@@ -957,12 +1124,50 @@ pub fn table_virtualized<H: UiHost, TData>(
                         active_index.set(Some(next));
                         *active_command.borrow_mut() = None;
                         vertical_scroll.scroll_to_item(next, ScrollStrategy::Nearest);
+
+                        if down.modifiers.shift {
+                            if enable_row_selection
+                                && let Some(m) = meta.get(next)
+                                && m.kind == TableNavRowKind::Leaf
+                            {
+                                let anchor = anchor_index.get().unwrap_or(current);
+                                if anchor_index.get().is_none() {
+                                    anchor_index.set(Some(anchor));
+                                }
+                                let (a, b) = if anchor <= next {
+                                    (anchor, next)
+                                } else {
+                                    (next, anchor)
+                                };
+
+                                let leaf_range: Vec<RowKey> = if single_row_selection {
+                                    vec![m.row_key]
+                                } else {
+                                    table_collect_leaf_keys_in_range(&meta, a, b)
+                                };
+
+                                if !leaf_range.is_empty() {
+                                    let _ = host.models_mut().update(&state, move |st| {
+                                        st.row_selection.clear();
+                                        st.row_selection.extend(leaf_range.iter().copied());
+                                    });
+                                }
+                            }
+                        } else {
+                            anchor_index.set(Some(next));
+                        }
+
+                        clear_typeahead(host);
                         host.request_redraw(action_cx.window);
                     }
                     true
                 }
                 KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space => {
-                    let Some(meta) = meta.get(current).copied() else {
+                    if primary {
+                        return false;
+                    }
+
+                    let Some(meta) = meta.get(current).cloned() else {
                         return false;
                     };
 
@@ -987,6 +1192,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                                     }
                                 }
                             });
+                            clear_typeahead(host);
                             host.request_redraw(action_cx.window);
                             true
                         }
@@ -1007,12 +1213,57 @@ pub fn table_virtualized<H: UiHost, TData>(
                                     st.row_selection.insert(row_key);
                                 }
                             });
+                            anchor_index.set(Some(current));
+                            clear_typeahead(host);
                             host.request_redraw(action_cx.window);
                             true
                         }
                     }
                 }
-                _ => false,
+                _ => {
+                    if primary {
+                        return false;
+                    }
+                    if down.repeat {
+                        return false;
+                    }
+                    let Some(input) = fret_core::keycode_to_ascii_lowercase(down.key) else {
+                        return false;
+                    };
+
+                    typeahead.borrow_mut().push_char(input, 0);
+                    let typeahead_buf = typeahead.borrow();
+                    let Some(query) = typeahead_buf.query(0) else {
+                        return false;
+                    };
+
+                    let labels: Vec<Arc<str>> = meta.iter().map(|m| m.label.clone()).collect();
+                    let disabled: Vec<bool> =
+                        meta.iter().map(|m| m.label.trim().is_empty()).collect();
+
+                    let next = match_prefix_arc_str(&labels, &disabled, query, Some(current), true);
+                    if let Some(next) = next
+                        && next != current
+                    {
+                        active_index.set(Some(next));
+                        anchor_index.set(Some(next));
+                        *active_command.borrow_mut() = None;
+                        vertical_scroll.scroll_to_item(next, ScrollStrategy::Nearest);
+                    }
+
+                    cancel_typeahead_timer(host);
+                    let token = host.next_timer_token();
+                    typeahead_timer.set(Some(token));
+                    host.push_effect(Effect::SetTimer {
+                        window: Some(action_cx.window),
+                        token,
+                        after: TABLE_TYPEAHEAD_TIMEOUT,
+                        repeat: None,
+                    });
+
+                    host.request_redraw(action_cx.window);
+                    true
+                }
             }
         })
     };
@@ -1028,6 +1279,22 @@ pub fn table_virtualized<H: UiHost, TData>(
         },
         |cx, list_id| {
             cx.key_on_key_down_for(list_id, key_handler.clone());
+            {
+                let typeahead = typeahead.clone();
+                let typeahead_timer = typeahead_timer.clone();
+                cx.timer_on_timer_for(
+                    list_id,
+                    Arc::new(move |host, action_cx, token| {
+                        if typeahead_timer.get() != Some(token) {
+                            return false;
+                        }
+                        typeahead_timer.set(None);
+                        typeahead.borrow_mut().clear();
+                        host.request_redraw(action_cx.window);
+                        true
+                    }),
+                );
+            }
             let is_focused = cx.is_focused_element(list_id);
             vec![cx.container(
                 ContainerProps {
@@ -1587,8 +1854,11 @@ pub fn table_virtualized<H: UiHost, TData>(
 
                                                         let enabled = true;
                                                         let active_index = active_index.clone();
+                                                        let anchor_index = anchor_index.clone();
                                                         let active_element = active_element.clone();
                                                         let active_command = active_command.clone();
+                                                        let typeahead = typeahead.clone();
+                                                        let typeahead_timer = typeahead_timer.clone();
                                                         let focus_target = list_id;
 
                                                         return cx.pressable(
@@ -1608,12 +1878,26 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                             |cx, st| {
                                                                 let active_index_for_pointer =
                                                                     active_index.clone();
+                                                                let anchor_index_for_pointer =
+                                                                    anchor_index.clone();
                                                                 let active_command_for_pointer =
                                                                     active_command.clone();
+                                                                let typeahead_for_pointer =
+                                                                    typeahead.clone();
+                                                                let typeahead_timer_for_pointer =
+                                                                    typeahead_timer.clone();
                                                                 cx.pressable_on_pointer_down(
                                                                     Arc::new(move |host, action_cx, _down| {
                                                                         host.request_focus(focus_target);
                                                                         active_index_for_pointer.set(Some(i));
+                                                                        anchor_index_for_pointer.set(Some(i));
+                                                                        typeahead_for_pointer.borrow_mut().clear();
+                                                                        if let Some(token) =
+                                                                            typeahead_timer_for_pointer.get()
+                                                                        {
+                                                                            host.push_effect(Effect::CancelTimer { token });
+                                                                            typeahead_timer_for_pointer.set(None);
+                                                                        }
                                                                         *active_command_for_pointer.borrow_mut() = None;
                                                                         host.request_redraw(action_cx.window);
                                                                         PressablePointerDownResult::Continue
@@ -2118,8 +2402,11 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                 is_row_selected(data_row.key, &state_value.row_selection);
 
                                             let active_index = active_index.clone();
+                                            let anchor_index = anchor_index.clone();
                                             let active_element = active_element.clone();
                                             let active_command = active_command.clone();
+                                            let typeahead = typeahead.clone();
+                                            let typeahead_timer = typeahead_timer.clone();
                                             let focus_target = list_id;
 
                                             cx.pressable(
@@ -2136,10 +2423,22 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                 },
                                                 |cx, st| {
                                                     let active_index_for_pointer = active_index.clone();
+                                                    let anchor_index_for_pointer = anchor_index.clone();
+                                                    let typeahead_for_pointer = typeahead.clone();
+                                                    let typeahead_timer_for_pointer =
+                                                        typeahead_timer.clone();
                                                     cx.pressable_on_pointer_down(Arc::new(
                                                         move |host, action_cx, _down| {
                                                             host.request_focus(focus_target);
                                                             active_index_for_pointer.set(Some(i));
+                                                            anchor_index_for_pointer.set(Some(i));
+                                                            typeahead_for_pointer.borrow_mut().clear();
+                                                            if let Some(token) =
+                                                                typeahead_timer_for_pointer.get()
+                                                            {
+                                                                host.push_effect(Effect::CancelTimer { token });
+                                                                typeahead_timer_for_pointer.set(None);
+                                                            }
                                                             host.request_redraw(action_cx.window);
                                                             PressablePointerDownResult::Continue
                                                         },
