@@ -44,6 +44,9 @@ fn init_window(app: &mut App, _window: AppWindowId) -> EchartsDemoState {
     for (dataset_id, table) in translated.datasets {
         engine.datasets_mut().insert(dataset_id, table);
     }
+    for action in translated.actions {
+        engine.apply_action(action);
+    }
 
     let engine = app.models_mut().insert(engine);
     EchartsDemoState {

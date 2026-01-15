@@ -119,15 +119,16 @@ impl WinitAppDriver for EchartsMultiGridDemoDriver {
 
             let translated = fret_chart::echarts::translate_json_str(option_json)
                 .expect("valid v1 ECharts option JSON");
+            let fret_chart::echarts::TranslatedChart {
+                spec,
+                datasets,
+                actions: _actions,
+            } = translated;
 
             let layout = UniformGrid::new(1).with_gap(Px(8.0));
-            let nodes = create_multi_grid_chart_canvas_nodes(
-                &mut state.ui,
-                translated.spec,
-                &translated.datasets,
-                layout,
-            )
-            .expect("translated chart spec should be valid");
+            let nodes =
+                create_multi_grid_chart_canvas_nodes(&mut state.ui, spec, &datasets, layout)
+                    .expect("translated chart spec should be valid");
 
             state.ui.set_root(nodes.root);
             state
