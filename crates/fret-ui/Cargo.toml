@@ -13,6 +13,7 @@ documentation.workspace = true
 default = ["layout-engine-v2"]
 layout-engine-v2 = []
 compat-policy-shortcuts = []
+compat-retained-widgets = []
 unstable-retained-bridge = []
 
 [dependencies]

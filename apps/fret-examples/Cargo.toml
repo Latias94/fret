@@ -37,7 +37,7 @@ fret-launch = { path = "../../crates/fret-launch" }
 fret-render = { path = "../../crates/fret-render" }
 fret-app = { path = "../../crates/fret-app" }
 fret-ui-app = { path = "../../crates/fret-ui-app" }
-fret-ui = { path = "../../crates/fret-ui" }
+fret-ui = { path = "../../crates/fret-ui", features = ["compat-retained-widgets"] }
 fret-markdown = { path = "../../ecosystem/fret-markdown" }
 fret-node = { path = "../../ecosystem/fret-node" }
 fret-editor = { path = "../fret-editor" }

@@ -18,7 +18,6 @@ use fret_core::{
 };
 use fret_runtime::DRAG_KIND_DOCK_PANEL;
 use fret_runtime::PlatformCapabilities;
-use fret_ui::InternalDragRouteService;
 use fret_ui::UiTree;
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 use fret_ui::retained_bridge::resizable_panel_group as resizable;
@@ -1607,14 +1606,12 @@ fn dock_space_installs_internal_drag_route_anchor() {
     let mut scene = Scene::default();
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
-    let route = app
-        .global::<InternalDragRouteService>()
-        .and_then(|svc| svc.route(window, DRAG_KIND_DOCK_PANEL));
+    let route = fret_ui::internal_drag::route(&app, window, DRAG_KIND_DOCK_PANEL);
 
     assert_eq!(
         route,
         Some(dock_space),
-        "expected DockSpace to install an InternalDragRouteService anchor during paint"
+        "expected DockSpace to install an internal drag route anchor during paint"
     );
 }
 

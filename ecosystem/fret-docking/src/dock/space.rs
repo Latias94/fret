@@ -746,10 +746,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let mut mark_drag_tear_off_requested = false;
 
         {
-            cx.app
-                .with_global_mut(InternalDragRouteService::default, |routes, _app| {
-                    routes.set(self.window, fret_runtime::DRAG_KIND_DOCK_PANEL, cx.node);
-                });
+            fret_ui::internal_drag::set_route(
+                cx.app,
+                self.window,
+                fret_runtime::DRAG_KIND_DOCK_PANEL,
+                cx.node,
+            );
             let Some(dock) = cx.app.global_mut::<DockManager>() else {
                 return;
             };
@@ -1984,10 +1986,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
         self.last_bounds = cx.bounds;
         let hidden = hidden_bounds(Size::new(Px(0.0), Px(0.0)));
 
-        cx.app
-            .with_global_mut(InternalDragRouteService::default, |routes, _app| {
-                routes.set(self.window, fret_runtime::DRAG_KIND_DOCK_PANEL, cx.node);
-            });
+        fret_ui::internal_drag::set_route(
+            cx.app,
+            self.window,
+            fret_runtime::DRAG_KIND_DOCK_PANEL,
+            cx.node,
+        );
         if let Some(dock) = cx.app.global_mut::<DockManager>() {
             dock.register_dock_space_node(self.window, cx.node);
         }
@@ -2068,10 +2072,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
         // This must be refreshed during paint/layout, not only during event handling, because
         // cross-window drag routing needs a reliable per-window anchor even when hit-testing is
         // over unrelated UI (ADR 0072) and even when no events have fired this frame.
-        cx.app
-            .with_global_mut(InternalDragRouteService::default, |routes, _app| {
-                routes.set(self.window, fret_runtime::DRAG_KIND_DOCK_PANEL, cx.node);
-            });
+        fret_ui::internal_drag::set_route(
+            cx.app,
+            self.window,
+            fret_runtime::DRAG_KIND_DOCK_PANEL,
+            cx.node,
+        );
         let overlay_hooks = cx
             .app
             .global::<DockViewportOverlayHooksService>()

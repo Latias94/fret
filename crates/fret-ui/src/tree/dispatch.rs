@@ -377,18 +377,20 @@ impl<H: UiHost> UiTree<H> {
         // ADR 0012: when a text input is focused, reserve common IME/navigation keys for the
         // text/IME path first, and only fall back to shortcut matching if the widget doesn't
         // consume the event.
-        let defer_keydown_shortcuts_until_after_dispatch = !self.replaying_pending_shortcut
-            && self.focus.is_some()
-            && match event {
-                Event::KeyDown { key, modifiers, .. } => {
-                    Self::should_defer_keydown_shortcut_matching_to_text_input(
-                        *key,
-                        *modifiers,
-                        focus_is_text_input,
-                    )
-                }
-                _ => false,
-            };
+        let defer_keydown_shortcuts_until_after_dispatch =
+            self.pending_shortcut.keystrokes.is_empty()
+                && !self.replaying_pending_shortcut
+                && self.focus.is_some()
+                && match event {
+                    Event::KeyDown { key, modifiers, .. } => {
+                        Self::should_defer_keydown_shortcut_matching_to_text_input(
+                            *key,
+                            *modifiers,
+                            focus_is_text_input,
+                        )
+                    }
+                    _ => false,
+                };
 
         if let Some(window) = self.window {
             let changed = crate::focus_visible::update_for_event(app, window, event);
@@ -563,8 +565,7 @@ impl<H: UiHost> UiTree<H> {
             if !drag.cross_window_hover {
                 return None;
             }
-            let routes = app.global::<crate::drag_route::InternalDragRouteService>()?;
-            let target = routes.route(window, drag.kind)?;
+            let target = crate::internal_drag::route(app, window, drag.kind)?;
             self.node_in_any_layer(target, &active_layers)
                 .then_some(target)
         })();

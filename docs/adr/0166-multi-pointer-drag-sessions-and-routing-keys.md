@@ -18,7 +18,7 @@ Related:
 ## Context
 
 Fret already has an internal drag session concept (ADR 0041) and a runtime mechanism to route internal drag events,
-including a per-window internal-drag anchor override (`InternalDragRouteService`) used for docking tear-off.
+including a per-window internal-drag anchor override (`fret_ui::internal_drag`) used for docking tear-off.
 
 Today, the host-facing drag API is effectively “single active session”:
 
@@ -133,7 +133,7 @@ This preserves ADR 0041’s “drag-and-drop style events must follow the cursor
 3. Update `DragHost` to be pointer-keyed; provide a compatibility adapter that maps legacy single-session hosts to
    `PointerId(0)`.
 4. Update docking to use `DRAG_KIND_DOCK_PANEL`.
-5. Update `InternalDragRouteService` to use `DragKindId` keys.
+5. Ensure the internal-drag route table uses `DragKindId` keys.
 6. Update ecosystem DnD integrations (ADR 0164) to use pointer-keyed sessions.
 
 ## Open Questions
@@ -141,4 +141,3 @@ This preserves ADR 0041’s “drag-and-drop style events must follow the cursor
 - Do we want a built-in registry for `DragKindId -> name` in `fret-runtime`, or should it remain host/ecosystem-only?
 - Should `DragSessionId` be global monotonic across all pointers, or monotonic per pointer? (Global is recommended for
   easier tracing and debugging.)
-
