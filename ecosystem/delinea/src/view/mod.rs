@@ -208,7 +208,14 @@ impl ViewState {
                 .unwrap_or_default();
             let x_node = data_zoom_x_node(model, state, series.x_axis, x_axis_range);
             let x_filter_mode = x_node.filter_mode();
-            let x_policy = x_node.x_policy();
+            let mut x_policy = x_node.x_policy();
+            if model
+                .axes
+                .get(&series.x_axis)
+                .is_some_and(|a| matches!(a.scale, crate::scale::AxisScale::Category(_)))
+            {
+                x_policy.mapping_window = expand_category_bands_window(x_policy.mapping_window);
+            }
             let selection = RowSelection::Range(base_range);
 
             let y_filter_mode = model
@@ -248,6 +255,27 @@ impl ViewState {
     pub fn series_view(&self, series: SeriesId) -> Option<&SeriesView> {
         self.series.iter().find(|v| v.series == series)
     }
+}
+
+fn expand_category_bands_window(
+    window: Option<crate::engine::window::DataWindowX>,
+) -> Option<crate::engine::window::DataWindowX> {
+    window.map(|mut w| {
+        let min = w.min;
+        if min.is_finite() && is_near_integer(min) {
+            w.min -= 0.5;
+        }
+        let max = w.max;
+        if max.is_finite() && is_near_integer(max) {
+            w.max += 0.5;
+        }
+        w.clamp_non_degenerate();
+        w
+    })
+}
+
+fn is_near_integer(v: f64) -> bool {
+    (v - v.round()).abs() < 1e-9
 }
 
 fn dataset_store_signature(model: &ChartModel, datasets: &DatasetStore) -> u64 {

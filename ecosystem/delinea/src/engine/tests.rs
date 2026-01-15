@@ -3749,8 +3749,8 @@ fn category_x_window_updates_axis_window_and_rounds_axis_pointer_value() {
         .get(&x_axis)
         .copied()
         .unwrap_or_default();
-    assert!((window.min - 2.0).abs() < 1e-6);
-    assert!((window.max - 4.0).abs() < 1e-6);
+    assert!((window.min - 1.5).abs() < 1e-6);
+    assert!((window.max - 4.5).abs() < 1e-6);
 
     let indices = &engine.output().marks.arena.data_indices;
     assert!(!indices.is_empty(), "expected marks to contain indices");
@@ -12407,6 +12407,139 @@ fn axis_pointer_axis_trigger_emits_shadow_rect_for_category_trigger_axis() {
 }
 
 #[test]
+fn axis_pointer_shadow_rect_respects_category_band_edges_under_x_window() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let value_field = crate::ids::FieldId::new(1);
+    let category_field = crate::ids::FieldId::new(2);
+
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(200.0)),
+    );
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(viewport),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: value_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: category_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: crate::scale::AxisScale::Category(crate::scale::CategoryAxisScale {
+                    categories: vec!["A".into(), "B".into(), "C".into(), "D".into()],
+                }),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        data_zoom_y: vec![],
+        tooltip: None,
+        axis_pointer: Some(AxisPointerSpec {
+            enabled: true,
+            trigger: crate::spec::AxisPointerTrigger::Axis,
+            pointer_type: AxisPointerType::Shadow,
+            label: Default::default(),
+            snap: true,
+            trigger_distance_px: 0.0,
+            throttle_px: 0.0,
+        }),
+        visual_maps: vec![],
+        series: vec![SeriesSpec {
+            id: series_id,
+            name: None,
+            kind: SeriesKind::Bar,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: category_field,
+                y: value_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
+            bar_layout: Default::default(),
+            area_baseline: None,
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(vec![1.0, 2.0, 3.0, 0.5]));
+    table.push_column(Column::F64(vec![0.0, 1.0, 2.0, 3.0]));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x_axis,
+        window: Some(DataWindow { min: 1.0, max: 2.0 }),
+    });
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 32))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let trigger_window = engine
+        .output()
+        .axis_windows
+        .get(&x_axis)
+        .copied()
+        .unwrap_or_default();
+    assert!((trigger_window.min - 0.5).abs() < 1e-6);
+    assert!((trigger_window.max - 2.5).abs() < 1e-6);
+
+    engine.apply_action(Action::HoverAt {
+        point: Point::new(Px(75.0), Px(100.0)),
+    });
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(32_768, 0, 8))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let axis_pointer = engine.output().axis_pointer.as_ref().unwrap();
+    let shadow = axis_pointer.shadow_rect_px.expect("expected a shadow band");
+
+    let x0 = crate::engine::axis::x_px_at_data_in_rect(trigger_window, 0.5, viewport);
+    let x1 = crate::engine::axis::x_px_at_data_in_rect(trigger_window, 1.5, viewport);
+    let expected_left = x0.min(x1);
+    let expected_right = x0.max(x1);
+    assert!((shadow.origin.x.0 - expected_left).abs() < 1e-4);
+    assert!(((shadow.origin.x.0 + shadow.size.width.0) - expected_right).abs() < 1e-4);
+    assert_eq!(shadow.origin.y, viewport.origin.y);
+    assert_eq!(shadow.size.height, viewport.size.height);
+}
+
+#[test]
 fn scatter_emits_point_marks() {
     let dataset_id = crate::ids::DatasetId::new(1);
     let grid_id = crate::ids::GridId::new(1);
@@ -13780,8 +13913,8 @@ fn data_zoom_x_filter_mode_empty_masks_bar_marks_without_culling_row_selection()
         .get(&x_axis)
         .copied()
         .unwrap_or_default();
-    assert!((x_window.min - 5.0).abs() < 1e-6);
-    assert!((x_window.max - 9.0).abs() < 1e-6);
+    assert!((x_window.min - 4.5).abs() < 1e-6);
+    assert!((x_window.max - 9.5).abs() < 1e-6);
 
     let y_window = engine
         .output()

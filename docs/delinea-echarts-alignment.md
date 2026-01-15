@@ -146,7 +146,7 @@ single “at a glance” view of:
 
 - ECharts reference: category axis + dataZoom behavior (series sampling under ordinal transforms)
 - ADR(s): `docs/adr/1130-delinea-axis-scales-and-coordinate-mapping.md`, `docs/adr/1140-delinea-dataset-storage-and-indices.md`
-- Evidence: `ecosystem/delinea/src/engine/stages/ordinal_index.rs` (ordinal mapping), `ecosystem/delinea/src/engine/axis.rs` (ticks)
+- Evidence: `ecosystem/delinea/src/engine/stages/ordinal_index.rs` (ordinal mapping), `ecosystem/delinea/src/engine/axis.rs` (category bands), `ecosystem/delinea/src/view/mod.rs` (band-edge mapping window under zoom), `ecosystem/delinea/src/engine/tests.rs` (`axis_pointer_shadow_rect_respects_category_band_edges_under_x_window`)
 - Validation (existing coverage):
   - `cargo run -p fret-demo --bin fret-demo -- horizontal_bars_demo` (category Y axis + bar layout + axis pointer)
 - Validation (recommended):
