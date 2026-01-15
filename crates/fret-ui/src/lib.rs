@@ -18,6 +18,7 @@ pub mod layout_engine;
 pub mod layout_pass;
 pub mod overlay_placement;
 pub mod paint;
+pub mod pending_shortcut;
 #[cfg(feature = "unstable-retained-bridge")]
 pub mod retained_bridge;
 pub type ItemKey = u64;
@@ -58,6 +59,7 @@ pub use elements::{ElementContext, ElementRuntime, GlobalElementId};
 pub use fixed_split::FixedSplit;
 pub use frame_cx::{UiFrameContext, UiFrameCx};
 pub use host::UiHost;
+pub use pending_shortcut::PendingShortcutOverlayState;
 pub use resizable_panel_group::ResizablePanelGroupStyle;
 pub use scroll::{ScrollHandle, ScrollStrategy, VirtualListScrollHandle};
 pub use svg_source::SvgSource;

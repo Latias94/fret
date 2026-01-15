@@ -1,8 +1,12 @@
 use crate::UiHost;
 use fret_core::{
-    AppWindowId, Axis, CursorIcon, KeyCode, Modifiers, MouseButton, Point, PointerId, PointerType,
+    AppWindowId, Axis, CursorIcon, InternalDragKind, KeyCode, Modifiers, MouseButton, Point,
+    PointerId, PointerType,
 };
-use fret_runtime::{CommandId, Effect, Model, ModelStore, TickId, TimerToken, WeakModel};
+use fret_runtime::{
+    CommandId, DragHost, DragKindId, DragSession, Effect, Model, ModelStore, TickId, TimerToken,
+    WeakModel,
+};
 use std::any::Any;
 use std::sync::Arc;
 
@@ -29,6 +33,14 @@ pub enum PressablePointerDownResult {
     SkipDefault,
     /// Skip the default behavior and stop propagation at this pressable.
     SkipDefaultAndStopPropagation,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PressablePointerUpResult {
+    /// Continue with the default `Pressable` pointer-up behavior (activate when pressed+hovered).
+    Continue,
+    /// Skip the activation step (but still run default cleanup like releasing capture).
+    SkipActivate,
 }
 
 /// Why an overlay is requesting dismissal.
@@ -149,6 +161,33 @@ pub trait UiFocusActionHost: UiActionHost {
     fn request_focus(&mut self, target: crate::GlobalElementId);
 }
 
+/// Host operations for internal (app-owned) drag sessions.
+///
+/// This is intentionally object-safe so drag flows can be authored via stored action hooks.
+/// Payload should typically live in models/globals (not in the drag session payload) to avoid
+/// generic APIs in this surface.
+pub trait UiDragActionHost: UiActionHost {
+    fn begin_drag_with_kind(
+        &mut self,
+        pointer_id: PointerId,
+        kind: DragKindId,
+        source_window: AppWindowId,
+        start: Point,
+    );
+
+    fn begin_cross_window_drag_with_kind(
+        &mut self,
+        pointer_id: PointerId,
+        kind: DragKindId,
+        source_window: AppWindowId,
+        start: Point,
+    );
+
+    fn drag(&self, pointer_id: PointerId) -> Option<&DragSession>;
+    fn drag_mut(&mut self, pointer_id: PointerId) -> Option<&mut DragSession>;
+    fn cancel_drag(&mut self, pointer_id: PointerId);
+}
+
 pub trait UiActionHostExt: UiActionHost {
     fn read_weak_model<T: Any, R>(
         &mut self,
@@ -183,7 +222,7 @@ impl<T> UiActionHostExt for T where T: UiActionHost + ?Sized {}
 ///
 /// This is intentionally separate from `UiActionHost` because pointer capture and cursor updates
 /// are mediated by the UI runtime (`UiTree`), not by the app host (`UiHost`).
-pub trait UiPointerActionHost: UiFocusActionHost {
+pub trait UiPointerActionHost: UiFocusActionHost + UiDragActionHost {
     fn bounds(&self) -> fret_core::Rect;
     fn capture_pointer(&mut self);
     fn release_pointer_capture(&mut self);
@@ -212,9 +251,74 @@ impl<'a, H: UiHost> UiActionHost for UiActionHostAdapter<'a, H> {
     }
 }
 
+impl<'a, H: UiHost> UiDragActionHost for UiActionHostAdapter<'a, H> {
+    fn begin_drag_with_kind(
+        &mut self,
+        pointer_id: PointerId,
+        kind: DragKindId,
+        source_window: AppWindowId,
+        start: Point,
+    ) {
+        DragHost::begin_drag_with_kind(&mut *self.app, pointer_id, kind, source_window, start, ());
+    }
+
+    fn begin_cross_window_drag_with_kind(
+        &mut self,
+        pointer_id: PointerId,
+        kind: DragKindId,
+        source_window: AppWindowId,
+        start: Point,
+    ) {
+        DragHost::begin_cross_window_drag_with_kind(
+            &mut *self.app,
+            pointer_id,
+            kind,
+            source_window,
+            start,
+            (),
+        );
+    }
+
+    fn drag(&self, pointer_id: PointerId) -> Option<&DragSession> {
+        DragHost::drag(&*self.app, pointer_id)
+    }
+
+    fn drag_mut(&mut self, pointer_id: PointerId) -> Option<&mut DragSession> {
+        DragHost::drag_mut(&mut *self.app, pointer_id)
+    }
+
+    fn cancel_drag(&mut self, pointer_id: PointerId) {
+        DragHost::cancel_drag(&mut *self.app, pointer_id);
+    }
+}
+
+/// Internal drag event payload for component-owned internal drag handlers.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct InternalDragCx {
+    pub pointer_id: PointerId,
+    pub position: Point,
+    pub tick_id: TickId,
+    pub kind: InternalDragKind,
+    pub modifiers: Modifiers,
+}
+
+pub type OnInternalDrag =
+    Arc<dyn Fn(&mut dyn UiDragActionHost, ActionCx, InternalDragCx) -> bool + 'static>;
+
+#[derive(Default)]
+pub(crate) struct InternalDragActionHooks {
+    pub on_internal_drag: Option<OnInternalDrag>,
+}
+
 pub type OnActivate = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, ActivateReason) + 'static>;
 pub type OnPressablePointerDown = Arc<
     dyn Fn(&mut dyn UiPointerActionHost, ActionCx, PointerDownCx) -> PressablePointerDownResult
+        + 'static,
+>;
+pub type OnPressablePointerMove =
+    Arc<dyn Fn(&mut dyn UiPointerActionHost, ActionCx, PointerMoveCx) -> bool + 'static>;
+pub type OnPressablePointerUp = Arc<
+    dyn Fn(&mut dyn UiPointerActionHost, ActionCx, PointerUpCx) -> PressablePointerUpResult
         + 'static,
 >;
 
@@ -222,6 +326,8 @@ pub type OnPressablePointerDown = Arc<
 pub(crate) struct PressableActionHooks {
     pub on_activate: Option<OnActivate>,
     pub on_pointer_down: Option<OnPressablePointerDown>,
+    pub on_pointer_move: Option<OnPressablePointerMove>,
+    pub on_pointer_up: Option<OnPressablePointerUp>,
 }
 
 pub type OnHoverChange = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, bool) + 'static>;

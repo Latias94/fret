@@ -1,0 +1,275 @@
+use std::sync::{Arc, OnceLock};
+
+pub(crate) const ENV_UI_GALLERY_BISECT: &str = "FRET_UI_GALLERY_BISECT";
+pub(crate) const ENV_UI_GALLERY_START_PAGE: &str = "FRET_UI_GALLERY_START_PAGE";
+
+pub(crate) const BISECT_MINIMAL_ROOT: u32 = 1 << 0;
+pub(crate) const BISECT_DISABLE_OVERLAY_CONTROLLER: u32 = 1 << 1;
+pub(crate) const BISECT_DISABLE_TOASTER: u32 = 1 << 2;
+pub(crate) const BISECT_DISABLE_TAB_STRIP: u32 = 1 << 3;
+pub(crate) const BISECT_SIMPLE_SIDEBAR: u32 = 1 << 4;
+pub(crate) const BISECT_SIMPLE_CONTENT: u32 = 1 << 5;
+pub(crate) const BISECT_DISABLE_SIDEBAR_SCROLL: u32 = 1 << 6;
+pub(crate) const BISECT_DISABLE_CONTENT_SCROLL: u32 = 1 << 7;
+pub(crate) const BISECT_DISABLE_MARKDOWN: u32 = 1 << 8;
+pub(crate) const BISECT_DISABLE_TABS: u32 = 1 << 9;
+
+pub(crate) fn ui_gallery_bisect_flags() -> u32 {
+    static FLAGS: OnceLock<u32> = OnceLock::new();
+    *FLAGS.get_or_init(|| {
+        std::env::var(ENV_UI_GALLERY_BISECT)
+            .ok()
+            .and_then(|v| v.parse::<u32>().ok())
+            .unwrap_or(0)
+    })
+}
+
+pub(crate) fn ui_gallery_start_page() -> Option<Arc<str>> {
+    let id = std::env::var(ENV_UI_GALLERY_START_PAGE).ok()?;
+    if id.trim().is_empty() {
+        return None;
+    }
+
+    let id = id.trim();
+    let known = NAV_GROUPS
+        .iter()
+        .flat_map(|group| group.items.iter())
+        .any(|item| item.id == id);
+    if known {
+        Some(Arc::<str>::from(id))
+    } else {
+        None
+    }
+}
+
+pub(crate) const CMD_NAV_SELECT_PREFIX: &str = "ui_gallery.nav.select.";
+pub(crate) const CMD_DATA_GRID_ROW_PREFIX: &str = "ui_gallery.data_grid.row.";
+
+pub(crate) const PAGE_INTRO: &str = "intro";
+pub(crate) const PAGE_LAYOUT: &str = "layout";
+pub(crate) const PAGE_BUTTON: &str = "button";
+pub(crate) const PAGE_OVERLAY: &str = "overlay";
+pub(crate) const PAGE_FORMS: &str = "forms";
+pub(crate) const PAGE_SELECT: &str = "select";
+pub(crate) const PAGE_COMBOBOX: &str = "combobox";
+pub(crate) const PAGE_DATE_PICKER: &str = "date_picker";
+pub(crate) const PAGE_RESIZABLE: &str = "resizable";
+pub(crate) const PAGE_DATA_TABLE: &str = "data_table";
+pub(crate) const PAGE_DATA_GRID: &str = "data_grid";
+pub(crate) const PAGE_TABS: &str = "tabs";
+pub(crate) const PAGE_ACCORDION: &str = "accordion";
+pub(crate) const PAGE_TABLE: &str = "table";
+pub(crate) const PAGE_PROGRESS: &str = "progress";
+pub(crate) const PAGE_MENUS: &str = "menus";
+pub(crate) const PAGE_COMMAND: &str = "command";
+pub(crate) const PAGE_TOAST: &str = "toast";
+
+pub(crate) const CMD_NAV_INTRO: &str = "ui_gallery.nav.select.intro";
+pub(crate) const CMD_NAV_LAYOUT: &str = "ui_gallery.nav.select.layout";
+pub(crate) const CMD_NAV_BUTTON: &str = "ui_gallery.nav.select.button";
+pub(crate) const CMD_NAV_OVERLAY: &str = "ui_gallery.nav.select.overlay";
+pub(crate) const CMD_NAV_FORMS: &str = "ui_gallery.nav.select.forms";
+pub(crate) const CMD_NAV_SELECT: &str = "ui_gallery.nav.select.select";
+pub(crate) const CMD_NAV_COMBOBOX: &str = "ui_gallery.nav.select.combobox";
+pub(crate) const CMD_NAV_DATE_PICKER: &str = "ui_gallery.nav.select.date_picker";
+pub(crate) const CMD_NAV_RESIZABLE: &str = "ui_gallery.nav.select.resizable";
+pub(crate) const CMD_NAV_DATA_TABLE: &str = "ui_gallery.nav.select.data_table";
+pub(crate) const CMD_NAV_DATA_GRID: &str = "ui_gallery.nav.select.data_grid";
+pub(crate) const CMD_NAV_TABS: &str = "ui_gallery.nav.select.tabs";
+pub(crate) const CMD_NAV_ACCORDION: &str = "ui_gallery.nav.select.accordion";
+pub(crate) const CMD_NAV_TABLE: &str = "ui_gallery.nav.select.table";
+pub(crate) const CMD_NAV_PROGRESS: &str = "ui_gallery.nav.select.progress";
+pub(crate) const CMD_NAV_MENUS: &str = "ui_gallery.nav.select.menus";
+pub(crate) const CMD_NAV_COMMAND: &str = "ui_gallery.nav.select.command";
+pub(crate) const CMD_NAV_TOAST: &str = "ui_gallery.nav.select.toast";
+
+pub(crate) const CMD_PROGRESS_INC: &str = "ui_gallery.progress.inc";
+pub(crate) const CMD_PROGRESS_DEC: &str = "ui_gallery.progress.dec";
+pub(crate) const CMD_PROGRESS_RESET: &str = "ui_gallery.progress.reset";
+
+pub(crate) const CMD_MENU_DROPDOWN_APPLE: &str = "ui_gallery.menu.dropdown.apple";
+pub(crate) const CMD_MENU_DROPDOWN_ORANGE: &str = "ui_gallery.menu.dropdown.orange";
+pub(crate) const CMD_MENU_CONTEXT_ACTION: &str = "ui_gallery.menu.context.action";
+
+pub(crate) const CMD_TOAST_DEFAULT: &str = "ui_gallery.toast.default";
+pub(crate) const CMD_TOAST_SUCCESS: &str = "ui_gallery.toast.success";
+pub(crate) const CMD_TOAST_ERROR: &str = "ui_gallery.toast.error";
+pub(crate) const CMD_TOAST_SHOW_ACTION_CANCEL: &str = "ui_gallery.toast.show_action_cancel";
+pub(crate) const CMD_TOAST_ACTION: &str = "ui_gallery.toast.action";
+pub(crate) const CMD_TOAST_CANCEL: &str = "ui_gallery.toast.cancel";
+
+pub(crate) const CMD_APP_OPEN: &str = "ui_gallery.app.open";
+pub(crate) const CMD_APP_SAVE: &str = "ui_gallery.app.save";
+pub(crate) const CMD_APP_SETTINGS: &str = "ui_gallery.app.settings";
+
+#[derive(Clone, Copy)]
+pub(crate) struct NavItemSpec {
+    pub(crate) id: &'static str,
+    pub(crate) label: &'static str,
+    pub(crate) origin: &'static str,
+    pub(crate) command: &'static str,
+    pub(crate) tags: &'static [&'static str],
+}
+
+impl NavItemSpec {
+    pub(crate) const fn new(
+        id: &'static str,
+        label: &'static str,
+        origin: &'static str,
+        command: &'static str,
+        tags: &'static [&'static str],
+    ) -> Self {
+        Self {
+            id,
+            label,
+            origin,
+            command,
+            tags,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct NavGroupSpec {
+    pub(crate) title: &'static str,
+    pub(crate) items: &'static [NavItemSpec],
+}
+
+pub(crate) static NAV_GROUPS: &[NavGroupSpec] = &[
+    NavGroupSpec {
+        title: "Core",
+        items: &[
+            NavItemSpec::new(
+                PAGE_INTRO,
+                "Introduction",
+                "Core contracts",
+                CMD_NAV_INTRO,
+                &["overview", "contracts"],
+            ),
+            NavItemSpec::new(
+                PAGE_LAYOUT,
+                "Layout",
+                "Layout system",
+                CMD_NAV_LAYOUT,
+                &["layout", "flex", "stack"],
+            ),
+        ],
+    },
+    NavGroupSpec {
+        title: "Shadcn",
+        items: &[
+            NavItemSpec::new(
+                PAGE_BUTTON,
+                "Button",
+                "fret-ui-shadcn",
+                CMD_NAV_BUTTON,
+                &["button", "variant"],
+            ),
+            NavItemSpec::new(
+                PAGE_FORMS,
+                "Forms",
+                "fret-ui-shadcn",
+                CMD_NAV_FORMS,
+                &["input", "textarea", "checkbox", "switch"],
+            ),
+            NavItemSpec::new(
+                PAGE_SELECT,
+                "Select",
+                "fret-ui-shadcn",
+                CMD_NAV_SELECT,
+                &["select", "popover", "listbox"],
+            ),
+            NavItemSpec::new(
+                PAGE_COMBOBOX,
+                "Combobox",
+                "fret-ui-shadcn",
+                CMD_NAV_COMBOBOX,
+                &["combobox", "cmdk", "search"],
+            ),
+            NavItemSpec::new(
+                PAGE_DATE_PICKER,
+                "Date Picker",
+                "fret-ui-shadcn",
+                CMD_NAV_DATE_PICKER,
+                &["date", "calendar", "popover"],
+            ),
+            NavItemSpec::new(
+                PAGE_RESIZABLE,
+                "Resizable",
+                "fret-ui-shadcn",
+                CMD_NAV_RESIZABLE,
+                &["split", "panel", "resize"],
+            ),
+            NavItemSpec::new(
+                PAGE_DATA_TABLE,
+                "DataTable",
+                "fret-ui-shadcn + fret-ui-headless",
+                CMD_NAV_DATA_TABLE,
+                &["table", "virtualized", "tanstack"],
+            ),
+            NavItemSpec::new(
+                PAGE_DATA_GRID,
+                "DataGrid",
+                "fret-ui-shadcn",
+                CMD_NAV_DATA_GRID,
+                &["grid", "viewport", "virtualized"],
+            ),
+            NavItemSpec::new(
+                PAGE_TABS,
+                "Tabs",
+                "fret-ui-shadcn",
+                CMD_NAV_TABS,
+                &["tabs", "roving", "focus"],
+            ),
+            NavItemSpec::new(
+                PAGE_ACCORDION,
+                "Accordion",
+                "fret-ui-shadcn",
+                CMD_NAV_ACCORDION,
+                &["accordion", "collapsible"],
+            ),
+            NavItemSpec::new(
+                PAGE_TABLE,
+                "Table",
+                "fret-ui-shadcn",
+                CMD_NAV_TABLE,
+                &["table", "grid"],
+            ),
+            NavItemSpec::new(
+                PAGE_PROGRESS,
+                "Progress",
+                "fret-ui-shadcn",
+                CMD_NAV_PROGRESS,
+                &["progress"],
+            ),
+            NavItemSpec::new(
+                PAGE_MENUS,
+                "Menus",
+                "fret-ui-shadcn",
+                CMD_NAV_MENUS,
+                &["dropdown", "context-menu"],
+            ),
+            NavItemSpec::new(
+                PAGE_COMMAND,
+                "Command Palette",
+                "fret-ui-shadcn",
+                CMD_NAV_COMMAND,
+                &["cmdk", "command"],
+            ),
+            NavItemSpec::new(
+                PAGE_TOAST,
+                "Toast",
+                "fret-ui-shadcn",
+                CMD_NAV_TOAST,
+                &["sonner", "toast"],
+            ),
+            NavItemSpec::new(
+                PAGE_OVERLAY,
+                "Overlay",
+                "Radix-shaped primitives",
+                CMD_NAV_OVERLAY,
+                &["dialog", "popover"],
+            ),
+        ],
+    },
+];

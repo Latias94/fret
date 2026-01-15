@@ -81,6 +81,7 @@ pub struct DropdownMenuItem {
     pub close_on_select: bool,
     pub command: Option<CommandId>,
     pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
     pub trailing: Option<AnyElement>,
     pub variant: DropdownMenuItemVariant,
     pub submenu: Option<Vec<DropdownMenuEntry>>,
@@ -98,6 +99,7 @@ impl DropdownMenuItem {
             close_on_select: true,
             command: None,
             a11y_label: None,
+            test_id: None,
             trailing: None,
             variant: DropdownMenuItemVariant::Default,
             submenu: None,
@@ -146,6 +148,11 @@ impl DropdownMenuItem {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
         self
     }
 
@@ -560,11 +567,6 @@ fn collect_roving_labels_and_disabled(
 fn flatten_entries(into: &mut Vec<DropdownMenuEntry>, entries: Vec<DropdownMenuEntry>) {
     for entry in entries {
         match entry {
-            DropdownMenuEntry::Item(_)
-            | DropdownMenuEntry::CheckboxItem(_)
-            | DropdownMenuEntry::RadioItem(_)
-            | DropdownMenuEntry::Label(_)
-            | DropdownMenuEntry::Separator => into.push(entry),
             DropdownMenuEntry::Group(group) => flatten_entries(into, group.entries),
             DropdownMenuEntry::RadioGroup(group) => {
                 let group_value = group.value.clone();
@@ -574,6 +576,7 @@ fn flatten_entries(into: &mut Vec<DropdownMenuEntry>, entries: Vec<DropdownMenuE
                     ));
                 }
             }
+            other => into.push(other),
         }
     }
 }
@@ -1089,9 +1092,11 @@ impl DropdownMenu {
                         return (Vec::new(), None);
                     };
 
-                    let mut flat_entries: Vec<DropdownMenuEntry> = Vec::new();
-                    flatten_entries(&mut flat_entries, entries(cx));
-                    let entries: Arc<[DropdownMenuEntry]> = Arc::from(flat_entries.into_boxed_slice());
+                    let entries: Arc<[DropdownMenuEntry]> = {
+                        let mut flat: Vec<DropdownMenuEntry> = Vec::new();
+                        flatten_entries(&mut flat, entries(cx));
+                        Arc::from(flat.into_boxed_slice())
+                    };
                     let reserve_leading_slot_enabled =
                         align_leading_icons && reserve_leading_slot(&entries);
 
@@ -1654,6 +1659,7 @@ impl DropdownMenu {
                                                             .a11y_label
                                                             .clone()
                                                             .or_else(|| Some(label.clone()));
+                                                        let test_id = item.test_id.clone();
                                                         let disabled = item.disabled;
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
@@ -1739,13 +1745,14 @@ impl DropdownMenu {
                                                                         &value,
                                                                     )
                                                                 });
-                                                                let a11y =
+                                                                let mut a11y =
                                                                     menu::item::menu_item_a11y_with_controls(
                                                                         a11y_label,
                                                                         has_submenu
                                                                             .then_some(is_open_submenu),
                                                                         controls,
                                                                     );
+                                                                a11y.test_id = test_id.clone();
                                                                 let props = PressableProps {
                                                                     layout: {
                                                                         let mut layout = LayoutStyle::default();
@@ -2011,10 +2018,11 @@ impl DropdownMenu {
                         );
 
                         if let Some(submenu_entries) = submenu_entries {
-                            let mut flat_submenu_entries: Vec<DropdownMenuEntry> = Vec::new();
-                            flatten_entries(&mut flat_submenu_entries, submenu_entries);
-                            let submenu_entries: Arc<[DropdownMenuEntry]> =
-                                Arc::from(flat_submenu_entries.into_boxed_slice());
+                            let submenu_entries: Vec<DropdownMenuEntry> = {
+                                let mut flat: Vec<DropdownMenuEntry> = Vec::new();
+                                flatten_entries(&mut flat, submenu_entries);
+                                flat
+                            };
 
                             let reserve_leading_slot_enabled =
                                 align_leading_icons && reserve_leading_slot(&submenu_entries);

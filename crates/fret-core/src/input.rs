@@ -234,7 +234,7 @@ impl ExternalDropReadLimits {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum InternalDragKind {
     Enter,
     Over,

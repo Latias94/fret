@@ -8,6 +8,19 @@ pub const CMD_WORKSPACE_TAB_NEXT: &str = "workspace.tab.next";
 pub const CMD_WORKSPACE_TAB_PREV: &str = "workspace.tab.prev";
 pub const CMD_WORKSPACE_TAB_CLOSE: &str = "workspace.tab.close";
 
+pub const CMD_WORKSPACE_TAB_MOVE_LEFT: &str = "workspace.tab.move.left";
+pub const CMD_WORKSPACE_TAB_MOVE_RIGHT: &str = "workspace.tab.move.right";
+
+/// Prefix for "move the active tab before another tab" commands.
+///
+/// Shape: `workspace.tab.move_before.<target_tab_id>`
+pub const CMD_WORKSPACE_TAB_MOVE_BEFORE_PREFIX: &str = "workspace.tab.move_before.";
+
+/// Prefix for "move the active tab after another tab" commands.
+///
+/// Shape: `workspace.tab.move_after.<target_tab_id>`
+pub const CMD_WORKSPACE_TAB_MOVE_AFTER_PREFIX: &str = "workspace.tab.move_after.";
+
 pub const CMD_WORKSPACE_PANE_NEXT: &str = "workspace.pane.next";
 pub const CMD_WORKSPACE_PANE_PREV: &str = "workspace.pane.prev";
 
@@ -86,6 +99,26 @@ pub fn tab_close_command(id: &str) -> Option<CommandId> {
     }
     Some(CommandId::new(Arc::<str>::from(format!(
         "{CMD_WORKSPACE_TAB_CLOSE_PREFIX}{id}"
+    ))))
+}
+
+pub fn tab_move_active_before_command(target_id: &str) -> Option<CommandId> {
+    let id = target_id.trim();
+    if id.is_empty() {
+        return None;
+    }
+    Some(CommandId::new(Arc::<str>::from(format!(
+        "{CMD_WORKSPACE_TAB_MOVE_BEFORE_PREFIX}{id}"
+    ))))
+}
+
+pub fn tab_move_active_after_command(target_id: &str) -> Option<CommandId> {
+    let id = target_id.trim();
+    if id.is_empty() {
+        return None;
+    }
+    Some(CommandId::new(Arc::<str>::from(format!(
+        "{CMD_WORKSPACE_TAB_MOVE_AFTER_PREFIX}{id}"
     ))))
 }
 
@@ -254,6 +287,96 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
                 win_ctrl(KeyCode::KeyW, false),
                 linux_ctrl(KeyCode::KeyW, false),
                 mac_cmd(KeyCode::KeyW),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_TAB_MOVE_LEFT),
+        CommandMeta::new("Move Tab Left")
+            .with_category("Workspace")
+            .with_keywords(["tab", "move", "left", "reorder", "workspace"])
+            .with_default_keybindings([
+                seq(
+                    PlatformFilter::Windows,
+                    vec![
+                        win_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowLeft,
+                            Modifiers {
+                                ctrl: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Linux,
+                    vec![
+                        linux_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowLeft,
+                            Modifiers {
+                                ctrl: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                kb(
+                    PlatformFilter::Macos,
+                    KeyCode::ArrowLeft,
+                    Modifiers {
+                        meta: true,
+                        alt: true,
+                        shift: true,
+                        ..Default::default()
+                    },
+                ),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_TAB_MOVE_RIGHT),
+        CommandMeta::new("Move Tab Right")
+            .with_category("Workspace")
+            .with_keywords(["tab", "move", "right", "reorder", "workspace"])
+            .with_default_keybindings([
+                seq(
+                    PlatformFilter::Windows,
+                    vec![
+                        win_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowRight,
+                            Modifiers {
+                                ctrl: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                seq(
+                    PlatformFilter::Linux,
+                    vec![
+                        linux_ctrl_k,
+                        KeyChord::new(
+                            KeyCode::ArrowRight,
+                            Modifiers {
+                                ctrl: true,
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                ),
+                kb(
+                    PlatformFilter::Macos,
+                    KeyCode::ArrowRight,
+                    Modifiers {
+                        meta: true,
+                        alt: true,
+                        shift: true,
+                        ..Default::default()
+                    },
+                ),
             ]),
     );
 

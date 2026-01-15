@@ -42,11 +42,21 @@ pub enum ElementKind {
     Opacity(OpacityProps),
     /// A scoped post-processing effect group wrapper (ADR 0119).
     EffectLayer(EffectLayerProps),
+    /// Experimental view-level cache boundary wrapper.
+    ///
+    /// When enabled by the runtime, this marks a subtree as a cache root for range-replay and
+    /// invalidation containment experiments (see `docs/workstreams/gpui-parity-refactor.md`).
+    ViewCache(ViewCacheProps),
     VisualTransform(VisualTransformProps),
     RenderTransform(RenderTransformProps),
     Anchored(AnchoredProps),
     Pressable(PressableProps),
     PointerRegion(PointerRegionProps),
+    /// An internal drag event listener region primitive.
+    ///
+    /// This is a mechanism-only building block: it does not own policy for any particular drag
+    /// kind, and is intended to be used by higher-level layers (workspace, docking, etc.).
+    InternalDragRegion(InternalDragRegionProps),
     RovingFlex(RovingFlexProps),
     Stack(StackProps),
     Column(ColumnProps),
@@ -91,6 +101,24 @@ pub struct PointerRegionState {
 pub struct PointerRegionProps {
     pub layout: LayoutStyle,
     pub enabled: bool,
+}
+
+/// An internal drag event listener region primitive.
+///
+/// This is a mechanism-only building block for cross-window and internal drag flows.
+#[derive(Debug, Clone, Copy)]
+pub struct InternalDragRegionProps {
+    pub layout: LayoutStyle,
+    pub enabled: bool,
+}
+
+impl Default for InternalDragRegionProps {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            enabled: true,
+        }
+    }
 }
 
 impl Default for PointerRegionProps {
@@ -274,6 +302,10 @@ pub struct SemanticsProps {
     pub layout: LayoutStyle,
     pub role: SemanticsRole,
     pub label: Option<Arc<str>>,
+    /// Debug/test-only identifier for deterministic automation.
+    ///
+    /// This MUST NOT be mapped into platform accessibility name/label fields by default.
+    pub test_id: Option<Arc<str>>,
     pub value: Option<Arc<str>>,
     pub disabled: bool,
     pub selected: bool,
@@ -306,6 +338,7 @@ impl Default for SemanticsProps {
             layout: LayoutStyle::default(),
             role: SemanticsRole::Generic,
             label: None,
+            test_id: None,
             value: None,
             disabled: false,
             selected: false,
@@ -392,6 +425,26 @@ impl Default for EffectLayerProps {
             mode: EffectMode::FilterContent,
             chain: EffectChain::EMPTY,
             quality: EffectQuality::Auto,
+        }
+    }
+}
+
+/// Experimental cache boundary wrapper for declarative element subtrees.
+///
+/// This is a mechanism-only primitive intended to support GPUI-style view caching experiments
+/// without committing to a stable authoring API.
+#[derive(Debug, Clone, Copy)]
+pub struct ViewCacheProps {
+    pub layout: LayoutStyle,
+    /// Whether the subtree should be treated as layout-contained by the runtime when view caching is enabled.
+    pub contained_layout: bool,
+}
+
+impl Default for ViewCacheProps {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            contained_layout: true,
         }
     }
 }
@@ -571,6 +624,10 @@ impl Default for RovingFocusProps {
 pub struct PressableA11y {
     pub role: Option<SemanticsRole>,
     pub label: Option<Arc<str>>,
+    /// Debug/test-only identifier for deterministic automation.
+    ///
+    /// This MUST NOT be mapped into platform accessibility name/label fields by default.
+    pub test_id: Option<Arc<str>>,
     pub selected: bool,
     pub expanded: Option<bool>,
     pub checked: Option<bool>,
@@ -773,6 +830,7 @@ pub struct TextInputProps {
     pub model: Model<String>,
     pub a11y_label: Option<std::sync::Arc<str>>,
     pub a11y_role: Option<SemanticsRole>,
+    pub test_id: Option<std::sync::Arc<str>>,
     pub placeholder: Option<std::sync::Arc<str>>,
     pub active_descendant: Option<NodeId>,
     pub expanded: Option<bool>,
@@ -789,6 +847,7 @@ impl TextInputProps {
             model,
             a11y_label: None,
             a11y_role: None,
+            test_id: None,
             placeholder: None,
             active_descendant: None,
             expanded: None,
@@ -807,6 +866,7 @@ impl std::fmt::Debug for TextInputProps {
             .field("model", &"<model>")
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
             .field("a11y_role", &self.a11y_role)
+            .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
             .field(
                 "placeholder",
                 &self.placeholder.as_ref().map(|s| s.as_ref()),
@@ -825,6 +885,7 @@ pub struct TextAreaProps {
     pub layout: LayoutStyle,
     pub model: Model<String>,
     pub a11y_label: Option<std::sync::Arc<str>>,
+    pub test_id: Option<std::sync::Arc<str>>,
     pub chrome: TextAreaStyle,
     pub text_style: TextStyle,
     pub min_height: Px,
@@ -836,6 +897,7 @@ impl TextAreaProps {
             layout: LayoutStyle::default(),
             model,
             a11y_label: None,
+            test_id: None,
             chrome: TextAreaStyle::default(),
             text_style: TextStyle::default(),
             min_height: Px(80.0),
@@ -849,6 +911,7 @@ impl std::fmt::Debug for TextAreaProps {
             .field("layout", &self.layout)
             .field("model", &"<model>")
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
+            .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
             .field("chrome", &self.chrome)
             .field("text_style", &self.text_style)
             .field("min_height", &self.min_height)

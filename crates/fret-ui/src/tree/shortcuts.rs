@@ -42,6 +42,74 @@ pub(super) struct KeydownShortcutParams<'a> {
 }
 
 impl<H: UiHost> UiTree<H> {
+    pub(super) fn sync_pending_shortcut_overlay_state(
+        &mut self,
+        app: &mut H,
+        input_ctx: Option<&InputContext>,
+    ) {
+        let Some(window) = self.window else {
+            return;
+        };
+
+        let sequence: Vec<KeyChord> = self
+            .pending_shortcut
+            .keystrokes
+            .iter()
+            .map(|s| s.chord)
+            .collect();
+
+        let input_ctx = input_ctx.cloned().unwrap_or_default();
+
+        let continuations = if sequence.is_empty() {
+            Vec::new()
+        } else if let Some(service) = app.global::<KeymapService>() {
+            let mut conts: Vec<crate::pending_shortcut::PendingShortcutContinuation> = service
+                .keymap
+                .continuations(&input_ctx, &sequence)
+                .into_iter()
+                .map(|c| crate::pending_shortcut::PendingShortcutContinuation {
+                    next: c.next,
+                    command: c.matched.exact.clone().flatten(),
+                    has_continuation: c.matched.has_continuation,
+                })
+                .collect();
+
+            conts.sort_by(|a, b| {
+                fn mods_key(mods: fret_core::Modifiers) -> u8 {
+                    (mods.ctrl as u8)
+                        | ((mods.shift as u8) << 1)
+                        | ((mods.alt as u8) << 2)
+                        | ((mods.meta as u8) << 3)
+                        | ((mods.alt_gr as u8) << 4)
+                }
+                fn key_key(key: KeyCode) -> u8 {
+                    match key {
+                        KeyCode::ArrowLeft => 0,
+                        KeyCode::ArrowRight => 1,
+                        KeyCode::ArrowUp => 2,
+                        KeyCode::ArrowDown => 3,
+                        _ => 255,
+                    }
+                }
+
+                mods_key(a.next.mods)
+                    .cmp(&mods_key(b.next.mods))
+                    .then_with(|| key_key(a.next.key).cmp(&key_key(b.next.key)))
+            });
+
+            conts
+        } else {
+            Vec::new()
+        };
+
+        app.with_global_mut(
+            crate::PendingShortcutOverlayState::default,
+            |state, _app| {
+                state.set_sequence(window, input_ctx, sequence, continuations);
+            },
+        );
+    }
+
     pub(super) fn should_defer_keydown_shortcut_matching_to_text_input(
         key: KeyCode,
         modifiers: fret_core::Modifiers,
@@ -134,6 +202,7 @@ impl<H: UiHost> UiTree<H> {
                     .then_some(params.key);
                 self.suppress_text_input_until_key_up = Some(params.key);
                 self.schedule_pending_shortcut_timeout(app);
+                self.sync_pending_shortcut_overlay_state(app, Some(params.input_ctx));
                 return true;
             }
 
@@ -151,6 +220,7 @@ impl<H: UiHost> UiTree<H> {
             if let Some(token) = pending.timer {
                 app.push_effect(Effect::CancelTimer { token });
             }
+            self.sync_pending_shortcut_overlay_state(app, None);
             self.replay_captured_keystrokes(app, services, params.input_ctx, pending.keystrokes);
             return true;
         }
@@ -168,6 +238,7 @@ impl<H: UiHost> UiTree<H> {
                     .then_some(params.key);
             self.suppress_text_input_until_key_up = Some(params.key);
             self.schedule_pending_shortcut_timeout(app);
+            self.sync_pending_shortcut_overlay_state(app, Some(params.input_ctx));
             return true;
         }
 
@@ -188,6 +259,7 @@ impl<H: UiHost> UiTree<H> {
             app.push_effect(Effect::CancelTimer { token });
         }
         self.pending_shortcut = PendingShortcut::default();
+        self.sync_pending_shortcut_overlay_state(app, None);
     }
 
     pub(super) fn schedule_pending_shortcut_timeout(&mut self, app: &mut H) {

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "steps": [
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-menubar-file" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-menubar-open" }
+      },
+      "timeout_frames": 60
+    },
+    { "type": "press_key", "key": "arrow_down" },
+    { "type": "press_key", "key": "enter" },
+    { "type": "capture_bundle", "label": "ui-gallery-menubar-file-enter" }
+  ]
+}

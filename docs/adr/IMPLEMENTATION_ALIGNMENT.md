@@ -15,19 +15,20 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 ## Summary
 
 - Last updated: 2026-01-15
-- ADR count (numbered): 180
+- ADR count (numbered): 181
 
 - Aligned: 80
-- Aligned (with known gaps): 54
+- Aligned (with known gaps): 55
 - N/A (superseded): 1
 - Not audited: 18
-- Not implemented: 5
-- Partially aligned: 22
+- Not implemented: 4
+- Partially aligned: 23
 
 ## Matrix
 
 | ADR | ADR Status | Implementation Alignment | Notes |
 | --- | --- | --- | --- |
+| [`0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`](0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md) | Proposed | Partially aligned | Versioned, structured diagnostics export exists behind `fret-bootstrap` `diagnostics`: per-window ring buffers for events + snapshots, on-demand dumps to `target/fret-diag/<unix_ms>/bundle.json` with `target/fret-diag/latest.txt` pointer (`ecosystem/fret-bootstrap/src/ui_diagnostics.rs`, wired in `ecosystem/fret-bootstrap/src/ui_app_driver.rs`; trigger via `fretboard diag poke` in `apps/fretboard/src/diag.rs`). Bundle includes `UiTree` debug stats/layers/hit-test, optional `ElementRuntime` window snapshot (`crates/fret-ui/src/elements/runtime.rs`), and an exported semantics snapshot (ADR 0033) when enabled. A minimal file-triggered script harness exists (JSON `UiActionScriptV1` + `script.touch`) with `Click` (selectors: `RoleAndName`, `RoleAndPath`), `TypeText`, `WaitFrames`, `WaitUntil`, `Assert`, and `CaptureBundle` steps (`ecosystem/fret-bootstrap/src/ui_diagnostics.rs`, fed via `fretboard diag script` in `apps/fretboard/src/diag.rs`). Gaps: no `test_id` contract surface, selector vocabulary is still minimal (no rich descendant/path matching beyond strict parent chain), no GPUI-style “picking mode” that disables caching for accurate hitboxes, and no effects/perf capture in the bundle yet. |
 | [`0173-docking-tab-bar-variable-width-tabs.md`](0173-docking-tab-bar-variable-width-tabs.md) | Proposed | Aligned (with known gaps) | Docking tab bars now support variable-width geometry via a shared `TabBarGeometry` that provides prefix-sum hit-testing, insertion marker positioning, and scroll bounds: `ecosystem/fret-docking/src/dock/tab_bar_geometry.rs` (`TabBarGeometry::variable`, `dock_tab_width_for_title`). DockSpace caches per-node tab widths (`tab_widths`) and uses them for scroll clamping, hit-testing, and internal-drag hover insert indices: `ecosystem/fret-docking/src/dock/space.rs` (`tab_bar_geometry_for_node`, `dock_drop_target_via_dnd`). Painting and the drop overlay consume the cached widths to stay consistent with hit-testing: `ecosystem/fret-docking/src/dock/paint.rs`. Gaps: `min_tab_w_px` currently equals legacy `DOCK_TAB_W` (short titles do not shrink yet), and there is no user-configurable policy surface for min/max widths. |
 | [`0172-headless-dnd-v1-contract-surface.md`](0172-headless-dnd-v1-contract-surface.md) | Proposed | Aligned (with known gaps) | `fret-dnd` exists as a headless toolbox with activation constraints (`ecosystem/fret-dnd/src/activation.rs`), deterministic rect collisions (`ecosystem/fret-dnd/src/collision.rs`, `ecosystem/fret-dnd/src/rect_index.rs`), modifiers (`ecosystem/fret-dnd/src/modifier.rs`), auto-scroll request computation (`ecosystem/fret-dnd/src/scroll.rs`), and a minimal sortable insertion semantic (`InsertionSide`) (`ecosystem/fret-dnd/src/sortable.rs`). `fret-ui-kit` validates before/after insertion in its sortable recipe (`ecosystem/fret-ui-kit/src/recipes/sortable_dnd.rs`). Docking consumes collision selection and derives tab insert indices via insertion-side semantics (`ecosystem/fret-docking/src/dock/space.rs`, tests: `ecosystem/fret-docking/src/dock/tests.rs`). Gaps: multi-rect droppables and keyboard sensors are not part of v1; UI integration ownership remains app/ecosystem-specific (registry/controller not yet standardized). |
 | [`0171-workspace-shell-tabs-and-pane-layout.md`](0171-workspace-shell-tabs-and-pane-layout.md) | Proposed | Aligned (with known gaps) | Workspace chrome building blocks live in `ecosystem/fret-workspace/src/lib.rs` with a tab model + snapshots (`ecosystem/fret-workspace/src/tabs.rs`) and a versioned pane layout snapshot (`ecosystem/fret-workspace/src/layout.rs`). `fret-kit` re-exports this as a user-facing entry point (`ecosystem/fret-kit/src/lib.rs`). Gap: focus + command routing for “active pane” is app-owned today (no shared arbiter yet). |

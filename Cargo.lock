@@ -959,6 +959,9 @@ dependencies = [
  "fret-ui-assets",
  "fret-ui-kit",
  "fret-ui-shadcn",
+ "serde",
+ "serde_json",
+ "slotmap",
  "subsecond",
  "thiserror 2.0.17",
  "tracing",
@@ -1444,15 +1447,20 @@ dependencies = [
  "fret-core",
  "fret-launch",
  "fret-markdown",
+ "fret-render",
  "fret-runtime",
  "fret-ui",
  "fret-ui-headless",
  "fret-ui-kit",
  "fret-ui-shadcn",
  "fret-workspace",
+ "pollster",
+ "slotmap",
+ "stacksafe",
  "time",
  "tracing",
  "tracing-subscriber",
+ "wgpu",
  "winit",
 ]
 
@@ -1542,6 +1550,9 @@ dependencies = [
 [[package]]
 name = "fretboard"
 version = "0.1.0"
+dependencies = [
+ "serde_json",
+]
 
 [[package]]
 name = "fslock"

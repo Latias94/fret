@@ -21,6 +21,8 @@ pub use fret_workspace as workspace;
 /// Re-export the `IconRegistry` type for app code that wants to install a custom icon pack.
 pub use fret_icons::IconRegistry;
 
+#[cfg(feature = "workspace-shell")]
+pub mod pending_shortcut_overlay;
 pub mod workspace_menu;
 #[cfg(feature = "workspace-shell")]
 pub mod workspace_shell;
@@ -58,7 +60,7 @@ pub mod prelude {
         WorkspaceFrame, WorkspaceStatusBar, WorkspaceTab, WorkspaceTabStrip, WorkspaceTopBar,
     };
     #[cfg(feature = "workspace-shell")]
-    pub use crate::workspace_shell::workspace_shell;
+    pub use crate::workspace_shell::workspace_shell_model;
 }
 
 #[derive(Debug, thiserror::Error)]

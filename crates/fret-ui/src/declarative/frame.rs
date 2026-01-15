@@ -8,6 +8,7 @@ pub(crate) struct ElementFrame {
 pub(crate) struct WindowFrame {
     pub(super) frame_id: FrameId,
     pub(crate) instances: HashMap<NodeId, ElementRecord>,
+    pub(crate) children: HashMap<NodeId, Vec<NodeId>>,
 }
 
 impl Default for WindowFrame {
@@ -15,6 +16,7 @@ impl Default for WindowFrame {
         Self {
             frame_id: FrameId(0),
             instances: HashMap::new(),
+            children: HashMap::new(),
         }
     }
 }
@@ -27,11 +29,13 @@ pub(crate) enum ElementInstance {
     InteractivityGate(crate::element::InteractivityGateProps),
     Opacity(crate::element::OpacityProps),
     EffectLayer(crate::element::EffectLayerProps),
+    ViewCache(crate::element::ViewCacheProps),
     VisualTransform(VisualTransformProps),
     RenderTransform(crate::element::RenderTransformProps),
     Anchored(crate::element::AnchoredProps),
     Pressable(PressableProps),
     PointerRegion(PointerRegionProps),
+    InternalDragRegion(crate::element::InternalDragRegionProps),
     DismissibleLayer(DismissibleLayerProps),
     RovingFlex(crate::element::RovingFlexProps),
     Stack(StackProps),
@@ -199,11 +203,13 @@ pub(crate) fn layout_style_for_node<H: UiHost>(
             ElementInstance::InteractivityGate(p) => p.layout,
             ElementInstance::Opacity(p) => p.layout,
             ElementInstance::EffectLayer(p) => p.layout,
+            ElementInstance::ViewCache(p) => p.layout,
             ElementInstance::VisualTransform(p) => p.layout,
             ElementInstance::RenderTransform(p) => p.layout,
             ElementInstance::Anchored(p) => p.layout,
             ElementInstance::Pressable(p) => p.layout,
             ElementInstance::PointerRegion(p) => p.layout,
+            ElementInstance::InternalDragRegion(p) => p.layout,
             ElementInstance::DismissibleLayer(p) => p.layout,
             ElementInstance::RovingFlex(p) => p.flex.layout,
             ElementInstance::Stack(p) => p.layout,

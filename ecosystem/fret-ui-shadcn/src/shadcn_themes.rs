@@ -131,6 +131,21 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         .entry("metric.font.line_height".to_string())
         .or_insert(20.0);
 
+    // Default typography scales used across shadcn recipes (via fret-ui-kit helpers).
+    // These are also accessed directly by some components (e.g. Calendar) via `metric_required`.
+    metrics
+        .entry("component.text.sm_px".to_string())
+        .or_insert(14.0);
+    metrics
+        .entry("component.text.sm_line_height".to_string())
+        .or_insert(20.0);
+    metrics
+        .entry("component.text.base_px".to_string())
+        .or_insert(15.0);
+    metrics
+        .entry("component.text.base_line_height".to_string())
+        .or_insert(20.0);
+
     metrics
         .entry("component.ring.width".to_string())
         .or_insert(3.0);
@@ -321,5 +336,23 @@ fn with_oklch_alpha(raw: &str, alpha: f32) -> Option<String> {
         Some(format!("oklch({main} / {}%)", pct as u32))
     } else {
         Some(format!("oklch({main} / {pct:.1}%)"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_york_v4_seeds_component_text_metrics() {
+        for &base in ShadcnBaseColor::ALL {
+            for scheme in [ShadcnColorScheme::Light, ShadcnColorScheme::Dark] {
+                let cfg = shadcn_new_york_v4_config(base, scheme);
+                assert!(cfg.metrics.contains_key("component.text.sm_px"));
+                assert!(cfg.metrics.contains_key("component.text.sm_line_height"));
+                assert!(cfg.metrics.contains_key("component.text.base_px"));
+                assert!(cfg.metrics.contains_key("component.text.base_line_height"));
+            }
+        }
     }
 }

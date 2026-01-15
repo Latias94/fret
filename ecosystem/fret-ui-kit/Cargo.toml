@@ -39,10 +39,6 @@ icons = ["dep:fret-icons"]
 # Opinionated declarative helpers that are closer to "recipes" than substrate.
 recipes = ["icons", "dep:fret-canvas"]
 
-# Compatibility flag (no longer gates) for the TanStack-inspired table surface
-# (`headless::table` + `declarative::table`).
-table = []
-
 [dev-dependencies]
 fret-app = { path = "../../crates/fret-app" }
 serde.workspace = true

@@ -429,6 +429,7 @@ impl<H: UiHost> UiTree<H> {
             && self.pending_shortcut.timer == Some(*token)
         {
             let pending = std::mem::take(&mut self.pending_shortcut);
+            self.sync_pending_shortcut_overlay_state(app, None);
             if let Some(command) = pending.fallback {
                 app.push_effect(Effect::Command {
                     window: self.window,
@@ -806,6 +807,31 @@ impl<H: UiHost> UiTree<H> {
             Some(target)
         } else if let Some(pos) = event_position(event) {
             let hit = self.hit_test_layers(&active_layers, pos);
+
+            let hit = if matches!(event, Event::InternalDrag(_)) {
+                (|| {
+                    let window = self.window?;
+                    crate::declarative::with_window_frame(app, window, |window_frame| {
+                        let window_frame = window_frame?;
+                        let mut node = hit?;
+                        loop {
+                            if let Some(record) = window_frame.instances.get(&node)
+                                && matches!(
+                                    record.instance,
+                                    crate::declarative::ElementInstance::InternalDragRegion(p)
+                                        if p.enabled
+                                )
+                            {
+                                return Some(node);
+                            }
+                            node = self.nodes.get(node).and_then(|n| n.parent)?;
+                        }
+                    })
+                })()
+                .or(hit)
+            } else {
+                hit
+            };
 
             if let Event::Pointer(PointerEvent::Move { buttons, .. }) = event
                 && !buttons.left

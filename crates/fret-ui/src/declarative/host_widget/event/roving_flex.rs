@@ -12,6 +12,53 @@ pub(super) fn handle_roving_flex<H: UiHost>(
         return;
     }
 
+    fn is_roving_item_instance(instance: &crate::declarative::frame::ElementInstance) -> bool {
+        matches!(
+            instance,
+            crate::declarative::frame::ElementInstance::Pressable(_)
+                | crate::declarative::frame::ElementInstance::TextInput(_)
+                | crate::declarative::frame::ElementInstance::TextArea(_)
+        )
+    }
+
+    fn is_roving_group_wrapper_instance(
+        instance: &crate::declarative::frame::ElementInstance,
+    ) -> bool {
+        match instance {
+            crate::declarative::frame::ElementInstance::Semantics(props) => matches!(
+                props.role,
+                fret_core::SemanticsRole::Group | fret_core::SemanticsRole::RadioGroup
+            ),
+            _ => false,
+        }
+    }
+
+    fn collect_roving_items_in_subtree<H: UiHost>(
+        app: &mut H,
+        window: AppWindowId,
+        node: NodeId,
+        out: &mut Vec<NodeId>,
+    ) {
+        let children =
+            crate::declarative::mount::children_for_node_in_window_frame(app, window, node);
+        for child in children {
+            let Some(record) =
+                crate::declarative::frame::element_record_for_node(app, window, child)
+            else {
+                continue;
+            };
+
+            if is_roving_item_instance(&record.instance) {
+                out.push(child);
+                continue;
+            }
+
+            // Within a group wrapper subtree, we want to pick up all focusable items in visual
+            // order, even if they are nested under layout containers (e.g. Flex).
+            collect_roving_items_in_subtree(app, window, child, out);
+        }
+    }
+
     struct RovingHookHost<'a, H: UiHost> {
         app: &'a mut H,
         window: AppWindowId,
@@ -118,9 +165,33 @@ pub(super) fn handle_roving_flex<H: UiHost>(
         return;
     }
 
+    // By default, roving items are expected to be direct children of the roving container.
+    //
+    // Some composite widgets (e.g. menu `Group`/`RadioGroup`) introduce structural wrappers for
+    // semantics while keeping the same visual/interaction model. For those wrappers, we collect
+    // roving items from their descendant subtree.
+    let mut roving_items: Vec<NodeId> = Vec::new();
+    for &child in cx.children {
+        let Some(record) =
+            crate::declarative::frame::element_record_for_node(cx.app, window, child)
+        else {
+            continue;
+        };
+        if is_roving_item_instance(&record.instance) {
+            roving_items.push(child);
+            continue;
+        }
+        if is_roving_group_wrapper_instance(&record.instance) {
+            collect_roving_items_in_subtree(cx.app, window, child, &mut roving_items);
+        }
+    }
+    if roving_items.is_empty() {
+        return;
+    }
+
     let current = cx
         .focus
-        .and_then(|focus| cx.children.iter().position(|n| *n == focus));
+        .and_then(|focus| roving_items.iter().position(|n| *n == focus));
 
     let navigate_hook = crate::elements::with_element_state(
         &mut *cx.app,
@@ -152,7 +223,7 @@ pub(super) fn handle_roving_flex<H: UiHost>(
                 repeat: *repeat,
                 axis: props.flex.direction,
                 current,
-                len,
+                len: roving_items.len(),
                 disabled: props.roving.disabled.clone(),
                 wrap: props.roving.wrap,
             },
@@ -196,7 +267,7 @@ pub(super) fn handle_roving_flex<H: UiHost>(
                 crate::action::RovingTypeaheadCx {
                     input: ch,
                     current,
-                    len,
+                    len: roving_items.len(),
                     disabled: props.roving.disabled.clone(),
                     wrap: props.roving.wrap,
                     tick,
@@ -220,7 +291,10 @@ pub(super) fn handle_roving_flex<H: UiHost>(
         return;
     }
 
-    cx.request_focus(cx.children[target]);
+    if target >= roving_items.len() {
+        return;
+    }
+    cx.request_focus(roving_items[target]);
 
     let hook = crate::elements::with_element_state(
         &mut *cx.app,

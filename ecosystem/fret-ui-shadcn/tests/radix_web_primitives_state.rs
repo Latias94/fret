@@ -2068,6 +2068,27 @@ fn radix_web_context_menu_submenu_hover_select_matches_fret() {
         .semantics_snapshot()
         .cloned()
         .expect("semantics snapshot");
+
+    let copy = find_semantics(&snap, SemanticsRole::MenuItem, "Copy");
+    let cut = find_semantics(&snap, SemanticsRole::MenuItem, "Cut");
+    assert_eq!(
+        copy.parent, cut.parent,
+        "context menu group should parent its menu items"
+    );
+    let group_id = copy
+        .parent
+        .expect("Copy should have a parent semantics node");
+    let group = snap
+        .nodes
+        .iter()
+        .find(|n| n.id == group_id)
+        .expect("Copy parent semantics node");
+    assert_eq!(
+        group.role,
+        SemanticsRole::Group,
+        "context menu group should use role=Group"
+    );
+
     let more_tools = find_semantics(&snap, SemanticsRole::MenuItem, "More Tools");
     move_pointer(
         &mut ui,
@@ -2092,11 +2113,26 @@ fn radix_web_context_menu_submenu_hover_select_matches_fret() {
         .semantics_snapshot()
         .cloned()
         .expect("semantics snapshot");
-    let save_page = snap
+
+    let save_page = find_semantics(&snap, SemanticsRole::MenuItem, "Save Page...");
+    let create_shortcut = find_semantics(&snap, SemanticsRole::MenuItem, "Create Shortcut...");
+    assert_eq!(
+        save_page.parent, create_shortcut.parent,
+        "submenu group should parent its menu items"
+    );
+    let submenu_group_id = save_page
+        .parent
+        .expect("submenu item should have a parent semantics node");
+    let submenu_group = snap
         .nodes
         .iter()
-        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Save Page..."))
-        .expect("submenu Save Page item should be present after hover");
+        .find(|n| n.id == submenu_group_id)
+        .expect("submenu item parent semantics node");
+    assert_eq!(
+        submenu_group.role,
+        SemanticsRole::Group,
+        "submenu group should use role=Group"
+    );
 
     click_center(
         &mut ui,

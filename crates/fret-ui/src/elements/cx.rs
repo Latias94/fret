@@ -10,9 +10,9 @@ use crate::action::OnHoverChange;
 use crate::action::{
     DismissibleActionHooks, KeyActionHooks, OnActivate, OnDismissRequest, OnDismissiblePointerMove,
     OnKeyDown, OnPinchGesture, OnPointerDown, OnPointerMove, OnPointerUp, OnPressablePointerDown,
-    OnRovingActiveChange, OnRovingNavigate, OnRovingTypeahead, OnTimer, OnWheel,
-    PointerActionHooks, PressableActionHooks, PressableHoverActionHooks, RovingActionHooks,
-    TimerActionHooks,
+    OnPressablePointerMove, OnPressablePointerUp, OnRovingActiveChange, OnRovingNavigate,
+    OnRovingTypeahead, OnTimer, OnWheel, PointerActionHooks, PressableActionHooks,
+    PressableHoverActionHooks, PressablePointerUpResult, RovingActionHooks, TimerActionHooks,
 };
 use crate::canvas::{CanvasPaintHooks, CanvasPainter, OnCanvasPaint};
 use crate::element::{
@@ -442,6 +442,19 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
+    pub fn view_cache(
+        &mut self,
+        props: crate::element::ViewCacheProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::ViewCache(props), children)
+        })
+    }
+
+    #[track_caller]
     pub fn focus_scope_with_id(
         &mut self,
         props: crate::element::FocusScopeProps,
@@ -761,6 +774,18 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn pressable_on_pointer_move(&mut self, handler: OnPressablePointerMove) {
+        self.with_state(PressableActionHooks::default, |hooks| {
+            hooks.on_pointer_move = Some(handler);
+        });
+    }
+
+    pub fn pressable_on_pointer_up(&mut self, handler: OnPressablePointerUp) {
+        self.with_state(PressableActionHooks::default, |hooks| {
+            hooks.on_pointer_up = Some(handler);
+        });
+    }
+
     pub fn pressable_on_pointer_down_for(
         &mut self,
         element: GlobalElementId,
@@ -768,6 +793,26 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     ) {
         self.with_state_for(element, PressableActionHooks::default, |hooks| {
             hooks.on_pointer_down = Some(handler);
+        });
+    }
+
+    pub fn pressable_on_pointer_move_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnPressablePointerMove,
+    ) {
+        self.with_state_for(element, PressableActionHooks::default, |hooks| {
+            hooks.on_pointer_move = Some(handler);
+        });
+    }
+
+    pub fn pressable_on_pointer_up_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnPressablePointerUp,
+    ) {
+        self.with_state_for(element, PressableActionHooks::default, |hooks| {
+            hooks.on_pointer_up = Some(handler);
         });
     }
 
@@ -788,6 +833,44 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                             }
                             (R::SkipDefault, _) | (_, R::SkipDefault) => R::SkipDefault,
                             _ => R::Continue,
+                        }
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn pressable_add_on_pointer_move(&mut self, handler: OnPressablePointerMove) {
+        self.with_state(PressableActionHooks::default, |hooks| {
+            hooks.on_pointer_move = match hooks.on_pointer_move.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, mv| {
+                        let prev_handled = prev(host, cx, mv);
+                        let next_handled = next(host, cx, mv);
+                        prev_handled || next_handled
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn pressable_add_on_pointer_up(&mut self, handler: OnPressablePointerUp) {
+        self.with_state(PressableActionHooks::default, |hooks| {
+            hooks.on_pointer_up = match hooks.on_pointer_up.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, up| {
+                        let prev_result = prev(host, cx, up);
+                        let next_result = next(host, cx, up);
+                        match (prev_result, next_result) {
+                            (PressablePointerUpResult::SkipActivate, _)
+                            | (_, PressablePointerUpResult::SkipActivate) => {
+                                PressablePointerUpResult::SkipActivate
+                            }
+                            _ => PressablePointerUpResult::Continue,
                         }
                     }))
                 }
@@ -823,9 +906,67 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn pressable_add_on_pointer_move_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnPressablePointerMove,
+    ) {
+        self.with_state_for(element, PressableActionHooks::default, |hooks| {
+            hooks.on_pointer_move = match hooks.on_pointer_move.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, mv| {
+                        let prev_handled = prev(host, cx, mv);
+                        let next_handled = next(host, cx, mv);
+                        prev_handled || next_handled
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn pressable_add_on_pointer_up_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnPressablePointerUp,
+    ) {
+        self.with_state_for(element, PressableActionHooks::default, |hooks| {
+            hooks.on_pointer_up = match hooks.on_pointer_up.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, up| {
+                        let prev_result = prev(host, cx, up);
+                        let next_result = next(host, cx, up);
+                        match (prev_result, next_result) {
+                            (PressablePointerUpResult::SkipActivate, _)
+                            | (_, PressablePointerUpResult::SkipActivate) => {
+                                PressablePointerUpResult::SkipActivate
+                            }
+                            _ => PressablePointerUpResult::Continue,
+                        }
+                    }))
+                }
+            };
+        });
+    }
+
     pub fn pressable_clear_on_pointer_down(&mut self) {
         self.with_state(PressableActionHooks::default, |hooks| {
             hooks.on_pointer_down = None;
+        });
+    }
+
+    pub fn pressable_clear_on_pointer_move(&mut self) {
+        self.with_state(PressableActionHooks::default, |hooks| {
+            hooks.on_pointer_move = None;
+        });
+    }
+
+    pub fn pressable_clear_on_pointer_up(&mut self) {
+        self.with_state(PressableActionHooks::default, |hooks| {
+            hooks.on_pointer_up = None;
         });
     }
 
@@ -876,6 +1017,34 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             let children = f(cx);
             AnyElement::new(id, ElementKind::PointerRegion(props), children)
         })
+    }
+
+    pub fn internal_drag_region(
+        &mut self,
+        props: crate::element::InternalDragRegionProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            cx.internal_drag_region_clear_on_internal_drag();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::InternalDragRegion(props), children)
+        })
+    }
+
+    pub fn internal_drag_region_on_internal_drag(
+        &mut self,
+        handler: crate::action::OnInternalDrag,
+    ) {
+        self.with_state(crate::action::InternalDragActionHooks::default, |hooks| {
+            hooks.on_internal_drag = Some(handler);
+        });
+    }
+
+    pub fn internal_drag_region_clear_on_internal_drag(&mut self) {
+        self.with_state(crate::action::InternalDragActionHooks::default, |hooks| {
+            hooks.on_internal_drag = None;
+        });
     }
 
     /// Register a component-owned pointer down handler for the current pointer region element.

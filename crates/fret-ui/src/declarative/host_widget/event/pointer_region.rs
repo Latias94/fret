@@ -1,5 +1,6 @@
 use super::ElementHostWidget;
 use crate::declarative::prelude::*;
+use fret_runtime::DragHost;
 
 pub(super) fn handle_pointer_region<H: UiHost>(
     this: &mut ElementHostWidget,
@@ -97,6 +98,57 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 return;
             }
             *self.requested_cursor = Some(icon);
+        }
+    }
+
+    impl<H: UiHost> action::UiDragActionHost for PointerHookHost<'_, H> {
+        fn begin_drag_with_kind(
+            &mut self,
+            pointer_id: fret_core::PointerId,
+            kind: fret_runtime::DragKindId,
+            source_window: AppWindowId,
+            start: Point,
+        ) {
+            DragHost::begin_drag_with_kind(
+                &mut *self.app,
+                pointer_id,
+                kind,
+                source_window,
+                start,
+                (),
+            );
+        }
+
+        fn begin_cross_window_drag_with_kind(
+            &mut self,
+            pointer_id: fret_core::PointerId,
+            kind: fret_runtime::DragKindId,
+            source_window: AppWindowId,
+            start: Point,
+        ) {
+            DragHost::begin_cross_window_drag_with_kind(
+                &mut *self.app,
+                pointer_id,
+                kind,
+                source_window,
+                start,
+                (),
+            );
+        }
+
+        fn drag(&self, pointer_id: fret_core::PointerId) -> Option<&fret_runtime::DragSession> {
+            DragHost::drag(&*self.app, pointer_id)
+        }
+
+        fn drag_mut(
+            &mut self,
+            pointer_id: fret_core::PointerId,
+        ) -> Option<&mut fret_runtime::DragSession> {
+            DragHost::drag_mut(&mut *self.app, pointer_id)
+        }
+
+        fn cancel_drag(&mut self, pointer_id: fret_core::PointerId) {
+            DragHost::cancel_drag(&mut *self.app, pointer_id);
         }
     }
 

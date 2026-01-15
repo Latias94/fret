@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "steps": [
+    {
+      "type": "click",
+      "button": "right",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-context-trigger"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-context-item-action" }
+      },
+      "timeout_frames": 60
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-context-item-action" }
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-context-action" }
+  ]
+}

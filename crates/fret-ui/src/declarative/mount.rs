@@ -90,7 +90,21 @@ fn prepare_window_frame_for_frame(window_frame: &mut WindowFrame, frame_id: Fram
     if window_frame.frame_id != frame_id {
         window_frame.frame_id = frame_id;
         window_frame.instances.clear();
+        window_frame.children.clear();
     }
+}
+
+pub(crate) fn children_for_node_in_window_frame<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    node: NodeId,
+) -> Vec<NodeId> {
+    with_window_frame(app, window, |window_frame| {
+        window_frame
+            .and_then(|w| w.children.get(&node))
+            .cloned()
+            .unwrap_or_default()
+    })
 }
 
 /// Render a declarative element tree into an existing `UiTree` root.
@@ -177,7 +191,8 @@ pub fn render_root<H: UiHost>(
                     &mut scroll_bindings,
                 ));
             }
-            ui.set_children(root_node, mounted_children);
+            ui.set_children(root_node, mounted_children.clone());
+            window_frame.children.insert(root_node, mounted_children);
         });
 
         crate::declarative::frame::register_scroll_handle_bindings_batch(
@@ -401,6 +416,15 @@ fn mount_element<H: UiHost>(
         },
     );
 
+    match &element.kind {
+        ElementKind::ViewCache(props) => {
+            ui.set_node_view_cache_flags(node, true, props.contained_layout);
+        }
+        _ => {
+            ui.set_node_view_cache_flags(node, false, false);
+        }
+    }
+
     let instance = match element.kind {
         ElementKind::Container(p) => ElementInstance::Container(p),
         ElementKind::Semantics(p) => ElementInstance::Semantics(p),
@@ -408,11 +432,13 @@ fn mount_element<H: UiHost>(
         ElementKind::InteractivityGate(p) => ElementInstance::InteractivityGate(p),
         ElementKind::Opacity(p) => ElementInstance::Opacity(p),
         ElementKind::EffectLayer(p) => ElementInstance::EffectLayer(p),
+        ElementKind::ViewCache(p) => ElementInstance::ViewCache(p),
         ElementKind::VisualTransform(p) => ElementInstance::VisualTransform(p),
         ElementKind::RenderTransform(p) => ElementInstance::RenderTransform(p),
         ElementKind::Anchored(p) => ElementInstance::Anchored(p),
         ElementKind::Pressable(p) => ElementInstance::Pressable(p),
         ElementKind::PointerRegion(p) => ElementInstance::PointerRegion(p),
+        ElementKind::InternalDragRegion(p) => ElementInstance::InternalDragRegion(p),
         ElementKind::RovingFlex(p) => ElementInstance::RovingFlex(p),
         ElementKind::Stack(p) => ElementInstance::Stack(p),
         ElementKind::Column(p) => ElementInstance::Flex(FlexProps {
@@ -477,7 +503,8 @@ fn mount_element<H: UiHost>(
             scroll_bindings,
         ));
     }
-    ui.set_children(node, child_nodes);
+    ui.set_children(node, child_nodes.clone());
+    window_frame.children.insert(node, child_nodes);
 
     node
 }

@@ -18,7 +18,7 @@ ui-assets = ["dep:fret-ui-assets", "fret-ui-assets/app-integration"]
 icons-lucide = ["dep:fret-icons-lucide", "fret-icons-lucide/app-integration"]
 icons-radix = ["dep:fret-icons-radix", "fret-icons-radix/app-integration"]
 hotpatch-subsecond = ["fret-launch/hotpatch-subsecond", "dep:subsecond"]
-ui-app-driver = ["dep:fret-ui", "dep:fret-ui-app", "dep:fret-ui-kit"]
+ui-app-driver = ["dep:fret-ui", "fret-ui/diagnostics", "dep:fret-ui-app", "dep:fret-ui-kit"]
 ui-app-command-palette = ["ui-app-driver", "dep:fret-ui-shadcn"]
 tracing = ["dep:tracing", "dep:tracing-subscriber"]
 diagnostics = ["tracing"]
@@ -27,6 +27,9 @@ diagnostics = ["tracing"]
 thiserror.workspace = true
 tracing = { workspace = true, optional = true }
 tracing-subscriber = { workspace = true, optional = true, features = ["env-filter"] }
+serde.workspace = true
+serde_json.workspace = true
+slotmap.workspace = true
 
 fret-app = { path = "../../crates/fret-app" }
 fret-core = { path = "../../crates/fret-core" }
