@@ -1,18 +1,12 @@
 use std::sync::Arc;
 
-use fret_app::App;
-use fret_bootstrap::BootstrapBuilder;
-use fret_bootstrap::ui_app_driver::UiAppDriver;
-use fret_core::{AppWindowId, ImageColorSpace};
-use fret_core::{SvgId, UiServices};
-use fret_launch::WinitRunnerConfig;
-use fret_ui::element::{AnyElement, ImageProps, Overflow, SvgIconProps, TextProps};
-use fret_ui::{ElementContext, Invalidation, Theme};
+use fret_kit::fret::core::{ImageColorSpace, SvgId};
+use fret_kit::fret::ui::element::{ImageProps, Overflow, SvgIconProps};
+use fret_kit::prelude::*;
 use fret_ui_assets::{UiAssets, image_asset_state, svg_asset_state};
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
-use fret_ui_shadcn as shadcn;
 
 static DEMO_SVG: &[u8] = br##"
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
@@ -34,17 +28,8 @@ struct AssetsDemoImageEvents {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    let driver = UiAppDriver::new("assets-demo", init_window, view)
-        .on_event(on_event)
-        .into_fn_driver();
-
-    let mut config = WinitRunnerConfig::default();
-    config.main_window_title = "assets_demo".to_string();
-    config.main_window_size = winit::dpi::LogicalSize::new(720.0, 520.0);
-
-    BootstrapBuilder::new(App::new(), driver)
-        .configure(|c| *c = config)
-        .with_default_config_files()?
+    fret_kit::app_with_hooks("assets-demo", init_window, view, |d| d.on_event(on_event))?
+        .with_main_window("assets_demo", (720.0, 520.0))
         .with_ui_assets_budgets(64 * 1024 * 1024, 2048, 16 * 1024 * 1024, 4096)
         .init_app(|app| {
             shadcn::shadcn_themes::apply_shadcn_new_york_v4(
@@ -59,8 +44,8 @@ pub fn run() -> anyhow::Result<()> {
                 svg_asset_state::use_svg_bytes_cached_with_stats(app, services, DEMO_SVG);
             app.set_global(AssetsDemoSvg { svg });
         })
-        .run()
-        .map_err(anyhow::Error::from)
+        .run()?;
+    Ok(())
 }
 
 fn init_window(_app: &mut App, _window: AppWindowId) -> () {}
@@ -69,12 +54,12 @@ fn on_event(
     app: &mut App,
     _services: &mut dyn UiServices,
     window: AppWindowId,
-    _ui: &mut fret_ui::UiTree<App>,
+    _ui: &mut UiTree<App>,
     _state: &mut (),
-    event: &fret_core::Event,
+    event: &Event,
 ) {
     match event {
-        fret_core::Event::ImageRegistered { .. } => {
+        Event::ImageRegistered { .. } => {
             let log_events = std::env::var_os("FRET_ASSETS_DEMO_LOG_IMAGE_EVENTS")
                 .is_some_and(|v| !v.is_empty());
             let log_stats =
@@ -103,7 +88,7 @@ fn on_event(
                 app.request_redraw(window);
             });
         }
-        fret_core::Event::ImageRegisterFailed { .. } => {
+        Event::ImageRegisterFailed { .. } => {
             let log_events = std::env::var_os("FRET_ASSETS_DEMO_LOG_IMAGE_EVENTS")
                 .is_some_and(|v| !v.is_empty());
             let log_stats =

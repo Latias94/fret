@@ -1,10 +1,9 @@
 use fret_app::{App, Effect};
-use fret_bootstrap::BootstrapBuilder;
 use fret_core::{
     AlphaMode, AppWindowId, Color, Corners, DrawOrder, Edges, Event, ImageColorInfo, ImageId, Px,
     Rect, SceneOp, Size,
 };
-use fret_launch::{FnDriver, WinitEventContext, WinitRenderContext};
+use fret_launch::{FnDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
 
 struct AlphaModeDemoState {
     pending_straight: Option<fret_core::ImageUploadToken>,
@@ -228,12 +227,14 @@ fn render(_driver: &mut (), context: WinitRenderContext<'_, AlphaModeDemoState>)
 
 pub fn run() -> anyhow::Result<()> {
     let driver = FnDriver::new((), create_window_state, handle_event, render);
-
-    let builder = BootstrapBuilder::new(App::new(), driver).configure(|config| {
-        config.main_window_title = "alpha_mode_demo".to_string();
-        config.main_window_size = winit::dpi::LogicalSize::new(920.0, 320.0);
-    });
-
-    let builder = builder.with_default_config_files()?;
-    builder.run().map_err(anyhow::Error::from)
+    fret_kit::run_native_demo(
+        WinitRunnerConfig {
+            main_window_title: "alpha_mode_demo".to_string(),
+            main_window_size: winit::dpi::LogicalSize::new(920.0, 320.0),
+            ..Default::default()
+        },
+        App::new(),
+        driver,
+    )
+    .map_err(anyhow::Error::from)
 }
