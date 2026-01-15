@@ -2910,6 +2910,57 @@ fn dock_drop_hint_rects_can_select_zone() {
 }
 
 #[test]
+fn dock_tab_bar_insert_index_respects_before_after_halves() {
+    let window = AppWindowId::default();
+
+    let mut dock = DockManager::default();
+    let tabs = dock.graph.insert_node(DockNode::Tabs {
+        tabs: vec![
+            PanelKey::new("core.a"),
+            PanelKey::new("core.b"),
+            PanelKey::new("core.c"),
+        ],
+        active: 0,
+    });
+    dock.graph.set_window_root(window, tabs);
+
+    let rect = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut layout = std::collections::HashMap::new();
+    layout.insert(tabs, rect);
+    let tab_scroll = std::collections::HashMap::new();
+
+    let (tab_bar, _content) = split_tab_bar(rect);
+    let scroll = Px(0.0);
+
+    let tab_b = tab_rect_for_index(tab_bar, 1, scroll);
+    let y = Px(tab_b.origin.y.0 + tab_b.size.height.0 * 0.5);
+
+    let left_half = Point::new(Px(tab_b.origin.x.0 + tab_b.size.width.0 * 0.25), y);
+    let hit_left = hit_test_drop_target(&dock.graph, &layout, &tab_scroll, left_half)
+        .expect("hit should resolve to a dock target");
+    assert_eq!(hit_left.tabs, tabs);
+    assert_eq!(hit_left.zone, DropZone::Center);
+    assert_eq!(hit_left.insert_index, Some(1));
+
+    let right_half = Point::new(Px(tab_b.origin.x.0 + tab_b.size.width.0 * 0.75), y);
+    let hit_right = hit_test_drop_target(&dock.graph, &layout, &tab_scroll, right_half)
+        .expect("hit should resolve to a dock target");
+    assert_eq!(hit_right.tabs, tabs);
+    assert_eq!(hit_right.zone, DropZone::Center);
+    assert_eq!(hit_right.insert_index, Some(2));
+
+    let far_right = Point::new(Px(tab_bar.origin.x.0 + tab_bar.size.width.0 - 1.0), y);
+    let hit_end = hit_test_drop_target(&dock.graph, &layout, &tab_scroll, far_right)
+        .expect("hit should resolve to a dock target");
+    assert_eq!(hit_end.tabs, tabs);
+    assert_eq!(hit_end.zone, DropZone::Center);
+    assert_eq!(hit_end.insert_index, Some(3));
+}
+
+#[test]
 fn render_and_bind_panels_falls_back_to_placeholder_for_missing_ui() {
     let window = AppWindowId::default();
 
