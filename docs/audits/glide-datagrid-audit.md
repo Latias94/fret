@@ -129,9 +129,9 @@ Summary (last rolling window, 240 samples):
 
 Updated baseline (stable, 3 iterations, median; output moved off repo disk):
 
-- Script defaults to `G:\\bench\\canvas-datagrid\\...` when `SCCACHE_DIR` is set.
+- Script defaults to `G:\\sccache\\bench\\canvas-datagrid\\...` when `SCCACHE_DIR` is set.
 - Commit: `fd4cae9f539ada0d8c4a1d4caad760dcba3931a4`
-- Output: `G:\\bench\\canvas-datagrid\\20260115-001530\\summary_agg.csv`
+- Output: `G:\\sccache\\bench\\canvas-datagrid\\20260115-001530\\summary_agg.csv`
 
 | Case | Visible (rows×cols/cells) | Grid compute median (ms) | Renderer `prepare_text` median (ms) | Renderer `draws` median |
 | --- | --- | --- | --- | --- |
@@ -142,7 +142,7 @@ Updated baseline (stable, 3 iterations, median; output moved off repo disk):
 
 Text caching improvement (shared plain-text blobs, 3 iterations, median):
 
-- Commit: (working tree changes not committed yet)
+- Commit: `c9abd0c7c0706f9684e8016442f26cb9458776cc`
 - Output: `G:\\sccache\\bench\\canvas-datagrid\\20260115-093254\\summary_agg.csv`
 
 | Case | Grid compute median (ms) | Renderer `prepare_text` median (ms) |
@@ -154,7 +154,7 @@ Text caching improvement (shared plain-text blobs, 3 iterations, median):
 
 Text draw-call improvement (coalesce adjacent text draws, 3 iterations, median):
 
-- Commit: (working tree changes not committed yet)
+- Commit: `3b80e3b4d03a46e850643a7e8a53f5f99cde79b1`
 - Output: `G:\\sccache\\bench\\canvas-datagrid\\20260115-100710\\summary_agg.csv`
 
 | Case | Renderer `prepare_text` median (ms) | Renderer `draws` median |
@@ -168,8 +168,8 @@ Interpretation:
 
 - Grid viewport/visible list math is already “in the noise” on high-end hardware.
 - The primary bottleneck is renderer-side text preparation and draw call count (not axis math).
-- Current text cache keying is per-cell (`(row_key, col_key)`), which is worst-case under scrolling; matching Glide’s
-  behavior likely requires a more reuse-friendly cache policy (e.g. keyed by `(col, wrap_width, text, style)`).
+- Per-cell cache keying is worst-case under scrolling; we now additionally share plain-text blobs by a content/style
+  fingerprint (independent of `(row_key, col_key)`), which significantly reduces `prepare_text` churn.
 
 ## Next P0/P1 Tasks (Recommended Order)
 
