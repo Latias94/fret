@@ -1488,16 +1488,20 @@ fn radix_web_tooltip_hover_show_hide_matches_fret() {
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
-    render_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        FrameId(3),
-        true,
-        |cx| vec![build(cx)],
-    );
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 1;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(3 + tick),
+            request_semantics,
+            |cx| vec![build(cx)],
+        );
+    }
 
     let snap = ui
         .semantics_snapshot()
