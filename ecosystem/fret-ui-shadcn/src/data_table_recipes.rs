@@ -272,6 +272,7 @@ impl<TData> DataTableToolbar<TData> {
 struct DataTablePaginationState {
     page_size_open: Option<Model<bool>>,
     page_size_value: Option<Model<Option<Arc<str>>>>,
+    last_synced_page_size: Option<usize>,
 }
 
 /// shadcn/ui `DataTable` pagination (recipe).
@@ -357,22 +358,44 @@ impl DataTablePagination {
             .cloned()
             .unwrap_or(None);
 
-        match selected_value {
-            None => {
-                let _ = cx
-                    .app
-                    .models_mut()
-                    .update(&page_size_value, |v| *v = Some(current_size_str.clone()));
-            }
-            Some(sel) => {
-                if let Ok(next) = sel.as_ref().parse::<usize>() {
-                    if next != current_size {
-                        let state = self.state.clone();
-                        let _ = cx.app.models_mut().update(&state, |st| {
-                            st.pagination.page_size = next;
-                            st.pagination.page_index = 0;
-                        });
-                    }
+        let last_synced_page_size = cx.with_state(DataTablePaginationState::default, |st| {
+            st.last_synced_page_size
+        });
+
+        // Treat `TableState.pagination.page_size` as the source of truth. The dropdown's internal
+        // model must follow external updates (e.g. programmatic page size changes) and only drive
+        // `TableState` when the user makes a new selection.
+        let should_sync_to_state =
+            selected_value.is_none() || last_synced_page_size != Some(current_size);
+        if should_sync_to_state {
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&page_size_value, |v| *v = Some(current_size_str.clone()));
+            cx.with_state(DataTablePaginationState::default, |st| {
+                st.last_synced_page_size = Some(current_size);
+            });
+        } else if let Some(sel) = selected_value {
+            match sel.as_ref().parse::<usize>() {
+                Ok(next) if next != current_size => {
+                    let state = self.state.clone();
+                    let _ = cx.app.models_mut().update(&state, |st| {
+                        st.pagination.page_size = next;
+                        st.pagination.page_index = 0;
+                    });
+                    cx.with_state(DataTablePaginationState::default, |st| {
+                        st.last_synced_page_size = Some(next);
+                    });
+                }
+                Ok(_) => {}
+                Err(_) => {
+                    let _ = cx
+                        .app
+                        .models_mut()
+                        .update(&page_size_value, |v| *v = Some(current_size_str.clone()));
+                    cx.with_state(DataTablePaginationState::default, |st| {
+                        st.last_synced_page_size = Some(current_size);
+                    });
                 }
             }
         }
@@ -455,5 +478,60 @@ impl DataTablePagination {
                 ]
             },
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    enum PageSizeAction {
+        None,
+        SyncToState,
+        SetToUserSelection(usize),
+    }
+
+    fn reconcile_page_size(
+        current_size: usize,
+        selected_value: Option<&str>,
+        last_synced: Option<usize>,
+    ) -> PageSizeAction {
+        if selected_value.is_none() || last_synced != Some(current_size) {
+            return PageSizeAction::SyncToState;
+        }
+
+        let Some(sel) = selected_value else {
+            return PageSizeAction::SyncToState;
+        };
+
+        match sel.parse::<usize>() {
+            Ok(next) if next != current_size => PageSizeAction::SetToUserSelection(next),
+            Ok(_) => PageSizeAction::None,
+            Err(_) => PageSizeAction::SyncToState,
+        }
+    }
+
+    #[test]
+    fn pagination_page_size_is_controlled_by_state() {
+        assert_eq!(
+            reconcile_page_size(20, None, None),
+            PageSizeAction::SyncToState
+        );
+        assert_eq!(
+            reconcile_page_size(50, Some("10"), Some(10)),
+            PageSizeAction::SyncToState,
+            "external page_size change must win over stale dropdown model"
+        );
+    }
+
+    #[test]
+    fn pagination_page_size_accepts_user_selection() {
+        assert_eq!(
+            reconcile_page_size(20, Some("50"), Some(20)),
+            PageSizeAction::SetToUserSelection(50)
+        );
+        assert_eq!(
+            reconcile_page_size(20, Some("abc"), Some(20)),
+            PageSizeAction::SyncToState
+        );
     }
 }
