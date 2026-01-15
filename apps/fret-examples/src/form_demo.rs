@@ -17,7 +17,7 @@ use fret_ui_kit::headless::form_state::{FormState, FormValidateMode};
 use fret_ui_kit::headless::form_validation::{first_error, required_trimmed};
 use fret_ui_shadcn::button::{Button, ButtonSize, ButtonVariant};
 use fret_ui_shadcn::stack;
-use fret_ui_shadcn::{Form, FormField, Input, Space};
+use fret_ui_shadcn::{Form, FormField, Input, Select, SelectItem, Space};
 use std::sync::Arc;
 
 struct DemoWindowState {
@@ -26,6 +26,8 @@ struct DemoWindowState {
     registry: FormRegistry,
     name: Model<String>,
     email: Model<String>,
+    role: Model<Option<Arc<str>>>,
+    role_open: Model<bool>,
     status: Model<Arc<str>>,
 }
 
@@ -36,6 +38,8 @@ impl FormDemoDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> DemoWindowState {
         let name = app.models_mut().insert(String::new());
         let email = app.models_mut().insert(String::new());
+        let role = app.models_mut().insert(None);
+        let role_open = app.models_mut().insert(false);
 
         let mut form_state = FormState::default();
         form_state.validate_mode = FormValidateMode::OnSubmit;
@@ -53,6 +57,9 @@ impl FormDemoDriver {
                 (!v.contains('@')).then(|| Arc::from("Email must contain '@'")),
             ])
         });
+        registry.register_field("role", role.clone(), None, |v| {
+            v.is_none().then(|| Arc::from("Role is required"))
+        });
         registry.register_into_form_state(app, &form_state);
 
         let mut ui: UiTree<App> = UiTree::new();
@@ -64,6 +71,8 @@ impl FormDemoDriver {
             registry,
             name,
             email,
+            role,
+            role_open,
             status,
         }
     }
@@ -136,6 +145,8 @@ impl WinitAppDriver for FormDemoDriver {
             "form_demo.reset" => {
                 let _ = app.models_mut().update(&state.name, |v| v.clear());
                 let _ = app.models_mut().update(&state.email, |v| v.clear());
+                let _ = app.models_mut().update(&state.role, |v| *v = None);
+                let _ = app.models_mut().update(&state.role_open, |v| *v = false);
                 let _ = app.models_mut().update(&state.form_state, |st| st.reset());
                 state
                     .registry
@@ -202,6 +213,8 @@ impl WinitAppDriver for FormDemoDriver {
 
         let name = state.name.clone();
         let email = state.email.clone();
+        let role = state.role.clone();
+        let role_open = state.role_open.clone();
         let form_state = state.form_state.clone();
         let status = state.status.clone();
         let root =
@@ -210,6 +223,7 @@ impl WinitAppDriver for FormDemoDriver {
                     cx.observe_model(&form_state, Invalidation::Layout);
                     cx.observe_model(&name, Invalidation::Layout);
                     cx.observe_model(&email, Invalidation::Layout);
+                    cx.observe_model(&role, Invalidation::Layout);
                     cx.observe_model(&status, Invalidation::Layout);
 
                     let theme = Theme::global(&*cx.app).clone();
@@ -275,6 +289,23 @@ impl WinitAppDriver for FormDemoDriver {
                                 vec![Input::new(email.clone()).into_element(cx)],
                             )
                             .label("Email")
+                            .into_element(cx),
+                            FormField::new(
+                                form_state.clone(),
+                                "role",
+                                vec![
+                                    Select::new(role.clone(), role_open.clone())
+                                        .a11y_label("Role")
+                                        .placeholder("Pick a role")
+                                        .items([
+                                            SelectItem::new("admin", "Admin"),
+                                            SelectItem::new("editor", "Editor"),
+                                            SelectItem::new("viewer", "Viewer"),
+                                        ])
+                                        .into_element(cx),
+                                ],
+                            )
+                            .label("Role")
                             .into_element(cx),
                         ])
                         .into_element(cx)
