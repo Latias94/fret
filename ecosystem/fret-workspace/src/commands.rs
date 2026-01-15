@@ -484,6 +484,9 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
             .with_category("Workspace")
             .with_keywords(["split", "pane", "right", "workspace"])
             .with_default_keybindings([
+                win_ctrl(KeyCode::Backslash, false),
+                linux_ctrl(KeyCode::Backslash, false),
+                mac_cmd(KeyCode::Backslash),
                 seq(
                     PlatformFilter::Windows,
                     vec![
