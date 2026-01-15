@@ -3,8 +3,8 @@ use std::hash::{Hash, Hasher};
 
 use fret_core::{AppWindowId, Point, PointerId, Rect};
 pub use fret_dnd::{
-    ActivationConstraint, AutoScrollConfig, AutoScrollRequest, CollisionStrategy, DndCollision,
-    DndItemId, InsertionSide, SensorOutput, insertion_side_for_pointer,
+    ActivationConstraint, AutoScrollConfig, AutoScrollRequest, Axis, CollisionStrategy,
+    DndCollision, DndItemId, InsertionSide, SensorOutput, insertion_side_for_pointer,
 };
 use fret_dnd::{
     Draggable, Droppable, PointerSensor, RegistrySnapshot, SensorEvent, closest_center_collisions,
