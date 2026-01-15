@@ -14,20 +14,21 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 
 ## Summary
 
-- Last updated: 2026-01-14
-- ADR count (numbered): 173
+- Last updated: 2026-01-15
+- ADR count (numbered): 179
 
-- Aligned: 81
-- Aligned (with known gaps): 47
+- Aligned: 80
+- Aligned (with known gaps): 54
 - N/A (superseded): 1
-- Not audited: 20
+- Not audited: 18
 - Not implemented: 4
-- Partially aligned: 20
+- Partially aligned: 22
 
 ## Matrix
 
 | ADR | ADR Status | Implementation Alignment | Notes |
 | --- | --- | --- | --- |
+| [`0172-headless-dnd-v1-contract-surface.md`](0172-headless-dnd-v1-contract-surface.md) | Proposed | Aligned (with known gaps) | `fret-dnd` exists as a headless toolbox with activation constraints (`ecosystem/fret-dnd/src/activation.rs`), deterministic rect collisions (`ecosystem/fret-dnd/src/collision.rs`, `ecosystem/fret-dnd/src/rect_index.rs`), modifiers (`ecosystem/fret-dnd/src/modifier.rs`), and auto-scroll request computation (`ecosystem/fret-dnd/src/scroll.rs`). Docking consumes the rect droppable index for hover selection (`ecosystem/fret-docking/src/dock/space.rs`). Gaps: multi-rect droppables and keyboard sensors are not part of v1; UI integration is still evolving (registry/controller ownership remains app/ecosystem-specific). |
 | [`0171-workspace-shell-tabs-and-pane-layout.md`](0171-workspace-shell-tabs-and-pane-layout.md) | Proposed | Aligned (with known gaps) | Workspace chrome building blocks live in `ecosystem/fret-workspace/src/lib.rs` with a tab model + snapshots (`ecosystem/fret-workspace/src/tabs.rs`) and a versioned pane layout snapshot (`ecosystem/fret-workspace/src/layout.rs`). `fret-kit` re-exports this as a user-facing entry point (`ecosystem/fret-kit/src/lib.rs`). Gap: focus + command routing for “active pane” is app-owned today (no shared arbiter yet). |
 | [`0001-app-effects.md`](0001-app-effects.md) | Accepted | Aligned | Effects queue + redraw coalescing: `crates/fret-app/src/app.rs` (`push_effect`, `flush_effects`); bounded fixed-point draining: `crates/fret-launch/src/runner/desktop/mod.rs` and `crates/fret-launch/src/runner/web.rs`. |
 | [`0002-display-list.md`](0002-display-list.md) | Accepted | Aligned | `SceneOp` contract: `crates/fret-core/src/scene.rs`; renderer preserves op iteration order: `crates/fret-render/src/renderer/render_scene/encode/mod.rs`. |
