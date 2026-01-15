@@ -167,6 +167,32 @@ fn form_decorate_control_element(
     ring: fret_ui::element::RingStyle,
 ) {
     match &mut element.kind {
+        ElementKind::Pressable(props) => {
+            if props.a11y.label.is_none() {
+                props.a11y.label = a11y_label.cloned();
+            }
+            if invalid {
+                props.focus_ring = Some(ring);
+            }
+
+            for child in element.children.iter_mut() {
+                form_decorate_control_element(child, a11y_label, invalid, destructive, ring);
+            }
+        }
+        ElementKind::Container(props) => {
+            if invalid
+                && (props.border.left.0 > 0.0
+                    || props.border.right.0 > 0.0
+                    || props.border.top.0 > 0.0
+                    || props.border.bottom.0 > 0.0)
+            {
+                props.border_color = Some(destructive);
+            }
+
+            for child in element.children.iter_mut() {
+                form_decorate_control_element(child, a11y_label, invalid, destructive, ring);
+            }
+        }
         ElementKind::TextInput(props) => {
             if props.a11y_label.is_none() {
                 props.a11y_label = a11y_label.cloned();
