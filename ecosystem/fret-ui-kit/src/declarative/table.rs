@@ -94,6 +94,19 @@ fn next_sort_for_column(current: Option<bool>) -> Option<bool> {
     }
 }
 
+fn apply_single_sort_toggle(state: &mut TableState, col_id: &ColumnId) {
+    let current = sort_for_column(&state.sorting, col_id);
+    let next = next_sort_for_column(current);
+    state.sorting.clear();
+    if let Some(desc) = next {
+        state.sorting.push(SortSpec {
+            column: col_id.clone(),
+            desc,
+        });
+    }
+    state.pagination.page_index = 0;
+}
+
 fn clamp_column_width<TData>(col: &ColumnDef<TData>, props: &TableViewProps, width: f32) -> Px {
     let min_w = col.min_size.max(props.min_column_width.0).max(0.0);
     let max_w = col.max_size.max(min_w);
@@ -185,6 +198,36 @@ pub struct TableViewOutput {
     /// Total row count after filters (and grouping expansion), before pagination is applied.
     pub filtered_row_count: usize,
     pub pagination: PaginationBounds,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn single_sort_toggle_cycles_and_resets_page_index() {
+        let id: ColumnId = Arc::from("col");
+        let mut state = TableState::default();
+        state.pagination.page_index = 3;
+        assert!(state.sorting.is_empty());
+
+        apply_single_sort_toggle(&mut state, &id);
+        assert_eq!(state.pagination.page_index, 0);
+        assert_eq!(state.sorting.len(), 1);
+        assert_eq!(state.sorting[0].column.as_ref(), id.as_ref());
+        assert!(!state.sorting[0].desc);
+
+        state.pagination.page_index = 2;
+        apply_single_sort_toggle(&mut state, &id);
+        assert_eq!(state.pagination.page_index, 0);
+        assert_eq!(state.sorting.len(), 1);
+        assert!(state.sorting[0].desc);
+
+        state.pagination.page_index = 1;
+        apply_single_sort_toggle(&mut state, &id);
+        assert_eq!(state.pagination.page_index, 0);
+        assert!(state.sorting.is_empty());
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -942,13 +985,10 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                             cx.pressable_update_model(
                                                                                                 &state_model,
                                                                                                 move |st| {
-                                                                                                    let current = sort_for_column(&st.sorting, &col_id);
-                                                                                                    let next = next_sort_for_column(current);
-                                                                                                    st.sorting.clear();
-                                                                                                    if let Some(desc) = next {
-                                                                                                        st.sorting.push(SortSpec { column: col_id.clone(), desc });
-                                                                                                    }
-                                                                                                    st.pagination.page_index = 0;
+                                                                                                    apply_single_sort_toggle(
+                                                                                                        st,
+                                                                                                        &col_id,
+                                                                                                    );
                                                                                                 },
                                                                                             );
                                                                                         }
