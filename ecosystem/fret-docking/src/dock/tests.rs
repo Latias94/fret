@@ -2961,6 +2961,121 @@ fn dock_tab_bar_insert_index_respects_before_after_halves() {
 }
 
 #[test]
+fn dock_tab_drop_emits_insert_index_based_on_over_tab_halves() {
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(root);
+
+    let panel_a = PanelKey::new("core.a");
+    let panel_b = PanelKey::new("core.b");
+    let panel_c = PanelKey::new("core.c");
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let tabs = app.with_global_mut(DockManager::default, |dock, _app| {
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![panel_a.clone(), panel_b.clone(), panel_c.clone()],
+            active: 0,
+        });
+        dock.graph.set_window_root(window, tabs);
+        for panel in [&panel_a, &panel_b, &panel_c] {
+            dock.panels.insert(
+                panel.clone(),
+                DockPanel {
+                    title: "Panel".to_string(),
+                    color: Color::TRANSPARENT,
+                    viewport: None,
+                },
+            );
+        }
+        tabs
+    });
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+    let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+
+    let (_chrome, dock_bounds) = dock_space_regions(bounds);
+    let (tab_bar, _content) = split_tab_bar(dock_bounds);
+    let scroll = Px(0.0);
+
+    let over_rect = tab_rect_for_index(tab_bar, 1, scroll);
+    let y = Px(over_rect.origin.y.0 + over_rect.size.height.0 * 0.5);
+
+    let check_drop = |app: &mut TestHost,
+                      ui: &mut UiTree<TestHost>,
+                      position: Point,
+                      expect: usize| {
+        app.begin_cross_window_drag_with_kind(
+            fret_core::PointerId(0),
+            DRAG_KIND_DOCK_PANEL,
+            window,
+            Point::new(Px(24.0), Px(12.0)),
+            DockPanelDragPayload {
+                panel: panel_a.clone(),
+                grab_offset: Point::new(Px(0.0), Px(0.0)),
+                start_tick: fret_runtime::TickId(0),
+                tear_off_requested: false,
+            },
+        );
+        if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+            drag.dragging = true;
+        }
+
+        let mut services = FakeTextService;
+        ui.dispatch_event(
+            app,
+            &mut services,
+            &Event::InternalDrag(InternalDragEvent {
+                position,
+                kind: InternalDragKind::Over,
+                modifiers: Modifiers::default(),
+                pointer_id: fret_core::PointerId(0),
+            }),
+        );
+        ui.dispatch_event(
+            app,
+            &mut services,
+            &Event::InternalDrag(InternalDragEvent {
+                position,
+                kind: InternalDragKind::Drop,
+                modifiers: Modifiers::default(),
+                pointer_id: fret_core::PointerId(0),
+            }),
+        );
+
+        let effects = app.take_effects();
+        let moves: Vec<_> = effects
+            .iter()
+            .filter_map(|e| match e {
+                Effect::Dock(DockOp::MovePanel {
+                    panel,
+                    target_tabs,
+                    zone,
+                    insert_index,
+                    ..
+                }) if panel == &panel_a && *target_tabs == tabs && *zone == DropZone::Center => {
+                    Some(*insert_index)
+                }
+                _ => None,
+            })
+            .collect();
+        assert_eq!(moves, vec![Some(expect)]);
+    };
+
+    let left_half = Point::new(Px(over_rect.origin.x.0 + over_rect.size.width.0 * 0.25), y);
+    check_drop(&mut app, &mut ui, left_half, 1);
+
+    let right_half = Point::new(Px(over_rect.origin.x.0 + over_rect.size.width.0 * 0.75), y);
+    check_drop(&mut app, &mut ui, right_half, 2);
+}
+
+#[test]
 fn render_and_bind_panels_falls_back_to_placeholder_for_missing_ui() {
     let window = AppWindowId::default();
 
