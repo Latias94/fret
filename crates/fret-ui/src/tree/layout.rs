@@ -18,6 +18,7 @@ impl<H: UiHost> UiTree<H> {
         self.layout_all_with_pass_kind(app, services, bounds, scale_factor, LayoutPassKind::Final);
     }
 
+    #[stacksafe::stacksafe]
     pub(crate) fn layout_all_with_pass_kind(
         &mut self,
         app: &mut H,
