@@ -17,7 +17,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use crate::declarative::model_watch::ModelWatchExt as _;
 use crate::declarative::stack;
 use crate::dnd;
-use crate::dnd::{ActivationConstraint, CollisionStrategy, DndItemId, SensorOutput};
+use crate::dnd::{ActivationConstraint, CollisionStrategy, DndItemId, DndScopeId, SensorOutput};
 use crate::{Items, Justify, LayoutRefinement, Space};
 
 const DRAG_KIND_SORTABLE_REORDER: DragKindId = DragKindId(100);
@@ -97,6 +97,7 @@ pub fn sortable_reorder_list<H: UiHost>(
     let state = get_state_model(cx);
     let dnd = dnd::dnd_service_model(cx);
     let frame_id = cx.frame_id;
+    let scope = DndScopeId(cx.root_id().0);
 
     let theme = Theme::global(&*cx.app);
     let list_bg = theme
@@ -160,11 +161,12 @@ pub fn sortable_reorder_list<H: UiHost>(
                         },
                     );
                 });
-                dnd::clear_pending_pointer(
+                dnd::clear_pending_pointer_in_scope(
                     host.models_mut(),
                     &dnd_on_down,
                     action_cx.window,
                     DRAG_KIND_SORTABLE_REORDER,
+                    scope,
                     down.pointer_id,
                 );
                 host.request_redraw(action_cx.window);
@@ -196,11 +198,12 @@ pub fn sortable_reorder_list<H: UiHost>(
                 });
 
                 if matches!(outcome, MoveOutcome::Canceled) {
-                    dnd::clear_pending_pointer(
+                    dnd::clear_pending_pointer_in_scope(
                         host.models_mut(),
                         &dnd_on_move,
                         _action_cx.window,
                         DRAG_KIND_SORTABLE_REORDER,
+                        scope,
                         mv.pointer_id,
                     );
                     host.release_pointer_capture();
@@ -212,12 +215,13 @@ pub fn sortable_reorder_list<H: UiHost>(
                     return false;
                 };
 
-                let dnd_update = dnd::update_pending_drag_move(
+                let dnd_update = dnd::update_pending_drag_move_in_scope(
                     host.models_mut(),
                     &dnd_on_move,
                     _action_cx.window,
                     frame_id,
                     DRAG_KIND_SORTABLE_REORDER,
+                    scope,
                     mv.pointer_id,
                     pointer_state.start_tick,
                     pointer_state.start_position,
@@ -247,11 +251,12 @@ pub fn sortable_reorder_list<H: UiHost>(
                 match outcome {
                     MoveOutcome::Ignore => false,
                     MoveOutcome::Canceled => {
-                        dnd::clear_pending_pointer(
+                        dnd::clear_pending_pointer_in_scope(
                             host.models_mut(),
                             &dnd_on_move,
                             _action_cx.window,
                             DRAG_KIND_SORTABLE_REORDER,
+                            scope,
                             mv.pointer_id,
                         );
                         host.release_pointer_capture();
@@ -288,11 +293,12 @@ pub fn sortable_reorder_list<H: UiHost>(
                     return false;
                 }
 
-                dnd::clear_pending_pointer(
+                dnd::clear_pending_pointer_in_scope(
                     host.models_mut(),
                     &dnd_on_up,
                     action_cx.window,
                     DRAG_KIND_SORTABLE_REORDER,
+                    scope,
                     up.pointer_id,
                 );
                 host.release_pointer_capture();
@@ -342,11 +348,12 @@ pub fn sortable_reorder_list<H: UiHost>(
                     |cx| {
                         let element = cx.root_id();
                         if let Some(rect) = cx.last_bounds_for_element(element) {
-                            dnd::register_droppable_rect(
+                            dnd::register_droppable_rect_in_scope(
                                 cx.app.models_mut(),
                                 &dnd,
                                 cx.window,
                                 cx.frame_id,
+                                scope,
                                 id,
                                 rect,
                                 0,
