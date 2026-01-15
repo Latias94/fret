@@ -99,6 +99,177 @@ fn pad_root<H: UiHost>(cx: &mut ElementContext<'_, H>, pad: Px, child: AnyElemen
     )
 }
 
+fn build_context_menu_demo<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+    checked_bookmarks: Model<bool>,
+    checked_full_urls: Model<bool>,
+    radio_person: Model<Option<Arc<str>>>,
+) -> AnyElement {
+    use fret_ui_shadcn::{
+        Button, ButtonVariant, ContextMenu, ContextMenuCheckboxItem, ContextMenuEntry,
+        ContextMenuItem, ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItemSpec,
+        ContextMenuShortcut,
+    };
+
+    ContextMenu::new(open)
+        // new-york-v4 context-menu-demo: `ContextMenuContent className="w-52"`.
+        .min_width(Px(208.0))
+        // new-york-v4 context-menu-demo: `ContextMenuSubContent className="w-44"`.
+        .submenu_min_width(Px(176.0))
+        .into_element(
+            cx,
+            |cx| {
+                Button::new("Right click here")
+                    .variant(ButtonVariant::Outline)
+                    .into_element(cx)
+            },
+            |cx| {
+                vec![
+                    ContextMenuEntry::Item(
+                        ContextMenuItem::new("Back")
+                            .inset(true)
+                            .trailing(ContextMenuShortcut::new("⌘[").into_element(cx)),
+                    ),
+                    ContextMenuEntry::Item(
+                        ContextMenuItem::new("Forward")
+                            .inset(true)
+                            .disabled(true)
+                            .trailing(ContextMenuShortcut::new("⌘]").into_element(cx)),
+                    ),
+                    ContextMenuEntry::Item(
+                        ContextMenuItem::new("Reload")
+                            .inset(true)
+                            .trailing(ContextMenuShortcut::new("⌘R").into_element(cx)),
+                    ),
+                    ContextMenuEntry::Item(ContextMenuItem::new("More Tools").inset(true).submenu(
+                        vec![
+                            ContextMenuEntry::Item(ContextMenuItem::new("Save Page...")),
+                            ContextMenuEntry::Item(ContextMenuItem::new("Create Shortcut...")),
+                            ContextMenuEntry::Item(ContextMenuItem::new("Name Window...")),
+                            ContextMenuEntry::Separator,
+                            ContextMenuEntry::Item(ContextMenuItem::new("Developer Tools")),
+                            ContextMenuEntry::Separator,
+                            ContextMenuEntry::Item(ContextMenuItem::new("Delete").variant(
+                                fret_ui_shadcn::context_menu::ContextMenuItemVariant::Destructive,
+                            )),
+                        ],
+                    )),
+                    ContextMenuEntry::Separator,
+                    ContextMenuEntry::CheckboxItem(ContextMenuCheckboxItem::new(
+                        checked_bookmarks,
+                        "Show Bookmarks",
+                    )),
+                    ContextMenuEntry::CheckboxItem(ContextMenuCheckboxItem::new(
+                        checked_full_urls,
+                        "Show Full URLs",
+                    )),
+                    ContextMenuEntry::Separator,
+                    ContextMenuEntry::Label(ContextMenuLabel::new("People").inset(true)),
+                    ContextMenuEntry::RadioGroup(
+                        ContextMenuRadioGroup::new(radio_person)
+                            .item(ContextMenuRadioItemSpec::new("pedro", "Pedro Duarte"))
+                            .item(ContextMenuRadioItemSpec::new("colm", "Colm Tuite")),
+                    ),
+                ]
+            },
+        )
+}
+
+fn build_menubar_demo<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    view_bookmarks_bar: Model<bool>,
+    view_full_urls: Model<bool>,
+    profile_value: Model<Option<Arc<str>>>,
+) -> AnyElement {
+    use fret_ui_shadcn::{
+        Menubar, MenubarCheckboxItem, MenubarEntry, MenubarItem, MenubarMenu, MenubarRadioGroup,
+        MenubarRadioItemSpec, MenubarShortcut,
+    };
+
+    Menubar::new(vec![
+        MenubarMenu::new("File").entries(vec![
+            MenubarEntry::Item(
+                MenubarItem::new("New Tab").trailing(MenubarShortcut::new("⌘T").into_element(cx)),
+            ),
+            MenubarEntry::Item(
+                MenubarItem::new("New Window")
+                    .trailing(MenubarShortcut::new("⌘N").into_element(cx)),
+            ),
+            MenubarEntry::Item(MenubarItem::new("New Incognito Window").disabled(true)),
+            MenubarEntry::Separator,
+            MenubarEntry::Submenu(MenubarItem::new("Share").submenu(vec![
+                MenubarEntry::Item(MenubarItem::new("Email link")),
+                MenubarEntry::Item(MenubarItem::new("Messages")),
+                MenubarEntry::Item(MenubarItem::new("Notes")),
+            ])),
+            MenubarEntry::Separator,
+            MenubarEntry::Item(
+                MenubarItem::new("Print...").trailing(MenubarShortcut::new("⌘P").into_element(cx)),
+            ),
+        ]),
+        MenubarMenu::new("Edit").entries(vec![
+            MenubarEntry::Item(
+                MenubarItem::new("Undo").trailing(MenubarShortcut::new("⌘Z").into_element(cx)),
+            ),
+            MenubarEntry::Item(
+                MenubarItem::new("Redo").trailing(MenubarShortcut::new("⇧⌘Z").into_element(cx)),
+            ),
+            MenubarEntry::Separator,
+            MenubarEntry::Submenu(MenubarItem::new("Find").submenu(vec![
+                MenubarEntry::Item(MenubarItem::new("Search the web")),
+                MenubarEntry::Separator,
+                MenubarEntry::Item(MenubarItem::new("Find...")),
+                MenubarEntry::Item(MenubarItem::new("Find Next")),
+                MenubarEntry::Item(MenubarItem::new("Find Previous")),
+            ])),
+            MenubarEntry::Separator,
+            MenubarEntry::Item(MenubarItem::new("Cut")),
+            MenubarEntry::Item(MenubarItem::new("Copy")),
+            MenubarEntry::Item(MenubarItem::new("Paste")),
+        ]),
+        MenubarMenu::new("View").entries(vec![
+            MenubarEntry::CheckboxItem(MenubarCheckboxItem::new(
+                view_bookmarks_bar,
+                "Always Show Bookmarks Bar",
+            )),
+            MenubarEntry::CheckboxItem(MenubarCheckboxItem::new(
+                view_full_urls,
+                "Always Show Full URLs",
+            )),
+            MenubarEntry::Separator,
+            MenubarEntry::Item(
+                MenubarItem::new("Reload")
+                    .inset(true)
+                    .trailing(MenubarShortcut::new("⌘R").into_element(cx)),
+            ),
+            MenubarEntry::Item(
+                MenubarItem::new("Force Reload")
+                    .disabled(true)
+                    .inset(true)
+                    .trailing(MenubarShortcut::new("⇧⌘R").into_element(cx)),
+            ),
+            MenubarEntry::Separator,
+            MenubarEntry::Item(MenubarItem::new("Toggle Fullscreen").inset(true)),
+            MenubarEntry::Separator,
+            MenubarEntry::Item(MenubarItem::new("Hide Sidebar").inset(true)),
+        ]),
+        MenubarMenu::new("Profiles").entries(vec![
+            MenubarEntry::RadioGroup(
+                MenubarRadioGroup::new(profile_value)
+                    .item(MenubarRadioItemSpec::new("andy", "Andy"))
+                    .item(MenubarRadioItemSpec::new("benoit", "Benoit"))
+                    .item(MenubarRadioItemSpec::new("Luis", "Luis")),
+            ),
+            MenubarEntry::Separator,
+            MenubarEntry::Item(MenubarItem::new("Edit...").inset(true)),
+            MenubarEntry::Separator,
+            MenubarEntry::Item(MenubarItem::new("Add Profile...").inset(true)),
+        ]),
+    ])
+    .into_element(cx)
+}
+
 fn first_container_px_size(element: &AnyElement) -> Option<(f32, f32)> {
     fn visit(node: &AnyElement) -> Option<(f32, f32)> {
         if let fret_ui::element::ElementKind::Container(props) = &node.kind {
@@ -679,6 +850,21 @@ fn assert_overlay_placement_matches(
         expected_cross,
         1.5,
     );
+
+    if fret_portal_role == SemanticsRole::Menu {
+        assert_close(
+            &format!("{web_name} portal_w"),
+            fret_portal.w,
+            expected_portal_w,
+            2.0,
+        );
+        assert_close(
+            &format!("{web_name} portal_h"),
+            fret_portal.h,
+            expected_portal_h,
+            2.0,
+        );
+    }
 }
 
 fn assert_centered_overlay_placement_matches(
@@ -1098,15 +1284,66 @@ fn web_vs_fret_dropdown_menu_demo_overlay_placement_matches() {
         "dropdown-menu-demo",
         Some("menu"),
         |cx, open| {
-            fret_ui_shadcn::DropdownMenu::new(open.clone()).into_element(
-                cx,
-                |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
-                |_cx| {
-                    vec![fret_ui_shadcn::DropdownMenuEntry::Item(
-                        fret_ui_shadcn::DropdownMenuItem::new("Alpha"),
-                    )]
-                },
-            )
+            use fret_ui_shadcn::{
+                Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuItem,
+                DropdownMenuLabel, DropdownMenuShortcut,
+            };
+
+            DropdownMenu::new(open.clone())
+                // new-york-v4 dropdown-menu-demo: `DropdownMenuContent className="w-56"`.
+                .min_width(Px(224.0))
+                .into_element(
+                    cx,
+                    |cx| {
+                        Button::new("Open")
+                            .variant(ButtonVariant::Outline)
+                            .into_element(cx)
+                    },
+                    |cx| {
+                        vec![
+                            DropdownMenuEntry::Label(DropdownMenuLabel::new("My Account")),
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Profile")
+                                    .trailing(DropdownMenuShortcut::new("⇧⌘P").into_element(cx)),
+                            ),
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Billing")
+                                    .trailing(DropdownMenuShortcut::new("⌘B").into_element(cx)),
+                            ),
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Settings")
+                                    .trailing(DropdownMenuShortcut::new("⌘S").into_element(cx)),
+                            ),
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Keyboard shortcuts")
+                                    .trailing(DropdownMenuShortcut::new("⌘K").into_element(cx)),
+                            ),
+                            DropdownMenuEntry::Separator,
+                            DropdownMenuEntry::Item(DropdownMenuItem::new("Team")),
+                            DropdownMenuEntry::Item(DropdownMenuItem::new("Invite users").submenu(
+                                vec![
+                                    DropdownMenuEntry::Item(DropdownMenuItem::new("Email")),
+                                    DropdownMenuEntry::Item(DropdownMenuItem::new("Message")),
+                                    DropdownMenuEntry::Separator,
+                                    DropdownMenuEntry::Item(DropdownMenuItem::new("More...")),
+                                ],
+                            )),
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("New Team")
+                                    .trailing(DropdownMenuShortcut::new("⌘+T").into_element(cx)),
+                            ),
+                            DropdownMenuEntry::Separator,
+                            DropdownMenuEntry::Item(DropdownMenuItem::new("GitHub")),
+                            DropdownMenuEntry::Item(DropdownMenuItem::new("Support")),
+                            DropdownMenuEntry::Item(DropdownMenuItem::new("API").disabled(true)),
+                            DropdownMenuEntry::Separator,
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Log out")
+                                    .trailing(DropdownMenuShortcut::new("⇧⌘Q").into_element(cx)),
+                            ),
+                        ]
+                    },
+                )
         },
         SemanticsRole::Button,
         Some("Open"),
@@ -1126,6 +1363,8 @@ fn web_vs_fret_dropdown_menu_demo_submenu_overlay_placement_matches() {
 
     let expected_dx = web_sub_menu.rect.x - rect_right(web_sub_trigger.rect);
     let expected_dy = web_sub_menu.rect.y - web_sub_trigger.rect.y;
+    let expected_w = web_sub_menu.rect.w;
+    let expected_h = web_sub_menu.rect.h;
 
     let window = AppWindowId::default();
     let mut app = App::new();
@@ -1151,18 +1390,23 @@ fn web_vs_fret_dropdown_menu_demo_submenu_overlay_placement_matches() {
         FrameId(1),
         false,
         |cx| {
-            let el = DropdownMenu::new(open.clone()).into_element(
-                cx,
-                |cx| Button::new("Open").into_element(cx),
-                |_cx| {
-                    vec![DropdownMenuEntry::Item(
-                        DropdownMenuItem::new("Invite users").submenu(vec![
-                            DropdownMenuEntry::Item(DropdownMenuItem::new("Email")),
-                            DropdownMenuEntry::Item(DropdownMenuItem::new("Message")),
-                        ]),
-                    )]
-                },
-            );
+            let el = DropdownMenu::new(open.clone())
+                // new-york-v4 dropdown-menu-demo: `DropdownMenuContent className="w-56"`.
+                .min_width(Px(224.0))
+                .into_element(
+                    cx,
+                    |cx| Button::new("Open").into_element(cx),
+                    |_cx| {
+                        vec![DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Invite users").submenu(vec![
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("Email")),
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("Message")),
+                                DropdownMenuEntry::Separator,
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("More...")),
+                            ]),
+                        )]
+                    },
+                );
             vec![pad_root(cx, Px(0.0), el)]
         },
     );
@@ -1178,18 +1422,22 @@ fn web_vs_fret_dropdown_menu_demo_submenu_overlay_placement_matches() {
         FrameId(2),
         true,
         |cx| {
-            let el = DropdownMenu::new(open.clone()).into_element(
-                cx,
-                |cx| Button::new("Open").into_element(cx),
-                |_cx| {
-                    vec![DropdownMenuEntry::Item(
-                        DropdownMenuItem::new("Invite users").submenu(vec![
-                            DropdownMenuEntry::Item(DropdownMenuItem::new("Email")),
-                            DropdownMenuEntry::Item(DropdownMenuItem::new("Message")),
-                        ]),
-                    )]
-                },
-            );
+            let el = DropdownMenu::new(open.clone())
+                .min_width(Px(224.0))
+                .into_element(
+                    cx,
+                    |cx| Button::new("Open").into_element(cx),
+                    |_cx| {
+                        vec![DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Invite users").submenu(vec![
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("Email")),
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("Message")),
+                                DropdownMenuEntry::Separator,
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("More...")),
+                            ]),
+                        )]
+                    },
+                );
             vec![pad_root(cx, Px(0.0), el)]
         },
     );
@@ -1224,18 +1472,22 @@ fn web_vs_fret_dropdown_menu_demo_submenu_overlay_placement_matches() {
             FrameId(3 + tick),
             request_semantics,
             |cx| {
-                let el = DropdownMenu::new(open.clone()).into_element(
-                    cx,
-                    |cx| Button::new("Open").into_element(cx),
-                    |_cx| {
-                        vec![DropdownMenuEntry::Item(
-                            DropdownMenuItem::new("Invite users").submenu(vec![
-                                DropdownMenuEntry::Item(DropdownMenuItem::new("Email")),
-                                DropdownMenuEntry::Item(DropdownMenuItem::new("Message")),
-                            ]),
-                        )]
-                    },
-                );
+                let el = DropdownMenu::new(open.clone())
+                    .min_width(Px(224.0))
+                    .into_element(
+                        cx,
+                        |cx| Button::new("Open").into_element(cx),
+                        |_cx| {
+                            vec![DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Invite users").submenu(vec![
+                                    DropdownMenuEntry::Item(DropdownMenuItem::new("Email")),
+                                    DropdownMenuEntry::Item(DropdownMenuItem::new("Message")),
+                                    DropdownMenuEntry::Separator,
+                                    DropdownMenuEntry::Item(DropdownMenuItem::new("More...")),
+                                ]),
+                            )]
+                        },
+                    );
                 vec![pad_root(cx, Px(0.0), el)]
             },
         );
@@ -1271,9 +1523,13 @@ fn web_vs_fret_dropdown_menu_demo_submenu_overlay_placement_matches() {
     let actual_dx =
         submenu.bounds.origin.x.0 - (trigger.bounds.origin.x.0 + trigger.bounds.size.width.0);
     let actual_dy = submenu.bounds.origin.y.0 - trigger.bounds.origin.y.0;
+    let actual_w = submenu.bounds.size.width.0;
+    let actual_h = submenu.bounds.size.height.0;
 
     assert_close("dropdown-menu-demo.submenu dx", actual_dx, expected_dx, 2.0);
     assert_close("dropdown-menu-demo.submenu dy", actual_dy, expected_dy, 2.0);
+    assert_close("dropdown-menu-demo.submenu w", actual_w, expected_w, 2.0);
+    assert_close("dropdown-menu-demo.submenu h", actual_h, expected_h, 2.0);
 
     // Ensure the root menu is also present (guards against selecting some unrelated menu).
     assert!(
@@ -1498,6 +1754,21 @@ fn assert_point_anchored_overlay_placement_matches(
         expected_cross,
         1.5,
     );
+
+    if fret_portal_role == SemanticsRole::Menu {
+        assert_close(
+            &format!("{web_name} portal_w"),
+            fret_portal.w,
+            expected_portal_w,
+            2.0,
+        );
+        assert_close(
+            &format!("{web_name} portal_h"),
+            fret_portal.h,
+            expected_portal_h,
+            2.0,
+        );
+    }
 }
 
 #[test]
@@ -1542,7 +1813,12 @@ fn web_vs_fret_context_menu_demo_overlay_placement_matches() {
                     (checked_bookmarks, checked_full_urls, radio_person)
                 };
 
-            fret_ui_shadcn::ContextMenu::new(open.clone()).into_element(
+            fret_ui_shadcn::ContextMenu::new(open.clone())
+                // new-york-v4 context-menu-demo: `ContextMenuContent className="w-52"`.
+                .min_width(Px(208.0))
+                // new-york-v4 context-menu-demo: `ContextMenuSubContent className="w-44"`.
+                .submenu_min_width(Px(176.0))
+                .into_element(
                 cx,
                 |cx| {
                     cx.container(
@@ -1558,18 +1834,32 @@ fn web_vs_fret_context_menu_demo_overlay_placement_matches() {
                         |cx| vec![cx.text("Right click here")],
                     )
                 },
-                |_cx| {
+                |cx| {
                     vec![
                         fret_ui_shadcn::ContextMenuEntry::Item(
-                            fret_ui_shadcn::ContextMenuItem::new("Back").inset(true),
+                            fret_ui_shadcn::ContextMenuItem::new("Back")
+                                .inset(true)
+                                .trailing(
+                                    fret_ui_shadcn::ContextMenuShortcut::new("⌘[")
+                                        .into_element(cx),
+                                ),
                         ),
                         fret_ui_shadcn::ContextMenuEntry::Item(
                             fret_ui_shadcn::ContextMenuItem::new("Forward")
                                 .inset(true)
-                                .disabled(true),
+                                .disabled(true)
+                                .trailing(
+                                    fret_ui_shadcn::ContextMenuShortcut::new("⌘]")
+                                        .into_element(cx),
+                                ),
                         ),
                         fret_ui_shadcn::ContextMenuEntry::Item(
-                            fret_ui_shadcn::ContextMenuItem::new("Reload").inset(true),
+                            fret_ui_shadcn::ContextMenuItem::new("Reload")
+                                .inset(true)
+                                .trailing(
+                                    fret_ui_shadcn::ContextMenuShortcut::new("⌘R")
+                                        .into_element(cx),
+                                ),
                         ),
                         fret_ui_shadcn::ContextMenuEntry::Item(
                             fret_ui_shadcn::ContextMenuItem::new("More Tools").inset(true).submenu(
@@ -1661,8 +1951,6 @@ fn web_vs_fret_context_menu_demo_overlay_placement_matches() {
 
 #[test]
 fn web_vs_fret_context_menu_demo_submenu_overlay_placement_matches() {
-    use fret_ui_shadcn::{Button, ButtonVariant, ContextMenu, ContextMenuEntry, ContextMenuItem};
-
     let web = read_web_golden_open("context-menu-demo.submenu-kbd");
     let theme = web_theme(&web);
 
@@ -1671,6 +1959,8 @@ fn web_vs_fret_context_menu_demo_submenu_overlay_placement_matches() {
 
     let expected_dx = web_sub_menu.rect.x - rect_right(web_sub_trigger.rect);
     let expected_dy = web_sub_menu.rect.y - web_sub_trigger.rect.y;
+    let expected_w = web_sub_menu.rect.w;
+    let expected_h = web_sub_menu.rect.h;
 
     let window = AppWindowId::default();
     let mut app = App::new();
@@ -1686,6 +1976,9 @@ fn web_vs_fret_context_menu_demo_submenu_overlay_placement_matches() {
     );
 
     let open: Model<bool> = app.models_mut().insert(false);
+    let checked_bookmarks: Model<bool> = app.models_mut().insert(true);
+    let checked_full_urls: Model<bool> = app.models_mut().insert(false);
+    let radio_person: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("pedro")));
 
     render_frame(
         &mut ui,
@@ -1696,21 +1989,12 @@ fn web_vs_fret_context_menu_demo_submenu_overlay_placement_matches() {
         FrameId(1),
         true,
         |cx| {
-            let el = ContextMenu::new(open.clone()).into_element(
+            let el = build_context_menu_demo(
                 cx,
-                |cx| {
-                    Button::new("Right click here")
-                        .variant(ButtonVariant::Outline)
-                        .into_element(cx)
-                },
-                |_cx| {
-                    vec![ContextMenuEntry::Item(
-                        ContextMenuItem::new("More Tools").submenu(vec![
-                            ContextMenuEntry::Item(ContextMenuItem::new("Save Page...")),
-                            ContextMenuEntry::Item(ContextMenuItem::new("Create Shortcut...")),
-                        ]),
-                    )]
-                },
+                open.clone(),
+                checked_bookmarks.clone(),
+                checked_full_urls.clone(),
+                radio_person.clone(),
             );
             vec![pad_root(cx, Px(0.0), el)]
         },
@@ -1772,21 +2056,12 @@ fn web_vs_fret_context_menu_demo_submenu_overlay_placement_matches() {
         FrameId(2),
         true,
         |cx| {
-            let el = ContextMenu::new(open.clone()).into_element(
+            let el = build_context_menu_demo(
                 cx,
-                |cx| {
-                    Button::new("Right click here")
-                        .variant(ButtonVariant::Outline)
-                        .into_element(cx)
-                },
-                |_cx| {
-                    vec![ContextMenuEntry::Item(
-                        ContextMenuItem::new("More Tools").submenu(vec![
-                            ContextMenuEntry::Item(ContextMenuItem::new("Save Page...")),
-                            ContextMenuEntry::Item(ContextMenuItem::new("Create Shortcut...")),
-                        ]),
-                    )]
-                },
+                open.clone(),
+                checked_bookmarks.clone(),
+                checked_full_urls.clone(),
+                radio_person.clone(),
             );
             vec![pad_root(cx, Px(0.0), el)]
         },
@@ -1830,21 +2105,12 @@ fn web_vs_fret_context_menu_demo_submenu_overlay_placement_matches() {
             FrameId(3 + tick),
             request_semantics,
             |cx| {
-                let el = ContextMenu::new(open.clone()).into_element(
+                let el = build_context_menu_demo(
                     cx,
-                    |cx| {
-                        Button::new("Right click here")
-                            .variant(ButtonVariant::Outline)
-                            .into_element(cx)
-                    },
-                    |_cx| {
-                        vec![ContextMenuEntry::Item(
-                            ContextMenuItem::new("More Tools").submenu(vec![
-                                ContextMenuEntry::Item(ContextMenuItem::new("Save Page...")),
-                                ContextMenuEntry::Item(ContextMenuItem::new("Create Shortcut...")),
-                            ]),
-                        )]
-                    },
+                    open.clone(),
+                    checked_bookmarks.clone(),
+                    checked_full_urls.clone(),
+                    radio_person.clone(),
                 );
                 vec![pad_root(cx, Px(0.0), el)]
             },
@@ -1881,9 +2147,13 @@ fn web_vs_fret_context_menu_demo_submenu_overlay_placement_matches() {
     let actual_dx =
         submenu.bounds.origin.x.0 - (trigger.bounds.origin.x.0 + trigger.bounds.size.width.0);
     let actual_dy = submenu.bounds.origin.y.0 - trigger.bounds.origin.y.0;
+    let actual_w = submenu.bounds.size.width.0;
+    let actual_h = submenu.bounds.size.height.0;
 
     assert_close("context-menu-demo.submenu dx", actual_dx, expected_dx, 2.0);
     assert_close("context-menu-demo.submenu dy", actual_dy, expected_dy, 2.0);
+    assert_close("context-menu-demo.submenu w", actual_w, expected_w, 2.0);
+    assert_close("context-menu-demo.submenu h", actual_h, expected_h, 2.0);
 }
 
 #[test]
@@ -2468,6 +2738,9 @@ fn web_vs_fret_menubar_demo_overlay_placement_matches() {
     let window = AppWindowId::default();
     let mut app = App::new();
     setup_app_with_shadcn_theme(&mut app);
+    let view_bookmarks_bar: Model<bool> = app.models_mut().insert(false);
+    let view_full_urls: Model<bool> = app.models_mut().insert(true);
+    let profile_value: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("benoit")));
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
@@ -2487,17 +2760,12 @@ fn web_vs_fret_menubar_demo_overlay_placement_matches() {
         FrameId(1),
         true,
         |cx| {
-            let menubar = fret_ui_shadcn::Menubar::new(vec![
-                fret_ui_shadcn::MenubarMenu::new("File").entries(vec![
-                    fret_ui_shadcn::MenubarEntry::Item(fret_ui_shadcn::MenubarItem::new("New Tab")),
-                    fret_ui_shadcn::MenubarEntry::Item(fret_ui_shadcn::MenubarItem::new(
-                        "New Window",
-                    )),
-                    fret_ui_shadcn::MenubarEntry::Separator,
-                    fret_ui_shadcn::MenubarEntry::Item(fret_ui_shadcn::MenubarItem::new("Share")),
-                ]),
-            ])
-            .into_element(cx);
+            let menubar = build_menubar_demo(
+                cx,
+                view_bookmarks_bar.clone(),
+                view_full_urls.clone(),
+                profile_value.clone(),
+            );
             vec![pad_root(cx, Px(0.0), menubar)]
         },
     );
@@ -2549,21 +2817,12 @@ fn web_vs_fret_menubar_demo_overlay_placement_matches() {
             FrameId(2 + tick),
             request_semantics,
             |cx| {
-                let menubar = fret_ui_shadcn::Menubar::new(vec![
-                    fret_ui_shadcn::MenubarMenu::new("File").entries(vec![
-                        fret_ui_shadcn::MenubarEntry::Item(fret_ui_shadcn::MenubarItem::new(
-                            "New Tab",
-                        )),
-                        fret_ui_shadcn::MenubarEntry::Item(fret_ui_shadcn::MenubarItem::new(
-                            "New Window",
-                        )),
-                        fret_ui_shadcn::MenubarEntry::Separator,
-                        fret_ui_shadcn::MenubarEntry::Item(fret_ui_shadcn::MenubarItem::new(
-                            "Share",
-                        )),
-                    ]),
-                ])
-                .into_element(cx);
+                let menubar = build_menubar_demo(
+                    cx,
+                    view_bookmarks_bar.clone(),
+                    view_full_urls.clone(),
+                    profile_value.clone(),
+                );
                 vec![pad_root(cx, Px(0.0), menubar)]
             },
         );
@@ -2662,12 +2921,22 @@ fn web_vs_fret_menubar_demo_overlay_placement_matches() {
         expected_cross,
         1.5,
     );
+    assert_close(
+        "menubar-demo portal_w",
+        fret_portal.w,
+        expected_portal_w,
+        2.0,
+    );
+    assert_close(
+        "menubar-demo portal_h",
+        fret_portal.h,
+        expected_portal_h,
+        2.0,
+    );
 }
 
 #[test]
 fn web_vs_fret_menubar_demo_submenu_overlay_placement_matches() {
-    use fret_ui_shadcn::{MenubarEntry, MenubarItem, MenubarMenu};
-
     let web = read_web_golden_open("menubar-demo.submenu-kbd");
     let theme = web_theme(&web);
 
@@ -2676,10 +2945,15 @@ fn web_vs_fret_menubar_demo_submenu_overlay_placement_matches() {
 
     let expected_dx = web_sub_menu.rect.x - rect_right(web_sub_trigger.rect);
     let expected_dy = web_sub_menu.rect.y - web_sub_trigger.rect.y;
+    let expected_w = web_sub_menu.rect.w;
+    let expected_h = web_sub_menu.rect.h;
 
     let window = AppWindowId::default();
     let mut app = App::new();
     setup_app_with_shadcn_theme(&mut app);
+    let view_bookmarks_bar: Model<bool> = app.models_mut().insert(false);
+    let view_full_urls: Model<bool> = app.models_mut().insert(true);
+    let profile_value: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("benoit")));
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
@@ -2699,18 +2973,12 @@ fn web_vs_fret_menubar_demo_submenu_overlay_placement_matches() {
         FrameId(1),
         true,
         |cx| {
-            let menubar =
-                fret_ui_shadcn::Menubar::new(vec![MenubarMenu::new("File").entries(vec![
-                    MenubarEntry::Item(MenubarItem::new("New Tab")),
-                    MenubarEntry::Item(MenubarItem::new("New Window")),
-                    MenubarEntry::Separator,
-                    MenubarEntry::Submenu(MenubarItem::new("Share").submenu(vec![
-                        MenubarEntry::Item(MenubarItem::new("Email Link")),
-                        MenubarEntry::Item(MenubarItem::new("Messages")),
-                        MenubarEntry::Item(MenubarItem::new("Notes")),
-                    ])),
-                ])])
-                .into_element(cx);
+            let menubar = build_menubar_demo(
+                cx,
+                view_bookmarks_bar.clone(),
+                view_full_urls.clone(),
+                profile_value.clone(),
+            );
             vec![pad_root(cx, Px(0.0), menubar)]
         },
     );
@@ -2762,18 +3030,12 @@ fn web_vs_fret_menubar_demo_submenu_overlay_placement_matches() {
             FrameId(2 + tick),
             request_semantics,
             |cx| {
-                let menubar =
-                    fret_ui_shadcn::Menubar::new(vec![MenubarMenu::new("File").entries(vec![
-                        MenubarEntry::Item(MenubarItem::new("New Tab")),
-                        MenubarEntry::Item(MenubarItem::new("New Window")),
-                        MenubarEntry::Separator,
-                        MenubarEntry::Submenu(MenubarItem::new("Share").submenu(vec![
-                            MenubarEntry::Item(MenubarItem::new("Email Link")),
-                            MenubarEntry::Item(MenubarItem::new("Messages")),
-                            MenubarEntry::Item(MenubarItem::new("Notes")),
-                        ])),
-                    ])])
-                    .into_element(cx);
+                let menubar = build_menubar_demo(
+                    cx,
+                    view_bookmarks_bar.clone(),
+                    view_full_urls.clone(),
+                    profile_value.clone(),
+                );
                 vec![pad_root(cx, Px(0.0), menubar)]
             },
         );
@@ -2808,18 +3070,12 @@ fn web_vs_fret_menubar_demo_submenu_overlay_placement_matches() {
             FrameId(2 + settle_frames + tick),
             request_semantics,
             |cx| {
-                let menubar =
-                    fret_ui_shadcn::Menubar::new(vec![MenubarMenu::new("File").entries(vec![
-                        MenubarEntry::Item(MenubarItem::new("New Tab")),
-                        MenubarEntry::Item(MenubarItem::new("New Window")),
-                        MenubarEntry::Separator,
-                        MenubarEntry::Submenu(MenubarItem::new("Share").submenu(vec![
-                            MenubarEntry::Item(MenubarItem::new("Email Link")),
-                            MenubarEntry::Item(MenubarItem::new("Messages")),
-                            MenubarEntry::Item(MenubarItem::new("Notes")),
-                        ])),
-                    ])])
-                    .into_element(cx);
+                let menubar = build_menubar_demo(
+                    cx,
+                    view_bookmarks_bar.clone(),
+                    view_full_urls.clone(),
+                    profile_value.clone(),
+                );
                 vec![pad_root(cx, Px(0.0), menubar)]
             },
         );
@@ -2855,9 +3111,13 @@ fn web_vs_fret_menubar_demo_submenu_overlay_placement_matches() {
     let actual_dx =
         submenu.bounds.origin.x.0 - (trigger.bounds.origin.x.0 + trigger.bounds.size.width.0);
     let actual_dy = submenu.bounds.origin.y.0 - trigger.bounds.origin.y.0;
+    let actual_w = submenu.bounds.size.width.0;
+    let actual_h = submenu.bounds.size.height.0;
 
     assert_close("menubar-demo.submenu dx", actual_dx, expected_dx, 2.0);
     assert_close("menubar-demo.submenu dy", actual_dy, expected_dy, 2.0);
+    assert_close("menubar-demo.submenu w", actual_w, expected_w, 2.0);
+    assert_close("menubar-demo.submenu h", actual_h, expected_h, 2.0);
 }
 
 #[test]

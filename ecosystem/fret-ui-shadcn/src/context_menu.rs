@@ -1,10 +1,11 @@
 use std::cell::Cell;
+use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{Edges, Point, Px, Rect, Size, TextOverflow, TextStyle, TextWrap};
 use fret_icons::ids;
-use fret_runtime::{CommandId, Model};
+use fret_runtime::{CommandId, Model, ModelId};
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
@@ -30,6 +31,11 @@ use fret_ui_kit::{ColorRef, MetricRef, OverlayController, OverlayPresence, Radiu
 use crate::dropdown_menu::{DropdownMenuAlign, DropdownMenuSide};
 use crate::overlay_motion;
 use crate::popper_arrow::{self, DiamondArrowStyle};
+
+#[derive(Default)]
+struct ContextMenuAnchorStore {
+    by_open_model: Option<Model<HashMap<ModelId, Point>>>,
+}
 
 #[derive(Debug, Clone)]
 pub enum ContextMenuEntry {
@@ -194,7 +200,12 @@ impl ContextMenuShortcut {
         let font_line_height = theme.metric_required("font.line_height");
 
         cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
+            layout: {
+                let mut layout = LayoutStyle::default();
+                // new-york-v4: `ml-auto` to push shortcut to the trailing edge.
+                layout.margin.left = fret_ui::element::MarginEdge::Auto;
+                layout
+            },
             text: self.text,
             style: Some(TextStyle {
                 font: fret_core::FontId::default(),
@@ -451,6 +462,39 @@ fn flatten_entries(into: &mut Vec<ContextMenuEntry>, entries: Vec<ContextMenuEnt
             other => into.push(other),
         }
     }
+}
+
+fn estimated_menu_panel_height_for_entries(
+    entries: &[ContextMenuEntry],
+    row_height: Px,
+    max_height: Px,
+) -> Px {
+    // new-york-v4: menu panels use `p-1` and `border`.
+    let panel_padding_y = Px(8.0);
+    let panel_border_y = Px(2.0);
+
+    let mut height = Px(panel_padding_y.0 + panel_border_y.0);
+    for entry in entries {
+        match entry {
+            ContextMenuEntry::Separator => {
+                // new-york-v4: `Separator` uses `-mx-1 my-1` (1px line + 4px + 4px).
+                height.0 += 9.0;
+            }
+            ContextMenuEntry::Label(_)
+            | ContextMenuEntry::Item(_)
+            | ContextMenuEntry::CheckboxItem(_)
+            | ContextMenuEntry::RadioItem(_) => {
+                height.0 += row_height.0.max(0.0);
+            }
+            ContextMenuEntry::Group(_) | ContextMenuEntry::RadioGroup(_) => {
+                unreachable!("entries are flattened")
+            }
+        }
+    }
+
+    let min_h = height.0.max(0.0);
+    let max_h = max_height.0.max(min_h);
+    Px(height.0.clamp(min_h, max_h))
 }
 
 fn find_submenu_entries_by_value(
@@ -734,7 +778,7 @@ fn context_menu_submenu_panel<H: UiHost>(
     let ring = decl_style::focus_ring(&theme, radius_sm);
     let pad_x = MetricRef::space(Space::N3).resolve(&theme);
     let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
-    let pad_y = MetricRef::space(Space::N2).resolve(&theme);
+    let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
     let font_size = theme.metric_required("font.size");
     let font_line_height = theme.metric_required("font.line_height");
     let text_style = TextStyle {
@@ -1161,6 +1205,8 @@ pub struct ContextMenu {
     side: DropdownMenuSide,
     side_offset: Px,
     window_margin: Px,
+    min_width: Px,
+    submenu_min_width: Px,
     typeahead_timeout_ticks: u64,
     arrow: bool,
     arrow_size_override: Option<Px>,
@@ -1194,6 +1240,8 @@ impl ContextMenu {
             side: DropdownMenuSide::Right,
             side_offset: Px(2.0),
             window_margin: Px(8.0),
+            min_width: Px(128.0),
+            submenu_min_width: Px(128.0),
             typeahead_timeout_ticks: 30,
             arrow: false,
             arrow_size_override: None,
@@ -1226,6 +1274,16 @@ impl ContextMenu {
 
     pub fn window_margin(mut self, margin: Px) -> Self {
         self.window_margin = margin;
+        self
+    }
+
+    pub fn min_width(mut self, min_width: Px) -> Self {
+        self.min_width = min_width;
+        self
+    }
+
+    pub fn submenu_min_width(mut self, min_width: Px) -> Self {
+        self.submenu_min_width = min_width;
         self
     }
 
@@ -1309,59 +1367,61 @@ impl ContextMenu {
             let overlay_root_name_for_controls: Arc<str> = Arc::from(overlay_root_name.clone());
             let content_id_for_trigger =
                 menu::content_panel::menu_content_semantics_id(cx, &overlay_root_name);
-            let trigger = trigger(cx);
-            let trigger = menu::trigger::apply_menu_trigger_a11y(
-                trigger,
+            let trigger_element = trigger(cx);
+            let trigger_element = menu::trigger::apply_menu_trigger_a11y(
+                trigger_element,
                 is_open,
                 Some(content_id_for_trigger),
             );
-            let trigger_id = trigger.id;
+            let trigger_id = trigger_element.id;
 
             menu::trigger::wire_open_on_shift_f10(cx, trigger_id, self.open.clone());
 
             let open = self.open;
             let on_dismiss_request = self.on_dismiss_request.clone();
-            let pointer_policy = menu::context_menu_pointer_down_policy(open.clone());
+            let open_model_id = open.id();
+            let anchor_store_model: Model<HashMap<ModelId, Point>> = cx.app.with_global_mut(
+                ContextMenuAnchorStore::default,
+                |st, app| {
+                    if let Some(model) = st.by_open_model.clone() {
+                        return model;
+                    }
+                    let model = app.models_mut().insert(HashMap::<ModelId, Point>::new());
+                    st.by_open_model = Some(model.clone());
+                    model
+                },
+            );
 
-            #[derive(Default)]
-            struct PointerDownPointState {
-                model: Option<Model<Option<Point>>>,
-            }
-
-            let last_down_point =
-                cx.with_state(PointerDownPointState::default, |st| st.model.clone());
-            let last_down_point = if let Some(model) = last_down_point {
-                model
-            } else {
-                let model = cx.app.models_mut().insert(None);
-                cx.with_state(PointerDownPointState::default, |st| {
-                    st.model = Some(model.clone());
-                });
-                model
-            };
+            let base_pointer_policy = menu::context_menu_pointer_down_policy(open.clone());
+            let pointer_policy = Arc::new({
+                let anchor_store_model = anchor_store_model.clone();
+                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                      cx: fret_ui::action::ActionCx,
+                      down: fret_ui::action::PointerDownCx| {
+                    let handled = base_pointer_policy(host, cx, down);
+                    if handled {
+                        let _ = host.models_mut().update(&anchor_store_model, |map| {
+                            map.insert(open_model_id, down.position);
+                        });
+                    }
+                    handled
+                }
+            });
 
             let pointer_policy_for_region = pointer_policy.clone();
-            let last_down_point_for_region = last_down_point.clone();
-            let trigger = cx.pointer_region(PointerRegionProps::default(), move |cx| {
+            let trigger = cx.keyed((open_model_id, "context-menu-trigger-region"), move |cx| {
                 let pointer_policy_for_region = pointer_policy_for_region.clone();
-                let last_down_point_for_region = last_down_point_for_region.clone();
-                cx.pointer_region_on_pointer_down(Arc::new(
-                    move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                          cx: fret_ui::action::ActionCx,
-                          down: fret_ui::action::PointerDownCx| {
-                        let _ = host.models_mut().update(&last_down_point_for_region, |v| {
-                            *v = Some(down.position);
-                        });
-                        pointer_policy_for_region(host, cx, down)
-                    },
-                ));
-                vec![trigger]
+                cx.pointer_region(PointerRegionProps::default(), move |cx| {
+                    cx.pointer_region_on_pointer_down(pointer_policy_for_region);
+                    vec![trigger_element]
+                })
             });
 
             let anchor_point = cx
-                .watch_model(&last_down_point)
-                .copied()
-                .unwrap_or(None);
+                .watch_model(&anchor_store_model)
+                .read_ref(|m| m.get(&open_model_id).copied())
+                .ok()
+                .flatten();
             let submenu_cfg = menu::sub::MenuSubmenuConfig::default();
             let submenu = cx.with_root_name(&overlay_root_name, |cx| {
                 menu::root::sync_root_open_and_ensure_submenu(cx, is_open, cx.root_id(), submenu_cfg)
@@ -1372,6 +1432,8 @@ impl ContextMenu {
                 let side = self.side;
                 let side_offset = self.side_offset;
                 let window_margin = self.window_margin;
+                let min_width = self.min_width;
+                let submenu_min_width = self.submenu_min_width;
                 let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
                 let align_leading_icons = self.align_leading_icons;
                 let modal = self.modal;
@@ -1449,10 +1511,6 @@ impl ContextMenu {
                     let (arrow_options, arrow_protrusion) =
                         popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
 
-                    let min_width = theme
-                        .metric_by_key("component.context_menu.min_width")
-                        .unwrap_or(Px(220.0));
-
                     let anchor_rect = overlay::anchor_rect_from_point(anchor);
                     let popper_placement =
                         popper::PopperContentPlacement::new(direction, side, align, side_offset)
@@ -1469,7 +1527,12 @@ impl ContextMenu {
                         .metric_by_key("component.context_menu.max_height")
                         .map(|h| Px(h.0.min(popper_vars.available_height.0)))
                         .unwrap_or(popper_vars.available_height);
-                    let desired = Size::new(desired_w, max_h);
+                    let menu_font_line_height = theme.metric_required("font.line_height");
+                    let menu_pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
+                    let menu_row_height = Px(menu_font_line_height.0 + menu_pad_y.0 * 2.0);
+                    let desired_h =
+                        estimated_menu_panel_height_for_entries(&entries, menu_row_height, max_h);
+                    let desired = Size::new(desired_w, desired_h);
 
                     let layout = popper::popper_content_layout_sized(
                         outer,
@@ -1502,7 +1565,7 @@ impl ContextMenu {
                     let ring = decl_style::focus_ring(&theme, radius_sm);
                     let pad_x = MetricRef::space(Space::N3).resolve(&theme);
                     let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
-                    let pad_y = MetricRef::space(Space::N2).resolve(&theme);
+                    let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
                     let font_size = theme.metric_required("font.size");
                     let font_line_height = theme.metric_required("font.line_height");
                     let text_style = TextStyle {
@@ -1551,7 +1614,7 @@ impl ContextMenu {
                     let (_content_id, content) = menu::content_panel::menu_content_semantics_with_id(
                         cx,
                         content_layout,
-                        move |cx, _content_id| {
+                        move |cx| {
                             vec![popper_content::popper_wrapper_at(
                                 cx,
                                 placed_local,
@@ -1701,12 +1764,12 @@ impl ContextMenu {
                                                         let leading = item.leading.clone();
                                                         let trailing = item.trailing.clone();
                                                         let has_submenu = item.submenu.is_some();
-                                                        let submenu_row_count_for_hint =
+                                                        let submenu_entries_for_hint =
                                                             item.submenu.clone().map(|entries| {
                                                                 let mut flat: Vec<ContextMenuEntry> =
                                                                     Vec::new();
                                                                 flatten_entries(&mut flat, entries);
-                                                                flat.len()
+                                                                flat
                                                             });
                                                         let variant = item.variant;
                                                         let pad_left =
@@ -1735,14 +1798,19 @@ impl ContextMenu {
                                                                                         ))
                                                                                     })
                                                                                     .unwrap_or(outer.size.height);
-                                                                            let desired = menu::sub::estimated_desired_size_for_row_count(
-                                                                                Px(192.0),
-                                                                                Px(28.0),
-                                                                                submenu_row_count_for_hint
-                                                                                    .unwrap_or(
-                                                                                        1,
-                                                                                    ),
-                                                                                submenu_max_h,
+                                                                            let entries_for_estimate =
+                                                                                submenu_entries_for_hint
+                                                                                    .clone()
+                                                                                    .unwrap_or_default();
+                                                                            let desired_h =
+                                                                                estimated_menu_panel_height_for_entries(
+                                                                                    &entries_for_estimate,
+                                                                                    menu_row_height,
+                                                                                    submenu_max_h,
+                                                                                );
+                                                                            let desired = Size::new(
+                                                                                submenu_min_width,
+                                                                                desired_h,
                                                                             );
                                                                             menu::sub_trigger::MenuSubTriggerGeometryHint {
                                                                                 outer,
@@ -2126,18 +2194,18 @@ impl ContextMenu {
                             let submenu_max_h = submenu_max_height_metric
                                 .map(|h| Px(h.0.min(outer.size.height.0)))
                                 .unwrap_or(outer.size.height);
-                            menu::sub::estimated_desired_size_for_row_count(
-                                Px(192.0),
-                                Px(28.0),
-                                flat.len(),
+                            let desired_h = estimated_menu_panel_height_for_entries(
+                                &flat,
+                                menu_row_height,
                                 submenu_max_h,
-                            )
+                            );
+                            Size::new(submenu_min_width, desired_h)
                         })
                         .unwrap_or_else(|| {
                             let submenu_max_h = submenu_max_height_metric
                                 .map(|h| Px(h.0.min(outer.size.height.0)))
                                 .unwrap_or(outer.size.height);
-                            Size::new(Px(192.0), submenu_max_h)
+                            Size::new(submenu_min_width, submenu_max_h)
                         });
                     let submenu_is_open = submenu_open_value.is_some();
                     let submenu_motion = radix_presence::scale_fade_presence_with_durations_and_easing(

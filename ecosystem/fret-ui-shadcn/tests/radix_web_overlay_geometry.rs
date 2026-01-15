@@ -1807,9 +1807,10 @@ fn radix_web_context_menu_open_geometry_matches_fret() {
     let web_trigger_rect = require_rect(web_trigger, "web trigger");
     let web_content_rect = require_rect(web_content, "web content");
 
+    // `extract-behavior.mts`: `rightClickUntilRoleAppears` clicks `box.x + 5, box.y + 5`.
     let web_anchor_rect = DomRect {
-        x: rect_center_x(web_trigger_rect),
-        y: rect_center_y(web_trigger_rect),
+        x: web_trigger_rect.x + 5.0,
+        y: web_trigger_rect.y + 5.0,
         w: 0.0,
         h: 0.0,
     };
@@ -1923,6 +1924,17 @@ fn radix_web_context_menu_open_geometry_matches_fret() {
     );
 
     let click_position = Point::new(Px(web_anchor_rect.x), Px(web_anchor_rect.y));
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            pointer_id: fret_core::PointerId(0),
+            position: click_position,
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
     ui.dispatch_event(
         &mut app,
         &mut services,

@@ -38,23 +38,26 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
-fn menu_panel_desired_size(entries: &[MenubarEntry], font_line_height: Px, pad_y: Px) -> Size {
+fn menu_panel_desired_size(
+    entries: &[MenubarEntry],
+    min_width: Px,
+    font_line_height: Px,
+    pad_y: Px,
+) -> Size {
     let item_line = font_line_height.0.max(16.0);
     let row_height = Px(item_line + pad_y.0 * 2.0);
 
-    // The panel uses `padding: 6px` on all sides.
-    let mut height = Px(12.0);
+    // new-york-v4: menu panels use `p-1` + `border`.
+    let mut height = Px(10.0);
 
     for entry in entries {
         match entry {
             MenubarEntry::Separator => {
-                // `Separator`: 1px line + `my-1` (4px top + 4px bottom).
+                // new-york-v4: `Separator` uses `-mx-1 my-1` (1px line + 4px + 4px).
                 height.0 += 9.0;
             }
-            MenubarEntry::Label(_) => {
-                height.0 += row_height.0;
-            }
-            MenubarEntry::Item(_)
+            MenubarEntry::Label(_)
+            | MenubarEntry::Item(_)
             | MenubarEntry::CheckboxItem(_)
             | MenubarEntry::RadioItem(_)
             | MenubarEntry::Submenu(_) => {
@@ -64,7 +67,7 @@ fn menu_panel_desired_size(entries: &[MenubarEntry], font_line_height: Px, pad_y
         }
     }
 
-    Size::new(Px(240.0), height)
+    Size::new(min_width, height)
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -238,7 +241,12 @@ impl MenubarShortcut {
         let font_line_height = theme.metric_required("font.line_height");
 
         cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
+            layout: {
+                let mut layout = LayoutStyle::default();
+                // new-york-v4: `ml-auto` to push shortcut to the trailing edge.
+                layout.margin.left = fret_ui::element::MarginEdge::Auto;
+                layout
+            },
             text: self.text,
             style: Some(TextStyle {
                 font: FontId::default(),
@@ -1098,9 +1106,10 @@ impl MenubarMenuEntries {
                         flatten_entries(&mut flat, entries.iter().cloned().collect());
                         let entries: Arc<[MenubarEntry]> = Arc::from(flat.into_boxed_slice());
 
-                        let pad_y = MetricRef::space(Space::N2).resolve(&theme);
+                        let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
                         let font_line_height = theme.metric_required("font.line_height");
-                        let mut desired = menu_panel_desired_size(&entries, font_line_height, pad_y);
+                        let mut desired =
+                            menu_panel_desired_size(&entries, Px(192.0), font_line_height, pad_y);
                         let popper_placement = popper::PopperContentPlacement::new(
                             direction,
                             Side::Bottom,
@@ -1233,7 +1242,7 @@ impl MenubarMenuEntries {
                                     overflow: Overflow::Clip,
                                     ..Default::default()
                                 },
-                                move |cx, _content_id| {
+                                move |cx| {
                                     let theme = theme_for_content.clone();
                                     let local_placed = Rect::new(
                                         fret_core::Point::new(Px(0.0), Px(0.0)),
@@ -1671,6 +1680,7 @@ impl MenubarMenuEntries {
                                                                           .unwrap_or(outer.size.height);
                                                                       let desired = menu_panel_desired_size(
                                                                           &flat,
+                                                                          Px(128.0),
                                                                           font_line_height,
                                                                           pad_y,
                                                                       );
@@ -1985,9 +1995,11 @@ impl MenubarMenuEntries {
                                     &mut flat,
                                     submenu_entries.iter().cloned().collect::<Vec<_>>(),
                                 );
-                                menu_panel_desired_size(&flat, font_line_height, pad_y)
+                                menu_panel_desired_size(&flat, Px(128.0), font_line_height, pad_y)
                             })
-                            .unwrap_or_else(|| menu_panel_desired_size(&[], font_line_height, pad_y));
+                            .unwrap_or_else(|| {
+                                menu_panel_desired_size(&[], Px(128.0), font_line_height, pad_y)
+                            });
                         let submenu_max_h = theme
                             .metric_by_key("component.menubar.max_height")
                             .map(|h| Px(h.0.min(outer.size.height.0)))

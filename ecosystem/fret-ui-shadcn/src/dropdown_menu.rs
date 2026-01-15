@@ -475,22 +475,6 @@ impl DropdownMenuShortcut {
     }
 }
 
-fn leaf_row_count(entries: &[DropdownMenuEntry]) -> usize {
-    let mut out = 0usize;
-    for entry in entries {
-        match entry {
-            DropdownMenuEntry::Item(_)
-            | DropdownMenuEntry::CheckboxItem(_)
-            | DropdownMenuEntry::RadioItem(_)
-            | DropdownMenuEntry::Label(_)
-            | DropdownMenuEntry::Separator => out += 1,
-            DropdownMenuEntry::Group(group) => out += leaf_row_count(&group.entries),
-            DropdownMenuEntry::RadioGroup(group) => out += group.items.len(),
-        }
-    }
-    out
-}
-
 fn focusable_item_count(entries: &[DropdownMenuEntry]) -> usize {
     let mut out = 0usize;
     for entry in entries {
@@ -573,6 +557,27 @@ fn collect_roving_labels_and_disabled(
     }
 }
 
+fn flatten_entries(into: &mut Vec<DropdownMenuEntry>, entries: Vec<DropdownMenuEntry>) {
+    for entry in entries {
+        match entry {
+            DropdownMenuEntry::Item(_)
+            | DropdownMenuEntry::CheckboxItem(_)
+            | DropdownMenuEntry::RadioItem(_)
+            | DropdownMenuEntry::Label(_)
+            | DropdownMenuEntry::Separator => into.push(entry),
+            DropdownMenuEntry::Group(group) => flatten_entries(into, group.entries),
+            DropdownMenuEntry::RadioGroup(group) => {
+                let group_value = group.value.clone();
+                for item in group.items {
+                    into.push(DropdownMenuEntry::RadioItem(
+                        item.into_item(group_value.clone()),
+                    ));
+                }
+            }
+        }
+    }
+}
+
 fn find_submenu_entries_by_value(
     entries: &[DropdownMenuEntry],
     open_value: &str,
@@ -597,6 +602,44 @@ fn find_submenu_entries_by_value(
         }
     }
     None
+}
+
+fn estimated_menu_panel_height_for_entries(
+    entries: &[DropdownMenuEntry],
+    row_height: Px,
+    max_height: Px,
+) -> Px {
+    // new-york-v4: menu panels use `p-1` and `border`.
+    let panel_padding_y = Px(8.0);
+    let panel_border_y = Px(2.0);
+
+    fn add_entries(height: &mut f32, entries: &[DropdownMenuEntry], row_height: f32) {
+        for entry in entries {
+            match entry {
+                DropdownMenuEntry::Separator => {
+                    // new-york-v4: `Separator` uses `-mx-1 my-1` (1px line + 4px + 4px).
+                    *height += 9.0;
+                }
+                DropdownMenuEntry::Label(_)
+                | DropdownMenuEntry::Item(_)
+                | DropdownMenuEntry::CheckboxItem(_)
+                | DropdownMenuEntry::RadioItem(_) => {
+                    *height += row_height.max(0.0);
+                }
+                DropdownMenuEntry::Group(group) => add_entries(height, &group.entries, row_height),
+                DropdownMenuEntry::RadioGroup(group) => {
+                    *height += row_height.max(0.0) * group.items.len() as f32;
+                }
+            }
+        }
+    }
+
+    let mut height = panel_padding_y.0 + panel_border_y.0;
+    add_entries(&mut height, entries, row_height.0);
+
+    let min_h = height.max(0.0);
+    let max_h = max_height.0.max(min_h);
+    Px(height.clamp(min_h, max_h))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -852,6 +895,7 @@ pub struct DropdownMenu {
     window_margin: Px,
     typeahead_timeout_ticks: u64,
     min_width: Px,
+    submenu_min_width: Px,
     arrow: bool,
     arrow_size_override: Option<Px>,
     arrow_padding_override: Option<Px>,
@@ -884,6 +928,7 @@ impl DropdownMenu {
             window_margin: Px(0.0),
             typeahead_timeout_ticks: 30,
             min_width: Px(128.0),
+            submenu_min_width: Px(128.0),
             arrow: false,
             arrow_size_override: None,
             arrow_padding_override: None,
@@ -925,6 +970,11 @@ impl DropdownMenu {
 
     pub fn min_width(mut self, min_width: Px) -> Self {
         self.min_width = min_width;
+        self
+    }
+
+    pub fn submenu_min_width(mut self, min_width: Px) -> Self {
+        self.submenu_min_width = min_width;
         self
     }
 
@@ -1023,6 +1073,7 @@ impl DropdownMenu {
                 let open_for_overlay = open.clone();
                 let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
                 let min_width = self.min_width;
+                let submenu_min_width = self.submenu_min_width;
                 let align_leading_icons = self.align_leading_icons;
                 let content_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let content_focus_id_for_children = content_focus_id.clone();
@@ -1038,8 +1089,9 @@ impl DropdownMenu {
                         return (Vec::new(), None);
                     };
 
-                    let entries: Arc<[DropdownMenuEntry]> =
-                        Arc::from(entries(cx).into_boxed_slice());
+                    let mut flat_entries: Vec<DropdownMenuEntry> = Vec::new();
+                    flatten_entries(&mut flat_entries, entries(cx));
+                    let entries: Arc<[DropdownMenuEntry]> = Arc::from(flat_entries.into_boxed_slice());
                     let reserve_leading_slot_enabled =
                         align_leading_icons && reserve_leading_slot(&entries);
 
@@ -1084,7 +1136,11 @@ impl DropdownMenu {
                         .metric_by_key("component.dropdown_menu.max_height")
                         .map(|h| Px(h.0.min(popper_vars.available_height.0)))
                         .unwrap_or(popper_vars.available_height);
-                    let desired = Size::new(desired_w, max_h);
+                    let font_line_height = theme.metric_required("font.line_height");
+                    let pad_y = MetricRef::space(Space::N1p5).resolve(theme);
+                    let row_height = Px(font_line_height.0 + pad_y.0 * 2.0);
+                    let desired_h = estimated_menu_panel_height_for_entries(&entries, row_height, max_h);
+                    let desired = Size::new(desired_w, desired_h);
 
                     let layout =
                         popper::popper_content_layout_sized(outer, anchor, desired, popper_placement);
@@ -1118,8 +1174,6 @@ impl DropdownMenu {
                     // new-york-v4: item rows use `px-2`.
                     let pad_x = MetricRef::space(Space::N2).resolve(&theme);
                     let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
-                    // new-york-v4: item rows use `py-1.5`.
-                    let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
                     let bg = theme.color_required("popover");
                     let fg = theme.color_required("popover-foreground");
                     let accent = theme.color_required("accent");
@@ -1159,7 +1213,7 @@ impl DropdownMenu {
                     let (content_id, content) = menu::content_panel::menu_content_semantics_with_id(
                         cx,
                         content_layout,
-                        move |cx, _content_id| {
+                        move |cx| {
                             vec![popper_content::popper_wrapper_at(
                                 cx,
                                 placed_local,
@@ -1607,8 +1661,7 @@ impl DropdownMenu {
                                                         let trailing = item.trailing.clone();
                                                         let variant = item.variant;
                                                         let has_submenu = item.submenu.is_some();
-                                                        let submenu_row_count_for_hint =
-                                                            item.submenu.clone().map(|entries| leaf_row_count(&entries));
+                                                        let submenu_entries_for_hint = item.submenu.clone();
                                                         let pad_left =
                                                             if item.inset { pad_x_inset } else { pad_x };
                                                         let open = open_for_menu.clone();
@@ -1634,13 +1687,18 @@ impl DropdownMenu {
                                                                             ))
                                                                         })
                                                                         .unwrap_or(outer.size.height);
-                                                                    let desired = menu::sub::estimated_desired_size_for_row_count(
-                                                                        Px(192.0),
-                                                                        Px(28.0),
-                                                                        submenu_row_count_for_hint
-                                                                            .unwrap_or(1),
-                                                                        submenu_max_h,
-                                                                    );
+                                                                    let entries_for_estimate =
+                                                                        submenu_entries_for_hint
+                                                                            .clone()
+                                                                            .unwrap_or_default();
+                                                                    let desired_h =
+                                                                        estimated_menu_panel_height_for_entries(
+                                                                            &entries_for_estimate,
+                                                                            row_height,
+                                                                            submenu_max_h,
+                                                                        );
+                                                                    let desired =
+                                                                        Size::new(submenu_min_width, desired_h);
                                                                     menu::sub_trigger::MenuSubTriggerGeometryHint {
                                                                         outer,
                                                                         desired,
@@ -1885,19 +1943,19 @@ impl DropdownMenu {
                                 .metric_by_key("component.dropdown_menu.max_height")
                                 .map(|h| Px(h.0.min(outer.size.height.0)))
                                 .unwrap_or(outer.size.height);
-                            menu::sub::estimated_desired_size_for_row_count(
-                                Px(192.0),
-                                Px(28.0),
-                                leaf_row_count(&submenu_entries),
+                            let desired_h = estimated_menu_panel_height_for_entries(
+                                &submenu_entries,
+                                row_height,
                                 submenu_max_h,
-                            )
+                            );
+                            Size::new(submenu_min_width, desired_h)
                         })
                         .unwrap_or_else(|| {
                             let submenu_max_h = theme
                                 .metric_by_key("component.dropdown_menu.max_height")
                                 .map(|h| Px(h.0.min(outer.size.height.0)))
                                 .unwrap_or(outer.size.height);
-                            Size::new(Px(192.0), submenu_max_h)
+                            Size::new(submenu_min_width, submenu_max_h)
                         });
                     let submenu_is_open = submenu_open_value.is_some();
                     let submenu_motion = radix_presence::scale_fade_presence_with_durations_and_easing(
@@ -1953,9 +2011,14 @@ impl DropdownMenu {
                         );
 
                         if let Some(submenu_entries) = submenu_entries {
-                                        let reserve_leading_slot_enabled =
-                                            align_leading_icons && reserve_leading_slot(&submenu_entries);
-                                        let item_count = focusable_item_count(&submenu_entries);
+                            let mut flat_submenu_entries: Vec<DropdownMenuEntry> = Vec::new();
+                            flatten_entries(&mut flat_submenu_entries, submenu_entries);
+                            let submenu_entries: Arc<[DropdownMenuEntry]> =
+                                Arc::from(flat_submenu_entries.into_boxed_slice());
+
+                            let reserve_leading_slot_enabled =
+                                align_leading_icons && reserve_leading_slot(&submenu_entries);
+                            let item_count = focusable_item_count(&submenu_entries);
 
                                             let font_size = theme.metric_required("font.size");
                                             let font_line_height =

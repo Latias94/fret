@@ -76,10 +76,10 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | checkbox | `checkbox` | Present | Unreviewed |  |
 | collapsible | `collapsible` | Present | Unreviewed | Headless open/close + a11y semantics |
 | command | `command` | Present | In review | `CommandPalette` provides cmdk-style active-descendant navigation + filtering/scoring (value + keywords), plus group/separator/empty + checkmark/shortcut; audit: `docs/audits/shadcn-command.md`; shadcn-web gates: `web_vs_fret_command_dialog_*` |
-| context-menu | `context_menu` | Present | In review | Right click + (macOS) ctrl-click + Shift+F10; audit: `docs/audits/shadcn-context-menu.md` |
+| context-menu | `context_menu` | Present | In review | Right click + (macOS) ctrl-click + Shift+F10; anchors to click position for web/Radix parity; audit: `docs/audits/shadcn-context-menu.md`; gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`, `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs` |
 | dialog | `dialog` | Present | In review | Audit: `docs/audits/shadcn-dialog.md`; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` |
 | drawer | `drawer` | Present | Unreviewed | `sheet` facade (defaults to bottom); overlay policy |
-| dropdown-menu | `dropdown_menu` | Present | In review | Menu navigation + typeahead + dismissible popover infra (ADR 0074); now includes `Label`/`Group`/`Shortcut` + destructive items; audit: `docs/audits/shadcn-dropdown-menu.md` |
+| dropdown-menu | `dropdown_menu` | Present | In review | Menu navigation + typeahead + dismissible popover infra (ADR 0074); now includes `Label`/`Group`/`Shortcut` + destructive items; audit: `docs/audits/shadcn-dropdown-menu.md`; gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` |
 | empty | `empty` | Present | Unreviewed |  |
 | field | `field` | Present | Unreviewed | Repo-specific "form field" primitives |
 | form | `form` | Present | Unreviewed |  |
@@ -90,7 +90,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | item | `item` | Present | Unreviewed | Repo-specific list/item recipes aligned with shadcn style |
 | kbd | `kbd` | Present | Unreviewed |  |
 | label | `label` | Present | Unreviewed |  |
-| menubar | `menubar` | Present | In review | Click-to-open; hover switching; audit: `docs/audits/shadcn-menubar.md` |
+| menubar | `menubar` | Present | In review | Click-to-open; hover switching; audit: `docs/audits/shadcn-menubar.md`; gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` |
 | native-select | `native_select` | Defer | Unreviewed | Can map to `select` + platform-native later |
 | navigation-menu | `navigation_menu` | Defer | Unreviewed | Complex; not editor-critical |
 | pagination | `pagination` | Present | Unreviewed |  |
