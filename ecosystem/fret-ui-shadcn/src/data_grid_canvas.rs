@@ -1,3 +1,9 @@
+//! Canvas-backed data grid ("performance ceiling").
+//!
+//! This surface is designed for spreadsheet-scale density by keeping UI node count ~constant and
+//! doing dense cell rendering via canvas ops. Rich editing UI is expected to live in overlay
+//! layers (selection rectangles, editor popovers), not per-cell widgets.
+
 use std::sync::Arc;
 
 use fret_core::geometry::{Corners, Edges, Point, Rect, Size};

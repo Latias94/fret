@@ -111,7 +111,14 @@ pub use context_menu::{
 pub use data_grid_canvas::{DataGridCanvas, DataGridCanvasAxis};
 /// Default high-performance data grid surface (canvas-rendered).
 ///
-/// Use [`DataGridElement`] for the element-based prototype when you need rich per-cell UI.
+/// This is the "performance ceiling" option for spreadsheet-scale density:
+/// prefer it when you need to scroll/render very large grids while keeping UI node count ~constant.
+///
+/// For business tables that need typical shadcn recipes (toolbar, column visibility, pagination),
+/// prefer [`DataTable`].
+///
+/// Use [`DataGridElement`] only when you need rich per-cell UI for a small dataset; it is a
+/// prototype surface and is not designed for spreadsheet-scale workloads.
 pub type DataGrid = DataGridCanvas;
 pub use data_grid::{DataGrid as DataGridElement, DataGridRowState};
 pub use data_grid_canvas::DataGridCanvasOutput;
