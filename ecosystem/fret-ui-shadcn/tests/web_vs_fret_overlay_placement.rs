@@ -2329,3 +2329,73 @@ fn web_vs_fret_sheet_side_top_overlay_insets_match() {
         },
     );
 }
+
+#[test]
+fn web_vs_fret_sheet_side_right_overlay_insets_match() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent, SheetSide};
+
+    assert_viewport_anchored_overlay_placement_matches(
+        "sheet-side.right",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Sheet::new(open.clone())
+                .side(SheetSide::Right)
+                .into_element(
+                    cx,
+                    |cx| {
+                        Button::new("right")
+                            .variant(ButtonVariant::Outline)
+                            .into_element(cx)
+                    },
+                    |cx| SheetContent::new(vec![cx.text("Edit profile")]).into_element(cx),
+                )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_sheet_side_bottom_overlay_insets_match() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent, SheetSide};
+
+    assert_viewport_anchored_overlay_placement_matches(
+        "sheet-side.bottom",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Sheet::new(open.clone())
+                .side(SheetSide::Bottom)
+                .into_element(
+                    cx,
+                    |cx| {
+                        Button::new("bottom")
+                            .variant(ButtonVariant::Outline)
+                            .into_element(cx)
+                    },
+                    |cx| SheetContent::new(vec![cx.text("Edit profile")]).into_element(cx),
+                )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_sheet_side_left_overlay_insets_match() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent, SheetSide};
+
+    assert_viewport_anchored_overlay_placement_matches(
+        "sheet-side.left",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Sheet::new(open.clone()).side(SheetSide::Left).into_element(
+                cx,
+                |cx| {
+                    Button::new("left")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| SheetContent::new(vec![cx.text("Edit profile")]).into_element(cx),
+            )
+        },
+    );
+}
