@@ -77,6 +77,11 @@ impl UiGalleryDriver {
             Arc::<str>::from(PAGE_INTRO),
             Arc::<str>::from(PAGE_LAYOUT),
             Arc::<str>::from(PAGE_BUTTON),
+            Arc::<str>::from(PAGE_CARD),
+            Arc::<str>::from(PAGE_BADGE),
+            Arc::<str>::from(PAGE_AVATAR),
+            Arc::<str>::from(PAGE_ICONS),
+            Arc::<str>::from(PAGE_FIELD),
             Arc::<str>::from(PAGE_OVERLAY),
             Arc::<str>::from(PAGE_COMMAND),
         ];
