@@ -260,7 +260,11 @@ fn ui_builder_smoke_applies_supported_patches() {
         .build();
 
     let _ = Command::new(Vec::new()).ui().p_4().build();
-    let _ = CommandInput::new(command_input_model).ui().w_full().build();
+    let _ = CommandInput::new(command_input_model)
+        .ui()
+        .px_2()
+        .w_full()
+        .build();
     let _ = CommandPalette::new(command_palette_model, Vec::<CommandItem>::new())
         .ui()
         .p_4()

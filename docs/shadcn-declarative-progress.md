@@ -140,7 +140,7 @@ Legend:
 | `table` | `TableCell` | Chrome+Layout |  |
 | `command` | `Command` | Chrome+Layout |  |
 | `command` | `CommandPalette` | Chrome+Layout |  |
-| `command` | `CommandInput` | Layout-only | Needs chrome support for full parity |
+| `command` | `CommandInput` | Chrome+Layout |  |
 | `input_group` | `InputGroup` | Chrome+Layout |  |
 | `input_otp` | `InputOtp` | Chrome+Layout |  |
 | `sidebar` | `Sidebar` | Chrome+Layout |  |
