@@ -81,6 +81,7 @@ fn prepare_code_block(
         Some(language) => fret_syntax::highlight(code, language).unwrap_or_default(),
         None => Vec::new(),
     };
+    let spans = normalize_spans_to_char_boundaries(code, spans);
 
     let mut lines = split_lines(code);
     let line_number_width = line_number_width(lines.len());
@@ -180,8 +181,55 @@ fn safe_slice(text: &str, start: usize, end: usize) -> String {
     let end = end.min(text.len());
     match text.get(start..end) {
         Some(s) => s.to_string(),
-        None => String::from_utf8_lossy(&text.as_bytes()[start..end]).into_owned(),
+        None => {
+            debug_assert!(false, "code slice is not aligned to UTF-8 boundaries");
+            String::from_utf8_lossy(&text.as_bytes()[start..end]).into_owned()
+        }
     }
+}
+
+fn clamp_down_to_char_boundary(text: &str, mut index: usize) -> usize {
+    index = index.min(text.len());
+    while index > 0 && !text.is_char_boundary(index) {
+        index = index.saturating_sub(1);
+    }
+    index
+}
+
+fn clamp_up_to_char_boundary(text: &str, mut index: usize) -> usize {
+    index = index.min(text.len());
+    while index < text.len() && !text.is_char_boundary(index) {
+        index = index.saturating_add(1);
+    }
+    index
+}
+
+fn normalize_spans_to_char_boundaries(
+    text: &str,
+    spans: Vec<fret_syntax::HighlightSpan>,
+) -> Vec<fret_syntax::HighlightSpan> {
+    let mut out = Vec::with_capacity(spans.len());
+    let mut cursor = 0usize;
+
+    for span in spans {
+        let mut start = clamp_down_to_char_boundary(text, span.range.start);
+        let mut end = clamp_up_to_char_boundary(text, span.range.end);
+
+        if start < cursor {
+            start = cursor;
+        }
+        if end <= start {
+            continue;
+        }
+
+        cursor = end;
+        out.push(fret_syntax::HighlightSpan {
+            range: start..end,
+            highlight: span.highlight,
+        });
+    }
+
+    out
 }
 
 #[derive(Debug, Clone)]
@@ -258,5 +306,18 @@ mod tests {
         assert_eq!(lines[0].text, "a");
         assert_eq!(lines[1].text, "b");
         assert_eq!(lines[2].text, "");
+    }
+
+    #[test]
+    fn normalizes_spans_to_utf8_boundaries() {
+        let text = "a🦀b";
+        let spans = vec![fret_syntax::HighlightSpan {
+            range: 2..3,
+            highlight: Some("keyword"),
+        }];
+        let out = normalize_spans_to_char_boundaries(text, spans);
+        assert_eq!(out.len(), 1);
+        assert!(text.is_char_boundary(out[0].range.start));
+        assert!(text.is_char_boundary(out[0].range.end));
     }
 }
