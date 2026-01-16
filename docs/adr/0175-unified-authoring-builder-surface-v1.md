@@ -1,6 +1,7 @@
 # ADR 0175: Unified Authoring Builder Surface (v1)
 
-Status: Proposed
+- Status: Proposed
+- Date: 2026-01-16
 
 ## Context
 
@@ -73,6 +74,34 @@ Button::new("Open")
 
 This builder is a *patch aggregator*; it does not render by itself. Rendering still happens in the component’s
 `into_element(cx)` (ADR 0039 / ADR 0028).
+
+### 1a) Patch-only roots must still allow a single `ui().into_element(cx, ...)` terminal
+
+Some shadcn components are intentionally *patch-only* at the root level: their `into_element` needs additional
+arguments such as trigger/content closures or data callbacks.
+
+To keep the authoring surface consistent (one entry point, one terminal), we standardize on *builder extension traits*
+exported by `fret-ui-shadcn`:
+
+- `component.ui().into_element(cx, ...)` is always available for public shadcn components,
+- when extra arguments are required, the builder’s `into_element` mirrors the component’s `into_element` signature.
+
+Examples (illustrative):
+
+```rust
+Popover::new(open)
+    .ui()
+    .into_element(cx, |cx| Button::new("Trigger").into_element(cx), |cx| cx.text("Panel"));
+
+DataTable::new()
+    .ui()
+    .into_element(cx, data, data_revision, state, columns, row_key, col_key, cell);
+```
+
+Implementation note:
+
+- these extension traits live in `ecosystem/fret-ui-shadcn/src/ui_builder_ext/*` and are re-exported in the
+  `fret_ui_shadcn::prelude` so applications can `use fret_ui_shadcn::prelude::*;` and always get the terminal method.
 
 ### 2) Unify patch vocabulary under one “UI patch” type
 
@@ -168,6 +197,7 @@ Acceptance (authoring ergonomics):
 ### Phase 1: Expand to the full shadcn surface
 
 - All public shadcn components implement the builder entrypoint.
+- Patch-only root elements also provide `ui().into_element(cx, ...)` via builder extension traits (see 1a).
 - Existing `refine_style/refine_layout` remain temporarily but are deprecated once the builder is stable.
 
 ### Phase 2: Integration and tooling polish
@@ -192,6 +222,12 @@ but the public authoring surface should converge on a single builder.
 Rejected: it conflicts with token-first typed design goals and introduces a parsing/validation surface that is hard to
 stabilize early for a Rust-native framework.
 
+### D) Require patch-only roots to use `build()` before `into_element(...)`
+
+Rejected: it introduces an API cliff where some components use `ui().into_element(cx)` while others require
+`ui().build().into_element(cx, ...)`. This reduces code density and hurts discoverability (autocomplete does not show
+the terminal method on the primary builder type).
+
 ## References
 
 - Declarative element model: `docs/adr/0028-declarative-elements-and-element-state.md`
@@ -200,4 +236,4 @@ stabilize early for a Rust-native framework.
 - Token-first theme semantics: `docs/adr/0032-style-tokens-and-theme-resolution.md`, `docs/adr/0056-component-size-and-density-system.md`
 - Ecosystem conventions: `docs/adr/0163-component-ecosystem-authoring-conventions-v1.md`, `docs/adr/0169-ecosystem-crate-taxonomy-glue-and-ui-kit-split-v1.md`
 - GPUI-style ergonomics reference: `repo-ref/gpui-component/crates/ui/src/styled.rs`
-
+- Coverage tracker: `docs/shadcn-declarative-progress.md`
