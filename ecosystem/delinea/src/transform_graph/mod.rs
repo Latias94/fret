@@ -14,6 +14,7 @@ pub use data_view::*;
 use crate::data::DatasetStore;
 use crate::engine::ChartState;
 use crate::engine::model::ChartModel;
+use crate::engine::stages::FilterPlanOutput;
 use crate::engine::window::DataWindow;
 use crate::engine::window_policy::AxisFilter1D;
 use crate::ids::{AxisId, Revision, SeriesId};
@@ -29,6 +30,7 @@ pub struct TransformGraph {
     x_extent_cache: BTreeMap<AxisId, CachedExtent>,
     y_percent_extents_cache: BTreeMap<crate::ids::GridId, CachedYExtents>,
     data_views: DataViewStage,
+    filter_plan_output: FilterPlanOutput,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -48,6 +50,7 @@ impl TransformGraph {
         self.x_extent_cache.clear();
         self.y_percent_extents_cache.clear();
         self.data_views = DataViewStage::default();
+        self.filter_plan_output = FilterPlanOutput::default();
     }
 
     pub fn data_views(&self) -> &DataViewStage {
@@ -60,6 +63,14 @@ impl TransformGraph {
 
     pub fn begin_frame(&mut self) {
         self.data_views.begin_frame();
+    }
+
+    pub fn filter_plan_output(&self) -> &FilterPlanOutput {
+        &self.filter_plan_output
+    }
+
+    pub fn set_filter_plan_output(&mut self, output: FilterPlanOutput) {
+        self.filter_plan_output = output;
     }
 
     pub fn prepare_requests(&mut self, datasets: &DatasetStore) {

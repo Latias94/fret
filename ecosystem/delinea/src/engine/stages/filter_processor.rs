@@ -11,9 +11,7 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
 #[derive(Debug, Default, Clone)]
-pub struct FilterProcessorStage {
-    last_plan_output: FilterPlanOutput,
-}
+pub struct FilterProcessorStage {}
 
 #[derive(Debug, Default, Clone)]
 pub struct FilterPlanOutput {
@@ -199,10 +197,6 @@ struct FilterPlanStep {
 }
 
 impl FilterProcessorStage {
-    pub fn plan_output(&self) -> &FilterPlanOutput {
-        &self.last_plan_output
-    }
-
     pub fn request_data_views(
         &mut self,
         model: &ChartModel,
@@ -475,8 +469,9 @@ impl FilterProcessorStage {
             }
         }
 
-        self.last_plan_output =
+        let plan_output =
             build_filter_plan_output(model, view, &grid_plans, &y_percent_extents_by_grid);
+        transform_graph.set_filter_plan_output(plan_output);
 
         FilterProcessorResult {
             xy_weak_filter_pending,

@@ -274,7 +274,7 @@ impl ChartEngine {
     }
 
     pub fn filter_plan_output(&self) -> &crate::engine::stages::FilterPlanOutput {
-        self.filter_processor_stage.plan_output()
+        self.transform_graph.filter_plan_output()
     }
 
     pub fn stats(&self) -> &EngineStats {
