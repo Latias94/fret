@@ -89,6 +89,8 @@ concepts and Fret building blocks they depend on.
     dropdown-menu/context-menu/menubar (in addition to hover-open + grace corridor).
   - (Done) `shadcn-web` open snapshots now cover non-click input pages like `command-dialog` (key chord; see `docs/shadcn-web-goldens.md` `--openKeys`).
   - (Done) `shadcn-web` open snapshots now cover nested submenu states for dropdown-menu/context-menu/menubar (see `docs/shadcn-web-goldens.md` `--openSteps`).
+  - (Done) `Select` item-aligned positioning now accounts for viewport padding edge (ports Radix `selectedItem.offsetTop` semantics). Evidence: `ecosystem/fret-ui-headless/src/select_item_aligned.rs` + `ecosystem/fret-ui-kit/src/primitives/select.rs`.
+  - (Done) `Button` shadcn variant styles are gated against `shadcn-web` computed styles (including `lab()` normalization to linear sRGB). Evidence: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_button.rs`.
   - (Next) `Select` / listbox width parity: upstream listbox content can grow beyond the trigger
     width (min-width = trigger, but long items expand); Fret currently pins desired width to the
     trigger, so listbox portal `w/h` conformance is not yet gated 1:1.
