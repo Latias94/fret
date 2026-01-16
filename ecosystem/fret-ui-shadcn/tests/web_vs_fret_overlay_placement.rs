@@ -579,6 +579,158 @@ fn fret_menu_item_heights_in_menus(snap: &fret_core::SemanticsSnapshot) -> Vec<f
         .collect()
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct InsetTriplet {
+    left: f32,
+    top_to_first_item: f32,
+    right: f32,
+}
+
+fn web_menu_content_inset(menu: &WebNode) -> InsetTriplet {
+    let is_menu_item_role = |node: &WebNode| {
+        matches!(
+            node.attrs.get("role").map(String::as_str),
+            Some("menuitem") | Some("menuitemcheckbox") | Some("menuitemradio")
+        )
+    };
+
+    let mut item_stack = vec![menu];
+    let mut min_x = None::<f32>;
+    let mut min_y = None::<f32>;
+    let mut max_right = None::<f32>;
+
+    while let Some(item_node) = item_stack.pop() {
+        if is_menu_item_role(item_node) {
+            let eps = 0.01;
+            let menu_left = menu.rect.x;
+            let menu_right = rect_right(menu.rect);
+            let menu_top = menu.rect.y;
+            let item_left = item_node.rect.x;
+            let item_right = rect_right(item_node.rect);
+            let item_top = item_node.rect.y;
+
+            let within_panel = item_left + eps >= menu_left
+                && item_right <= menu_right + eps
+                && item_top + eps >= menu_top;
+            if !within_panel {
+                continue;
+            }
+
+            min_x = Some(min_x.unwrap_or(item_node.rect.x).min(item_node.rect.x));
+            min_y = Some(min_y.unwrap_or(item_node.rect.y).min(item_node.rect.y));
+            let r = rect_right(item_node.rect);
+            max_right = Some(max_right.unwrap_or(r).max(r));
+        }
+        for child in &item_node.children {
+            item_stack.push(child);
+        }
+    }
+
+    let min_x = min_x.unwrap_or_else(|| panic!("web menu missing menuitem descendants"));
+    let min_y = min_y.unwrap_or_else(|| panic!("web menu missing menuitem descendants"));
+    let max_right = max_right.unwrap_or_else(|| panic!("web menu missing menuitem descendants"));
+
+    InsetTriplet {
+        left: min_x - menu.rect.x,
+        top_to_first_item: min_y - menu.rect.y,
+        right: rect_right(menu.rect) - max_right,
+    }
+}
+
+fn web_menu_content_insets_for_slots(theme: &WebGoldenTheme, slots: &[&str]) -> Vec<InsetTriplet> {
+    slots
+        .iter()
+        .map(|slot| web_portal_node_by_data_slot(theme, slot))
+        .map(web_menu_content_inset)
+        .collect()
+}
+
+fn fret_menu_content_insets(snap: &fret_core::SemanticsSnapshot) -> Vec<InsetTriplet> {
+    let is_menu_item = |n: &fret_core::SemanticsNode| {
+        matches!(
+            n.role,
+            SemanticsRole::MenuItem
+                | SemanticsRole::MenuItemCheckbox
+                | SemanticsRole::MenuItemRadio
+        )
+    };
+
+    let mut insets = Vec::new();
+
+    for menu in snap.nodes.iter().filter(|n| n.role == SemanticsRole::Menu) {
+        let items: Vec<_> = snap
+            .nodes
+            .iter()
+            .filter(|n| is_menu_item(n))
+            .filter(|n| fret_rect_contains(menu.bounds, n.bounds))
+            .collect();
+
+        if items.is_empty() {
+            continue;
+        }
+
+        let mut min_x = items[0].bounds.origin.x.0;
+        let mut min_y = items[0].bounds.origin.y.0;
+        let mut max_right = items[0].bounds.origin.x.0 + items[0].bounds.size.width.0;
+        for item in items.iter().skip(1) {
+            min_x = min_x.min(item.bounds.origin.x.0);
+            min_y = min_y.min(item.bounds.origin.y.0);
+            max_right = max_right.max(item.bounds.origin.x.0 + item.bounds.size.width.0);
+        }
+
+        let menu_right = menu.bounds.origin.x.0 + menu.bounds.size.width.0;
+        insets.push(InsetTriplet {
+            left: min_x - menu.bounds.origin.x.0,
+            top_to_first_item: min_y - menu.bounds.origin.y.0,
+            right: menu_right - max_right,
+        });
+    }
+
+    insets
+}
+
+fn assert_sorted_insets_match(web_name: &str, actual: &[InsetTriplet], expected: &[InsetTriplet]) {
+    if expected.is_empty() {
+        panic!("missing web menu insets for {web_name}");
+    }
+    if actual.is_empty() {
+        panic!("missing fret menu insets for {web_name}");
+    }
+    assert!(
+        actual.len() == expected.len(),
+        "{web_name} expected {} menus, got {}",
+        expected.len(),
+        actual.len()
+    );
+
+    let mut expected_sorted = expected.to_vec();
+    let mut actual_sorted = actual.to_vec();
+    let sort_key = |v: &InsetTriplet| (round_i32(v.top_to_first_item), round_i32(v.left));
+    expected_sorted.sort_by_key(sort_key);
+    actual_sorted.sort_by_key(sort_key);
+
+    for (i, (a, e)) in actual_sorted.iter().zip(expected_sorted.iter()).enumerate() {
+        assert_close(
+            &format!("{web_name} menu[{i}] left_inset"),
+            a.left,
+            e.left,
+            1.0,
+        );
+        assert_close(
+            &format!("{web_name} menu[{i}] top_to_first_item"),
+            a.top_to_first_item,
+            e.top_to_first_item,
+            1.5,
+        );
+        assert_close(
+            &format!("{web_name} menu[{i}] right_inset"),
+            a.right,
+            e.right,
+            1.0,
+        );
+    }
+}
+
 fn round_i32(v: f32) -> i32 {
     v.round() as i32
 }
@@ -1675,6 +1827,120 @@ fn web_vs_fret_dropdown_menu_demo_small_viewport_menu_item_height_matches() {
     );
 }
 
+#[test]
+fn web_vs_fret_dropdown_menu_demo_small_viewport_menu_content_insets_match() {
+    let web = read_web_golden_open("dropdown-menu-demo.vp1440x320");
+    let theme = web_theme(&web);
+    let expected = web_menu_content_insets_for_slots(&theme, &["dropdown-menu-content"]);
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    let render = |cx: &mut ElementContext<'_, App>| {
+        use fret_ui_shadcn::{
+            Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuItem,
+            DropdownMenuLabel, DropdownMenuShortcut,
+        };
+
+        DropdownMenu::new(open.clone())
+            .min_width(Px(224.0))
+            .into_element(
+                cx,
+                |cx| {
+                    Button::new("Open")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| {
+                    vec![
+                        DropdownMenuEntry::Label(DropdownMenuLabel::new("My Account")),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Profile")
+                                .trailing(DropdownMenuShortcut::new("??P").into_element(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Billing")
+                                .trailing(DropdownMenuShortcut::new("?B").into_element(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Settings")
+                                .trailing(DropdownMenuShortcut::new("?S").into_element(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Keyboard shortcuts")
+                                .trailing(DropdownMenuShortcut::new("?K").into_element(cx)),
+                        ),
+                        DropdownMenuEntry::Separator,
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("Team")),
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("Invite users").submenu(
+                            vec![
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("Email")),
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("Message")),
+                                DropdownMenuEntry::Separator,
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("More...")),
+                            ],
+                        )),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("New Team")
+                                .trailing(DropdownMenuShortcut::new("?+T").into_element(cx)),
+                        ),
+                        DropdownMenuEntry::Separator,
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("GitHub")),
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("Support")),
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("API").disabled(true)),
+                        DropdownMenuEntry::Separator,
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Log out")
+                                .trailing(DropdownMenuShortcut::new("??Q").into_element(cx)),
+                        ),
+                    ]
+                },
+            )
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = render(cx);
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    for frame in 2..=4 {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            frame == 4,
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let actual = fret_menu_content_insets(&snap);
+    assert_sorted_insets_match("dropdown-menu-demo.vp1440x320", &actual, &expected);
+}
+
 fn assert_dropdown_menu_demo_submenu_overlay_placement_matches(web_name: &str) {
     use fret_ui_shadcn::{Button, DropdownMenu, DropdownMenuEntry, DropdownMenuItem};
 
@@ -1882,6 +2148,229 @@ fn web_vs_fret_dropdown_menu_demo_submenu_hover_overlay_placement_matches() {
 fn web_vs_fret_dropdown_menu_demo_submenu_small_viewport_overlay_placement_matches() {
     assert_dropdown_menu_demo_submenu_overlay_placement_matches(
         "dropdown-menu-demo.submenu-kbd-vp1440x320",
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_submenu_small_viewport_menu_content_insets_match() {
+    let web = read_web_golden_open("dropdown-menu-demo.submenu-kbd-vp1440x320");
+    let theme = web_theme(&web);
+    let expected = web_menu_content_insets_for_slots(
+        &theme,
+        &["dropdown-menu-content", "dropdown-menu-sub-content"],
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    let render = |cx: &mut ElementContext<'_, App>| {
+        use fret_ui_shadcn::{
+            Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuItem,
+            DropdownMenuLabel, DropdownMenuShortcut,
+        };
+
+        DropdownMenu::new(open.clone())
+            .min_width(Px(224.0))
+            .into_element(
+                cx,
+                |cx| {
+                    Button::new("Open")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| {
+                    vec![
+                        DropdownMenuEntry::Label(DropdownMenuLabel::new("My Account")),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Profile")
+                                .trailing(DropdownMenuShortcut::new("??P").into_element(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Billing")
+                                .trailing(DropdownMenuShortcut::new("?B").into_element(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Settings")
+                                .trailing(DropdownMenuShortcut::new("?S").into_element(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Keyboard shortcuts")
+                                .trailing(DropdownMenuShortcut::new("?K").into_element(cx)),
+                        ),
+                        DropdownMenuEntry::Separator,
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("Team")),
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("Invite users").submenu(
+                            vec![
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("Email")),
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("Message")),
+                                DropdownMenuEntry::Separator,
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("More...")),
+                            ],
+                        )),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("New Team")
+                                .trailing(DropdownMenuShortcut::new("?+T").into_element(cx)),
+                        ),
+                        DropdownMenuEntry::Separator,
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("GitHub")),
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("Support")),
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("API").disabled(true)),
+                        DropdownMenuEntry::Separator,
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Log out")
+                                .trailing(DropdownMenuShortcut::new("??Q").into_element(cx)),
+                        ),
+                    ]
+                },
+            )
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = render(cx);
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| {
+            let el = render(cx);
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let root_menu = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Menu)
+        .expect("fret root menu semantics");
+    let wheel_pos = Point::new(
+        Px(root_menu.bounds.origin.x.0 + root_menu.bounds.size.width.0 * 0.5),
+        Px(root_menu.bounds.origin.y.0 + root_menu.bounds.size.height.0 * 0.5),
+    );
+
+    // The web golden scrolls the menu before opening the submenu (via `scrollIntoView` in the
+    // golden extraction openSteps). Replicate the same state by wheel-scrolling the menu.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Wheel {
+            pointer_id: fret_core::PointerId::default(),
+            position: wheel_pos,
+            delta: Point::new(Px(0.0), Px(-80.0)),
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(3),
+        true,
+        |cx| {
+            let el = render(cx);
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Invite users"))
+        .expect("fret submenu trigger semantics (Invite users)");
+    let click_point = Point::new(
+        Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+        Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(4 + tick),
+            request_semantics,
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let actual = fret_menu_content_insets(&snap);
+    assert_sorted_insets_match(
+        "dropdown-menu-demo.submenu-kbd-vp1440x320",
+        &actual,
+        &expected,
     );
 }
 
@@ -2636,6 +3125,76 @@ fn web_vs_fret_context_menu_demo_small_viewport_menu_item_height_matches() {
     );
 }
 
+#[test]
+fn web_vs_fret_context_menu_demo_small_viewport_menu_content_insets_match() {
+    let web = read_web_golden_open("context-menu-demo.vp1440x320");
+    let theme = web_theme(&web);
+    let expected = web_menu_content_insets_for_slots(&theme, &["context-menu-content"]);
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let checked_bookmarks: Model<bool> = app.models_mut().insert(true);
+    let checked_full_urls: Model<bool> = app.models_mut().insert(false);
+    let radio_person: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("pedro")));
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = build_context_menu_demo(
+                cx,
+                open.clone(),
+                checked_bookmarks.clone(),
+                checked_full_urls.clone(),
+                radio_person.clone(),
+            );
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    for frame in 2..=4 {
+        let request_semantics = frame == 4;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            request_semantics,
+            |cx| {
+                let el = build_context_menu_demo(
+                    cx,
+                    open.clone(),
+                    checked_bookmarks.clone(),
+                    checked_full_urls.clone(),
+                    radio_person.clone(),
+                );
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let actual = fret_menu_content_insets(&snap);
+    assert_sorted_insets_match("context-menu-demo.vp1440x320", &actual, &expected);
+}
+
 fn assert_context_menu_demo_submenu_overlay_placement_matches(web_name: &str) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
@@ -2863,6 +3422,168 @@ fn web_vs_fret_context_menu_demo_submenu_hover_overlay_placement_matches() {
 fn web_vs_fret_context_menu_demo_submenu_small_viewport_overlay_placement_matches() {
     assert_context_menu_demo_submenu_overlay_placement_matches(
         "context-menu-demo.submenu-kbd-vp1440x320",
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_submenu_small_viewport_menu_content_insets_match() {
+    let web = read_web_golden_open("context-menu-demo.submenu-kbd-vp1440x320");
+    let theme = web_theme(&web);
+    let expected = web_menu_content_insets_for_slots(
+        &theme,
+        &["context-menu-content", "context-menu-sub-content"],
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let checked_bookmarks: Model<bool> = app.models_mut().insert(true);
+    let checked_full_urls: Model<bool> = app.models_mut().insert(false);
+    let radio_person: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("pedro")));
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| {
+            let el = build_context_menu_demo(
+                cx,
+                open.clone(),
+                checked_bookmarks.clone(),
+                checked_full_urls.clone(),
+                radio_person.clone(),
+            );
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger_button = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Right click here"))
+        .expect("fret trigger button semantics");
+    let click_point = Point::new(
+        Px(trigger_button.bounds.origin.x.0 + trigger_button.bounds.size.width.0 * 0.5),
+        Px(trigger_button.bounds.origin.y.0 + trigger_button.bounds.size.height.0 * 0.5),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Right,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Right,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| {
+            let el = build_context_menu_demo(
+                cx,
+                open.clone(),
+                checked_bookmarks.clone(),
+                checked_full_urls.clone(),
+                radio_person.clone(),
+            );
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More Tools"))
+        .expect("fret submenu trigger semantics (More Tools)");
+    ui.set_focus(Some(trigger.id));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::ArrowRight,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(3 + tick),
+            request_semantics,
+            |cx| {
+                let el = build_context_menu_demo(
+                    cx,
+                    open.clone(),
+                    checked_bookmarks.clone(),
+                    checked_full_urls.clone(),
+                    radio_person.clone(),
+                );
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let actual = fret_menu_content_insets(&snap);
+    assert_sorted_insets_match(
+        "context-menu-demo.submenu-kbd-vp1440x320",
+        &actual,
+        &expected,
     );
 }
 
@@ -3995,6 +4716,107 @@ fn web_vs_fret_menubar_demo_small_viewport_menu_item_height_matches() {
     );
 }
 
+#[test]
+fn web_vs_fret_menubar_demo_small_viewport_menu_content_insets_match() {
+    let web = read_web_golden_open("menubar-demo.vp1440x320");
+    let theme = web_theme(&web);
+    let expected = web_menu_content_insets_for_slots(&theme, &["menubar-content"]);
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+    let view_bookmarks_bar: Model<bool> = app.models_mut().insert(false);
+    let view_full_urls: Model<bool> = app.models_mut().insert(true);
+    let profile_value: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("benoit")));
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| {
+            let menubar = build_menubar_demo(
+                cx,
+                view_bookmarks_bar.clone(),
+                view_full_urls.clone(),
+                profile_value.clone(),
+            );
+            vec![pad_root(cx, Px(0.0), menubar)]
+        },
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("File"))
+        .expect("fret menubar trigger semantics (File)");
+    let click_point = Point::new(
+        Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+        Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| {
+                let menubar = build_menubar_demo(
+                    cx,
+                    view_bookmarks_bar.clone(),
+                    view_full_urls.clone(),
+                    profile_value.clone(),
+                );
+                vec![pad_root(cx, Px(0.0), menubar)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let actual = fret_menu_content_insets(&snap);
+    assert_sorted_insets_match("menubar-demo.vp1440x320", &actual, &expected);
+}
+
 fn assert_menubar_demo_submenu_overlay_placement_matches(web_name: &str) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
@@ -4199,6 +5021,148 @@ fn web_vs_fret_menubar_demo_submenu_hover_overlay_placement_matches() {
 #[test]
 fn web_vs_fret_menubar_demo_submenu_small_viewport_overlay_placement_matches() {
     assert_menubar_demo_submenu_overlay_placement_matches("menubar-demo.submenu-kbd-vp1440x320");
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_submenu_small_viewport_menu_content_insets_match() {
+    let web = read_web_golden_open("menubar-demo.submenu-kbd-vp1440x320");
+    let theme = web_theme(&web);
+    let expected =
+        web_menu_content_insets_for_slots(&theme, &["menubar-content", "menubar-sub-content"]);
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+    let view_bookmarks_bar: Model<bool> = app.models_mut().insert(false);
+    let view_full_urls: Model<bool> = app.models_mut().insert(true);
+    let profile_value: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("benoit")));
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| {
+            let menubar = build_menubar_demo(
+                cx,
+                view_bookmarks_bar.clone(),
+                view_full_urls.clone(),
+                profile_value.clone(),
+            );
+            vec![pad_root(cx, Px(0.0), menubar)]
+        },
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let file_trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("File"))
+        .expect("fret menubar trigger semantics (File)");
+    let click_point = Point::new(
+        Px(file_trigger.bounds.origin.x.0 + file_trigger.bounds.size.width.0 * 0.5),
+        Px(file_trigger.bounds.origin.y.0 + file_trigger.bounds.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| {
+                let menubar = build_menubar_demo(
+                    cx,
+                    view_bookmarks_bar.clone(),
+                    view_full_urls.clone(),
+                    profile_value.clone(),
+                );
+                vec![pad_root(cx, Px(0.0), menubar)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let share_trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Share"))
+        .expect("fret submenu trigger semantics (Share)");
+    ui.set_focus(Some(share_trigger.id));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::ArrowRight,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + settle_frames + tick),
+            request_semantics,
+            |cx| {
+                let menubar = build_menubar_demo(
+                    cx,
+                    view_bookmarks_bar.clone(),
+                    view_full_urls.clone(),
+                    profile_value.clone(),
+                );
+                vec![pad_root(cx, Px(0.0), menubar)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let actual = fret_menu_content_insets(&snap);
+    assert_sorted_insets_match("menubar-demo.submenu-kbd-vp1440x320", &actual, &expected);
 }
 
 #[test]
