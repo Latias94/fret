@@ -131,7 +131,7 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Elevation and shadows (no-blur baseline)**: `docs/adr/0060-shadows-and-elevation.md`
 - **Focus rings (outline) and focus-visible**: `docs/adr/0061-focus-rings-and-focus-visible.md`
 - **Component sizing/density (Tailwind-like scales)**: `docs/adr/0056-component-size-and-density-system.md`
-- **Editor-scale performance**: `docs/adr/0042-virtualization-and-large-lists.md`, `docs/adr/0070-virtualization-contract.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`, `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`, `docs/adr/0055-frame-recording-and-subtree-replay-caching.md`
+- **Editor-scale performance**: `docs/adr/0042-virtualization-and-large-lists.md`, `docs/adr/0070-virtualization-contract.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`, `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`, `docs/adr/0055-frame-recording-and-subtree-replay-caching.md`, `docs/adr/1152-cache-roots-and-cached-subtree-semantics-v1.md`
 - **Model observation / reactive invalidation (GPUI-style)**: `docs/adr/0051-model-observation-and-ui-invalidation-propagation.md`, `docs/adr/0031-app-owned-models-and-leasing-updates.md`, `docs/adr/0005-retained-ui-tree.md`
 - **Editor-scale lists contract (keys + data source)**: `docs/adr/0047-virtual-list-data-source-and-stable-item-keys.md`
 
@@ -171,6 +171,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0116-window-scoped-layout-engine-and-viewport-roots.md` (multi-viewport end-state for declarative flow layout)
 - `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md` (profiling and inspector hooks)
 - `docs/adr/0055-frame-recording-and-subtree-replay-caching.md` (recording/replay caching for editor-scale UI)
+- `docs/adr/1152-cache-roots-and-cached-subtree-semantics-v1.md` (cache roots / cached subtree semantics for GPUI-style composition)
 - `docs/adr/0037-workspace-boundaries-and-components-repository.md` (workspace boundaries + external components repo)
 - `docs/adr/0038-engine-render-hook-and-submission-coordinator.md` (engine integration without queue ownership)
 - `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md` (composable authoring layer)
