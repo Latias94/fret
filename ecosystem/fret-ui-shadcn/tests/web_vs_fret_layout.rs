@@ -1,7 +1,7 @@
 use fret_app::App;
 use fret_core::{
-    AppWindowId, ImageId, NodeId, Point, Px, Rect, SemanticsRole, Size as CoreSize, TextOverflow,
-    TextWrap,
+    AppWindowId, Edges, ImageId, NodeId, Point, Px, Rect, SemanticsRole, Size as CoreSize,
+    TextOverflow, TextWrap,
 };
 use fret_runtime::Model;
 use fret_ui::Theme;
@@ -9,6 +9,7 @@ use fret_ui::element::{
     ColumnProps, ContainerProps, CrossAlign, FlexProps, GridProps, LayoutStyle, Length, MainAlign,
     PressableProps, RovingFlexProps, SizeStyle, TextProps,
 };
+use fret_ui::scroll::ScrollHandle;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::primitives::radio_group as radio_group_prim;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Radius, Space};
@@ -52,6 +53,9 @@ struct WebNode {
     #[serde(default)]
     #[serde(rename = "className")]
     class_name: Option<String>,
+    #[serde(default)]
+    #[serde(rename = "computedStyle")]
+    computed_style: BTreeMap<String, String>,
     #[allow(dead_code)]
     #[serde(default)]
     attrs: BTreeMap<String, String>,
@@ -2228,6 +2232,93 @@ fn web_vs_fret_layout_scroll_area_demo_root_size() {
         web_root.rect.h,
         1.0,
     );
+}
+
+#[test]
+fn web_vs_fret_layout_scroll_area_demo_max_offset_y_matches_web() {
+    let web = read_web_golden("scroll-area-demo");
+    let theme = web_theme(&web);
+    let web_root = web_find_by_class_tokens(
+        &theme.root,
+        &["relative", "h-72", "w-48", "rounded-md", "border"],
+    )
+    .expect("web scroll area root");
+
+    let web_viewport = find_first(web_root, &|n| {
+        n.computed_style
+            .get("overflowY")
+            .is_some_and(|v| v == "scroll")
+    })
+    .expect("web scroll viewport (overflowY=scroll)");
+
+    let web_content = web_find_best_by(
+        web_viewport,
+        &|n| n.tag == "div" && n.rect.h > web_viewport.rect.h + 1.0,
+        &|n| -n.rect.h,
+    )
+    .expect("web scroll content (taller than viewport)");
+
+    let expected_max_offset_y = web_content.rect.h - web_viewport.rect.h;
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let handle = ScrollHandle::default();
+    let _ = run_fret_root(bounds, |cx| {
+        let content = cx.container(
+            ContainerProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout.size.height = Length::Px(Px(web_content.rect.h));
+                    layout
+                },
+                ..Default::default()
+            },
+            |_cx| vec![],
+        );
+
+        let scroll_area = fret_ui_shadcn::ScrollArea::new(vec![content])
+            .scroll_handle(handle.clone())
+            .refine_layout(LayoutRefinement::default().size_full())
+            .into_element(cx);
+
+        vec![cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:scroll-area-demo:max-offset-y")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(web_root.rect.w));
+                            layout.size.height = Length::Px(Px(web_root.rect.h));
+                            layout
+                        },
+                        // Model the CSS border-box layout: the upstream demo has a 1px border and
+                        // the scroll viewport is inset by that border.
+                        padding: Edges::all(Px(1.0)),
+                        ..Default::default()
+                    },
+                    move |_cx| vec![scroll_area],
+                )]
+            },
+        )]
+    });
+
+    let max = handle.max_offset();
+    assert_close_px(
+        "scroll area max_offset_y",
+        max.y,
+        expected_max_offset_y,
+        1.0,
+    );
+    assert!(max.y.0 > 0.0, "expected scroll area to overflow vertically");
 }
 
 #[test]

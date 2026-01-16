@@ -95,7 +95,7 @@ patterns:
 - `popover-demo` (overlay placement + transform origin)
 - `dropdown-menu-demo` (overlay placement + max-height/scrolling)
 - `select-scrollable` (available-height clamping + scrolling + scroll buttons / top inset outcome)
-- `scroll-area-demo` (closed-mode snapshot; scrollbar hover/scroll states need scripted variants)
+- `scroll-area-demo` (max offset + viewport sizing; scrollbar hover/scroll states need scripted variants)
 - `slider-demo`
 - `avatar-demo`
 - `item-avatar`
