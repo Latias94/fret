@@ -145,7 +145,7 @@ These anchors are intentionally few; use `rg` to drill down from them.
 
 - App/effects/models: `crates/fret-app/src/app.rs`
 - Desktop runner (winit + wgpu): `crates/fret-launch/src/runner/mod.rs`
-- UI runtime (retained tree prototype): `crates/fret-ui/src/tree/mod.rs`
+- UI runtime substrate (UiTree + declarative bridge): `crates/fret-ui/src/tree/mod.rs` and `crates/fret-ui/src/declarative/`
 - Docking UI (`DockSpace`, policy-heavy): `ecosystem/fret-docking/src/dock/space.rs`
 - Core contracts (IDs, dock graph, scene ops): `crates/fret-core/src/lib.rs`
 - Renderer (quads/SDF/text hooks): `crates/fret-render/src/renderer/mod.rs`

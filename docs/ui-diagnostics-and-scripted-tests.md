@@ -9,6 +9,13 @@ scope: debugging, AI triage, scripted repros
 This doc describes the current **diagnostics bundle** workflow and the **MVP scripted interaction harness**
 implemented for Fret apps that run through `fret-bootstrap`'s `UiAppDriver`.
 
+Scope note:
+
+- This file focuses on **bundles + scripts** (how to dump `bundle.json`, how the script harness is triggered, and
+  how to author stable, selector-driven repros).
+- For the **interactive inspect workflow** (hover/pick overlay, shortcuts, and selector copy UX), see:
+  `docs/debugging-ui-with-inspector-and-scripts.md`.
+
 The goal is GPUI/Zed-style "inspectable, shareable repro units":
 
 - capture a portable bundle (`bundle.json`) that can be sent to another developer (or an AI tool),
