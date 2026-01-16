@@ -1,5 +1,5 @@
 use std::any::TypeId;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
@@ -12,6 +12,7 @@ use fret_core::{PathCommand, PathConstraints, PathMetrics, PathStyle};
 use fret_runtime::ModelId;
 
 use crate::Theme;
+use crate::element::CanvasCachePolicy;
 use crate::widget::Invalidation;
 use crate::{SvgSource, UiHost, widget::PaintCx};
 
@@ -478,78 +479,24 @@ impl Default for CanvasTextConstraints {
 
 #[derive(Default)]
 pub(crate) struct CanvasCache {
+    frame: u64,
+    policy: CanvasCachePolicy,
     text_by_key: HashMap<CanvasTextCacheKey, HostedTextEntry>,
-    text_used: HashSet<CanvasTextCacheKey>,
     shared_text_by_fingerprint: HashMap<SharedTextFingerprintKey, SharedTextEntry>,
-    shared_text_frame: u64,
     path_by_key: HashMap<CanvasPathCacheKey, HostedPathEntry>,
-    path_used: HashSet<CanvasPathCacheKey>,
     svg_by_key: HashMap<CanvasSvgCacheKey, HostedSvgEntry>,
-    svg_used: HashSet<CanvasSvgCacheKey>,
 }
 
 impl CanvasCache {
-    pub(crate) fn begin_paint(&mut self) {
-        self.shared_text_frame = self.shared_text_frame.wrapping_add(1);
-        self.text_used.clear();
-        self.path_used.clear();
-        self.svg_used.clear();
+    pub(crate) fn begin_paint(&mut self, frame: u64, policy: CanvasCachePolicy) {
+        self.frame = frame;
+        self.policy = policy;
     }
 
     pub(crate) fn end_paint(&mut self, services: &mut dyn fret_core::UiServices) {
-        let mut to_remove: Vec<CanvasTextCacheKey> = Vec::new();
-        for (&key, entry) in self.text_by_key.iter() {
-            if self.text_used.contains(&key) {
-                continue;
-            }
-            if entry.blob.is_some() {
-                to_remove.push(key);
-            }
-        }
-
-        for key in to_remove {
-            if let Some(mut entry) = self.text_by_key.remove(&key) {
-                if let Some(blob) = entry.blob.take() {
-                    services.text().release(blob);
-                }
-            }
-        }
-
-        let mut to_remove: Vec<CanvasPathCacheKey> = Vec::new();
-        for (&key, entry) in self.path_by_key.iter() {
-            if self.path_used.contains(&key) {
-                continue;
-            }
-            if entry.path.is_some() {
-                to_remove.push(key);
-            }
-        }
-
-        for key in to_remove {
-            if let Some(mut entry) = self.path_by_key.remove(&key) {
-                if let Some(path) = entry.path.take() {
-                    services.path().release(path);
-                }
-            }
-        }
-
-        let mut to_remove: Vec<CanvasSvgCacheKey> = Vec::new();
-        for (&key, entry) in self.svg_by_key.iter() {
-            if self.svg_used.contains(&key) {
-                continue;
-            }
-            if entry.svg.is_some() {
-                to_remove.push(key);
-            }
-        }
-
-        for key in to_remove {
-            if let Some(mut entry) = self.svg_by_key.remove(&key)
-                && let Some(svg) = entry.svg.take()
-            {
-                let _ = services.svg().unregister_svg(svg);
-            }
-        }
+        self.evict_hosted_text(services);
+        self.evict_hosted_paths(services);
+        self.evict_hosted_svgs(services);
 
         self.evict_shared_text(services);
     }
@@ -573,16 +520,14 @@ impl CanvasCache {
                 let _ = services.svg().unregister_svg(svg);
             }
         }
-        self.text_used.clear();
-        self.path_used.clear();
-        self.svg_used.clear();
+        self.frame = 0;
     }
 
     fn evict_shared_text(&mut self, services: &mut dyn fret_core::UiServices) {
         const SHARED_TEXT_KEEP_FRAMES: u64 = 120;
         const SHARED_TEXT_MAX_ENTRIES: usize = 4096;
 
-        let now = self.shared_text_frame;
+        let now = self.frame;
         if self.shared_text_by_fingerprint.is_empty() {
             return;
         }
@@ -632,6 +577,141 @@ impl CanvasCache {
         }
     }
 
+    fn evict_hosted_text(&mut self, services: &mut dyn fret_core::UiServices) {
+        let now = self.frame;
+        let keep_frames = self.policy.text.keep_frames;
+        let max_entries = self.policy.text.max_entries;
+
+        self.text_by_key.retain(|_, entry| {
+            let keep = now.saturating_sub(entry.last_used_frame) <= keep_frames;
+            if !keep {
+                if let Some(blob) = entry.blob.take() {
+                    services.text().release(blob);
+                }
+            }
+            keep
+        });
+
+        if max_entries == 0 {
+            for (_, mut entry) in self.text_by_key.drain() {
+                if let Some(blob) = entry.blob.take() {
+                    services.text().release(blob);
+                }
+            }
+            return;
+        }
+
+        let over = self.text_by_key.len().saturating_sub(max_entries);
+        if over == 0 {
+            return;
+        }
+
+        let mut candidates: Vec<(u64, CanvasTextCacheKey)> = self
+            .text_by_key
+            .iter()
+            .map(|(k, v)| (v.last_used_frame, *k))
+            .collect();
+        candidates.sort_by_key(|(last, _)| *last);
+
+        for (_, key) in candidates.into_iter().take(over) {
+            if let Some(mut entry) = self.text_by_key.remove(&key) {
+                if let Some(blob) = entry.blob.take() {
+                    services.text().release(blob);
+                }
+            }
+        }
+    }
+
+    fn evict_hosted_paths(&mut self, services: &mut dyn fret_core::UiServices) {
+        let now = self.frame;
+        let keep_frames = self.policy.path.keep_frames;
+        let max_entries = self.policy.path.max_entries;
+
+        self.path_by_key.retain(|_, entry| {
+            let keep = now.saturating_sub(entry.last_used_frame) <= keep_frames;
+            if !keep {
+                if let Some(path) = entry.path.take() {
+                    services.path().release(path);
+                }
+            }
+            keep
+        });
+
+        if max_entries == 0 {
+            for (_, mut entry) in self.path_by_key.drain() {
+                if let Some(path) = entry.path.take() {
+                    services.path().release(path);
+                }
+            }
+            return;
+        }
+
+        let over = self.path_by_key.len().saturating_sub(max_entries);
+        if over == 0 {
+            return;
+        }
+
+        let mut candidates: Vec<(u64, CanvasPathCacheKey)> = self
+            .path_by_key
+            .iter()
+            .map(|(k, v)| (v.last_used_frame, *k))
+            .collect();
+        candidates.sort_by_key(|(last, _)| *last);
+
+        for (_, key) in candidates.into_iter().take(over) {
+            if let Some(mut entry) = self.path_by_key.remove(&key) {
+                if let Some(path) = entry.path.take() {
+                    services.path().release(path);
+                }
+            }
+        }
+    }
+
+    fn evict_hosted_svgs(&mut self, services: &mut dyn fret_core::UiServices) {
+        let now = self.frame;
+        let keep_frames = self.policy.svg.keep_frames;
+        let max_entries = self.policy.svg.max_entries;
+
+        self.svg_by_key.retain(|_, entry| {
+            let keep = now.saturating_sub(entry.last_used_frame) <= keep_frames;
+            if !keep {
+                if let Some(svg) = entry.svg.take() {
+                    let _ = services.svg().unregister_svg(svg);
+                }
+            }
+            keep
+        });
+
+        if max_entries == 0 {
+            for (_, mut entry) in self.svg_by_key.drain() {
+                if let Some(svg) = entry.svg.take() {
+                    let _ = services.svg().unregister_svg(svg);
+                }
+            }
+            return;
+        }
+
+        let over = self.svg_by_key.len().saturating_sub(max_entries);
+        if over == 0 {
+            return;
+        }
+
+        let mut candidates: Vec<(u64, CanvasSvgCacheKey)> = self
+            .svg_by_key
+            .iter()
+            .map(|(k, v)| (v.last_used_frame, *k))
+            .collect();
+        candidates.sort_by_key(|(last, _)| *last);
+
+        for (_, key) in candidates.into_iter().take(over) {
+            if let Some(mut entry) = self.svg_by_key.remove(&key)
+                && let Some(svg) = entry.svg.take()
+            {
+                let _ = services.svg().unregister_svg(svg);
+            }
+        }
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn text(
         &mut self,
@@ -660,7 +740,7 @@ impl CanvasCache {
             };
 
             if let Some(entry) = self.shared_text_by_fingerprint.get_mut(&shared_key) {
-                entry.last_used_frame = self.shared_text_frame;
+                entry.last_used_frame = self.frame;
                 scene.push(SceneOp::Text {
                     order,
                     origin,
@@ -686,7 +766,7 @@ impl CanvasCache {
                 SharedTextEntry {
                     blob,
                     metrics,
-                    last_used_frame: self.shared_text_frame,
+                    last_used_frame: self.frame,
                 },
             );
 
@@ -700,16 +780,8 @@ impl CanvasCache {
         }
 
         let cache_key = CanvasTextCacheKey { key, scale_bits };
-        self.text_used.insert(cache_key);
-
-        let entry = self
-            .text_by_key
-            .entry(cache_key)
-            .or_insert_with(|| HostedTextEntry {
-                blob: None,
-                metrics: None,
-                fingerprint: None,
-            });
+        let entry = self.text_by_key.entry(cache_key).or_default();
+        entry.last_used_frame = self.frame;
 
         let fingerprint = HostedTextFingerprint {
             content: content.clone(),
@@ -786,16 +858,8 @@ impl CanvasCache {
         let scale_bits = raster_scale_factor.to_bits();
 
         let cache_key = CanvasPathCacheKey { key, scale_bits };
-        self.path_used.insert(cache_key);
-
-        let entry = self
-            .path_by_key
-            .entry(cache_key)
-            .or_insert_with(|| HostedPathEntry {
-                path: None,
-                metrics: None,
-                fingerprint: None,
-            });
+        let entry = self.path_by_key.entry(cache_key).or_default();
+        entry.last_used_frame = self.frame;
 
         let fingerprint = HostedPathFingerprint {
             commands_hash: hash_path_commands(commands),
@@ -855,9 +919,8 @@ impl CanvasCache {
         bytes: SvgBytesKey,
     ) -> fret_core::SvgId {
         let cache_key = CanvasSvgCacheKey { key };
-        self.svg_used.insert(cache_key);
-
         let entry = self.svg_by_key.entry(cache_key).or_default();
+        entry.last_used_frame = self.frame;
         let fingerprint = SvgFingerprint {
             bytes: bytes.fingerprint(),
         };
@@ -965,6 +1028,7 @@ struct HostedTextEntry {
     blob: Option<fret_core::TextBlobId>,
     metrics: Option<TextMetrics>,
     fingerprint: Option<HostedTextFingerprint>,
+    last_used_frame: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -980,12 +1044,14 @@ struct HostedPathEntry {
     path: Option<fret_core::PathId>,
     metrics: Option<PathMetrics>,
     fingerprint: Option<HostedPathFingerprint>,
+    last_used_frame: u64,
 }
 
 #[derive(Default)]
 struct HostedSvgEntry {
     svg: Option<fret_core::SvgId>,
     fingerprint: Option<SvgFingerprint>,
+    last_used_frame: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

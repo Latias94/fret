@@ -6,6 +6,12 @@ This document describes a GPUI/Zed-inspired debugging workflow for Fret UIs, wit
 - **Deterministic repro** (selector-driven scripted actions)
 - **AI-friendly artifacts** (`bundle.json`, pick results, and stable selectors)
 
+Scope note:
+
+- This file focuses on the **interactive inspect workflow** (picker UX + shortcuts).
+- For the **bundle format + script harness** details (dump workflow, script schema v1, CI-friendly runs), see:
+  `docs/ui-diagnostics-and-scripted-tests.md`.
+
 ## Quick start (UI Gallery)
 
 1. Start the demo app:

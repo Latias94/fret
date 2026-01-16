@@ -335,7 +335,8 @@ Crate placement (recommended):
 
 Potential follow-up (optional):
 
-- Add a small `fret-ui-kit` “canvas utilities” module with reusable value types:
+- Add a small `fret-canvas` feature-gated “UI integration” module (e.g. `fret-canvas/ui`) with
+  reusable canvas wiring helpers and value types:
   - pan/zoom transform helpers,
   - constant-pixel stroke utilities,
   - common drag phase state (`Begin/Update/Commit/Cancel`) aligned with ADR 0136.

@@ -94,6 +94,7 @@ pub(crate) const CMD_DATA_GRID_ROW_PREFIX: &str = "ui_gallery.data_grid.row.";
 
 pub(crate) const PAGE_INTRO: &str = "intro";
 pub(crate) const PAGE_LAYOUT: &str = "layout";
+pub(crate) const PAGE_VIEW_CACHE: &str = "view_cache";
 pub(crate) const PAGE_BUTTON: &str = "button";
 pub(crate) const PAGE_CARD: &str = "card";
 pub(crate) const PAGE_BADGE: &str = "badge";
@@ -122,6 +123,7 @@ pub(crate) const PAGE_TOAST: &str = "toast";
 
 pub(crate) const CMD_NAV_INTRO: &str = "ui_gallery.nav.select.intro";
 pub(crate) const CMD_NAV_LAYOUT: &str = "ui_gallery.nav.select.layout";
+pub(crate) const CMD_NAV_VIEW_CACHE: &str = "ui_gallery.nav.select.view_cache";
 pub(crate) const CMD_NAV_BUTTON: &str = "ui_gallery.nav.select.button";
 pub(crate) const CMD_NAV_CARD: &str = "ui_gallery.nav.select.card";
 pub(crate) const CMD_NAV_BADGE: &str = "ui_gallery.nav.select.badge";
@@ -151,6 +153,9 @@ pub(crate) const CMD_NAV_TOAST: &str = "ui_gallery.nav.select.toast";
 pub(crate) const CMD_PROGRESS_INC: &str = "ui_gallery.progress.inc";
 pub(crate) const CMD_PROGRESS_DEC: &str = "ui_gallery.progress.dec";
 pub(crate) const CMD_PROGRESS_RESET: &str = "ui_gallery.progress.reset";
+
+pub(crate) const CMD_VIEW_CACHE_BUMP: &str = "ui_gallery.view_cache.bump";
+pub(crate) const CMD_VIEW_CACHE_RESET: &str = "ui_gallery.view_cache.reset";
 
 pub(crate) const CMD_MENU_DROPDOWN_APPLE: &str = "ui_gallery.menu.dropdown.apple";
 pub(crate) const CMD_MENU_DROPDOWN_ORANGE: &str = "ui_gallery.menu.dropdown.orange";
@@ -236,6 +241,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["layout", "flex", "stack"],
                 docs::DOC_LAYOUT,
                 docs::USAGE_LAYOUT,
+            ),
+            PageSpec::new(
+                PAGE_VIEW_CACHE,
+                "View Cache",
+                "View Cache / Subtree Reuse",
+                "fret-ui (runtime experiments)",
+                CMD_NAV_VIEW_CACHE,
+                &["cache", "performance", "gpui-parity"],
+                docs::DOC_VIEW_CACHE,
+                docs::USAGE_VIEW_CACHE,
             ),
         ],
     },

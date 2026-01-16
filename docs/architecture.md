@@ -135,9 +135,11 @@ provide retained **semantics**:
 
 Current status:
 
-- The current prototype is a retained widget tree (`UiTree`).
-- The planned long-term direction is a GPUI-style declarative element tree rebuilt each frame, with externalized
-  cross-frame element state (ADR 0028).
+- The runtime substrate is still a retained tree (`UiTree`) that owns layout/hit-test/paint state and invalidation.
+- Most new UI authoring is declarative: each frame builds an element tree (`AnyElement` via `ElementContext`) that is
+  mounted into `UiTree`, with cross-frame element state externalized by stable identity (ADR 0028).
+- Some legacy/low-level surfaces may still be authored directly as retained widgets, but the long-term direction for
+  ecosystem components is “declarative-first / declarative-only”.
 
 ### Proposed structure
 

@@ -12,6 +12,12 @@ documentation.workspace = true
 [features]
 default = []
 
+# UI integration helpers (declarative wiring + recipes).
+#
+# This is intentionally feature-gated so `fret-canvas` can remain a lightweight, portable substrate
+# by default. When enabled, this pulls in `fret-ui` + `fret-runtime` for declarative integration.
+ui = ["dep:fret-ui", "dep:fret-runtime"]
+
 # Reserved for a future declarative canvas element surface (ADR 0137).
 declarative = []
 
@@ -23,5 +29,7 @@ kurbo = ["dep:kurbo"]
 
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
+fret-runtime = { path = "../../crates/fret-runtime", optional = true }
+fret-ui = { path = "../../crates/fret-ui", optional = true }
 rstar = { workspace = true, optional = true }
 kurbo = { workspace = true, optional = true }

@@ -73,3 +73,7 @@ Toolchain is pinned via `rust-toolchain.toml` (Rust 1.92) and the workspace uses
   - When you implement/refactor behavior covered by an ADR, update the corresponding row in `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
   - Mark one of: `Aligned`, `Aligned (with known gaps)`, `Partially aligned`, `Not implemented`, `Not audited`.
   - Add 1–3 evidence anchors (file paths / key functions / tests) or clearly describe the missing pieces.
+
+## Documentation Language
+
+- Write repository documentation and code comments in English.

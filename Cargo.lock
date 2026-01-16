@@ -973,6 +973,8 @@ name = "fret-canvas"
 version = "0.1.0"
 dependencies = [
  "fret-core",
+ "fret-runtime",
+ "fret-ui",
  "kurbo 0.11.3",
  "rstar",
 ]

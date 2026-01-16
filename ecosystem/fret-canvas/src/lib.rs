@@ -8,6 +8,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod cache;
 pub mod drag;
 pub mod scale;
 pub mod spatial;
@@ -19,3 +20,6 @@ pub mod wires;
 
 #[cfg(feature = "declarative")]
 pub mod declarative;
+
+#[cfg(feature = "ui")]
+pub mod ui;

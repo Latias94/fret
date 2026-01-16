@@ -782,7 +782,7 @@ impl ElementHostWidget {
                     });
                 }
             }
-            ElementInstance::Canvas(_props) => {
+            ElementInstance::Canvas(props) => {
                 let on_paint = crate::elements::with_element_state(
                     cx.app,
                     window,
@@ -791,7 +791,8 @@ impl ElementHostWidget {
                     |hooks| hooks.on_paint.clone(),
                 );
 
-                self.canvas_cache.begin_paint();
+                self.canvas_cache
+                    .begin_paint(cx.app.frame_id().0, props.cache_policy);
                 if let Some(on_paint) = on_paint {
                     {
                         let mut host = crate::canvas::UiCanvasHostAdapter::new(cx);

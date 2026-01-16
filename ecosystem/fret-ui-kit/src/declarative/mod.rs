@@ -1,5 +1,6 @@
 pub mod action_hooks;
 pub mod active_descendant;
+#[cfg(feature = "recipes")]
 pub mod canvas_surface;
 pub mod chrome;
 pub mod collapsible_motion;

@@ -1020,6 +1020,62 @@ impl ViewportSurfaceProps {
 #[derive(Debug, Clone, Copy)]
 pub struct CanvasProps {
     pub layout: LayoutStyle,
+    pub cache_policy: CanvasCachePolicy,
+}
+
+/// Cache tuning for a single hosted resource kind (text/path/svg) within a declarative `Canvas`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CanvasCacheTuning {
+    /// How long an unused entry may remain cached (in UI frames).
+    pub keep_frames: u64,
+    /// Hard cap on cached entries for this resource kind.
+    pub max_entries: usize,
+}
+
+impl CanvasCacheTuning {
+    pub const fn transient() -> Self {
+        Self {
+            keep_frames: 0,
+            max_entries: 0,
+        }
+    }
+}
+
+/// Hosted cache policy for declarative `Canvas` resources.
+///
+/// This is intentionally numeric-only configuration: it does not encode interaction policy or
+/// domain semantics (ADR 0156 / ADR 0137).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CanvasCachePolicy {
+    pub text: CanvasCacheTuning,
+    pub path: CanvasCacheTuning,
+    pub svg: CanvasCacheTuning,
+}
+
+impl CanvasCachePolicy {
+    pub const fn smooth_default() -> Self {
+        Self {
+            // ~1s at 60fps; reduces prepare/release thrash during scroll/pan.
+            text: CanvasCacheTuning {
+                keep_frames: 60,
+                max_entries: 4096,
+            },
+            path: CanvasCacheTuning {
+                keep_frames: 60,
+                max_entries: 2048,
+            },
+            svg: CanvasCacheTuning {
+                keep_frames: 60,
+                max_entries: 256,
+            },
+        }
+    }
+}
+
+impl Default for CanvasCachePolicy {
+    fn default() -> Self {
+        Self::smooth_default()
+    }
 }
 
 impl Default for CanvasProps {
@@ -1027,7 +1083,10 @@ impl Default for CanvasProps {
         let mut layout = LayoutStyle::default();
         layout.size.width = Length::Fill;
         layout.size.height = Length::Fill;
-        Self { layout }
+        Self {
+            layout,
+            cache_policy: CanvasCachePolicy::default(),
+        }
     }
 }
 

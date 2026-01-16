@@ -14,6 +14,7 @@ contracts early to avoid large rewrites later.
 - GPU debugging (RenderDoc): `docs/renderdoc-inspection.md`
 - Debugging playbook: `docs/debugging-playbook.md`
 - UI diagnostics + scripted repros: `docs/ui-diagnostics-and-scripted-tests.md`
+- Inspect workflow (picker + scripts): `docs/debugging-ui-with-inspector-and-scripts.md`
 - Viewport panels (engine/video): `docs/viewport-panels.md`
 - Gizmo + viewport integration: `docs/gizmo-viewport-integration.md`
 - Contracts: `docs/adr/`
@@ -73,10 +74,10 @@ Web/wasm runs through tooling (not through `fret-kit`):
 - Plot demos (2D): `apps/fret-examples/src/plot_demo.rs` (or `cargo run -p fret-demo --bin plot_demo`; web: `apps/fret-demo-web` + `?demo=plot_demo`)
 - Plot stress harness (desktop-only): `apps/fret-examples/src/plot_stress_demo.rs` (or `cargo run -p fret-demo --bin plot_stress_demo`)
 - A11y manual acceptance checklist (overlays + demo): `docs/a11y-acceptance-checklist.md`
- - App runtime (effects + models + commands): `crates/fret-app/src/app.rs`
- - Desktop runner (integrated example; winit window lifecycle + scheduling): `crates/fret-launch/src/runner/mod.rs`
+- App runtime (effects + models + commands): `crates/fret-app/src/app.rs`
+- Desktop runner (integrated example; winit window lifecycle + scheduling): `crates/fret-launch/src/runner/mod.rs`
    - Note: crate boundary direction is “core vs backends vs apps” (ADR 0093): `docs/adr/0093-crate-structure-core-backends-apps.md`
- - UI runtime (retained tree prototype): `crates/fret-ui/src/tree/mod.rs`
+- UI runtime substrate (UiTree + declarative bridge): `crates/fret-ui/src/tree/mod.rs` and `crates/fret-ui/src/declarative/`
 - Docking UI (`DockSpace`, policy-heavy): `ecosystem/fret-docking/src/dock/space.rs`
 - Renderer (display list → wgpu pipelines; SDF AA lives here): `crates/fret-render/src/renderer/mod.rs`
 

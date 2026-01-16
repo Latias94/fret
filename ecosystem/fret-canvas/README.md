@@ -46,6 +46,10 @@ should be converted to canvas units before comparison:
 - `fret_canvas::text`
   - `TextCache`: a keyed cache for prepared `TextBlobId` + `TextMetrics` that releases resources
     via `UiServices`.
+- `fret_canvas::cache`
+  - `PathCache`: a keyed cache for prepared `PathId` + `PathMetrics` that releases resources via
+    `UiServices`.
+  - `SvgCache`: a keyed cache for registered `SvgId`s that unregisters SVGs via `UiServices`.
 
 ## Future: declarative surface
 
@@ -59,6 +63,17 @@ Fret now provides a declarative canvas element in `crates/fret-ui` (ADR 0156).
 
 This crate intentionally stays focused on reusable retained-canvas helpers that remain useful even
 when the high-level authoring style is declarative.
+
+## Optional: UI integration (`fret-canvas/ui`)
+
+For convenience, `fret-canvas` can also provide canvas-specific declarative wiring and recipes
+behind an opt-in feature:
+
+- Enable: `fret-canvas/ui`
+- Provides: `fret_canvas::ui::{canvas_surface_panel, pan_zoom_canvas_surface_panel, canvas_tool_router_panel, ...}`
+
+This keeps the default crate portable and lightweight while allowing users to depend on a single
+canvas crate when building editor-grade interactive surfaces.
 
 ## Optional: rstar backend
 

@@ -89,8 +89,6 @@ pub(crate) fn node_for_element_in_window_frame<H: UiHost>(
 fn prepare_window_frame_for_frame(window_frame: &mut WindowFrame, frame_id: FrameId) {
     if window_frame.frame_id != frame_id {
         window_frame.frame_id = frame_id;
-        window_frame.instances.clear();
-        window_frame.children.clear();
     }
 }
 
@@ -122,11 +120,17 @@ pub fn render_root<H: UiHost>(
     let frame_id = app.frame_id();
     let focused = ui.focus();
 
-    let children = crate::elements::with_element_cx(app, window, bounds, root_name, |cx| {
+    let ui_ref: &UiTree<H> = &*ui;
+    let children = app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, app| {
+        let mut should_reuse_view_cache = |node: NodeId| ui_ref.should_reuse_view_cache_node(node);
+        let mut cx = crate::elements::ElementContext::new_for_root_name(
+            app, runtime, window, bounds, root_name,
+        );
+        cx.set_view_cache_should_reuse(&mut should_reuse_view_cache);
         cx.sync_focused_element_from_focused_node(focused);
         cx.dismissible_clear_on_dismiss_request();
         cx.dismissible_clear_on_pointer_move();
-        render(cx)
+        render(&mut cx)
     });
 
     app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, app| {
@@ -222,7 +226,14 @@ pub fn render_root<H: UiHost>(
         });
 
         for node in stale_nodes {
-            let _ = ui.remove_subtree(services, node);
+            let removed = ui.remove_subtree(services, node);
+            app.with_global_mut(ElementFrame::default, |frame, _app| {
+                let window_frame = frame.windows.entry(window).or_default();
+                for removed in removed {
+                    window_frame.instances.remove(&removed);
+                    window_frame.children.remove(&removed);
+                }
+            });
         }
 
         if window_state.wants_continuous_frames() {
@@ -267,11 +278,17 @@ fn render_dismissible_root_impl<
     let frame_id = app.frame_id();
     let focused = ui.focus();
 
-    let children = crate::elements::with_element_cx(app, window, bounds, root_name, |cx| {
+    let ui_ref: &UiTree<H> = &*ui;
+    let children = app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, app| {
+        let mut should_reuse_view_cache = |node: NodeId| ui_ref.should_reuse_view_cache_node(node);
+        let mut cx = crate::elements::ElementContext::new_for_root_name(
+            app, runtime, window, bounds, root_name,
+        );
+        cx.set_view_cache_should_reuse(&mut should_reuse_view_cache);
         cx.sync_focused_element_from_focused_node(focused);
         cx.dismissible_clear_on_dismiss_request();
         cx.dismissible_clear_on_pointer_move();
-        render(cx)
+        render(&mut cx)
     });
 
     app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, app| {
@@ -366,7 +383,14 @@ fn render_dismissible_root_impl<
         });
 
         for node in stale_nodes {
-            let _ = ui.remove_subtree(services, node);
+            let removed = ui.remove_subtree(services, node);
+            app.with_global_mut(ElementFrame::default, |frame, _app| {
+                let window_frame = frame.windows.entry(window).or_default();
+                for removed in removed {
+                    window_frame.instances.remove(&removed);
+                    window_frame.children.remove(&removed);
+                }
+            });
         }
 
         if window_state.wants_continuous_frames() {
@@ -389,6 +413,8 @@ fn mount_element<H: UiHost>(
     scroll_bindings: &mut Vec<(usize, GlobalElementId)>,
 ) -> NodeId {
     let id = element.id;
+    let reuse_view_cache = matches!(&element.kind, ElementKind::ViewCache(_))
+        && window_state.should_reuse_view_cache_root(id);
     let node = window_state
         .node_entry(id)
         .map(|e| e.node)
@@ -491,6 +517,15 @@ fn mount_element<H: UiHost>(
         },
     );
 
+    if reuse_view_cache {
+        let children = ui.children(node);
+        window_frame.children.insert(node, children);
+
+        mark_existing_declarative_subtree_seen(ui, window_state, root_id, frame_id, node);
+        collect_scroll_handle_bindings_for_existing_subtree(window_frame, scroll_bindings, node);
+        return node;
+    }
+
     let mut child_nodes: Vec<NodeId> = Vec::with_capacity(element.children.len());
     for child in element.children {
         child_nodes.push(mount_element(
@@ -508,6 +543,54 @@ fn mount_element<H: UiHost>(
     window_frame.children.insert(node, child_nodes);
 
     node
+}
+
+fn mark_existing_declarative_subtree_seen<H: UiHost>(
+    ui: &UiTree<H>,
+    window_state: &mut crate::elements::WindowElementState,
+    root_id: GlobalElementId,
+    frame_id: FrameId,
+    root: NodeId,
+) {
+    let mut stack: Vec<NodeId> = vec![root];
+    while let Some(node) = stack.pop() {
+        if let Some(element) = ui.node_element(node) {
+            window_state.set_node_entry(
+                element,
+                NodeEntry {
+                    node,
+                    last_seen_frame: frame_id,
+                    root: root_id,
+                },
+            );
+
+            #[cfg(feature = "diagnostics")]
+            window_state.touch_debug_identity_for_element(frame_id, element);
+        }
+
+        for child in ui.children(node) {
+            stack.push(child);
+        }
+    }
+}
+
+fn collect_scroll_handle_bindings_for_existing_subtree(
+    window_frame: &WindowFrame,
+    out: &mut Vec<(usize, GlobalElementId)>,
+    root: NodeId,
+) {
+    let mut stack: Vec<NodeId> = vec![root];
+    while let Some(node) = stack.pop() {
+        if let Some(record) = window_frame.instances.get(&node) {
+            collect_scroll_handle_bindings(record.element, &record.instance, out);
+        }
+
+        if let Some(children) = window_frame.children.get(&node) {
+            for &child in children {
+                stack.push(child);
+            }
+        }
+    }
 }
 
 fn collect_scroll_handle_bindings(

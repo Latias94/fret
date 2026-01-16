@@ -93,6 +93,7 @@ Legend:
 | `badge` | `Badge` | Pass-through |  |
 | `kbd` | `Kbd` | Pass-through |  |
 | `breadcrumb` | `Breadcrumb` | Pass-through |  |
+| `combobox` | `Combobox` | Pass-through |  |
 | `checkbox` | `Checkbox` | Chrome+Layout |  |
 | `radio_group` | `RadioGroup` | Pass-through |  |
 | `calendar` | `Calendar` | Pass-through |  |
@@ -104,14 +105,22 @@ Legend:
 | `switch` | `Switch` | Chrome+Layout |  |
 | `card` | `Card` | Chrome+Layout |  |
 | `popover` | `PopoverContent` | Chrome+Layout |  |
+| `popover` | `Popover` | Patch-only | `into_element` requires trigger/content closures |
 | `tooltip` | `TooltipContent` | Chrome+Layout |  |
 | `dialog` | `DialogContent` | Chrome+Layout |  |
+| `dialog` | `Dialog` | Patch-only | `into_element` requires trigger/content closures |
 | `alert_dialog` | `AlertDialogContent` | Chrome+Layout |  |
+| `alert_dialog` | `AlertDialog` | Patch-only | `into_element` requires trigger/content closures |
 | `sheet` | `SheetContent` | Chrome+Layout |  |
+| `sheet` | `Sheet` | Patch-only | `into_element` requires trigger/content closures |
 | `hover_card` | `HoverCardContent` | Chrome+Layout |  |
 | `drawer` | `DrawerContent` | Chrome+Layout |  |
-| `select` | `Select` | Layout-only | Needs chrome support for full parity |
-| `slider` | `Slider` | Layout-only | Needs chrome support for full parity |
+| `drawer` | `Drawer` | Patch-only | `into_element` requires trigger/content closures |
+| `dropdown_menu` | `DropdownMenu` | Patch-only | `into_element` requires trigger/entries closures |
+| `context_menu` | `ContextMenu` | Patch-only | `into_element` requires trigger/entries closures |
+| `menubar` | `Menubar` | Pass-through |  |
+| `select` | `Select` | Chrome+Layout |  |
+| `slider` | `Slider` | Chrome+Layout |  |
 | `accordion` | `AccordionTrigger` | Chrome+Layout (Patch-only) | `into_element` requires root/value args |
 | `accordion` | `AccordionContent` | Chrome+Layout (Patch-only) | Rendered via `Accordion` |
 | `accordion` | `AccordionItem` | Chrome+Layout (Patch-only) | Rendered via `Accordion` |
@@ -157,8 +166,12 @@ Additional pass-through subcomponents also opt into `ui()` (not tracked individu
 
 - Alert/Dialog/Sheet: `*Header/*Footer/*Title/*Description` (+ `AlertDialogAction/AlertDialogCancel`).
 - Card: `CardHeader/CardContent/CardFooter/CardTitle/CardDescription`.
+- Command: `CommandEmpty/CommandList/CommandShortcut` (plus `CommandDialog` as Patch-only).
+- Field/Item/Pagination: `FieldSet/FieldLegend/FieldLabel/FieldTitle/FieldDescription/FieldError/FieldSeparator/FieldGroup/FieldContent`, `ItemGroup/ItemHeader/ItemContent/ItemTitle/ItemDescription/ItemMedia/ItemActions/ItemFooter/ItemSeparator`, `PaginationContent/PaginationItem/PaginationLink/PaginationPrevious/PaginationNext/PaginationEllipsis`.
+- Data table controls: `DataTableGlobalFilterInput/DataTableViewOptions`.
+- Sonner: `Toaster`.
 - Table: `TableHeader/TableBody/TableFooter/TableRow/TableHead/TableCaption`.
-- Wrappers: `PopoverTrigger/PopoverAnchor/TooltipTrigger/TooltipAnchor/HoverCardTrigger/HoverCardAnchor`.
+- Wrappers: `PopoverTrigger/PopoverAnchor/TooltipTrigger/TooltipAnchor/HoverCardTrigger/HoverCardAnchor/DrawerTrigger`.
 
 ## shadcn/ui v4 Registry Baseline
 

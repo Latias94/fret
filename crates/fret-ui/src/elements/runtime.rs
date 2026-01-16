@@ -1,5 +1,5 @@
 use std::any::{Any, TypeId};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::{
     Arc,
     atomic::{AtomicUsize, Ordering},
@@ -101,6 +101,11 @@ pub struct WindowElementState {
     pub(super) rendered_state: HashMap<(GlobalElementId, TypeId), Box<dyn Any>>,
     pub(super) next_state: HashMap<(GlobalElementId, TypeId), Box<dyn Any>>,
     pub(super) lag_state: Vec<HashMap<(GlobalElementId, TypeId), Box<dyn Any>>>,
+    pub(super) view_cache_state_keys_rendered:
+        HashMap<GlobalElementId, Vec<(GlobalElementId, TypeId)>>,
+    pub(super) view_cache_state_keys_next: HashMap<GlobalElementId, Vec<(GlobalElementId, TypeId)>>,
+    pub(super) view_cache_reuse_roots: HashSet<GlobalElementId>,
+    view_cache_stack: Vec<GlobalElementId>,
     prepared_frame: FrameId,
     pub(super) prev_unkeyed_fingerprints: HashMap<u64, Vec<u64>>,
     pub(super) cur_unkeyed_fingerprints: HashMap<u64, Vec<u64>>,
@@ -144,6 +149,14 @@ impl WindowElementState {
         self.prepared_frame = frame_id;
 
         self.advance_element_state_buffers(lag_frames);
+
+        std::mem::swap(
+            &mut self.view_cache_state_keys_rendered,
+            &mut self.view_cache_state_keys_next,
+        );
+        self.view_cache_state_keys_next.clear();
+        self.view_cache_reuse_roots.clear();
+        self.view_cache_stack.clear();
 
         std::mem::swap(
             &mut self.prev_unkeyed_fingerprints,
@@ -222,6 +235,55 @@ impl WindowElementState {
 
     pub(super) fn insert_state_box(&mut self, key: (GlobalElementId, TypeId), value: Box<dyn Any>) {
         self.next_state.insert(key, value);
+    }
+
+    pub(super) fn record_state_key_access(&mut self, key: (GlobalElementId, TypeId)) {
+        let Some(root) = self.view_cache_stack.last().copied() else {
+            return;
+        };
+        self.view_cache_state_keys_next
+            .entry(root)
+            .or_default()
+            .push(key);
+    }
+
+    pub(super) fn begin_view_cache_scope(&mut self, root: GlobalElementId) {
+        self.view_cache_stack.push(root);
+        self.view_cache_state_keys_next.remove(&root);
+    }
+
+    pub(super) fn end_view_cache_scope(&mut self, root: GlobalElementId) {
+        let popped = self.view_cache_stack.pop();
+        debug_assert_eq!(popped, Some(root));
+        if let Some(keys) = self.view_cache_state_keys_next.get_mut(&root) {
+            let mut seen: HashSet<(GlobalElementId, TypeId)> = HashSet::with_capacity(keys.len());
+            keys.retain(|&key| seen.insert(key));
+        }
+    }
+
+    pub(crate) fn mark_view_cache_reuse_root(&mut self, root: GlobalElementId) {
+        self.view_cache_reuse_roots.insert(root);
+    }
+
+    pub(crate) fn should_reuse_view_cache_root(&self, root: GlobalElementId) -> bool {
+        self.view_cache_reuse_roots.contains(&root)
+    }
+
+    pub(super) fn touch_state_key(&mut self, key: (GlobalElementId, TypeId)) {
+        let Some(value) = self.take_state_box(&key) else {
+            return;
+        };
+        self.insert_state_box(key, value);
+    }
+
+    pub(crate) fn touch_view_cache_state_keys_if_recorded(&mut self, root: GlobalElementId) {
+        let Some(keys) = self.view_cache_state_keys_rendered.get(&root).cloned() else {
+            return;
+        };
+        for &key in &keys {
+            self.touch_state_key(key);
+        }
+        self.view_cache_state_keys_next.insert(root, keys);
     }
 
     pub(crate) fn active_text_selection(&self) -> Option<ActiveTextSelection> {
@@ -357,6 +419,7 @@ impl WindowElementState {
         line: u32,
         column: u32,
         key_hash: Option<u64>,
+        name: Option<&str>,
         slot: u64,
     ) {
         self.debug_identity.entries.insert(
@@ -368,11 +431,23 @@ impl WindowElementState {
                     line,
                     column,
                     key_hash,
+                    name: name.map(StdArc::<str>::from),
                     slot,
                 },
                 last_seen_frame: frame_id,
             },
         );
+    }
+
+    #[cfg(feature = "diagnostics")]
+    pub(crate) fn touch_debug_identity_for_element(
+        &mut self,
+        frame_id: FrameId,
+        element: GlobalElementId,
+    ) {
+        if let Some(entry) = self.debug_identity.entries.get_mut(&element) {
+            entry.last_seen_frame = frame_id;
+        }
     }
 
     #[cfg(feature = "diagnostics")]
@@ -431,6 +506,7 @@ enum DebugIdentitySegment {
         line: u32,
         column: u32,
         key_hash: Option<u64>,
+        name: Option<StdArc<str>>,
         slot: u64,
     },
 }
@@ -445,9 +521,12 @@ impl DebugIdentitySegment {
                 line,
                 column,
                 key_hash,
+                name,
                 slot,
             } => {
-                if let Some(k) = key_hash {
+                if let Some(name) = name.as_deref() {
+                    format!("{file}:{line}:{column}[name={name}]")
+                } else if let Some(k) = key_hash {
                     format!("{file}:{line}:{column}[key={k:#x}]")
                 } else {
                     format!("{file}:{line}:{column}[slot={slot}]")

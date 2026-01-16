@@ -84,3 +84,13 @@ macro_rules! impl_ui_patch_passthrough {
         }
     };
 }
+
+macro_rules! impl_ui_patch_passthrough_patch_only {
+    ($ty:ty) => {
+        impl ::fret_ui_kit::UiPatchTarget for $ty {
+            fn apply_ui_patch(self, _patch: ::fret_ui_kit::UiPatch) -> Self {
+                self
+            }
+        }
+    };
+}

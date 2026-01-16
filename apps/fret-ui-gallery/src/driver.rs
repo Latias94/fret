@@ -35,6 +35,14 @@ struct UiGalleryWindowState {
     theme_preset: Model<Option<Arc<str>>>,
     theme_preset_open: Model<bool>,
     applied_theme_preset: Option<Arc<str>>,
+    view_cache_enabled: Model<bool>,
+    view_cache_cache_shell: Model<bool>,
+    view_cache_inner_enabled: Model<bool>,
+    view_cache_popover_open: Model<bool>,
+    view_cache_continuous: Model<bool>,
+    view_cache_counter: Model<u64>,
+    inspector_enabled: Model<bool>,
+    inspector_last_pointer: Model<Option<fret_core::Point>>,
     popover_open: Model<bool>,
     dialog_open: Model<bool>,
     alert_dialog_open: Model<bool>,
@@ -69,6 +77,83 @@ struct UiGalleryWindowState {
 struct UiGalleryDriver;
 
 impl UiGalleryDriver {
+    fn compute_inspector_status(
+        app: &mut App,
+        ui: &UiTree<App>,
+        window: AppWindowId,
+        pointer: Option<fret_core::Point>,
+    ) -> (Arc<str>, Arc<str>, Arc<str>) {
+        let hit = pointer.map(|p| ui.debug_hit_test(p));
+        let hit_node = hit.as_ref().and_then(|h| h.hit);
+        let hit_layers = hit
+            .as_ref()
+            .map(|h| h.active_layer_roots.len())
+            .unwrap_or(0);
+        let hit_barrier = hit.as_ref().and_then(|h| h.barrier_root);
+
+        let (focused_node, focused_element, hovered_pressable, pressed_pressable) = app
+            .with_global_mut(fret_ui::ElementRuntime::new, |runtime, _| {
+                let state = runtime.diagnostics_snapshot(window);
+                (
+                    ui.focus(),
+                    state.as_ref().and_then(|s| s.focused_element),
+                    state.as_ref().and_then(|s| s.hovered_pressable),
+                    state.as_ref().and_then(|s| s.pressed_pressable),
+                )
+            });
+
+        let hit_element = hit_node.and_then(|node| {
+            app.with_global_mut(fret_ui::ElementRuntime::new, |runtime, _| {
+                runtime.element_for_node(window, node)
+            })
+        });
+
+        let hit_path = hit_element.and_then(|element| {
+            app.with_global_mut(fret_ui::ElementRuntime::new, |runtime, _| {
+                runtime.debug_path_for_element(window, element)
+            })
+        });
+        let focused_path = focused_element.and_then(|element| {
+            app.with_global_mut(fret_ui::ElementRuntime::new, |runtime, _| {
+                runtime.debug_path_for_element(window, element)
+            })
+        });
+
+        let cursor = if let Some(pos) = pointer {
+            Arc::<str>::from(format!("cursor=({:.1},{:.1})", pos.x.0, pos.y.0))
+        } else {
+            Arc::<str>::from("cursor=<none>")
+        };
+
+        let hit = Arc::<str>::from(format!(
+            "hit={:?} el={} layers={} barrier={:?} {}",
+            hit_node,
+            hit_element
+                .map(|id| format!("{:#x}", id.0))
+                .unwrap_or_else(|| "<none>".to_string()),
+            hit_layers,
+            hit_barrier,
+            hit_path.as_deref().unwrap_or(""),
+        ));
+
+        let focus = Arc::<str>::from(format!(
+            "focus={:?} el={} hovered={} pressed={} {}",
+            focused_node,
+            focused_element
+                .map(|id| format!("{:#x}", id.0))
+                .unwrap_or_else(|| "<none>".to_string()),
+            hovered_pressable
+                .map(|id| format!("{:#x}", id.0))
+                .unwrap_or_else(|| "<none>".to_string()),
+            pressed_pressable
+                .map(|id| format!("{:#x}", id.0))
+                .unwrap_or_else(|| "<none>".to_string()),
+            focused_path.as_deref().unwrap_or(""),
+        ));
+
+        (cursor, hit, focus)
+    }
+
     fn build_ui(app: &mut App, window: AppWindowId) -> UiGalleryWindowState {
         let start_page = ui_gallery_start_page().unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
         let selected_page = app.models_mut().insert(start_page.clone());
@@ -76,6 +161,7 @@ impl UiGalleryDriver {
         let mut workspace_tabs_init = vec![
             Arc::<str>::from(PAGE_INTRO),
             Arc::<str>::from(PAGE_LAYOUT),
+            Arc::<str>::from(PAGE_VIEW_CACHE),
             Arc::<str>::from(PAGE_BUTTON),
             Arc::<str>::from(PAGE_CARD),
             Arc::<str>::from(PAGE_BADGE),
@@ -144,9 +230,31 @@ impl UiGalleryDriver {
         let cmdk_query = app.models_mut().insert(String::new());
         let last_action = app.models_mut().insert(Arc::<str>::from("<none>"));
 
+        let view_cache_enabled = app
+            .models_mut()
+            .insert(std::env::var_os("FRET_UI_GALLERY_VIEW_CACHE").is_some_and(|v| !v.is_empty()));
+        let view_cache_cache_shell = app.models_mut().insert(false);
+        let view_cache_inner_enabled = app.models_mut().insert(true);
+        let view_cache_popover_open = app.models_mut().insert(false);
+        let view_cache_continuous = app.models_mut().insert(false);
+        let view_cache_counter = app.models_mut().insert(0u64);
+
+        let inspector_enabled = app.models_mut().insert(
+            std::env::var_os("FRET_UI_GALLERY_INSPECTOR").is_some_and(|v| !v.is_empty())
+                || std::env::var_os("FRET_UI_DEBUG_STATS").is_some_and(|v| !v.is_empty())
+                || std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty()),
+        );
+        let inspector_last_pointer = app.models_mut().insert(None::<fret_core::Point>);
+
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        ui.set_view_cache_enabled(std::env::var_os("FRET_UI_GALLERY_VIEW_CACHE").is_some());
+        ui.set_view_cache_enabled(
+            std::env::var_os("FRET_UI_GALLERY_VIEW_CACHE").is_some_and(|v| !v.is_empty()),
+        );
+        ui.set_debug_enabled(
+            std::env::var_os("FRET_UI_DEBUG_STATS").is_some_and(|v| !v.is_empty())
+                || std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty()),
+        );
 
         UiGalleryWindowState {
             ui,
@@ -159,6 +267,14 @@ impl UiGalleryDriver {
             theme_preset,
             theme_preset_open,
             applied_theme_preset: None,
+            view_cache_enabled,
+            view_cache_cache_shell,
+            view_cache_inner_enabled,
+            view_cache_popover_open,
+            view_cache_continuous,
+            view_cache_counter,
+            inspector_enabled,
+            inspector_last_pointer,
             popover_open,
             dialog_open,
             alert_dialog_open,
@@ -324,6 +440,16 @@ impl UiGalleryDriver {
             CMD_PROGRESS_RESET => {
                 let _ = app.models_mut().update(&state.progress, |v| *v = 35.0);
             }
+            CMD_VIEW_CACHE_BUMP => {
+                let _ = app
+                    .models_mut()
+                    .update(&state.view_cache_counter, |v| *v = v.saturating_add(1));
+            }
+            CMD_VIEW_CACHE_RESET => {
+                let _ = app
+                    .models_mut()
+                    .update(&state.view_cache_counter, |v| *v = 0);
+            }
             _ => {}
         }
     }
@@ -371,6 +497,22 @@ impl UiGalleryDriver {
         OverlayController::begin_frame(app, window);
         let bisect = ui_gallery_bisect_flags();
 
+        let cache_enabled = app
+            .models()
+            .get_copied(&state.view_cache_enabled)
+            .unwrap_or(false);
+        let cache_shell = app
+            .models()
+            .get_copied(&state.view_cache_cache_shell)
+            .unwrap_or(false);
+
+        if state.ui.view_cache_enabled() != cache_enabled {
+            state.ui.set_view_cache_enabled(cache_enabled);
+            if let Some(root) = state.root {
+                state.ui.invalidate(root, Invalidation::Layout);
+            }
+        }
+
         let selected_page = state.selected_page.clone();
         let workspace_tabs = state.workspace_tabs.clone();
         let workspace_dirty_tabs = state.workspace_dirty_tabs.clone();
@@ -378,6 +520,12 @@ impl UiGalleryDriver {
         let content_tab = state.content_tab.clone();
         let theme_preset = state.theme_preset.clone();
         let theme_preset_open = state.theme_preset_open.clone();
+        let view_cache_enabled = state.view_cache_enabled.clone();
+        let view_cache_cache_shell = state.view_cache_cache_shell.clone();
+        let view_cache_inner_enabled = state.view_cache_inner_enabled.clone();
+        let view_cache_popover_open = state.view_cache_popover_open.clone();
+        let view_cache_continuous = state.view_cache_continuous.clone();
+        let view_cache_counter = state.view_cache_counter.clone();
         let popover_open = state.popover_open.clone();
         let dialog_open = state.dialog_open.clone();
         let alert_dialog_open = state.alert_dialog_open.clone();
@@ -406,8 +554,23 @@ impl UiGalleryDriver {
         let cmdk_open = state.cmdk_open.clone();
         let cmdk_query = state.cmdk_query.clone();
         let last_action = state.last_action.clone();
+        let inspector_enabled = state.inspector_enabled.clone();
+        let inspector_last_pointer = state.inspector_last_pointer.clone();
 
         Self::sync_shadcn_theme(app, state);
+
+        let last_debug_stats = state.ui.debug_stats();
+        let inspector_status = if app.models().get_copied(&inspector_enabled).unwrap_or(false) {
+            let pointer = app
+                .models()
+                .get_copied(&inspector_last_pointer)
+                .unwrap_or(None);
+            Some(Self::compute_inspector_status(
+                app, &state.ui, window, pointer,
+            ))
+        } else {
+            None
+        };
 
         let root =
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
@@ -418,17 +581,51 @@ impl UiGalleryDriver {
 
                     let theme = cx.theme().clone();
 
-                    let sidebar = cx.view_cache(
-                        {
-                            let mut layout = fret_ui::element::LayoutStyle::default();
-                            layout.size.width = fret_ui::element::Length::Px(Px(280.0));
-                            layout.size.height = fret_ui::element::Length::Fill;
-                            fret_ui::element::ViewCacheProps {
-                                layout,
-                                ..Default::default()
-                            }
-                        },
-                        |cx| {
+                    let sidebar = if cache_shell {
+                        cx.view_cache(
+                            {
+                                let mut layout = fret_ui::element::LayoutStyle::default();
+                                layout.size.width = fret_ui::element::Length::Px(Px(280.0));
+                                layout.size.height = fret_ui::element::Length::Fill;
+                                fret_ui::element::ViewCacheProps {
+                                    layout,
+                                    ..Default::default()
+                                }
+                            },
+                            |cx| {
+                                let selected = cx
+                                    .get_model_cloned(&selected_page, Invalidation::Layout)
+                                    .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+                                let query = cx
+                                    .get_model_cloned(&nav_query, Invalidation::Layout)
+                                    .unwrap_or_default();
+
+                                vec![if (bisect & BISECT_SIMPLE_SIDEBAR) != 0 {
+                                    cx.container(
+                                        decl_style::container_props(
+                                            &theme,
+                                            ChromeRefinement::default()
+                                                .bg(ColorRef::Color(theme.color_required("muted")))
+                                                .p(Space::N4),
+                                            LayoutRefinement::default()
+                                                .w_px(MetricRef::Px(Px(280.0)))
+                                                .h_full(),
+                                        ),
+                                        |cx| vec![cx.text("Sidebar (disabled)")],
+                                    )
+                                } else {
+                                    ui::sidebar_view(
+                                        cx,
+                                        &theme,
+                                        selected.as_ref(),
+                                        query.as_str(),
+                                        nav_query.clone(),
+                                    )
+                                }]
+                            },
+                        )
+                    } else {
+                        cx.keyed("ui_gallery.sidebar", |cx| {
                             let selected = cx
                                 .get_model_cloned(&selected_page, Invalidation::Layout)
                                 .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
@@ -436,7 +633,7 @@ impl UiGalleryDriver {
                                 .get_model_cloned(&nav_query, Invalidation::Layout)
                                 .unwrap_or_default();
 
-                            vec![if (bisect & BISECT_SIMPLE_SIDEBAR) != 0 {
+                            if (bisect & BISECT_SIMPLE_SIDEBAR) != 0 {
                                 cx.container(
                                     decl_style::container_props(
                                         &theme,
@@ -457,27 +654,95 @@ impl UiGalleryDriver {
                                     query.as_str(),
                                     nav_query.clone(),
                                 )
-                            }]
-                        },
-                    );
-
-                    let content = cx.view_cache(
-                        {
-                            let mut layout = fret_ui::element::LayoutStyle::default();
-                            layout.size.width = fret_ui::element::Length::Fill;
-                            layout.size.height = fret_ui::element::Length::Fill;
-                            layout.flex.grow = 1.0;
-                            fret_ui::element::ViewCacheProps {
-                                layout,
-                                ..Default::default()
                             }
-                        },
-                        |cx| {
+                        })
+                    };
+
+                    let content = if cache_shell {
+                        cx.view_cache(
+                            {
+                                let mut layout = fret_ui::element::LayoutStyle::default();
+                                layout.size.width = fret_ui::element::Length::Fill;
+                                layout.size.height = fret_ui::element::Length::Fill;
+                                layout.flex.grow = 1.0;
+                                fret_ui::element::ViewCacheProps {
+                                    layout,
+                                    ..Default::default()
+                                }
+                            },
+                            |cx| {
+                                let selected = cx
+                                    .get_model_cloned(&selected_page, Invalidation::Layout)
+                                    .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+
+                                vec![cx.keyed(("ui_gallery.content", selected.as_ref()), |cx| {
+                                    if (bisect & BISECT_SIMPLE_CONTENT) != 0 {
+                                        cx.container(
+                                            decl_style::container_props(
+                                                &theme,
+                                                ChromeRefinement::default()
+                                                    .bg(ColorRef::Color(
+                                                        theme.color_required("background"),
+                                                    ))
+                                                    .p(Space::N6),
+                                                LayoutRefinement::default().w_full().h_full(),
+                                            ),
+                                            |cx| vec![cx.text("Content (disabled)")],
+                                        )
+                                    } else {
+                                        ui::content_view(
+                                            cx,
+                                            &theme,
+                                            selected.as_ref(),
+                                            content_tab.clone(),
+                                            theme_preset.clone(),
+                                            theme_preset_open.clone(),
+                                            view_cache_enabled.clone(),
+                                            view_cache_cache_shell.clone(),
+                                            view_cache_inner_enabled.clone(),
+                                            view_cache_popover_open.clone(),
+                                            view_cache_continuous.clone(),
+                                            view_cache_counter.clone(),
+                                            popover_open.clone(),
+                                            dialog_open.clone(),
+                                            alert_dialog_open.clone(),
+                                            sheet_open.clone(),
+                                            select_value.clone(),
+                                            select_open.clone(),
+                                            combobox_value.clone(),
+                                            combobox_open.clone(),
+                                            combobox_query.clone(),
+                                            date_picker_open.clone(),
+                                            date_picker_month.clone(),
+                                            date_picker_selected.clone(),
+                                            resizable_h_fractions.clone(),
+                                            resizable_v_fractions.clone(),
+                                            data_table_state.clone(),
+                                            data_grid_selected_row.clone(),
+                                            tabs_value.clone(),
+                                            accordion_value.clone(),
+                                            progress.clone(),
+                                            checkbox.clone(),
+                                            switch.clone(),
+                                            text_input.clone(),
+                                            text_area.clone(),
+                                            dropdown_open.clone(),
+                                            context_menu_open.clone(),
+                                            cmdk_open.clone(),
+                                            cmdk_query.clone(),
+                                            last_action.clone(),
+                                        )
+                                    }
+                                })]
+                            },
+                        )
+                    } else {
+                        cx.keyed("ui_gallery.content_root", |cx| {
                             let selected = cx
                                 .get_model_cloned(&selected_page, Invalidation::Layout)
                                 .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
 
-                            vec![cx.keyed(("ui_gallery.content", selected.as_ref()), |cx| {
+                            cx.keyed(("ui_gallery.content", selected.as_ref()), |cx| {
                                 if (bisect & BISECT_SIMPLE_CONTENT) != 0 {
                                     cx.container(
                                         decl_style::container_props(
@@ -499,6 +764,12 @@ impl UiGalleryDriver {
                                         content_tab.clone(),
                                         theme_preset.clone(),
                                         theme_preset_open.clone(),
+                                        view_cache_enabled.clone(),
+                                        view_cache_cache_shell.clone(),
+                                        view_cache_inner_enabled.clone(),
+                                        view_cache_popover_open.clone(),
+                                        view_cache_continuous.clone(),
+                                        view_cache_counter.clone(),
                                         popover_open.clone(),
                                         dialog_open.clone(),
                                         alert_dialog_open.clone(),
@@ -529,9 +800,9 @@ impl UiGalleryDriver {
                                         last_action.clone(),
                                     )
                                 }
-                            })]
-                        },
-                    );
+                            })
+                        })
+                    };
 
                     let menubar = shadcn::Menubar::new(vec![
                         shadcn::MenubarMenu::new("File")
@@ -629,13 +900,36 @@ impl UiGalleryDriver {
                             .get_model_cloned(&theme_preset, Invalidation::Layout)
                             .flatten()
                             .unwrap_or_else(|| Arc::<str>::from("<default>"));
+                        let status_view_cache = cx
+                            .get_model_copied(&view_cache_enabled, Invalidation::Layout)
+                            .unwrap_or(false);
+                        let status_cache_shell = cx
+                            .get_model_copied(&view_cache_cache_shell, Invalidation::Layout)
+                            .unwrap_or(false);
+
+                        let mut right_items: Vec<AnyElement> = vec![
+                            cx.text(format!("theme: {}", status_theme.as_ref())),
+                            cx.text(format!(
+                                "view_cache={} shell_cache={} active={} trunc={} relayouts={}",
+                                status_view_cache as u8,
+                                status_cache_shell as u8,
+                                last_debug_stats.view_cache_active as u8,
+                                last_debug_stats.view_cache_invalidation_truncations,
+                                last_debug_stats.view_cache_contained_relayouts
+                            )),
+                        ];
+                        if let Some((cursor, hit, focus)) = inspector_status.as_ref() {
+                            right_items.push(cx.text(format!("inspect: {}", cursor.as_ref())));
+                            right_items.push(cx.text(format!("inspect: {}", hit.as_ref())));
+                            right_items.push(cx.text(format!("inspect: {}", focus.as_ref())));
+                        }
 
                         WorkspaceStatusBar::new()
                             .left(vec![cx.text(format!(
                                 "last action: {}",
                                 status_last_action.as_ref()
                             ))])
-                            .right(vec![cx.text(format!("theme: {}", status_theme.as_ref()))])
+                            .right(right_items)
                             .into_element(cx)
                     });
 
@@ -658,7 +952,7 @@ impl UiGalleryDriver {
                         .bottom(status_bar)
                         .into_element(cx);
 
-                    vec![
+                    let content: Vec<AnyElement> = vec![
                         cx.semantics(
                             SemanticsProps {
                                 role: SemanticsRole::Panel,
@@ -672,7 +966,53 @@ impl UiGalleryDriver {
                         } else {
                             shadcn::Toaster::new().into_element(cx)
                         },
-                    ]
+                    ];
+
+                    if cx
+                        .get_model_copied(&inspector_enabled, Invalidation::Layout)
+                        .unwrap_or(false)
+                    {
+                        let mut props = fret_ui::element::PointerRegionProps::default();
+                        props.layout.size.width = fret_ui::element::Length::Fill;
+                        props.layout.size.height = fret_ui::element::Length::Fill;
+
+                        let on_pointer_move = {
+                            let inspector_last_pointer = inspector_last_pointer.clone();
+                            Arc::new(
+                                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                                      cx: fret_ui::action::ActionCx,
+                                      mv: fret_ui::action::PointerMoveCx| {
+                                    let _ = host.models_mut().update(&inspector_last_pointer, |v| {
+                                        *v = Some(mv.position);
+                                    });
+                                    host.request_redraw(cx.window);
+                                    false
+                                },
+                            )
+                        };
+                        let on_pointer_down = {
+                            let inspector_last_pointer = inspector_last_pointer.clone();
+                            Arc::new(
+                                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                                      cx: fret_ui::action::ActionCx,
+                                      down: fret_ui::action::PointerDownCx| {
+                                    let _ = host.models_mut().update(&inspector_last_pointer, |v| {
+                                        *v = Some(down.position);
+                                    });
+                                    host.request_redraw(cx.window);
+                                    false
+                                },
+                            )
+                        };
+
+                        vec![cx.pointer_region(props, |cx| {
+                            cx.pointer_region_on_pointer_move(on_pointer_move);
+                            cx.pointer_region_on_pointer_down(on_pointer_down);
+                            content
+                        })]
+                    } else {
+                        content
+                    }
                 });
 
         state.ui.set_root(root);
