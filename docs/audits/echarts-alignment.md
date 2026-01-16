@@ -40,7 +40,7 @@ Status symbols:
 - `[~]` Minimal ECharts option JSON adapter (v1 subset) producing `ChartSpec` + datasets (not schema parity)
 - `[~]` DataZoom filter modes (`Filter`/`None`/`WeakFilter`/`Empty`) with a v1 multi-dim subset (ADR 1129 / ADR 1150)
 - `[~]` Order-sensitive multi-dim filtering (ECharts “filter X then reset/filter Y”) (v1 subset; processor stage exists, parity incomplete)
-- `[ ]` General transform graph with cached node outputs + derived columns (ECharts-class dataset transforms)
+- `[~]` Transform graph scaffolding with cached derived outputs (partial; not yet a general node graph)
 - `[ ]` Dataset transform operators (filter/map/sort/aggregate) as first-class nodes (beyond dataZoom)
 
 ### Coordinate systems & layout
@@ -110,6 +110,7 @@ Status symbols:
 - Key implementation surfaces:
   - Engine stages: `ecosystem/delinea/src/engine/stages/`
   - View participation: `ecosystem/delinea/src/view/mod.rs`
+  - Transform graph scaffolding: `ecosystem/delinea/src/transform_graph/mod.rs`
   - UI adapter: `ecosystem/fret-chart/src/retained/canvas.rs`
   - ECharts option adapter (feature-gated): `ecosystem/fret-chart/src/echarts/mod.rs`
   - ECharts smoke demo: `apps/fret-examples/src/echarts_demo.rs`

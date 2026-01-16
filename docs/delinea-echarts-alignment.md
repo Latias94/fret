@@ -578,6 +578,10 @@ goal is to establish a stable “Option -> Engine” spine that scales to more s
 ### P0-4: Transform graph (ECharts-class, but minimal nodes)
 
 - Goal: stop baking filter/dataZoom semantics into bespoke code paths; move to a cached transform graph.
+- Status (current):
+  - `TransformGraph` exists as a minimal “derived output cache” surface, currently hosting:
+    - X axis data extents caching (used by percent->value mapping).
+    - Y percent extents scoped by X selection/filter (order-sensitive “X before Y” semantics per grid).
 - Minimum viable nodes:
   - selection/slice node (monotonic fast path + non-monotonic index selection)
   - derived columns (computed fields)
@@ -585,3 +589,4 @@ goal is to establish a stable “Option -> Engine” spine that scales to more s
 - Code anchors:
   - `ecosystem/delinea/src/transform/*`
   - `ecosystem/delinea/src/engine/stages/data_view.rs` (current incremental indices builder)
+  - `ecosystem/delinea/src/transform_graph/mod.rs` (cached extents + Y percent extents caching)
