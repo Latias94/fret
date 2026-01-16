@@ -1662,6 +1662,13 @@ fn web_vs_fret_dropdown_menu_demo_submenu_hover_overlay_placement_matches() {
 }
 
 #[test]
+fn web_vs_fret_dropdown_menu_demo_submenu_small_viewport_overlay_placement_matches() {
+    assert_dropdown_menu_demo_submenu_overlay_placement_matches(
+        "dropdown-menu-demo.submenu-kbd-vp1440x320",
+    );
+}
+
+#[test]
 fn web_vs_fret_select_scrollable_overlay_placement_matches() {
     assert_overlay_placement_matches(
         "select-scrollable",
@@ -2546,6 +2553,13 @@ fn web_vs_fret_context_menu_demo_submenu_overlay_placement_matches() {
 #[test]
 fn web_vs_fret_context_menu_demo_submenu_hover_overlay_placement_matches() {
     assert_context_menu_demo_submenu_overlay_placement_matches("context-menu-demo.submenu");
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_submenu_small_viewport_overlay_placement_matches() {
+    assert_context_menu_demo_submenu_overlay_placement_matches(
+        "context-menu-demo.submenu-kbd-vp1440x320",
+    );
 }
 
 #[test]
@@ -3757,6 +3771,11 @@ fn web_vs_fret_menubar_demo_submenu_overlay_placement_matches() {
 #[test]
 fn web_vs_fret_menubar_demo_submenu_hover_overlay_placement_matches() {
     assert_menubar_demo_submenu_overlay_placement_matches("menubar-demo.submenu");
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_submenu_small_viewport_overlay_placement_matches() {
+    assert_menubar_demo_submenu_overlay_placement_matches("menubar-demo.submenu-kbd-vp1440x320");
 }
 
 #[test]
