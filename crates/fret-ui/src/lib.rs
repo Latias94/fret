@@ -3,19 +3,22 @@
 pub mod action;
 pub mod canvas;
 pub mod declarative;
-pub mod drag_route;
+mod drag_route;
 pub mod element;
 pub mod elements;
+#[cfg(any(test, feature = "compat-retained-widgets"))]
 pub mod fixed_split;
 pub mod focus_visible;
 mod frame_cx;
 pub mod host;
 pub mod input_modality;
+pub mod internal_drag;
 pub mod layout_constraints;
 pub mod layout_engine;
 pub mod layout_pass;
 pub mod overlay_placement;
 pub mod paint;
+pub mod pending_shortcut;
 #[cfg(feature = "unstable-retained-bridge")]
 pub mod retained_bridge;
 pub type ItemKey = u64;
@@ -51,11 +54,12 @@ Use component-owned action hooks (ADR 0074) via `ElementCx::{pressable_*, dismis
 or `fret-ui-kit::declarative::action_hooks::ActionHooksExt`."
 );
 
-pub use drag_route::InternalDragRouteService;
 pub use elements::{ElementContext, ElementRuntime, GlobalElementId};
+#[cfg(any(test, feature = "compat-retained-widgets"))]
 pub use fixed_split::FixedSplit;
 pub use frame_cx::{UiFrameContext, UiFrameCx};
 pub use host::UiHost;
+pub use pending_shortcut::PendingShortcutOverlayState;
 pub use resizable_panel_group::ResizablePanelGroupStyle;
 pub use scroll::{ScrollHandle, ScrollStrategy, VirtualListScrollHandle};
 pub use svg_source::SvgSource;

@@ -61,8 +61,8 @@ Fret models Radix tooltip outcomes by composing:
   `onPointerDownOutside` + `onDismiss` outcomes). The shadcn tooltip recipe installs a dismiss
   handler on its overlay request (`OverlayRequest.dismissible_on_dismiss_request`) so an outside
   press requests close without blocking underlay input.
-- Pass: Escape-to-dismiss is supported for focused triggers by installing an Escape key hook on the
-  trigger element (Radix `onEscapeKeyDown` outcome for the common focus-open case).
+- Pass: Escape-to-dismiss routes to the topmost overlay root, matching Radix's "only the highest
+  layer handles it" outcome (global arbitration in `crates/fret-ui/src/tree/dispatch.rs`).
 - Pass: Scroll-to-dismiss is supported for tooltip overlays by wiring the tooltip trigger node as a
   scroll-dismiss descendant on the overlay layer. When a wheel event scrolls an ancestor of the
   trigger, the tooltip requests dismissal (Radix scroll listener closes when
@@ -84,4 +84,6 @@ Fret models Radix tooltip outcomes by composing:
 - `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs` validates tooltip placement (popper
   gap + cross-axis delta) against the Radix Vega web golden
   (`goldens/radix-web/v4/radix-vega/tooltip-example.tooltip.hover-show-hide.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates hover open/close and
+  Escape dismissal outcomes against the Radix Vega web goldens.
 - Run: `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`

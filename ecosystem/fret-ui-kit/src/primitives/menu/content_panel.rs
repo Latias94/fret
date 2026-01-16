@@ -23,14 +23,28 @@ pub fn menu_content_semantics_with_id<H: UiHost>(
     layout: LayoutStyle,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> (GlobalElementId, AnyElement) {
-    let element = cx.semantics_with_id(
+    menu_content_semantics_with_id_props(
+        cx,
         SemanticsProps {
             layout,
             role: SemanticsRole::Menu,
             ..Default::default()
         },
-        move |cx, _id| f(cx),
-    );
+        f,
+    )
+}
+
+/// Render a menu content semantics wrapper with explicit semantics props.
+///
+/// Callers may set relationship fields like `labelled_by_element` to mirror Radix `aria-*`
+/// outcomes, while `role` is forced to `SemanticsRole::Menu`.
+pub fn menu_content_semantics_with_id_props<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    mut props: SemanticsProps,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> (GlobalElementId, AnyElement) {
+    props.role = SemanticsRole::Menu;
+    let element = cx.semantics_with_id(props, move |cx, _id| f(cx));
     (element.id, element)
 }
 
@@ -107,5 +121,50 @@ pub fn menu_panel_at<H: UiHost>(
             f,
         )]
     })
+    .1
+}
+
+/// Render a menu panel at `placed` with `role=menu` semantics and an optional `labelled_by`
+/// relationship.
+pub fn menu_panel_at_with_labelled_by_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    placed: Rect,
+    labelled_by_element: Option<GlobalElementId>,
+    build_container: impl FnOnce(LayoutStyle) -> ContainerProps,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
+    let layout = LayoutStyle {
+        position: PositionStyle::Absolute,
+        inset: InsetStyle {
+            left: Some(placed.origin.x),
+            top: Some(placed.origin.y),
+            ..Default::default()
+        },
+        size: SizeStyle {
+            width: Length::Px(placed.size.width),
+            height: Length::Px(placed.size.height),
+            ..Default::default()
+        },
+        overflow: Overflow::Clip,
+        ..Default::default()
+    };
+
+    let local_placed = Rect::new(Point::new(Px(0.0), Px(0.0)), placed.size);
+    menu_content_semantics_with_id_props(
+        cx,
+        SemanticsProps {
+            layout,
+            labelled_by_element: labelled_by_element.map(|id| id.0),
+            ..Default::default()
+        },
+        move |cx| {
+            vec![menu_panel_container_at(
+                cx,
+                local_placed,
+                build_container,
+                f,
+            )]
+        },
+    )
     .1
 }

@@ -1,11 +1,13 @@
 use super::hit_test::hit_test_drop_target;
 use super::layout::{
     active_panel_content_bounds, compute_layout_map, dock_hint_rects, dock_space_regions,
+    split_tab_bar,
 };
 use super::prelude_core::*;
 use super::prelude_runtime::*;
 use super::prelude_ui::*;
 use super::split_stabilize::{apply_same_axis_locks, compute_same_axis_locks_for_split_drag};
+use super::tab_bar_geometry::TabBarGeometry;
 use super::{
     DockManager, DockPanelContentService, DockPanelRegistry, DockPanelRegistryService, DockSpace,
     render_and_bind_dock_panels,
@@ -17,7 +19,6 @@ use fret_core::{
 };
 use fret_runtime::DRAG_KIND_DOCK_PANEL;
 use fret_runtime::PlatformCapabilities;
-use fret_ui::InternalDragRouteService;
 use fret_ui::UiTree;
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 use fret_ui::retained_bridge::resizable_panel_group as resizable;
@@ -189,6 +190,33 @@ impl DockViewportHarness {
             .expect("expected viewport layout to be recorded during paint");
         let rect = layout.content_rect;
         Point::new(Px(rect.origin.x.0 + 10.0), Px(rect.origin.y.0 + 10.0))
+    }
+
+    fn tab_point(&self, index: usize) -> Point {
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let (_chrome, dock_bounds) = dock_space_regions(bounds);
+        let root = self
+            .app
+            .global::<DockManager>()
+            .and_then(|dock| dock.graph.window_root(self.window))
+            .expect("expected dock window root");
+        let layout = compute_layout_map(
+            &self.app.global::<DockManager>().unwrap().graph,
+            root,
+            dock_bounds,
+        );
+        let root_rect = layout.get(&root).copied().expect("expected root rect");
+        let (tab_bar, _content) = split_tab_bar(root_rect);
+        let tab_count = match self.app.global::<DockManager>().unwrap().graph.node(root) {
+            Some(DockNode::Tabs { tabs, .. }) => tabs.len(),
+            _ => 0,
+        }
+        .max(index + 1);
+        let tab_rect = TabBarGeometry::fixed(tab_bar, tab_count).tab_rect(index, Px(0.0));
+        Point::new(Px(tab_rect.origin.x.0 + 2.0), Px(tab_rect.origin.y.0 + 2.0))
     }
 }
 
@@ -1584,14 +1612,12 @@ fn dock_space_installs_internal_drag_route_anchor() {
     let mut scene = Scene::default();
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
-    let route = app
-        .global::<InternalDragRouteService>()
-        .and_then(|svc| svc.route(window, DRAG_KIND_DOCK_PANEL));
+    let route = fret_ui::internal_drag::route(&app, window, DRAG_KIND_DOCK_PANEL);
 
     assert_eq!(
         route,
         Some(dock_space),
-        "expected DockSpace to install an InternalDragRouteService anchor during paint"
+        "expected DockSpace to install an internal drag route anchor during paint"
     );
 }
 
@@ -1828,6 +1854,7 @@ fn dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
         DockPanelDragPayload {
             panel: PanelKey::new("core.viewport"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
         },
     );
@@ -1867,6 +1894,369 @@ fn dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
 }
 
 #[test]
+fn pending_dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    let tab_pos = harness.tab_point(0);
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: tab_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    assert!(
+        harness.app.drag(fret_core::PointerId(0)).is_none(),
+        "pending tab press should not start a cross-window drag session yet",
+    );
+
+    let position = harness.viewport_point();
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position,
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Wheel {
+            position,
+            delta: Point::new(Px(0.0), Px(12.0)),
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let effects = harness.app.take_effects();
+    assert!(
+        !effects
+            .iter()
+            .any(|e| matches!(e, Effect::ViewportInput(_))),
+        "pending dock drag must suppress viewport hover/wheel forwarding (ADR 0072), got: {effects:?}",
+    );
+
+    let activate_pos = Point::new(Px(tab_pos.x.0 + 20.0), tab_pos.y);
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position: activate_pos,
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let drag = harness
+        .app
+        .drag(fret_core::PointerId(0))
+        .and_then(|d| d.payload::<DockPanelDragPayload>().map(|_| d))
+        .expect("expected pending dock drag to create a DragSession after activation");
+    assert!(
+        drag.dragging,
+        "expected drag session to start in dragging state"
+    );
+}
+
+#[test]
+fn pending_dock_drag_does_not_start_drag_session_on_pointer_up_before_activation() {
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    let tab_pos = harness.tab_point(0);
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: tab_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Up {
+            position: tab_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    assert!(
+        harness.app.drag(fret_core::PointerId(0)).is_none(),
+        "pending dock drag must not create a drag session if released before activation",
+    );
+
+    // After releasing, viewport hover forwarding should resume.
+    let position = harness.viewport_point();
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let effects = harness.app.take_effects();
+    assert!(
+        effects
+            .iter()
+            .any(|e| matches!(e, Effect::ViewportInput(_))),
+        "expected viewport hover forwarding after pending drag is released, got: {effects:?}",
+    );
+}
+
+#[test]
+fn pending_dock_drag_clears_on_pointer_cancel() {
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    let tab_pos = harness.tab_point(0);
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: tab_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::PointerCancel(fret_core::PointerCancelEvent {
+            pointer_id: fret_core::PointerId(0),
+            position: Some(tab_pos),
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+            reason: fret_core::PointerCancelReason::LeftWindow,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    assert!(
+        harness.app.drag(fret_core::PointerId(0)).is_none(),
+        "pending dock drag must not create a drag session on cancel",
+    );
+
+    let position = harness.viewport_point();
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let effects = harness.app.take_effects();
+    assert!(
+        effects
+            .iter()
+            .any(|e| matches!(e, Effect::ViewportInput(_))),
+        "expected viewport hover forwarding after pending drag cancel, got: {effects:?}",
+    );
+}
+
+#[test]
+fn pending_dock_drag_arbitration_is_pointer_keyed() {
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    let tab_pos = harness.tab_point(0);
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: tab_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    let position = harness.viewport_point();
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(1),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let effects = harness.app.take_effects();
+    assert!(
+        effects
+            .iter()
+            .any(|e| matches!(e, Effect::ViewportInput(_))),
+        "pending dock drag for one pointer must not suppress viewport hover for other pointers, got: {effects:?}",
+    );
+}
+
+#[test]
+fn docking_tab_drag_threshold_is_configurable_via_settings() {
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    harness
+        .app
+        .set_global(fret_runtime::DockingInteractionSettings {
+            tab_drag_threshold: Px(1000.0),
+            ..Default::default()
+        });
+
+    let tab_pos = harness.tab_point(0);
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: tab_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    let move_pos = Point::new(Px(tab_pos.x.0 + 40.0), tab_pos.y);
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position: move_pos,
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    assert!(
+        harness.app.drag(fret_core::PointerId(0)).is_none(),
+        "expected large threshold to prevent activation",
+    );
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Up {
+            position: move_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    harness
+        .app
+        .set_global(fret_runtime::DockingInteractionSettings {
+            tab_drag_threshold: Px(0.0),
+            ..Default::default()
+        });
+
+    let tab_pos = harness.tab_point(0);
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: tab_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position: tab_pos,
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let drag = harness
+        .app
+        .drag(fret_core::PointerId(0))
+        .and_then(|d| d.payload::<DockPanelDragPayload>().map(|_| d));
+    assert!(
+        drag.is_some_and(|d| d.dragging),
+        "expected zero threshold to activate immediately on first move",
+    );
+}
+
+#[test]
 fn dock_drag_requests_animation_frames_while_dragging() {
     let mut harness = DockViewportHarness::new();
     harness.layout();
@@ -1879,6 +2269,7 @@ fn dock_drag_requests_animation_frames_while_dragging() {
         DockPanelDragPayload {
             panel: PanelKey::new("core.viewport"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
         },
     );
@@ -2147,6 +2538,7 @@ fn dock_tab_drop_outside_window_requests_float() {
         DockPanelDragPayload {
             panel: PanelKey::new("core.hierarchy"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
         },
     );
@@ -2216,6 +2608,7 @@ fn dock_tab_drop_outside_window_does_not_request_tear_off_twice() {
         DockPanelDragPayload {
             panel: PanelKey::new("core.hierarchy"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
         },
     );
@@ -2305,6 +2698,7 @@ fn dock_tab_drop_outside_window_floats_in_window_when_tear_off_disabled() {
         DockPanelDragPayload {
             panel: PanelKey::new("core.hierarchy"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
         },
     );
@@ -2377,6 +2771,7 @@ fn dock_tab_drop_outside_window_floats_in_window_when_multi_window_is_disabled()
         DockPanelDragPayload {
             panel: PanelKey::new("core.hierarchy"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
         },
     );
@@ -2453,6 +2848,7 @@ fn dock_tab_drop_outside_routes_to_dock_space() {
         DockPanelDragPayload {
             panel: PanelKey::new("core.hierarchy"),
             grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
         },
     );
@@ -2514,6 +2910,322 @@ fn dock_drop_hint_rects_can_select_zone() {
         assert_eq!(hit.zone, expected);
         assert!(hit.insert_index.is_none());
     }
+}
+
+#[test]
+fn dock_tab_bar_insert_index_respects_before_after_halves() {
+    let window = AppWindowId::default();
+
+    let mut dock = DockManager::default();
+    let tabs = dock.graph.insert_node(DockNode::Tabs {
+        tabs: vec![
+            PanelKey::new("core.a"),
+            PanelKey::new("core.b"),
+            PanelKey::new("core.c"),
+        ],
+        active: 0,
+    });
+    dock.graph.set_window_root(window, tabs);
+
+    let rect = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut layout = std::collections::HashMap::new();
+    layout.insert(tabs, rect);
+    let tab_scroll = std::collections::HashMap::new();
+
+    let (tab_bar, _content) = split_tab_bar(rect);
+    let scroll = Px(0.0);
+
+    let tab_b = TabBarGeometry::fixed(tab_bar, 3).tab_rect(1, scroll);
+    let y = Px(tab_b.origin.y.0 + tab_b.size.height.0 * 0.5);
+
+    let left_half = Point::new(Px(tab_b.origin.x.0 + tab_b.size.width.0 * 0.25), y);
+    let hit_left = hit_test_drop_target(&dock.graph, &layout, &tab_scroll, left_half)
+        .expect("hit should resolve to a dock target");
+    assert_eq!(hit_left.tabs, tabs);
+    assert_eq!(hit_left.zone, DropZone::Center);
+    assert_eq!(hit_left.insert_index, Some(1));
+
+    let right_half = Point::new(Px(tab_b.origin.x.0 + tab_b.size.width.0 * 0.75), y);
+    let hit_right = hit_test_drop_target(&dock.graph, &layout, &tab_scroll, right_half)
+        .expect("hit should resolve to a dock target");
+    assert_eq!(hit_right.tabs, tabs);
+    assert_eq!(hit_right.zone, DropZone::Center);
+    assert_eq!(hit_right.insert_index, Some(2));
+
+    let far_right = Point::new(Px(tab_bar.origin.x.0 + tab_bar.size.width.0 - 1.0), y);
+    let hit_end = hit_test_drop_target(&dock.graph, &layout, &tab_scroll, far_right)
+        .expect("hit should resolve to a dock target");
+    assert_eq!(hit_end.tabs, tabs);
+    assert_eq!(hit_end.zone, DropZone::Center);
+    assert_eq!(hit_end.insert_index, Some(3));
+}
+
+#[test]
+fn dock_tab_drop_emits_insert_index_based_on_over_tab_halves() {
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(root);
+
+    let panel_a = PanelKey::new("core.a");
+    let panel_b = PanelKey::new("core.b");
+    let panel_c = PanelKey::new("core.c");
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let tabs = app.with_global_mut(DockManager::default, |dock, _app| {
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![panel_a.clone(), panel_b.clone(), panel_c.clone()],
+            active: 0,
+        });
+        dock.graph.set_window_root(window, tabs);
+        for panel in [&panel_a, &panel_b, &panel_c] {
+            dock.panels.insert(
+                panel.clone(),
+                DockPanel {
+                    title: "Panel".to_string(),
+                    color: Color::TRANSPARENT,
+                    viewport: None,
+                },
+            );
+        }
+        tabs
+    });
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+    let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+
+    let (_chrome, dock_bounds) = dock_space_regions(bounds);
+    let (tab_bar, _content) = split_tab_bar(dock_bounds);
+    let scroll = Px(0.0);
+
+    let over_rect = TabBarGeometry::fixed(tab_bar, 3).tab_rect(1, scroll);
+    let y = Px(over_rect.origin.y.0 + over_rect.size.height.0 * 0.5);
+
+    let check_drop = |app: &mut TestHost,
+                      ui: &mut UiTree<TestHost>,
+                      position: Point,
+                      expect: usize| {
+        app.begin_cross_window_drag_with_kind(
+            fret_core::PointerId(0),
+            DRAG_KIND_DOCK_PANEL,
+            window,
+            Point::new(Px(24.0), Px(12.0)),
+            DockPanelDragPayload {
+                panel: panel_a.clone(),
+                grab_offset: Point::new(Px(0.0), Px(0.0)),
+                start_tick: fret_runtime::TickId(0),
+                tear_off_requested: false,
+            },
+        );
+        if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+            drag.dragging = true;
+        }
+
+        let mut services = FakeTextService;
+        ui.dispatch_event(
+            app,
+            &mut services,
+            &Event::InternalDrag(InternalDragEvent {
+                position,
+                kind: InternalDragKind::Over,
+                modifiers: Modifiers::default(),
+                pointer_id: fret_core::PointerId(0),
+            }),
+        );
+        ui.dispatch_event(
+            app,
+            &mut services,
+            &Event::InternalDrag(InternalDragEvent {
+                position,
+                kind: InternalDragKind::Drop,
+                modifiers: Modifiers::default(),
+                pointer_id: fret_core::PointerId(0),
+            }),
+        );
+
+        let effects = app.take_effects();
+        let moves: Vec<_> = effects
+            .iter()
+            .filter_map(|e| match e {
+                Effect::Dock(DockOp::MovePanel {
+                    panel,
+                    target_tabs,
+                    zone,
+                    insert_index,
+                    ..
+                }) if panel == &panel_a && *target_tabs == tabs && *zone == DropZone::Center => {
+                    Some(*insert_index)
+                }
+                _ => None,
+            })
+            .collect();
+        assert_eq!(moves, vec![Some(expect)]);
+    };
+
+    let left_half = Point::new(Px(over_rect.origin.x.0 + over_rect.size.width.0 * 0.25), y);
+    check_drop(&mut app, &mut ui, left_half, 1);
+
+    let right_half = Point::new(Px(over_rect.origin.x.0 + over_rect.size.width.0 * 0.75), y);
+    check_drop(&mut app, &mut ui, right_half, 2);
+}
+
+#[test]
+fn dock_tab_drop_reorders_tabs_when_applying_move_panel() {
+    fn run(position_in_tab_bar: Point) -> Vec<PanelKey> {
+        let window = AppWindowId::default();
+
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node_retained(DockSpace::new(window));
+        ui.set_root(root);
+
+        let panel_a = PanelKey::new("core.a");
+        let panel_b = PanelKey::new("core.b");
+        let panel_c = PanelKey::new("core.c");
+        let panel_d = PanelKey::new("core.d");
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let tabs = app.with_global_mut(DockManager::default, |dock, _app| {
+            let tabs = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![
+                    panel_a.clone(),
+                    panel_b.clone(),
+                    panel_c.clone(),
+                    panel_d.clone(),
+                ],
+                active: 0,
+            });
+            dock.graph.set_window_root(window, tabs);
+            for panel in [&panel_a, &panel_b, &panel_c, &panel_d] {
+                dock.panels.insert(
+                    panel.clone(),
+                    DockPanel {
+                        title: "Panel".to_string(),
+                        color: Color::TRANSPARENT,
+                        viewport: None,
+                    },
+                );
+            }
+            tabs
+        });
+
+        let mut text = FakeTextService;
+        let size = Size::new(Px(800.0), Px(600.0));
+        let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+
+        app.begin_cross_window_drag_with_kind(
+            fret_core::PointerId(0),
+            DRAG_KIND_DOCK_PANEL,
+            window,
+            Point::new(Px(24.0), Px(12.0)),
+            DockPanelDragPayload {
+                panel: panel_d.clone(),
+                grab_offset: Point::new(Px(0.0), Px(0.0)),
+                start_tick: fret_runtime::TickId(0),
+                tear_off_requested: false,
+            },
+        );
+        if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+            drag.dragging = true;
+        }
+
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &Event::InternalDrag(InternalDragEvent {
+                position: position_in_tab_bar,
+                kind: InternalDragKind::Over,
+                modifiers: Modifiers::default(),
+                pointer_id: fret_core::PointerId(0),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &Event::InternalDrag(InternalDragEvent {
+                position: position_in_tab_bar,
+                kind: InternalDragKind::Drop,
+                modifiers: Modifiers::default(),
+                pointer_id: fret_core::PointerId(0),
+            }),
+        );
+
+        let effects = app.take_effects();
+        let op = effects
+            .iter()
+            .find_map(|e| match e {
+                Effect::Dock(DockOp::MovePanel {
+                    panel,
+                    target_tabs,
+                    zone,
+                    insert_index,
+                    ..
+                }) if panel == &panel_d && *target_tabs == tabs && *zone == DropZone::Center => {
+                    Some(DockOp::MovePanel {
+                        source_window: window,
+                        panel: panel.clone(),
+                        target_window: window,
+                        target_tabs: *target_tabs,
+                        zone: *zone,
+                        insert_index: *insert_index,
+                    })
+                }
+                _ => None,
+            })
+            .expect("expected a MovePanel op for the drop");
+
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            assert!(dock.graph.apply_op(&op));
+            match dock.graph.node(tabs) {
+                Some(DockNode::Tabs { tabs, .. }) => tabs.clone(),
+                other => panic!("expected tabs node, got {other:?}"),
+            }
+        })
+    }
+
+    let rect = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let (_chrome, dock_bounds) = dock_space_regions(rect);
+    let (tab_bar, _content) = split_tab_bar(dock_bounds);
+    let scroll = Px(0.0);
+
+    let over_rect = TabBarGeometry::fixed(tab_bar, 3).tab_rect(1, scroll);
+    let y = Px(over_rect.origin.y.0 + over_rect.size.height.0 * 0.5);
+
+    let left_half = Point::new(Px(over_rect.origin.x.0 + over_rect.size.width.0 * 0.25), y);
+    assert_eq!(
+        run(left_half),
+        vec![
+            PanelKey::new("core.a"),
+            PanelKey::new("core.d"),
+            PanelKey::new("core.b"),
+            PanelKey::new("core.c"),
+        ]
+    );
+
+    let right_half = Point::new(Px(over_rect.origin.x.0 + over_rect.size.width.0 * 0.75), y);
+    assert_eq!(
+        run(right_half),
+        vec![
+            PanelKey::new("core.a"),
+            PanelKey::new("core.b"),
+            PanelKey::new("core.d"),
+            PanelKey::new("core.c"),
+        ]
+    );
 }
 
 #[test]

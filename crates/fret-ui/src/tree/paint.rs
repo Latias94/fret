@@ -2,6 +2,7 @@ use super::*;
 use std::any::TypeId;
 
 impl<H: UiHost> UiTree<H> {
+    #[stacksafe::stacksafe]
     pub fn paint_all(
         &mut self,
         app: &mut H,
@@ -116,8 +117,10 @@ impl<H: UiHost> UiTree<H> {
 
         let theme_revision = Theme::global(&*app).revision();
         let key = PaintCacheKey::new(bounds, sf, theme_revision);
-        let cache_enabled =
-            self.paint_cache_enabled() && self.node_render_transform(node).is_none();
+        let cache_enabled = self.paint_cache_enabled()
+            && self.node_render_transform(node).is_none()
+            && (!self.view_cache_active()
+                || self.nodes.get(node).is_some_and(|n| n.view_cache.enabled));
 
         if cache_enabled && !invalidated {
             if let Some(prev) = prev_cache

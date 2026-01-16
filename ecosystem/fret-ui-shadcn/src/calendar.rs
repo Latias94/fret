@@ -1,3 +1,5 @@
+use std::cell::Cell;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{Color, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
@@ -27,6 +29,7 @@ pub struct Calendar {
     disable_outside_days: bool,
     disabled: Option<Arc<dyn Fn(Date) -> bool + Send + Sync + 'static>>,
     close_on_select: Option<Model<bool>>,
+    initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
 }
 
 impl std::fmt::Debug for Calendar {
@@ -39,6 +42,7 @@ impl std::fmt::Debug for Calendar {
             .field("disable_outside_days", &self.disable_outside_days)
             .field("disabled", &self.disabled.is_some())
             .field("close_on_select", &self.close_on_select.is_some())
+            .field("initial_focus_out", &self.initial_focus_out.is_some())
             .finish()
     }
 }
@@ -53,6 +57,7 @@ impl Calendar {
             disable_outside_days: true,
             disabled: None,
             close_on_select: None,
+            initial_focus_out: None,
         }
     }
 
@@ -81,6 +86,14 @@ impl Calendar {
         self
     }
 
+    pub(crate) fn initial_focus_out(
+        mut self,
+        out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+    ) -> Self {
+        self.initial_focus_out = Some(out);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
@@ -88,6 +101,7 @@ impl Calendar {
         let selected_model = self.selected.clone();
         let disabled_predicate = self.disabled.clone();
         let close_on_select = self.close_on_select.clone();
+        let initial_focus_out = self.initial_focus_out.clone();
 
         let month = cx
             .watch_model(&month_model)
@@ -113,17 +127,52 @@ impl Calendar {
         }
         let disabled: Arc<[bool]> = disabled.into();
 
+        let focus_date = {
+            let selected_idx = selected.and_then(|d| grid.iter().position(|it| it.date == d));
+            let today_idx = grid.iter().position(|it| it.date == today);
+
+            let visible = |idx: usize| {
+                grid.get(idx)
+                    .is_some_and(|d| d.in_month || self.show_outside_days)
+            };
+            let enabled = |idx: usize| !disabled.get(idx).copied().unwrap_or(false);
+
+            selected_idx
+                .filter(|&idx| visible(idx) && enabled(idx))
+                .and_then(|idx| grid.get(idx).map(|d| d.date))
+                .or_else(|| {
+                    today_idx
+                        .filter(|&idx| visible(idx) && enabled(idx))
+                        .and_then(|idx| grid.get(idx).map(|d| d.date))
+                })
+                .or_else(|| {
+                    grid.iter()
+                        .enumerate()
+                        .find(|(idx, day)| {
+                            (day.in_month || self.show_outside_days) && enabled(*idx)
+                        })
+                        .map(|(_, day)| day.date)
+                })
+        };
+
         let root = LayoutRefinement::default().w_full();
 
         let title: Arc<str> = Arc::from(format!("{:?} {}", month.month, month.year));
 
         let weekday_labels = weekday_labels(self.week_start);
 
+        let text_sm_px = theme
+            .metric_by_key("component.text.sm_px")
+            .unwrap_or_else(|| theme.metric_required("font.size"));
+        let text_sm_line_height = theme
+            .metric_by_key("component.text.sm_line_height")
+            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+
         let grid_text_style = TextStyle {
             font: Default::default(),
-            size: theme.metric_required("component.text.sm_px"),
+            size: text_sm_px,
             weight: FontWeight::MEDIUM,
-            line_height: Some(theme.metric_required("component.text.sm_line_height")),
+            line_height: Some(text_sm_line_height),
             ..Default::default()
         };
 
@@ -334,10 +383,12 @@ impl Calendar {
                                 is_selected,
                                 is_today,
                                 is_disabled,
+                                focus_date.is_some_and(|d| d == day.date),
                                 day_size,
                                 &selected_model,
                                 close_on_select.clone(),
                                 disabled_predicate.clone(),
+                                initial_focus_out.clone(),
                             ))
                         })
                         .collect::<Vec<_>>()
@@ -400,8 +451,13 @@ fn calendar_icon_button<H: UiHost>(
         }));
 
         let mut pressable_layout = LayoutStyle::default();
-        pressable_layout.size.width = Length::Px(theme.metric_required("metric.size.lg"));
-        pressable_layout.size.height = Length::Px(theme.metric_required("metric.size.lg"));
+        let icon_button_size = match size {
+            ButtonSize::IconSm => theme.metric_required("component.size.sm.icon_button.size"),
+            ButtonSize::IconLg => theme.metric_required("component.size.lg.icon_button.size"),
+            _ => theme.metric_required("component.size.md.icon_button.size"),
+        };
+        pressable_layout.size.width = Length::Px(icon_button_size);
+        pressable_layout.size.height = Length::Px(icon_button_size);
 
         let bg = if st.pressed {
             bg_pressed
@@ -454,10 +510,12 @@ fn calendar_day_cell<H: UiHost>(
     selected: bool,
     today: bool,
     disabled: bool,
+    focus_candidate: bool,
     size: Px,
     selected_model: &Model<Option<Date>>,
     close_on_select: Option<Model<bool>>,
     disabled_predicate: Option<Arc<dyn Fn(Date) -> bool + Send + Sync + 'static>>,
+    initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
 ) -> AnyElement {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Px(size);
@@ -488,15 +546,30 @@ fn calendar_day_cell<H: UiHost>(
     let day_text: Arc<str> = Arc::from(date.day().to_string());
     let date_label: Arc<str> = Arc::from(date.to_string());
 
+    let text_sm_px = theme
+        .metric_by_key("component.text.sm_px")
+        .unwrap_or_else(|| theme.metric_required("font.size"));
+    let text_sm_line_height = theme
+        .metric_by_key("component.text.sm_line_height")
+        .unwrap_or_else(|| theme.metric_required("font.line_height"));
+
     let text_style = TextStyle {
         font: Default::default(),
-        size: theme.metric_required("component.text.sm_px"),
+        size: text_sm_px,
         weight: FontWeight::MEDIUM,
-        line_height: Some(theme.metric_required("component.text.sm_line_height")),
+        line_height: Some(text_sm_line_height),
         ..Default::default()
     };
 
-    control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
+    control_chrome_pressable_with_id_props(cx, move |cx, st, id| {
+        if focus_candidate
+            && !disabled
+            && let Some(out) = initial_focus_out.as_ref()
+            && out.get().is_none()
+        {
+            out.set(Some(id));
+        }
+
         let selected_model = selected_model.clone();
         let close_on_select = close_on_select.clone();
         let disabled_predicate = disabled_predicate.clone();

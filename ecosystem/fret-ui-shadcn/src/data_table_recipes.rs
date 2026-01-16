@@ -23,20 +23,53 @@ fn is_column_visible(state: &TableState, id: &ColumnId) -> bool {
     state.column_visibility.get(id).copied().unwrap_or(true)
 }
 
-fn sync_global_filter<H: UiHost>(app: &mut H, state: &Model<TableState>, value: &str) {
+fn normalized_global_filter(value: &str) -> Option<Arc<str>> {
     let next = value.trim();
-    let next: Option<Arc<str>> = if next.is_empty() {
+    if next.is_empty() {
         None
     } else {
         Some(Arc::from(next.to_string()))
-    };
+    }
+}
 
+fn apply_global_filter_change(state: &mut TableState, value: &str) -> bool {
+    let next = normalized_global_filter(value);
+    if state.global_filter == next {
+        return false;
+    }
+    state.global_filter = next;
+    state.pagination.page_index = 0;
+    true
+}
+
+fn sync_global_filter<H: UiHost>(app: &mut H, state: &Model<TableState>, value: &str) {
     let _ = app.models_mut().update(state, |st| {
-        if st.global_filter != next {
-            st.global_filter = next;
-            st.pagination.page_index = 0;
-        }
+        let _ = apply_global_filter_change(st, value);
     });
+}
+
+fn apply_column_visibility_change(
+    state: &mut TableState,
+    desired: &HashMap<ColumnId, bool>,
+) -> bool {
+    let mut changed = false;
+    for (id, visible) in desired {
+        let current = is_column_visible(state, id);
+        if current == *visible {
+            continue;
+        }
+        changed = true;
+        if *visible {
+            state.column_visibility.remove(id);
+        } else {
+            state.column_visibility.insert(id.clone(), false);
+        }
+    }
+
+    if changed {
+        state.pagination.page_index = 0;
+    }
+    changed
 }
 
 fn sync_column_visibility(
@@ -45,22 +78,7 @@ fn sync_column_visibility(
     desired: &HashMap<ColumnId, bool>,
 ) {
     let _ = app.models_mut().update(state, |st| {
-        let mut changed = false;
-        for (id, visible) in desired {
-            let current = is_column_visible(st, id);
-            if current == *visible {
-                continue;
-            }
-            changed = true;
-            if *visible {
-                st.column_visibility.remove(id);
-            } else {
-                st.column_visibility.insert(id.clone(), false);
-            }
-        }
-        if changed {
-            st.pagination.page_index = 0;
-        }
+        let _ = apply_column_visibility_change(st, desired);
     });
 }
 
@@ -272,6 +290,7 @@ impl<TData> DataTableToolbar<TData> {
 struct DataTablePaginationState {
     page_size_open: Option<Model<bool>>,
     page_size_value: Option<Model<Option<Arc<str>>>>,
+    last_synced_page_size: Option<usize>,
 }
 
 /// shadcn/ui `DataTable` pagination (recipe).
@@ -357,22 +376,44 @@ impl DataTablePagination {
             .cloned()
             .unwrap_or(None);
 
-        match selected_value {
-            None => {
-                let _ = cx
-                    .app
-                    .models_mut()
-                    .update(&page_size_value, |v| *v = Some(current_size_str.clone()));
-            }
-            Some(sel) => {
-                if let Ok(next) = sel.as_ref().parse::<usize>() {
-                    if next != current_size {
-                        let state = self.state.clone();
-                        let _ = cx.app.models_mut().update(&state, |st| {
-                            st.pagination.page_size = next;
-                            st.pagination.page_index = 0;
-                        });
-                    }
+        let last_synced_page_size = cx.with_state(DataTablePaginationState::default, |st| {
+            st.last_synced_page_size
+        });
+
+        // Treat `TableState.pagination.page_size` as the source of truth. The dropdown's internal
+        // model must follow external updates (e.g. programmatic page size changes) and only drive
+        // `TableState` when the user makes a new selection.
+        let should_sync_to_state =
+            selected_value.is_none() || last_synced_page_size != Some(current_size);
+        if should_sync_to_state {
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&page_size_value, |v| *v = Some(current_size_str.clone()));
+            cx.with_state(DataTablePaginationState::default, |st| {
+                st.last_synced_page_size = Some(current_size);
+            });
+        } else if let Some(sel) = selected_value {
+            match sel.as_ref().parse::<usize>() {
+                Ok(next) if next != current_size => {
+                    let state = self.state.clone();
+                    let _ = cx.app.models_mut().update(&state, |st| {
+                        st.pagination.page_size = next;
+                        st.pagination.page_index = 0;
+                    });
+                    cx.with_state(DataTablePaginationState::default, |st| {
+                        st.last_synced_page_size = Some(next);
+                    });
+                }
+                Ok(_) => {}
+                Err(_) => {
+                    let _ = cx
+                        .app
+                        .models_mut()
+                        .update(&page_size_value, |v| *v = Some(current_size_str.clone()));
+                    cx.with_state(DataTablePaginationState::default, |st| {
+                        st.last_synced_page_size = Some(current_size);
+                    });
                 }
             }
         }
@@ -455,5 +496,95 @@ impl DataTablePagination {
                 ]
             },
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    enum PageSizeAction {
+        None,
+        SyncToState,
+        SetToUserSelection(usize),
+    }
+
+    fn reconcile_page_size(
+        current_size: usize,
+        selected_value: Option<&str>,
+        last_synced: Option<usize>,
+    ) -> PageSizeAction {
+        if selected_value.is_none() || last_synced != Some(current_size) {
+            return PageSizeAction::SyncToState;
+        }
+
+        let Some(sel) = selected_value else {
+            return PageSizeAction::SyncToState;
+        };
+
+        match sel.parse::<usize>() {
+            Ok(next) if next != current_size => PageSizeAction::SetToUserSelection(next),
+            Ok(_) => PageSizeAction::None,
+            Err(_) => PageSizeAction::SyncToState,
+        }
+    }
+
+    #[test]
+    fn pagination_page_size_is_controlled_by_state() {
+        assert_eq!(
+            reconcile_page_size(20, None, None),
+            PageSizeAction::SyncToState
+        );
+        assert_eq!(
+            reconcile_page_size(50, Some("10"), Some(10)),
+            PageSizeAction::SyncToState,
+            "external page_size change must win over stale dropdown model"
+        );
+    }
+
+    #[test]
+    fn pagination_page_size_accepts_user_selection() {
+        assert_eq!(
+            reconcile_page_size(20, Some("50"), Some(20)),
+            PageSizeAction::SetToUserSelection(50)
+        );
+        assert_eq!(
+            reconcile_page_size(20, Some("abc"), Some(20)),
+            PageSizeAction::SyncToState
+        );
+    }
+
+    #[test]
+    fn global_filter_change_resets_page_index() {
+        let mut st = TableState::default();
+        st.pagination.page_index = 3;
+        assert!(apply_global_filter_change(&mut st, "  foo  "));
+        assert_eq!(st.pagination.page_index, 0);
+        assert_eq!(st.global_filter.as_deref(), Some("foo"));
+
+        st.pagination.page_index = 2;
+        assert!(!apply_global_filter_change(&mut st, "foo"));
+        assert_eq!(st.pagination.page_index, 2, "no change should not reset");
+
+        assert!(apply_global_filter_change(&mut st, "   "));
+        assert_eq!(st.pagination.page_index, 0);
+        assert!(st.global_filter.is_none());
+    }
+
+    #[test]
+    fn column_visibility_change_resets_page_index() {
+        let mut st = TableState::default();
+        st.pagination.page_index = 5;
+
+        let mut desired: HashMap<ColumnId, bool> = HashMap::new();
+        desired.insert(Arc::from("a"), false);
+        assert!(apply_column_visibility_change(&mut st, &desired));
+        assert_eq!(st.pagination.page_index, 0);
+        assert_eq!(st.column_visibility.get("a").copied(), Some(false));
+
+        st.pagination.page_index = 3;
+        assert!(!apply_column_visibility_change(&mut st, &desired));
+        assert_eq!(st.pagination.page_index, 3);
     }
 }

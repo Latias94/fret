@@ -1,5 +1,6 @@
 use super::ElementHostWidget;
 use crate::declarative::prelude::*;
+use fret_runtime::DragHost;
 
 pub(super) fn handle_pointer_region<H: UiHost>(
     this: &mut ElementHostWidget,
@@ -100,6 +101,57 @@ pub(super) fn handle_pointer_region<H: UiHost>(
         }
     }
 
+    impl<H: UiHost> action::UiDragActionHost for PointerHookHost<'_, H> {
+        fn begin_drag_with_kind(
+            &mut self,
+            pointer_id: fret_core::PointerId,
+            kind: fret_runtime::DragKindId,
+            source_window: AppWindowId,
+            start: Point,
+        ) {
+            DragHost::begin_drag_with_kind(
+                &mut *self.app,
+                pointer_id,
+                kind,
+                source_window,
+                start,
+                (),
+            );
+        }
+
+        fn begin_cross_window_drag_with_kind(
+            &mut self,
+            pointer_id: fret_core::PointerId,
+            kind: fret_runtime::DragKindId,
+            source_window: AppWindowId,
+            start: Point,
+        ) {
+            DragHost::begin_cross_window_drag_with_kind(
+                &mut *self.app,
+                pointer_id,
+                kind,
+                source_window,
+                start,
+                (),
+            );
+        }
+
+        fn drag(&self, pointer_id: fret_core::PointerId) -> Option<&fret_runtime::DragSession> {
+            DragHost::drag(&*self.app, pointer_id)
+        }
+
+        fn drag_mut(
+            &mut self,
+            pointer_id: fret_core::PointerId,
+        ) -> Option<&mut fret_runtime::DragSession> {
+            DragHost::drag_mut(&mut *self.app, pointer_id)
+        }
+
+        fn cancel_drag(&mut self, pointer_id: fret_core::PointerId) {
+            DragHost::cancel_drag(&mut *self.app, pointer_id);
+        }
+    }
+
     match event {
         Event::Pointer(fret_core::PointerEvent::Down {
             position,
@@ -107,6 +159,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             modifiers,
             pointer_type,
             click_count,
+            pointer_id,
             ..
         }) => {
             let hook = crate::elements::with_element_state(
@@ -118,7 +171,9 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             );
 
             let down = action::PointerDownCx {
+                pointer_id: *pointer_id,
                 position: *position,
+                tick_id: cx.app.tick_id(),
                 pixels_per_point,
                 button: *button,
                 modifiers: *modifiers,
@@ -169,6 +224,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             buttons,
             modifiers,
             pointer_type,
+            pointer_id,
             ..
         }) => {
             let hook = crate::elements::with_element_state(
@@ -184,7 +240,9 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             };
 
             let mv = action::PointerMoveCx {
+                pointer_id: *pointer_id,
                 position: *position,
+                tick_id: cx.app.tick_id(),
                 pixels_per_point,
                 buttons: *buttons,
                 modifiers: *modifiers,
@@ -219,6 +277,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             position,
             delta,
             modifiers,
+            pointer_id,
             pointer_type: _,
             ..
         }) => {
@@ -235,7 +294,9 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             };
 
             let wheel = action::WheelCx {
+                pointer_id: *pointer_id,
                 position: *position,
+                tick_id: cx.app.tick_id(),
                 pixels_per_point,
                 delta: *delta,
                 modifiers: *modifiers,
@@ -270,6 +331,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             delta,
             modifiers,
             pointer_type,
+            pointer_id,
             ..
         }) => {
             let hook = crate::elements::with_element_state(
@@ -285,7 +347,9 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             };
 
             let pinch = action::PinchGestureCx {
+                pointer_id: *pointer_id,
                 position: *position,
+                tick_id: cx.app.tick_id(),
                 pixels_per_point,
                 delta: *delta,
                 modifiers: *modifiers,
@@ -322,6 +386,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             modifiers,
             pointer_type,
             click_count,
+            pointer_id,
             ..
         }) => {
             let was_captured = cx.captured == Some(cx.node);
@@ -335,7 +400,9 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             );
 
             let up = action::PointerUpCx {
+                pointer_id: *pointer_id,
                 position: *position,
+                tick_id: cx.app.tick_id(),
                 pixels_per_point,
                 button: *button,
                 modifiers: *modifiers,

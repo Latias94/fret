@@ -1,9 +1,8 @@
 use fret_app::{App, Effect, WindowRequest};
-use fret_bootstrap::BootstrapBuilder;
 use fret_core::{
     AppWindowId, Color, Corners, DrawOrder, Edges, Event, ImageColorSpace, Px, Rect, SceneOp, Size,
 };
-use fret_launch::{FnDriver, WinitEventContext, WinitRenderContext};
+use fret_launch::{FnDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
 use fret_ui_assets::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetKey};
 
 struct ImageUploadDemoWindowState {
@@ -185,12 +184,14 @@ fn render(_driver: &mut (), context: WinitRenderContext<'_, ImageUploadDemoWindo
 
 pub fn run() -> anyhow::Result<()> {
     let driver = FnDriver::new((), create_window_state, handle_event, render);
-
-    let builder = BootstrapBuilder::new(App::new(), driver).configure(|config| {
-        config.main_window_title = "image_upload_demo".to_string();
-        config.main_window_size = winit::dpi::LogicalSize::new(520.0, 380.0);
-    });
-
-    let builder = builder.with_default_config_files()?;
-    builder.run().map_err(anyhow::Error::from)
+    fret_kit::run_native_demo(
+        WinitRunnerConfig {
+            main_window_title: "image_upload_demo".to_string(),
+            main_window_size: winit::dpi::LogicalSize::new(520.0, 380.0),
+            ..Default::default()
+        },
+        App::new(),
+        driver,
+    )
+    .map_err(anyhow::Error::from)
 }

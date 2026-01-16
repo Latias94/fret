@@ -1,8 +1,15 @@
+//! Canvas-backed data grid ("performance ceiling").
+//!
+//! This surface is designed for spreadsheet-scale density by keeping UI node count ~constant and
+//! doing dense cell rendering via canvas ops. Rich editing UI is expected to live in overlay
+//! layers (selection rectangles, editor popovers), not per-cell widgets.
+
 use std::sync::Arc;
 
 use fret_core::geometry::{Corners, Edges, Point, Rect, Size};
 use fret_core::scene::SceneOp;
 use fret_core::{Color, DrawOrder, FontId, Px, TextOverflow, TextStyle, TextWrap};
+use fret_runtime::Model;
 use fret_ui::canvas::CanvasTextConstraints;
 use fret_ui::element::{
     AnyElement, CanvasProps, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow,
@@ -13,10 +20,10 @@ use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_headless::grid_viewport::{
     GridAxisItem, GridAxisMeasureMode, GridAxisMetrics, GridViewport2D, compute_grid_viewport_2d,
-    default_range_extractor,
 };
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius};
+use std::time::Instant;
 
 fn border_color(theme: &Theme) -> Color {
     theme.color_required("border")
@@ -49,6 +56,17 @@ fn text_style(theme: &Theme) -> TextStyle {
         line_height: Some(font_line_height(theme)),
         ..Default::default()
     }
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct DataGridCanvasOutput {
+    pub visible_rows: usize,
+    pub visible_cols: usize,
+    pub visible_cells: usize,
+    pub ensure_axes_us: u32,
+    pub apply_overrides_us: u32,
+    pub compute_viewport_us: u32,
+    pub build_visible_items_us: u32,
 }
 
 #[derive(Clone)]
@@ -138,6 +156,7 @@ pub struct DataGridCanvas {
     pub overscan_cols: usize,
     pub chrome: ChromeRefinement,
     pub layout: LayoutRefinement,
+    pub output: Option<Model<DataGridCanvasOutput>>,
 }
 
 impl DataGridCanvas {
@@ -149,6 +168,7 @@ impl DataGridCanvas {
             overscan_cols: 2,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            output: None,
         }
     }
 
@@ -159,6 +179,11 @@ impl DataGridCanvas {
 
     pub fn overscan_cols(mut self, overscan: usize) -> Self {
         self.overscan_cols = overscan;
+        self
+    }
+
+    pub fn output_model(mut self, output: Model<DataGridCanvasOutput>) -> Self {
+        self.output = Some(output);
         self
     }
 
@@ -191,6 +216,8 @@ impl DataGridCanvas {
         let cols = self.cols;
         let overscan_rows = self.overscan_rows;
         let overscan_cols = self.overscan_cols;
+        let output_model = self.output;
+        let wants_output = output_model.is_some();
 
         let cell_text_at: Arc<dyn Fn(u64, u64) -> Arc<str> + Send + Sync + 'static> =
             Arc::new(cell_text_at);
@@ -202,29 +229,41 @@ impl DataGridCanvas {
             let thumb = theme.color_required("scrollbar.thumb.background");
             let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
 
-            let (scroll_handle, paint_data, total_w, total_h) =
+            let (scroll_handle, paint_data, total_w, total_h, output) =
                 cx.with_state(DataGridCanvasState::default, |state| {
+                    let t0 = wants_output.then(Instant::now);
                     state.ensure_axes(&rows, &cols);
+                    let ensure_axes_us = t0
+                        .map(|t| (t.elapsed().as_micros()).min(u32::MAX as u128) as u32)
+                        .unwrap_or_default();
 
                     let viewport = state.scroll.viewport_size();
                     let offset = state.scroll.offset();
 
-                    // Apply size overrides for currently visible rows/cols, then recompute the viewport.
-                    if let Some(vp) = compute_grid_viewport_2d(
-                        &state.row_metrics,
-                        &state.col_metrics,
-                        offset.x,
-                        offset.y,
-                        viewport.width,
-                        viewport.height,
-                        overscan_rows,
-                        overscan_cols,
-                    ) {
-                        state.apply_overrides(&rows, &cols, &vp);
+                    let mut apply_overrides_us = 0u32;
+                    if rows.size_override.is_some() || cols.size_override.is_some() {
+                        // Apply size overrides for currently visible rows/cols, then recompute the viewport.
+                        let t = wants_output.then(Instant::now);
+                        if let Some(vp) = compute_grid_viewport_2d(
+                            &state.row_metrics,
+                            &state.col_metrics,
+                            offset.x,
+                            offset.y,
+                            viewport.width,
+                            viewport.height,
+                            overscan_rows,
+                            overscan_cols,
+                        ) {
+                            state.apply_overrides(&rows, &cols, &vp);
+                        }
+                        apply_overrides_us = t
+                            .map(|t| (t.elapsed().as_micros()).min(u32::MAX as u128) as u32)
+                            .unwrap_or_default();
                     }
 
                     let viewport = state.scroll.viewport_size();
                     let offset = state.scroll.offset();
+                    let t = wants_output.then(Instant::now);
                     let vp = compute_grid_viewport_2d(
                         &state.row_metrics,
                         &state.col_metrics,
@@ -235,22 +274,42 @@ impl DataGridCanvas {
                         overscan_rows,
                         overscan_cols,
                     );
+                    let compute_viewport_us = t
+                        .map(|t| (t.elapsed().as_micros()).min(u32::MAX as u128) as u32)
+                        .unwrap_or_default();
 
                     let mut rows_visible = Vec::new();
                     let mut cols_visible = Vec::new();
                     let mut rows_clamped = Vec::new();
+                    let mut build_visible_items_us = 0u32;
                     if let Some(vp) = vp {
-                        let row_indices = default_range_extractor(vp.row_range.clone());
-                        let col_indices = default_range_extractor(vp.col_range.clone());
+                        let t = wants_output.then(Instant::now);
+                        let row_start = vp
+                            .row_range
+                            .start_index
+                            .saturating_sub(vp.row_range.overscan);
+                        let row_end = (vp.row_range.end_index + vp.row_range.overscan)
+                            .min(vp.row_range.count.saturating_sub(1));
+                        let col_start = vp
+                            .col_range
+                            .start_index
+                            .saturating_sub(vp.col_range.overscan);
+                        let col_end = (vp.col_range.end_index + vp.col_range.overscan)
+                            .min(vp.col_range.count.saturating_sub(1));
 
-                        rows_visible = row_indices
-                            .into_iter()
-                            .filter_map(|i| state.row_metrics.axis_item(i))
-                            .collect();
-                        cols_visible = col_indices
-                            .into_iter()
-                            .filter_map(|i| state.col_metrics.axis_item(i))
-                            .collect();
+                        for i in row_start..=row_end {
+                            if let Some(item) = state.row_metrics.axis_item(i) {
+                                rows_visible.push(item);
+                            }
+                        }
+                        for i in col_start..=col_end {
+                            if let Some(item) = state.col_metrics.axis_item(i) {
+                                cols_visible.push(item);
+                            }
+                        }
+                        build_visible_items_us = t
+                            .map(|t| (t.elapsed().as_micros()).min(u32::MAX as u128) as u32)
+                            .unwrap_or_default();
 
                         rows_clamped = rows_visible
                             .iter()
@@ -271,6 +330,9 @@ impl DataGridCanvas {
                         Size::new(viewport.width, viewport.height),
                     );
 
+                    let visible_rows = rows_visible.len();
+                    let visible_cols = cols_visible.len();
+
                     let paint_data = DataGridCanvasPaintData {
                         viewport: viewport_rect,
                         rows: rows_visible,
@@ -286,13 +348,32 @@ impl DataGridCanvas {
                         cell_text_at: Arc::clone(&cell_text_at),
                     };
 
+                    let output = wants_output.then(|| DataGridCanvasOutput {
+                        visible_rows,
+                        visible_cols,
+                        visible_cells: visible_rows.saturating_mul(visible_cols),
+                        ensure_axes_us,
+                        apply_overrides_us,
+                        compute_viewport_us,
+                        build_visible_items_us,
+                    });
+
                     (
                         state.scroll.clone(),
                         Arc::new(paint_data),
                         state.col_metrics.total_size(),
                         state.row_metrics.total_size(),
+                        output,
                     )
                 });
+
+            if let (Some(out_model), Some(output)) = (output_model, output) {
+                let _ = cx.app.models_mut().update(&out_model, |v| {
+                    if *v != output {
+                        *v = output;
+                    }
+                });
+            }
 
             let stack = cx.stack_props(
                 StackProps {
@@ -455,7 +536,13 @@ impl DataGridCanvasState {
         vp: &GridViewport2D,
     ) {
         if let Some(f) = &rows.size_override {
-            for idx in default_range_extractor(vp.row_range.clone()) {
+            let start = vp
+                .row_range
+                .start_index
+                .saturating_sub(vp.row_range.overscan);
+            let end = (vp.row_range.end_index + vp.row_range.overscan)
+                .min(vp.row_range.count.saturating_sub(1));
+            for idx in start..=end {
                 let Some(key) = rows.keys.get(idx).copied() else {
                     continue;
                 };
@@ -467,7 +554,13 @@ impl DataGridCanvasState {
         }
 
         if let Some(f) = &cols.size_override {
-            for idx in default_range_extractor(vp.col_range.clone()) {
+            let start = vp
+                .col_range
+                .start_index
+                .saturating_sub(vp.col_range.overscan);
+            let end = (vp.col_range.end_index + vp.col_range.overscan)
+                .min(vp.col_range.count.saturating_sub(1));
+            for idx in start..=end {
                 let Some(key) = cols.keys.get(idx).copied() else {
                     continue;
                 };

@@ -197,6 +197,7 @@ impl<H: UiHost> Widget<H> for ClickCounter {
     }
 }
 
+mod escape_dismiss;
 mod focus_scope;
 mod globals;
 mod hit_test;
@@ -208,4 +209,6 @@ mod paint_cache;
 mod pointer_move_hover;
 mod scroll_into_view;
 mod semantics_focus_shortcuts;
+mod stack_safety;
 mod transforms;
+mod view_cache;

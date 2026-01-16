@@ -1,0 +1,129 @@
+use std::sync::Arc;
+
+use fret_runtime::{CommandRegistry, InputContext, MenuBar, Model};
+use fret_ui::element::{AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, StackProps};
+use fret_ui::{ElementContext, GlobalElementId, PendingShortcutOverlayState, UiHost};
+
+use crate::workspace::layout::WorkspacePaneLayout;
+use crate::workspace::{
+    WorkspaceFrame, WorkspaceTabStrip, WorkspaceTopBar, workspace_pane_tree_element_with_resize,
+};
+
+use crate::pending_shortcut_overlay::pending_shortcut_hint_overlay;
+use crate::workspace_menu::{MenubarFromRuntimeOptions, menubar_from_runtime};
+
+fn fill_layout() -> LayoutStyle {
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Fill;
+    layout.size.height = Length::Fill;
+    layout
+}
+
+/// Model-driven workspace shell.
+///
+/// This enables in-place UI mutations (e.g. split drag-to-resize) without requiring apps to route
+/// those interactions through commands.
+pub fn workspace_shell_model<H: UiHost, FTitle, FPane>(
+    cx: &mut ElementContext<'_, H>,
+    menu_bar: Option<&MenuBar>,
+    commands: Option<&CommandRegistry>,
+    window: Model<crate::workspace::layout::WorkspaceWindowLayout>,
+    tab_title: FTitle,
+    mut render_pane_content: FPane,
+) -> AnyElement
+where
+    FTitle: Fn(&str) -> Arc<str> + Clone,
+    FPane: FnMut(&mut ElementContext<'_, H>, &WorkspacePaneLayout, bool) -> AnyElement,
+{
+    let top = menu_bar
+        .map(|bar| menubar_from_runtime(cx, bar, commands, MenubarFromRuntimeOptions::default()));
+
+    let mut topbar_anchor_id: Option<GlobalElementId> = None;
+
+    let center = workspace_pane_tree_element_with_resize(
+        cx,
+        window.clone(),
+        &mut |cx, pane, is_active, tab_drag| {
+            let tab_title = tab_title.clone();
+            let tab_strip = WorkspaceTabStrip::from_workspace_tabs(&pane.tabs, tab_title)
+                .pane_id(pane.id.clone())
+                .tab_drag_model(tab_drag.clone())
+                .into_element(cx);
+            let content = render_pane_content(cx, pane, is_active);
+
+            cx.flex(
+                FlexProps {
+                    layout: fill_layout(),
+                    direction: fret_core::Axis::Vertical,
+                    ..Default::default()
+                },
+                |_cx| vec![tab_strip, content],
+            )
+        },
+    );
+
+    let mut frame = WorkspaceFrame::new(center);
+    if let Some(menu) = top {
+        let topbar = cx.keyed("workspace_shell.topbar_anchor", |cx| {
+            topbar_anchor_id = Some(cx.root_id());
+
+            let mut layout = LayoutStyle::default();
+            layout.size.width = Length::Fill;
+
+            cx.container(
+                ContainerProps {
+                    layout,
+                    ..Default::default()
+                },
+                |cx| {
+                    vec![
+                        WorkspaceTopBar::new()
+                            .left([cx.container(
+                                ContainerProps {
+                                    layout: fill_layout(),
+                                    ..Default::default()
+                                },
+                                |_cx| vec![menu],
+                            )])
+                            .into_element(cx),
+                    ]
+                },
+            )
+        });
+
+        frame = frame.top(topbar);
+    }
+
+    let (pending_input_ctx, pending_sequence, pending_continuations) = cx
+        .app
+        .global::<PendingShortcutOverlayState>()
+        .and_then(|s| {
+            s.snapshot_for_window(cx.window)
+                .map(|(ctx, seq, cont)| (ctx.clone(), seq.to_vec(), cont.to_vec()))
+        })
+        .unwrap_or_else(|| (InputContext::default(), Vec::new(), Vec::new()));
+
+    let top_inset = topbar_anchor_id
+        .and_then(|id| cx.last_bounds_for_element(id))
+        .map(|bounds| bounds.origin.y + bounds.size.height + fret_core::Px(8.0))
+        .unwrap_or(fret_core::Px(40.0));
+
+    let frame = frame.into_element(cx);
+    let overlay = pending_shortcut_hint_overlay(
+        cx,
+        top_inset,
+        &pending_input_ctx,
+        &pending_sequence,
+        &pending_continuations,
+    );
+    if let Some(overlay) = overlay {
+        return cx.stack_props(
+            StackProps {
+                layout: fill_layout(),
+            },
+            |_cx| vec![frame, overlay],
+        );
+    }
+
+    frame
+}

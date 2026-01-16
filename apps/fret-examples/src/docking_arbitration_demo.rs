@@ -937,5 +937,5 @@ pub fn run() -> anyhow::Result<()> {
             });
 
     let driver = DockingArbitrationDriver::new(pending_layout, viewport_tools);
-    crate::run_native_demo(config, app, driver).context("run docking_arbitration_demo app")
+    fret_kit::run_native_demo(config, app, driver).context("run docking_arbitration_demo app")
 }

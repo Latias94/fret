@@ -21,6 +21,7 @@ use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
 use crate::overlay;
+use crate::primitives::direction::LayoutDirection;
 use crate::primitives::menu::pointer_grace_intent;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -1389,10 +1390,21 @@ pub fn close_and_restore_trigger(
     }
 }
 
-pub fn submenu_item_arrow_left_handler(models: MenuSubmenuModels) -> fret_ui::action::OnKeyDown {
+pub fn submenu_item_close_key_handler(
+    models: MenuSubmenuModels,
+    dir: LayoutDirection,
+) -> fret_ui::action::OnKeyDown {
     #[allow(clippy::arc_with_non_send_sync)]
     Arc::new(move |host, acx, down| {
-        if down.repeat || down.key != fret_core::KeyCode::ArrowLeft {
+        if down.repeat {
+            return false;
+        }
+        let is_close_key = match (down.key, dir) {
+            (fret_core::KeyCode::ArrowLeft, LayoutDirection::Ltr) => true,
+            (fret_core::KeyCode::ArrowRight, LayoutDirection::Rtl) => true,
+            _ => false,
+        };
+        if !is_close_key {
             return false;
         }
         close_and_restore_trigger(host, acx, &models);

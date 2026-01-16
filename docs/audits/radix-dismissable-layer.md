@@ -36,6 +36,8 @@ Fret does not have DOM capture/bubble, but it models the same outcomes by compos
 - Escape routing and dismiss semantics:
   - `ElementContext::dismissible_on_dismiss_request(...)` (policy hook),
   - `OnDismissRequest(host, ActionCx, DismissReason)` (portable "preventDefault" analogue).
+  - Global Escape arbitration: the runtime routes Escape to the topmost overlay root (matching the
+    Radix "only the highest layer handles it" outcome): `crates/fret-ui/src/tree/dispatch.rs`.
 - Branches:
   - `dismissable_branches: Vec<GlobalElementId>` on overlay requests, resolved to `NodeId`s for
     the outside-press observer pass.

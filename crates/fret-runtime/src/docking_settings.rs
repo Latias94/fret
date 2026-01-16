@@ -1,8 +1,19 @@
-use fret_core::Modifiers;
+use fret_core::{Modifiers, Px};
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DockingInteractionSettings {
     pub drag_inversion: DockDragInversionSettings,
+    /// Drag activation threshold for docking tab drags (window-local logical pixels).
+    pub tab_drag_threshold: Px,
+}
+
+impl Default for DockingInteractionSettings {
+    fn default() -> Self {
+        Self {
+            drag_inversion: DockDragInversionSettings::default(),
+            tab_drag_threshold: Px(6.0),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

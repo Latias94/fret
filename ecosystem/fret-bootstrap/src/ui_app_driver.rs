@@ -19,6 +19,9 @@ use std::sync::OnceLock;
 
 use fret_core::time::Instant;
 
+#[cfg(feature = "diagnostics")]
+use crate::ui_diagnostics::UiDiagnosticsService;
+
 type ViewFn<S> = for<'a> fn(&mut ElementContext<'a, App>, &mut S) -> Vec<AnyElement>;
 
 type EventHookFn<S> =
@@ -491,6 +494,11 @@ fn ui_app_handle_event<S>(
         return;
     }
 
+    #[cfg(feature = "diagnostics")]
+    app.with_global_mut(UiDiagnosticsService::default, |svc, app| {
+        svc.record_event(app, window, event);
+    });
+
     state.ui.dispatch_event(app, services, event);
 
     #[cfg(feature = "ui-assets")]
@@ -623,6 +631,12 @@ fn ui_app_handle_model_changes<S>(
     let WinitWindowContext {
         app, window, state, ..
     } = context;
+
+    #[cfg(feature = "diagnostics")]
+    app.with_global_mut(UiDiagnosticsService::default, |svc, _app| {
+        svc.record_model_changes(window, changed);
+    });
+
     state.ui.propagate_model_changes(app, changed);
     if let Some(f) = driver.on_model_changes {
         #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
@@ -646,6 +660,12 @@ fn ui_app_handle_global_changes<S>(
     let WinitWindowContext {
         app, window, state, ..
     } = context;
+
+    #[cfg(feature = "diagnostics")]
+    app.with_global_mut(UiDiagnosticsService::default, |svc, _app| {
+        svc.record_global_changes(window, changed);
+    });
+
     state.ui.propagate_global_changes(app, changed);
     if let Some(f) = driver.on_global_changes {
         #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
@@ -742,7 +762,6 @@ fn ui_app_render<S>(
     let hitch_total_started = hitch_config.map(|_| Instant::now());
     let mut hitch_view_ms: Option<u64> = None;
     let mut hitch_overlay_ms: Option<u64> = None;
-    let mut hitch_layout_ms: Option<u64> = None;
     let mut hitch_paint_ms: Option<u64> = None;
 
     let render_depth = RENDER_DEPTH.with(|d| {
@@ -899,7 +918,7 @@ fn ui_app_render<S>(
             #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
             {
                 let out = direction_prim::with_direction_provider(cx, dir, |cx| {
-                    let mut out = (driver.view)(cx, &mut state.state);
+                    let out = (driver.view)(cx, &mut state.state);
 
                     #[cfg(feature = "ui-app-command-palette")]
                     if driver.command_palette_enabled
@@ -959,22 +978,93 @@ fn ui_app_render<S>(
     state.ui.request_semantics_snapshot();
     state.ui.ingest_paint_cache_source(scene);
     scene.clear();
-
-    let mut frame = UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
     let layout_started = hitch_config.map(|_| Instant::now());
-    frame.layout_all();
-    if let Some(started) = layout_started {
-        hitch_layout_ms = Some(started.elapsed().as_millis() as u64);
+    {
+        let mut frame = UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+        frame.layout_all();
     }
+    let mut layout_total_ms: Option<u64> = layout_started.map(|s| s.elapsed().as_millis() as u64);
     hotpatch_trace_log(&format!(
         "ui_app_render: after layout_all window={window:?}"
     ));
+
+    #[cfg(feature = "diagnostics")]
+    {
+        let inspection_active = app.with_global_mut(UiDiagnosticsService::default, |svc, _app| {
+            svc.wants_inspection_active(window)
+        });
+        state.ui.set_inspection_active(inspection_active);
+
+        let semantics_snapshot = state.ui.semantics_snapshot();
+        let drive = app.with_global_mut(UiDiagnosticsService::default, |svc, _app| {
+            svc.drive_script_for_window(window, semantics_snapshot)
+        });
+        if drive.request_redraw {
+            app.request_redraw(window);
+        }
+
+        let mut injected_any = false;
+        for event in drive.events {
+            injected_any = true;
+            ui_app_handle_event(
+                driver,
+                WinitEventContext {
+                    app,
+                    services,
+                    window,
+                    state,
+                },
+                &event,
+            );
+        }
+
+        if injected_any {
+            state.ui.request_semantics_snapshot();
+
+            let relayout_started = hitch_config.map(|_| Instant::now());
+            {
+                let mut frame =
+                    UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+                frame.layout_all();
+            }
+            if let Some(started) = relayout_started {
+                layout_total_ms =
+                    Some(layout_total_ms.unwrap_or(0) + started.elapsed().as_millis() as u64);
+            }
+        }
+    }
+
+    let hitch_layout_ms = layout_total_ms;
+
     let paint_started = hitch_config.map(|_| Instant::now());
-    frame.paint_all(scene);
+    {
+        let mut frame = UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+        frame.paint_all(scene);
+    }
     if let Some(started) = paint_started {
         hitch_paint_ms = Some(started.elapsed().as_millis() as u64);
     }
     hotpatch_trace_log(&format!("ui_app_render: after paint_all window={window:?}"));
+
+    #[cfg(feature = "diagnostics")]
+    {
+        app.with_global_mut(UiDiagnosticsService::default, |svc, app| {
+            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+            svc.record_snapshot(
+                app,
+                window,
+                bounds,
+                scale_factor,
+                &state.ui,
+                element_runtime,
+                scene,
+            );
+            if let Some(dir) = svc.maybe_dump_if_triggered() {
+                #[cfg(feature = "tracing")]
+                tracing::info!(window = ?window, out_dir = %dir.display(), "ui diagnostics dumped");
+            }
+        });
+    }
 
     if let (Some(cfg), Some(started)) = (hitch_config, hitch_total_started) {
         let total = started.elapsed();
@@ -1024,6 +1114,11 @@ fn ui_app_hot_reload_window<S>(
 
     reset_ui_tree_for_hotpatch(app, window, &mut state.ui);
     state.root = None;
+
+    #[cfg(feature = "diagnostics")]
+    app.with_global_mut(UiDiagnosticsService::default, |svc, _app| {
+        svc.clear_window(window);
+    });
 
     if let Some(f) = driver.on_hot_reload_window {
         #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
@@ -1184,9 +1279,7 @@ fn reset_ui_tree_for_hotpatch(app: &mut App, window: AppWindowId, ui: &mut UiTre
         std::mem::forget(old);
     }
 
-    app.with_global_mut(fret_ui::InternalDragRouteService::default, |svc, _app| {
-        svc.clear_window(window);
-    });
+    fret_ui::internal_drag::clear_window(app, window);
 }
 
 fn hotpatch_drop_old_state() -> bool {

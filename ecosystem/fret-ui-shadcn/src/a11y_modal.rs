@@ -9,6 +9,7 @@ pub(crate) struct ModalA11yRegistry {
     stack: Vec<ModelId>,
     title_by_modal: HashMap<ModelId, GlobalElementId>,
     description_by_modal: HashMap<ModelId, GlobalElementId>,
+    content_max_width_by_modal: HashMap<ModelId, fret_core::Px>,
 }
 
 pub(crate) fn begin_modal_a11y_scope<H: UiHost>(app: &mut H, modal: ModelId) {
@@ -16,6 +17,7 @@ pub(crate) fn begin_modal_a11y_scope<H: UiHost>(app: &mut H, modal: ModelId) {
         reg.stack.push(modal);
         reg.title_by_modal.remove(&modal);
         reg.description_by_modal.remove(&modal);
+        reg.content_max_width_by_modal.remove(&modal);
     });
 }
 
@@ -46,6 +48,26 @@ pub(crate) fn register_modal_description<H: UiHost>(app: &mut H, element: Global
         };
         reg.description_by_modal.insert(active, element);
     });
+}
+
+pub(crate) fn register_modal_content_max_width<H: UiHost>(app: &mut H, max_width: fret_core::Px) {
+    app.with_global_mut(ModalA11yRegistry::default, |reg, _app| {
+        let Some(active) = reg.stack.last().copied() else {
+            return;
+        };
+        reg.content_max_width_by_modal.insert(active, max_width);
+    });
+}
+
+pub(crate) fn modal_content_max_width_for_current_scope<H: UiHost>(
+    app: &mut H,
+) -> Option<fret_core::Px> {
+    app.with_global_mut(ModalA11yRegistry::default, |reg, _app| {
+        let Some(active) = reg.stack.last().copied() else {
+            return None;
+        };
+        reg.content_max_width_by_modal.get(&active).copied()
+    })
 }
 
 pub(crate) fn modal_relations_for_current_scope<H: UiHost>(

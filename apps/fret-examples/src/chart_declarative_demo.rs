@@ -1,9 +1,4 @@
-use fret_app::App;
-use fret_bootstrap::ui_app_with_hooks;
-use fret_core::AppWindowId;
-use fret_runtime::Model;
-use fret_ui::element::AnyElement;
-use fret_ui::{ElementContext, Invalidation};
+use fret_kit::prelude::*;
 
 use delinea::data::{Column, DataTable};
 use delinea::ids::{AxisId, FieldId, StackId};
@@ -20,12 +15,10 @@ struct ChartDeclarativeState {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    ui_app_with_hooks("chart-declarative-demo", init_window, view, |d| d)
-        .with_default_diagnostics()
+    fret_kit::app("chart-declarative-demo", init_window, view)?
         .with_main_window("chart_declarative_demo", (960.0, 720.0))
-        .with_default_config_files()?
-        .run()
-        .map_err(anyhow::Error::from)
+        .run()?;
+    Ok(())
 }
 
 fn init_window(app: &mut App, _window: AppWindowId) -> ChartDeclarativeState {

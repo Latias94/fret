@@ -424,5 +424,5 @@ pub fn run() -> anyhow::Result<()> {
     };
 
     let driver = DockingDemoDriver::default();
-    crate::run_native_demo(config, app, driver).context("run docking_demo app")
+    fret_kit::run_native_demo(config, app, driver).context("run docking_demo app")
 }

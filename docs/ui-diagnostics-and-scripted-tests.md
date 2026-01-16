@@ -1,0 +1,311 @@
+---
+title: UI Diagnostics Bundles & Scripted Interaction Tests
+status: living
+scope: debugging, AI triage, scripted repros
+---
+
+# UI Diagnostics Bundles & Scripted Interaction Tests
+
+This doc describes the current **diagnostics bundle** workflow and the **MVP scripted interaction harness**
+implemented for Fret apps that run through `fret-bootstrap`'s `UiAppDriver`.
+
+The goal is GPUI/Zed-style "inspectable, shareable repro units":
+
+- capture a portable bundle (`bundle.json`) that can be sent to another developer (or an AI tool),
+- select targets by **semantics** (ADR 0033) rather than paint output,
+- run deterministic scripted repros without adding ad-hoc debug UI.
+
+Related ADRs:
+
+- ADR 0174: `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
+- ADR 0033 (Semantics/a11y): `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
+
+## Quick Start (manual bundle dump)
+
+1. Run any demo/app wired via `UiAppDriver` and enable diagnostics:
+
+   - `FRET_DIAG=1`
+
+2. Reproduce the issue.
+
+3. Trigger a dump:
+
+   - `cargo run -p fretboard -- diag poke`
+
+4. Locate the most recent bundle directory:
+
+   - `cargo run -p fretboard -- diag latest`
+   - The bundle file is `bundle.json` under that directory.
+
+By default bundles go under `target/fret-diag/<timestamp>/` and `target/fret-diag/latest.txt` is updated.
+
+## Quick Start (scripted repro)
+
+1. Run the app with diagnostics enabled:
+
+   - `FRET_DIAG=1`
+
+2. (Recommended while authoring scripts) disable redaction so you can see semantics labels in bundles:
+
+   - `FRET_DIAG_REDACT_TEXT=0`
+
+3. Write a `script.json` file (schema v1):
+
+```json
+{
+  "schema_version": 1,
+  "steps": [
+    { "type": "click", "target": { "kind": "role_and_name", "role": "button", "name": "Open" } },
+    { "type": "wait_until", "predicate": { "kind": "exists", "target": { "kind": "role_and_name", "role": "dialog", "name": "Settings" } }, "timeout_frames": 60 },
+    { "type": "type_text", "text": "hello" },
+    { "type": "press_key", "key": "enter" },
+    { "type": "assert", "predicate": { "kind": "focus_is", "target": { "kind": "role_and_name", "role": "text_field", "name": "Search" } } },
+    { "type": "capture_bundle", "label": "after-typing" }
+  ]
+}
+```
+
+4. Push the script into the running app (write `script.json` + touch `script.touch`):
+
+   - `cargo run -p fretboard -- diag script .\\script.json`
+
+   Or run it and wait for a pass/fail result (CI-friendly):
+
+   - `cargo run -p fretboard -- diag run .\\script.json`
+
+   Or run a pre-defined suite (the app must be running):
+
+   - `cargo run -p fretboard -- diag suite ui-gallery`
+
+5. The app executes **one step per frame** (deterministic), and (by default) auto-dumps after actions.
+   Use `cargo run -p fretboard -- diag latest` to grab the newest bundle.
+
+## What's inside `bundle.json`
+
+Bundles are a per-window ring history plus snapshots (schema is versioned and intended to evolve).
+
+At a high level:
+
+- `windows[].events[]`: recent normalized `fret-core::Event` (with redaction controls)
+- `windows[].snapshots[]`: recent `UiDiagnosticsSnapshotV1`
+  - `debug.stats`: layout/paint timings and counters
+  - `debug.layers_in_paint_order`: overlay roots / barrier behavior / hit-test intent
+  - `debug.hit_test`: last pointer position + hit summary
+  - `debug.element_runtime`: `ElementRuntime` window-level state (focus/selection/observed models/globals)
+  - `debug.semantics`: the exported semantics snapshot (ADR 0033) when enabled
+
+For AI triage, the bundle is intentionally self-contained: it is the unit you attach to a bug report.
+
+## Environment variables (current)
+
+Core:
+
+- `FRET_DIAG=1`: enable diagnostics collection.
+- `FRET_DIAG_DIR=...`: output directory (default `target/fret-diag`).
+- `FRET_DIAG_TRIGGER_PATH=...`: dump trigger file (default `<dir>/trigger.touch`).
+- `FRET_DIAG_MAX_EVENTS=...`: ring size for events.
+- `FRET_DIAG_MAX_SNAPSHOTS=...`: ring size for snapshots.
+
+Semantics export:
+
+- `FRET_DIAG_SEMANTICS=0`: disable exporting `debug.semantics` into bundles (default enabled).
+
+Privacy / size:
+
+- `FRET_DIAG_REDACT_TEXT=0`: disable redaction (default enabled).
+- `FRET_DIAG_MAX_DEBUG_STRING_BYTES=...`: cap event debug strings and exported semantics text.
+
+Script harness:
+
+- `FRET_DIAG_SCRIPT_PATH=...`: script JSON path (default `<dir>/script.json`).
+- `FRET_DIAG_SCRIPT_TRIGGER_PATH=...`: script trigger file (default `<dir>/script.touch`).
+- `FRET_DIAG_SCRIPT_RESULT_PATH=...`: script result JSON path (default `<dir>/script.result.json`).
+- `FRET_DIAG_SCRIPT_RESULT_TRIGGER_PATH=...`: script result trigger file (default `<dir>/script.result.touch`).
+- `FRET_DIAG_SCRIPT_AUTO_DUMP=0`: disable auto-dump after steps (default enabled).
+
+## Target selection rules (MVP)
+
+Selection is evaluated against the current `SemanticsSnapshot` (ADR 0033).
+
+Supported selectors (v1 MVP):
+
+- `{"kind":"test_id","id":"open-settings"}` (preferred when available; see "Test IDs")
+- `{"kind":"role_and_name","role":"button","name":"Open"}`
+- `{"kind":"role_and_path","role":"menu_item","name":"Close","ancestors":[{"role":"menu","name":"File"}]}`
+- `{"kind":"node_id","node":123456789}` (low-level / brittle; avoid for real tests)
+
+## Supported scripted steps (v1 MVP)
+
+- `click` (optional `button`: `left`/`right`/`middle`; default `left`)
+- `press_key` (`key`: `escape`, `enter`, `tab`, `space`, `arrow_up/down/left/right`, `home`, `end`, `page_up/down`;
+  optional `modifiers`: `{shift,ctrl,alt,meta}`, optional `repeat`)
+- `type_text`
+- `wait_frames`
+- `wait_until`
+- `assert`
+- `capture_bundle`
+
+Example: right click a context menu trigger
+
+```json
+{ "type": "click", "button": "right", "target": { "kind": "role_and_name", "role": "button", "name": "ContextMenu (right click)" } }
+```
+
+Notes on `role_and_path`:
+
+- `ancestors` are matched as an **ordered subsequence** on the parent chain (outermost -> innermost).
+  - This allows skipping intermediate unlabeled/internal nodes.
+- Order is **outermost -> innermost** (closest parent last).
+- When multiple nodes match a selector, the harness prefers the node under the highest-`z_index` semantics root (topmost overlay),
+  then prefers the deeper node (more specific).
+
+## Test IDs (optional, debug/test-only)
+
+Test IDs are exported as `debug.semantics.nodes[].test_id` and can be targeted by scripts via:
+
+- `{"kind":"test_id","id":"..."}`
+
+Rules:
+
+- Test IDs do not affect accessibility: they are not mapped into AccessKit `name`/`label`.
+- Prefer Test IDs for stable scripts when labels are dynamic or localized.
+- Set them at authoring time on semantics props (examples):
+  - `SemanticsProps.test_id`
+  - `PressableA11y.test_id`
+  - `TextInputProps.test_id`
+  - `TextAreaProps.test_id`
+
+### Supported role strings (MVP)
+
+Use the following lowercase role strings (subset of `SemanticsRole`):
+
+`window`, `dialog`, `alert_dialog`, `panel`,
+`button`, `text_field`,
+`menu_bar`, `menu`, `menu_item`, `menu_item_checkbox`, `menu_item_radio`,
+`tab_list`, `tab`, `tab_panel`,
+`list`, `list_item`, `list_box`, `list_box_option`,
+`checkbox`, `switch`, `slider`, `combo_box`, `radio_group`, `radio_button`,
+`tooltip`, `text`, `tree_item`, `viewport`.
+
+If a selector fails to resolve, the harness will wait and retry on the next frame (deterministic).
+
+## `wait_until` and `assert` (avoiding brittle frame waits)
+
+`wait_until` keeps the script deterministic without relying on wall-clock time:
+
+- the predicate is evaluated once per frame against the current semantics snapshot,
+- it either succeeds and advances, or times out and dumps a failure bundle.
+
+Predicates (v1 MVP):
+
+- `{"kind":"exists","target":<selector>}`
+- `{"kind":"focus_is","target":<selector>}`
+
+## Debugging recipes (Radix primitives / shadcn / overlays)
+
+### 1) "My click didn't hit the button"
+
+Checklist:
+
+1. Dump a bundle right after the click (or enable auto-dumps in scripted repros).
+2. Inspect `debug.layers_in_paint_order` and `debug.hit_test`:
+   - confirm the top layer is hit-testable and not blocking unexpectedly,
+   - confirm `hit` points to the expected node.
+3. Inspect `debug.semantics.nodes[]` to ensure:
+   - the target node has the expected `role` and `label`,
+   - the node's `bounds` encloses the expected point.
+
+GPUI alignment note: scripted selection wants a future "picking mode" that disables caching for hitbox truth.
+Until then, prefer selection by semantics and verify bounds in the bundle.
+
+### 2) Radix-style Dialog / AlertDialog
+
+Radix patterns rely on a modal barrier + focus management.
+
+What to look for:
+
+- `debug.layers_in_paint_order`: the modal root should indicate barrier-like behavior.
+- `debug.semantics.barrier_root`: when a modal is open, background semantics are gated by the barrier.
+
+Script tip:
+
+- ensure dialog triggers and primary actions have stable semantics labels
+  (e.g. `.a11y_label("Open settings")`, `.a11y_label("Confirm")`),
+  then select by `role_and_name`.
+
+### 3) Menus (DropdownMenu / ContextMenu / Menubar)
+
+Menu stacks are overlay-heavy and easy to mis-debug without snapshots.
+
+Recipe:
+
+1. Script:
+   - click the trigger (role `button` or `menu_item` depending on your surface),
+   - wait 1-2 frames,
+   - click the menu item.
+2. Verify `debug.layers_in_paint_order` shows the menu layer as hit-testable.
+3. Verify semantics nodes exist for:
+   - the trigger,
+   - the menu root,
+   - the menu items (role `menu_item*`).
+
+### 4) shadcn components: make semantics labels your "test handles"
+
+shadcn surfaces often already set labels for accessibility or debugging.
+
+Best practice for stable scripted tests:
+
+- assign explicit `.a11y_label("...")` to:
+  - the trigger button,
+  - destructive actions,
+  - menu items,
+  - text fields (search boxes, command palette input).
+
+This keeps tests selector-driven without introducing `test_id` as a styling/policy hook.
+
+## Behavior testing strategy (today)
+
+The current harness is intentionally simple:
+
+- scripts are pushed via file triggers (`script.json` + `script.touch`),
+- execution is deterministic and step-based,
+- each step can dump a bundle for post-mortem debugging.
+
+Recommended workflow:
+
+1. Repro a bug manually once and dump a bundle.
+2. Extract stable selectors from `debug.semantics` (role + label).
+3. Encode a script and run it repeatedly.
+4. Attach the script + the last failing bundle to an issue.
+
+When you use `fretboard diag run`, the running app writes a small status file:
+
+- `script.result.json`: `{run_id, stage, reason, last_bundle_dir, ...}`
+- `script.result.touch`: touched whenever the result is updated (useful for external watchers)
+
+`fretboard diag suite` runs multiple scripts sequentially using the same mechanism.
+
+## Regression suites (starter)
+
+The `tools/diag-scripts/` directory contains curated scripts intended to become a baseline suite.
+For the UI gallery, run:
+
+- `cargo run -p fretboard -- diag suite ui-gallery`
+
+## Troubleshooting
+
+**The app never dumps bundles**
+
+- confirm `FRET_DIAG=1`,
+- confirm the app uses `fret-bootstrap` `UiAppDriver`,
+- run `cargo run -p fretboard -- diag path` and ensure the trigger file is being touched.
+
+**A scripted click never resolves**
+
+- disable redaction while authoring: `FRET_DIAG_REDACT_TEXT=0`,
+- dump a bundle and inspect `debug.semantics.nodes[]` to confirm the label/role,
+- if the UI is mid-transition, add `wait_frames` between steps.
+
+**Multiple windows**
+
+- bundles are per-window; scripts currently execute against the first window that picks up the pending script.

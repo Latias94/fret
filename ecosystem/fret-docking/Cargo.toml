@@ -11,8 +11,10 @@ documentation.workspace = true
 
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
+fret-dnd = { path = "../fret-dnd" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui", features = ["unstable-retained-bridge"] }
+slotmap.workspace = true
 tracing.workspace = true
 
 [features]

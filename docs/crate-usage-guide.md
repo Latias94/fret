@@ -13,6 +13,14 @@ If you are a component author, start with:
 
 ## Quick rules of thumb
 
+### The 5 crate names to remember
+
+- `fret-kit`: desktop-first batteries-included app entry point.
+- `fret-ui-shadcn`: default component surface (apps).
+- `fret-ui-kit`: component authoring glue (ecosystem libraries).
+- `fret`: framework facade for advanced/manual assembly.
+- `fretboard`: dev tooling (templates + native/web runner).
+
 1) If you are writing a reusable ecosystem library, avoid backend crates (`fret-launch`, `winit`, `wgpu`).
 
 2) Prefer this dependency ladder (low → high):
@@ -22,6 +30,14 @@ If you are a component author, start with:
 - `ecosystem/*` (policy layers, component libraries, domain ecosystems)
 - `fret-app` / `fret-bootstrap` (app-level integration and golden-path defaults)
 - `fret-launch` (runner glue, effect draining, presentation)
+
+Desktop-first quick start:
+
+- If you want a single dependency for a native desktop app, use `fret-kit` (ecosystem-level batteries-included wrapper).
+
+Web/wasm quick start (tooling):
+
+- `cargo run -p fretboard -- dev web --demo ui_gallery`
 
 3) Only depend on `fret-app` if you need app-owned integration surfaces:
 
@@ -139,6 +155,12 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 - Call `fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(...)` for an explicit preset, or
 - Enable `fret-ui-shadcn/app-integration` and call `fret_ui_shadcn::install_app(...)` for the golden-path default.
 
+**Tables vs grids (naming and intent):**
+
+- `DataTable`: business-table surface (headless filtering/sorting/pagination + virtualized rows; recipes like toolbar + pagination).
+- `DataGrid` (`DataGridCanvas`): performance ceiling (canvas-rendered, constant-ish UI node count; intended for spreadsheet-scale density).
+- `experimental::DataGridElement`: element-based prototype for rich per-cell UI; not intended for spreadsheet-scale workloads.
+
 ### `fret-icons` + icon packs
 
 - `fret-icons`: renderer-agnostic icon IDs + registry.
@@ -176,6 +198,14 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 - optional UI app driver wiring,
 - optional command palette integration,
 - optional dev hotpatch toggles.
+
+### `fret-kit`
+
+**What it is:** a desktop-first batteries-included convenience crate that composes:
+
+- `fret` (with `native-wgpu`) + `fret-bootstrap` (golden path wiring) + `fret-ui-shadcn` (default component surface).
+
+**Use it when:** you want a working native app with minimal boilerplate and a single memorable dependency.
 
 ### `fret-canvas`
 

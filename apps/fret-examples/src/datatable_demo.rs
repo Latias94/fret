@@ -41,14 +41,16 @@ struct DemoWindowState {
 }
 
 #[derive(Default)]
-struct TanstackDataTableDemoDriver;
+struct DataTableDemoDriver;
 
-impl TanstackDataTableDemoDriver {
+impl DataTableDemoDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> DemoWindowState {
-        let profile_frames_left = std::env::var_os("FRET_TANSTACK_DATATABLE_DEMO_PROFILE_FRAMES")
+        let profile_frames_left = std::env::var_os("FRET_DATATABLE_DEMO_PROFILE_FRAMES")
+            .or_else(|| std::env::var_os("FRET_TANSTACK_DATATABLE_DEMO_PROFILE_FRAMES"))
             .and_then(|v| v.to_string_lossy().parse::<u64>().ok())
             .unwrap_or(0);
-        let exit_after_frames = std::env::var_os("FRET_TANSTACK_DATATABLE_DEMO_EXIT_AFTER_FRAMES")
+        let exit_after_frames = std::env::var_os("FRET_DATATABLE_DEMO_EXIT_AFTER_FRAMES")
+            .or_else(|| std::env::var_os("FRET_TANSTACK_DATATABLE_DEMO_EXIT_AFTER_FRAMES"))
             .and_then(|v| v.to_string_lossy().parse::<u64>().ok());
 
         let rows: Arc<[DemoRow]> = (0..10_000)
@@ -82,7 +84,7 @@ impl TanstackDataTableDemoDriver {
     }
 }
 
-impl WinitAppDriver for TanstackDataTableDemoDriver {
+impl WinitAppDriver for DataTableDemoDriver {
     type WindowState = DemoWindowState;
 
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
@@ -137,7 +139,7 @@ impl WinitAppDriver for TanstackDataTableDemoDriver {
             return;
         }
 
-        if command.as_str() == "tanstack_datatable.close" {
+        if command.as_str() == "datatable_demo.close" {
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
             return;
         }
@@ -191,7 +193,7 @@ impl WinitAppDriver for TanstackDataTableDemoDriver {
         let table_output = state.table_output.clone();
         let root =
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
-                .render_root("tanstack-datatable-demo", move |cx| {
+                .render_root("datatable-demo", move |cx| {
                     cx.observe_model(&table_state, Invalidation::Layout);
                     cx.observe_model(&table_output, Invalidation::Layout);
 
@@ -221,8 +223,8 @@ impl WinitAppDriver for TanstackDataTableDemoDriver {
                     let helper = create_column_helper::<DemoRow>();
                     let columns: Vec<ColumnDef<DemoRow>> = vec![
                         helper.clone().accessor("id", |r| r.id),
-                        helper.clone().accessor("name", |r| r.name.clone()),
-                        helper.clone().accessor("role", |r| r.role.clone()),
+                        helper.clone().accessor_str("name", |r| r.name.as_ref()),
+                        helper.clone().accessor_str("role", |r| r.role.as_ref()),
                         helper.accessor("score", |r| r.score),
                     ];
                     let columns: Arc<[ColumnDef<DemoRow>]> = columns.into();
@@ -252,7 +254,7 @@ impl WinitAppDriver for TanstackDataTableDemoDriver {
                                 Button::new("Close")
                                     .variant(ButtonVariant::Outline)
                                     .size(ButtonSize::Sm)
-                                    .on_click(CommandId::from("tanstack_datatable.close"))
+                                    .on_click(CommandId::from("datatable_demo.close"))
                                     .into_element(cx),
                                 cx.text(Arc::from(format!(
                                     "DataTable | selected={selected} sort={sorting}"
@@ -374,7 +376,7 @@ impl WinitAppDriver for TanstackDataTableDemoDriver {
             let since_start = state.started_at.elapsed();
             let frame_elapsed = frame_started.elapsed();
             tracing::info!(
-                "tanstack_datatable_demo: frame={} since_start={:.2}ms total={:.2}ms layout={:.2}ms paint={:.2}ms",
+                "datatable_demo: frame={} since_start={:.2}ms total={:.2}ms layout={:.2}ms paint={:.2}ms",
                 state.frame,
                 since_start.as_secs_f64() * 1000.0,
                 frame_elapsed.as_secs_f64() * 1000.0,
@@ -418,11 +420,11 @@ pub fn run() -> anyhow::Result<()> {
     app.set_global(PlatformCapabilities::default());
 
     let config = WinitRunnerConfig {
-        main_window_title: "fret-demo tanstack_datatable_demo".to_string(),
+        main_window_title: "fret-demo datatable_demo".to_string(),
         main_window_size: winit::dpi::LogicalSize::new(980.0, 720.0),
         ..Default::default()
     };
 
-    crate::run_native_demo(config, app, TanstackDataTableDemoDriver::default())
-        .context("run tanstack_datatable_demo app")
+    crate::run_native_demo(config, app, DataTableDemoDriver::default())
+        .context("run datatable_demo app")
 }

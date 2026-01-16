@@ -12,6 +12,15 @@ type OpenAction = "click" | "hover" | "contextmenu" | "keys"
 type OpenPoint = { abs: { x: number; y: number }; rel: { x: number; y: number } }
 type OpenMeta = { action: OpenAction; selector: string; point: { x: number; y: number } }
 
+type OpenVariant = { variant: string; selector: string }
+
+type KeyChord = { modifiers: string[]; key: string }
+
+type OpenStep =
+  | { action: "wait"; waitMs: number }
+  | { action: Exclude<OpenAction, "keys">; selector: string }
+  | { action: "keys"; selector: string; keys: KeyChord[] }
+
 type GoldenOptions = {
   baseUrl: string
   style: string
@@ -24,6 +33,9 @@ type GoldenOptions = {
   timeoutMs: number
   openSelector?: string
   openAction?: OpenAction
+  openKeys?: KeyChord
+  openSteps?: OpenStep[]
+  openVariants?: OpenVariant[]
   mergeThemes?: boolean
 }
 
@@ -32,6 +44,7 @@ type GoldenFile = {
   style: string
   name: string
   mode?: Mode
+  variant?: string
   themes: Record<string, unknown>
 }
 
@@ -68,6 +81,215 @@ function round3(v: number) {
 
 function ensureDir(dir: string) {
   fs.mkdirSync(dir, { recursive: true })
+}
+
+function parseOpenVariants(raw: string): OpenVariant[] {
+  const parts = raw
+    .split(";")
+    .map((p) => p.trim())
+    .filter(Boolean)
+
+  const out: OpenVariant[] = []
+  for (const part of parts) {
+    const eq = part.indexOf("=")
+    if (eq === -1) {
+      throw new Error(
+        `invalid --openVariants entry "${part}" (expected "<variant>=<css>")`
+      )
+    }
+    const variant = part.slice(0, eq).trim()
+    const selector = part.slice(eq + 1).trim()
+    if (!variant) {
+      throw new Error(`invalid --openVariants entry "${part}" (empty variant)`)
+    }
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(variant)) {
+      throw new Error(
+        `invalid --openVariants variant "${variant}" (expected [a-zA-Z0-9][a-zA-Z0-9_-]*)`
+      )
+    }
+    if (!selector) {
+      throw new Error(
+        `invalid --openVariants entry "${part}" (empty selector for variant=${variant})`
+      )
+    }
+    out.push({ variant, selector })
+  }
+
+  return out
+}
+
+function normalizeKeyToken(raw: string): string {
+  const v = raw.trim()
+  if (!v) return v
+
+  const lower = v.toLowerCase()
+  if (lower === "ctrl" || lower === "control") return "Control"
+  if (lower === "cmd" || lower === "command" || lower === "meta" || lower === "win")
+    return "Meta"
+  if (lower === "alt" || lower === "option") return "Alt"
+  if (lower === "shift") return "Shift"
+
+  // Let callers pass Puppeteer key codes directly (e.g. "KeyJ", "Digit1", "F10").
+  if (/^(Key[A-Z]|Digit[0-9]|F[0-9]{1,2}|Arrow(Up|Down|Left|Right))$/.test(v)) return v
+
+  if (/^[a-zA-Z]$/.test(v)) return `Key${v.toUpperCase()}`
+  if (/^[0-9]$/.test(v)) return `Digit${v}`
+
+  // Common named keys.
+  if (
+    [
+      "Enter",
+      "Escape",
+      "Tab",
+      "Backspace",
+      "Delete",
+      "Space",
+      "Home",
+      "End",
+      "PageUp",
+      "PageDown",
+    ].includes(v)
+  ) {
+    return v
+  }
+
+  throw new Error(`invalid key token "${raw}"`)
+}
+
+function parseOpenKeys(raw: string): KeyChord {
+  const parts = raw
+    .split("+")
+    .map((p) => p.trim())
+    .filter(Boolean)
+
+  if (parts.length === 0) {
+    throw new Error(`invalid --openKeys="${raw}" (empty chord)`)
+  }
+
+  const norm = parts.map(normalizeKeyToken)
+  const key = norm[norm.length - 1]
+  const modifiers = norm.slice(0, -1)
+
+  for (const m of modifiers) {
+    if (m !== "Shift" && m !== "Control" && m !== "Alt" && m !== "Meta") {
+      throw new Error(
+        `invalid --openKeys="${raw}" (modifier "${m}" must be Shift|Control|Alt|Meta)`
+      )
+    }
+  }
+
+  // De-dupe modifiers while preserving order.
+  const dedupedMods: string[] = []
+  for (const m of modifiers) {
+    if (!dedupedMods.includes(m)) dedupedMods.push(m)
+  }
+
+  return { modifiers: dedupedMods, key }
+}
+
+function parseKeySequence(raw: string): KeyChord[] {
+  const v = raw.trim()
+  if (!v) {
+    throw new Error(`invalid key sequence "${raw}" (empty)`)
+  }
+
+  // Treat any "+" as a chord spec (e.g. "Shift+F10", "Control+KeyJ").
+  if (v.includes("+")) {
+    return [parseOpenKeys(v)]
+  }
+
+  const tokens = v
+    .split(/[,\s]+/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+
+  if (tokens.length === 0) {
+    throw new Error(`invalid key sequence "${raw}" (empty)`)
+  }
+
+  return tokens.map((t) => ({ modifiers: [], key: normalizeKeyToken(t) }))
+}
+
+function parseOpenSteps(raw: string, openKeys: KeyChord | undefined): OpenStep[] {
+  const parts = raw
+    .split(";")
+    .map((p) => p.trim())
+    .filter(Boolean)
+
+  const out: OpenStep[] = []
+  for (const part of parts) {
+    const eq = part.indexOf("=")
+    if (eq === -1) {
+      throw new Error(
+        `invalid --openSteps entry "${part}" (expected "<action>=<value>")`
+      )
+    }
+
+    const actionRaw = part.slice(0, eq).trim()
+    const valueRaw = part.slice(eq + 1).trim()
+
+    if (actionRaw === "wait") {
+      const waitMs = Number(valueRaw)
+      if (!Number.isFinite(waitMs) || waitMs < 0) {
+        throw new Error(
+          `invalid --openSteps wait="${valueRaw}" (expected non-negative ms)`
+        )
+      }
+      out.push({ action: "wait", waitMs })
+      continue
+    }
+
+    if (!valueRaw) {
+      throw new Error(
+        `invalid --openSteps entry "${part}" (empty value for action=${actionRaw})`
+      )
+    }
+
+    if (actionRaw === "keys") {
+      let selector = valueRaw
+      let keysSpec: string | undefined
+
+      const at = valueRaw.indexOf("@")
+      if (at !== -1) {
+        selector = valueRaw.slice(0, at).trim()
+        keysSpec = valueRaw.slice(at + 1).trim()
+        if (!selector || !keysSpec) {
+          throw new Error(
+            `invalid --openSteps entry "${part}" (expected "keys=<selector>@<keys>")`
+          )
+        }
+      }
+
+      const keys = keysSpec
+        ? parseKeySequence(keysSpec)
+        : openKeys
+          ? [openKeys]
+          : null
+
+      if (!keys) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (action=keys requires "<selector>@<keys>" or --openKeys=... / OPEN_KEYS=...)`
+        )
+      }
+
+      out.push({ action: "keys", selector, keys })
+      continue
+    }
+
+    if (
+      actionRaw !== "click" &&
+      actionRaw !== "hover" &&
+      actionRaw !== "contextmenu"
+    ) {
+      throw new Error(
+        `invalid --openSteps action "${actionRaw}" (expected click|hover|contextmenu|keys|wait)`
+      )
+    }
+
+    out.push({ action: actionRaw, selector: valueRaw } as OpenStep)
+  }
+
+  return out
 }
 
 function resolveBrowserExecutablePath(): string | undefined {
@@ -333,7 +555,8 @@ async function openOverlay(
   name: string,
   timeoutMs: number,
   openSelector: string | undefined,
-  openAction: OpenAction
+  openAction: OpenAction,
+  openKeys: KeyChord | undefined
 ) {
   const rootSel = "[data-fret-golden-target]"
   const debug = process.env.DEBUG_GOLDENS === "1"
@@ -384,6 +607,10 @@ async function openOverlay(
       `${rootSel} button`,
       `${rootSel}`
     )
+  } else if (openAction === "keys") {
+    // Keyboard-triggered pages may not render a clickable trigger (e.g. `command-dialog`).
+    // Focus a stable node so the page receives key events.
+    selectorCandidates.push(`${rootSel}`)
   } else {
     selectorCandidates.push(
       `${rootSel} [role='combobox'][aria-expanded='false']`,
@@ -397,6 +624,16 @@ async function openOverlay(
 
   const waitExpr = `(() => {
     const root = document.querySelector("${rootSel}") || document.body;
+    ${
+      name === "navigation-menu-demo"
+        ? `
+    // NavigationMenu does not portal its viewport by default, so "open" state stays within the
+    // golden root. Treat an open viewport/content as success for open-mode extraction.
+    if (root.querySelector("[data-slot='navigation-menu-viewport'][data-state='open']")) return true;
+    if (root.querySelector("[data-slot='navigation-menu-content'][data-state='open']")) return true;
+    `
+        : ""
+    }
     const outside = (sel) =>
       Array.from(document.querySelectorAll(sel)).filter((el) => !root.contains(el));
 
@@ -448,10 +685,20 @@ async function openOverlay(
         })
       } else if (openAction === "keys") {
         await page.focus(sel)
-        // Prefer the cross-platform "Shift+F10" policy for context menus, otherwise try Enter.
-        await page.keyboard.down("Shift")
-        await page.keyboard.press("F10")
-        await page.keyboard.up("Shift")
+        if (openKeys) {
+          for (const mod of openKeys.modifiers) {
+            await page.keyboard.down(mod)
+          }
+          await page.keyboard.press(openKeys.key)
+          for (const mod of [...openKeys.modifiers].reverse()) {
+            await page.keyboard.up(mod)
+          }
+        } else {
+          // Default key open policy: "Shift+F10" (common cross-platform context menu shortcut).
+          await page.keyboard.down("Shift")
+          await page.keyboard.press("F10")
+          await page.keyboard.up("Shift")
+        }
       } else {
         await page.mouse.click(point.abs.x, point.abs.y, {
           button: "left",
@@ -494,10 +741,128 @@ async function openOverlay(
   } satisfies OpenMeta
 }
 
+async function openOverlayOutsideCounts(
+  page: puppeteer.Page,
+  rootSel: string
+): Promise<{ popperWrapper: number; roleMenu: number; roleDialog: number; dataStateOpen: number }> {
+  const expr = `(() => {
+    const root = document.querySelector(${JSON.stringify(rootSel)}) || document.body;
+    const outsideCount = (sel) =>
+      Array.from(document.querySelectorAll(sel)).filter((el) => !root.contains(el)).length;
+
+    return {
+      popperWrapper: outsideCount("[data-radix-popper-content-wrapper]"),
+      roleMenu: outsideCount("[role='menu']"),
+      roleDialog: outsideCount("[role='dialog']"),
+      dataStateOpen: outsideCount("[data-state='open']"),
+    };
+  })()`
+  return (await page.evaluate(expr)) as {
+    popperWrapper: number
+    roleMenu: number
+    roleDialog: number
+    dataStateOpen: number
+  }
+}
+
+async function applyOpenSteps(
+  page: puppeteer.Page,
+  name: string,
+  timeoutMs: number,
+  steps: OpenStep[],
+  rootSel: string
+) {
+  const debug = process.env.DEBUG_GOLDENS === "1"
+
+  for (const [idx, step] of steps.entries()) {
+    if (step.action === "wait") {
+      if (debug) console.log(`- openSteps: ${name} step[${idx}] wait ${step.waitMs}ms`)
+      await new Promise((r) => setTimeout(r, step.waitMs))
+      continue
+    }
+
+    const baseline = await openOverlayOutsideCounts(page, rootSel)
+
+    if (debug) {
+      console.log(
+        `- openSteps: ${name} step[${idx}] ${step.action} ${step.selector} (baseline popper=${baseline.popperWrapper}, menu=${baseline.roleMenu})`
+      )
+    }
+
+    const point = await (async () => {
+      const expr = `(() => {
+        const rootSel = ${JSON.stringify(rootSel)};
+        const sel = ${JSON.stringify(step.selector)};
+
+        const root = document.querySelector(rootSel) || document.body;
+        const el = document.querySelector(sel);
+        if (!el || !(el instanceof Element)) return null;
+
+        el.scrollIntoView({ block: "center", inline: "center" });
+        const r = el.getBoundingClientRect();
+        return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+      })()`
+      return (await page.evaluate(expr)) as { x: number; y: number } | null
+    })()
+
+    if (!point) {
+      throw new Error(`openSteps failed for ${name}: selector not found: ${step.selector}`)
+    }
+
+    if (step.action === "hover") {
+      await page.mouse.move(point.x, point.y, { steps: 4 })
+    } else if (step.action === "contextmenu") {
+      await page.mouse.click(point.x, point.y, { button: "right", delay: 10 })
+    } else if (step.action === "keys") {
+      await page.focus(step.selector)
+      for (const chord of step.keys) {
+        for (const mod of chord.modifiers) {
+          await page.keyboard.down(mod)
+        }
+        await page.keyboard.press(chord.key)
+        for (const mod of [...chord.modifiers].reverse()) {
+          await page.keyboard.up(mod)
+        }
+      }
+    } else {
+      await page.mouse.click(point.x, point.y, { button: "left", delay: 10 })
+    }
+
+    // Wait for a new portal-ish surface to appear (submenu, nested menu, etc.).
+    const waitExpr = `(() => {
+      const root = document.querySelector(${JSON.stringify(rootSel)}) || document.body;
+      const outsideCount = (sel) =>
+        Array.from(document.querySelectorAll(sel)).filter((el) => !root.contains(el)).length;
+
+      const popperWrapper = outsideCount("[data-radix-popper-content-wrapper]");
+      const roleMenu = outsideCount("[role='menu']");
+      const roleDialog = outsideCount("[role='dialog']");
+      const dataStateOpen = outsideCount("[data-state='open']");
+
+      return (
+        popperWrapper > ${baseline.popperWrapper} ||
+        roleMenu > ${baseline.roleMenu} ||
+        roleDialog > ${baseline.roleDialog} ||
+        dataStateOpen > ${baseline.dataStateOpen}
+      );
+    })()`
+
+    await waitForExpr(page, waitExpr, Math.min(timeoutMs, 2500))
+    await waitForFonts(page, Math.min(2000, timeoutMs))
+  }
+}
+
 function inferOpenAction(name: string): OpenAction {
   if (name === "context-menu-demo") return "contextmenu"
   if (name === "tooltip-demo" || name === "hover-card-demo") return "hover"
+  if (name === "command-dialog") return "keys"
   return "click"
+}
+
+function inferOpenKeys(name: string): KeyChord | null {
+  // `command-dialog` toggles on keydown: (metaKey || ctrlKey) + "j".
+  if (name === "command-dialog") return parseOpenKeys("Control+KeyJ")
+  return null
 }
 
 async function disableMotion(page: puppeteer.Page) {
@@ -924,120 +1289,147 @@ async function run(options: GoldenOptions): Promise<string[]> {
 
     for (const name of options.names) {
       for (const mode of options.modes) {
-        const suffix = mode === "closed" ? "" : `.${mode}`
-        const outPath = path.join(options.outDir, `${name}${suffix}.json`)
-        if (!options.update && fs.existsSync(outPath)) {
-          continue
-        }
+        const variants =
+          mode === "open" && options.openVariants && options.openVariants.length > 0
+            ? options.openVariants
+            : [null]
 
-        const out: GoldenFile = (() => {
-          if (options.mergeThemes && fs.existsSync(outPath)) {
-            const existing = JSON.parse(fs.readFileSync(outPath, "utf8")) as GoldenFile
-            const existingMode = existing.mode ?? "closed"
-            if (
-              existing.version !== 1 ||
-              existing.style !== options.style ||
-              existing.name !== name ||
-              existingMode !== mode
-            ) {
-              throw new Error(
-                `refusing to merge themes into ${outPath} (mismatched header)`
-              )
-            }
-            return existing
+        for (const variant of variants) {
+          const variantSuffix = variant ? `.${variant.variant}` : ""
+          const suffix = mode === "closed" ? "" : `${variantSuffix}.${mode}`
+          const outPath = path.join(options.outDir, `${name}${suffix}.json`)
+          if (!options.update && fs.existsSync(outPath)) {
+            continue
           }
 
-          return {
-            version: 1,
-            style: options.style,
-            name,
-            mode,
-            themes: {},
-          }
-        })()
-
-        let ok = true
-        for (const theme of options.themes) {
-          const url = `${options.baseUrl}/view/${options.style}/${name}`
-          try {
-            const page = pagesByTheme[theme]
-
-            if (debug) console.log(`- goto: ${name}${suffix} (${theme})`)
-            await page.goto(url, {
-              waitUntil: "networkidle2",
-              timeout: options.timeoutMs,
-            })
-            await page.waitForSelector("body", { timeout: 30000 })
-            if (debug) console.log(`- ensureGoldenTarget: ${name}${suffix} (${theme})`)
-            await ensureGoldenTarget(page)
-            await page.waitForSelector("[data-fret-golden-target]", { timeout: 30000 })
-            if (debug) console.log(`- injectCssLinks: ${name}${suffix} (${theme})`)
-            await injectCssLinks(page, cssInjectionUrls)
-
-            // Ensure stable geometry: shadcn overlays use enter/exit animations that can affect
-            // `getBoundingClientRect()` if captured mid-transition.
-            await disableMotion(page)
-
-            await page.evaluate(`(() => {
-              const indicator = document.querySelector("[data-tailwind-indicator]");
-              if (indicator) indicator.remove();
-            })()`)
-
-            await waitForFonts(page, Math.min(2000, options.timeoutMs))
-            if (debug) console.log(`- waitForShadcnStyles: ${name}${suffix} (${theme})`)
-            await waitForShadcnStyles(page, Math.min(30000, options.timeoutMs))
-
-            let openMeta: OpenMeta | null = null
-            if (mode === "open") {
-              const action = options.openAction ?? inferOpenAction(name)
-              openMeta = await openOverlay(
-                page,
-                name,
-                options.timeoutMs,
-                options.openSelector,
-                action
-              )
+          const out: GoldenFile = (() => {
+            if (options.mergeThemes && fs.existsSync(outPath)) {
+              const existing = JSON.parse(fs.readFileSync(outPath, "utf8")) as GoldenFile
+              const existingMode = existing.mode ?? "closed"
+              if (
+                existing.version !== 1 ||
+                existing.style !== options.style ||
+                existing.name !== name ||
+                existingMode !== mode
+              ) {
+                throw new Error(
+                  `refusing to merge themes into ${outPath} (mismatched header)`
+                )
+              }
+              return existing
             }
 
-            if (debug) console.log(`- extractOne: ${name}${suffix} (${theme})`)
-            const extracted = await extractOne(page)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            ;(extracted as any).open = openMeta
-            // Normalize a few floats that may slip through as high precision.
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            ;(extracted as any).devicePixelRatio = round3(
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              (extracted as any).devicePixelRatio
-            )
+            return {
+              version: 1,
+              style: options.style,
+              name,
+              mode,
+              variant: variant?.variant,
+              themes: {},
+            }
+          })()
 
-            ;(out.themes as Record<string, unknown>)[theme] = extracted
-          } catch (error) {
-            ok = false
-            const msg = `${name}${suffix} (${theme}): ${String(error)}`
-            failures.push(msg)
-            console.error(`! failed ${name}${suffix} (${theme})`)
-            console.error(`  url: ${url}`)
-            console.error(`  error: ${String(error)}`)
-
-            // Try to recover by recreating the page for this theme so later iterations can continue.
+          let ok = true
+          for (const theme of options.themes) {
+            const url = `${options.baseUrl}/view/${options.style}/${name}`
             try {
-              await pagesByTheme[theme].close()
-            } catch {
-              // ignore
-            }
-            const page = await browser.newPage()
-            page.setDefaultTimeout(options.timeoutMs)
-            await page.emulateMediaFeatures([
-              { name: "prefers-reduced-motion", value: "reduce" },
-            ])
-            await setThemeBeforeLoad(page, theme as Theme)
-            pagesByTheme[theme] = page
-          }
-        }
+              const page = pagesByTheme[theme]
 
-        if (ok) {
-          writeIfChanged(outPath, out, options.update)
-          console.log(`- wrote ${path.relative(process.cwd(), outPath)}`)
+              if (debug) console.log(`- goto: ${name}${suffix} (${theme})`)
+              await page.goto(url, {
+                waitUntil: "networkidle2",
+                timeout: options.timeoutMs,
+              })
+              await page.waitForSelector("body", { timeout: 30000 })
+              if (debug) {
+                console.log(`- ensureGoldenTarget: ${name}${suffix} (${theme})`)
+              }
+              await ensureGoldenTarget(page)
+              await page.waitForSelector("[data-fret-golden-target]", { timeout: 30000 })
+              if (debug) console.log(`- injectCssLinks: ${name}${suffix} (${theme})`)
+              await injectCssLinks(page, cssInjectionUrls)
+
+              // Ensure stable geometry: shadcn overlays use enter/exit animations that can affect
+              // `getBoundingClientRect()` if captured mid-transition.
+              await disableMotion(page)
+
+              await page.evaluate(`(() => {
+                const indicator = document.querySelector("[data-tailwind-indicator]");
+                if (indicator) indicator.remove();
+              })()`)
+
+              await waitForFonts(page, Math.min(2000, options.timeoutMs))
+              if (debug) console.log(`- waitForShadcnStyles: ${name}${suffix} (${theme})`)
+              await waitForShadcnStyles(page, Math.min(30000, options.timeoutMs))
+
+              let openMeta: OpenMeta | null = null
+              if (mode === "open") {
+                const action = options.openAction ?? inferOpenAction(name)
+                const selector = variant?.selector ?? options.openSelector
+                const keys =
+                  action === "keys"
+                    ? options.openKeys ?? inferOpenKeys(name) ?? undefined
+                    : undefined
+                openMeta = await openOverlay(
+                  page,
+                  name,
+                  options.timeoutMs,
+                  selector,
+                  action,
+                  keys
+                )
+
+                if (options.openSteps && options.openSteps.length > 0) {
+                  await applyOpenSteps(
+                    page,
+                    name,
+                    options.timeoutMs,
+                    options.openSteps,
+                    "[data-fret-golden-target]"
+                  )
+                }
+              }
+
+              if (debug) console.log(`- extractOne: ${name}${suffix} (${theme})`)
+              const extracted = await extractOne(page)
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              ;(extracted as any).open = openMeta
+              // Normalize a few floats that may slip through as high precision.
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              ;(extracted as any).devicePixelRatio = round3(
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (extracted as any).devicePixelRatio
+              )
+
+              ;(out.themes as Record<string, unknown>)[theme] = extracted
+            } catch (error) {
+              ok = false
+              const msg = `${name}${suffix} (${theme}): ${String(error)}`
+              failures.push(msg)
+              console.error(`! failed ${name}${suffix} (${theme})`)
+              console.error(`  url: ${url}`)
+              console.error(`  error: ${String(error)}`)
+
+              // Try to recover by recreating the page for this theme so later iterations can continue.
+              try {
+                await pagesByTheme[theme].close()
+              } catch {
+                // ignore
+              }
+              const page = await browser.newPage()
+              page.setDefaultTimeout(options.timeoutMs)
+              await page.emulateMediaFeatures([
+                { name: "prefers-reduced-motion", value: "reduce" },
+              ])
+              await setThemeBeforeLoad(page, theme as Theme)
+              pagesByTheme[theme] = page
+            }
+          }
+
+          if (ok) {
+            writeIfChanged(outPath, out, options.update)
+            console.log(`- wrote ${path.relative(process.cwd(), outPath)}`)
+          }
         }
       }
     }
@@ -1116,6 +1508,13 @@ const openSelector =
   process.env.OPEN_SELECTOR ??
   undefined
 
+const openVariantsRaw =
+  (typeof flags.openVariants === "string" ? flags.openVariants : undefined) ??
+  process.env.OPEN_VARIANTS ??
+  undefined
+
+const openVariants = openVariantsRaw ? parseOpenVariants(openVariantsRaw) : undefined
+
 const openActionRaw =
   (typeof flags.openAction === "string" ? flags.openAction : undefined) ??
   process.env.OPEN_ACTION ??
@@ -1131,6 +1530,20 @@ const openAction = (() => {
     `invalid --openAction=${openActionRaw} (expected click|hover|contextmenu|keys)`
   )
 })()
+
+const openKeysRaw =
+  (typeof flags.openKeys === "string" ? flags.openKeys : undefined) ??
+  process.env.OPEN_KEYS ??
+  undefined
+
+const openKeys = openKeysRaw ? parseOpenKeys(openKeysRaw) : undefined
+
+const openStepsRaw =
+  (typeof flags.openSteps === "string" ? flags.openSteps : undefined) ??
+  process.env.OPEN_STEPS ??
+  undefined
+
+const openSteps = openStepsRaw ? parseOpenSteps(openStepsRaw, openKeys) : undefined
 
 const defaultNames = ["button-default", "tabs-demo"]
 const all = flags.all === true || process.env.ALL_GOLDENS === "1"
@@ -1181,6 +1594,9 @@ try {
   console.log(`- timeoutMs: ${timeoutMs}`)
   console.log(`- update: ${update ? "yes" : "no (skip existing)"}`)
   console.log(`- all: ${all ? "yes" : "no"}`)
+  console.log(`- openVariants: ${openVariants?.length ?? 0}`)
+  console.log(`- openKeys: ${openKeys ? `${openKeys.modifiers.join("+")}+${openKeys.key}` : ""}`)
+  console.log(`- openSteps: ${openSteps?.length ?? 0}`)
 
   const finalNames = await resolveNames()
   console.log(`- names: ${finalNames.length}`)
@@ -1197,6 +1613,9 @@ try {
     timeoutMs,
     openSelector,
     openAction,
+    openKeys,
+    openSteps,
+    openVariants,
     mergeThemes: flags.mergeThemes === true || process.env.MERGE_THEMES === "1",
   })
 

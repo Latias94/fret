@@ -196,15 +196,20 @@ impl Dialog {
                     crate::a11y_modal::begin_modal_a11y_scope(cx.app, open_id);
                     let content = content(cx);
                     content_element_for_trigger.set(Some(content.id));
+                    let max_w_hint =
+                        crate::a11y_modal::modal_content_max_width_for_current_scope(cx.app)
+                            .unwrap_or(Px(512.0));
                     crate::a11y_modal::end_modal_a11y_scope(cx.app, open_id);
                     let last_size = cx.last_bounds_for_element(content.id).map(|r| r.size);
 
-                    // These defaults match upstream's `sm:max-w-lg` intent and provide a stable
-                    // first-frame anchor without forcing a fixed size.
-                    let desired_w = last_size.map(|s| s.width).unwrap_or(Px(512.0));
-                    let desired_h = last_size.map(|s| s.height).unwrap_or(Px(320.0));
+                    // Upstream uses `w-full` + `max-w-*`, so dialog width should not collapse to
+                    // intrinsic content. We compute a width hint from the modal content and clamp
+                    // it to the available viewport space (matches `max-w-[calc(100%-2rem)]`).
+                    let content_w = Px(max_w_hint.0.min(available_w.0).max(0.0));
 
-                    let content_w = Px(desired_w.0.min(available_w.0).max(0.0));
+                    // Height remains content-driven; use last-frame bounds as a stable anchor for
+                    // the open zoom transform origin and placement.
+                    let desired_h = last_size.map(|s| s.height).unwrap_or(Px(320.0));
                     let content_h = Px(desired_h.0.min(available_h.0).max(0.0));
 
                     let left = Px(outer.origin.x.0
@@ -227,6 +232,10 @@ impl Dialog {
                             left: Some(left),
                             right: None,
                             bottom: None,
+                        },
+                        size: SizeStyle {
+                            width: Length::Px(content_w),
+                            ..Default::default()
                         },
                         overflow: Overflow::Visible,
                         ..Default::default()
@@ -343,6 +352,15 @@ impl DialogContent {
             .w_full()
             .max_w(MetricRef::Px(Px(512.0)))
             .merge(self.layout);
+
+        if let Some(max_w) = layout
+            .size
+            .as_ref()
+            .and_then(|s| s.max_width.as_ref())
+            .map(|m| m.resolve(&theme))
+        {
+            crate::a11y_modal::register_modal_content_max_width(cx.app, max_w);
+        }
 
         let props = decl_style::container_props(&theme, chrome, layout);
         let children = self.children;

@@ -217,6 +217,36 @@ The recommended direction is to replace this with an explicit internal-drag rout
 - Widgets that care about cross-window drags (DockSpace, Project panel drop targets) react to
   internal-drag events instead of relying on cross-window pointer move broadcasting.
 
+##### Internal drag drop targets (mechanism, not policy)
+
+To make internal-drag drop targets composable and deterministic, the UI runtime provides two
+mechanism-only routing layers:
+
+1. **Hit-test derived targets via `InternalDragRegion`**:
+   - Declarative trees can wrap a subtree with an `InternalDragRegion` element.
+   - When dispatching `Event::InternalDrag`, the runtime prefers the closest (deepest) enabled
+     `InternalDragRegion` ancestor of the hit-tested node as the dispatch target.
+   - If no `InternalDragRegion` exists in the ancestor chain, dispatch falls back to normal
+     hit-testing (the hit-tested node + bubbling).
+
+   This encourages a common “drop zone” pattern (pane surface, tab strip, list) that does not depend
+   on child widgets and reduces accidental coupling between policy and hit-testing details.
+
+2. **Explicit overrides via `InternalDragRouteService`**:
+   - Some drag flows need to route to a stable anchor even when hit-testing fails or the pointer is
+     outside all windows (e.g. docking tear-off follow).
+   - App/policy layers can register per-window overrides keyed by `(window, drag_kind)`.
+   - When the runner marks a drag session as `cross_window_hover`, internal drag events may be routed
+     to that anchor node.
+
+`InternalDragRegion` is the “normal” path for in-window drop targets; `InternalDragRouteService` is
+an escape hatch for special cases that cannot rely on hit-testing.
+
+Note on payloads:
+
+- `DragSession.payload` is type-erased and should not be relied on for most policy-layer DnD flows.
+  Prefer app-owned `Model` state keyed by pointer/session id (so action hooks remain object-safe).
+
 Benefits:
 
 - Removes runner-level “DockPanel” special-cases and reduces accidental side-effects on unrelated widgets.
@@ -227,6 +257,9 @@ Implementation status:
 
 - Prototype implemented: dock drag uses `Event::InternalDrag` for cross-window hover/drop, and the runner no longer
   broadcasts `PointerEvent::Move` across windows.
+- Declarative internal drag targets: `InternalDragRegion` element + handler (`crates/fret-ui/src/element.rs`,
+  `crates/fret-ui/src/declarative/host_widget/event/internal_drag_region.rs`) and dispatch targeting in
+  `crates/fret-ui/src/tree/dispatch.rs`.
 - Runner invariant: on mouse button release, the runner ends any active **cross-window** internal drag session to
   prevent "stuck" drags if no widget consumes the `InternalDrag::Drop` (or if the drop target is missing).
 - Runner tracking note: while a cross-window drag is active, the runner may update screen-space cursor position using

@@ -9,18 +9,7 @@ pub(crate) fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(
     app: fret_app::App,
     driver: D,
 ) -> anyhow::Result<()> {
-    use anyhow::Context as _;
-    use fret_bootstrap::BootstrapBuilder;
-
-    BootstrapBuilder::new(app, driver)
-        .configure(move |c| {
-            *c = config;
-        })
-        .with_default_config_files()
-        .context("load layered config files (settings/keymap)")?
-        .with_lucide_icons()
-        .run()
-        .map_err(anyhow::Error::from)
+    fret_kit::run_native_demo(config, app, driver).map_err(anyhow::Error::from)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -41,6 +30,10 @@ pub mod chart_multi_axis_demo;
 pub mod chart_stress_demo;
 pub mod cjk_conformance_demo;
 pub mod components_gallery;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod datatable_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod date_picker_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod docking_arbitration_demo;
 #[cfg(not(target_arch = "wasm32"))]
@@ -102,8 +95,6 @@ pub mod table_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod table_stress_demo;
 pub mod tags_demo;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod tanstack_datatable_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod todo_demo;
 #[cfg(not(target_arch = "wasm32"))]

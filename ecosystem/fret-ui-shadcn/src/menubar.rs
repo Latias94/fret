@@ -3,16 +3,16 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle,
-    TextWrap,
+    Color, Corners, Edges, FontId, FontWeight, Px, Rect, SemanticsRole, Size, TextOverflow,
+    TextStyle, TextWrap,
 };
 use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis, ScrollProps,
-    SemanticsProps, SizeStyle, TextProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
+    Overflow, PositionStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
+    ScrollAxis, ScrollProps, SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -38,23 +38,26 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
-fn menu_panel_desired_size(entries: &[MenubarEntry], font_line_height: Px, pad_y: Px) -> Size {
+fn menu_panel_desired_size(
+    entries: &[MenubarEntry],
+    min_width: Px,
+    font_line_height: Px,
+    pad_y: Px,
+) -> Size {
     let item_line = font_line_height.0.max(16.0);
     let row_height = Px(item_line + pad_y.0 * 2.0);
 
-    // The panel uses `padding: 6px` on all sides.
-    let mut height = Px(12.0);
+    // new-york-v4: menu panels use `p-1` + `border`.
+    let mut height = Px(10.0);
 
     for entry in entries {
         match entry {
             MenubarEntry::Separator => {
-                // `Separator`: 1px line + `my-1` (4px top + 4px bottom).
+                // new-york-v4: `Separator` uses `-mx-1 my-1` (1px line + 4px + 4px).
                 height.0 += 9.0;
             }
-            MenubarEntry::Label(_) => {
-                height.0 += row_height.0;
-            }
-            MenubarEntry::Item(_)
+            MenubarEntry::Label(_)
+            | MenubarEntry::Item(_)
             | MenubarEntry::CheckboxItem(_)
             | MenubarEntry::RadioItem(_)
             | MenubarEntry::Submenu(_) => {
@@ -64,7 +67,7 @@ fn menu_panel_desired_size(entries: &[MenubarEntry], font_line_height: Px, pad_y
         }
     }
 
-    Size::new(Px(240.0), height)
+    Size::new(min_width, height)
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -84,6 +87,7 @@ pub struct MenubarItem {
     pub close_on_select: bool,
     pub command: Option<CommandId>,
     pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
     pub trailing: Option<AnyElement>,
     pub variant: MenubarItemVariant,
 }
@@ -100,6 +104,7 @@ impl MenubarItem {
             close_on_select: true,
             command: None,
             a11y_label: None,
+            test_id: None,
             trailing: None,
             variant: MenubarItemVariant::Default,
         }
@@ -131,6 +136,11 @@ impl MenubarItem {
 
     pub fn close_on_select(mut self, close: bool) -> Self {
         self.close_on_select = close;
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
         self
     }
 
@@ -238,7 +248,12 @@ impl MenubarShortcut {
         let font_line_height = theme.metric_required("font.line_height");
 
         cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
+            layout: {
+                let mut layout = LayoutStyle::default();
+                // new-york-v4: `ml-auto` to push shortcut to the trailing edge.
+                layout.margin.left = fret_ui::element::MarginEdge::Auto;
+                layout
+            },
             text: self.text,
             style: Some(TextStyle {
                 font: FontId::default(),
@@ -753,11 +768,12 @@ impl Menubar {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
             let border = theme.color_required("border");
-            let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
-            let pad_x = MetricRef::space(Space::N2).resolve(&theme);
-            let pad_y = MetricRef::space(Space::N2).resolve(&theme);
+            let radius = MetricRef::radius(Radius::Md).resolve(&theme);
+            let pad_x = MetricRef::space(Space::N1).resolve(&theme);
+            let pad_y = MetricRef::space(Space::N1).resolve(&theme);
             let gap = MetricRef::space(Space::N1).resolve(&theme);
             let bg = theme.color_required("background");
+            let shadow = decl_style::shadow_xs(&theme, radius);
 
             let disabled = self.disabled;
             let menus = self.menus;
@@ -803,7 +819,7 @@ impl Menubar {
                                 left: pad_x,
                             },
                             background: Some(bg),
-                            shadow: None,
+                            shadow: Some(shadow),
                             border: Edges::all(Px(1.0)),
                             border_color: Some(border),
                             corner_radii: Corners::all(radius),
@@ -858,6 +874,7 @@ struct MenubarMenuState {
 pub struct MenubarMenu {
     label: Arc<str>,
     disabled: bool,
+    test_id: Option<Arc<str>>,
     window_margin: Px,
     side_offset: Px,
     typeahead_timeout_ticks: u64,
@@ -880,10 +897,16 @@ impl MenubarMenu {
         Self {
             label: label.into(),
             disabled: false,
+            test_id: None,
             window_margin: Px(8.0),
             side_offset: Px(8.0),
             typeahead_timeout_ticks: 30,
         }
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
     }
 
     pub fn entries(self, entries: Vec<MenubarEntry>) -> MenubarMenuEntries {
@@ -987,6 +1010,7 @@ impl MenubarMenuEntries {
             };
 
             let label = self.menu.label.clone();
+            let test_id = self.menu.test_id.clone();
 
             cx.pressable_with_id_props(|cx, st, trigger_id| {
                 if enabled {
@@ -1061,6 +1085,7 @@ impl MenubarMenuEntries {
                     a11y: PressableA11y {
                         role: Some(SemanticsRole::MenuItem),
                         label: Some(label.clone()),
+                        test_id: test_id.clone(),
                         expanded: Some(is_open),
                         controls_element: Some(content_id_for_trigger.0),
                         ..Default::default()
@@ -1097,9 +1122,10 @@ impl MenubarMenuEntries {
                         flatten_entries(&mut flat, entries.iter().cloned().collect());
                         let entries: Arc<[MenubarEntry]> = Arc::from(flat.into_boxed_slice());
 
-                        let pad_y = MetricRef::space(Space::N2).resolve(&theme);
+                        let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
                         let font_line_height = theme.metric_required("font.line_height");
-                        let mut desired = menu_panel_desired_size(&entries, font_line_height, pad_y);
+                        let mut desired =
+                            menu_panel_desired_size(&entries, Px(192.0), font_line_height, pad_y);
                         let popper_placement = popper::PopperContentPlacement::new(
                             direction,
                             Side::Bottom,
@@ -1157,21 +1183,19 @@ impl MenubarMenuEntries {
 
                         let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) = entries
                             .iter()
-                            .map(|e| match e {
-                                MenubarEntry::Item(item) => (item.label.clone(), item.disabled),
+                            .filter_map(|e| match e {
+                                MenubarEntry::Item(item) => Some((item.label.clone(), item.disabled)),
                                 MenubarEntry::CheckboxItem(item) => {
-                                    (item.label.clone(), item.disabled)
+                                    Some((item.label.clone(), item.disabled))
                                 }
-                                MenubarEntry::RadioItem(item) => (item.label.clone(), item.disabled),
-                                MenubarEntry::Label(_) | MenubarEntry::Separator => {
-                                    (Arc::from(""), true)
-                                }
-                                MenubarEntry::Group(_) | MenubarEntry::RadioGroup(_) => {
-                                    unreachable!("entries are flattened")
-                                }
+                                MenubarEntry::RadioItem(item) => Some((item.label.clone(), item.disabled)),
                                 MenubarEntry::Submenu(submenu) => {
-                                    (submenu.trigger.label.clone(), submenu.trigger.disabled)
+                                    Some((submenu.trigger.label.clone(), submenu.trigger.disabled))
                                 }
+                                MenubarEntry::Label(_)
+                                | MenubarEntry::Separator
+                                | MenubarEntry::Group(_)
+                                | MenubarEntry::RadioGroup(_) => None,
                             })
                             .unzip();
 
@@ -1182,14 +1206,16 @@ impl MenubarMenuEntries {
 
                         let roving = RovingFocusProps {
                             enabled: true,
-                            wrap: true,
+                            wrap: false,
                             disabled: disabled_arc,
                             ..Default::default()
                         };
 
                         let border = theme.color_required("border");
                         let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
-                        let shadow = decl_style::shadow_sm(&theme, radius_sm);
+                        let radius_md = MetricRef::radius(Radius::Md).resolve(&theme);
+                        let shadow = decl_style::shadow_md(&theme, radius_md);
+                        let shadow_submenu = decl_style::shadow_lg(&theme, radius_md);
                         let item_ring = decl_style::focus_ring(&theme, radius_sm);
                         let pad_x = MetricRef::space(Space::N3).resolve(&theme);
                         let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
@@ -1215,20 +1241,38 @@ impl MenubarMenuEntries {
                         let (_content_id, content) =
                             menu::content_panel::menu_content_semantics_with_id(
                                 cx,
-                                LayoutStyle::default(),
+                                LayoutStyle {
+                                    position: PositionStyle::Absolute,
+                                    inset: InsetStyle {
+                                        left: Some(placed.origin.x),
+                                        top: Some(placed.origin.y),
+                                        ..Default::default()
+                                    },
+                                    size: SizeStyle {
+                                        width: Length::Px(placed.size.width),
+                                        height: Length::Px(placed.size.height),
+                                        ..Default::default()
+                                    },
+                                    overflow: Overflow::Clip,
+                                    ..Default::default()
+                                },
                                 move |cx| {
                                     let theme = theme_for_content.clone();
+                                    let local_placed = Rect::new(
+                                        fret_core::Point::new(Px(0.0), Px(0.0)),
+                                        placed.size,
+                                    );
                                     vec![menu::content_panel::menu_panel_container_at(
                                         cx,
-                                        placed,
+                                        local_placed,
                                         move |layout| ContainerProps {
                                             layout,
-                                            padding: Edges::all(Px(6.0)),
+                                            padding: Edges::all(Px(4.0)),
                                             background: Some(panel_bg),
                                             shadow: Some(shadow),
                                             border: Edges::all(Px(1.0)),
                                             border_color: Some(border),
-                                            corner_radii: Corners::all(radius_sm),
+                                            corner_radii: Corners::all(radius_md),
                                         },
                                         move |cx| {
                                             let content_focus_id_for_panel =
@@ -1609,16 +1653,16 @@ impl MenubarMenuEntries {
 
                                                             let item_enabled =
                                                                 !item.disabled && enabled;
-                                                            let focusable =
-                                                                active.is_some_and(|a| a == idx);
-                                                            let label = item.label.clone();
-                                                              let a11y_label =
-                                                                   item.a11y_label.clone();
-                                                               let command = item.command.clone();
-                                                              let trailing = item.trailing.clone();
-                                                              let leading = item.leading.clone();
-                                                              let close_on_select = item.close_on_select;
-                                                            let variant = item.variant;
+                                                             let focusable =
+                                                                 active.is_some_and(|a| a == idx);
+                                                             let label = item.label.clone();
+                                                               let a11y_label =
+                                                                    item.a11y_label.clone();
+                                                                let command = item.command.clone();
+                                                               let trailing = item.trailing.clone();
+                                                               let leading = item.leading.clone();
+                                                               let close_on_select = item.close_on_select;
+                                                             let variant = item.variant;
                                                                let open = open_for_overlay.clone();
                                                                let group_active =
                                                                    group_active_for_content.clone();
@@ -1650,6 +1694,7 @@ impl MenubarMenuEntries {
                                                                           .unwrap_or(outer.size.height);
                                                                       let desired = menu_panel_desired_size(
                                                                           &flat,
+                                                                          Px(128.0),
                                                                           font_line_height,
                                                                           pad_y,
                                                                       );
@@ -1664,16 +1709,17 @@ impl MenubarMenuEntries {
                                                                       None
                                                                   };
 
-                                                              let submenu_for_item =
-                                                                  submenu_for_content.clone();
-                                                              let trigger_registry =
-                                                                  trigger_registry_for_overlay_for_content.clone();
-                                                             let value = item.value.clone();
-                                                              let pad_left =
-                                                                  if item.inset { pad_x_inset } else { pad_x };
-                                                              let theme = theme.clone();
-                                                              let overlay_root_name_for_controls =
-                                                                  overlay_root_name_for_controls.clone();
+                                                               let submenu_for_item =
+                                                                   submenu_for_content.clone();
+                                                               let trigger_registry =
+                                                                   trigger_registry_for_overlay_for_content.clone();
+                                                              let value = item.value.clone();
+                                                              let test_id = item.test_id.clone();
+                                                               let pad_left =
+                                                                   if item.inset { pad_x_inset } else { pad_x };
+                                                               let theme = theme.clone();
+                                                               let overlay_root_name_for_controls =
+                                                                   overlay_root_name_for_controls.clone();
                                                               out.push(cx.keyed(value.clone(), move |cx| {
                                                                   cx.pressable_with_id_props(move |cx, st, item_id| {
                                                                     let geometry_hint = submenu_desired_for_hint.map(|desired| {
@@ -1768,14 +1814,16 @@ impl MenubarMenuEntries {
                                                                                     &value,
                                                                                 )
                                                                             });
-                                                                            menu::item::menu_item_a11y_with_controls(
+                                                                            let mut a11y = menu::item::menu_item_a11y_with_controls(
                                                                                 a11y_label.or_else(|| {
                                                                                     Some(label.clone())
                                                                                 }),
                                                                                 expanded,
                                                                                 controls,
                                                                             )
-                                                                            .with_collection_position(
+                                                                            ;
+                                                                            a11y.test_id = test_id.clone();
+                                                                            a11y.with_collection_position(
                                                                                 collection_index,
                                                                                 item_count,
                                                                             )
@@ -1964,9 +2012,11 @@ impl MenubarMenuEntries {
                                     &mut flat,
                                     submenu_entries.iter().cloned().collect::<Vec<_>>(),
                                 );
-                                menu_panel_desired_size(&flat, font_line_height, pad_y)
+                                menu_panel_desired_size(&flat, Px(128.0), font_line_height, pad_y)
                             })
-                            .unwrap_or_else(|| menu_panel_desired_size(&[], font_line_height, pad_y));
+                            .unwrap_or_else(|| {
+                                menu_panel_desired_size(&[], Px(128.0), font_line_height, pad_y)
+                            });
                         let submenu_max_h = theme
                             .metric_by_key("component.menubar.max_height")
                             .map(|h| Px(h.0.min(outer.size.height.0)))
@@ -2052,27 +2102,24 @@ impl MenubarMenuEntries {
                                     let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) =
                                         submenu_entries
                                             .iter()
-                                            .map(|e| match e {
+                                            .filter_map(|e| match e {
                                                 MenubarEntry::Item(item) => {
-                                                    (item.label.clone(), item.disabled)
+                                                    Some((item.label.clone(), item.disabled))
                                                 }
                                                 MenubarEntry::CheckboxItem(item) => {
-                                                    (item.label.clone(), item.disabled)
+                                                    Some((item.label.clone(), item.disabled))
                                                 }
                                                 MenubarEntry::RadioItem(item) => {
-                                                    (item.label.clone(), item.disabled)
+                                                    Some((item.label.clone(), item.disabled))
                                                 }
-                                                MenubarEntry::Submenu(submenu) => (
+                                                MenubarEntry::Submenu(submenu) => Some((
                                                     submenu.trigger.label.clone(),
                                                     submenu.trigger.disabled,
-                                                ),
-                                                MenubarEntry::Label(_) | MenubarEntry::Separator => {
-                                                    (Arc::from(""), true)
-                                                }
-                                                MenubarEntry::Group(_)
-                                                | MenubarEntry::RadioGroup(_) => {
-                                                    unreachable!("entries are flattened")
-                                                }
+                                                )),
+                                                MenubarEntry::Label(_)
+                                                | MenubarEntry::Separator
+                                                | MenubarEntry::Group(_)
+                                                | MenubarEntry::RadioGroup(_) => None,
                                             })
                                             .unzip();
 
@@ -2097,7 +2144,7 @@ impl MenubarMenuEntries {
 
                                     let roving = RovingFocusProps {
                                         enabled: true,
-                                        wrap: true,
+                                        wrap: false,
                                         disabled: disabled_arc,
                                         ..Default::default()
                                     };
@@ -2109,20 +2156,27 @@ impl MenubarMenuEntries {
                                         trigger_registry_for_overlay.clone();
                                     let text_style = text_style_for_submenu.clone();
                                     let submenu_models_for_panel = submenu_for_panel.clone();
+                                    let labelled_by_element = cx
+                                        .app
+                                        .models_mut()
+                                        .read(&submenu_models_for_panel.trigger, |v| *v)
+                                        .ok()
+                                        .flatten();
                                     let item_ring = item_ring;
 
                                     let submenu_panel = menu::sub_content::submenu_panel_scroll_y_for_value_at(
                                         cx,
                                         open_value.clone(),
                                         placed,
+                                        labelled_by_element,
                                         move |layout| ContainerProps {
                                             layout,
-                                            padding: Edges::all(Px(6.0)),
+                                            padding: Edges::all(Px(4.0)),
                                             background: Some(panel_bg),
-                                            shadow: Some(shadow),
+                                            shadow: Some(shadow_submenu),
                                             border: Edges::all(Px(1.0)),
                                             border_color: Some(border),
-                                            corner_radii: Corners::all(radius_sm),
+                                            corner_radii: Corners::all(radius_md),
                                         },
                                         move |cx| {
                                             let content_focus_id_for_panel =
@@ -2467,6 +2521,7 @@ impl MenubarMenuEntries {
                                                                         let focusable = active.is_some_and(|a| a == idx);
                                                                         let label = item.label.clone();
                                                                         let a11y_label = item.a11y_label.clone();
+                                                                        let test_id = item.test_id.clone();
                                                                         let command = item.command.clone();
                                                                         let trailing = item.trailing.clone();
                                                                         let leading = item.leading.clone();
@@ -2549,14 +2604,20 @@ impl MenubarMenuEntries {
                                                                                     enabled: item_enabled,
                                                                                     focusable,
                                                                                     focus_ring: Some(item_ring),
-                                                                                    a11y: menu::item::menu_item_a11y(
-                                                                                        a11y_label.or_else(|| Some(label.clone())),
-                                                                                        None,
-                                                                                    )
-                                                                                    .with_collection_position(
-                                                                                        collection_index,
-                                                                                        item_count,
-                                                                                    ),
+                                                                                    a11y: {
+                                                                                        let mut a11y =
+                                                                                            menu::item::menu_item_a11y(
+                                                                                                a11y_label.or_else(|| {
+                                                                                                    Some(label.clone())
+                                                                                                }),
+                                                                                                None,
+                                                                                            );
+                                                                                        a11y.test_id = test_id.clone();
+                                                                                        a11y.with_collection_position(
+                                                                                            collection_index,
+                                                                                            item_count,
+                                                                                        )
+                                                                                    },
                                                                                     ..Default::default()
                                                                                 };
 

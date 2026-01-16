@@ -38,8 +38,14 @@ impl ElementHostWidget {
                 if let Some(label) = props.label.as_ref() {
                     cx.set_label(label.as_ref().to_string());
                 }
+                if let Some(test_id) = props.test_id.as_ref() {
+                    cx.set_test_id(test_id.as_ref().to_string());
+                }
                 if let Some(value) = props.value.as_ref() {
                     cx.set_value(value.as_ref().to_string());
+                }
+                if props.focusable && !props.disabled {
+                    cx.set_focusable(true);
                 }
                 if props.disabled {
                     cx.set_disabled(true);
@@ -91,6 +97,9 @@ impl ElementHostWidget {
                 if let Some(label) = props.a11y_label.as_ref() {
                     cx.set_label(label.as_ref().to_string());
                 }
+                if let Some(test_id) = props.test_id.as_ref() {
+                    cx.set_test_id(test_id.as_ref().to_string());
+                }
                 if let Some(expanded) = props.expanded {
                     cx.set_expanded(expanded);
                 }
@@ -112,6 +121,9 @@ impl ElementHostWidget {
                 area.set_min_height(props.min_height);
                 if let Some(label) = props.a11y_label.as_ref() {
                     cx.set_label(label.as_ref().to_string());
+                }
+                if let Some(test_id) = props.test_id.as_ref() {
+                    cx.set_test_id(test_id.as_ref().to_string());
                 }
                 area.semantics(cx);
             }
@@ -143,6 +155,9 @@ impl ElementHostWidget {
                 if let Some(label) = props.a11y.label.as_ref() {
                     cx.set_label(label.as_ref().to_string());
                 }
+                if let Some(test_id) = props.a11y.test_id.as_ref() {
+                    cx.set_test_id(test_id.as_ref().to_string());
+                }
                 cx.set_active_descendant(props.a11y.active_descendant);
                 if props.a11y.selected {
                     cx.set_selected(true);
@@ -169,7 +184,7 @@ impl ElementHostWidget {
                     cx.push_controlled(node);
                 }
                 cx.set_disabled(!props.enabled);
-                cx.set_focusable(props.enabled);
+                cx.set_focusable(props.enabled && props.focusable);
                 cx.set_invokable(props.enabled);
                 cx.set_collection_position(props.a11y.pos_in_set, props.a11y.set_size);
             }
@@ -186,6 +201,7 @@ impl ElementHostWidget {
             }
             ElementInstance::Image(_)
             | ElementInstance::PointerRegion(_)
+            | ElementInstance::InternalDragRegion(_)
             | ElementInstance::HoverRegion(_)
             | ElementInstance::Spinner(_)
             | ElementInstance::Opacity(_)

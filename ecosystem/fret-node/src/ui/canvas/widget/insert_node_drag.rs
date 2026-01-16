@@ -59,7 +59,14 @@ pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M: NodeGraphCanvas
     if !buttons.left {
         canvas.interaction.pending_insert_node_drag = None;
         if let Some(window) = cx.window {
-            ui_dnd::clear_pending_pointer(cx.app, window, DRAG_KIND_INSERT_NODE, pointer_id);
+            let dnd = ui_dnd::dnd_service_model_global(cx.app);
+            ui_dnd::clear_pending_pointer(
+                cx.app.models_mut(),
+                &dnd,
+                window,
+                DRAG_KIND_INSERT_NODE,
+                pointer_id,
+            );
         }
         cx.release_pointer_capture();
         return false;
@@ -78,15 +85,31 @@ pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M: NodeGraphCanvas
     let start_window = canvas_to_window(cx.bounds, pending.start_pos, snapshot.pan, zoom);
     let current_window = canvas_to_window(cx.bounds, position, snapshot.pan, zoom);
 
-    ui_dnd::register_droppable_rect(cx.app, window, DND_DROP_CANVAS, cx.bounds, 0, false);
-    let update = ui_dnd::update_pending_drag_move(
-        cx.app,
+    let dnd = ui_dnd::dnd_service_model_global(cx.app);
+    let frame_id = cx.app.frame_id();
+    let tick_id = cx.app.tick_id();
+
+    ui_dnd::register_droppable_rect(
+        cx.app.models_mut(),
+        &dnd,
         window,
+        frame_id,
+        DND_DROP_CANVAS,
+        cx.bounds,
+        0,
+        false,
+    );
+    let update = ui_dnd::update_pending_drag_move(
+        cx.app.models_mut(),
+        &dnd,
+        window,
+        frame_id,
         DRAG_KIND_INSERT_NODE,
         pointer_id,
         pending.start_tick,
         start_window,
         current_window,
+        tick_id,
         ActivationConstraint::Distance { px: 6.0 },
         CollisionStrategy::PointerWithin,
         Some((cx.bounds, AutoScrollConfig::default())),
@@ -104,7 +127,13 @@ pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M: NodeGraphCanvas
             candidate: pending.candidate.clone(),
         },
     );
-    ui_dnd::clear_pending_pointer(cx.app, window, DRAG_KIND_INSERT_NODE, pointer_id);
+    ui_dnd::clear_pending_pointer(
+        cx.app.models_mut(),
+        &dnd,
+        window,
+        DRAG_KIND_INSERT_NODE,
+        pointer_id,
+    );
     if let Some(drag) = cx.app.drag_mut(pointer_id)
         && drag.payload::<InsertNodeDragPayload>().is_some()
     {

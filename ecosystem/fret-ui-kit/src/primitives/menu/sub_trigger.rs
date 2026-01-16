@@ -15,6 +15,7 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::model_watch::ModelWatchExt as _;
+use crate::primitives::direction::{self as direction_prim, LayoutDirection};
 use crate::primitives::menu::sub;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -80,41 +81,52 @@ pub fn wire<H: UiHost>(
     let models_for_key = models.clone();
     let value_for_key = value.clone();
     let cfg_for_key = cfg;
+    let dir = direction_prim::use_direction_in_scope(cx, None);
     cx.key_on_key_down_for(
         item_id,
         Arc::new(move |host, acx, down| {
             if down.repeat {
                 return false;
             }
-            match down.key {
-                KeyCode::ArrowRight => {
-                    if !key_has_submenu {
-                        return false;
-                    }
-                    sub::open_on_arrow_right(
-                        host,
-                        acx,
-                        &models_for_key,
-                        value_for_key.clone(),
-                        cfg_for_key.focus_delay,
-                    );
-                    true
-                }
-                KeyCode::ArrowLeft => {
-                    let is_open = host
-                        .models_mut()
-                        .read(&models_for_key.open_value, |v| v.is_some())
-                        .ok()
-                        .unwrap_or(false);
-                    if !is_open {
-                        return false;
-                    }
-
-                    sub::close_on_arrow_left(host, acx, &models_for_key);
-                    true
-                }
+            let is_open_key = match (down.key, dir) {
+                (KeyCode::ArrowRight, LayoutDirection::Ltr) => true,
+                (KeyCode::ArrowLeft, LayoutDirection::Rtl) => true,
                 _ => false,
+            };
+            if is_open_key {
+                if !key_has_submenu {
+                    return false;
+                }
+                sub::open_on_arrow_right(
+                    host,
+                    acx,
+                    &models_for_key,
+                    value_for_key.clone(),
+                    cfg_for_key.focus_delay,
+                );
+                return true;
             }
+
+            let is_close_key = match (down.key, dir) {
+                (KeyCode::ArrowLeft, LayoutDirection::Ltr) => true,
+                (KeyCode::ArrowRight, LayoutDirection::Rtl) => true,
+                _ => false,
+            };
+            if is_close_key {
+                let is_open = host
+                    .models_mut()
+                    .read(&models_for_key.open_value, |v| v.is_some())
+                    .ok()
+                    .unwrap_or(false);
+                if !is_open {
+                    return false;
+                }
+
+                sub::close_on_arrow_left(host, acx, &models_for_key);
+                return true;
+            }
+
+            false
         }),
     );
 

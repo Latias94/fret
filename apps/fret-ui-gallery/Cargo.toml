@@ -1,0 +1,37 @@
+[package]
+name = "fret-ui-gallery"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+publish = false
+default-run = "fret-ui-gallery"
+
+[dependencies]
+anyhow.workspace = true
+fret-app = { path = "../../crates/fret-app" }
+fret-core = { path = "../../crates/fret-core" }
+fret-runtime = { path = "../../crates/fret-runtime" }
+fret-launch = { path = "../../crates/fret-launch" }
+fret-ui = { path = "../../crates/fret-ui" }
+fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
+fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
+fret-markdown = { path = "../../ecosystem/fret-markdown" }
+fret-workspace = { path = "../../ecosystem/fret-workspace" }
+fret-ui-headless = { path = "../../ecosystem/fret-ui-headless" }
+fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["preload-icon-svgs", "icons-lucide", "diagnostics"] }
+time.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+winit.workspace = true
+
+[dev-dependencies]
+fret-render = { path = "../../crates/fret-render" }
+pollster.workspace = true
+slotmap.workspace = true
+stacksafe.workspace = true
+wgpu.workspace = true

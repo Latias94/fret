@@ -62,7 +62,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | --- | --- | --- | --- | --- |
 | accordion | `accordion` | Present | Unreviewed | Selection model drives open/close; no animation yet |
 | alert | `alert` | Present | Unreviewed |  |
-| alert-dialog | `alert_dialog` | Present | Unreviewed | Modal overlay policy; Tab traversal wraps within modal barrier (ADR 0068) |
+| alert-dialog | `alert_dialog` | Present | In review | Audit: `docs/audits/shadcn-alert-dialog.md`; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` |
 | aspect-ratio | `aspect_ratio` | Present | Unreviewed |  |
 | avatar | `avatar` | Present | Unreviewed |  |
 | badge | `badge` | Present | Unreviewed |  |
@@ -75,11 +75,11 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | chart | `chart` | Defer | Unreviewed | Not editor-critical |
 | checkbox | `checkbox` | Present | Unreviewed |  |
 | collapsible | `collapsible` | Present | Unreviewed | Headless open/close + a11y semantics |
-| command | `command` | Present | In review | `CommandPalette` provides cmdk-style active-descendant navigation + filtering/scoring (value + keywords), plus group/separator/empty + checkmark/shortcut |
-| context-menu | `context_menu` | Present | In review | Right click + (macOS) ctrl-click + Shift+F10; audit: `docs/audits/shadcn-context-menu.md` |
-| dialog | `dialog` | Present | Unreviewed | Modal barrier + Escape + overlay dismissal; Tab traversal wraps within modal barrier (ADR 0068) |
+| command | `command` | Present | In review | `CommandPalette` provides cmdk-style active-descendant navigation + filtering/scoring (value + keywords), plus group/separator/empty + checkmark/shortcut; audit: `docs/audits/shadcn-command.md`; shadcn-web gates: `web_vs_fret_command_dialog_*` |
+| context-menu | `context_menu` | Present | In review | Right click + (macOS) ctrl-click + Shift+F10; anchors to click position for web/Radix parity; audit: `docs/audits/shadcn-context-menu.md`; gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`, `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs` |
+| dialog | `dialog` | Present | In review | Audit: `docs/audits/shadcn-dialog.md`; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` |
 | drawer | `drawer` | Present | Unreviewed | `sheet` facade (defaults to bottom); overlay policy |
-| dropdown-menu | `dropdown_menu` | Present | In review | Menu navigation + typeahead + dismissible popover infra (ADR 0074); now includes `Label`/`Group`/`Shortcut` + destructive items; audit: `docs/audits/shadcn-dropdown-menu.md` |
+| dropdown-menu | `dropdown_menu` | Present | In review | Menu navigation + typeahead + dismissible popover infra (ADR 0074); now includes `Label`/`Group`/`Shortcut` + destructive items; audit: `docs/audits/shadcn-dropdown-menu.md`; gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` |
 | empty | `empty` | Present | Unreviewed |  |
 | field | `field` | Present | Unreviewed | Repo-specific "form field" primitives |
 | form | `form` | Present | Unreviewed |  |
@@ -90,7 +90,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | item | `item` | Present | Unreviewed | Repo-specific list/item recipes aligned with shadcn style |
 | kbd | `kbd` | Present | Unreviewed |  |
 | label | `label` | Present | Unreviewed |  |
-| menubar | `menubar` | Present | In review | Click-to-open; hover switching; audit: `docs/audits/shadcn-menubar.md` |
+| menubar | `menubar` | Present | In review | Click-to-open; hover switching; audit: `docs/audits/shadcn-menubar.md`; gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` |
 | native-select | `native_select` | Defer | Unreviewed | Can map to `select` + platform-native later |
 | navigation-menu | `navigation_menu` | Defer | Unreviewed | Complex; not editor-critical |
 | pagination | `pagination` | Present | Unreviewed |  |
@@ -101,7 +101,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | scroll-area | `scroll_area` | Present | Unreviewed | Declarative wrapper over `Scroll` + styling |
 | select | `select` | Present | In review | Anchored placement supports `side`/`align` + offsets; roving navigation supports `loop` default; audit: `docs/audits/shadcn-select.md` |
 | separator | `separator` | Present | Unreviewed | Simple primitive; declarative-only |
-| sheet | `sheet` | Present | Unreviewed | Modal barrier + Escape + overlay dismissal; Tab traversal wraps within modal barrier (ADR 0068) |
+| sheet | `sheet` | Present | In review | Audit: `docs/audits/shadcn-sheet.md`; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` |
 | sidebar | `sidebar` | Present | Unreviewed |  |
 | skeleton | `skeleton` | Present | Unreviewed |  |
 | slider | `slider` | Present | Unreviewed | Declarative composition over primitives (PointerRegion hooks + bounds); a11y TBD |
@@ -123,7 +123,7 @@ These are shadcn-style surfaces referenced by docs/demos but not part of the `re
 | --- | --- | --- | --- | --- |
 | combobox | `combobox` | Present | In review | Now implemented as `Popover` + `CommandPalette` recipe; audit: `docs/audits/shadcn-combobox.md` |
 | date picker | `date_picker` | Present | Unreviewed | `Popover` + `Calendar` recipe; v1 is single-date selection |
-| data table / datagrid | `data_table` | Present | Unreviewed | Extension surface (not a `registry:ui` item upstream); `DataGrid` defaults to canvas; use `DataGridElement` for rich per-cell UI |
+| data table / datagrid | `data_table` | Present | Unreviewed | Extension surface (not a `registry:ui` item upstream); `DataGrid` defaults to canvas; use `experimental::DataGridElement` for rich per-cell UI |
 | toast | `toast` | Skip | Unreviewed | Upstream `toast` is deprecated in favor of `sonner`; this repo ships `sonner` |
 | typography | `typography` | Skip | Unreviewed | Upstream typography page is docs-only and not shipped as a component |
 

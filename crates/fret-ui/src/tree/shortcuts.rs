@@ -42,6 +42,74 @@ pub(super) struct KeydownShortcutParams<'a> {
 }
 
 impl<H: UiHost> UiTree<H> {
+    pub(super) fn sync_pending_shortcut_overlay_state(
+        &mut self,
+        app: &mut H,
+        input_ctx: Option<&InputContext>,
+    ) {
+        let Some(window) = self.window else {
+            return;
+        };
+
+        let sequence: Vec<KeyChord> = self
+            .pending_shortcut
+            .keystrokes
+            .iter()
+            .map(|s| s.chord)
+            .collect();
+
+        let input_ctx = input_ctx.cloned().unwrap_or_default();
+
+        let continuations = if sequence.is_empty() {
+            Vec::new()
+        } else if let Some(service) = app.global::<KeymapService>() {
+            let mut conts: Vec<crate::pending_shortcut::PendingShortcutContinuation> = service
+                .keymap
+                .continuations(&input_ctx, &sequence)
+                .into_iter()
+                .map(|c| crate::pending_shortcut::PendingShortcutContinuation {
+                    next: c.next,
+                    command: c.matched.exact.clone().flatten(),
+                    has_continuation: c.matched.has_continuation,
+                })
+                .collect();
+
+            conts.sort_by(|a, b| {
+                fn mods_key(mods: fret_core::Modifiers) -> u8 {
+                    (mods.ctrl as u8)
+                        | ((mods.shift as u8) << 1)
+                        | ((mods.alt as u8) << 2)
+                        | ((mods.meta as u8) << 3)
+                        | ((mods.alt_gr as u8) << 4)
+                }
+                fn key_key(key: KeyCode) -> u8 {
+                    match key {
+                        KeyCode::ArrowLeft => 0,
+                        KeyCode::ArrowRight => 1,
+                        KeyCode::ArrowUp => 2,
+                        KeyCode::ArrowDown => 3,
+                        _ => 255,
+                    }
+                }
+
+                mods_key(a.next.mods)
+                    .cmp(&mods_key(b.next.mods))
+                    .then_with(|| key_key(a.next.key).cmp(&key_key(b.next.key)))
+            });
+
+            conts
+        } else {
+            Vec::new()
+        };
+
+        app.with_global_mut(
+            crate::PendingShortcutOverlayState::default,
+            |state, _app| {
+                state.set_sequence(window, input_ctx, sequence, continuations);
+            },
+        );
+    }
+
     pub(super) fn should_defer_keydown_shortcut_matching_to_text_input(
         key: KeyCode,
         modifiers: fret_core::Modifiers,
@@ -134,6 +202,7 @@ impl<H: UiHost> UiTree<H> {
                     .then_some(params.key);
                 self.suppress_text_input_until_key_up = Some(params.key);
                 self.schedule_pending_shortcut_timeout(app);
+                self.sync_pending_shortcut_overlay_state(app, Some(params.input_ctx));
                 return true;
             }
 
@@ -151,6 +220,7 @@ impl<H: UiHost> UiTree<H> {
             if let Some(token) = pending.timer {
                 app.push_effect(Effect::CancelTimer { token });
             }
+            self.sync_pending_shortcut_overlay_state(app, None);
             self.replay_captured_keystrokes(app, services, params.input_ctx, pending.keystrokes);
             return true;
         }
@@ -168,6 +238,7 @@ impl<H: UiHost> UiTree<H> {
                     .then_some(params.key);
             self.suppress_text_input_until_key_up = Some(params.key);
             self.schedule_pending_shortcut_timeout(app);
+            self.sync_pending_shortcut_overlay_state(app, Some(params.input_ctx));
             return true;
         }
 
@@ -188,6 +259,7 @@ impl<H: UiHost> UiTree<H> {
             app.push_effect(Effect::CancelTimer { token });
         }
         self.pending_shortcut = PendingShortcut::default();
+        self.sync_pending_shortcut_overlay_state(app, None);
     }
 
     pub(super) fn schedule_pending_shortcut_timeout(&mut self, app: &mut H) {
@@ -249,5 +321,214 @@ impl<H: UiHost> UiTree<H> {
         }
 
         self.replaying_pending_shortcut = prev;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_host::TestHost;
+    use fret_core::{AppWindowId, Event, KeyCode, Modifiers, Point, Px, Rect, Size};
+    use fret_runtime::keymap::Binding;
+    use fret_runtime::{CommandId, Keymap, KeymapService, PlatformFilter};
+    use std::sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    };
+
+    #[derive(Default)]
+    struct RootStack;
+
+    impl<H: UiHost> Widget<H> for RootStack {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            for &child in cx.children {
+                let _ = cx.layout_in(child, cx.bounds);
+            }
+            cx.available
+        }
+    }
+
+    struct TextInputConsumesArrows {
+        saw_arrow_right: Arc<AtomicBool>,
+    }
+
+    impl<H: UiHost> Widget<H> for TextInputConsumesArrows {
+        fn is_focusable(&self) -> bool {
+            true
+        }
+
+        fn is_text_input(&self) -> bool {
+            true
+        }
+
+        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+            match event {
+                Event::Pointer(fret_core::PointerEvent::Down { .. }) => {
+                    cx.request_focus(cx.node);
+                    cx.stop_propagation();
+                }
+                Event::KeyDown {
+                    key: KeyCode::ArrowRight,
+                    modifiers,
+                    repeat: false,
+                } if *modifiers == Modifiers::default() => {
+                    self.saw_arrow_right.store(true, Ordering::SeqCst);
+                    cx.stop_propagation();
+                }
+                _ => {}
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    #[derive(Default)]
+    struct FakeUiServices;
+
+    impl fret_core::TextService for FakeUiServices {
+        fn prepare(
+            &mut self,
+            _input: &fret_core::TextInput,
+            _constraints: fret_core::TextConstraints,
+        ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+            (
+                fret_core::TextBlobId::default(),
+                fret_core::TextMetrics {
+                    size: Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    impl fret_core::PathService for FakeUiServices {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
+    }
+
+    impl fret_core::SvgService for FakeUiServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            false
+        }
+    }
+
+    #[test]
+    fn pending_sequence_matches_reserved_second_chord_before_text_input_consumes() {
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+
+        let command = CommandId::from("test.multi_stroke");
+        let mut keymap = Keymap::empty();
+        keymap.push_binding(Binding {
+            platform: PlatformFilter::All,
+            sequence: vec![
+                KeyChord::new(
+                    KeyCode::KeyK,
+                    Modifiers {
+                        ctrl: true,
+                        ..Default::default()
+                    },
+                ),
+                KeyChord::new(KeyCode::ArrowRight, Modifiers::default()),
+            ],
+            when: None,
+            command: Some(command.clone()),
+        });
+        app.set_global(KeymapService { keymap });
+
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(AppWindowId::default());
+
+        let saw_arrow_right = Arc::new(AtomicBool::new(false));
+        let root = ui.create_node(RootStack);
+        let text_input = ui.create_node(TextInputConsumesArrows {
+            saw_arrow_right: saw_arrow_right.clone(),
+        });
+        ui.add_child(root, text_input);
+        ui.set_root(root);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        let mut services = FakeUiServices;
+        ui.layout_in(&mut app, &mut services, root, bounds, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_id: fret_core::PointerId(0),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        assert_eq!(ui.focus(), Some(text_input));
+        let _ = app.take_effects();
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::KeyK,
+                modifiers: Modifiers {
+                    ctrl: true,
+                    ..Default::default()
+                },
+                repeat: false,
+            },
+        );
+        let effects = app.take_effects();
+        assert!(
+            effects
+                .iter()
+                .all(|e| !matches!(e, Effect::Command { command: c, .. } if c == &command)),
+            "first chord should only enter pending state"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        assert!(
+            !saw_arrow_right.load(Ordering::SeqCst),
+            "reserved key should not reach the text input while a pending shortcut is active"
+        );
+
+        let effects = app.take_effects();
+        assert!(
+            effects
+                .iter()
+                .any(|e| matches!(e, Effect::Command { command: c, .. } if c == &command)),
+            "second chord should dispatch the multi-stroke command"
+        );
     }
 }

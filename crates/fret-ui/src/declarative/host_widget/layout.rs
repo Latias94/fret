@@ -46,12 +46,14 @@ impl ElementHostWidget {
         self.hit_testable = match &instance {
             ElementInstance::Pressable(p) => p.enabled,
             ElementInstance::PointerRegion(p) => p.enabled,
+            ElementInstance::InternalDragRegion(p) => p.enabled,
             ElementInstance::Semantics(_) => false,
             ElementInstance::FocusScope(_) => false,
             ElementInstance::InteractivityGate(_) => false,
             ElementInstance::DismissibleLayer(_) => false,
             ElementInstance::Opacity(_) => false,
             ElementInstance::EffectLayer(_) => false,
+            ElementInstance::ViewCache(_) => false,
             ElementInstance::VisualTransform(_) => false,
             ElementInstance::RenderTransform(_) => false,
             ElementInstance::Anchored(_) => false,
@@ -61,11 +63,13 @@ impl ElementHostWidget {
         self.hit_test_children = match &instance {
             ElementInstance::Pressable(p) => p.enabled,
             ElementInstance::PointerRegion(_) => true,
+            ElementInstance::InternalDragRegion(_) => true,
             ElementInstance::Semantics(_) => true,
             ElementInstance::FocusScope(_) => true,
             ElementInstance::InteractivityGate(p) => p.present && p.interactive,
             ElementInstance::DismissibleLayer(_) => true,
             ElementInstance::EffectLayer(_) => true,
+            ElementInstance::ViewCache(_) => true,
             ElementInstance::VisualTransform(_) => true,
             ElementInstance::RenderTransform(_) => true,
             ElementInstance::Anchored(_) => true,
@@ -106,11 +110,13 @@ impl ElementHostWidget {
             ElementInstance::InteractivityGate(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Opacity(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::EffectLayer(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::ViewCache(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::VisualTransform(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::RenderTransform(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Anchored(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Pressable(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::PointerRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::InternalDragRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::DismissibleLayer(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Stack(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Flex(p) => matches!(p.layout.overflow, Overflow::Clip),
@@ -266,6 +272,17 @@ impl ElementHostWidget {
                 self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::Semantics(props) => {
+                if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    return size;
+                }
+
+                self.layout_positioned_container_impl(cx, window, props.layout)
+            }
+            ElementInstance::ViewCache(props) => {
                 if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
                     cx,
                     window,
@@ -853,6 +870,16 @@ impl ElementHostWidget {
                 clamp_to_constraints(Size::new(Px(16.0), Px(16.0)), props.layout, cx.available)
             }
             ElementInstance::PointerRegion(props) => {
+                if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    return size;
+                }
+                self.layout_positioned_container_impl(cx, window, props.layout)
+            }
+            ElementInstance::InternalDragRegion(props) => {
                 if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
                     cx,
                     window,

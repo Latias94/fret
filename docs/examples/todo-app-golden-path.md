@@ -18,36 +18,29 @@ Related ADRs:
 
 ## Recommended dependencies (native)
 
-- `fret` (facade; portable core re-exports)
-- `fret-ui-shadcn` (components) or `fret-ui-kit` (lower-level building blocks)
-- `fret-bootstrap` (recommended; startup wiring, enable the `ui-app-driver` feature)
-- `fret-ui-assets` (optional): UI render asset caches (images / SVGs), typically driven via `fret-bootstrap/ui-assets`
-- Lucide icons (optional): typically enabled via `fret-bootstrap/icons-lucide` (or register your own icon pack)
+- `fret-kit` (desktop-first batteries-included entry point)
+  - wraps `fret-bootstrap` (golden-path wiring) + `fret-ui-shadcn` (default component surface)
+  - enables a practical desktop-first default stack via `fret/native-wgpu`
 
 ## Quick start (template)
 
 If you are working inside this repository, you can generate a runnable todo template:
 
 ```bash
-fretboard init todo --name my-todo
+fretboard new todo --name my-todo
 cargo run --manifest-path local/my-todo/Cargo.toml
 ```
 
 To enable UI render asset caches (images/SVG), add `--ui-assets`:
 
 ```bash
-fretboard init todo --name my-todo --ui-assets
+fretboard new todo --name my-todo --ui-assets
 ```
 
 Notes:
 
-- `fret-bootstrap` features:
-  - `ui-app-driver`: enables `UiAppDriver`.
-  - `ui-assets`: drives `fret-ui-assets` caches from the event pipeline (recommended if you load images/SVGs).
-  - `icons-lucide` / `icons-radix`: installs a built-in icon pack via `with_lucide_icons()` / `with_radix_icons()`.
-  - `preload-icon-svgs`: enables `preload_icon_svgs_on_gpu_ready`.
-  - `tracing`: enables `with_default_tracing` / `init_tracing` convenience.
-  - `diagnostics`: enables `with_default_diagnostics` / `init_diagnostics` and installs a panic hook (set `RUST_BACKTRACE=1`).
+- `fret-kit` defaults to a practical desktop setup (diagnostics + icons + optional caches).
+- Advanced apps can depend on `fret` + `fret-bootstrap` directly for finer-grained control.
 
 ## Minimal `Cargo.toml`
 
@@ -61,36 +54,15 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1"
-fret-app = { path = "../../crates/fret-app" }
-fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver", "preload-icon-svgs", "icons-lucide"] }
-fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn", features = ["app-integration"] }
-```
-
-If you want images/SVG caches out-of-the-box, enable `fret-bootstrap/ui-assets`:
-
-```toml
-fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver", "preload-icon-svgs", "ui-assets"] }
+fret-kit = { path = "../../ecosystem/fret-kit" }
 ```
 
 ## Minimal startup
 
 ```rust,ignore
-use fret_app::App;
-
 fn main() -> anyhow::Result<()> {
-    fret_bootstrap::ui_app_with_hooks("todo", init_window, view, |d| d.on_command(on_command))
-        .with_default_config_files()?
-        // Optional: override UI render asset cache budgets (images/SVG).
-        // Requires enabling `fret-bootstrap/ui-assets`.
-        // .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
-        .init_app(|app| {
-            // Optional: apply a built-in shadcn theme preset for a “new-york-v4” look.
-            // Requires enabling `fret-ui-shadcn/app-integration`.
-            fret_ui_shadcn::install_app(app);
-        })
-        // Requires enabling `fret-bootstrap/icons-lucide`.
-        .with_lucide_icons()
-        .preload_icon_svgs_on_gpu_ready()
+    fret_kit::app_with_hooks("todo", init_window, view, |d| d.on_command(on_command))?
+        .with_main_window("todo", (560.0, 520.0))
         .run()?;
 
     Ok(())
@@ -99,13 +71,8 @@ fn main() -> anyhow::Result<()> {
 
 Notes:
 
-- `FnDriver` is the recommended authoring surface for Subsecond-style hotpatch (ADR 0107). `ui_app_with_hooks` wraps the
-  boilerplate while keeping the underlying driver hotpatch-friendly.
-- Icons are data-only (`IconRegistry`); rendering remains in the renderer layer.
-- `UiAppDriver` closes the window by default on `Event::WindowCloseRequested` (clicking the window X).
-  Disable this via `UiAppDriver::close_on_window_close_requested(false)` if you need an unsaved-changes prompt.
-- If you enable the `fret-bootstrap` feature `ui-assets`, `UiAppDriver` will also drive `fret-ui-assets` caches from
-  the event pipeline so `ImageAssetCache` works without additional boilerplate.
+- `FnDriver` is the recommended authoring surface for Subsecond-style hotpatch (ADR 0107).
+- `fret-kit::app_with_hooks` applies conservative defaults while keeping the underlying driver hotpatch-friendly.
 
 ## App state (models)
 
@@ -156,7 +123,7 @@ This avoids storing long-lived closures at arbitrary nodes and keeps hot reload 
 This is high-level pseudocode showing the intent; exact component APIs may vary.
 
 ```rust,ignore
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_kit::prelude::*;
 
 fn view(cx: &mut ElementContext<'_, fret_app::App>, st: &mut TodoWindowState) -> Vec<AnyElement> {
     let add_icon = IconId::new("lucide.plus");
@@ -169,8 +136,8 @@ fn view(cx: &mut ElementContext<'_, fret_app::App>, st: &mut TodoWindowState) ->
 }
 ```
 
-Note: `fret-ui-shadcn::prelude` re-exports common declarative authoring helpers (stack/style/icon) from `fret-ui-kit` so
-app code can stay on `fret-bootstrap` + `fret-ui-shadcn` for the default story.
+Note: `fret-kit::prelude` includes the shadcn authoring vocabulary (layout/styling + common types) so app code can stay
+on a single dependency for the default story.
 
 ## Event pipeline (platform → UI)
 
@@ -233,8 +200,8 @@ When using hotpatch (ADR 0107):
 
 If you want UI render asset conveniences (not an editor/project asset pipeline):
 
-- Enable `fret-bootstrap/ui-assets` (so `UiAppDriver` drives the image cache state machine from the event pipeline).
-- Optionally call `.with_ui_assets_budgets(...)` to override budgets.
+- `fret-kit` enables UI asset caches by default; disable via features if you want a smaller build.
+- Optionally call `.with_ui_assets_budgets(...)` (on the returned builder) to override budgets.
 - If you want to call cache APIs directly (stats, keyed helpers), add an explicit dependency on
   `fret-ui-assets` and enable its `app-integration` feature.
 
@@ -244,7 +211,8 @@ See the runnable demo: `apps/fret-demo/src/bin/assets_demo.rs`.
 
 Recommended for apps:
 
-- Enable `fret-bootstrap/icons-lucide` and call `.with_lucide_icons()`, or
-- Enable `fret-bootstrap/icons-radix` and call `.with_radix_icons()`.
+- `fret-kit` enables Lucide by default. To change packs, configure `fret-kit` features:
+  - enable `fret-kit/icons-lucide` (default), or
+  - enable `fret-kit/icons-radix`.
 
 If you need a custom pack, call `.register_icon_pack(...)` with your own `fn(&mut IconRegistry)` implementation.

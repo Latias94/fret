@@ -60,6 +60,13 @@ impl ElementHostWidget {
                     None,
                 );
             }
+            ElementInstance::ViewCache(props) => {
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.layout.overflow, Overflow::Clip),
+                    None,
+                );
+            }
             ElementInstance::FocusScope(props) => {
                 paint_children_clipped_if(
                     cx,
@@ -902,6 +909,21 @@ impl ElementHostWidget {
                 }
             }
             ElementInstance::PointerRegion(props) => {
+                let clip = matches!(props.layout.overflow, Overflow::Clip);
+                if clip {
+                    cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
+                }
+
+                for &child in cx.children {
+                    let bounds = cx.child_bounds(child).unwrap_or(cx.bounds);
+                    cx.paint(child, bounds);
+                }
+
+                if clip {
+                    cx.scene.push(SceneOp::PopClip);
+                }
+            }
+            ElementInstance::InternalDragRegion(props) => {
                 let clip = matches!(props.layout.overflow, Overflow::Clip);
                 if clip {
                     cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });

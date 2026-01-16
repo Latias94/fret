@@ -105,7 +105,7 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Rounded clipping / overflow-hidden**: `docs/adr/0063-rounded-clipping-and-soft-clip-masks.md`
 - **Overflow conventions (surfaces, focus rings, portals)**: `docs/adr/0088-overflow-and-clipping-conventions.md`
 - **Docking + multi-window tear-off**: `docs/adr/0013-docking-ops-and-persistence.md`, `docs/adr/0011-overlays-and-multi-root.md`, `docs/adr/0017-multi-window-display-and-dpi.md`, `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
-- **Headless drag-and-drop toolbox (sensors/collision/modifiers)**: `docs/adr/0164-headless-dnd-toolbox-and-ui-integration.md`, `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
+- **Headless drag-and-drop toolbox (sensors/collision/modifiers)**: `docs/adr/0172-headless-dnd-v1-contract-surface.md`, `docs/adr/0164-headless-dnd-toolbox-and-ui-integration.md`, `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
 - **Pointer identity and multi-pointer dispatch**: `docs/adr/0165-pointer-identity-and-multi-pointer-capture.md`, `docs/adr/0017-multi-window-display-and-dpi.md`, `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
 - **Multi-pointer drag sessions (host + routing keys)**: `docs/adr/0166-multi-pointer-drag-sessions-and-routing-keys.md`, `docs/adr/0165-pointer-identity-and-multi-pointer-capture.md`, `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
 - **Docking interaction arbitration (overlays/tools)**: `docs/adr/0072-docking-interaction-arbitration-matrix.md`
@@ -117,6 +117,7 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Text editing commands + selection model**: `docs/adr/0044-text-editing-state-and-commands.md`
 - **Text geometry queries (caret/hit-test, multiline affinity)**: `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`, `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
 - **Shortcut arbitration / AltGr / multi-stroke bindings**: `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`, `docs/adr/0021-keymap-file-format.md`, `docs/adr/0020-focus-and-command-routing.md`
+- **Observability + diagnostics bundles + scripted UI interaction tests**: `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`, `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 - **Renderer (ordering, batching, shapes/SDF)**: `docs/adr/0009-renderer-ordering-and-batching.md`, `docs/adr/0030-shape-rendering-and-sdf-semantics.md`, `docs/adr/0002-display-list.md`
 - **Renderer clipping (soft/rounded)**: `docs/adr/0063-rounded-clipping-and-soft-clip-masks.md`
 - **Icons (semantic keys + SVG-first packaging)**: `docs/adr/0065-icon-system-and-asset-packaging.md`

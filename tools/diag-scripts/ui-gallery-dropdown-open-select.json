@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "steps": [
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-trigger" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-item-apple" }
+      },
+      "timeout_frames": 60
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-item-apple" }
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-dropdown-apple" }
+  ]
+}

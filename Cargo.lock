@@ -959,6 +959,9 @@ dependencies = [
  "fret-ui-assets",
  "fret-ui-kit",
  "fret-ui-shadcn",
+ "serde",
+ "serde_json",
+ "slotmap",
  "subsecond",
  "thiserror 2.0.17",
  "tracing",
@@ -1032,6 +1035,7 @@ dependencies = [
  "console_error_panic_hook",
  "fret-examples",
  "fret-launch",
+ "fret-ui-gallery",
  "js-sys",
  "wasm-bindgen",
  "web-sys",
@@ -1050,6 +1054,7 @@ name = "fret-docking"
 version = "0.1.0"
 dependencies = [
  "fret-core",
+ "fret-dnd",
  "fret-runtime",
  "fret-ui",
  "slotmap",
@@ -1084,6 +1089,7 @@ dependencies = [
  "fret-editor",
  "fret-gizmo",
  "fret-icons",
+ "fret-kit",
  "fret-launch",
  "fret-markdown",
  "fret-node",
@@ -1100,6 +1106,7 @@ dependencies = [
  "glam",
  "image",
  "serde_json",
+ "time",
  "tracing",
  "tracing-subscriber",
  "ureq",
@@ -1142,6 +1149,23 @@ dependencies = [
  "fret-core",
  "fret-icons",
  "rust-embed",
+]
+
+[[package]]
+name = "fret-kit"
+version = "0.1.0"
+dependencies = [
+ "fret",
+ "fret-app",
+ "fret-bootstrap",
+ "fret-core",
+ "fret-icons",
+ "fret-launch",
+ "fret-runtime",
+ "fret-ui",
+ "fret-ui-shadcn",
+ "fret-workspace",
+ "thiserror 2.0.17",
 ]
 
 [[package]]
@@ -1417,6 +1441,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-ui-gallery"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "fret-app",
+ "fret-bootstrap",
+ "fret-core",
+ "fret-launch",
+ "fret-markdown",
+ "fret-render",
+ "fret-runtime",
+ "fret-ui",
+ "fret-ui-headless",
+ "fret-ui-kit",
+ "fret-ui-shadcn",
+ "fret-workspace",
+ "pollster",
+ "slotmap",
+ "stacksafe",
+ "time",
+ "tracing",
+ "tracing-subscriber",
+ "wgpu",
+ "winit",
+]
+
+[[package]]
 name = "fret-ui-headless"
 version = "0.1.0"
 dependencies = [
@@ -1490,8 +1541,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-workspace"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-runtime",
+ "fret-ui",
+ "serde",
+]
+
+[[package]]
 name = "fretboard"
 version = "0.1.0"
+dependencies = [
+ "serde_json",
+]
 
 [[package]]
 name = "fslock"

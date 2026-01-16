@@ -1,6 +1,100 @@
 use super::*;
 
 impl<H: UiHost> UiTree<H> {
+    fn dismiss_topmost_overlay_on_escape(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        base_root: NodeId,
+        barrier_root: Option<NodeId>,
+    ) -> bool {
+        struct EscapeDismissHookHost<'a, H: crate::UiHost> {
+            app: &'a mut H,
+            window: AppWindowId,
+            element: crate::GlobalElementId,
+        }
+
+        impl<H: crate::UiHost> crate::action::UiActionHost for EscapeDismissHookHost<'_, H> {
+            fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+                self.app.models_mut()
+            }
+
+            fn push_effect(&mut self, effect: Effect) {
+                match effect {
+                    Effect::SetTimer {
+                        window: Some(window),
+                        token,
+                        ..
+                    } if window == self.window => {
+                        crate::elements::record_timer_target(
+                            &mut *self.app,
+                            window,
+                            token,
+                            self.element,
+                        );
+                    }
+                    Effect::CancelTimer { token } => {
+                        crate::elements::clear_timer_target(&mut *self.app, self.window, token);
+                    }
+                    _ => {}
+                }
+                self.app.push_effect(effect);
+            }
+
+            fn request_redraw(&mut self, window: AppWindowId) {
+                self.app.request_redraw(window);
+            }
+
+            fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
+                self.app.next_timer_token()
+            }
+        }
+
+        let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
+        for layer_id in layers.into_iter().rev() {
+            let Some(layer) = self.layers.get(layer_id) else {
+                continue;
+            };
+            if layer.root == base_root {
+                continue;
+            }
+
+            let Some(root_element) = self.nodes.get(layer.root).and_then(|n| n.element) else {
+                continue;
+            };
+            let hook = crate::elements::with_element_state(
+                app,
+                window,
+                root_element,
+                crate::action::DismissibleActionHooks::default,
+                |hooks| hooks.on_dismiss_request.clone(),
+            );
+            let Some(hook) = hook else {
+                if barrier_root == Some(layer.root) {
+                    break;
+                }
+                continue;
+            };
+
+            let mut host = EscapeDismissHookHost {
+                app,
+                window,
+                element: root_element,
+            };
+            hook(
+                &mut host,
+                crate::action::ActionCx {
+                    window,
+                    target: root_element,
+                },
+                crate::action::DismissReason::Escape,
+            );
+            return true;
+        }
+
+        false
+    }
+
     fn update_ime_composing_for_event(&mut self, focus_is_text_input: bool, event: &Event) {
         if !focus_is_text_input {
             self.ime_composing = false;
@@ -283,18 +377,20 @@ impl<H: UiHost> UiTree<H> {
         // ADR 0012: when a text input is focused, reserve common IME/navigation keys for the
         // text/IME path first, and only fall back to shortcut matching if the widget doesn't
         // consume the event.
-        let defer_keydown_shortcuts_until_after_dispatch = !self.replaying_pending_shortcut
-            && self.focus.is_some()
-            && match event {
-                Event::KeyDown { key, modifiers, .. } => {
-                    Self::should_defer_keydown_shortcut_matching_to_text_input(
-                        *key,
-                        *modifiers,
-                        focus_is_text_input,
-                    )
-                }
-                _ => false,
-            };
+        let defer_keydown_shortcuts_until_after_dispatch =
+            self.pending_shortcut.keystrokes.is_empty()
+                && !self.replaying_pending_shortcut
+                && self.focus.is_some()
+                && match event {
+                    Event::KeyDown { key, modifiers, .. } => {
+                        Self::should_defer_keydown_shortcut_matching_to_text_input(
+                            *key,
+                            *modifiers,
+                            focus_is_text_input,
+                        )
+                    }
+                    _ => false,
+                };
 
         if let Some(window) = self.window {
             let changed = crate::focus_visible::update_for_event(app, window, event);
@@ -333,6 +429,7 @@ impl<H: UiHost> UiTree<H> {
             && self.pending_shortcut.timer == Some(*token)
         {
             let pending = std::mem::take(&mut self.pending_shortcut);
+            self.sync_pending_shortcut_overlay_state(app, None);
             if let Some(command) = pending.fallback {
                 app.push_effect(Effect::Command {
                     window: self.window,
@@ -407,6 +504,20 @@ impl<H: UiHost> UiTree<H> {
         let mut synth_pointer_move_prev_target: Option<NodeId> = None;
 
         if let Event::KeyDown {
+            key: fret_core::KeyCode::Escape,
+            repeat: false,
+            ..
+        } = event
+            && let Some(window) = self.window
+            && self.dismiss_topmost_overlay_on_escape(app, window, base_root, barrier_root)
+        {
+            if let Some(window) = self.window {
+                app.request_redraw(window);
+            }
+            return;
+        }
+
+        if let Event::KeyDown {
             key,
             modifiers,
             repeat,
@@ -455,8 +566,7 @@ impl<H: UiHost> UiTree<H> {
             if !drag.cross_window_hover {
                 return None;
             }
-            let routes = app.global::<crate::drag_route::InternalDragRouteService>()?;
-            let target = routes.route(window, drag.kind)?;
+            let target = crate::internal_drag::route(app, window, drag.kind)?;
             self.node_in_any_layer(target, &active_layers)
                 .then_some(target)
         })();
@@ -697,6 +807,31 @@ impl<H: UiHost> UiTree<H> {
             Some(target)
         } else if let Some(pos) = event_position(event) {
             let hit = self.hit_test_layers(&active_layers, pos);
+
+            let hit = if matches!(event, Event::InternalDrag(_)) {
+                (|| {
+                    let window = self.window?;
+                    crate::declarative::with_window_frame(app, window, |window_frame| {
+                        let window_frame = window_frame?;
+                        let mut node = hit?;
+                        loop {
+                            if let Some(record) = window_frame.instances.get(&node)
+                                && matches!(
+                                    record.instance,
+                                    crate::declarative::ElementInstance::InternalDragRegion(p)
+                                        if p.enabled
+                                )
+                            {
+                                return Some(node);
+                            }
+                            node = self.nodes.get(node).and_then(|n| n.parent)?;
+                        }
+                    })
+                })()
+                .or(hit)
+            } else {
+                hit
+            };
 
             if let Event::Pointer(PointerEvent::Move { buttons, .. }) = event
                 && !buttons.left

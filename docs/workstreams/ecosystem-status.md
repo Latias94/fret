@@ -71,7 +71,7 @@ What exists:
   - Recipe controls: `DataTableToolbar` + `DataTablePagination` (`ecosystem/fret-ui-shadcn/src/data_table_recipes.rs`).
 - `DataGrid` default surface is canvas-backed (performance ceiling): `ecosystem/fret-ui-shadcn/src/data_grid_canvas.rs`
   (exported as `fret-ui-shadcn::DataGrid`).
-- `DataGridElement` prototype exists for rich per-cell UI: `ecosystem/fret-ui-shadcn/src/data_grid.rs`.
+- `experimental::DataGridElement` prototype exists for rich per-cell UI: `ecosystem/fret-ui-shadcn/src/data_grid.rs`.
 - A TanStack-inspired headless engine exists in `fret-ui-kit` (ADR 0101) and is now integrated into the shadcn
   `DataTable` recipe, but still needs recipe-level widgets + validation for editor-grade ergonomics.
   - Note: the long-lived `fret-ui-kit` `table` feature gate has been removed; the table modules are now always available.
@@ -151,7 +151,7 @@ Why it matters:
 - Align a shadcn `DataTable` recipe with the headless engine (ADR 0101):
   - sorting, filtering, pagination, selection, visibility
   - stable `RowKey` and derived `CellId`
-- Keep the existing element-based `DataTable`/`DataGridElement` for “rich cell UI” use cases.
+- Keep the existing element-based `DataTable`/`experimental::DataGridElement` for "rich cell UI" use cases.
 
 ### Phase B — DataGrid performance ceiling (canvas/GPU-backed)
 

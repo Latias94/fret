@@ -40,5 +40,9 @@ runner-winit = ["dep:fret-runner-winit"]
 launch = ["dep:fret-launch"]
 
 # Convenience bundles (optional).
-native-wgpu = ["launch", "platform-native", "render", "runtime"]
-web = ["runner-winit", "platform-web", "render", "runtime"]
+native-wgpu = ["launch", "runner-winit", "platform-native", "render", "runtime", "app", "ui"]
+web = ["launch", "runner-winit", "platform-web", "render", "runtime", "app", "ui", "fonts"]
+
+# Preferred aliases (keep bundle intent clear).
+desktop = ["native-wgpu"]
+wasm = ["web"]

@@ -54,6 +54,11 @@ Recent fixes:
 - Trigger chrome/content width now tracks the trigger width mode (auto vs fixed), preventing “ellipsis even when there is space” cases.
 - `fret-icons-radix` now vendors `chevron-up.svg`, so Radix-backed semantic `ui.chevron.up` resolves correctly.
 
+Conformance gates:
+
+- Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_select_panel_chrome_matches`).
+- Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_select_scrollable_overlay_placement_matches`).
+
 ### `DropdownMenu`
 
 - Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/dropdown-menu.tsx`
@@ -68,6 +73,75 @@ Recent fixes:
 Recent fixes:
 
 - Destructive item focus tint now matches upstream (`destructive/10` in light, `destructive/20` in dark) via seeded theme tokens.
+
+Conformance gates:
+
+- Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_dropdown_menu_panel_chrome_matches`).
+- Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_dropdown_menu_demo_overlay_placement_matches`, `web_vs_fret_dropdown_menu_demo_submenu_overlay_placement_matches`).
+
+### `Command` / `CommandDialog`
+
+- Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/command.tsx`
+- Upstream demo: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/command-dialog.tsx`
+- Fret: `ecosystem/fret-ui-shadcn/src/command.rs`
+- Notes:
+  - `CommandDialog` is a `Dialog`-backed recipe that composes `CommandPalette` into a modal.
+  - The upstream demo opens via a key chord (`Ctrl/Cmd+J`); the golden extractor treats it as `openAction=keys`.
+- Conformance gates:
+  - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_command_dialog_panel_chrome_matches`).
+  - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_command_dialog_overlay_center_matches`).
+
+### `ContextMenu`
+
+- Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/context-menu.tsx`
+- Fret: `ecosystem/fret-ui-shadcn/src/context_menu.rs`
+- Gaps to check:
+  - Content: `p-1`, `rounded-md`, `border`, `shadow-md`, max-height behavior.
+  - SubContent: `rounded-md`, `border`, `shadow-lg`, and submenu focus/close rules.
+  - Item rows: `rounded-sm` + focus tint + destructive variant tint.
+
+Recent fixes:
+
+- Panel chrome now matches upstream `rounded-md` (radius token) and `shadow-md` / `shadow-lg` split.
+- Conformance gates:
+  - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_context_menu_panel_chrome_matches`).
+  - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_context_menu_demo_overlay_placement_matches`, `web_vs_fret_context_menu_demo_submenu_overlay_placement_matches`).
+
+### `Menubar`
+
+- Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/menubar.tsx`
+- Fret: `ecosystem/fret-ui-shadcn/src/menubar.rs`
+- Gaps to check:
+  - Root: `h-9`, `rounded-md`, `border`, `p-1`, `shadow-xs`, `gap-1`.
+  - Content: `rounded-md`, `border`, `p-1`, `shadow-md`.
+  - SubContent: `rounded-md`, `border`, `p-1`, `shadow-lg`.
+
+Recent fixes:
+
+- Root panel chrome now matches upstream `rounded-md` + `shadow-xs` (new-york-v4 baseline).
+- Menu panels now match upstream `rounded-md` + `p-1` and `shadow-md` / `shadow-lg` split.
+- Conformance gates:
+  - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_menubar_panel_chrome_matches`).
+  - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_menubar_demo_overlay_placement_matches`, `web_vs_fret_menubar_demo_submenu_overlay_placement_matches`).
+
+Note: for menu-like overlays (DropdownMenu / ContextMenu / Menubar), the placement gate also asserts
+the portal panel `w/h` against the shadcn-web portal wrapper geometry (so “menu height” regressions
+are caught as layout/style outcomes, not just placement drift).
+
+### `NavigationMenu`
+
+- Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/navigation-menu.tsx`
+- Fret: `ecosystem/fret-ui-shadcn/src/navigation_menu.rs`
+- Gaps to check:
+  - `viewport=false` content panel: `rounded-md border shadow` with `mt-1.5` offset and `p-2 pr-2.5`.
+  - `viewport=true` viewport panel: `rounded-md border shadow` with zoom motion `zoom-in-90` / `zoom-out-95`.
+
+Recent fixes:
+
+- `viewport=false` chrome/placement now match shadcn-web `navigation-menu-demo` open snapshot.
+- Conformance gates:
+  - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_navigation_menu_demo_panel_chrome_matches`).
+  - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_navigation_menu_demo_overlay_placement_matches`).
 
 ### `Input`
 
@@ -121,3 +195,40 @@ Recent fixes:
 - Gaps to check:
   - Overlay: `bg-black/50` (not fully opaque).
   - Content: centered, `rounded-lg`, `border`, `p-6`, `shadow-lg`, close button slot.
+
+Conformance gates:
+
+- Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+  (`web_vs_fret_dialog_demo_panel_chrome_matches`).
+- Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+  (`web_vs_fret_dialog_demo_overlay_center_matches`).
+
+### `AlertDialog`
+
+- Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/alert-dialog.tsx`
+- Fret: `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`
+- Gaps to check:
+  - Safety defaults: overlay click-to-dismiss disabled by default.
+  - Cancel focus preference (first `AlertDialogCancel`).
+
+Conformance gates:
+
+- Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+  (`web_vs_fret_alert_dialog_demo_panel_chrome_matches`).
+- Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+  (`web_vs_fret_alert_dialog_demo_overlay_center_matches`).
+
+### `Sheet`
+
+- Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sheet.tsx`
+- Fret: `ecosystem/fret-ui-shadcn/src/sheet.rs`
+- Gaps to check:
+  - Side-specific border edge (right=`border-l`, left=`border-r`, top=`border-b`, bottom=`border-t`).
+  - Side-specific sizing (`sm:max-w-sm` for left/right) and motion.
+
+Conformance gates:
+
+- Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+  (`web_vs_fret_sheet_demo_panel_chrome_matches`, `web_vs_fret_sheet_side_panel_chrome_matches`, `web_vs_fret_sheet_side_right_panel_chrome_matches`, `web_vs_fret_sheet_side_bottom_panel_chrome_matches`, `web_vs_fret_sheet_side_left_panel_chrome_matches`).
+- Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+  (`web_vs_fret_sheet_demo_overlay_insets_match`, `web_vs_fret_sheet_side_top_overlay_insets_match`, `web_vs_fret_sheet_side_right_overlay_insets_match`, `web_vs_fret_sheet_side_bottom_overlay_insets_match`, `web_vs_fret_sheet_side_left_overlay_insets_match`).

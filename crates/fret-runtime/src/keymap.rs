@@ -35,8 +35,18 @@ pub struct Binding {
 #[derive(Debug, Clone)]
 pub struct DefaultKeybinding {
     pub platform: PlatformFilter,
-    pub chord: KeyChord,
+    pub sequence: Vec<KeyChord>,
     pub when: Option<WhenExpr>,
+}
+
+impl DefaultKeybinding {
+    pub fn single(platform: PlatformFilter, chord: KeyChord) -> Self {
+        Self {
+            platform,
+            sequence: vec![chord],
+            when: None,
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone)]
@@ -260,6 +270,12 @@ pub struct SequenceMatch {
     pub has_continuation: bool,
 }
 
+#[derive(Debug, Clone)]
+pub struct KeymapContinuation {
+    pub next: KeyChord,
+    pub matched: SequenceMatch,
+}
+
 impl Keymap {
     pub fn empty() -> Self {
         Self::default()
@@ -336,6 +352,62 @@ impl Keymap {
             exact,
             has_continuation,
         }
+    }
+
+    /// Lists the valid "next" keystrokes that can follow the provided prefix under the given
+    /// input context.
+    ///
+    /// This is intended for UI hint overlays (e.g. a leader-key popup): it enumerates candidate
+    /// next chords from the configured bindings, then uses `match_sequence` to filter down to
+    /// chords that either execute a command or have further continuations.
+    pub fn continuations(
+        &self,
+        ctx: &InputContext,
+        prefix: &[KeyChord],
+    ) -> Vec<KeymapContinuation> {
+        if prefix.is_empty() {
+            return Vec::new();
+        }
+
+        let mut candidates: Vec<KeyChord> = Vec::new();
+        let mut seen: HashSet<KeyChord> = HashSet::new();
+
+        for b in self.bindings.iter().rev() {
+            if !b.platform.matches(ctx.platform) {
+                continue;
+            }
+            if let Some(expr) = b.when.as_ref()
+                && !expr.eval(ctx)
+            {
+                continue;
+            }
+            if b.sequence.len() <= prefix.len() {
+                continue;
+            }
+            if b.sequence.get(0..prefix.len()) != Some(prefix) {
+                continue;
+            }
+
+            let next = b.sequence[prefix.len()];
+            if seen.insert(next) {
+                candidates.push(next);
+            }
+        }
+
+        let mut out: Vec<KeymapContinuation> = Vec::new();
+        for next in candidates {
+            let mut seq: Vec<KeyChord> = Vec::with_capacity(prefix.len() + 1);
+            seq.extend_from_slice(prefix);
+            seq.push(next);
+
+            let matched = self.match_sequence(ctx, &seq);
+            let exact_command = matched.exact.clone().flatten();
+            if exact_command.is_some() || matched.has_continuation {
+                out.push(KeymapContinuation { next, matched });
+            }
+        }
+
+        out
     }
 
     pub fn extend(&mut self, other: Keymap) {
@@ -555,6 +627,7 @@ enum KeysAny {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Arc;
 
     #[test]
     fn keymap_rejects_unknown_when_identifiers() {
@@ -635,5 +708,70 @@ mod tests {
             conflicts[0].entries[1].command.as_ref().unwrap().as_str(),
             "test.b"
         );
+    }
+
+    #[test]
+    fn keymap_continuations_list_valid_next_chords_and_filters_unbound() {
+        let ctrl_k = KeyChord::new(
+            KeyCode::KeyK,
+            Modifiers {
+                ctrl: true,
+                ..Default::default()
+            },
+        );
+        let up = KeyChord::new(KeyCode::ArrowUp, Modifiers::default());
+        let down_shift = KeyChord::new(
+            KeyCode::ArrowDown,
+            Modifiers {
+                shift: true,
+                ..Default::default()
+            },
+        );
+
+        let mut km = Keymap::empty();
+        km.push_binding(Binding {
+            platform: PlatformFilter::All,
+            sequence: vec![ctrl_k, up],
+            when: None,
+            command: Some(CommandId::new(Arc::<str>::from("test.up"))),
+        });
+        km.push_binding(Binding {
+            platform: PlatformFilter::All,
+            sequence: vec![ctrl_k, down_shift],
+            when: None,
+            command: Some(CommandId::new(Arc::<str>::from("test.down_shift"))),
+        });
+
+        let ctx = InputContext {
+            platform: Platform::Windows,
+            ..Default::default()
+        };
+
+        let out = km.continuations(&ctx, &[ctrl_k]);
+        assert_eq!(out.len(), 2);
+        assert!(out.iter().any(|c| {
+            c.next == up
+                && c.matched
+                    .exact
+                    .as_ref()
+                    .is_some_and(|c| c.as_ref().is_some_and(|id| id.as_str() == "test.up"))
+        }));
+        assert!(out.iter().any(|c| c.next == down_shift
+            && c.matched.exact.as_ref().is_some_and(|c| {
+                c.as_ref()
+                    .is_some_and(|id| id.as_str() == "test.down_shift")
+            })));
+
+        // Explicitly unbind one of the continuations: it should no longer be listed.
+        km.push_binding(Binding {
+            platform: PlatformFilter::All,
+            sequence: vec![ctrl_k, up],
+            when: None,
+            command: None,
+        });
+
+        let out = km.continuations(&ctx, &[ctrl_k]);
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].next, down_shift);
     }
 }

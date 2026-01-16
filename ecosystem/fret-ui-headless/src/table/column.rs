@@ -180,4 +180,20 @@ impl<TData> ColumnHelper<TData> {
         let accessor = Arc::new(accessor);
         ColumnDef::new(id).sort_by(move |a, b| accessor(a).cmp(&accessor(b)))
     }
+
+    pub fn accessor_str(
+        self,
+        id: impl Into<ColumnId>,
+        accessor: impl for<'r> Fn(&'r TData) -> &'r str + 'static,
+    ) -> ColumnDef<TData>
+    where
+        TData: 'static,
+    {
+        let accessor: Arc<dyn for<'r> Fn(&'r TData) -> &'r str> = Arc::new(accessor);
+        let sort_accessor = accessor.clone();
+        let facet_accessor = accessor.clone();
+        ColumnDef::new(id)
+            .sort_by(move |a, b| sort_accessor(a).cmp(sort_accessor(b)))
+            .facet_str_by(move |row| facet_accessor(row))
+    }
 }

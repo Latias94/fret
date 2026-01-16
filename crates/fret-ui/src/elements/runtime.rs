@@ -7,10 +7,25 @@ use std::sync::{
 
 use fret_core::{AppWindowId, NodeId, Rect};
 use fret_runtime::{FrameId, ModelId, TimerToken};
+#[cfg(feature = "diagnostics")]
+use slotmap::Key as _;
 
 use crate::widget::Invalidation;
 
 use super::GlobalElementId;
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone)]
+pub struct WindowElementDiagnosticsSnapshot {
+    pub focused_element: Option<GlobalElementId>,
+    pub active_text_selection: Option<(GlobalElementId, GlobalElementId)>,
+    pub hovered_pressable: Option<GlobalElementId>,
+    pub pressed_pressable: Option<GlobalElementId>,
+    pub hovered_hover_region: Option<GlobalElementId>,
+    pub wants_continuous_frames: bool,
+    pub observed_models: Vec<(GlobalElementId, Vec<(u64, Invalidation)>)>,
+    pub observed_globals: Vec<(GlobalElementId, Vec<(String, Invalidation)>)>,
+}
 
 #[derive(Default)]
 pub struct ElementRuntime {
@@ -41,6 +56,15 @@ impl ElementRuntime {
     pub fn prepare_window_for_frame(&mut self, window: AppWindowId, frame_id: FrameId) {
         let lag = self.gc_lag_frames;
         self.for_window_mut(window).prepare_for_frame(frame_id, lag);
+    }
+
+    #[cfg(feature = "diagnostics")]
+    pub fn diagnostics_snapshot(
+        &self,
+        window: AppWindowId,
+    ) -> Option<WindowElementDiagnosticsSnapshot> {
+        let state = self.windows.get(&window)?;
+        Some(state.diagnostics_snapshot())
     }
 }
 
@@ -176,6 +200,44 @@ impl WindowElementState {
         self.continuous_frames.fetch_add(1, Ordering::Relaxed);
         ContinuousFrames {
             leases: self.continuous_frames.clone(),
+        }
+    }
+
+    #[cfg(feature = "diagnostics")]
+    fn diagnostics_snapshot(&self) -> WindowElementDiagnosticsSnapshot {
+        WindowElementDiagnosticsSnapshot {
+            focused_element: self.focused_element,
+            active_text_selection: self
+                .active_text_selection
+                .map(|sel| (sel.root, sel.element)),
+            hovered_pressable: self.hovered_pressable,
+            pressed_pressable: self.pressed_pressable,
+            hovered_hover_region: self.hovered_hover_region,
+            wants_continuous_frames: self.wants_continuous_frames(),
+            observed_models: self
+                .observed_models
+                .iter()
+                .map(|(element, list)| {
+                    (
+                        *element,
+                        list.iter()
+                            .map(|(model, inv)| (model.data().as_ffi(), *inv))
+                            .collect(),
+                    )
+                })
+                .collect(),
+            observed_globals: self
+                .observed_globals
+                .iter()
+                .map(|(element, list)| {
+                    (
+                        *element,
+                        list.iter()
+                            .map(|(ty, inv)| (format!("{ty:?}"), *inv))
+                            .collect(),
+                    )
+                })
+                .collect(),
         }
     }
 }

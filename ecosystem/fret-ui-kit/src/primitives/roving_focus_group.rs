@@ -64,6 +64,14 @@ pub enum TypeaheadPolicy {
         labels: Arc<[Arc<str>]>,
         timeout_ticks: u64,
     },
+    /// Match on an accumulated prefix buffer that always wraps around the list.
+    ///
+    /// This is closer to Radix Menu's typeahead outcome: the "next match" search wraps even when
+    /// roving navigation does not loop.
+    PrefixAlwaysWrap {
+        labels: Arc<[Arc<str>]>,
+        timeout_ticks: u64,
+    },
 }
 
 /// Render a `RovingFlex` container with an APG-aligned default navigation policy, plus an optional
@@ -96,6 +104,10 @@ pub fn roving_focus_group_apg_with_direction<H: UiHost>(
                 labels,
                 timeout_ticks,
             } => typeahead_prefix_arc_str(cx, labels, timeout_ticks),
+            TypeaheadPolicy::PrefixAlwaysWrap {
+                labels,
+                timeout_ticks,
+            } => typeahead_prefix_arc_str_always_wrap(cx, labels, timeout_ticks),
         }
         f(cx)
     })
@@ -138,6 +150,10 @@ pub fn roving_focus_group_apg_entry_fallback_with_direction<H: UiHost>(
                 labels,
                 timeout_ticks,
             } => typeahead_prefix_arc_str(cx, labels, timeout_ticks),
+            TypeaheadPolicy::PrefixAlwaysWrap {
+                labels,
+                timeout_ticks,
+            } => typeahead_prefix_arc_str_always_wrap(cx, labels, timeout_ticks),
         }
         f(cx)
     })
@@ -473,6 +489,68 @@ pub fn typeahead_prefix_arc_str<H: UiHost>(
                     query,
                     it.current,
                     it.wrap,
+                )
+            },
+        );
+
+        TypeaheadPrefixState {
+            timeout_ticks,
+            labels: labels_cell,
+            handler,
+        }
+    }
+
+    let handler = cx.with_state(
+        || make_state(labels.clone(), timeout_ticks),
+        |state| {
+            if state.timeout_ticks != timeout_ticks {
+                *state = make_state(labels.clone(), timeout_ticks);
+            }
+            *state.labels.borrow_mut() = labels.clone();
+            state.handler.clone()
+        },
+    );
+
+    cx.roving_add_on_typeahead(handler);
+}
+
+/// Install a prefix-buffer typeahead policy for the current roving container that always wraps.
+///
+/// This matches Radix Menu's `getNextMatch` behavior (it searches circularly) even when roving
+/// navigation uses `loop=false`.
+pub fn typeahead_prefix_arc_str_always_wrap<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    labels: Arc<[Arc<str>]>,
+    timeout_ticks: u64,
+) {
+    struct TypeaheadPrefixState {
+        timeout_ticks: u64,
+        labels: Rc<RefCell<Arc<[Arc<str>]>>>,
+        handler: OnRovingTypeahead,
+    }
+
+    fn make_state(labels: Arc<[Arc<str>]>, timeout_ticks: u64) -> TypeaheadPrefixState {
+        let labels_cell: Rc<RefCell<Arc<[Arc<str>]>>> = Rc::new(RefCell::new(labels));
+        let buffer: Rc<RefCell<typeahead::TypeaheadBuffer>> =
+            Rc::new(RefCell::new(typeahead::TypeaheadBuffer::new(timeout_ticks)));
+
+        let labels_read = labels_cell.clone();
+        let buffer_read = buffer.clone();
+
+        #[allow(clippy::arc_with_non_send_sync)]
+        let handler: OnRovingTypeahead = Arc::new(
+            move |_host: &mut dyn UiActionHost, _cx: ActionCx, it: RovingTypeaheadCx| {
+                let mut buf = buffer_read.borrow_mut();
+                buf.push_char(it.input, it.tick);
+                let query = buf.query(it.tick)?;
+
+                let labels = labels_read.borrow();
+                typeahead::match_prefix_arc_str(
+                    labels.as_ref(),
+                    it.disabled.as_ref(),
+                    query,
+                    it.current,
+                    true,
                 )
             },
         );

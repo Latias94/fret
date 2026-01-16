@@ -509,5 +509,6 @@ pub fn run() -> anyhow::Result<()> {
 
     let app = build_app();
     let config = build_runner_config();
-    crate::run_native_demo(config, app, SonnerDemoDriver::default()).context("run sonner_demo app")
+    fret_kit::run_native_demo(config, app, SonnerDemoDriver::default())
+        .context("run sonner_demo app")
 }

@@ -37,6 +37,12 @@ For selected high-frequency shadcn examples (web goldens):
 4. Extract the matching **Fret layout bounds** (and any derived “layout diagnostics”).
 5. Compare with tolerances.
 
+For overlay-heavy scenarios (menus, popovers, etc.), we prefer comparing:
+
+- **Placement deltas** (main-axis gap + cross-axis delta) against the web portal wrapper geometry.
+- **Portal panel size** (width/height) for menu-like overlays where “menu height” is a styling outcome
+  (e.g. `p-1 + border + row heights`), so regressions in sizing/clamping/scrolling are caught early.
+
 ### Matching rules (intentionally strict on scope)
 
 We avoid “full tree matching” for now. Instead, each test scenario should select a minimal set of
