@@ -29,7 +29,10 @@ use fret_ui_kit::primitives::menubar::trigger_row as menubar_trigger_row;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::roving_focus_group;
-use fret_ui_kit::{ColorRef, MetricRef, OverlayController, OverlayPresence, Radius, Space};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
+    Radius, Space,
+};
 
 use crate::overlay_motion;
 
@@ -716,6 +719,8 @@ pub struct Menubar {
     typeahead_timeout_ticks: u64,
     align_leading_icons: bool,
     on_dismiss_request: Option<OnDismissRequest>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
 }
 
 impl std::fmt::Debug for Menubar {
@@ -737,6 +742,8 @@ impl Menubar {
             typeahead_timeout_ticks: 30,
             align_leading_icons: true,
             on_dismiss_request: None,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
         }
     }
 
@@ -764,16 +771,56 @@ impl Menubar {
         self
     }
 
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
-            let border = theme.color_required("border");
-            let radius = MetricRef::radius(Radius::Md).resolve(&theme);
+
+            let radius = self
+                .chrome
+                .radius
+                .as_ref()
+                .map(|m| m.resolve(&theme))
+                .unwrap_or_else(|| MetricRef::radius(Radius::Md).resolve(&theme));
+            let border_width = self
+                .chrome
+                .border_width
+                .as_ref()
+                .map(|m| m.resolve(&theme))
+                .unwrap_or(Px(1.0));
+            let border = self
+                .chrome
+                .border_color
+                .as_ref()
+                .map(|c| c.resolve(&theme))
+                .unwrap_or_else(|| theme.color_required("border"));
+
             let pad_x = MetricRef::space(Space::N1).resolve(&theme);
             let pad_y = MetricRef::space(Space::N1).resolve(&theme);
+            let padding = self.chrome.padding.clone().unwrap_or_default();
+            let pad_top = padding.top.map(|m| m.resolve(&theme)).unwrap_or(pad_y);
+            let pad_right = padding.right.map(|m| m.resolve(&theme)).unwrap_or(pad_x);
+            let pad_bottom = padding.bottom.map(|m| m.resolve(&theme)).unwrap_or(pad_y);
+            let pad_left = padding.left.map(|m| m.resolve(&theme)).unwrap_or(pad_x);
+
             let gap = MetricRef::space(Space::N1).resolve(&theme);
-            let bg = theme.color_required("background");
+            let bg = self
+                .chrome
+                .background
+                .as_ref()
+                .map(|c| c.resolve(&theme))
+                .unwrap_or_else(|| theme.color_required("background"));
             let shadow = decl_style::shadow_xs(&theme, radius);
+            let layout = decl_style::layout_style(&theme, self.layout.clone());
 
             let disabled = self.disabled;
             let menus = self.menus;
@@ -811,16 +858,16 @@ impl Menubar {
                 |cx| {
                     vec![cx.container(
                         ContainerProps {
-                            layout: LayoutStyle::default(),
+                            layout,
                             padding: Edges {
-                                top: pad_y,
-                                right: pad_x,
-                                bottom: pad_y,
-                                left: pad_x,
+                                top: pad_top,
+                                right: pad_right,
+                                bottom: pad_bottom,
+                                left: pad_left,
                             },
                             background: Some(bg),
                             shadow: Some(shadow),
-                            border: Edges::all(Px(1.0)),
+                            border: Edges::all(border_width),
                             border_color: Some(border),
                             corner_radii: Corners::all(radius),
                         },
