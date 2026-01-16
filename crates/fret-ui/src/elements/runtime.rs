@@ -9,6 +9,8 @@ use fret_core::{AppWindowId, NodeId, Rect};
 use fret_runtime::{FrameId, ModelId, TimerToken};
 #[cfg(feature = "diagnostics")]
 use slotmap::Key as _;
+#[cfg(feature = "diagnostics")]
+use std::sync::Arc as StdArc;
 
 use crate::widget::Invalidation;
 
@@ -82,11 +84,23 @@ impl ElementRuntime {
         let state = self.windows.get(&window)?;
         state.node_entry(element).map(|e| e.node)
     }
+
+    #[cfg(feature = "diagnostics")]
+    pub fn debug_path_for_element(
+        &self,
+        window: AppWindowId,
+        element: GlobalElementId,
+    ) -> Option<String> {
+        let state = self.windows.get(&window)?;
+        state.debug_path_for_element(element)
+    }
 }
 
 #[derive(Default)]
 pub struct WindowElementState {
-    pub(super) state: HashMap<(GlobalElementId, TypeId), StateEntry>,
+    pub(super) rendered_state: HashMap<(GlobalElementId, TypeId), Box<dyn Any>>,
+    pub(super) next_state: HashMap<(GlobalElementId, TypeId), Box<dyn Any>>,
+    pub(super) lag_state: Vec<HashMap<(GlobalElementId, TypeId), Box<dyn Any>>>,
     prepared_frame: FrameId,
     pub(super) prev_unkeyed_fingerprints: HashMap<u64, Vec<u64>>,
     pub(super) cur_unkeyed_fingerprints: HashMap<u64, Vec<u64>>,
@@ -105,18 +119,14 @@ pub struct WindowElementState {
     pub(super) pressed_pressable: Option<GlobalElementId>,
     pub(super) hovered_hover_region: Option<GlobalElementId>,
     continuous_frames: Arc<AtomicUsize>,
+    #[cfg(feature = "diagnostics")]
+    debug_identity: DebugIdentityRegistry,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct ActiveTextSelection {
     pub root: GlobalElementId,
     pub element: GlobalElementId,
-}
-
-#[derive(Debug)]
-pub(super) struct StateEntry {
-    pub(super) value: Box<dyn Any>,
-    pub(super) last_seen_frame: FrameId,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -133,8 +143,7 @@ impl WindowElementState {
         }
         self.prepared_frame = frame_id;
 
-        let cutoff = frame_id.0.saturating_sub(lag_frames);
-        self.state.retain(|_, e| e.last_seen_frame.0 >= cutoff);
+        self.advance_element_state_buffers(lag_frames);
 
         std::mem::swap(
             &mut self.prev_unkeyed_fingerprints,
@@ -151,6 +160,68 @@ impl WindowElementState {
         self.cur_visual_bounds.clear();
 
         self.focused_element = None;
+
+        #[cfg(feature = "diagnostics")]
+        {
+            let cutoff = frame_id.0.saturating_sub(lag_frames);
+            self.debug_identity
+                .entries
+                .retain(|_, v| v.last_seen_frame.0 >= cutoff);
+        }
+    }
+
+    fn advance_element_state_buffers(&mut self, lag_frames: u64) {
+        if lag_frames == 0 {
+            self.lag_state.clear();
+        } else {
+            self.lag_state
+                .push(std::mem::take(&mut self.rendered_state));
+            let max = lag_frames as usize;
+            if self.lag_state.len() > max {
+                let drain = self.lag_state.len() - max;
+                self.lag_state.drain(0..drain);
+            }
+        }
+
+        self.rendered_state = std::mem::take(&mut self.next_state);
+        self.next_state.clear();
+    }
+
+    pub(super) fn state_any_ref(&self, key: &(GlobalElementId, TypeId)) -> Option<&dyn Any> {
+        if let Some(v) = self.next_state.get(key) {
+            return Some(&**v);
+        }
+        if let Some(v) = self.rendered_state.get(key) {
+            return Some(&**v);
+        }
+        for map in self.lag_state.iter().rev() {
+            if let Some(v) = map.get(key) {
+                return Some(&**v);
+            }
+        }
+        None
+    }
+
+    pub(super) fn take_state_box(
+        &mut self,
+        key: &(GlobalElementId, TypeId),
+    ) -> Option<Box<dyn Any>> {
+        if let Some(v) = self.next_state.remove(key) {
+            return Some(v);
+        }
+        if let Some(v) = self.rendered_state.remove(key) {
+            return Some(v);
+        }
+        for map in self.lag_state.iter_mut().rev() {
+            if let Some(v) = map.remove(key) {
+                return Some(v);
+            }
+        }
+        None
+    }
+
+    pub(super) fn insert_state_box(&mut self, key: (GlobalElementId, TypeId), value: Box<dyn Any>) {
+        self.next_state.insert(key, value);
     }
 
     pub(crate) fn active_text_selection(&self) -> Option<ActiveTextSelection> {
@@ -256,6 +327,72 @@ impl WindowElementState {
                 .collect(),
         }
     }
+
+    #[cfg(feature = "diagnostics")]
+    pub(crate) fn record_debug_root(
+        &mut self,
+        frame_id: FrameId,
+        root: GlobalElementId,
+        name: &str,
+    ) {
+        self.debug_identity.entries.insert(
+            root,
+            DebugIdentityEntry {
+                parent: None,
+                segment: DebugIdentitySegment::Root {
+                    name: StdArc::<str>::from(name),
+                },
+                last_seen_frame: frame_id,
+            },
+        );
+    }
+
+    #[cfg(feature = "diagnostics")]
+    pub(crate) fn record_debug_child(
+        &mut self,
+        frame_id: FrameId,
+        parent: GlobalElementId,
+        child: GlobalElementId,
+        file: &'static str,
+        line: u32,
+        column: u32,
+        key_hash: Option<u64>,
+        slot: u64,
+    ) {
+        self.debug_identity.entries.insert(
+            child,
+            DebugIdentityEntry {
+                parent: Some(parent),
+                segment: DebugIdentitySegment::Child {
+                    file,
+                    line,
+                    column,
+                    key_hash,
+                    slot,
+                },
+                last_seen_frame: frame_id,
+            },
+        );
+    }
+
+    #[cfg(feature = "diagnostics")]
+    pub(crate) fn debug_path_for_element(&self, element: GlobalElementId) -> Option<String> {
+        let mut segments: Vec<String> = Vec::new();
+        let mut cur = element;
+        let mut guard = 0usize;
+        while guard < 256 {
+            guard += 1;
+            let entry = self.debug_identity.entries.get(&cur)?;
+            segments.push(entry.segment.format());
+            if let Some(parent) = entry.parent {
+                cur = parent;
+                continue;
+            }
+            break;
+        }
+        segments.reverse();
+        Some(format!("{} ({:#x})", segments.join("."), element.0))
+    }
 }
 
 #[must_use]
@@ -268,5 +405,54 @@ impl Drop for ContinuousFrames {
         let _ = self
             .leases
             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |v| v.checked_sub(1));
+    }
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Default)]
+struct DebugIdentityRegistry {
+    entries: HashMap<GlobalElementId, DebugIdentityEntry>,
+}
+
+#[cfg(feature = "diagnostics")]
+struct DebugIdentityEntry {
+    parent: Option<GlobalElementId>,
+    segment: DebugIdentitySegment,
+    last_seen_frame: FrameId,
+}
+
+#[cfg(feature = "diagnostics")]
+enum DebugIdentitySegment {
+    Root {
+        name: StdArc<str>,
+    },
+    Child {
+        file: &'static str,
+        line: u32,
+        column: u32,
+        key_hash: Option<u64>,
+        slot: u64,
+    },
+}
+
+#[cfg(feature = "diagnostics")]
+impl DebugIdentitySegment {
+    fn format(&self) -> String {
+        match self {
+            DebugIdentitySegment::Root { name } => format!("root[{name}]"),
+            DebugIdentitySegment::Child {
+                file,
+                line,
+                column,
+                key_hash,
+                slot,
+            } => {
+                if let Some(k) = key_hash {
+                    format!("{file}:{line}:{column}[key={k:#x}]")
+                } else {
+                    format!("{file}:{line}:{column}[slot={slot}]")
+                }
+            }
+        }
     }
 }

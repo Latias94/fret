@@ -222,6 +222,9 @@ cargo nextest run -p fret-ui -p fret-docking
 In debug builds with `UiTree::set_debug_enabled(true)`, the frame stats include a counter:
 `UiDebugFrameStats.layout_engine_widget_fallback_solves`.
 
+Tip: when using `fret-bootstrap`'s UI diagnostics, setting `FRET_DIAG=1` will also enable UI frame stats
+(same effect as `FRET_UI_DEBUG_STATS=1`) so bundles include `UiDebugFrameStats` counters.
+
 Example (todo demo):
 
 ```powershell

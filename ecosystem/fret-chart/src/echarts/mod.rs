@@ -9,11 +9,12 @@ use std::collections::{BTreeMap, BTreeSet};
 use delinea::Action;
 use delinea::data::{Column, DataTable};
 use delinea::engine::window::DataWindow;
-use delinea::ids::{AxisId, ChartId, DatasetId, FieldId, GridId, SeriesId};
+use delinea::ids::{AxisId, ChartId, DatasetId, FieldId, GridId, SeriesId, VisualMapId};
 use delinea::scale::{AxisScale, CategoryAxisScale, ValueAxisScale};
 use delinea::spec::{
     AxisKind, AxisSpec, ChartSpec, DataZoomXSpec, DataZoomYSpec, DatasetSpec, FieldSpec,
     FilterMode, GridSpec, SeriesEncode, SeriesKind, SeriesLodSpecV1, SeriesSpec, TooltipSpecV1,
+    VisualMapMode, VisualMapSpec,
 };
 
 use serde::Deserialize;
@@ -82,6 +83,63 @@ struct EchartsOption {
     tooltip: Option<EchartsTooltip>,
     #[serde(default)]
     data_zoom: Option<DataZoomOrDataZooms>,
+    #[serde(default)]
+    visual_map: Option<VisualMapOrVisualMaps>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+enum VisualMapOrVisualMaps {
+    One(EchartsVisualMap),
+    Many(Vec<EchartsVisualMap>),
+}
+
+impl VisualMapOrVisualMaps {
+    fn to_vec(&self) -> Vec<EchartsVisualMap> {
+        match self {
+            Self::One(v) => vec![v.clone()],
+            Self::Many(v) => v.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct EchartsVisualMap {
+    #[serde(default, rename = "type")]
+    kind: Option<String>,
+    #[serde(default)]
+    series_index: Option<SeriesIndexOrIndices>,
+    #[serde(default)]
+    dimension: Option<EncodeDim>,
+    #[serde(default)]
+    min: Option<f64>,
+    #[serde(default)]
+    max: Option<f64>,
+    #[serde(default)]
+    range: Option<[f64; 2]>,
+    #[serde(default)]
+    split_number: Option<u16>,
+    #[serde(default)]
+    in_range: Option<serde_json::Map<String, serde_json::Value>>,
+    #[serde(default)]
+    out_of_range: Option<serde_json::Map<String, serde_json::Value>>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+enum SeriesIndexOrIndices {
+    One(usize),
+    Many(Vec<usize>),
+}
+
+impl SeriesIndexOrIndices {
+    fn to_vec(&self) -> Vec<usize> {
+        match self {
+            Self::One(v) => vec![*v],
+            Self::Many(v) => v.clone(),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -411,6 +469,11 @@ fn translate_option(option: &EchartsOption) -> Result<TranslatedChart> {
 
     if option.dataset.is_some() {
         return translate_option_with_dataset(option);
+    }
+    if option.visual_map.is_some() {
+        return Err(EchartsError::Unsupported(
+            "visualMap without dataset (v1 subset)",
+        ));
     }
 
     let grid_id = GridId::new(1);
@@ -971,6 +1034,14 @@ fn translate_option_with_dataset(option: &EchartsOption) -> Result<TranslatedCha
         });
     }
 
+    spec.visual_maps = translate_visual_maps_v1(
+        option.visual_map.as_ref(),
+        &spec,
+        &out_datasets,
+        &dataset_dimensions_by_index,
+        &dataset_fields_by_index,
+    )?;
+
     let axis_grids = compute_axis_grids(&spec);
     let (data_zoom_x, data_zoom_y, actions) =
         translate_data_zoom_v1(option.data_zoom.as_ref(), &x_ids, &y_ids, &axis_grids)?;
@@ -1279,6 +1350,271 @@ fn translate_data_zoom_v1(
     }
 
     Ok((x_specs, y_specs, actions))
+}
+
+fn translate_visual_maps_v1(
+    visual_map: Option<&VisualMapOrVisualMaps>,
+    spec: &ChartSpec,
+    datasets: &[(DatasetId, DataTable)],
+    dataset_dimensions_by_index: &[Vec<String>],
+    dataset_fields_by_index: &[Vec<FieldId>],
+) -> Result<Vec<VisualMapSpec>> {
+    let Some(visual_map) = visual_map else {
+        return Ok(Vec::new());
+    };
+
+    let mut dataset_index_by_id: BTreeMap<DatasetId, usize> = BTreeMap::new();
+    for (i, ds) in spec.datasets.iter().enumerate() {
+        dataset_index_by_id.insert(ds.id, i);
+    }
+
+    let mut table_by_dataset: BTreeMap<DatasetId, &DataTable> = BTreeMap::new();
+    for (id, table) in datasets {
+        table_by_dataset.insert(*id, table);
+    }
+
+    fn parse_range_f32(
+        map: Option<&serde_json::Map<String, serde_json::Value>>,
+        key: &str,
+    ) -> Option<(f32, f32)> {
+        let v = map?.get(key)?;
+        match v {
+            serde_json::Value::Number(n) => n.as_f64().map(|v| (v as f32, v as f32)),
+            serde_json::Value::Array(arr) => {
+                if arr.len() != 2 {
+                    return None;
+                }
+                let a = arr[0].as_f64()? as f32;
+                let b = arr[1].as_f64()? as f32;
+                Some((a, b))
+            }
+            _ => None,
+        }
+    }
+
+    fn parse_number_f32(
+        map: Option<&serde_json::Map<String, serde_json::Value>>,
+        key: &str,
+    ) -> Option<f32> {
+        let v = map?.get(key)?;
+        match v {
+            serde_json::Value::Number(n) => n.as_f64().map(|v| v as f32),
+            _ => None,
+        }
+    }
+
+    fn clamp01(v: f32) -> f32 {
+        v.clamp(0.0, 1.0)
+    }
+
+    fn compute_domain_from_table(
+        table_by_dataset: &BTreeMap<DatasetId, &DataTable>,
+        spec: &ChartSpec,
+        dataset_id: DatasetId,
+        field: FieldId,
+    ) -> Result<(f64, f64)> {
+        let dataset_spec = spec
+            .datasets
+            .iter()
+            .find(|d| d.id == dataset_id)
+            .ok_or(EchartsError::Invalid("visualMap target dataset missing"))?;
+        let column = dataset_spec
+            .fields
+            .iter()
+            .find(|f| f.id == field)
+            .map(|f| f.column)
+            .ok_or(EchartsError::Invalid("visualMap target field missing"))?;
+        let table = table_by_dataset
+            .get(&dataset_id)
+            .copied()
+            .ok_or(EchartsError::Invalid("visualMap dataset table missing"))?;
+        let values = table
+            .columns
+            .get(column)
+            .and_then(|c| c.as_f64_slice())
+            .ok_or(EchartsError::Unsupported(
+                "visualMap domain inference requires f64 column (v1 subset)",
+            ))?;
+
+        let mut min = f64::INFINITY;
+        let mut max = f64::NEG_INFINITY;
+        for v in values.iter().copied().take(table.row_count) {
+            if v.is_nan() {
+                continue;
+            }
+            if v < min {
+                min = v;
+            }
+            if v > max {
+                max = v;
+            }
+        }
+        if !min.is_finite() || !max.is_finite() {
+            return Err(EchartsError::Invalid("visualMap domain is empty"));
+        }
+        Ok((min, max))
+    }
+
+    fn resolve_field_from_dimension(
+        dim: &EncodeDim,
+        dataset_index: usize,
+        dataset_dimensions_by_index: &[Vec<String>],
+        dataset_fields_by_index: &[Vec<FieldId>],
+    ) -> Result<FieldId> {
+        let field_ids = dataset_fields_by_index
+            .get(dataset_index)
+            .ok_or(EchartsError::Invalid("visualMap.datasetIndex out of range"))?;
+        match dim {
+            EncodeDim::Index(i) => field_ids
+                .get(*i)
+                .copied()
+                .ok_or(EchartsError::Invalid("visualMap.dimension out of range")),
+            EncodeDim::Name(name) => {
+                let dims =
+                    dataset_dimensions_by_index
+                        .get(dataset_index)
+                        .ok_or(EchartsError::Invalid(
+                            "visualMap dataset dimensions missing",
+                        ))?;
+                let i = dims
+                    .iter()
+                    .position(|d| d == name)
+                    .ok_or(EchartsError::Invalid("visualMap.dimension name not found"))?;
+                field_ids
+                    .get(i)
+                    .copied()
+                    .ok_or(EchartsError::Invalid("visualMap.dimension out of range"))
+            }
+        }
+    }
+
+    let mut out: Vec<VisualMapSpec> = Vec::new();
+    for (i, vm) in visual_map.to_vec().into_iter().enumerate() {
+        let mode = match vm.kind.as_deref().unwrap_or("continuous") {
+            "continuous" => VisualMapMode::Continuous,
+            "piecewise" => VisualMapMode::Piecewise,
+            _ => return Err(EchartsError::Unsupported("visualMap.type")),
+        };
+
+        let (dataset_target, series_targets) = if let Some(series) = vm.series_index.as_ref() {
+            let indices = series.to_vec();
+            if indices.is_empty() {
+                return Err(EchartsError::Invalid("visualMap.seriesIndex is empty"));
+            }
+            let mut series_ids: Vec<SeriesId> = Vec::with_capacity(indices.len());
+            for idx in indices {
+                let s = spec
+                    .series
+                    .get(idx)
+                    .ok_or(EchartsError::Invalid("visualMap.seriesIndex out of range"))?;
+                series_ids.push(s.id);
+            }
+            (None, series_ids)
+        } else {
+            if spec.series.is_empty() {
+                return Err(EchartsError::Invalid("visualMap requires series"));
+            }
+            let dataset_id = spec.series[0].dataset;
+            if spec.series.iter().any(|s| s.dataset != dataset_id) {
+                return Err(EchartsError::Unsupported(
+                    "visualMap without seriesIndex requires a single dataset (v1 subset)",
+                ));
+            }
+            (Some(dataset_id), Vec::new())
+        };
+
+        let dataset_id = if let Some(ds) = dataset_target {
+            ds
+        } else {
+            let first = series_targets
+                .first()
+                .and_then(|id| spec.series.iter().find(|s| s.id == *id))
+                .ok_or(EchartsError::Invalid("visualMap target series missing"))?;
+            let dataset_id = first.dataset;
+            if series_targets.iter().any(|id| {
+                spec.series
+                    .iter()
+                    .find(|s| s.id == *id)
+                    .is_some_and(|s| s.dataset != dataset_id)
+            }) {
+                return Err(EchartsError::Unsupported(
+                    "visualMap across multiple datasets (v1 subset)",
+                ));
+            }
+            dataset_id
+        };
+
+        let dataset_index = *dataset_index_by_id
+            .get(&dataset_id)
+            .ok_or(EchartsError::Invalid("visualMap target dataset missing"))?;
+
+        let field = if let Some(dim) = vm.dimension.as_ref() {
+            resolve_field_from_dimension(
+                dim,
+                dataset_index,
+                dataset_dimensions_by_index,
+                dataset_fields_by_index,
+            )?
+        } else if let Some(series_id) = series_targets.first() {
+            let series = spec
+                .series
+                .iter()
+                .find(|s| s.id == *series_id)
+                .ok_or(EchartsError::Invalid("visualMap target series missing"))?;
+            series.encode.y
+        } else {
+            return Err(EchartsError::Invalid("visualMap requires dimension"));
+        };
+
+        let (mut min, mut max) = match (vm.min, vm.max) {
+            (Some(min), Some(max)) => (min, max),
+            _ => compute_domain_from_table(&table_by_dataset, spec, dataset_id, field)?,
+        };
+        if min > max {
+            std::mem::swap(&mut min, &mut max);
+        }
+
+        let initial_range = vm.range.map(|r| {
+            let mut a = r[0];
+            let mut b = r[1];
+            if a > b {
+                std::mem::swap(&mut a, &mut b);
+            }
+            (a, b)
+        });
+
+        let point_radius_mul_range =
+            parse_range_f32(vm.in_range.as_ref(), "symbolSize").map(|(a, b)| {
+                let base = 10.0f32;
+                ((a / base).max(0.0), (b / base).max(0.0))
+            });
+
+        let opacity_mul_range =
+            parse_range_f32(vm.in_range.as_ref(), "opacity").map(|(a, b)| (clamp01(a), clamp01(b)));
+        let out_of_range_opacity = parse_number_f32(vm.out_of_range.as_ref(), "opacity")
+            .map(clamp01)
+            .unwrap_or(0.25);
+
+        let buckets = vm.split_number.unwrap_or(8).max(1).min(64);
+
+        out.push(VisualMapSpec {
+            id: VisualMapId::new((i as u64).saturating_add(1)),
+            mode,
+            dataset: dataset_target,
+            series: series_targets,
+            field,
+            domain: (min, max),
+            initial_range,
+            initial_piece_mask: None,
+            point_radius_mul_range,
+            stroke_width_range: None,
+            opacity_mul_range,
+            buckets,
+            out_of_range_opacity,
+        });
+    }
+
+    Ok(out)
 }
 
 fn compute_axis_grids(spec: &ChartSpec) -> BTreeMap<AxisId, GridId> {

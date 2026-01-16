@@ -433,6 +433,10 @@ fn ui_app_create_window_state<S>(
 ) -> UiAppWindowState<S> {
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
+    ui.set_debug_enabled(
+        std::env::var_os("FRET_UI_DEBUG_STATS").is_some_and(|v| !v.is_empty())
+            || std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty()),
+    );
 
     #[cfg(feature = "ui-app-command-palette")]
     if driver.command_palette_enabled {
@@ -934,7 +938,7 @@ fn ui_app_render<S>(
             #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
             {
                 let out = direction_prim::with_direction_provider(cx, dir, |cx| {
-                    let out = (driver.view)(cx, &mut state.state);
+                    let mut out = (driver.view)(cx, &mut state.state);
 
                     #[cfg(feature = "ui-app-command-palette")]
                     if driver.command_palette_enabled

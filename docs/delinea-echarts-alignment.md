@@ -486,8 +486,10 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 
 - `[~]` Token-driven chart styling (tracked in `docs/adr/0142-fret-chart-theme-tokens-and-style-resolution.md`).
 - `[~]` VisualMap-style data-driven color mapping (ECharts `visualMap`) (scatter + bar v1 buckets).
-  - Evidence: `docs/adr/1147-delinea-visualmap-and-data-driven-styling.md`, `ecosystem/delinea/src/engine/stages/marks.rs`, `ecosystem/fret-chart/src/retained/canvas.rs`.
+  - Evidence (engine): `docs/adr/1147-delinea-visualmap-and-data-driven-styling.md`, `ecosystem/delinea/src/engine/stages/marks.rs`, `ecosystem/delinea/src/spec/mod.rs` (`VisualMapSpec`).
+  - Evidence (translator): `ecosystem/fret-chart/src/echarts/mod.rs` (`translate_visual_maps_v1`) + `ecosystem/fret-chart/tests/echarts_headless_goldens.rs` (golden: `goldens/echarts-headless/v1/visualmap-scatter-opacity-and-size.json`).
   - Notes: v1 includes continuous + piecewise controller UI, scatter/bar bucket coloring, per-bucket opacity ramps, scatter point radius mapping, and optional stroke width ranges; per-item attribute pipelines are future work.
+  - Notes (ECharts adapter v1): supports `visualMap.type`, `seriesIndex` (or dataset-wide when single dataset), `dimension` (index/name), `min/max` (or inferred from data), `range`, `inRange.opacity`, `outOfRange.opacity`, and `inRange.symbolSize` (mapped to `point_radius_mul_range` using `symbolSize / 10.0` as a heuristic).
 
 ## Known Gaps vs ECharts (High Value)
 
