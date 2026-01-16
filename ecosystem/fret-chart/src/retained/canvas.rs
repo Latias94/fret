@@ -11,6 +11,7 @@ use delinea::marks::{MarkKind, MarkPayloadRef};
 use delinea::text::{TextMeasurer, TextMetrics};
 use delinea::{Action, BrushSelection2D, ChartEngine, WorkBudget};
 use fret_canvas::cache::PathCache;
+use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_canvas::scale::effective_scale_factor;
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, FontWeight, KeyCode, Modifiers, MouseButton,
@@ -21,6 +22,7 @@ use fret_runtime::Model;
 use fret_ui::Theme;
 use fret_ui::UiHost;
 use fret_ui::retained_bridge::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
+use slotmap::Key;
 
 use crate::input_map::{ChartInputMap, ModifierKey, ModifiersMask};
 use crate::retained::style::ChartStyle;
@@ -3894,6 +3896,20 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         self.axis_text.begin_frame();
         self.legend_text.begin_frame();
         self.path_cache.begin_frame();
+        if let Some(window) = cx.window {
+            let frame_id = cx.app.frame_id().0;
+            let entries = self.path_cache.len();
+            let stats = self.path_cache.stats();
+            let key = CanvasCacheKey {
+                window: window.data().as_ffi(),
+                node: cx.node.data().as_ffi(),
+                name: "fret-chart.canvas.paths",
+            };
+            cx.app
+                .with_global_mut(CanvasCacheStatsRegistry::default, |registry, _app| {
+                    registry.record_path_cache(key, frame_id, entries, stats);
+                });
+        }
 
         let mut measurer = NullTextMeasurer::default();
 

@@ -14,6 +14,7 @@ fret-runtime = { path = "../../crates/fret-runtime" }
 fret-canvas = { path = "../fret-canvas" }
 fret-ui-kit = { path = "../fret-ui-kit", features = ["recipes"] }
 delinea = { path = "../delinea" }
+slotmap.workspace = true
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 

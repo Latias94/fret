@@ -994,6 +994,7 @@ dependencies = [
  "fret-ui-kit",
  "serde",
  "serde_json",
+ "slotmap",
 ]
 
 [[package]]
