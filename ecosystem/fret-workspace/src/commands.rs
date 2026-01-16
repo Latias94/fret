@@ -7,6 +7,9 @@ use std::sync::Arc;
 pub const CMD_WORKSPACE_TAB_NEXT: &str = "workspace.tab.next";
 pub const CMD_WORKSPACE_TAB_PREV: &str = "workspace.tab.prev";
 pub const CMD_WORKSPACE_TAB_CLOSE: &str = "workspace.tab.close";
+pub const CMD_WORKSPACE_TAB_CLOSE_OTHERS: &str = "workspace.tab.close.others";
+pub const CMD_WORKSPACE_TAB_CLOSE_LEFT: &str = "workspace.tab.close.left";
+pub const CMD_WORKSPACE_TAB_CLOSE_RIGHT: &str = "workspace.tab.close.right";
 
 pub const CMD_WORKSPACE_TAB_MOVE_LEFT: &str = "workspace.tab.move.left";
 pub const CMD_WORKSPACE_TAB_MOVE_RIGHT: &str = "workspace.tab.move.right";
@@ -288,6 +291,27 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
                 linux_ctrl(KeyCode::KeyW, false),
                 mac_cmd(KeyCode::KeyW),
             ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_TAB_CLOSE_OTHERS),
+        CommandMeta::new("Close Other Tabs")
+            .with_category("Workspace")
+            .with_keywords(["tab", "close", "others", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_TAB_CLOSE_LEFT),
+        CommandMeta::new("Close Tabs to the Left")
+            .with_category("Workspace")
+            .with_keywords(["tab", "close", "left", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_TAB_CLOSE_RIGHT),
+        CommandMeta::new("Close Tabs to the Right")
+            .with_category("Workspace")
+            .with_keywords(["tab", "close", "right", "workspace"]),
     );
 
     registry.register(

@@ -25,6 +25,9 @@ use crate::commands::{
 };
 use crate::tab_drag::{DRAG_KIND_WORKSPACE_TAB, WorkspaceTabDragState, WorkspaceTabDropZone};
 
+#[cfg(feature = "shadcn-context-menu")]
+use fret_ui_shadcn::{ContextMenu, ContextMenuEntry, ContextMenuItem};
+
 fn fill_layout() -> LayoutStyle {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
@@ -96,6 +99,39 @@ fn fixed_square_layout(size: Px) -> LayoutStyle {
     layout.size.height = Length::Px(size);
     layout.flex.shrink = 0.0;
     layout
+}
+
+fn fill_grow_layout() -> LayoutStyle {
+    let mut layout = fill_layout();
+    layout.flex.grow = 1.0;
+    layout
+}
+
+fn centered_row<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: Arc<str>,
+    style: TextStyle,
+    color: Option<Color>,
+) -> AnyElement {
+    cx.flex(
+        FlexProps {
+            layout: fill_layout(),
+            direction: fret_core::Axis::Horizontal,
+            justify: MainAlign::Center,
+            align: CrossAlign::Center,
+            ..Default::default()
+        },
+        |cx| {
+            vec![cx.text_props(TextProps {
+                layout: LayoutStyle::default(),
+                text,
+                style: Some(style),
+                color,
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+            })]
+        },
+    )
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -227,6 +263,28 @@ struct WorkspaceTabStripState {
     last_active: Option<Arc<str>>,
 }
 
+#[cfg(feature = "shadcn-context-menu")]
+#[derive(Debug, Default)]
+struct WorkspaceTabStripContextMenuState {
+    open: Option<Model<bool>>,
+}
+
+#[cfg(feature = "shadcn-context-menu")]
+fn get_context_menu_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
+    let existing = cx.with_state(WorkspaceTabStripContextMenuState::default, |st| {
+        st.open.clone()
+    });
+    if let Some(m) = existing {
+        return m;
+    }
+
+    let model = cx.app.models_mut().insert(false);
+    cx.with_state(WorkspaceTabStripContextMenuState::default, |st| {
+        st.open = Some(model.clone());
+    });
+    model
+}
+
 impl WorkspaceTabStrip {
     pub fn new(active: impl Into<Arc<str>>) -> Self {
         Self {
@@ -327,6 +385,8 @@ impl WorkspaceTabStrip {
             indicator_color,
             text_style,
             tab_radius,
+            scroll_button_fg,
+            tab_max_width,
         ) = {
             let theme = Theme::global(cx.app);
 
@@ -358,6 +418,13 @@ impl WorkspaceTabStrip {
 
             let text_style = tab_text_style(theme);
             let tab_radius = theme.metric_by_key("radius").unwrap_or(Px(6.0));
+            let scroll_button_fg = theme
+                .color_by_key("workspace.tab_strip.scroll_fg")
+                .or_else(|| theme.color_by_key("muted-foreground"))
+                .unwrap_or(active_fg);
+            let tab_max_width = theme
+                .metric_by_key("workspace.tab.max_width")
+                .unwrap_or(Px(240.0));
 
             (
                 bar_bg,
@@ -370,6 +437,8 @@ impl WorkspaceTabStrip {
                 indicator_color,
                 text_style,
                 tab_radius,
+                scroll_button_fg,
+                tab_max_width,
             )
         };
 
@@ -431,13 +500,16 @@ impl WorkspaceTabStrip {
                                             let pane_activate_cmd_for_drag = pane_activate_cmd.clone();
                                             let tab_close_command = tab.close_command.clone();
                                             let tab_dirty = tab.dirty;
+                                            let has_left = index > 0;
+                                            let has_right = index + 1 < tabs.len();
+                                            let has_others = tabs.len() > 1;
                                             let is_active = active
                                                 .as_deref()
                                                 .is_some_and(|a| tab_id.as_ref() == a);
                                             let pos_in_set = (index as u32) + 1;
 
                                             let element = cx.keyed(tab_id.as_ref(), |cx| {
-                                                cx.pressable_with_id(
+                                                let tab_element = cx.pressable_with_id(
                                                     PressableProps {
                                                         layout: {
                                                             let mut layout =
@@ -539,7 +611,7 @@ impl WorkspaceTabStrip {
                                                                         host.request_redraw(
                                                                             acx.window,
                                                                         );
-                                                                        return PressablePointerDownResult::SkipDefaultAndStopPropagation;
+                                                                        return PressablePointerDownResult::SkipDefault;
                                                                     }
                                                                     _ => {}
                                                                 }
@@ -837,7 +909,13 @@ impl WorkspaceTabStrip {
 
                                                                         let mut children = vec![
                                                                             cx.text_props(TextProps {
-                                                                                layout: LayoutStyle::default(),
+                                                                                layout: {
+                                                                                    let mut layout =
+                                                                                        LayoutStyle::default();
+                                                                                    layout.size.max_width =
+                                                                                        Some(tab_max_width);
+                                                                                    layout
+                                                                                },
                                                                                 text: label,
                                                                                 style: Some(text_style.clone()),
                                                                                 color: Some(tab_fg),
@@ -955,7 +1033,76 @@ impl WorkspaceTabStrip {
                                                             },
                                                         )]
                                                     },
-                                                )
+                                                );
+
+                                                #[cfg(feature = "shadcn-context-menu")]
+                                                {
+                                                    let open = get_context_menu_open_model(cx);
+                                                    let close_cmd = tab_close_command.clone();
+                                                    let has_left = has_left;
+                                                    let has_right = has_right;
+                                                    let has_others = has_others;
+                                                    ContextMenu::new(open).into_element(
+                                                        cx,
+                                                        |_cx| tab_element,
+                                                        move |_cx| {
+                                                            let mut entries = Vec::new();
+                                                            if let Some(cmd) = close_cmd {
+                                                                entries.push(ContextMenuEntry::Item(
+                                                                    ContextMenuItem::new("Close Tab").on_select(cmd),
+                                                                ));
+                                                            }
+                                                            entries.push(ContextMenuEntry::Item(
+                                                                ContextMenuItem::new("Close Other Tabs")
+                                                                    .disabled(!has_others)
+                                                                    .on_select(CommandId::new(
+                                                                        crate::commands::CMD_WORKSPACE_TAB_CLOSE_OTHERS,
+                                                                    )),
+                                                            ));
+                                                            entries.push(ContextMenuEntry::Item(
+                                                                ContextMenuItem::new("Close Tabs to the Left")
+                                                                    .disabled(!has_left)
+                                                                    .on_select(CommandId::new(
+                                                                        crate::commands::CMD_WORKSPACE_TAB_CLOSE_LEFT,
+                                                                    )),
+                                                            ));
+                                                            entries.push(ContextMenuEntry::Item(
+                                                                ContextMenuItem::new("Close Tabs to the Right")
+                                                                    .disabled(!has_right)
+                                                                    .on_select(CommandId::new(
+                                                                        crate::commands::CMD_WORKSPACE_TAB_CLOSE_RIGHT,
+                                                                    )),
+                                                            ));
+                                                            entries.push(ContextMenuEntry::Separator);
+                                                            entries.push(ContextMenuEntry::Item(
+                                                                ContextMenuItem::new("Split Right").on_select(
+                                                                    CommandId::new(crate::commands::CMD_WORKSPACE_PANE_SPLIT_RIGHT),
+                                                                ),
+                                                            ));
+                                                            entries.push(ContextMenuEntry::Item(
+                                                                ContextMenuItem::new("Split Left").on_select(
+                                                                    CommandId::new(crate::commands::CMD_WORKSPACE_PANE_SPLIT_LEFT),
+                                                                ),
+                                                            ));
+                                                            entries.push(ContextMenuEntry::Item(
+                                                                ContextMenuItem::new("Split Up").on_select(
+                                                                    CommandId::new(crate::commands::CMD_WORKSPACE_PANE_SPLIT_UP),
+                                                                ),
+                                                            ));
+                                                            entries.push(ContextMenuEntry::Item(
+                                                                ContextMenuItem::new("Split Down").on_select(
+                                                                    CommandId::new(crate::commands::CMD_WORKSPACE_PANE_SPLIT_DOWN),
+                                                                ),
+                                                            ));
+                                                            entries
+                                                        },
+                                                    )
+                                                }
+
+                                                #[cfg(not(feature = "shadcn-context-menu"))]
+                                                {
+                                                    tab_element
+                                                }
                                             });
                                             out.push(element);
                                         }
@@ -967,7 +1114,7 @@ impl WorkspaceTabStrip {
                                 AnyElement::new(
                                     id,
                                     ElementKind::Scroll(ScrollProps {
-                                        layout: fill_layout(),
+                                        layout: fill_grow_layout(),
                                         axis: ScrollAxis::X,
                                         scroll_handle: Some(scroll_handle.clone()),
                                         // Important: keep the scroll child width `Auto` (see
@@ -978,6 +1125,73 @@ impl WorkspaceTabStrip {
                                     children,
                                 )
                             });
+
+                            let scroll_step = Px(120.0);
+                            let scroll_x = scroll_handle.offset().x;
+                            let scroll_max_x = scroll_handle.max_offset().x;
+                            let can_scroll_left = scroll_x.0 > 0.5;
+                            let can_scroll_right = scroll_x.0 + 0.5 < scroll_max_x.0;
+
+                            let scroll_button = |cx: &mut ElementContext<'_, H>,
+                                                 enabled: bool,
+                                                 glyph: &'static str,
+                                                 a11y_label: &'static str,
+                                                 delta_x: f32| {
+                                let scroll_handle = scroll_handle.clone();
+                                let button_text_style = text_style.clone();
+                                let glyph = Arc::<str>::from(glyph);
+                                cx.pressable(
+                                    PressableProps {
+                                        layout: fixed_square_layout(Px(20.0)),
+                                        enabled,
+                                        focusable: false,
+                                        a11y: PressableA11y {
+                                            role: Some(SemanticsRole::Button),
+                                            label: Some(Arc::from(a11y_label)),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    move |cx, state| {
+                                        let handler: OnActivate = Arc::new(move |_host, _acx, _r| {
+                                            let current = scroll_handle.offset();
+                                            scroll_handle.set_offset(Point::new(
+                                                Px(current.x.0 + delta_x * scroll_step.0),
+                                                current.y,
+                                            ));
+                                        });
+                                        cx.pressable_on_activate(handler);
+
+                                        let alpha = if enabled { 1.0 } else { 0.35 };
+                                        let fg = Some(Color {
+                                            a: scroll_button_fg.a * alpha,
+                                            ..scroll_button_fg
+                                        });
+                                        let bg = if enabled && (state.hovered || state.pressed) {
+                                            Some(hover_bg)
+                                        } else {
+                                            None
+                                        };
+
+                                        vec![cx.container(
+                                            ContainerProps {
+                                                layout: fill_layout(),
+                                                background: bg,
+                                                corner_radii: Corners::all(Px(4.0)),
+                                                ..Default::default()
+                                            },
+                                            |cx| {
+                                                vec![centered_row(
+                                                    cx,
+                                                    glyph.clone(),
+                                                    button_text_style.clone(),
+                                                    fg,
+                                                )]
+                                            },
+                                        )]
+                                    },
+                                )
+                            };
 
                             let mut rects: Vec<TabHitRect> = Vec::new();
                             for (id, el) in tab_elements.borrow().iter() {
@@ -1012,7 +1226,23 @@ impl WorkspaceTabStrip {
                                 });
                             }
 
-                            vec![scroll]
+                            vec![cx.flex(
+                                FlexProps {
+                                    layout: fill_layout(),
+                                    direction: fret_core::Axis::Horizontal,
+                                    gap: Px(2.0),
+                                    justify: MainAlign::Start,
+                                    align: CrossAlign::Center,
+                                    ..Default::default()
+                                },
+                                |cx| {
+                                    vec![
+                                        scroll_button(cx, can_scroll_left, "<", "Scroll left", -1.0),
+                                        scroll,
+                                        scroll_button(cx, can_scroll_right, ">", "Scroll right", 1.0),
+                                    ]
+                                },
+                            )]
                         },
                     );
 
