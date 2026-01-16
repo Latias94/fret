@@ -1,5 +1,5 @@
-/target
-/target*
+/target/
+/target-*
 /repo-ref
 .DS_Store
 /local
