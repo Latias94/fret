@@ -77,6 +77,8 @@ pub mod tooltip;
 #[cfg(feature = "app-integration")]
 pub mod app_integration;
 
+mod ui_ext;
+
 pub use accordion::{
     Accordion, AccordionContent, AccordionItem, AccordionKind, AccordionTrigger,
     accordion_multiple, accordion_multiple_uncontrolled, accordion_single,
@@ -242,7 +244,7 @@ pub use fret_ui_kit::declarative::style as decl_style;
 /// the common “app + components” story down to `fret-ui-shadcn` + `fret-bootstrap`.
 pub use fret_ui_kit::declarative::{icon, stack};
 pub use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Size, Space, StyledExt,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Size, Space, StyledExt, UiExt,
 };
 
 /// Common imports for application code using `fret-ui-shadcn`.
@@ -252,6 +254,7 @@ pub use fret_ui_kit::{
 pub mod prelude {
     pub use crate::{
         ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Size, Space, StyledExt,
+        UiExt,
     };
     pub use crate::{decl_style, icon, stack};
 

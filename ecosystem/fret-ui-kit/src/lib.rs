@@ -18,6 +18,7 @@ pub mod recipes;
 pub mod theme_tokens;
 pub mod tooltip_provider;
 pub mod tree;
+pub mod ui_builder;
 pub mod viewport_tooling;
 #[cfg(feature = "unstable-internals")]
 pub mod window_overlays;
@@ -34,6 +35,7 @@ pub use style::{
     OverflowRefinement, Radius, Space,
 };
 pub use styled::{RefineStyle, Stylable, Styled, StyledExt};
+pub use ui_builder::{UiBuilder, UiExt, UiIntoElement, UiPatch, UiPatchTarget};
 
 pub use overlay_controller::{
     OverlayController, OverlayKind, OverlayPresence, OverlayRequest, ToastLayerSpec,
@@ -58,6 +60,7 @@ pub mod prelude {
 
     pub use crate::{
         ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Size, Space, StyledExt,
+        UiExt,
     };
     pub use crate::{OverlayController, OverlayKind, OverlayPresence, OverlayRequest};
 
