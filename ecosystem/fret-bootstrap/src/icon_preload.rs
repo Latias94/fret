@@ -5,11 +5,22 @@ use fret_app::App;
 use fret_core::UiServices;
 use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned};
 
+use fret_canvas::cache::CacheStats;
 use fret_canvas::cache::{SvgBytes, SvgCache};
 
 #[derive(Debug, Default)]
 pub struct PreloadedIconSvgCache {
     cache: SvgCache,
+}
+
+impl PreloadedIconSvgCache {
+    pub(crate) fn diagnostics_snapshot(&self) -> (usize, u64, CacheStats) {
+        (
+            self.cache.len(),
+            self.cache.bytes_ready(),
+            self.cache.stats(),
+        )
+    }
 }
 
 fn icon_svg_cache_key(icon: &IconId) -> u64 {
