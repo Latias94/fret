@@ -10,6 +10,7 @@ pub mod elements;
 pub mod fixed_split;
 pub mod focus_visible;
 mod frame_cx;
+pub mod frame_pipeline;
 pub mod host;
 pub mod input_modality;
 pub mod internal_drag;
