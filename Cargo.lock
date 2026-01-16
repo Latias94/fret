@@ -948,6 +948,7 @@ name = "fret-bootstrap"
 version = "0.1.0"
 dependencies = [
  "fret-app",
+ "fret-canvas",
  "fret-core",
  "fret-icons",
  "fret-icons-lucide",

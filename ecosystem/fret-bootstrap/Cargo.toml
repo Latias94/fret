@@ -12,7 +12,7 @@ documentation.workspace = true
 [features]
 default = []
 # Enable `preload_icon_svgs_on_gpu_ready`, which depends on `fret-ui-kit`.
-preload-icon-svgs = ["dep:fret-ui-kit", "fret-ui-kit/icons"]
+preload-icon-svgs = ["dep:fret-ui-kit", "fret-ui-kit/icons", "dep:fret-canvas"]
 ui-assets = ["dep:fret-ui-assets", "fret-ui-assets/app-integration"]
 # Convenience icon pack installers (data-only).
 icons-lucide = ["dep:fret-icons-lucide", "fret-icons-lucide/app-integration"]
@@ -38,6 +38,7 @@ fret-launch = { path = "../../crates/fret-launch" }
 fret-render = { path = "../../crates/fret-render" }
 fret-ui = { path = "../../crates/fret-ui", optional = true }
 fret-ui-app = { path = "../../crates/fret-ui-app", optional = true }
+fret-canvas = { path = "../fret-canvas", optional = true }
 
 fret-ui-kit = { path = "../fret-ui-kit", optional = true }
 fret-ui-shadcn = { path = "../fret-ui-shadcn", optional = true }

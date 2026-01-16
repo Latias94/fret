@@ -44,6 +44,9 @@ use fret_app::config_files::LayeredConfigPaths;
 use fret_app::{App, KeymapFileError, SettingsError, SettingsFileV1};
 use fret_icons::IconRegistry;
 
+#[cfg(feature = "preload-icon-svgs")]
+mod icon_preload;
+
 #[derive(Debug, thiserror::Error)]
 pub enum BootstrapError {
     #[error(transparent)]
@@ -335,7 +338,7 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         self.on_gpu_ready_hooks
             .push(Box::new(|app, _context, renderer| {
                 let services = renderer as &mut dyn fret_core::UiServices;
-                fret_ui_kit::declarative::icon::preload_icon_svgs(app, services);
+                icon_preload::preload_icon_svgs(app, services);
             }));
         self
     }
@@ -462,7 +465,7 @@ pub mod ui_app_driver;
     feature = "ui-app-driver",
     feature = "diagnostics"
 ))]
-mod ui_diagnostics;
+pub mod ui_diagnostics;
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "diagnostics"))]
 pub fn init_diagnostics() {
