@@ -7,6 +7,7 @@ pub mod geometry;
 pub mod ids;
 pub mod image;
 pub mod input;
+pub mod layout_direction;
 pub mod panels;
 pub mod scene;
 pub mod semantics;
@@ -50,6 +51,7 @@ pub use input::{
     keycode_to_ascii_lowercase,
 };
 pub use input::{MouseButtons, ViewportInputEvent, ViewportInputGeometry, ViewportInputKind};
+pub use layout_direction::LayoutDirection;
 pub use panels::{PanelKey, PanelKind};
 pub use scene::{
     Color, DitherMode, DrawOrder, EffectChain, EffectMode, EffectQuality, EffectStep, Scene,

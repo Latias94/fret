@@ -1,6 +1,6 @@
 //! Headless table engine (TanStack-aligned vocabulary, Rust-native API).
 //!
-//! This module is feature-gated behind `fret-ui-kit/table`.
+//! This module is always available (no long-lived feature gate).
 
 mod aggregation;
 mod column;

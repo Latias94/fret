@@ -1470,7 +1470,6 @@ name = "fret-ui-headless"
 version = "0.1.0"
 dependencies = [
  "fret-core",
- "fret-ui",
  "time",
  "virtualizer",
 ]

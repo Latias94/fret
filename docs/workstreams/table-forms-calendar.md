@@ -132,7 +132,7 @@ As of the initial audit:
 - [ ] Lock the minimal v1 public API surface (types + invariants) and add/adjust unit tests as needed.
 - [ ] Validate stable row keys + selection + sorting tie-breakers + column visibility semantics with tests.
 - [x] Decide the feature gate story:
-  - `headless::table` has no heavy deps, so it is now always available; the `table` feature is kept as a no-op compatibility flag.
+  - `headless::table` has no heavy deps, so it is always available (no long-lived feature gate).
 
 ### M2 — DataTable UI Surface (shadcn-aligned)
 
