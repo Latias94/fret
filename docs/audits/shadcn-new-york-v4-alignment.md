@@ -48,7 +48,9 @@ Fret mapping intent:
     this via a longest-item width probe in item-aligned mode (so listbox width can exceed trigger).
   - Items: `py-1.5`, `pl-2`, `pr-8`, `gap-2`, `rounded-sm`.
   - Selected indicator: absolute slot (`right-2`, `size-3.5`) + reserve `pr-8`.
-  - Scroll buttons: `py-1` with centered `size-4` chevrons (only visible when scrollable).
+  - Scroll buttons: `py-1` with centered `size-4` chevrons; when scrollable, Radix scrolls the
+    viewport so the first selectable option sits directly under the up-button (the group label is
+    scrolled behind it).
 
 Recent fixes:
 
@@ -60,6 +62,7 @@ Conformance gates:
 
 - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_select_panel_chrome_matches`).
 - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_select_scrollable_overlay_placement_matches`, `web_vs_fret_select_scrollable_small_viewport_overlay_placement_matches`).
+- Scroll buttons + viewport inset: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_select_scrollable_listbox_option_insets_match`, `web_vs_fret_select_scrollable_small_viewport_listbox_option_insets_match`).
 
 ### `DropdownMenu`
 

@@ -47,6 +47,9 @@ Fret models Radix Select outcomes by composing:
 - Pass: Item-aligned positioning (Radix `SelectItemAlignedPosition`) is implemented as reusable
   headless geometry math in `ecosystem/fret-ui-kit/src/headless/select_item_aligned.rs` and is
   available to recipes (shadcn select exposes it via `SelectPosition::ItemAligned`).
+- Pass: When the select content is scrollable, opening the listbox performs a one-shot “align active
+  option to the top edge” scroll so the first option sits directly under the scroll-up button,
+  matching the upstream scrollable select outcome (group labels are scrolled behind the button).
 - Pass: Dismissals can be intercepted (Radix `DismissableLayer` "preventDefault" outcome) via
   `modal_select_request_with_dismiss_handler(...)` and `select_modal_barrier_with_dismiss_handler(...)`.
   When provided, the handler receives the `DismissReason` and can decide whether to close the `open`
@@ -67,3 +70,6 @@ Fret models Radix Select outcomes by composing:
 - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` validates select scrollable
   placement + panel sizing against shadcn web goldens (including a constrained viewport variant:
   `goldens/shadcn-web/v4/new-york-v4/select-scrollable.vp1440x450.open.json`).
+- `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` also gates the scrollable
+  select's scroll buttons and the “top inset to first option” outcome via
+  `web_vs_fret_select_scrollable_listbox_option_insets_match` (and the small-viewport variant).

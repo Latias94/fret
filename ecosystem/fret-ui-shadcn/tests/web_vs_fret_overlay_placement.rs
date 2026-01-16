@@ -586,6 +586,14 @@ struct InsetTriplet {
     right: f32,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct InsetQuad {
+    left: f32,
+    top_to_first_option: f32,
+    right: f32,
+    bottom_from_last_option: f32,
+}
+
 fn web_menu_content_inset(menu: &WebNode) -> InsetTriplet {
     let is_menu_item_role = |node: &WebNode| {
         matches!(
@@ -643,6 +651,82 @@ fn web_menu_content_insets_for_slots(theme: &WebGoldenTheme, slots: &[&str]) -> 
         .map(|slot| web_portal_node_by_data_slot(theme, slot))
         .map(web_menu_content_inset)
         .collect()
+}
+
+fn web_select_listbox<'a>(theme: &'a WebGoldenTheme) -> &'a WebNode {
+    theme
+        .portals
+        .iter()
+        .chain(theme.portal_wrappers.iter())
+        .find(|n| n.attrs.get("role").is_some_and(|v| v == "listbox"))
+        .or_else(|| {
+            theme
+                .portals
+                .iter()
+                .chain(theme.portal_wrappers.iter())
+                .find_map(|portal| {
+                    find_first(portal, &|n| {
+                        n.attrs.get("role").is_some_and(|v| v == "listbox")
+                    })
+                })
+        })
+        .unwrap_or_else(|| panic!("missing web select listbox portal"))
+}
+
+fn web_select_content_option_inset(listbox: &WebNode) -> InsetQuad {
+    let mut option_stack = vec![listbox];
+    let mut min_x = None::<f32>;
+    let mut min_y = None::<f32>;
+    let mut max_right = None::<f32>;
+    let mut max_bottom = None::<f32>;
+
+    while let Some(option_node) = option_stack.pop() {
+        if option_node
+            .attrs
+            .get("role")
+            .is_some_and(|v| v.as_str() == "option")
+        {
+            let eps = 0.01;
+            let panel_left = listbox.rect.x;
+            let panel_right = rect_right(listbox.rect);
+            let panel_top = listbox.rect.y;
+            let panel_bottom = rect_bottom(listbox.rect);
+            let option_left = option_node.rect.x;
+            let option_right = rect_right(option_node.rect);
+            let option_top = option_node.rect.y;
+            let option_bottom = rect_bottom(option_node.rect);
+
+            let within_panel = option_left + eps >= panel_left
+                && option_right <= panel_right + eps
+                && option_top + eps >= panel_top
+                && option_bottom <= panel_bottom + eps;
+            if !within_panel {
+                continue;
+            }
+
+            min_x = Some(min_x.unwrap_or(option_left).min(option_left));
+            min_y = Some(min_y.unwrap_or(option_top).min(option_top));
+            max_right = Some(max_right.unwrap_or(option_right).max(option_right));
+            max_bottom = Some(max_bottom.unwrap_or(option_bottom).max(option_bottom));
+        }
+        for child in &option_node.children {
+            option_stack.push(child);
+        }
+    }
+
+    let min_x = min_x.unwrap_or_else(|| panic!("web select listbox missing option descendants"));
+    let min_y = min_y.unwrap_or_else(|| panic!("web select listbox missing option descendants"));
+    let max_right =
+        max_right.unwrap_or_else(|| panic!("web select listbox missing option descendants"));
+    let max_bottom =
+        max_bottom.unwrap_or_else(|| panic!("web select listbox missing option descendants"));
+
+    InsetQuad {
+        left: min_x - listbox.rect.x,
+        top_to_first_option: min_y - listbox.rect.y,
+        right: rect_right(listbox.rect) - max_right,
+        bottom_from_last_option: rect_bottom(listbox.rect) - max_bottom,
+    }
 }
 
 fn fret_menu_content_insets(snap: &fret_core::SemanticsSnapshot) -> Vec<InsetTriplet> {
@@ -729,6 +813,73 @@ fn assert_sorted_insets_match(web_name: &str, actual: &[InsetTriplet], expected:
             1.0,
         );
     }
+}
+
+fn fret_select_content_option_inset(snap: &fret_core::SemanticsSnapshot) -> InsetQuad {
+    let listbox = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::ListBox)
+        .unwrap_or_else(|| panic!("missing fret listbox"));
+
+    let options: Vec<_> = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::ListBoxOption)
+        .filter(|n| fret_rect_contains(listbox.bounds, n.bounds))
+        .collect();
+
+    if options.is_empty() {
+        panic!("missing fret listbox options");
+    }
+
+    let mut min_x = options[0].bounds.origin.x.0;
+    let mut min_y = options[0].bounds.origin.y.0;
+    let mut max_right = options[0].bounds.origin.x.0 + options[0].bounds.size.width.0;
+    let mut max_bottom = options[0].bounds.origin.y.0 + options[0].bounds.size.height.0;
+    for option in options.iter().skip(1) {
+        min_x = min_x.min(option.bounds.origin.x.0);
+        min_y = min_y.min(option.bounds.origin.y.0);
+        max_right = max_right.max(option.bounds.origin.x.0 + option.bounds.size.width.0);
+        max_bottom = max_bottom.max(option.bounds.origin.y.0 + option.bounds.size.height.0);
+    }
+
+    let panel_right = listbox.bounds.origin.x.0 + listbox.bounds.size.width.0;
+    let panel_bottom = listbox.bounds.origin.y.0 + listbox.bounds.size.height.0;
+
+    InsetQuad {
+        left: min_x - listbox.bounds.origin.x.0,
+        top_to_first_option: min_y - listbox.bounds.origin.y.0,
+        right: panel_right - max_right,
+        bottom_from_last_option: panel_bottom - max_bottom,
+    }
+}
+
+fn assert_select_inset_match(web_name: &str, actual: InsetQuad, expected: InsetQuad) {
+    assert_close(
+        &format!("{web_name} listbox left_inset"),
+        actual.left,
+        expected.left,
+        1.0,
+    );
+    assert_close(
+        &format!("{web_name} listbox top_to_first_option"),
+        actual.top_to_first_option,
+        expected.top_to_first_option,
+        1.0,
+    );
+    assert_close(
+        &format!("{web_name} listbox right_inset"),
+        actual.right,
+        expected.right,
+        1.0,
+    );
+    assert_close(
+        &format!("{web_name} listbox bottom_from_last_option"),
+        actual.bottom_from_last_option,
+        expected.bottom_from_last_option,
+        1.0,
+    );
 }
 
 fn round_i32(v: f32) -> i32 {
@@ -2524,6 +2675,202 @@ fn web_vs_fret_select_scrollable_small_viewport_overlay_placement_matches() {
         Some("Select"),
         SemanticsRole::ListBox,
     );
+}
+
+fn assert_select_scrollable_listbox_option_insets_match(web_name: &str) {
+    let debug = std::env::var("FRET_DEBUG_SELECT_SCROLLABLE")
+        .ok()
+        .is_some_and(|v| v == "1");
+
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let web_listbox = web_select_listbox(theme);
+    let expected_h = web_listbox.rect.h;
+    let expected_inset = web_select_content_option_inset(web_listbox);
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(theme);
+
+    let value: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    let render = |cx: &mut ElementContext<'_, App>| {
+        use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
+
+        let entries: Vec<SelectEntry> = vec![
+            SelectGroup::new(vec![
+                SelectLabel::new("North America").into(),
+                SelectItem::new("est", "Eastern Standard Time (EST)").into(),
+                SelectItem::new("cst", "Central Standard Time (CST)").into(),
+                SelectItem::new("mst", "Mountain Standard Time (MST)").into(),
+                SelectItem::new("pst", "Pacific Standard Time (PST)").into(),
+                SelectItem::new("akst", "Alaska Standard Time (AKST)").into(),
+                SelectItem::new("hst", "Hawaii Standard Time (HST)").into(),
+            ])
+            .into(),
+            SelectGroup::new(vec![
+                SelectLabel::new("Europe & Africa").into(),
+                SelectItem::new("gmt", "Greenwich Mean Time (GMT)").into(),
+                SelectItem::new("cet", "Central European Time (CET)").into(),
+                SelectItem::new("eet", "Eastern European Time (EET)").into(),
+                SelectItem::new("west", "Western European Summer Time (WEST)").into(),
+                SelectItem::new("cat", "Central Africa Time (CAT)").into(),
+                SelectItem::new("eat", "East Africa Time (EAT)").into(),
+            ])
+            .into(),
+            SelectGroup::new(vec![
+                SelectLabel::new("Asia").into(),
+                SelectItem::new("msk", "Moscow Time (MSK)").into(),
+                SelectItem::new("ist", "India Standard Time (IST)").into(),
+                SelectItem::new("cst_china", "China Standard Time (CST)").into(),
+                SelectItem::new("jst", "Japan Standard Time (JST)").into(),
+                SelectItem::new("kst", "Korea Standard Time (KST)").into(),
+                SelectItem::new("ist_indonesia", "Indonesia Central Standard Time (WITA)").into(),
+            ])
+            .into(),
+            SelectGroup::new(vec![
+                SelectLabel::new("Australia & Pacific").into(),
+                SelectItem::new("awst", "Australian Western Standard Time (AWST)").into(),
+                SelectItem::new("acst", "Australian Central Standard Time (ACST)").into(),
+                SelectItem::new("aest", "Australian Eastern Standard Time (AEST)").into(),
+                SelectItem::new("nzst", "New Zealand Standard Time (NZST)").into(),
+                SelectItem::new("fjt", "Fiji Time (FJT)").into(),
+            ])
+            .into(),
+            SelectGroup::new(vec![
+                SelectLabel::new("South America").into(),
+                SelectItem::new("art", "Argentina Time (ART)").into(),
+                SelectItem::new("bot", "Bolivia Time (BOT)").into(),
+                SelectItem::new("brt", "Brasilia Time (BRT)").into(),
+                SelectItem::new("clt", "Chile Standard Time (CLT)").into(),
+            ])
+            .into(),
+        ];
+
+        fret_ui_shadcn::Select::new(value.clone(), open.clone())
+            .a11y_label("Select")
+            .placeholder("Select a timezone")
+            .refine_layout(
+                fret_ui_kit::LayoutRefinement::default()
+                    .w_px(fret_ui_kit::MetricRef::Px(Px(280.0))),
+            )
+            .entries(entries)
+            .into_element(cx)
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = render(cx);
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let listbox = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::ListBox)
+        .unwrap_or_else(|| panic!("missing fret listbox for {web_name}"));
+
+    if debug {
+        let mut options: Vec<_> = snap
+            .nodes
+            .iter()
+            .filter(|n| n.role == SemanticsRole::ListBoxOption)
+            .filter(|n| fret_rect_contains(listbox.bounds, n.bounds))
+            .collect();
+        options.sort_by(|a, b| {
+            a.bounds
+                .origin
+                .y
+                .0
+                .total_cmp(&b.bounds.origin.y.0)
+                .then_with(|| a.bounds.origin.x.0.total_cmp(&b.bounds.origin.x.0))
+        });
+
+        eprintln!(
+            "[{web_name}] fret listbox y={} h={}",
+            listbox.bounds.origin.y.0, listbox.bounds.size.height.0
+        );
+        for (idx, opt) in options.iter().take(8).enumerate() {
+            eprintln!(
+                "  opt[{idx}] y={} h={} label={:?}",
+                opt.bounds.origin.y.0,
+                opt.bounds.size.height.0,
+                opt.label.as_deref()
+            );
+        }
+
+        let scroll_buttons: Vec<_> = snap
+            .nodes
+            .iter()
+            .filter(|n| n.role == SemanticsRole::Button)
+            .filter(|n| {
+                n.label.as_deref() == Some("Scroll up") || n.label.as_deref() == Some("Scroll down")
+            })
+            .collect();
+        for btn in scroll_buttons {
+            eprintln!(
+                "  button {:?} y={} h={}",
+                btn.label.as_deref(),
+                btn.bounds.origin.y.0,
+                btn.bounds.size.height.0
+            );
+        }
+    }
+
+    assert_close(
+        &format!("{web_name} listbox_h"),
+        listbox.bounds.size.height.0,
+        expected_h,
+        1.0,
+    );
+
+    let actual_inset = fret_select_content_option_inset(&snap);
+    assert_select_inset_match(web_name, actual_inset, expected_inset);
+}
+
+#[test]
+fn web_vs_fret_select_scrollable_listbox_option_insets_match() {
+    assert_select_scrollable_listbox_option_insets_match("select-scrollable");
+}
+
+#[test]
+fn web_vs_fret_select_scrollable_small_viewport_listbox_option_insets_match() {
+    assert_select_scrollable_listbox_option_insets_match("select-scrollable.vp1440x450");
 }
 
 fn assert_point_anchored_overlay_placement_matches(
