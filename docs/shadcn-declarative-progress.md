@@ -83,6 +83,8 @@ Legend:
 
 - `Chrome+Layout`: supports both style and layout fluent methods (`UiSupportsChrome + UiSupportsLayout`).
 - `Layout-only`: supports only layout fluent methods (`UiSupportsLayout`); chrome methods are gated.
+- `Patch-only`: supports `ui().build()` but not `ui().into_element(cx)` (the component’s `into_element` requires extra args/closures).
+- `Pass-through`: supports `ui().into_element(cx)` but does not accept chrome/layout patches (no fluent style/layout methods; patch is ignored).
 
 | Module | Type | Status | Notes |
 | --- | --- | --- | --- |
@@ -101,9 +103,9 @@ Legend:
 | `drawer` | `DrawerContent` | Chrome+Layout |  |
 | `select` | `Select` | Layout-only | Needs chrome support for full parity |
 | `slider` | `Slider` | Layout-only | Needs chrome support for full parity |
-| `accordion` | `AccordionTrigger` | Chrome+Layout |  |
-| `accordion` | `AccordionContent` | Chrome+Layout |  |
-| `accordion` | `AccordionItem` | Chrome+Layout |  |
+| `accordion` | `AccordionTrigger` | Chrome+Layout (Patch-only) | `into_element` requires root/value args |
+| `accordion` | `AccordionContent` | Chrome+Layout (Patch-only) | Rendered via `Accordion` |
+| `accordion` | `AccordionItem` | Chrome+Layout (Patch-only) | Rendered via `Accordion` |
 | `accordion` | `Accordion` | Layout-only | Needs chrome support for full parity |
 | `avatar` | `Avatar` | Chrome+Layout |  |
 | `avatar` | `AvatarFallback` | Chrome+Layout |  |
@@ -118,6 +120,28 @@ Legend:
 | `command` | `Command` | Chrome+Layout |  |
 | `command` | `CommandPalette` | Chrome+Layout |  |
 | `command` | `CommandInput` | Layout-only | Needs chrome support for full parity |
+| `input_group` | `InputGroup` | Chrome+Layout |  |
+| `input_otp` | `InputOtp` | Chrome+Layout |  |
+| `sidebar` | `Sidebar` | Chrome+Layout |  |
+| `data_table` | `DataTable` | Chrome+Layout (Patch-only) | `into_element` requires data/columns callbacks |
+| `data_grid` | `DataGrid` | Chrome+Layout (Patch-only) | `into_element` requires row/col callbacks |
+| `data_grid_canvas` | `DataGridCanvas` | Chrome+Layout (Patch-only) | `into_element` requires cell callback |
+| `collapsible` | `Collapsible` | Layout-only (Patch-only) | `into_element` requires trigger/content closures |
+| `collapsible` | `CollapsibleContent` | Layout-only |  |
+| `field` | `Field` | Layout-only |  |
+| `item` | `Item` | Layout-only |  |
+| `pagination` | `Pagination` | Layout-only |  |
+| `navigation_menu` | `NavigationMenu` | Layout-only |  |
+| `scroll_area` | `ScrollArea` | Layout-only |  |
+| `scroll_area` | `ScrollAreaRoot` | Layout-only |  |
+| `resizable` | `ResizablePanelGroup` | Layout-only |  |
+| `resizable` | `ResizablePanel` | Layout-only (Patch-only) | `into_element` is not public; used via panel group |
+| `spinner` | `Spinner` | Layout-only |  |
+| `tooltip` | `Tooltip` | Layout-only (Patch-only) | `into_element` requires trigger/content |
+| `hover_card` | `HoverCard` | Layout-only (Patch-only) | `into_element` requires trigger/content |
+| `dialog` | `DialogClose` | Chrome+Layout |  |
+| `alert_dialog` | `AlertDialogTrigger` | Pass-through | `ui()` is available for consistency; chrome/layout are not supported |
+| `drawer` | `DrawerClose` | Chrome+Layout |  |
 
 ## shadcn/ui v4 Registry Baseline
 
