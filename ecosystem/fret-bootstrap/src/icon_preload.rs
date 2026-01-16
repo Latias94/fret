@@ -7,6 +7,7 @@ use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned};
 
 use fret_canvas::cache::CacheStats;
 use fret_canvas::cache::{SvgBytes, SvgCache};
+use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 
 #[derive(Debug, Default)]
 pub struct PreloadedIconSvgCache {
@@ -79,5 +80,18 @@ pub fn preload_icon_svgs(app: &mut App, services: &mut dyn UiServices) {
                 }
             },
         );
+
+        let frame_id = app.frame_id().0;
+        let entries = cache.cache.len();
+        let bytes_ready = cache.cache.bytes_ready();
+        let stats = cache.cache.stats();
+        let key = CanvasCacheKey {
+            window: 0,
+            node: 0,
+            name: "fret-bootstrap.icon_svgs",
+        };
+        app.with_global_mut(CanvasCacheStatsRegistry::default, |registry, _app| {
+            registry.record_svg_cache(key, frame_id, entries, bytes_ready, stats);
+        });
     });
 }

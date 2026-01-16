@@ -1770,7 +1770,9 @@ fn canvas_cache_stats_for_window(app: &App, window: u64) -> Vec<UiCanvasCacheEnt
 
     registry
         .iter()
-        .filter_map(|(key, snap)| (key.window == window).then_some((key, snap)))
+        .filter_map(|(key, snap)| {
+            ((key.window == window) || (key.window == 0)).then_some((key, snap))
+        })
         .map(|(key, snap)| UiCanvasCacheEntryV1 {
             node: key.node,
             name: key.name.to_string(),
