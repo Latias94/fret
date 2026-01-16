@@ -648,20 +648,26 @@ fn preview_view_cache(
         );
 
         let mut needs_lease = false;
-        cx.with_state(|| None::<ContinuousFrames>, |lease| {
-            if continuous {
-                if lease.is_none() {
-                    needs_lease = true;
+        cx.with_state(
+            || None::<ContinuousFrames>,
+            |lease| {
+                if continuous {
+                    if lease.is_none() {
+                        needs_lease = true;
+                    }
+                } else {
+                    *lease = None;
                 }
-            } else {
-                *lease = None;
-            }
-        });
+            },
+        );
         if needs_lease {
             let lease = cx.begin_continuous_frames();
-            cx.with_state(|| None::<ContinuousFrames>, |slot| {
-                *slot = Some(lease);
-            });
+            cx.with_state(
+                || None::<ContinuousFrames>,
+                |slot| {
+                    *slot = Some(lease);
+                },
+            );
         }
 
         let counter = cx
