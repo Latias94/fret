@@ -434,3 +434,47 @@ fn golden_scatter_lod_forced_large_mode_is_pixel_bounded() {
     let viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(20.0), Px(200.0)));
     assert_matches_golden_with_viewport("scatter-lod-forced-large", &json, viewport);
 }
+
+#[test]
+fn golden_bar_category_basic() {
+    let json = r#"
+    {
+      "xAxis": { "type": "category", "data": ["A","B","C","D"] },
+      "yAxis": { "type": "value" },
+      "series": [{ "type": "bar", "data": [5, 20, 36, 10] }]
+    }
+    "#;
+    assert_matches_golden("bar-category-basic", json);
+}
+
+#[test]
+fn golden_multi_grid_two_series_with_shared_datazoom() {
+    let mut source = Vec::with_capacity(1 + 21);
+    source.push(serde_json::json!(["x", "y0", "y1"]));
+    for i in 0..20 {
+        source.push(serde_json::json!([i as f64, i as f64, (100 - i) as f64]));
+    }
+
+    let option = serde_json::json!({
+      "grid": [{}, {}],
+      "xAxis": [
+        { "type": "value", "gridIndex": 0 },
+        { "type": "value", "gridIndex": 1 }
+      ],
+      "yAxis": [
+        { "type": "value", "gridIndex": 0 },
+        { "type": "value", "gridIndex": 1 }
+      ],
+      "dataset": { "source": source },
+      "dataZoom": [
+        { "type": "inside", "xAxisIndex": [0, 1], "filterMode": "filter", "start": 25, "end": 75 }
+      ],
+      "series": [
+        { "type": "scatter", "datasetIndex": 0, "xAxisIndex": 0, "yAxisIndex": 0, "encode": { "x": "x", "y": "y0" } },
+        { "type": "line", "datasetIndex": 0, "xAxisIndex": 1, "yAxisIndex": 1, "encode": { "x": "x", "y": "y1" } }
+      ]
+    });
+    let json = serde_json::to_string(&option).expect("option json");
+
+    assert_matches_golden("multi-grid-two-series-datazoom", &json);
+}
