@@ -96,6 +96,16 @@ This is the fastest way to author stable selectors (GPUI/Zed-style inspect):
 
 4. The app writes `pick.result.json` (and, by default, also dumps a `bundle.json` labelled `pick`).
 
+### Generate a runnable script from a pick
+
+To reduce "pick → first repro script" friction, `fretboard` can generate a minimal script skeleton:
+
+- `cargo run -p fretboard -- diag pick-script`
+
+This writes `target/fret-diag/picked.script.json` (override with `--pick-script-out`), which you can then run via:
+
+- `cargo run -p fretboard -- diag run target/fret-diag/picked.script.json`
+
 ## What's inside `bundle.json`
 
 Bundles are a per-window ring history plus snapshots (schema is versioned and intended to evolve).

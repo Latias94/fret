@@ -16,6 +16,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut pick_trigger_path: Option<PathBuf> = None;
     let mut pick_result_path: Option<PathBuf> = None;
     let mut pick_result_trigger_path: Option<PathBuf> = None;
+    let mut pick_script_out: Option<PathBuf> = None;
     let mut timeout_ms: u64 = 30_000;
     let mut poll_ms: u64 = 50;
 
@@ -93,6 +94,14 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 };
                 rest.remove(0);
                 pick_result_trigger_path = Some(PathBuf::from(v));
+            }
+            "--pick-script-out" => {
+                rest.remove(0);
+                let Some(v) = rest.first().cloned() else {
+                    return Err("missing value for --pick-script-out".to_string());
+                };
+                rest.remove(0);
+                pick_script_out = Some(PathBuf::from(v));
             }
             "--timeout-ms" => {
                 rest.remove(0);
@@ -219,6 +228,11 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     .map(PathBuf::from)
             })
             .unwrap_or_else(|| resolved_out_dir.join("pick.result.touch"));
+        resolve_path(&workspace_root, raw)
+    };
+
+    let resolved_pick_script_out = {
+        let raw = pick_script_out.unwrap_or_else(|| resolved_out_dir.join("picked.script.json"));
         resolve_path(&workspace_root, raw)
     };
 
@@ -370,6 +384,26 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 poll_ms,
             )?;
             report_pick_result_and_exit(&result);
+        }
+        "pick-script" => {
+            if !rest.is_empty() {
+                return Err(format!("unexpected arguments: {}", rest.join(" ")));
+            }
+            let result = run_pick_and_wait(
+                &resolved_pick_trigger_path,
+                &resolved_pick_result_path,
+                &resolved_pick_result_trigger_path,
+                timeout_ms,
+                poll_ms,
+            )?;
+
+            let Some(selector) = result.selector.clone() else {
+                return Err("pick succeeded but no selector was returned".to_string());
+            };
+
+            write_pick_script(&selector, &resolved_pick_script_out)?;
+            println!("{}", resolved_pick_script_out.display());
+            Ok(())
         }
         other => Err(format!("unknown diag subcommand: {other}")),
     }
@@ -643,4 +677,21 @@ fn report_pick_result_and_exit(result: &PickResultSummary) -> ! {
             std::process::exit(1);
         }
     }
+}
+
+fn write_pick_script(selector: &serde_json::Value, dst: &Path) -> Result<(), String> {
+    let script = serde_json::json!({
+        "schema_version": 1,
+        "steps": [
+            { "type": "click", "target": selector },
+            { "type": "wait_frames", "frames": 2 },
+            { "type": "capture_bundle", "label": "after-picked-click" }
+        ]
+    });
+
+    let bytes = serde_json::to_vec_pretty(&script).map_err(|e| e.to_string())?;
+    if let Some(parent) = dst.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    std::fs::write(dst, bytes).map_err(|e| e.to_string())
 }
