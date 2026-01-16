@@ -69,6 +69,8 @@ What exists:
 - shadcn `DataTable` (headless-backed): fixed header + vertical virtualization via the shared table view
   (`ecosystem/fret-ui-shadcn/src/data_table.rs` -> `ecosystem/fret-ui-kit/src/declarative/table.rs::table_virtualized`).
   - Recipe controls: `DataTableToolbar` + `DataTablePagination` (`ecosystem/fret-ui-shadcn/src/data_table_recipes.rs`).
+- Note: the current shared table view uses fixed-height virtualization for rows by default (fast path).
+  The runtime virtualizer supports measured (variable-height) rows, but table recipes have not enabled it by default yet.
 - `DataGrid` default surface is canvas-backed (performance ceiling): `ecosystem/fret-ui-shadcn/src/data_grid_canvas.rs`
   (exported as `fret-ui-shadcn::DataGrid`).
 - `experimental::DataGridElement` prototype exists for rich per-cell UI: `ecosystem/fret-ui-shadcn/src/data_grid.rs`.
