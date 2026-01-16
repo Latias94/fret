@@ -174,6 +174,12 @@ To make cache tuning actionable, expose per-canvas counters (debug/diagnostics):
 
 This should integrate with existing diagnostics tooling rather than introducing bespoke logging.
 
+Implementation note:
+
+- `ecosystem/fret-canvas` caches now expose lightweight counters via `CacheStats`
+  (`ecosystem/fret-canvas/src/cache/mod.rs`) and per-cache `stats()` / `reset_stats()` methods.
+  Wiring these into diagnostics bundles is recommended but remains ecosystem/app-owned.
+
 ## Consequences
 
 Pros:
