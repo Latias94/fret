@@ -357,6 +357,7 @@ impl FilterProcessorStage {
                     &mut xy_weak_filter_skipped_view_len_cap_series,
                 ),
                 FilterPlanStepKind::XRange => apply_x_range_for_grid(
+                    transform_graph,
                     model,
                     datasets,
                     view,
@@ -609,6 +610,7 @@ fn apply_xy_weak_filter_for_grid(
 }
 
 fn apply_x_range_for_grid(
+    transform_graph: &mut TransformGraph,
     model: &ChartModel,
     datasets: &DatasetStore,
     view: &mut ViewState,
@@ -627,50 +629,15 @@ fn apply_x_range_for_grid(
         let Some(series_view_index) = view_series_index.get(series_id).copied() else {
             continue;
         };
-
-        let Some(dataset_view) = view.dataset_view(series_model.dataset) else {
+        let Some(sel) = transform_graph.x_range_selection_for_series(
+            model,
+            datasets,
+            view,
+            *series_id,
+            series_view_index,
+        ) else {
             continue;
         };
-        let base_range = dataset_view.row_range;
-
-        let (x_filter_mode, selection, x_filter) = {
-            let series_view = &view.series[series_view_index];
-            (
-                series_view.x_filter_mode,
-                series_view.selection.clone(),
-                series_view.x_policy.filter,
-            )
-        };
-
-        if !matches!(
-            x_filter_mode,
-            crate::spec::FilterMode::Filter | crate::spec::FilterMode::WeakFilter
-        ) {
-            continue;
-        }
-
-        if !matches!(selection, RowSelection::All | RowSelection::Range(_)) {
-            continue;
-        }
-
-        if x_filter.min.is_none() && x_filter.max.is_none() {
-            continue;
-        }
-
-        let Some(table) = datasets.dataset(series_model.dataset) else {
-            continue;
-        };
-        let Some(dataset) = model.datasets.get(&series_model.dataset) else {
-            continue;
-        };
-        let Some(x_col) = dataset.fields.get(&series_model.encode.x).copied() else {
-            continue;
-        };
-        let Some(x_values) = table.column_f64(x_col) else {
-            continue;
-        };
-
-        let sel = crate::transform::row_selection_for_x_filter(x_values, base_range, x_filter);
         let series_view = &mut view.series[series_view_index];
         if series_view.selection != sel {
             series_view.selection = sel;

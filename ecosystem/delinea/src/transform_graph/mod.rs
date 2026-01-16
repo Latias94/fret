@@ -10,6 +10,7 @@
 mod data_view;
 mod filter_plan;
 mod filter_plan_output;
+mod x_range;
 mod y_indices;
 
 pub use data_view::*;
@@ -38,6 +39,7 @@ pub struct TransformGraph {
     filter_plan_output: FilterPlanOutput,
     filter_plan_cache: Option<CachedFilterPlan>,
     filter_plan_output_cache: Option<filter_plan_output::CachedFilterPlanOutput>,
+    x_range_cache: BTreeMap<SeriesId, x_range::CachedXRangeNode>,
     y_indices_cache: BTreeMap<SeriesId, y_indices::CachedYIndicesNode>,
 }
 
@@ -67,6 +69,7 @@ impl TransformGraph {
         self.filter_plan_output = FilterPlanOutput::default();
         self.filter_plan_cache = None;
         self.filter_plan_output_cache = None;
+        self.x_range_cache.clear();
         self.y_indices_cache.clear();
     }
 
