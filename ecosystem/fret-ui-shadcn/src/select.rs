@@ -727,8 +727,7 @@ fn select_impl<H: UiHost>(
 
         let min_width = theme
             .metric_by_key("component.select.min_width")
-            // radix-vega: Select content uses `min-w-36` (Tailwind: 9rem).
-            .unwrap_or(Px(144.0));
+            .unwrap_or(Px(128.0));
 
         let mut trigger_layout = decl_style::layout_style(
             &theme,
@@ -761,6 +760,7 @@ fn select_impl<H: UiHost>(
             content_panel: Option<GlobalElementId>,
             selected_item: Option<GlobalElementId>,
             selected_item_text: Option<GlobalElementId>,
+            width_probe: Option<GlobalElementId>,
             pending_item_aligned_scroll_to_y: Option<Px>,
             did_item_aligned_scroll: bool,
         }
@@ -778,6 +778,7 @@ fn select_impl<H: UiHost>(
                     content_panel: None,
                     selected_item: None,
                     selected_item_text: None,
+                    width_probe: None,
                     pending_item_aligned_scroll_to_y: None,
                     did_item_aligned_scroll: false,
                 }
@@ -991,21 +992,28 @@ fn select_impl<H: UiHost>(
                     let direction = direction_prim::use_direction_in_scope(cx, None);
 
                     let item_aligned = if position == SelectPosition::ItemAligned {
-                        let (value_node, viewport, listbox, content_panel, selected_item, selected_item_text, did_scroll) =
-                            {
-                                let state = trigger_state
-                                    .lock()
-                                    .unwrap_or_else(|e| e.into_inner());
-                                (
-                                    state.value_node,
-                                    state.viewport,
-                                    state.listbox,
-                                    state.content_panel,
-                                    state.selected_item,
-                                    state.selected_item_text,
-                                    state.did_item_aligned_scroll,
-                                )
-                            };
+                        let (
+                            value_node,
+                            viewport,
+                            listbox,
+                            content_panel,
+                            width_probe,
+                            selected_item,
+                            selected_item_text,
+                            did_scroll,
+                        ) = {
+                            let state = trigger_state.lock().unwrap_or_else(|e| e.into_inner());
+                            (
+                                state.value_node,
+                                state.viewport,
+                                state.listbox,
+                                state.content_panel,
+                                state.width_probe,
+                                state.selected_item,
+                                state.selected_item_text,
+                                state.did_item_aligned_scroll,
+                            )
+                        };
 
                         if let (
                             Some(value_node),
@@ -1023,6 +1031,10 @@ fn select_impl<H: UiHost>(
                             selected_item_text,
                         ) {
                             if debug_item_aligned {
+                                eprintln!(
+                                    "select item-aligned theme min_width={}",
+                                    min_width.0
+                                );
                                 let dbg = |label: &str, id: GlobalElementId| {
                                     let b = overlay::anchor_bounds_for_element(cx, id);
                                     eprintln!("select item-aligned {label}: id={id:?} bounds={b:?}");
@@ -1031,6 +1043,9 @@ fn select_impl<H: UiHost>(
                                 dbg("viewport", viewport);
                                 dbg("listbox", listbox);
                                 dbg("content_panel", content_panel);
+                                if let Some(width_probe) = width_probe {
+                                    dbg("width_probe", width_probe);
+                                }
                                 dbg("selected_item", selected_item);
                                 dbg("selected_item_text", selected_item_text);
                             }
@@ -1039,6 +1054,7 @@ fn select_impl<H: UiHost>(
                                     direction,
                                     window: cx.bounds,
                                     trigger: anchor,
+                                    content_min_width: min_width,
                                     content_border_top: border_width,
                                     content_padding_top: Px(0.0),
                                     content_border_bottom: border_width,
@@ -1049,6 +1065,7 @@ fn select_impl<H: UiHost>(
                                     viewport,
                                     listbox,
                                     content_panel,
+                                    content_width_probe: width_probe,
                                     selected_item,
                                     selected_item_text,
                                 },
@@ -1077,15 +1094,57 @@ fn select_impl<H: UiHost>(
                     .with_align_offset(align_offset)
                     .with_arrow(arrow_options, arrow_protrusion);
 
+                    let width_probe_w = {
+                        let probe = trigger_state
+                            .lock()
+                            .unwrap_or_else(|e| e.into_inner())
+                            .width_probe;
+                        probe
+                            .and_then(|id| cx.last_bounds_for_element(id))
+                            .map(|rect| rect.size.width)
+                    };
+                    let desired_w = if let Some(probe_w) = width_probe_w {
+                        let border_extra = Px(border_width.0 * 2.0);
+                        Px(probe_w.0 + border_extra.0)
+                    } else {
+                        radix_select::select_popper_desired_width(outer, anchor, min_width)
+                    };
+                    let desired_w = Px(desired_w.0.max(min_width.0).min(outer.size.width.0));
+                    if std::env::var("FRET_DEBUG_SELECT_POPPER_WIDTH")
+                        .ok()
+                        .is_some_and(|v| v == "1")
+                    {
+                        eprintln!(
+                            "select popper desired_w: probe={:?} anchor_w={} min_w={} border_w={} -> {}",
+                            width_probe_w.map(|v| v.0),
+                            anchor.size.width.0,
+                            min_width.0,
+                            border_width.0,
+                            desired_w.0
+                        );
+                    }
+
                     // new-york-v4 uses Radix's `--radix-select-content-available-height` which adapts
                     // to the current window + trigger placement. Prefer that behavior by computing
                     // the available height from our popper substrate, while still allowing an
                     // explicit theme override for apps that want a fixed cap.
-                    let popper_vars = (position == SelectPosition::Popper).then(|| {
-                        radix_select::select_popper_vars(outer, anchor, min_width, popper_placement)
-                    });
-                    let available_h = popper_vars
-                        .map(|vars| vars.available_height)
+                    let available_h = (position == SelectPosition::Popper)
+                        .then(|| {
+                            let probe_desired = fret_core::Size::new(desired_w, outer.size.height);
+                            let layout = popper::popper_content_layout_sized(
+                                outer,
+                                anchor,
+                                probe_desired,
+                                popper_placement,
+                            );
+                            popper::popper_available_metrics(
+                                outer,
+                                anchor,
+                                &layout,
+                                popper_placement.direction,
+                            )
+                            .available_height
+                        })
                         .unwrap_or(outer.size.height);
                     let max_h = theme
                         .metric_by_key("component.select.max_list_height")
@@ -1097,7 +1156,6 @@ fn select_impl<H: UiHost>(
                             .max(item_h.0)
                             .min(outer.size.height.0),
                     );
-                    let desired_w = radix_select::select_popper_desired_width(outer, anchor, min_width);
                     let desired = fret_core::Size::new(desired_w, desired_h);
 
                     let (item_aligned_inputs, did_scroll) = match item_aligned {
@@ -1153,6 +1211,8 @@ fn select_impl<H: UiHost>(
                     let listbox_id_out = &listbox_id_out_cell;
                     let content_panel_id_out_cell = Cell::new(None::<GlobalElementId>);
                     let content_panel_id_out = &content_panel_id_out_cell;
+                    let width_probe_id_out_cell = Cell::new(None::<GlobalElementId>);
+                    let width_probe_id_out = &width_probe_id_out_cell;
                     let selected_item_id_out_cell = Cell::new(None::<GlobalElementId>);
                     let selected_item_id_out = &selected_item_id_out_cell;
                     let selected_item_text_id_out_cell = Cell::new(None::<GlobalElementId>);
@@ -1254,6 +1314,55 @@ fn select_impl<H: UiHost>(
                                 .unwrap_or_else(|e| e.into_inner());
                             state.pending_item_aligned_scroll_to_y.take()
                         };
+
+                        let probe = cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.position = PositionStyle::Absolute;
+                                    layout.inset.left = Some(Px(-10000.0));
+                                    layout.inset.top = Some(Px(0.0));
+                                    layout
+                                },
+                                // new-york-v4: `SelectViewport` uses `p-1`.
+                                padding: Edges::all(Px(4.0)),
+                                ..Default::default()
+                            },
+                            |cx| {
+                                let mut out: Vec<AnyElement> = Vec::new();
+                                for row in rows.iter().cloned() {
+                                    let SelectRow::Item(item) = row else {
+                                        continue;
+                                    };
+                                    let label = item.label.clone();
+                                    let style = text_style_for_overlay.clone();
+                                    out.push(cx.container(
+                                        ContainerProps {
+                                            // new-york-v4: `py-1.5 pl-2 pr-8`
+                                            padding: Edges {
+                                                top: Px(6.0),
+                                                right: Px(32.0),
+                                                bottom: Px(6.0),
+                                                left: Px(8.0),
+                                            },
+                                            ..Default::default()
+                                        },
+                                        |cx| {
+                                            vec![cx.text_props(TextProps {
+                                                layout: LayoutStyle::default(),
+                                                text: label,
+                                                style: Some(style),
+                                                wrap: TextWrap::None,
+                                                overflow: TextOverflow::Clip,
+                                                color: None,
+                                            })]
+                                        },
+                                    ));
+                                }
+                                out
+                            },
+                        );
+                        width_probe_id_out.set(Some(probe.id));
 
                         let trigger_state_for_overlay_in_content = trigger_state_for_overlay.clone();
                         let mouse_open_guard_for_content = mouse_open_guard_for_barrier_children.clone();
@@ -1800,6 +1909,7 @@ fn select_impl<H: UiHost>(
                             state.viewport = viewport_id_out.get();
                             state.listbox = listbox_id_out.get();
                             state.content_panel = content_panel_id_out.get();
+                            state.width_probe = width_probe_id_out.get();
                             state.selected_item = selected_item_id_out.get();
                             state.selected_item_text = selected_item_text_id_out.get();
                             if !is_open {
@@ -1813,7 +1923,7 @@ fn select_impl<H: UiHost>(
                             dismiss_on_overlay_press,
                             on_dismiss_request_for_overlay_children.clone(),
                             mouse_open_guard_for_barrier_children.clone(),
-                            Vec::new(),
+                            vec![probe],
                             animated,
                         )
                     });

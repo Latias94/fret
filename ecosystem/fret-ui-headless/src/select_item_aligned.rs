@@ -154,6 +154,7 @@ pub fn select_item_aligned_position(inputs: SelectItemAlignedInputs) -> SelectIt
             (content_top_to_item_mid.0 + clamped_trigger_mid_to_bottom_edge.0)
                 .min(available_height.0),
         );
+        let height = Px(height.0.min(full_content_h.0));
 
         SelectItemAlignedOutputs {
             left,
@@ -179,6 +180,7 @@ pub fn select_item_aligned_position(inputs: SelectItemAlignedInputs) -> SelectIt
             (clamped_top_edge_to_trigger_mid.0 + item_mid_to_content_bottom.0)
                 .min(available_height.0),
         );
+        let height = Px(height.0.min(full_content_h.0));
 
         let scroll_to =
             Px(content_top_to_item_mid.0 - top_edge_to_trigger_mid.0 + viewport_offset_top.0);

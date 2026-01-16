@@ -525,8 +525,34 @@ impl fret_core::TextService for StyleAwareServices {
             .line_height
             .unwrap_or(Px((style.size.0 * 1.4).max(0.0)));
 
-        let char_w = (style.size.0 * 0.55).max(1.0);
-        let est_w = Px(char_w * text.chars().count() as f32);
+        fn estimate_width_px(text: &str, font_size: f32) -> Px {
+            let mut units = 0.0f32;
+            for ch in text.chars() {
+                units += match ch {
+                    // Most overlay placement goldens use Geist @ 14px. We approximate its advance
+                    // widths with a small heuristic table so both short labels ("Open popover") and
+                    // long mixed-case strings ("Australian Western Standard Time (AWST)") land close
+                    // to the web snapshots.
+                    ' ' => 0.28,
+                    '(' | ')' => 0.28,
+                    // Narrow glyphs.
+                    'i' | 'l' | 'I' | 't' | 'f' | 'j' | 'r' => 0.32,
+                    // Wide glyphs.
+                    'm' | 'w' | 'M' | 'W' => 0.75,
+                    // Round glyphs.
+                    'o' | 'O' | 'p' | 'P' => 0.62,
+                    // Uppercase baseline.
+                    'A'..='Z' => 0.62,
+                    // Default lowercase baseline.
+                    'a'..='z' => 0.56,
+                    // Everything else (digits/punctuation) uses a neutral baseline.
+                    _ => 0.56,
+                };
+            }
+            Px((units * font_size).max(1.0))
+        }
+
+        let est_w = estimate_width_px(text, style.size.0);
 
         let max_w = constraints.max_width.unwrap_or(est_w);
         let (lines, w) = match constraints.wrap {
@@ -851,7 +877,10 @@ fn assert_overlay_placement_matches(
         1.5,
     );
 
-    if fret_portal_role == SemanticsRole::Menu {
+    if matches!(
+        fret_portal_role,
+        SemanticsRole::Menu | SemanticsRole::ListBox
+    ) {
         assert_close(
             &format!("{web_name} portal_w"),
             fret_portal.w,

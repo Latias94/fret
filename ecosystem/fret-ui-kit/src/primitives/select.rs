@@ -348,6 +348,14 @@ pub fn select_item_aligned_layout(inputs: SelectItemAlignedInputs) -> SelectItem
     let window_right = Px(window_left.0 + inputs.window.size.width.0);
     let window_bottom = Px(window_top.0 + inputs.window.size.height.0);
 
+    let clamp_y = |y: Px| {
+        let min_y = Px(window_top.0 + margin.0);
+        let max_y = Px((window_bottom.0 - margin.0 - outputs.height.0).max(min_y.0));
+        Px(y.0.clamp(min_y.0, max_y.0))
+    };
+
+    let trigger_mid_y = Px(inputs.trigger.origin.y.0 + inputs.trigger.size.height.0 / 2.0);
+
     let x = if let Some(left) = outputs.left {
         left
     } else if let Some(right) = outputs.right {
@@ -359,7 +367,18 @@ pub fn select_item_aligned_layout(inputs: SelectItemAlignedInputs) -> SelectItem
     let y = if outputs.top.is_some() {
         Px(window_top.0 + margin.0)
     } else if outputs.bottom.is_some() {
-        Px(window_bottom.0 - margin.0 - outputs.height.0)
+        // Radix positions the wrapper relative to the window edges (top/bottom), but the visible
+        // listbox content itself is aligned so the selected item's midpoint matches the trigger's
+        // midpoint (when it fits without top overflow). Map that outcome directly into window
+        // space so the resulting rect matches the web goldens for short lists.
+        let selected_item_half_h = Px(inputs.selected_item.size.height.0 / 2.0);
+        let selected_item_mid_offset = Px((inputs.selected_item.origin.y.0
+            - inputs.viewport.origin.y.0)
+            + selected_item_half_h.0);
+        let content_top_to_item_mid = Px(inputs.content_border_top.0
+            + inputs.content_padding_top.0
+            + selected_item_mid_offset.0);
+        clamp_y(Px(trigger_mid_y.0 - content_top_to_item_mid.0))
     } else {
         Px(window_top.0 + margin.0)
     };
@@ -383,6 +402,9 @@ pub struct SelectItemAlignedElementInputs {
     pub window: Rect,
     pub trigger: Rect,
 
+    /// Minimum content width (matches CSS `min-width` on the content element).
+    pub content_min_width: Px,
+
     pub content_border_top: Px,
     pub content_padding_top: Px,
     pub content_border_bottom: Px,
@@ -395,6 +417,12 @@ pub struct SelectItemAlignedElementInputs {
     pub viewport: GlobalElementId,
     pub listbox: GlobalElementId,
     pub content_panel: GlobalElementId,
+    /// Optional probe element that represents the intrinsic content width (e.g. max item label).
+    ///
+    /// When present, the measured width is used as an additional lower bound for the item-aligned
+    /// solver. This mirrors Radix's behavior where the content can grow beyond the trigger width
+    /// when items require more space.
+    pub content_width_probe: Option<GlobalElementId>,
     pub selected_item: GlobalElementId,
     pub selected_item_text: GlobalElementId,
 }
@@ -406,9 +434,25 @@ pub fn select_item_aligned_layout_from_elements<H: UiHost>(
     let value_node = overlay::anchor_bounds_for_element(cx, inputs.value_node)?;
     let viewport = overlay::anchor_bounds_for_element(cx, inputs.viewport)?;
     let listbox = overlay::anchor_bounds_for_element(cx, inputs.listbox)?;
-    let content = overlay::anchor_bounds_for_element(cx, inputs.content_panel)?;
+    let mut content = overlay::anchor_bounds_for_element(cx, inputs.content_panel)?;
+    content.size.width = Px(content.size.width.0.max(inputs.content_min_width.0));
     let selected_item = overlay::anchor_bounds_for_element(cx, inputs.selected_item)?;
     let selected_item_text = overlay::anchor_bounds_for_element(cx, inputs.selected_item_text)?;
+
+    if let Some(probe_id) = inputs.content_width_probe
+        && let Some(probe) = cx.last_bounds_for_element(probe_id)
+        && probe.size.width.0.is_finite()
+        && probe.size.width.0 > 0.0
+    {
+        // The solver expects the "content" rect to reflect the last known content panel width.
+        // Inflate it with an intrinsic width measurement so the panel can grow to fit long labels.
+        //
+        // We reuse the vertical border thickness as the horizontal border thickness (shadcn/radix
+        // uses a uniform border width).
+        let border_extra = Px(inputs.content_border_top.0 * 2.0);
+        let probed_width = Px(probe.size.width.0 + border_extra.0);
+        content.size.width = Px(content.size.width.0.max(probed_width.0));
+    }
 
     Some(select_item_aligned_layout(SelectItemAlignedInputs {
         direction: inputs.direction,

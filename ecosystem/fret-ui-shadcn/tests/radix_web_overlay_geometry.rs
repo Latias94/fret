@@ -735,10 +735,25 @@ fn radix_web_popover_open_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
-        &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    {
+        let mut cfg = fret_ui_shadcn::shadcn_themes::shadcn_new_york_v4_config(
+            fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+            fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        );
+        // Radix's `radix-vega` select content uses `min-w-36` (Tailwind: 9rem).
+        // Keep this test aligned to the upstream snapshots without coupling the recipe default.
+        cfg.metrics
+            .insert("component.select.min_width".to_string(), 144.0);
+        fret_ui::Theme::global_mut(&mut app).apply_config(&cfg);
+    }
+    assert_close(
+        "select theme min width metric",
+        fret_ui::Theme::global(&app)
+            .metric_by_key("component.select.min_width")
+            .unwrap_or(Px(-1.0))
+            .0,
+        144.0,
+        0.01,
     );
     let open: Model<bool> = app.models_mut().insert(false);
     let mut ui: UiTree<App> = UiTree::new();
@@ -1193,11 +1208,18 @@ fn radix_web_select_item_aligned_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
-        &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
-    );
+    {
+        let mut cfg = fret_ui_shadcn::shadcn_themes::shadcn_new_york_v4_config(
+            fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+            fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        );
+        // Radix's `radix-vega` select content uses `min-w-36` (Tailwind: 9rem).
+        // Keep this geometry assertion aligned to upstream snapshots without changing the
+        // shadcn recipe defaults.
+        cfg.metrics
+            .insert("component.select.min_width".to_string(), 144.0);
+        fret_ui::Theme::global_mut(&mut app).apply_config(&cfg);
+    }
     let value: Model<Option<Arc<str>>> = app.models_mut().insert(None);
     let open: Model<bool> = app.models_mut().insert(false);
     let mut ui: UiTree<App> = UiTree::new();
