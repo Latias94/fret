@@ -21,18 +21,18 @@ impl UiPatch {
     }
 }
 
-/// A target that can accept a `UiPatch`.
+/// A type that opts into the `ui()` builder surface by accepting a `UiPatch`.
 ///
-/// Ecosystem components (e.g. `fret-ui-shadcn`) implement this to opt into the `ui()` builder
-/// surface.
+/// This is intentionally an ecosystem-only authoring surface (see ADR 0175).
 pub trait UiPatchTarget: Sized {
-    fn apply_chrome(self, chrome: ChromeRefinement) -> Self;
-    fn apply_layout(self, layout: LayoutRefinement) -> Self;
-
-    fn apply_patch(self, patch: UiPatch) -> Self {
-        self.apply_chrome(patch.chrome).apply_layout(patch.layout)
-    }
+    fn apply_ui_patch(self, patch: UiPatch) -> Self;
 }
+
+/// Marker trait enabling `UiBuilder` chrome/styling methods for a `UiPatchTarget`.
+pub trait UiSupportsChrome {}
+
+/// Marker trait enabling `UiBuilder` layout methods for a `UiPatchTarget`.
+pub trait UiSupportsLayout {}
 
 /// A type that can render itself into a declarative element.
 ///
@@ -57,84 +57,138 @@ impl<T> UiBuilder<T> {
         }
     }
 
-    pub fn style(mut self, style: ChromeRefinement) -> Self {
+    pub fn style(mut self, style: ChromeRefinement) -> Self
+    where
+        T: UiSupportsChrome,
+    {
         self.patch.chrome = self.patch.chrome.merge(style);
         self
     }
 
-    pub fn layout(mut self, layout: LayoutRefinement) -> Self {
+    pub fn layout(mut self, layout: LayoutRefinement) -> Self
+    where
+        T: UiSupportsLayout,
+    {
         self.patch.layout = self.patch.layout.merge(layout);
         self
     }
 
-    pub fn style_with(self, f: impl FnOnce(ChromeRefinement) -> ChromeRefinement) -> Self {
+    pub fn style_with(self, f: impl FnOnce(ChromeRefinement) -> ChromeRefinement) -> Self
+    where
+        T: UiSupportsChrome,
+    {
         self.style(f(ChromeRefinement::default()))
     }
 
-    pub fn layout_with(self, f: impl FnOnce(LayoutRefinement) -> LayoutRefinement) -> Self {
+    pub fn layout_with(self, f: impl FnOnce(LayoutRefinement) -> LayoutRefinement) -> Self
+    where
+        T: UiSupportsLayout,
+    {
         self.layout(f(LayoutRefinement::default()))
     }
 
-    pub fn px(self, space: Space) -> Self {
+    pub fn px(self, space: Space) -> Self
+    where
+        T: UiSupportsChrome,
+    {
         self.style_with(|c| c.px(space))
     }
 
-    pub fn py(self, space: Space) -> Self {
+    pub fn py(self, space: Space) -> Self
+    where
+        T: UiSupportsChrome,
+    {
         self.style_with(|c| c.py(space))
     }
 
-    pub fn p(self, space: Space) -> Self {
+    pub fn p(self, space: Space) -> Self
+    where
+        T: UiSupportsChrome,
+    {
         self.style_with(|c| c.p(space))
     }
 
-    pub fn px_2(self) -> Self {
+    pub fn px_2(self) -> Self
+    where
+        T: UiSupportsChrome,
+    {
         self.px(Space::N2)
     }
 
-    pub fn px_3(self) -> Self {
+    pub fn px_3(self) -> Self
+    where
+        T: UiSupportsChrome,
+    {
         self.px(Space::N3)
     }
 
-    pub fn py_2(self) -> Self {
+    pub fn py_2(self) -> Self
+    where
+        T: UiSupportsChrome,
+    {
         self.py(Space::N2)
     }
 
-    pub fn py_1p5(self) -> Self {
+    pub fn py_1p5(self) -> Self
+    where
+        T: UiSupportsChrome,
+    {
         self.py(Space::N1p5)
     }
 
-    pub fn p_4(self) -> Self {
+    pub fn p_4(self) -> Self
+    where
+        T: UiSupportsChrome,
+    {
         self.p(Space::N4)
     }
 
-    pub fn rounded(self, radius: Radius) -> Self {
+    pub fn rounded(self, radius: Radius) -> Self
+    where
+        T: UiSupportsChrome,
+    {
         self.style_with(|c| c.rounded(radius))
     }
 
-    pub fn rounded_md(self) -> Self {
+    pub fn rounded_md(self) -> Self
+    where
+        T: UiSupportsChrome,
+    {
         self.rounded(Radius::Md)
     }
 
-    pub fn border_1(self) -> Self {
+    pub fn border_1(self) -> Self
+    where
+        T: UiSupportsChrome,
+    {
         self.style_with(|c| c.border_1())
     }
 
-    pub fn w_full(self) -> Self {
+    pub fn w_full(self) -> Self
+    where
+        T: UiSupportsLayout,
+    {
         self.layout_with(|l| l.w_full())
     }
 
-    pub fn h_full(self) -> Self {
+    pub fn h_full(self) -> Self
+    where
+        T: UiSupportsLayout,
+    {
         self.layout_with(|l| l.h_full())
     }
 
-    pub fn size_full(self) -> Self {
+    pub fn size_full(self) -> Self
+    where
+        T: UiSupportsLayout,
+    {
         self.layout_with(|l| l.size_full())
     }
 }
 
 impl<T: UiPatchTarget> UiBuilder<T> {
     pub fn build(self) -> T {
-        self.inner.apply_patch(self.patch)
+        self.inner.apply_ui_patch(self.patch)
     }
 }
 
@@ -166,16 +220,15 @@ mod tests {
     }
 
     impl UiPatchTarget for Dummy {
-        fn apply_chrome(mut self, chrome: ChromeRefinement) -> Self {
-            self.chrome = self.chrome.merge(chrome);
-            self
-        }
-
-        fn apply_layout(mut self, layout: LayoutRefinement) -> Self {
-            self.layout = self.layout.merge(layout);
+        fn apply_ui_patch(mut self, patch: UiPatch) -> Self {
+            self.chrome = self.chrome.merge(patch.chrome);
+            self.layout = self.layout.merge(patch.layout);
             self
         }
     }
+
+    impl UiSupportsChrome for Dummy {}
+    impl UiSupportsLayout for Dummy {}
 
     #[test]
     fn ui_builder_merges_chrome_and_layout() {

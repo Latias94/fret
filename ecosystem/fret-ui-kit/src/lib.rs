@@ -35,7 +35,9 @@ pub use style::{
     OverflowRefinement, Radius, Space,
 };
 pub use styled::{RefineStyle, Stylable, Styled, StyledExt};
-pub use ui_builder::{UiBuilder, UiExt, UiIntoElement, UiPatch, UiPatchTarget};
+pub use ui_builder::{
+    UiBuilder, UiExt, UiIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
+};
 
 pub use overlay_controller::{
     OverlayController, OverlayKind, OverlayPresence, OverlayRequest, ToastLayerSpec,
