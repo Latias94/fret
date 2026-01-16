@@ -1150,6 +1150,7 @@ fn render_diag_inspect_overlay(
     let (
         pointer_pos,
         picked_node_id,
+        focus_node_id,
         redact_text,
         pick_armed,
         inspect_enabled,
@@ -1159,6 +1160,7 @@ fn render_diag_inspect_overlay(
         (
             svc.last_pointer_position(window),
             svc.last_picked_node_id(window),
+            svc.inspect_focus_node_id(window),
             svc.redact_text(),
             svc.pick_is_armed(),
             svc.inspect_is_enabled(),
@@ -1201,11 +1203,17 @@ fn render_diag_inspect_overlay(
             label: node.label.clone(),
         });
 
-    let hovered_id = hovered.as_ref().map(|h| h.node_id);
-    app.with_global_mut(UiDiagnosticsService::default, |svc, app| {
-        let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-        svc.update_inspect_hover(window, snapshot, hovered_id, element_runtime);
-    });
+    let focus = focus_node_id
+        .and_then(|id| {
+            snapshot.and_then(|snap| snap.nodes.iter().find(|n| n.id.data().as_ffi() == id))
+        })
+        .map(|node| InspectNodeInfo {
+            bounds: node.bounds,
+            role: node.role,
+            node_id: node.id.data().as_ffi(),
+            test_id: node.test_id.clone(),
+            label: node.label.clone(),
+        });
 
     let hovered = if locked { None } else { hovered };
 
@@ -1217,10 +1225,15 @@ fn render_diag_inspect_overlay(
         )
     });
 
+    let breadcrumb = focus.as_ref().and_then(|f| {
+        snapshot.and_then(|snap| diag_inspect_path_line(snap, f.node_id, redact_text, 6))
+    });
+
     let present = pick_armed
         || inspect_enabled
         || toast.is_some()
         || best_selector.is_some()
+        || focus.is_some()
         || hovered.is_some()
         || picked.is_some();
 
@@ -1275,11 +1288,14 @@ fn render_diag_inspect_overlay(
                     lines.push("INSPECT: click to pick a target (Esc to cancel)".to_string());
                 } else {
                     lines.push(format!(
-                        "INSPECT: Esc exit | Ctrl+C copy | L lock (consume_clicks={consume_clicks}, locked={locked})"
+                        "INSPECT: Esc exit | Ctrl+C copy | L lock | Alt+Up/Down nav (consume_clicks={consume_clicks}, locked={locked})"
                     ));
                 }
                 if let Some(t) = toast.as_deref() {
                     lines.push(format!("status: {t}"));
+                }
+                if let Some(path) = breadcrumb.as_deref() {
+                    lines.push(path.to_string());
                 }
                 if let Some(sel) = best_selector.as_deref() {
                     let trimmed = if sel.len() > 180 {
@@ -1295,7 +1311,23 @@ fn render_diag_inspect_overlay(
                 );
             }
 
+            let show_focus = focus.as_ref().is_some_and(|f| {
+                picked.as_ref().is_none_or(|p| p.node_id != f.node_id)
+                    && hovered.as_ref().is_none_or(|h| h.node_id != f.node_id)
+            });
+            let focus_outline = if show_focus { focus } else { None };
+
             let outlines = [
+                (
+                    focus_outline,
+                    Color {
+                        r: 0.2,
+                        g: 0.8,
+                        b: 1.0,
+                        a: 1.0,
+                    },
+                    "focus",
+                ),
                 (
                     picked,
                     Color {
@@ -1402,6 +1434,48 @@ fn render_diag_inspect_overlay(
     ui.set_layer_wants_pointer_down_outside_events(layer, false);
     ui.set_layer_wants_pointer_move_events(layer, false);
     ui.set_layer_wants_timer_events(layer, false);
+}
+
+#[cfg(feature = "diagnostics")]
+fn diag_inspect_path_line(
+    snapshot: &fret_core::SemanticsSnapshot,
+    focus_node_id: u64,
+    redact_text: bool,
+    max_parts: usize,
+) -> Option<String> {
+    if max_parts == 0 {
+        return None;
+    }
+
+    let mut parts: Vec<String> = Vec::new();
+    let mut cur: Option<u64> = Some(focus_node_id);
+    while let Some(id) = cur {
+        let Some(node) = snapshot.nodes.iter().find(|n| n.id.data().as_ffi() == id) else {
+            break;
+        };
+        let role = crate::ui_diagnostics::semantics_role_label(node.role);
+        let mut part = role.to_string();
+        if let Some(test_id) = node.test_id.as_deref() {
+            part.push_str(&format!("[{test_id}]"));
+        }
+        if !redact_text && let Some(label) = node.label.as_deref() {
+            part.push('(');
+            part.push_str(label);
+            part.push(')');
+        }
+
+        parts.push(part);
+        if parts.len() >= max_parts {
+            break;
+        }
+        cur = node.parent.map(|p| p.data().as_ffi());
+    }
+
+    parts.reverse();
+    if parts.is_empty() {
+        return None;
+    }
+    Some(format!("path: {}", parts.join(" > ")))
 }
 
 fn ui_app_hot_reload_window<S>(
