@@ -2,11 +2,6 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
-    let mut it = args.into_iter();
-    let Some(sub) = it.next() else {
-        return Err("missing diag subcommand (try: fretboard diag poke)".to_string());
-    };
-
     let mut out_dir: Option<PathBuf> = None;
     let mut trigger_path: Option<PathBuf> = None;
     let mut script_path: Option<PathBuf> = None;
@@ -24,158 +19,184 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut inspect_consume_clicks: Option<bool> = None;
     let mut timeout_ms: u64 = 30_000;
     let mut poll_ms: u64 = 50;
+    let mut stats_top: usize = 5;
+    let mut stats_json: bool = false;
 
-    let mut rest: Vec<String> = it.collect();
-    while let Some(arg) = rest.first().cloned() {
+    // Parse global `diag` flags regardless of their position, leaving positional args intact.
+    // This keeps the behavior aligned with the help text in `apps/fretboard/src/cli.rs`.
+    let mut positionals: Vec<String> = Vec::new();
+    let mut i: usize = 0;
+    while i < args.len() {
+        let arg = &args[i];
         match arg.as_str() {
             "--dir" => {
-                rest.remove(0);
-                let Some(v) = rest.first().cloned() else {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
                     return Err("missing value for --dir".to_string());
                 };
-                rest.remove(0);
                 out_dir = Some(PathBuf::from(v));
+                i += 1;
             }
             "--trigger-path" => {
-                rest.remove(0);
-                let Some(v) = rest.first().cloned() else {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
                     return Err("missing value for --trigger-path".to_string());
                 };
-                rest.remove(0);
                 trigger_path = Some(PathBuf::from(v));
+                i += 1;
             }
             "--script-path" => {
-                rest.remove(0);
-                let Some(v) = rest.first().cloned() else {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
                     return Err("missing value for --script-path".to_string());
                 };
-                rest.remove(0);
                 script_path = Some(PathBuf::from(v));
+                i += 1;
             }
             "--script-trigger-path" => {
-                rest.remove(0);
-                let Some(v) = rest.first().cloned() else {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
                     return Err("missing value for --script-trigger-path".to_string());
                 };
-                rest.remove(0);
                 script_trigger_path = Some(PathBuf::from(v));
+                i += 1;
             }
             "--script-result-path" => {
-                rest.remove(0);
-                let Some(v) = rest.first().cloned() else {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
                     return Err("missing value for --script-result-path".to_string());
                 };
-                rest.remove(0);
                 script_result_path = Some(PathBuf::from(v));
+                i += 1;
             }
             "--script-result-trigger-path" => {
-                rest.remove(0);
-                let Some(v) = rest.first().cloned() else {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
                     return Err("missing value for --script-result-trigger-path".to_string());
                 };
-                rest.remove(0);
                 script_result_trigger_path = Some(PathBuf::from(v));
+                i += 1;
             }
             "--pick-trigger-path" => {
-                rest.remove(0);
-                let Some(v) = rest.first().cloned() else {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
                     return Err("missing value for --pick-trigger-path".to_string());
                 };
-                rest.remove(0);
                 pick_trigger_path = Some(PathBuf::from(v));
+                i += 1;
             }
             "--pick-result-path" => {
-                rest.remove(0);
-                let Some(v) = rest.first().cloned() else {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
                     return Err("missing value for --pick-result-path".to_string());
                 };
-                rest.remove(0);
                 pick_result_path = Some(PathBuf::from(v));
+                i += 1;
             }
             "--pick-result-trigger-path" => {
-                rest.remove(0);
-                let Some(v) = rest.first().cloned() else {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
                     return Err("missing value for --pick-result-trigger-path".to_string());
                 };
-                rest.remove(0);
                 pick_result_trigger_path = Some(PathBuf::from(v));
+                i += 1;
             }
             "--pick-script-out" => {
-                rest.remove(0);
-                let Some(v) = rest.first().cloned() else {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
                     return Err("missing value for --pick-script-out".to_string());
                 };
-                rest.remove(0);
                 pick_script_out = Some(PathBuf::from(v));
+                i += 1;
             }
             "--ptr" => {
-                rest.remove(0);
-                let Some(v) = rest.first().cloned() else {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
                     return Err("missing value for --ptr".to_string());
                 };
-                rest.remove(0);
                 pick_apply_pointer = Some(v);
+                i += 1;
             }
             "--out" => {
-                rest.remove(0);
-                let Some(v) = rest.first().cloned() else {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
                     return Err("missing value for --out".to_string());
                 };
-                rest.remove(0);
                 pick_apply_out = Some(PathBuf::from(v));
+                i += 1;
             }
             "--inspect-path" => {
-                rest.remove(0);
-                let Some(v) = rest.first().cloned() else {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
                     return Err("missing value for --inspect-path".to_string());
                 };
-                rest.remove(0);
                 inspect_path = Some(PathBuf::from(v));
+                i += 1;
             }
             "--inspect-trigger-path" => {
-                rest.remove(0);
-                let Some(v) = rest.first().cloned() else {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
                     return Err("missing value for --inspect-trigger-path".to_string());
                 };
-                rest.remove(0);
                 inspect_trigger_path = Some(PathBuf::from(v));
+                i += 1;
             }
             "--consume-clicks" => {
-                rest.remove(0);
-                let Some(v) = rest.first().cloned() else {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
                     return Err("missing value for --consume-clicks".to_string());
                 };
-                rest.remove(0);
                 inspect_consume_clicks = Some(
                     parse_bool(&v).map_err(|_| "invalid value for --consume-clicks".to_string())?,
                 );
+                i += 1;
             }
             "--timeout-ms" => {
-                rest.remove(0);
-                let Some(v) = rest.first().cloned() else {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
                     return Err("missing value for --timeout-ms".to_string());
                 };
-                rest.remove(0);
                 timeout_ms = v
                     .parse::<u64>()
                     .map_err(|_| "invalid value for --timeout-ms".to_string())?;
+                i += 1;
             }
             "--poll-ms" => {
-                rest.remove(0);
-                let Some(v) = rest.first().cloned() else {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
                     return Err("missing value for --poll-ms".to_string());
                 };
-                rest.remove(0);
                 poll_ms = v
                     .parse::<u64>()
                     .map_err(|_| "invalid value for --poll-ms".to_string())?;
+                i += 1;
             }
-            other if other.starts_with('-') => {
-                return Err(format!("unknown diag flag: {other}"));
+            "--top" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --top".to_string());
+                };
+                stats_top = v
+                    .parse::<usize>()
+                    .map_err(|_| "invalid value for --top".to_string())?;
+                i += 1;
             }
-            _ => break,
+            "--json" => {
+                stats_json = true;
+                i += 1;
+            }
+            other if other.starts_with('-') => return Err(format!("unknown diag flag: {other}")),
+            _ => {
+                positionals.push(arg.clone());
+                i += 1;
+            }
         }
     }
+
+    let Some(sub) = positionals.first().cloned() else {
+        return Err("missing diag subcommand (try: fretboard diag poke)".to_string());
+    };
+    let rest: Vec<String> = positionals.into_iter().skip(1).collect();
 
     let workspace_root = crate::cli::workspace_root()?;
 
@@ -433,6 +454,31 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
             std::process::exit(0);
         }
+        "stats" => {
+            let Some(src) = rest.first().cloned() else {
+                return Err(
+                    "missing bundle path (try: fretboard diag stats ./target/fret-diag/1234/bundle.json)".to_string(),
+                );
+            };
+            if rest.len() != 1 {
+                return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
+            }
+
+            let src = resolve_path(&workspace_root, PathBuf::from(src));
+            let bundle_path = resolve_bundle_json_path(&src);
+            let report = bundle_stats_from_path(&bundle_path, stats_top)?;
+
+            if stats_json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&report.to_json())
+                        .unwrap_or_else(|_| "{}".to_string())
+                );
+            } else {
+                report.print_human(&bundle_path);
+            }
+            Ok(())
+        }
         "inspect" => {
             let Some(action) = rest.first().cloned() else {
                 return Err(
@@ -626,6 +672,14 @@ fn resolve_path(workspace_root: &Path, path: PathBuf) -> PathBuf {
     }
 }
 
+fn resolve_bundle_json_path(path: &Path) -> PathBuf {
+    if path.is_dir() {
+        path.join("bundle.json")
+    } else {
+        path.to_path_buf()
+    }
+}
+
 fn read_latest_pointer(out_dir: &Path) -> Option<PathBuf> {
     let s = std::fs::read_to_string(out_dir.join("latest.txt")).ok()?;
     let s = s.trim();
@@ -705,6 +759,257 @@ fn read_pick_result_run_id(path: &Path) -> Option<u64> {
     read_pick_result(path)?.get("run_id")?.as_u64()
 }
 
+#[derive(Debug, Default, Clone)]
+struct BundleStatsReport {
+    windows: u32,
+    snapshots: u32,
+    snapshots_with_model_changes: u32,
+    snapshots_with_global_changes: u32,
+    sum_invalidation_walk_calls: u64,
+    sum_invalidation_walk_nodes: u64,
+    sum_model_change_invalidation_roots: u64,
+    sum_global_change_invalidation_roots: u64,
+    max_invalidation_walk_calls: u32,
+    max_invalidation_walk_nodes: u32,
+    max_model_change_invalidation_roots: u32,
+    max_global_change_invalidation_roots: u32,
+    top: Vec<BundleStatsSnapshotRow>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct BundleStatsSnapshotRow {
+    window: u64,
+    tick_id: u64,
+    frame_id: u64,
+    timestamp_unix_ms: Option<u64>,
+    changed_models: u32,
+    changed_globals: u32,
+    invalidation_walk_calls: u32,
+    invalidation_walk_nodes: u32,
+    model_change_invalidation_roots: u32,
+    global_change_invalidation_roots: u32,
+}
+
+impl BundleStatsReport {
+    fn print_human(&self, bundle_path: &Path) {
+        println!("bundle: {}", bundle_path.display());
+        println!(
+            "windows={} snapshots={} model_changes={} global_changes={}",
+            self.windows,
+            self.snapshots,
+            self.snapshots_with_model_changes,
+            self.snapshots_with_global_changes
+        );
+        println!(
+            "invalidation sum: calls={} nodes={}",
+            self.sum_invalidation_walk_calls, self.sum_invalidation_walk_nodes
+        );
+        println!(
+            "invalidation max: calls={} nodes={}",
+            self.max_invalidation_walk_calls, self.max_invalidation_walk_nodes
+        );
+        println!(
+            "roots sum: model={} global={}",
+            self.sum_model_change_invalidation_roots, self.sum_global_change_invalidation_roots
+        );
+        println!(
+            "roots max: model={} global={}",
+            self.max_model_change_invalidation_roots, self.max_global_change_invalidation_roots
+        );
+
+        if self.top.is_empty() {
+            return;
+        }
+
+        println!("top:");
+        for row in &self.top {
+            let ts = row
+                .timestamp_unix_ms
+                .map(|v| v.to_string())
+                .unwrap_or_else(|| "-".to_string());
+            println!(
+                "  window={} tick={} frame={} ts={} inv.calls={} inv.nodes={} roots.model={} roots.global={} changed.models={} changed.globals={}",
+                row.window,
+                row.tick_id,
+                row.frame_id,
+                ts,
+                row.invalidation_walk_calls,
+                row.invalidation_walk_nodes,
+                row.model_change_invalidation_roots,
+                row.global_change_invalidation_roots,
+                row.changed_models,
+                row.changed_globals
+            );
+        }
+    }
+
+    fn to_json(&self) -> serde_json::Value {
+        serde_json::json!({
+            "schema_version": 1,
+            "windows": self.windows,
+            "snapshots": self.snapshots,
+            "snapshots_with_model_changes": self.snapshots_with_model_changes,
+            "snapshots_with_global_changes": self.snapshots_with_global_changes,
+            "sum": {
+                "invalidation_walk_calls": self.sum_invalidation_walk_calls,
+                "invalidation_walk_nodes": self.sum_invalidation_walk_nodes,
+                "model_change_invalidation_roots": self.sum_model_change_invalidation_roots,
+                "global_change_invalidation_roots": self.sum_global_change_invalidation_roots,
+            },
+            "max": {
+                "invalidation_walk_calls": self.max_invalidation_walk_calls,
+                "invalidation_walk_nodes": self.max_invalidation_walk_nodes,
+                "model_change_invalidation_roots": self.max_model_change_invalidation_roots,
+                "global_change_invalidation_roots": self.max_global_change_invalidation_roots,
+            },
+            "top": self.top.iter().map(|row| serde_json::json!({
+                "window": row.window,
+                "tick_id": row.tick_id,
+                "frame_id": row.frame_id,
+                "timestamp_unix_ms": row.timestamp_unix_ms,
+                "changed_models": row.changed_models,
+                "changed_globals": row.changed_globals,
+                "invalidation_walk_calls": row.invalidation_walk_calls,
+                "invalidation_walk_nodes": row.invalidation_walk_nodes,
+                "model_change_invalidation_roots": row.model_change_invalidation_roots,
+                "global_change_invalidation_roots": row.global_change_invalidation_roots,
+            })).collect::<Vec<_>>(),
+        })
+    }
+}
+
+fn bundle_stats_from_path(bundle_path: &Path, top: usize) -> Result<BundleStatsReport, String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    bundle_stats_from_json(&bundle, top)
+}
+
+fn bundle_stats_from_json(
+    bundle: &serde_json::Value,
+    top: usize,
+) -> Result<BundleStatsReport, String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+
+    let mut out = BundleStatsReport::default();
+    out.windows = windows.len().min(u32::MAX as usize) as u32;
+
+    let mut rows: Vec<BundleStatsSnapshotRow> = Vec::new();
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            out.snapshots = out.snapshots.saturating_add(1);
+
+            let changed_models = s
+                .get("changed_models")
+                .and_then(|v| v.as_array())
+                .map(|v| v.len())
+                .unwrap_or(0)
+                .min(u32::MAX as usize) as u32;
+            let changed_globals = s
+                .get("changed_globals")
+                .and_then(|v| v.as_array())
+                .map(|v| v.len())
+                .unwrap_or(0)
+                .min(u32::MAX as usize) as u32;
+
+            if changed_models > 0 {
+                out.snapshots_with_model_changes =
+                    out.snapshots_with_model_changes.saturating_add(1);
+            }
+            if changed_globals > 0 {
+                out.snapshots_with_global_changes =
+                    out.snapshots_with_global_changes.saturating_add(1);
+            }
+
+            let stats = s
+                .get("debug")
+                .and_then(|v| v.get("stats"))
+                .and_then(|v| v.as_object());
+
+            let invalidation_walk_calls = stats
+                .and_then(|m| m.get("invalidation_walk_calls"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let invalidation_walk_nodes = stats
+                .and_then(|m| m.get("invalidation_walk_nodes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let model_change_invalidation_roots = stats
+                .and_then(|m| m.get("model_change_invalidation_roots"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let global_change_invalidation_roots = stats
+                .and_then(|m| m.get("global_change_invalidation_roots"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+
+            out.sum_invalidation_walk_calls = out
+                .sum_invalidation_walk_calls
+                .saturating_add(invalidation_walk_calls as u64);
+            out.sum_invalidation_walk_nodes = out
+                .sum_invalidation_walk_nodes
+                .saturating_add(invalidation_walk_nodes as u64);
+            out.sum_model_change_invalidation_roots = out
+                .sum_model_change_invalidation_roots
+                .saturating_add(model_change_invalidation_roots as u64);
+            out.sum_global_change_invalidation_roots = out
+                .sum_global_change_invalidation_roots
+                .saturating_add(global_change_invalidation_roots as u64);
+
+            out.max_invalidation_walk_calls =
+                out.max_invalidation_walk_calls.max(invalidation_walk_calls);
+            out.max_invalidation_walk_nodes =
+                out.max_invalidation_walk_nodes.max(invalidation_walk_nodes);
+            out.max_model_change_invalidation_roots = out
+                .max_model_change_invalidation_roots
+                .max(model_change_invalidation_roots);
+            out.max_global_change_invalidation_roots = out
+                .max_global_change_invalidation_roots
+                .max(global_change_invalidation_roots);
+
+            rows.push(BundleStatsSnapshotRow {
+                window: window_id,
+                tick_id: s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0),
+                frame_id: s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0),
+                timestamp_unix_ms: s.get("timestamp_unix_ms").and_then(|v| v.as_u64()),
+                changed_models,
+                changed_globals,
+                invalidation_walk_calls,
+                invalidation_walk_nodes,
+                model_change_invalidation_roots,
+                global_change_invalidation_roots,
+            });
+        }
+    }
+
+    rows.sort_by(|a, b| {
+        b.invalidation_walk_nodes
+            .cmp(&a.invalidation_walk_nodes)
+            .then_with(|| b.invalidation_walk_calls.cmp(&a.invalidation_walk_calls))
+            .then_with(|| {
+                b.model_change_invalidation_roots
+                    .cmp(&a.model_change_invalidation_roots)
+            })
+            .then_with(|| {
+                b.global_change_invalidation_roots
+                    .cmp(&a.global_change_invalidation_roots)
+            })
+    });
+    out.top = rows.into_iter().take(top).collect();
+    Ok(out)
+}
+
 #[derive(Debug, Clone)]
 struct ScriptResultSummary {
     run_id: u64,
@@ -732,6 +1037,7 @@ fn run_script_and_wait(
     poll_ms: u64,
 ) -> Result<ScriptResultSummary, String> {
     let prev_run_id = read_script_result_run_id(script_result_path).unwrap_or(0);
+    let mut target_run_id: Option<u64> = None;
 
     write_script(src, script_path)?;
     touch(script_trigger_path)?;
@@ -748,25 +1054,32 @@ fn run_script_and_wait(
 
         if let Some(result) = read_script_result(script_result_path) {
             let run_id = result.get("run_id").and_then(|v| v.as_u64()).unwrap_or(0);
-            if run_id > prev_run_id {
+            if target_run_id.is_none() && run_id > prev_run_id {
+                target_run_id = Some(run_id);
+            }
+
+            if Some(run_id) == target_run_id {
                 let stage = result
                     .get("stage")
                     .and_then(|v| v.as_str())
                     .map(|s| s.to_string());
-                let reason = result
-                    .get("reason")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string());
-                let last_bundle_dir = result
-                    .get("last_bundle_dir")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string());
-                return Ok(ScriptResultSummary {
-                    run_id,
-                    stage,
-                    reason,
-                    last_bundle_dir,
-                });
+
+                if matches!(stage.as_deref(), Some("passed") | Some("failed")) {
+                    let reason = result
+                        .get("reason")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string());
+                    let last_bundle_dir = result
+                        .get("last_bundle_dir")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string());
+                    return Ok(ScriptResultSummary {
+                        run_id,
+                        stage,
+                        reason,
+                        last_bundle_dir,
+                    });
+                }
             }
         }
 
@@ -808,6 +1121,7 @@ fn run_pick_and_wait(
     poll_ms: u64,
 ) -> Result<PickResultSummary, String> {
     let prev_run_id = read_pick_result_run_id(pick_result_path).unwrap_or(0);
+    let mut target_run_id: Option<u64> = None;
 
     touch(pick_trigger_path)?;
 
@@ -823,34 +1137,41 @@ fn run_pick_and_wait(
 
         if let Some(result) = read_pick_result(pick_result_path) {
             let run_id = result.get("run_id").and_then(|v| v.as_u64()).unwrap_or(0);
-            if run_id > prev_run_id {
+            if target_run_id.is_none() && run_id > prev_run_id {
+                target_run_id = Some(run_id);
+            }
+
+            if Some(run_id) == target_run_id {
                 let stage = result
                     .get("stage")
                     .and_then(|v| v.as_str())
                     .map(|s| s.to_string());
-                let reason = result
-                    .get("reason")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string());
-                let last_bundle_dir = result
-                    .get("last_bundle_dir")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string());
 
-                let selector = result
-                    .get("selection")
-                    .and_then(|v| v.get("selectors"))
-                    .and_then(|v| v.as_array())
-                    .and_then(|arr| arr.first())
-                    .cloned();
+                if matches!(stage.as_deref(), Some("picked")) {
+                    let reason = result
+                        .get("reason")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string());
+                    let last_bundle_dir = result
+                        .get("last_bundle_dir")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string());
 
-                return Ok(PickResultSummary {
-                    run_id,
-                    stage,
-                    reason,
-                    last_bundle_dir,
-                    selector,
-                });
+                    let selector = result
+                        .get("selection")
+                        .and_then(|v| v.get("selectors"))
+                        .and_then(|v| v.as_array())
+                        .and_then(|arr| arr.first())
+                        .cloned();
+
+                    return Ok(PickResultSummary {
+                        run_id,
+                        stage,
+                        reason,
+                        last_bundle_dir,
+                        selector,
+                    });
+                }
             }
         }
 
