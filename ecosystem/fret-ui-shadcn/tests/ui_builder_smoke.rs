@@ -228,10 +228,12 @@ fn ui_builder_smoke_applies_supported_patches() {
 
     let _ = fret_ui_shadcn::Calendar::new(calendar_month.clone(), calendar_selected.clone())
         .ui()
+        .p_4()
         .build();
     let _ =
         fret_ui_shadcn::CalendarRange::new(calendar_month.clone(), calendar_range_selected.clone())
             .ui()
+            .p_4()
             .build();
     let _ = fret_ui_shadcn::DatePicker::new(
         date_picker_open,

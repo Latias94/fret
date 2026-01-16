@@ -5,8 +5,8 @@ use std::sync::Arc;
 use fret_core::{Color, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, MainAlign, Overflow, PressableA11y,
-    PressableProps, RovingFlexProps, RovingFocusProps, TextProps,
+    AnyElement, FlexProps, LayoutStyle, Length, MainAlign, Overflow, PressableA11y, PressableProps,
+    RovingFlexProps, RovingFocusProps, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
@@ -31,6 +31,8 @@ pub struct CalendarRange {
     disabled: Option<Arc<dyn Fn(Date) -> bool + Send + Sync + 'static>>,
     close_on_select: Option<Model<bool>>,
     initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
 }
 
 impl std::fmt::Debug for CalendarRange {
@@ -59,6 +61,8 @@ impl CalendarRange {
             disabled: None,
             close_on_select: None,
             initial_focus_out: None,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
         }
     }
 
@@ -93,6 +97,16 @@ impl CalendarRange {
         out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
     ) -> Self {
         self.initial_focus_out = Some(out);
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
         self
     }
 
@@ -158,7 +172,7 @@ impl CalendarRange {
                 })
         };
 
-        let root = LayoutRefinement::default().w_full();
+        let root = LayoutRefinement::default().w_full().merge(self.layout);
         let title: Arc<str> = Arc::from(format!("{:?} {}", month.month, month.year));
         let weekday_labels = weekday_labels(self.week_start);
 
@@ -185,10 +199,7 @@ impl CalendarRange {
             .unwrap_or(Px(4.0));
 
         cx.container(
-            ContainerProps {
-                layout: decl_style::layout_style(&theme, root),
-                ..Default::default()
-            },
+            decl_style::container_props(&theme, self.chrome, root),
             move |cx| {
                 let theme_header = theme.clone();
                 let theme_weekdays = theme.clone();

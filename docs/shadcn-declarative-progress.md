@@ -98,8 +98,8 @@ Legend:
 | `combobox` | `Combobox` | Pass-through |  |
 | `checkbox` | `Checkbox` | Chrome+Layout |  |
 | `radio_group` | `RadioGroup` | Chrome+Layout |  |
-| `calendar` | `Calendar` | Pass-through |  |
-| `calendar_range` | `CalendarRange` | Pass-through |  |
+| `calendar` | `Calendar` | Chrome+Layout |  |
+| `calendar_range` | `CalendarRange` | Chrome+Layout |  |
 | `date_picker` | `DatePicker` | Pass-through |  |
 | `date_range_picker` | `DateRangePicker` | Pass-through |  |
 | `input` | `Input` | Chrome+Layout |  |
