@@ -113,6 +113,7 @@ Legend:
 | `progress` | `Progress` | Chrome+Layout |  |
 | `skeleton` | `Skeleton` | Chrome+Layout |  |
 | `tabs` | `Tabs` | Chrome+Layout |  |
+| `tabs` | `TabsRoot` | Chrome+Layout |  |
 | `toggle` | `Toggle` | Chrome+Layout |  |
 | `toggle_group` | `ToggleGroup` | Chrome+Layout |  |
 | `table` | `Table` | Chrome+Layout |  |
@@ -137,8 +138,8 @@ Legend:
 | `resizable` | `ResizablePanelGroup` | Layout-only |  |
 | `resizable` | `ResizablePanel` | Layout-only (Patch-only) | `into_element` is not public; used via panel group |
 | `spinner` | `Spinner` | Layout-only |  |
-| `tooltip` | `Tooltip` | Layout-only (Patch-only) | `into_element` requires trigger/content |
-| `hover_card` | `HoverCard` | Layout-only (Patch-only) | `into_element` requires trigger/content |
+| `tooltip` | `Tooltip` | Layout-only |  |
+| `hover_card` | `HoverCard` | Layout-only |  |
 | `dialog` | `DialogClose` | Chrome+Layout |  |
 | `alert_dialog` | `AlertDialogTrigger` | Pass-through | `ui()` is available for consistency; chrome/layout are not supported |
 | `drawer` | `DrawerClose` | Chrome+Layout |  |

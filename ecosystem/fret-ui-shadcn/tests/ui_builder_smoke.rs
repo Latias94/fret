@@ -5,7 +5,7 @@ use fret_ui_shadcn::prelude::*;
 use fret_ui_shadcn::{
     AlertDialogContent, Button, Card, Command, CommandInput, CommandItem, CommandPalette,
     DialogContent, DrawerContent, HoverCardContent, PopoverContent, Progress, Select, SheetContent,
-    Slider, Switch, TooltipContent,
+    Slider, Switch, TabsRoot, TooltipContent,
 };
 
 #[test]
@@ -32,6 +32,7 @@ fn ui_builder_smoke_applies_supported_patches() {
     let _ = Select::new(select_model, select_open).ui().w_full().build();
 
     let _ = Progress::new(progress_model).ui().w_full().build();
+    let _ = TabsRoot::uncontrolled::<Arc<str>>(None).ui().p_4().build();
 
     let _ = PopoverContent::new(Vec::new()).ui().p_4().build();
     let _ = TooltipContent::new(Vec::new()).ui().p_4().build();

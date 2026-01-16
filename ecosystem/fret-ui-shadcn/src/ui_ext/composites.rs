@@ -3,7 +3,7 @@ use crate::avatar::{Avatar, AvatarFallback, AvatarImage};
 use crate::progress::Progress;
 use crate::skeleton::Skeleton;
 use crate::table::{Table, TableCell};
-use crate::tabs::Tabs;
+use crate::tabs::{Tabs, TabsRoot};
 use crate::toggle::Toggle;
 use crate::toggle_group::ToggleGroup;
 
@@ -15,6 +15,7 @@ impl_ui_patch_chrome_layout!(Progress);
 impl_ui_patch_chrome_layout!(Skeleton);
 
 impl_ui_patch_chrome_layout!(Tabs);
+impl_ui_patch_chrome_layout!(TabsRoot);
 impl_ui_patch_chrome_layout!(Toggle);
 impl_ui_patch_chrome_layout!(ToggleGroup);
 
