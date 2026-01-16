@@ -1042,7 +1042,7 @@ impl ChartEngine {
             filter_result.y_indices_skipped_indices_scan_avoid_series as u64;
 
         self.participation
-            .rebuild_from_view(&self.model, &self.view);
+            .rebuild_from_plan_output(&self.model, self.transform_graph.filter_plan_output());
 
         self.ordinal_index_stage.begin_frame();
         if self

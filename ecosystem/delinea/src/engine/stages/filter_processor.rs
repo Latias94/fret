@@ -160,6 +160,48 @@ impl ParticipationState {
             }
         }
     }
+
+    pub fn rebuild_from_plan_output(&mut self, model: &ChartModel, plan: &FilterPlanOutput) {
+        self.series.clear();
+        self.series_index.clear();
+        self.series.reserve(model.series_order.len());
+        self.revision = plan.revision;
+
+        let mut by_id: BTreeMap<SeriesId, &SeriesFilterOutput> = BTreeMap::new();
+        by_id.extend(plan.series.iter().map(|s| (s.series, s)));
+
+        for (i, series_id) in model.series_order.iter().copied().enumerate() {
+            self.series_index.insert(series_id, i);
+            let Some(series_model) = model.series.get(&series_id) else {
+                self.series.push(SeriesParticipation {
+                    series: series_id,
+                    ..Default::default()
+                });
+                continue;
+            };
+
+            if let Some(s) = by_id.get(&series_id) {
+                self.series.push(SeriesParticipation {
+                    series: series_id,
+                    dataset: series_model.dataset,
+                    revision: plan.revision,
+                    data_revision: Revision::default(),
+                    selection: s.selection.clone(),
+                    x_policy: s.x_policy,
+                    x_filter_mode: s.x_filter_mode,
+                    y_filter_mode: s.y_filter_mode,
+                    y_filter: s.y_filter,
+                    empty_mask: s.empty_mask,
+                });
+            } else {
+                self.series.push(SeriesParticipation {
+                    series: series_id,
+                    dataset: series_model.dataset,
+                    ..Default::default()
+                });
+            }
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
