@@ -11,6 +11,7 @@ This file tracks the next iteration of Fret's GPUI/Zed-style inspector workflow:
 Related docs:
 
 - `docs/ui-diagnostics-and-scripted-tests.md`
+- `docs/debugging-ui-with-inspector-and-scripts.md`
 - `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 
 ## What is already done (baseline)
@@ -21,6 +22,7 @@ Related docs:
 - Declarative identity: pick results include `GlobalElementId` and scripts can target it via `{"kind":"global_element_id","element":...}` (best for harness tests)
 - Picking (one-shot): `diag pick`, `diag pick-script`, `diag pick-apply`
 - Continuous inspect mode: `diag inspect on|off|toggle|status` (file-triggered, AI-friendly)
+- In-app inspect shortcuts (diagnostics-only): `Esc` exit, `Ctrl+C` copy selector, `Ctrl+Shift+C` copy details, `L` lock/unlock, `Alt+Up/Down` parent-chain navigation
 - View cache frame stats exported in bundles (`debug.stats.view_cache_*`, `debug.stats.invalidation_*`)
 
 ## Milestone M1: “Inspect UX parity” (highest ROI)
@@ -33,14 +35,13 @@ Related docs:
    - Status:
      - MVP implemented in `fret-bootstrap` as a diagnostics-only overlay layer (border + label) while inspection is active (scripts/picking).
      - Continuous inspect toggle implemented via file-triggered `inspect.json` + `inspect.touch` (`fretboard diag inspect ...`).
-     - In-app shortcuts implemented (diagnostics-only): `Esc` exit, `Ctrl+C` copy selector, `L` lock/unlock selection.
+     - In-app shortcuts implemented (diagnostics-only): `Esc` exit, `Ctrl+C` copy selector, `Ctrl+Shift+C` copy details, `L` lock/unlock selection.
      - Locked navigation implemented (diagnostics-only): `Alt+Up/Down` walks the semantics parent chain with a small “back to child” stack.
      - Gaps: no in-app toggle/help UI beyond the overlay hint panel; no richer tree view (children list / siblings / search).
 
 2. **Pick modes**
    - One-shot pick (already): click once and write `pick.result.json`.
    - Continuous picking mode: hover shows candidate, click selects (optional click pass-through).
-     - Gap: `Esc` exit / in-app toggle not implemented yet (CLI/file-trigger only).
    - Keyboard “inspect focus”: select current focused node without pointer.
 
 3. **Selector quality improvements**
