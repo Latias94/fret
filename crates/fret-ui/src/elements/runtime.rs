@@ -419,6 +419,7 @@ impl WindowElementState {
         line: u32,
         column: u32,
         key_hash: Option<u64>,
+        name: Option<&str>,
         slot: u64,
     ) {
         self.debug_identity.entries.insert(
@@ -430,6 +431,7 @@ impl WindowElementState {
                     line,
                     column,
                     key_hash,
+                    name: name.map(StdArc::<str>::from),
                     slot,
                 },
                 last_seen_frame: frame_id,
@@ -504,6 +506,7 @@ enum DebugIdentitySegment {
         line: u32,
         column: u32,
         key_hash: Option<u64>,
+        name: Option<StdArc<str>>,
         slot: u64,
     },
 }
@@ -518,9 +521,12 @@ impl DebugIdentitySegment {
                 line,
                 column,
                 key_hash,
+                name,
                 slot,
             } => {
-                if let Some(k) = key_hash {
+                if let Some(name) = name.as_deref() {
+                    format!("{file}:{line}:{column}[name={name}]")
+                } else if let Some(k) = key_hash {
                     format!("{file}:{line}:{column}[key={k:#x}]")
                 } else {
                     format!("{file}:{line}:{column}[slot={slot}]")

@@ -236,7 +236,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn scope<R>(&mut self, f: impl FnOnce(&mut Self) -> R) -> R {
         let loc = Location::caller();
         let callsite = callsite_hash(loc);
-        self.enter_with_callsite(loc, callsite, None, f)
+        self.enter_with_callsite(loc, callsite, None, None, f)
     }
 
     #[track_caller]
@@ -244,7 +244,15 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         let loc = Location::caller();
         let caller = callsite_hash(loc);
         let key_hash = stable_hash(&key);
-        self.enter_with_callsite(loc, caller, Some(key_hash), f)
+        self.enter_with_callsite(loc, caller, Some(key_hash), None, f)
+    }
+
+    #[track_caller]
+    pub fn named<R>(&mut self, name: &str, f: impl FnOnce(&mut Self) -> R) -> R {
+        let loc = Location::caller();
+        let caller = callsite_hash(loc);
+        let key_hash = stable_hash(&name);
+        self.enter_with_callsite(loc, caller, Some(key_hash), Some(name), f)
     }
 
     pub fn with_state<S: Any, R>(
@@ -445,7 +453,9 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             for (index, item) in items.iter().enumerate() {
                 let index_key = index as u64;
-                cx.enter_with_callsite(loc, list_id, Some(index_key), |cx| f(cx, index, item));
+                cx.enter_with_callsite(loc, list_id, Some(index_key), None, |cx| {
+                    f(cx, index, item)
+                });
             }
         });
     }
@@ -455,6 +465,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         _loc: &'static Location<'static>,
         callsite: u64,
         key_hash: Option<u64>,
+        _debug_name: Option<&str>,
         f: impl FnOnce(&mut Self) -> R,
     ) -> R {
         let parent = self.root_id();
@@ -474,6 +485,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             _loc.line(),
             _loc.column(),
             key_hash,
+            _debug_name,
             slot,
         );
 
