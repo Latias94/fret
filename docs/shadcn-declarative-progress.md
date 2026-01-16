@@ -90,9 +90,9 @@ Legend:
 | Module | Type | Status | Notes |
 | --- | --- | --- | --- |
 | `button` | `Button` | Chrome+Layout |  |
-| `alert` | `Alert` | Pass-through |  |
-| `badge` | `Badge` | Pass-through |  |
-| `kbd` | `Kbd` | Pass-through |  |
+| `alert` | `Alert` | Chrome+Layout |  |
+| `badge` | `Badge` | Chrome+Layout |  |
+| `kbd` | `Kbd` | Chrome+Layout |  |
 | `breadcrumb` | `Breadcrumb` | Pass-through |  |
 | `combobox` | `Combobox` | Pass-through |  |
 | `checkbox` | `Checkbox` | Chrome+Layout |  |

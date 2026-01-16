@@ -19,6 +19,8 @@ pub enum BadgeVariant {
 pub struct Badge {
     label: Arc<str>,
     variant: BadgeVariant,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
 }
 
 impl Badge {
@@ -26,6 +28,8 @@ impl Badge {
         Self {
             label: label.into(),
             variant: BadgeVariant::Default,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
         }
     }
 
@@ -34,8 +38,18 @@ impl Badge {
         self
     }
 
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        badge(cx, self.label, self.variant)
+        badge_with_patch(cx, self.label, self.variant, self.chrome, self.layout)
     }
 }
 
@@ -66,6 +80,22 @@ pub fn badge<H: UiHost>(
     label: impl Into<Arc<str>>,
     variant: BadgeVariant,
 ) -> AnyElement {
+    badge_with_patch(
+        cx,
+        label,
+        variant,
+        ChromeRefinement::default(),
+        LayoutRefinement::default(),
+    )
+}
+
+fn badge_with_patch<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: impl Into<Arc<str>>,
+    variant: BadgeVariant,
+    chrome_override: ChromeRefinement,
+    layout_override: LayoutRefinement,
+) -> AnyElement {
     let label = label.into();
     let theme = Theme::global(&*cx.app).clone();
 
@@ -78,13 +108,16 @@ pub fn badge<H: UiHost>(
     if let Some(bg) = bg_for(&theme, variant) {
         chrome = chrome.bg(ColorRef::Color(bg));
     }
+    chrome = chrome.merge(chrome_override);
 
     let fg = fg_for(&theme, variant);
 
     let mut props = decl_style::container_props(
         &theme,
         chrome,
-        LayoutRefinement::default().overflow_hidden(),
+        LayoutRefinement::default()
+            .overflow_hidden()
+            .merge(layout_override),
     );
     // Treat borders as part of the component's "outer size" to match the web box model:
     // shadcn uses `border` + `px-*`/`py-*` (border-box sizing). Our `ContainerProps.border` is a
