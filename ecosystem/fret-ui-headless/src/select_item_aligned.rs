@@ -120,8 +120,13 @@ pub fn select_item_aligned_position(inputs: SelectItemAlignedInputs) -> SelectIt
     let selected_item_half_h = Px(inputs.selected_item.size.height.0 / 2.0);
 
     let viewport_origin_y = inputs.viewport.origin.y;
-    let selected_item_mid_offset =
-        Px((inputs.selected_item.origin.y.0 - viewport_origin_y.0) + selected_item_half_h.0);
+    // Radix uses `selectedItem.offsetTop` which is measured from the viewport's padding edge.
+    // Our layout bounds for the scroll viewport typically reflect the *content* box, so we add
+    // the viewport padding back in to keep the item-aligned solver consistent with the web
+    // reference implementation.
+    let selected_item_mid_offset = Px((inputs.selected_item.origin.y.0 - viewport_origin_y.0)
+        + inputs.viewport_padding_top.0
+        + selected_item_half_h.0);
 
     let full_content_h = Px(inputs.content_border_top.0
         + inputs.content_padding_top.0
