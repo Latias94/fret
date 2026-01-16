@@ -100,8 +100,8 @@ Legend:
 | `radio_group` | `RadioGroup` | Chrome+Layout |  |
 | `calendar` | `Calendar` | Chrome+Layout |  |
 | `calendar_range` | `CalendarRange` | Chrome+Layout |  |
-| `date_picker` | `DatePicker` | Pass-through |  |
-| `date_range_picker` | `DateRangePicker` | Pass-through |  |
+| `date_picker` | `DatePicker` | Chrome+Layout |  |
+| `date_range_picker` | `DateRangePicker` | Chrome+Layout |  |
 | `input` | `Input` | Chrome+Layout |  |
 | `textarea` | `Textarea` | Chrome+Layout |  |
 | `switch` | `Switch` | Chrome+Layout |  |

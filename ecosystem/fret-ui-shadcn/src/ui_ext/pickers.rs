@@ -6,6 +6,6 @@ use crate::radio_group::RadioGroup;
 
 impl_ui_patch_chrome_layout!(Calendar);
 impl_ui_patch_chrome_layout!(CalendarRange);
-impl_ui_patch_passthrough!(DatePicker);
-impl_ui_patch_passthrough!(DateRangePicker);
+impl_ui_patch_chrome_layout!(DatePicker);
+impl_ui_patch_chrome_layout!(DateRangePicker);
 impl_ui_patch_chrome_layout!(RadioGroup);
