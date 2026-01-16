@@ -439,6 +439,39 @@ fn golden_datazoom_percent_order_sensitive() {
 }
 
 #[test]
+fn golden_visualmap_scatter_opacity_and_size() {
+    let json = r#"
+    {
+      "dataset": {
+        "source": [
+          ["x","y"],
+          [0, -1],
+          [1, -0.5],
+          [2, 0],
+          [3, 0.5],
+          [4, 1]
+        ]
+      },
+      "xAxis": [{ "type": "value" }],
+      "yAxis": [{ "type": "value" }],
+      "visualMap": {
+        "type": "continuous",
+        "dimension": "y",
+        "min": -1,
+        "max": 1,
+        "range": [-0.25, 0.75],
+        "inRange": { "opacity": [0.2, 1.0], "symbolSize": [5, 20] },
+        "outOfRange": { "opacity": 0.05 }
+      },
+      "series": [
+        { "type": "scatter", "datasetIndex": 0, "encode": { "x": "x", "y": "y" } }
+      ]
+    }
+    "#;
+    assert_matches_golden("visualmap-scatter-opacity-and-size", json);
+}
+
+#[test]
 fn golden_scatter_lod_forced_large_mode_is_pixel_bounded() {
     let mut source = Vec::with_capacity(1 + 200);
     source.push(serde_json::json!(["x", "y"]));
