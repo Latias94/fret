@@ -6,8 +6,8 @@ use crate::engine::interaction::AxisInteractionLocks;
 use crate::engine::lod::LodScratch;
 use crate::engine::model::{ChartModel, ModelError};
 use crate::engine::stages::{
-    BarLayoutStage, DataViewStage, FilterProcessorStage, MarksStage, NearestXIndexKey,
-    NearestXIndexStage, OrdinalIndexStage, StackDimsStage,
+    BarLayoutStage, FilterProcessorStage, MarksStage, NearestXIndexKey, NearestXIndexStage,
+    OrdinalIndexStage, StackDimsStage,
 };
 use crate::ids::{ChartId, Revision};
 use crate::link::{LinkConfig, LinkEvent};
@@ -22,6 +22,7 @@ use crate::tooltip::{
 };
 use crate::transform::stack_base_at_index;
 use crate::transform::{RowRange, RowSelection};
+use crate::transform_graph::{DataViewStage, TransformGraph};
 use crate::view::ViewState;
 use std::collections::BTreeMap;
 
@@ -48,6 +49,11 @@ pub struct ChartState {
     pub link: LinkConfig,
     pub data_zoom_x: BTreeMap<crate::ids::AxisId, DataZoomXState>,
     pub data_window_y: BTreeMap<crate::ids::AxisId, window::DataWindowY>,
+    /// ECharts-like percent windows (0..=100) for axes.
+    ///
+    /// When present for an axis, the engine derives a value-space window from the effective
+    /// data extent and applies it in an order-sensitive way (X before Y within a grid).
+    pub axis_percent_windows: BTreeMap<crate::ids::AxisId, (f64, f64)>,
     pub axis_locks: BTreeMap<crate::ids::AxisId, AxisInteractionLocks>,
     pub visual_map_range:
         BTreeMap<crate::ids::VisualMapId, Option<crate::engine::model::VisualMapRange>>,
@@ -122,7 +128,7 @@ pub struct ChartEngine {
     output: ChartOutput,
     stats: EngineStats,
     view: ViewState,
-    data_view_stage: DataViewStage,
+    transform_graph: TransformGraph,
     filter_processor_stage: FilterProcessorStage,
     participation: crate::engine::stages::ParticipationState,
     ordinal_index_stage: OrdinalIndexStage,
@@ -149,6 +155,42 @@ struct BrushLinkCache {
 }
 
 impl ChartEngine {
+    fn apply_percent_windows_pre_view(&mut self) {
+        for (axis, (start, end)) in self.state.axis_percent_windows.clone() {
+            let Some(axis_model) = self.model.axes.get(&axis) else {
+                continue;
+            };
+            if axis_model.kind != crate::spec::AxisKind::X {
+                continue;
+            }
+
+            let Some(extent) =
+                self.transform_graph
+                    .x_data_extent(&self.model, &self.datasets, &self.state, axis)
+            else {
+                continue;
+            };
+
+            let range = self.axis_range(axis);
+            let Some(window) =
+                TransformGraph::percent_range_to_value_window(extent, range, start, end)
+            else {
+                continue;
+            };
+
+            let entry = self
+                .state
+                .data_zoom_x
+                .entry(axis)
+                .or_insert(DataZoomXState {
+                    window: None,
+                    filter_mode: crate::spec::FilterMode::Filter,
+                });
+            if entry.window != Some(window) {
+                entry.window = Some(window);
+            }
+        }
+    }
     pub fn new(spec: crate::spec::ChartSpec) -> Result<Self, ModelError> {
         let id = spec.id;
         let model = ChartModel::from_spec(spec)?;
@@ -175,7 +217,7 @@ impl ChartEngine {
             output: ChartOutput::default(),
             stats: EngineStats::default(),
             view: ViewState::default(),
-            data_view_stage: DataViewStage::default(),
+            transform_graph: TransformGraph::default(),
             filter_processor_stage: FilterProcessorStage::default(),
             participation: crate::engine::stages::ParticipationState::default(),
             ordinal_index_stage: OrdinalIndexStage::default(),
@@ -231,6 +273,10 @@ impl ChartEngine {
         &self.participation
     }
 
+    pub fn filter_plan_output(&self) -> &crate::engine::stages::FilterPlanOutput {
+        self.transform_graph.filter_plan_output()
+    }
+
     pub fn stats(&self) -> &EngineStats {
         &self.stats
     }
@@ -277,6 +323,7 @@ impl ChartEngine {
                 delta_px,
                 viewport_span_px,
             } => {
+                self.state.axis_percent_windows.remove(&axis);
                 self.apply_pan_from_base(axis, base, delta_px, viewport_span_px);
             }
             Action::PanDataWindowYFromBase {
@@ -285,6 +332,7 @@ impl ChartEngine {
                 delta_px,
                 viewport_span_px,
             } => {
+                self.state.axis_percent_windows.remove(&axis);
                 self.apply_pan_from_base(axis, base, delta_px, viewport_span_px);
             }
             Action::ZoomDataWindowXFromBase {
@@ -294,6 +342,7 @@ impl ChartEngine {
                 log2_scale,
                 viewport_span_px,
             } => {
+                self.state.axis_percent_windows.remove(&axis);
                 self.apply_zoom_from_base(axis, base, center_px, log2_scale, viewport_span_px);
             }
             Action::ZoomDataWindowYFromBase {
@@ -303,6 +352,7 @@ impl ChartEngine {
                 log2_scale,
                 viewport_span_px,
             } => {
+                self.state.axis_percent_windows.remove(&axis);
                 self.apply_zoom_from_base(axis, base, center_px, log2_scale, viewport_span_px);
             }
             Action::SetDataWindowXFromZoom {
@@ -311,6 +361,7 @@ impl ChartEngine {
                 window,
                 anchor,
             } => {
+                self.state.axis_percent_windows.remove(&axis);
                 self.apply_zoom_set_window(axis, base, window, anchor);
             }
             Action::SetDataWindowYFromZoom {
@@ -319,9 +370,11 @@ impl ChartEngine {
                 window,
                 anchor,
             } => {
+                self.state.axis_percent_windows.remove(&axis);
                 self.apply_zoom_set_window(axis, base, window, anchor);
             }
             Action::SetDataWindowX { axis, window } => {
+                self.state.axis_percent_windows.remove(&axis);
                 let range = self.axis_range(axis);
                 let default_mode = self
                     .model
@@ -349,6 +402,7 @@ impl ChartEngine {
                 self.marks_stage.mark_dirty();
             }
             Action::SetDataWindowY { axis, window } => {
+                self.state.axis_percent_windows.remove(&axis);
                 let range = self.axis_range(axis);
                 if let Some(mut window) = window {
                     window.clamp_non_degenerate();
@@ -356,6 +410,31 @@ impl ChartEngine {
                     self.state.data_window_y.insert(axis, window);
                 } else {
                     self.state.data_window_y.remove(&axis);
+                }
+                self.state.revision.bump();
+                self.marks_stage.mark_dirty();
+            }
+            Action::SetAxisWindowPercent { axis, range } => {
+                if let Some((a, b)) = range {
+                    if a.is_finite() && b.is_finite() {
+                        self.state.axis_percent_windows.insert(axis, (a, b));
+                        if let Some(axis_model) = self.model.axes.get(&axis) {
+                            match axis_model.kind {
+                                crate::spec::AxisKind::X => {
+                                    if let Some(st) = self.state.data_zoom_x.get_mut(&axis) {
+                                        st.window = None;
+                                    }
+                                }
+                                crate::spec::AxisKind::Y => {
+                                    self.state.data_window_y.remove(&axis);
+                                }
+                            }
+                        }
+                    } else {
+                        self.state.axis_percent_windows.remove(&axis);
+                    }
+                } else {
+                    self.state.axis_percent_windows.remove(&axis);
                 }
                 self.state.revision.bump();
                 self.marks_stage.mark_dirty();
@@ -387,6 +466,9 @@ impl ChartEngine {
                 y,
             } => {
                 let mut changed = false;
+
+                self.state.axis_percent_windows.remove(&x_axis);
+                self.state.axis_percent_windows.remove(&y_axis);
 
                 if !self.axis_is_fixed(x_axis) && !self.axis_locks(x_axis).zoom_locked {
                     let x_range = self.axis_range(x_axis);
@@ -452,6 +534,9 @@ impl ChartEngine {
                 y,
             } => {
                 let mut changed = false;
+
+                self.state.axis_percent_windows.remove(&x_axis);
+                self.state.axis_percent_windows.remove(&y_axis);
 
                 if !self.axis_is_fixed(x_axis) && !self.axis_locks(x_axis).zoom_locked {
                     let x_range = self.axis_range(x_axis);
@@ -874,6 +959,10 @@ impl ChartEngine {
             return Err(EngineError::MissingViewport);
         }
 
+        // Apply percent window inputs early so the view rebuild and data-view requests can observe
+        // the derived X value windows (ECharts-class dataZoomProcessor ordering scaffold).
+        self.apply_percent_windows_pre_view();
+
         self.output.brush_selection_2d = self.state.brush_selection_2d;
         self.output.brush_x_row_ranges_by_series.clear();
 
@@ -912,26 +1001,26 @@ impl ChartEngine {
             .bar_layout_stage
             .step(&self.model, &self.datasets, &mut budget);
 
-        self.data_view_stage.begin_frame();
+        self.transform_graph.begin_frame();
         self.filter_processor_stage.request_data_views(
             &self.model,
             &self.datasets,
             &self.state,
             &self.view,
-            &mut self.data_view_stage,
+            &mut self.transform_graph,
         );
-        self.data_view_stage.prepare_requests(&self.datasets);
-        let selection_done = self.data_view_stage.step(&self.datasets, &mut budget);
+        self.transform_graph.prepare_requests(&self.datasets);
+        let selection_done = self.transform_graph.step(&self.datasets, &mut budget);
 
         // Multi-dimensional `weakFilter` (v1 subset) is materialized as an indices-backed selection.
         // Apply the cached selection when available so all downstream consumers observe the correct
         // row participation contract.
         let filter_result = self.filter_processor_stage.apply(
+            &mut self.transform_graph,
             &self.model,
             &self.datasets,
-            &self.state,
+            &mut self.state,
             &mut self.view,
-            &self.data_view_stage,
         );
         let xy_weak_filter_pending = filter_result.xy_weak_filter_pending;
 
@@ -953,7 +1042,7 @@ impl ChartEngine {
             filter_result.y_indices_skipped_indices_scan_avoid_series as u64;
 
         self.participation
-            .rebuild_from_view(&self.model, &self.view);
+            .rebuild_from_plan_output(&self.model, self.transform_graph.filter_plan_output());
 
         self.ordinal_index_stage.begin_frame();
         if self
@@ -1059,7 +1148,7 @@ impl ChartEngine {
                 &self.model,
                 &self.datasets,
                 &self.state,
-                &self.data_view_stage,
+                self.transform_graph.data_views(),
                 &self.stack_dims_stage,
                 &self.bar_layout_stage,
                 &self.participation,
@@ -1131,44 +1220,46 @@ impl ChartEngine {
                     if rect_contains_point(viewport, hover_px) {
                         match spec.trigger {
                             AxisPointerTrigger::Item => {
-                                let hit = hit_test::hover_hit_test(
+                                let raw_hit = hit_test::hover_hit_test(
                                     &self.model,
                                     &self.datasets,
                                     &self.output.marks,
                                     hover_px,
                                     &self.stack_dims_stage,
                                 );
-                                self.axis_pointer_cache.hit = hit;
-                                self.axis_pointer_cache.output = compute_item_axis_pointer_output(
+                                let output = compute_item_axis_pointer_output(
                                     &self.model,
                                     hover_px,
-                                    hit,
+                                    raw_hit,
                                     spec,
                                 );
+                                self.axis_pointer_cache.hit = output.as_ref().and_then(|o| o.hit);
+                                self.axis_pointer_cache.output = output;
                             }
                             AxisPointerTrigger::Axis => {
-                                let hit = hit_test::hover_hit_test(
+                                let raw_hit = hit_test::hover_hit_test(
                                     &self.model,
                                     &self.datasets,
                                     &self.output.marks,
                                     hover_px,
                                     &self.stack_dims_stage,
                                 );
-                                self.axis_pointer_cache.hit = hit;
-                                self.axis_pointer_cache.output = compute_axis_axis_pointer_output(
+                                let output = compute_axis_axis_pointer_output(
                                     &self.model,
                                     &self.datasets,
                                     &self.participation,
-                                    &self.data_view_stage,
+                                    self.transform_graph.data_views(),
                                     &self.stack_dims_stage,
                                     &self.ordinal_index_stage,
                                     &self.nearest_x_index_stage,
                                     &self.output.axis_windows,
                                     viewport,
                                     hover_px,
-                                    hit,
+                                    raw_hit,
                                     spec,
                                 );
+                                self.axis_pointer_cache.hit = output.as_ref().and_then(|o| o.hit);
+                                self.axis_pointer_cache.output = output;
                             }
                         }
                     }
@@ -1255,14 +1346,11 @@ fn request_nearest_x_indices_for_axis_pointer(
             continue;
         }
 
-        let Some(series_view) = participation.series_participation(series.id) else {
-            continue;
-        };
-        let (RowSelection::All | RowSelection::Range(_)) = series_view.selection else {
-            continue;
-        };
-
         let Some(table) = datasets.dataset(series.dataset) else {
+            continue;
+        };
+        let contract = participation.series_contract(series.id, table.row_count);
+        let (RowSelection::All | RowSelection::Range(_)) = contract.selection else {
             continue;
         };
         let Some(dataset) = model.datasets.get(&series.dataset) else {
@@ -1275,11 +1363,7 @@ fn request_nearest_x_indices_for_axis_pointer(
             continue;
         };
 
-        let selection_range = series_view.selection.as_range(table.row_count);
-        let selection_range = RowRange {
-            start: selection_range.start,
-            end: selection_range.end,
-        };
+        let selection_range = contract.selection_range;
         let visible_len = selection_range.end.saturating_sub(selection_range.start);
         if visible_len <= MAX_UNSORTED_AXIS_SCAN_POINTS {
             continue;
@@ -1293,7 +1377,7 @@ fn request_nearest_x_indices_for_axis_pointer(
             series.dataset,
             x_col,
             selection_range,
-            series_view.x_policy.filter,
+            contract.x_policy.filter,
         ));
     }
 }
@@ -1554,31 +1638,11 @@ fn compute_axis_axis_pointer_output(
             None
         };
 
-        let (selection_range, filter, base_selection, empty_mask) =
-            match participation.series_participation(series.id) {
-                Some(series_view) => {
-                    let selection_range = series_view.selection.as_range(table.row_count);
-                    let selection_range = RowRange {
-                        start: selection_range.start,
-                        end: selection_range.end,
-                    };
-                    (
-                        selection_range,
-                        series_view.x_policy.filter,
-                        series_view.selection.clone(),
-                        series_view.empty_mask,
-                    )
-                }
-                None => (
-                    RowRange {
-                        start: 0,
-                        end: table.row_count,
-                    },
-                    crate::engine::window_policy::AxisFilter1D::default(),
-                    RowSelection::default(),
-                    Default::default(),
-                ),
-            };
+        let contract = participation.series_contract(series.id, table.row_count);
+        let selection_range = contract.selection_range;
+        let filter = contract.x_policy.filter;
+        let base_selection = contract.selection.clone();
+        let empty_mask = contract.empty_mask;
 
         let selection_for_index = base_selection.clone();
         let filter_for_index = if series_trigger_axis == series.x_axis {
@@ -1849,31 +1913,11 @@ fn snap_axis_pointer_x_to_series(
         .and_then(|y2_field| dataset.fields.get(&y2_field).copied())
         .and_then(|y2_col| table.column_f64(y2_col));
 
-    let (selection_range, filter, base_selection, empty_mask) =
-        match participation.series_participation(primary.id) {
-            Some(series_view) => {
-                let selection_range = series_view.selection.as_range(table.row_count);
-                let selection_range = RowRange {
-                    start: selection_range.start,
-                    end: selection_range.end,
-                };
-                (
-                    selection_range,
-                    series_view.x_policy.filter,
-                    series_view.selection.clone(),
-                    series_view.empty_mask,
-                )
-            }
-            None => (
-                RowRange {
-                    start: 0,
-                    end: table.row_count,
-                },
-                crate::engine::window_policy::AxisFilter1D::default(),
-                RowSelection::default(),
-                Default::default(),
-            ),
-        };
+    let contract = participation.series_contract(primary.id, table.row_count);
+    let selection_range = contract.selection_range;
+    let filter = contract.x_policy.filter;
+    let base_selection = contract.selection;
+    let empty_mask = contract.empty_mask;
 
     let table_view = data_views.table_view_for(
         table,
@@ -2075,31 +2119,11 @@ fn snap_axis_pointer_y_to_series(
         .and_then(|y2_field| dataset.fields.get(&y2_field).copied())
         .and_then(|y2_col| table.column_f64(y2_col));
 
-    let (selection_range, filter, base_selection, empty_mask) =
-        match participation.series_participation(primary.id) {
-            Some(series_view) => {
-                let selection_range = series_view.selection.as_range(table.row_count);
-                let selection_range = RowRange {
-                    start: selection_range.start,
-                    end: selection_range.end,
-                };
-                (
-                    selection_range,
-                    series_view.x_policy.filter,
-                    series_view.selection.clone(),
-                    series_view.empty_mask,
-                )
-            }
-            None => (
-                RowRange {
-                    start: 0,
-                    end: table.row_count,
-                },
-                crate::engine::window_policy::AxisFilter1D::default(),
-                RowSelection::default(),
-                Default::default(),
-            ),
-        };
+    let contract = participation.series_contract(primary.id, table.row_count);
+    let selection_range = contract.selection_range;
+    let filter = contract.x_policy.filter;
+    let base_selection = contract.selection.clone();
+    let empty_mask = contract.empty_mask;
 
     let table_view = data_views.table_view_for(
         table,
@@ -2321,29 +2345,10 @@ fn request_ordinal_indices_for_axis_pointer(
             continue;
         };
 
-        let (selection_range, filter, selection) =
-            match participation.series_participation(series.id) {
-                Some(series_view) => {
-                    let selection_range = series_view.selection.as_range(table.row_count);
-                    let selection_range = RowRange {
-                        start: selection_range.start,
-                        end: selection_range.end,
-                    };
-                    (
-                        selection_range,
-                        series_view.x_policy.filter,
-                        series_view.selection.clone(),
-                    )
-                }
-                None => (
-                    RowRange {
-                        start: 0,
-                        end: table.row_count,
-                    },
-                    crate::engine::window_policy::AxisFilter1D::default(),
-                    RowSelection::default(),
-                ),
-            };
+        let contract = participation.series_contract(series.id, table.row_count);
+        let selection_range = contract.selection_range;
+        let filter = contract.x_policy.filter;
+        let selection = contract.selection;
 
         if matches!(selection, RowSelection::Indices(_)) {
             continue;

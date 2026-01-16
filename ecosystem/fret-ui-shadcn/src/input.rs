@@ -6,6 +6,7 @@ use fret_ui::element::{AnyElement, Length, Overflow, SizeStyle, TextInputProps};
 use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size};
 
 #[derive(Clone)]
 pub struct Input {
@@ -17,6 +18,9 @@ pub struct Input {
     expanded: Option<bool>,
     submit_command: Option<CommandId>,
     cancel_command: Option<CommandId>,
+    size: Size,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
 }
 
 impl Input {
@@ -30,6 +34,9 @@ impl Input {
             expanded: None,
             submit_command: None,
             cancel_command: None,
+            size: Size::default(),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
         }
     }
 
@@ -68,8 +75,23 @@ impl Input {
         self
     }
 
+    pub fn size(mut self, size: Size) -> Self {
+        self.size = size;
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        input(
+        input_with_style(
             cx,
             self.model,
             self.a11y_label,
@@ -79,6 +101,9 @@ impl Input {
             self.expanded,
             self.submit_command,
             self.cancel_command,
+            self.size,
+            self.chrome,
+            self.layout,
         )
     }
 }
@@ -94,12 +119,42 @@ pub fn input<H: UiHost>(
     submit_command: Option<CommandId>,
     cancel_command: Option<CommandId>,
 ) -> AnyElement {
+    input_with_style(
+        cx,
+        model,
+        a11y_label,
+        a11y_role,
+        placeholder,
+        active_descendant,
+        expanded,
+        submit_command,
+        cancel_command,
+        Size::default(),
+        ChromeRefinement::default(),
+        LayoutRefinement::default(),
+    )
+}
+
+fn input_with_style<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    model: Model<String>,
+    a11y_label: Option<Arc<str>>,
+    a11y_role: Option<SemanticsRole>,
+    placeholder: Option<Arc<str>>,
+    active_descendant: Option<NodeId>,
+    expanded: Option<bool>,
+    submit_command: Option<CommandId>,
+    cancel_command: Option<CommandId>,
+    size: Size,
+    chrome_override: ChromeRefinement,
+    layout_override: LayoutRefinement,
+) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
 
     let resolved = resolve_input_chrome(
         &theme,
-        fret_ui_kit::Size::default(),
-        &Default::default(),
+        size,
+        &chrome_override,
         InputTokenKeys {
             bg: Some("component.input.bg"),
             border: Some("input"),
@@ -152,6 +207,7 @@ pub fn input<H: UiHost>(
         ..Default::default()
     };
     props.layout.overflow = Overflow::Clip;
+    decl_style::apply_layout_refinement(&theme, layout_override, &mut props.layout);
 
     cx.text_input(props)
 }

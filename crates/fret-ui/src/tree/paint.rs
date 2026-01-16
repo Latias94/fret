@@ -54,6 +54,8 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
+        self.collapse_paint_observations_to_view_cache_roots_if_needed();
+
         if let Some(started) = started {
             self.debug_stats.paint_time = started.elapsed();
         }

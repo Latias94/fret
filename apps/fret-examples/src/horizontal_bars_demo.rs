@@ -143,6 +143,7 @@ impl HorizontalBarsDemoDriver {
                     stack_strategy: Default::default(),
                     bar_layout: Default::default(),
                     area_baseline: None,
+                    lod: None,
                 },
                 SeriesSpec {
                     id: series_b_id,
@@ -160,6 +161,7 @@ impl HorizontalBarsDemoDriver {
                     stack_strategy: Default::default(),
                     bar_layout: Default::default(),
                     area_baseline: None,
+                    lod: None,
                 },
                 SeriesSpec {
                     id: series_c_id,
@@ -177,6 +179,7 @@ impl HorizontalBarsDemoDriver {
                     stack_strategy: Default::default(),
                     bar_layout: Default::default(),
                     area_baseline: None,
+                    lod: None,
                 },
             ],
         };

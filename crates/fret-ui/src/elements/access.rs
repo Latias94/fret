@@ -7,7 +7,6 @@ use crate::widget::Invalidation;
 
 use fret_runtime::{ModelId, TimerToken};
 
-use super::runtime::StateEntry;
 use super::{ElementRuntime, GlobalElementId, WindowElementState};
 
 pub fn with_element_state<H: UiHost, S: Any, R>(
@@ -23,17 +22,19 @@ pub fn with_element_state<H: UiHost, S: Any, R>(
         let window_state = runtime.for_window_mut(window);
 
         let key = (element, TypeId::of::<S>());
-        let entry = window_state.state.entry(key).or_insert_with(|| StateEntry {
-            value: Box::new(init()),
-            last_seen_frame: frame_id,
-        });
-        entry.last_seen_frame = frame_id;
+        let mut value = window_state
+            .take_state_box(&key)
+            .unwrap_or_else(|| Box::new(init()));
 
-        let state = entry
-            .value
-            .downcast_mut::<S>()
-            .expect("element state type mismatch");
-        f(state)
+        let out = {
+            let state = value
+                .downcast_mut::<S>()
+                .expect("element state type mismatch");
+            f(state)
+        };
+
+        window_state.insert_state_box(key, value);
+        out
     })
 }
 
@@ -185,10 +186,10 @@ pub fn take_element_state<H: UiHost, S: Any>(
     app.with_global_mut(ElementRuntime::new, |runtime, app| {
         runtime.prepare_window_for_frame(window, app.frame_id());
         let window_state = runtime.for_window_mut(window);
+        let key = (element, TypeId::of::<S>());
         window_state
-            .state
-            .remove(&(element, TypeId::of::<S>()))
-            .and_then(|e| e.value.downcast::<S>().ok())
+            .take_state_box(&key)
+            .and_then(|e| e.downcast::<S>().ok())
             .map(|b| *b)
     })
 }

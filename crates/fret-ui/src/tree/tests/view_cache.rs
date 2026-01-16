@@ -131,3 +131,104 @@ fn view_cache_runs_contained_relayout_for_invalidated_boundaries() {
     assert!(!ui.nodes[boundary].invalidation.layout);
     assert_eq!(ui.debug_stats().view_cache_contained_relayouts, 1);
 }
+
+#[test]
+fn view_cache_nested_boundaries_invalidate_ancestor_cache_roots() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+
+    let root = ui.create_node(TestStack::default());
+    let outer = ui.create_node(TestStack::default());
+    let mid = ui.create_node(TestStack::default());
+    let inner = ui.create_node(TestStack::default());
+    let leaf = ui.create_node(TestStack::default());
+
+    ui.set_root(root);
+    ui.set_children(root, vec![outer]);
+    ui.set_children(outer, vec![mid]);
+    ui.set_children(mid, vec![inner]);
+    ui.set_children(inner, vec![leaf]);
+
+    for id in [root, outer, mid, inner, leaf] {
+        ui.nodes[id].invalidation.clear();
+    }
+    ui.nodes[outer].view_cache.enabled = true;
+    ui.nodes[outer].view_cache.contained_layout = true;
+    ui.nodes[inner].view_cache.enabled = true;
+    ui.nodes[inner].view_cache.contained_layout = true;
+
+    ui.invalidate(leaf, Invalidation::Paint);
+
+    assert!(ui.nodes[leaf].invalidation.paint);
+    assert!(ui.nodes[inner].invalidation.paint);
+    assert!(ui.nodes[outer].invalidation.paint);
+    assert!(!ui.nodes[mid].invalidation.paint);
+    assert!(!ui.nodes[root].invalidation.paint);
+}
+
+#[test]
+fn view_cache_uplifts_observations_to_nearest_root_and_invalidates_ancestor_roots() {
+    let mut app = crate::test_host::TestHost::new();
+    let model = app.models_mut().insert(0u32);
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+
+    let root = ui.create_node(TestStack::default());
+    let outer = ui.create_node(TestStack::default());
+    let inner = ui.create_node(TestStack::default());
+    let leaf = ui.create_node(PaintObservingWidget {
+        model: model.clone(),
+    });
+
+    ui.set_root(root);
+    ui.set_children(root, vec![outer]);
+    ui.set_children(outer, vec![inner]);
+    ui.set_children(inner, vec![leaf]);
+
+    ui.nodes[outer].view_cache.enabled = true;
+    ui.nodes[outer].view_cache.contained_layout = true;
+    ui.nodes[inner].view_cache.enabled = true;
+    ui.nodes[inner].view_cache.contained_layout = true;
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(100.0), fret_core::Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    for id in [root, outer, inner, leaf] {
+        ui.nodes[id].invalidation.clear();
+    }
+
+    let observed = ui
+        .observed_in_paint
+        .by_model
+        .get(&model.id())
+        .expect("expected paint observation for model");
+    assert!(
+        observed.contains_key(&inner),
+        "nearest cache root should observe"
+    );
+    assert!(
+        !observed.contains_key(&leaf),
+        "leaf observation should be uplifted to cache root in view-cache mode"
+    );
+    assert!(
+        !observed.contains_key(&outer),
+        "observation should not be attributed to ancestor cache roots"
+    );
+
+    let _ = model.update(&mut app, |v, _cx| *v += 1);
+    let changed = app.take_changed_models();
+    ui.propagate_model_changes(&mut app, &changed);
+
+    assert!(ui.nodes[inner].invalidation.paint);
+    assert!(ui.nodes[outer].invalidation.paint);
+    assert!(!ui.nodes[root].invalidation.paint);
+}

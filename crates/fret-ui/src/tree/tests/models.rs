@@ -215,6 +215,52 @@ fn model_change_requests_redraw_for_each_invalidated_window() {
 }
 
 #[test]
+fn model_change_invalidation_dedup_stops_at_shared_ancestors() {
+    let mut app = crate::test_host::TestHost::new();
+    let model = app.models_mut().insert(0u32);
+
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_debug_enabled(true);
+
+    let root = ui.create_node(TestStack::default());
+    let left = ui.create_node(TestStack::default());
+    let right = ui.create_node(TestStack::default());
+    let leaf_a = ui.create_node(PaintObservingWidget {
+        model: model.clone(),
+    });
+    let leaf_b = ui.create_node(PaintObservingWidget {
+        model: model.clone(),
+    });
+
+    ui.set_root(root);
+    ui.add_child(root, left);
+    ui.add_child(root, right);
+    ui.add_child(left, leaf_a);
+    ui.add_child(right, leaf_b);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(100.0), fret_core::Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let _ = model.update(&mut app, |v, _cx| *v += 1);
+    let changed = app.take_changed_models();
+    app.advance_frame();
+
+    assert!(ui.propagate_model_changes(&mut app, &changed));
+
+    let stats = ui.debug_stats();
+    assert_eq!(stats.model_change_invalidation_roots, 2);
+    assert_eq!(stats.invalidation_walk_calls, 2);
+    assert_eq!(stats.invalidation_walk_nodes, 5);
+}
+
+#[test]
 fn paint_all_sets_ime_allowed_for_focused_text_input() {
     #[derive(Default)]
     struct FakeTextInput;

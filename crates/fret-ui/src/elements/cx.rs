@@ -1,4 +1,5 @@
 use std::any::{Any, TypeId};
+use std::collections::HashMap;
 use std::hash::Hash;
 use std::panic::Location;
 use std::sync::Arc;
@@ -27,7 +28,6 @@ use crate::widget::Invalidation;
 use crate::{SvgSource, Theme, UiHost};
 
 use super::hash::{callsite_hash, derive_child_id, stable_hash};
-use super::runtime::StateEntry;
 use super::{ContinuousFrames, ElementRuntime, GlobalElementId, WindowElementState, global_root};
 
 pub struct ElementContext<'a, H: UiHost> {
@@ -71,7 +71,18 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         bounds: Rect,
         root_name: &str,
     ) -> Self {
-        Self::new(app, runtime, window, bounds, global_root(window, root_name))
+        let root = global_root(window, root_name);
+        #[cfg(feature = "diagnostics")]
+        {
+            let cx = Self::new(app, runtime, window, bounds, root);
+            cx.window_state
+                .record_debug_root(cx.frame_id, root, root_name);
+            cx
+        }
+        #[cfg(not(feature = "diagnostics"))]
+        {
+            Self::new(app, runtime, window, bounds, root)
+        }
     }
 
     pub fn root_id(&self) -> GlobalElementId {
@@ -93,10 +104,11 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn inherited_state_where<S: Any>(&self, predicate: impl Fn(&S) -> bool) -> Option<&S> {
         let ty = TypeId::of::<S>();
         for &id in self.stack.iter().rev() {
-            let Some(entry) = self.window_state.state.get(&(id, ty)) else {
+            let key = (id, ty);
+            let Some(any) = self.window_state.state_any_ref(&key) else {
                 continue;
             };
-            let Some(state) = entry.value.downcast_ref::<S>() else {
+            let Some(state) = any.downcast_ref::<S>() else {
                 continue;
             };
             if predicate(state) {
@@ -216,15 +228,17 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
 
     #[track_caller]
     pub fn scope<R>(&mut self, f: impl FnOnce(&mut Self) -> R) -> R {
-        let caller = callsite_hash(Location::caller());
-        self.enter(caller, None, f)
+        let loc = Location::caller();
+        let callsite = callsite_hash(loc);
+        self.enter_with_callsite(loc, callsite, None, f)
     }
 
     #[track_caller]
     pub fn keyed<K: Hash, R>(&mut self, key: K, f: impl FnOnce(&mut Self) -> R) -> R {
-        let caller = callsite_hash(Location::caller());
+        let loc = Location::caller();
+        let caller = callsite_hash(loc);
         let key_hash = stable_hash(&key);
-        self.enter(caller, Some(key_hash), f)
+        self.enter_with_callsite(loc, caller, Some(key_hash), f)
     }
 
     pub fn with_state<S: Any, R>(
@@ -243,22 +257,20 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         f: impl FnOnce(&mut S) -> R,
     ) -> R {
         let key = (element, TypeId::of::<S>());
-
-        let entry = self
+        let mut value = self
             .window_state
-            .state
-            .entry(key)
-            .or_insert_with(|| StateEntry {
-                value: Box::new(init()),
-                last_seen_frame: self.frame_id,
-            });
-        entry.last_seen_frame = self.frame_id;
+            .take_state_box(&key)
+            .unwrap_or_else(|| Box::new(init()));
 
-        let state = entry
-            .value
-            .downcast_mut::<S>()
-            .expect("element state type mismatch");
-        f(state)
+        let out = {
+            let state = value
+                .downcast_mut::<S>()
+                .expect("element state type mismatch");
+            f(state)
+        };
+
+        self.window_state.insert_state_box(key, value);
+        out
     }
 
     pub fn observe_model<T>(&mut self, model: &Model<T>, invalidation: Invalidation) {
@@ -341,10 +353,46 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         mut key: impl FnMut(&T) -> K,
         mut f: impl FnMut(&mut Self, usize, &T),
     ) {
+        let loc = Location::caller();
         self.scope(|cx| {
+            let mut first_dup: Option<(u64, usize, usize)> = None;
+            let mut seen: HashMap<u64, usize> = HashMap::new();
             for (index, item) in items.iter().enumerate() {
                 let k = key(item);
+                let key_hash = stable_hash(&k);
+                if first_dup.is_none() {
+                    if let Some(prev) = seen.insert(key_hash, index) {
+                        first_dup = Some((key_hash, prev, index));
+                    }
+                }
                 cx.keyed(k, |cx| f(cx, index, item));
+            }
+
+            if let Some((key_hash, a, b)) = first_dup
+                && cfg!(debug_assertions)
+                && items.len() > 1
+            {
+                let element_path: Option<String> = {
+                    #[cfg(feature = "diagnostics")]
+                    {
+                        cx.window_state.debug_path_for_element(cx.root_id())
+                    }
+                    #[cfg(not(feature = "diagnostics"))]
+                    {
+                        None
+                    }
+                };
+
+                tracing::warn!(
+                    file = loc.file(),
+                    line = loc.line(),
+                    column = loc.column(),
+                    key_hash = format_args!("{key_hash:#x}"),
+                    first_index = a,
+                    second_index = b,
+                    element_path = element_path.as_deref().unwrap_or("<unknown>"),
+                    "duplicate keyed list item key hash; element state may collide"
+                );
             }
         });
     }
@@ -355,7 +403,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         items: &[T],
         mut f: impl FnMut(&mut Self, usize, &T),
     ) {
-        let list_id = callsite_hash(Location::caller());
+        let loc = Location::caller();
+        let list_id = callsite_hash(loc);
         let fingerprints: Vec<u64> = items.iter().map(stable_hash).collect();
         self.window_state
             .cur_unkeyed_fingerprints
@@ -366,8 +415,22 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             && items.len() > 1
             && cfg!(debug_assertions)
         {
+            let element_path: Option<String> = {
+                #[cfg(feature = "diagnostics")]
+                {
+                    self.window_state.debug_path_for_element(self.root_id())
+                }
+                #[cfg(not(feature = "diagnostics"))]
+                {
+                    None
+                }
+            };
             tracing::warn!(
                 list_id = format_args!("{list_id:#x}"),
+                file = loc.file(),
+                line = loc.line(),
+                column = loc.column(),
+                element_path = element_path.as_deref().unwrap_or("<unknown>"),
                 "unkeyed element list order changed; add explicit keys to preserve state"
             );
         }
@@ -375,13 +438,14 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             for (index, item) in items.iter().enumerate() {
                 let index_key = index as u64;
-                cx.enter(list_id, Some(index_key), |cx| f(cx, index, item));
+                cx.enter_with_callsite(loc, list_id, Some(index_key), |cx| f(cx, index, item));
             }
         });
     }
 
-    fn enter<R>(
+    fn enter_with_callsite<R>(
         &mut self,
+        _loc: &'static Location<'static>,
         callsite: u64,
         key_hash: Option<u64>,
         f: impl FnOnce(&mut Self) -> R,
@@ -393,6 +457,18 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
 
         let child_salt = key_hash.unwrap_or(slot);
         let id = derive_child_id(parent, callsite, child_salt);
+
+        #[cfg(feature = "diagnostics")]
+        self.window_state.record_debug_child(
+            self.frame_id,
+            parent,
+            id,
+            _loc.file(),
+            _loc.line(),
+            _loc.column(),
+            key_hash,
+            slot,
+        );
 
         self.stack.push(id);
         self.child_counters.push(0);
@@ -2107,6 +2183,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         range_extractor: impl FnOnce(crate::virtual_list::VirtualRange) -> Vec<usize>,
         mut row: impl FnMut(&mut Self, usize) -> AnyElement,
     ) -> AnyElement {
+        let loc = Location::caller();
         self.virtual_list_with_layout_and_keys(
             layout,
             len,
@@ -2115,6 +2192,42 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             key_at,
             range_extractor,
             |cx, items| {
+                if cfg!(debug_assertions) && items.len() > 1 {
+                    let mut first_dup: Option<(crate::ItemKey, usize, usize)> = None;
+                    let mut seen: HashMap<crate::ItemKey, usize> = HashMap::new();
+                    for (pos, item) in items.iter().enumerate() {
+                        if first_dup.is_none() {
+                            if let Some(prev) = seen.insert(item.key, pos) {
+                                first_dup = Some((item.key, prev, pos));
+                            }
+                        }
+                    }
+
+                    if let Some((key, a, b)) = first_dup {
+                        let element_path: Option<String> = {
+                            #[cfg(feature = "diagnostics")]
+                            {
+                                cx.window_state.debug_path_for_element(cx.root_id())
+                            }
+                            #[cfg(not(feature = "diagnostics"))]
+                            {
+                                None
+                            }
+                        };
+
+                        tracing::warn!(
+                            file = loc.file(),
+                            line = loc.line(),
+                            column = loc.column(),
+                            key = format_args!("{key:#x}"),
+                            first_visible_pos = a,
+                            second_visible_pos = b,
+                            element_path = element_path.as_deref().unwrap_or("<unknown>"),
+                            "duplicate virtual_list item key; element identity may collide"
+                        );
+                    }
+                }
+
                 items
                     .iter()
                     .copied()

@@ -72,6 +72,7 @@ fn basic_spec() -> ChartSpec {
             stack_strategy: Default::default(),
             bar_layout: Default::default(),
             area_baseline: None,
+            lod: None,
         }],
     }
 }
@@ -164,6 +165,7 @@ fn visual_map_accepts_dataset_binding() {
         stack_strategy: Default::default(),
         bar_layout: Default::default(),
         area_baseline: None,
+        lod: None,
     });
 
     spec.visual_maps.push(VisualMapSpec {
@@ -381,6 +383,7 @@ fn replace_merge_can_replace_series_only() {
                     bar_layout: Default::default(),
                     visible: Some(true),
                     area_baseline: None,
+                    lod: None,
                 })],
                 ..ChartPatch::default()
             },
@@ -424,6 +427,7 @@ fn replace_merge_keeps_and_merges_matching_ids() {
                     bar_layout: Default::default(),
                     visible: Some(false),
                     area_baseline: None,
+                    lod: None,
                 })],
                 ..ChartPatch::default()
             },
@@ -568,6 +572,7 @@ fn merge_series_visibility_updates_visual_without_structure() {
                     bar_layout: Default::default(),
                     visible: Some(false),
                     area_baseline: None,
+                    lod: None,
                 })],
                 ..ChartPatch::default()
             },

@@ -1,17 +1,45 @@
-use super::DataViewStage;
 use crate::data::DatasetStore;
 use crate::engine::ChartState;
 use crate::engine::model::ChartModel;
-use crate::ids::{DatasetId, GridId, Revision, SeriesId};
+use crate::ids::{AxisId, DatasetId, GridId, Revision, SeriesId};
 use crate::spec::FilterMode;
-use crate::transform::{RowSelection, SeriesXPolicy};
+use crate::transform::{RowRange, RowSelection, SeriesXPolicy};
+use crate::transform_graph::{FilterPlanStepKind, TransformGraph};
 use crate::view::SeriesEmptyMask;
 use crate::view::ViewState;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
 #[derive(Debug, Default, Clone)]
-pub struct FilterProcessorStage;
+pub struct FilterProcessorStage {}
+
+#[derive(Debug, Default, Clone)]
+pub struct FilterPlanOutput {
+    pub revision: Revision,
+    pub grids: Vec<GridFilterOutput>,
+    pub series: Vec<SeriesFilterOutput>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct GridFilterOutput {
+    pub grid: GridId,
+    pub series: Vec<SeriesId>,
+    pub y_percent_extents: BTreeMap<AxisId, (f64, f64)>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct SeriesFilterOutput {
+    pub series: SeriesId,
+    pub dataset: DatasetId,
+    pub grid: GridId,
+    pub data_revision: Revision,
+    pub selection: RowSelection,
+    pub x_policy: SeriesXPolicy,
+    pub x_filter_mode: FilterMode,
+    pub y_filter_mode: FilterMode,
+    pub y_filter: crate::engine::window_policy::AxisFilter1D,
+    pub empty_mask: SeriesEmptyMask,
+}
 
 #[derive(Debug, Default, Clone)]
 pub struct SeriesParticipation {
@@ -34,6 +62,17 @@ pub struct ParticipationState {
     series_index: BTreeMap<SeriesId, usize>,
 }
 
+#[derive(Debug, Clone)]
+pub struct SeriesParticipationContract {
+    pub selection_range: RowRange,
+    pub selection: RowSelection,
+    pub x_policy: SeriesXPolicy,
+    pub x_filter_mode: FilterMode,
+    pub y_filter_mode: FilterMode,
+    pub y_filter: crate::engine::window_policy::AxisFilter1D,
+    pub empty_mask: SeriesEmptyMask,
+}
+
 impl ParticipationState {
     pub fn clear(&mut self) {
         self.revision = Revision::default();
@@ -46,6 +85,41 @@ impl ParticipationState {
             .get(&series)
             .copied()
             .and_then(|i| self.series.get(i))
+    }
+
+    pub fn series_contract(
+        &self,
+        series: SeriesId,
+        row_count: usize,
+    ) -> SeriesParticipationContract {
+        let Some(p) = self.series_participation(series) else {
+            return SeriesParticipationContract {
+                selection_range: RowRange {
+                    start: 0,
+                    end: row_count,
+                },
+                selection: RowSelection::All,
+                x_policy: SeriesXPolicy::default(),
+                x_filter_mode: FilterMode::None,
+                y_filter_mode: FilterMode::None,
+                y_filter: crate::engine::window_policy::AxisFilter1D::default(),
+                empty_mask: SeriesEmptyMask::default(),
+            };
+        };
+
+        let selection_range = p.selection.as_range(row_count);
+        SeriesParticipationContract {
+            selection_range: RowRange {
+                start: selection_range.start,
+                end: selection_range.end,
+            },
+            selection: p.selection.clone(),
+            x_policy: p.x_policy,
+            x_filter_mode: p.x_filter_mode,
+            y_filter_mode: p.y_filter_mode,
+            y_filter: p.y_filter,
+            empty_mask: p.empty_mask,
+        }
     }
 
     pub fn rebuild_from_view(&mut self, model: &ChartModel, view: &ViewState) {
@@ -87,6 +161,48 @@ impl ParticipationState {
             }
         }
     }
+
+    pub fn rebuild_from_plan_output(&mut self, model: &ChartModel, plan: &FilterPlanOutput) {
+        self.series.clear();
+        self.series_index.clear();
+        self.series.reserve(model.series_order.len());
+        self.revision = plan.revision;
+
+        let mut by_id: BTreeMap<SeriesId, &SeriesFilterOutput> = BTreeMap::new();
+        by_id.extend(plan.series.iter().map(|s| (s.series, s)));
+
+        for (i, series_id) in model.series_order.iter().copied().enumerate() {
+            self.series_index.insert(series_id, i);
+            let Some(series_model) = model.series.get(&series_id) else {
+                self.series.push(SeriesParticipation {
+                    series: series_id,
+                    ..Default::default()
+                });
+                continue;
+            };
+
+            if let Some(s) = by_id.get(&series_id) {
+                self.series.push(SeriesParticipation {
+                    series: series_id,
+                    dataset: series_model.dataset,
+                    revision: plan.revision,
+                    data_revision: s.data_revision,
+                    selection: s.selection.clone(),
+                    x_policy: s.x_policy,
+                    x_filter_mode: s.x_filter_mode,
+                    y_filter_mode: s.y_filter_mode,
+                    y_filter: s.y_filter,
+                    empty_mask: s.empty_mask,
+                });
+            } else {
+                self.series.push(SeriesParticipation {
+                    series: series_id,
+                    dataset: series_model.dataset,
+                    ..Default::default()
+                });
+            }
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -103,24 +219,6 @@ pub struct FilterProcessorResult {
     pub y_indices_skipped_indices_scan_avoid_series: u32,
 }
 
-#[derive(Debug, Default, Clone)]
-struct GridFilterPlan {
-    series: Vec<SeriesId>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum FilterPlanStepKind {
-    XYWeakFilter,
-    XIndices,
-    YIndices,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct FilterPlanStep {
-    grid: GridId,
-    kind: FilterPlanStepKind,
-}
-
 impl FilterProcessorStage {
     pub fn request_data_views(
         &mut self,
@@ -128,7 +226,7 @@ impl FilterProcessorStage {
         datasets: &DatasetStore,
         state: &ChartState,
         view: &ViewState,
-        data_view: &mut DataViewStage,
+        transform_graph: &mut TransformGraph,
     ) {
         for series_id in &model.series_order {
             let Some(series) = model.series.get(series_id) else {
@@ -205,12 +303,12 @@ impl FilterProcessorStage {
                         );
 
                         requested_xy_weak_filter = match series.kind {
-                            crate::spec::SeriesKind::Band => data_view
+                            crate::spec::SeriesKind::Band => transform_graph
                                 .request_xy_weak_filter_band_for_series(
                                     model, datasets, view, *series_id, base_range, x_filter,
                                     y_filter,
                                 ),
-                            _ => data_view.request_xy_weak_filter_for_series(
+                            _ => transform_graph.request_xy_weak_filter_for_series(
                                 model, datasets, view, *series_id, base_range, x_filter, y_filter,
                             ),
                         };
@@ -235,21 +333,23 @@ impl FilterProcessorStage {
                 continue;
             }
 
-            data_view.request_x_filter_for_series(model, datasets, view, *series_id);
+            transform_graph.request_x_filter_for_series(model, datasets, view, *series_id);
         }
     }
 
     pub fn apply(
         &mut self,
+        transform_graph: &mut TransformGraph,
         model: &ChartModel,
         datasets: &DatasetStore,
-        state: &ChartState,
+        state: &mut ChartState,
         view: &mut ViewState,
-        data_views: &DataViewStage,
     ) -> FilterProcessorResult {
         let mut xy_weak_filter_pending = false;
         let mut view_changed = false;
         let mut x_indices_applied: BTreeSet<SeriesId> = BTreeSet::new();
+        let mut y_percent_extents_by_grid: BTreeMap<GridId, BTreeMap<AxisId, (f64, f64)>> =
+            BTreeMap::new();
 
         let mut xy_weak_filter_applied_series = 0u32;
         let mut xy_weak_filter_pending_series = 0u32;
@@ -259,23 +359,10 @@ impl FilterProcessorStage {
         let mut y_indices_skipped_view_len_cap_series = 0u32;
         let mut y_indices_skipped_indices_scan_avoid_series = 0u32;
 
-        // ECharts `dataZoomProcessor` applies transforms in an order-sensitive way per grid (e.g. X
-        // before Y). We currently only allow one dataZoom per axis, but structuring this stage by
-        // grid provides a stable footing for a future general transform plan.
-        let mut grid_plans: BTreeMap<GridId, GridFilterPlan> = BTreeMap::new();
-        for series_id in &model.series_order {
-            let Some(series_model) = model.series.get(series_id) else {
-                continue;
-            };
-            let Some(axis) = model.axes.get(&series_model.x_axis) else {
-                continue;
-            };
-            let grid = axis.grid;
-            let plan = grid_plans
-                .entry(grid)
-                .or_insert_with(|| GridFilterPlan { series: Vec::new() });
-            plan.series.push(*series_id);
-        }
+        // ECharts `dataZoomProcessor` applies transforms in an order-sensitive way per grid (e.g.
+        // X before Y). `TransformGraph` owns the current v1 plan scaffold and caches it by model
+        // revision.
+        let plan = transform_graph.filter_plan(model).clone();
 
         let view_series_index: BTreeMap<SeriesId, usize> = view
             .series
@@ -284,32 +371,15 @@ impl FilterProcessorStage {
             .map(|(i, v)| (v.series, i))
             .collect();
 
-        let mut plan_steps: Vec<FilterPlanStep> = Vec::new();
-        plan_steps.reserve(grid_plans.len() * 3);
-        for grid in grid_plans.keys().copied() {
-            plan_steps.push(FilterPlanStep {
-                grid,
-                kind: FilterPlanStepKind::XYWeakFilter,
-            });
-            plan_steps.push(FilterPlanStep {
-                grid,
-                kind: FilterPlanStepKind::XIndices,
-            });
-            plan_steps.push(FilterPlanStep {
-                grid,
-                kind: FilterPlanStepKind::YIndices,
-            });
-        }
-
         // Step ordering is intentionally explicit and per-grid (ECharts-style ordering scaffold).
         const MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN: usize = 200_000;
         const MAX_Y_FILTER_VIEW_LEN: usize = 200_000;
 
-        let plan_grids = grid_plans.len().min(u32::MAX as usize) as u32;
-        let plan_steps_run = plan_steps.len().min(u32::MAX as usize) as u32;
+        let plan_grids = plan.grids.len().min(u32::MAX as usize) as u32;
+        let plan_steps_run = plan.steps.len().min(u32::MAX as usize) as u32;
 
-        for step in &plan_steps {
-            let Some(plan) = grid_plans.get(&step.grid) else {
+        for step in &plan.steps {
+            let Some(series) = plan.grids.get(&step.grid) else {
                 continue;
             };
 
@@ -319,9 +389,9 @@ impl FilterProcessorStage {
                     datasets,
                     state,
                     view,
-                    data_views,
+                    transform_graph,
                     &view_series_index,
-                    &plan.series,
+                    series,
                     MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN,
                     &mut xy_weak_filter_pending,
                     &mut view_changed,
@@ -329,24 +399,46 @@ impl FilterProcessorStage {
                     &mut xy_weak_filter_pending_series,
                     &mut xy_weak_filter_skipped_view_len_cap_series,
                 ),
+                FilterPlanStepKind::XRange => apply_x_range_for_grid(
+                    transform_graph,
+                    model,
+                    datasets,
+                    view,
+                    &view_series_index,
+                    series,
+                    &mut view_changed,
+                ),
                 FilterPlanStepKind::XIndices => apply_x_indices_for_grid(
                     model,
                     datasets,
                     view,
-                    data_views,
+                    transform_graph,
                     &view_series_index,
-                    &plan.series,
+                    series,
                     &mut view_changed,
                     &mut x_indices_applied,
                     &mut x_indices_applied_series,
                 ),
-                FilterPlanStepKind::YIndices => apply_y_indices_for_grid(
+                FilterPlanStepKind::YPercent => apply_y_percent_for_grid(
+                    transform_graph,
                     model,
                     datasets,
                     state,
                     view,
                     &view_series_index,
-                    &plan.series,
+                    series,
+                    step.grid,
+                    &mut y_percent_extents_by_grid,
+                    &mut view_changed,
+                ),
+                FilterPlanStepKind::YIndices => apply_y_indices_for_grid(
+                    transform_graph,
+                    model,
+                    datasets,
+                    state,
+                    view,
+                    &view_series_index,
+                    series,
                     MAX_Y_FILTER_VIEW_LEN,
                     &x_indices_applied,
                     &mut view_changed,
@@ -363,6 +455,8 @@ impl FilterProcessorStage {
                 series_view.revision = view.revision;
             }
         }
+
+        transform_graph.refresh_filter_plan_output(model, view, &y_percent_extents_by_grid);
 
         FilterProcessorResult {
             xy_weak_filter_pending,
@@ -384,7 +478,7 @@ fn apply_xy_weak_filter_for_grid(
     datasets: &DatasetStore,
     state: &ChartState,
     view: &mut ViewState,
-    data_views: &DataViewStage,
+    transform_graph: &TransformGraph,
     view_series_index: &BTreeMap<SeriesId, usize>,
     series: &[SeriesId],
     max_view_len: usize,
@@ -510,7 +604,7 @@ fn apply_xy_weak_filter_for_grid(
         }
 
         let sel = match y1_col {
-            Some(y1_col) => data_views.selection_for_xy_weak_filter_band(
+            Some(y1_col) => transform_graph.selection_for_xy_weak_filter_band(
                 series_model.dataset,
                 x_col,
                 y0_col,
@@ -520,7 +614,7 @@ fn apply_xy_weak_filter_for_grid(
                 y_filter,
                 table.revision,
             ),
-            None => data_views.selection_for_xy_weak_filter(
+            None => transform_graph.selection_for_xy_weak_filter(
                 series_model.dataset,
                 x_col,
                 y0_col,
@@ -558,11 +652,48 @@ fn apply_xy_weak_filter_for_grid(
     }
 }
 
+fn apply_x_range_for_grid(
+    transform_graph: &mut TransformGraph,
+    model: &ChartModel,
+    datasets: &DatasetStore,
+    view: &mut ViewState,
+    view_series_index: &BTreeMap<SeriesId, usize>,
+    series: &[SeriesId],
+    view_changed: &mut bool,
+) {
+    for series_id in series {
+        let Some(series_model) = model.series.get(series_id) else {
+            continue;
+        };
+        if !series_model.visible {
+            continue;
+        }
+
+        let Some(series_view_index) = view_series_index.get(series_id).copied() else {
+            continue;
+        };
+        let Some(sel) = transform_graph.x_range_selection_for_series(
+            model,
+            datasets,
+            view,
+            *series_id,
+            series_view_index,
+        ) else {
+            continue;
+        };
+        let series_view = &mut view.series[series_view_index];
+        if series_view.selection != sel {
+            series_view.selection = sel;
+            *view_changed = true;
+        }
+    }
+}
+
 fn apply_x_indices_for_grid(
     model: &ChartModel,
     datasets: &DatasetStore,
     view: &mut ViewState,
-    data_views: &DataViewStage,
+    transform_graph: &TransformGraph,
     view_series_index: &BTreeMap<SeriesId, usize>,
     series: &[SeriesId],
     view_changed: &mut bool,
@@ -614,7 +745,7 @@ fn apply_x_indices_for_grid(
             end: selection_range.end,
         };
 
-        let Some(sel) = data_views.selection_for(
+        let Some(sel) = transform_graph.selection_for_x_filter(
             series_model.dataset,
             x_col,
             selection_range,
@@ -638,6 +769,7 @@ fn apply_x_indices_for_grid(
 }
 
 fn apply_y_indices_for_grid(
+    transform_graph: &mut TransformGraph,
     model: &ChartModel,
     datasets: &DatasetStore,
     state: &ChartState,
@@ -663,6 +795,7 @@ fn apply_y_indices_for_grid(
             crate::spec::SeriesKind::Scatter
                 | crate::spec::SeriesKind::Line
                 | crate::spec::SeriesKind::Area
+                | crate::spec::SeriesKind::Band
         ) {
             continue;
         }
@@ -697,97 +830,66 @@ fn apply_y_indices_for_grid(
         let Some(series_view_index) = view_series_index.get(series_id).copied() else {
             continue;
         };
-        let series_view = &mut view.series[series_view_index];
-
-        let y_filter = series_view.y_filter;
-        if y_filter.min.is_none() && y_filter.max.is_none() {
-            continue;
-        }
-
-        let base_selection = series_view.selection.clone();
-        if matches!(base_selection, RowSelection::Indices(_))
-            && !x_indices_applied.contains(series_id)
-        {
-            // Avoid repeatedly scanning indices selections every frame. The primary order-sensitive
-            // behavior we need is X-before-Y in the same frame when X indices were just applied.
-            *y_indices_skipped_indices_scan_avoid_series =
-                y_indices_skipped_indices_scan_avoid_series.saturating_add(1);
-            continue;
-        }
-
-        let Some(table) = datasets.dataset(series_model.dataset) else {
-            continue;
-        };
-        let Some(dataset) = model.datasets.get(&series_model.dataset) else {
-            continue;
-        };
-        let Some(x_col) = dataset.fields.get(&series_model.encode.x).copied() else {
-            continue;
-        };
-        let Some(y_col) = dataset.fields.get(&series_model.encode.y).copied() else {
-            continue;
-        };
-        let Some(x) = table.column_f64(x_col) else {
-            continue;
-        };
-        let Some(y) = table.column_f64(y_col) else {
-            continue;
-        };
-
-        let len = x.len().min(y.len());
-        let view_len = base_selection.view_len(len);
-        if view_len == 0 {
-            continue;
-        }
-        if view_len > max_view_len {
-            *y_indices_skipped_view_len_cap_series =
-                y_indices_skipped_view_len_cap_series.saturating_add(1);
-            continue;
-        }
-
-        // Apply the X filter predicate only when X is in a filtering mode (Filter/WeakFilter).
-        // For `Empty`, the X window is represented as a masking predicate and must not cull the
-        // row participation space.
-        let x_filter_mode = series_view.x_filter_mode;
-        let x_filter = series_view.x_policy.filter;
-        let x_filter_active = x_filter.min.is_some() || x_filter.max.is_some();
-        let x_filter_should_cull_selection = matches!(
-            x_filter_mode,
-            crate::spec::FilterMode::Filter | crate::spec::FilterMode::WeakFilter
+        let x_indices_applied = x_indices_applied.contains(series_id);
+        let out = transform_graph.y_indices_node_for_series(
+            model,
+            datasets,
+            view,
+            *series_id,
+            series_view_index,
+            max_view_len,
+            x_indices_applied,
         );
 
-        let mut indices: Vec<u32> = Vec::new();
-        indices.reserve(view_len.min(4096));
-
-        let mut kept = 0usize;
-        for view_index in 0..view_len {
-            let Some(raw_index) = base_selection.get_raw_index(len, view_index) else {
-                continue;
-            };
-            let xi = x.get(raw_index).copied().unwrap_or(f64::NAN);
-            let yi = y.get(raw_index).copied().unwrap_or(f64::NAN);
-            if !xi.is_finite() || !yi.is_finite() {
-                continue;
+        match out.result {
+            crate::transform_graph::YIndicesNodeResult::NoChange => {}
+            crate::transform_graph::YIndicesNodeResult::SkippedViewLenCap => {
+                *y_indices_skipped_view_len_cap_series =
+                    y_indices_skipped_view_len_cap_series.saturating_add(1);
             }
-            if x_filter_should_cull_selection && x_filter_active && !x_filter.contains(xi) {
-                continue;
+            crate::transform_graph::YIndicesNodeResult::SkippedIndicesScanAvoid => {
+                *y_indices_skipped_indices_scan_avoid_series =
+                    y_indices_skipped_indices_scan_avoid_series.saturating_add(1);
             }
-            if !y_filter.contains(yi) {
-                continue;
+            crate::transform_graph::YIndicesNodeResult::Indices(indices) => {
+                let series_view = &mut view.series[series_view_index];
+                *y_indices_applied_series = y_indices_applied_series.saturating_add(1);
+                if series_view.selection != RowSelection::Indices(indices.clone()) {
+                    series_view.selection = RowSelection::Indices(indices);
+                }
+                if out.x_filter_should_cull_selection
+                    && series_view.x_policy.filter != Default::default()
+                {
+                    series_view.x_policy.filter = Default::default();
+                }
+                *view_changed = true;
             }
-            indices.push(raw_index.min(u32::MAX as usize) as u32);
-            kept += 1;
         }
+    }
+}
 
-        if kept == view_len {
-            continue;
-        }
-
-        *y_indices_applied_series = y_indices_applied_series.saturating_add(1);
-        series_view.selection = RowSelection::Indices(indices.into());
-        if x_filter_should_cull_selection && series_view.x_policy.filter != Default::default() {
-            series_view.x_policy.filter = Default::default();
-        }
+fn apply_y_percent_for_grid(
+    transform_graph: &mut TransformGraph,
+    model: &ChartModel,
+    datasets: &DatasetStore,
+    state: &mut ChartState,
+    view: &mut ViewState,
+    view_series_index: &BTreeMap<SeriesId, usize>,
+    series: &[SeriesId],
+    grid: GridId,
+    y_percent_extents_by_grid: &mut BTreeMap<GridId, BTreeMap<AxisId, (f64, f64)>>,
+    view_changed: &mut bool,
+) {
+    if transform_graph.apply_y_percent_for_grid(
+        model,
+        datasets,
+        state,
+        view,
+        view_series_index,
+        series,
+        grid,
+        y_percent_extents_by_grid,
+    ) {
         *view_changed = true;
     }
 }

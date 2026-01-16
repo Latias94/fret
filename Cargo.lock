@@ -988,6 +988,8 @@ dependencies = [
  "fret-runtime",
  "fret-ui",
  "fret-ui-kit",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

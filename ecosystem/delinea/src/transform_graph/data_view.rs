@@ -1,3 +1,5 @@
+//! Incremental indices views (X filter / XY weakFilter).
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
@@ -161,14 +163,15 @@ impl DataViewStage {
         view: &ViewState,
         series_id: crate::ids::SeriesId,
     ) -> bool {
-        // v1 policy: build indices only when:
+        // v1 policy: build indices when:
         // - the series is visible,
         // - filter mode is "filter" (so `x_policy.filter` is active),
         // - the current view selection is a broad `Range`,
-        // - the X slice is probably non-monotonic (so we cannot shrink range cheaply),
-        // - and the selection is "large enough" to benefit from an index view.
+        // - and the X slice is probably non-monotonic (so we cannot shrink range cheaply).
         //
-        // This is intentionally conservative: indices are an optimization carrier, not required for correctness.
+        // Note: while indices started as an optimization carrier, line-family rendering relies on
+        // indices materialization to apply filtering semantics for non-monotonic inputs (range
+        // slicing cannot represent the filter, and mark LOD should not scan unfiltered rows).
 
         let Some(series) = model.series.get(&series_id) else {
             return false;
@@ -192,7 +195,7 @@ impl DataViewStage {
             end: selection_range.end,
         };
         let visible_len = selection_range.end.saturating_sub(selection_range.start);
-        if visible_len < 50_000 {
+        if visible_len == 0 {
             return false;
         }
 

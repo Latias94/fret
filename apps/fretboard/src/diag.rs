@@ -19,6 +19,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut pick_script_out: Option<PathBuf> = None;
     let mut pick_apply_pointer: Option<String> = None;
     let mut pick_apply_out: Option<PathBuf> = None;
+    let mut inspect_path: Option<PathBuf> = None;
+    let mut inspect_trigger_path: Option<PathBuf> = None;
+    let mut inspect_consume_clicks: Option<bool> = None;
     let mut timeout_ms: u64 = 30_000;
     let mut poll_ms: u64 = 50;
 
@@ -120,6 +123,32 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 };
                 rest.remove(0);
                 pick_apply_out = Some(PathBuf::from(v));
+            }
+            "--inspect-path" => {
+                rest.remove(0);
+                let Some(v) = rest.first().cloned() else {
+                    return Err("missing value for --inspect-path".to_string());
+                };
+                rest.remove(0);
+                inspect_path = Some(PathBuf::from(v));
+            }
+            "--inspect-trigger-path" => {
+                rest.remove(0);
+                let Some(v) = rest.first().cloned() else {
+                    return Err("missing value for --inspect-trigger-path".to_string());
+                };
+                rest.remove(0);
+                inspect_trigger_path = Some(PathBuf::from(v));
+            }
+            "--consume-clicks" => {
+                rest.remove(0);
+                let Some(v) = rest.first().cloned() else {
+                    return Err("missing value for --consume-clicks".to_string());
+                };
+                rest.remove(0);
+                inspect_consume_clicks = Some(
+                    parse_bool(&v).map_err(|_| "invalid value for --consume-clicks".to_string())?,
+                );
             }
             "--timeout-ms" => {
                 rest.remove(0);
@@ -254,6 +283,28 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         resolve_path(&workspace_root, raw)
     };
 
+    let resolved_inspect_path = {
+        let raw = inspect_path
+            .or_else(|| {
+                std::env::var_os("FRET_DIAG_INSPECT_PATH")
+                    .filter(|v| !v.is_empty())
+                    .map(PathBuf::from)
+            })
+            .unwrap_or_else(|| resolved_out_dir.join("inspect.json"));
+        resolve_path(&workspace_root, raw)
+    };
+
+    let resolved_inspect_trigger_path = {
+        let raw = inspect_trigger_path
+            .or_else(|| {
+                std::env::var_os("FRET_DIAG_INSPECT_TRIGGER_PATH")
+                    .filter(|v| !v.is_empty())
+                    .map(PathBuf::from)
+            })
+            .unwrap_or_else(|| resolved_out_dir.join("inspect.touch"));
+        resolve_path(&workspace_root, raw)
+    };
+
     match sub.as_str() {
         "path" => {
             if !rest.is_empty() {
@@ -382,6 +433,66 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
             std::process::exit(0);
         }
+        "inspect" => {
+            let Some(action) = rest.first().cloned() else {
+                return Err(
+                    "missing inspect action (try: fretboard diag inspect on|off|toggle|status)"
+                        .to_string(),
+                );
+            };
+            if rest.len() != 1 {
+                return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
+            }
+
+            match action.as_str() {
+                "status" => {
+                    let cfg = read_inspect_config(&resolved_inspect_path);
+                    let (enabled, consume_clicks) = match cfg {
+                        Some(c) => (c.enabled, c.consume_clicks),
+                        None => (false, true),
+                    };
+                    let payload = serde_json::json!({
+                        "schema_version": 1,
+                        "enabled": enabled,
+                        "consume_clicks": consume_clicks,
+                        "inspect_path": resolved_inspect_path.display().to_string(),
+                        "inspect_trigger_path": resolved_inspect_trigger_path.display().to_string(),
+                    });
+                    println!(
+                        "{}",
+                        serde_json::to_string(&payload).unwrap_or_else(|_| "{}".to_string())
+                    );
+                    Ok(())
+                }
+                "on" | "off" | "toggle" => {
+                    let prev = read_inspect_config(&resolved_inspect_path);
+                    let prev_enabled = prev.as_ref().map(|c| c.enabled).unwrap_or(false);
+                    let prev_consume_clicks =
+                        prev.as_ref().map(|c| c.consume_clicks).unwrap_or(true);
+
+                    let next_enabled = match action.as_str() {
+                        "on" => true,
+                        "off" => false,
+                        "toggle" => !prev_enabled,
+                        _ => unreachable!(),
+                    };
+                    let next_consume_clicks = inspect_consume_clicks.unwrap_or(prev_consume_clicks);
+
+                    write_inspect_config(
+                        &resolved_inspect_path,
+                        InspectConfigV1 {
+                            schema_version: 1,
+                            enabled: next_enabled,
+                            consume_clicks: next_consume_clicks,
+                        },
+                    )?;
+                    touch(&resolved_inspect_trigger_path)?;
+                    println!("{}", resolved_inspect_trigger_path.display());
+                    Ok(())
+                }
+                other => Err(format!("unknown inspect action: {other}")),
+            }
+        }
         "pick-arm" => {
             if !rest.is_empty() {
                 return Err(format!("unexpected arguments: {}", rest.join(" ")));
@@ -459,6 +570,52 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         }
         other => Err(format!("unknown diag subcommand: {other}")),
     }
+}
+
+fn parse_bool(s: &str) -> Result<bool, ()> {
+    match s {
+        "1" | "true" | "True" | "TRUE" => Ok(true),
+        "0" | "false" | "False" | "FALSE" => Ok(false),
+        _ => Err(()),
+    }
+}
+
+#[derive(Debug, Clone)]
+struct InspectConfigV1 {
+    schema_version: u32,
+    enabled: bool,
+    consume_clicks: bool,
+}
+
+fn read_inspect_config(path: &Path) -> Option<InspectConfigV1> {
+    let bytes = std::fs::read(path).ok()?;
+    let v: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
+    if v.get("schema_version")?.as_u64()? != 1 {
+        return None;
+    }
+    let enabled = v.get("enabled")?.as_bool()?;
+    let consume_clicks = v
+        .get("consume_clicks")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+    Some(InspectConfigV1 {
+        schema_version: 1,
+        enabled,
+        consume_clicks,
+    })
+}
+
+fn write_inspect_config(path: &Path, cfg: InspectConfigV1) -> Result<(), String> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let v = serde_json::json!({
+        "schema_version": cfg.schema_version,
+        "enabled": cfg.enabled,
+        "consume_clicks": cfg.consume_clicks,
+    });
+    let bytes = serde_json::to_vec_pretty(&v).map_err(|e| e.to_string())?;
+    std::fs::write(path, bytes).map_err(|e| e.to_string())
 }
 
 fn resolve_path(workspace_root: &Path, path: PathBuf) -> PathBuf {

@@ -148,7 +148,7 @@ P1:
 
 - Action surface: `ecosystem/delinea/src/action/mod.rs` (`ZoomDataWindowYFromBase`, `PanDataWindowYFromBase`, `SetViewWindow2DFromZoom`)
 - Engine semantics: `ecosystem/delinea/src/engine/mod.rs` (lock gating + window writes for Y and 2D actions)
-- Budgeted indices carriers for filtering/masks: `ecosystem/delinea/src/engine/stages/data_view.rs`
+- Budgeted indices carriers for filtering/masks: `ecosystem/delinea/src/transform_graph/data_view.rs`
 - View-level `Empty` participation contract: `ecosystem/delinea/src/view/mod.rs` (`SeriesEmptyMask`)
 - UI adapter (multi-axis routing + 2D box zoom): `ecosystem/fret-chart/src/retained/canvas.rs`
 - Conformance harness (desktop + wasm): `apps/fret-examples/src/chart_multi_axis_demo.rs`

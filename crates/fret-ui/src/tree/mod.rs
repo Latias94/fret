@@ -686,6 +686,134 @@ impl<H: UiHost> UiTree<H> {
         self.view_cache_enabled && !self.inspection_active
     }
 
+    fn nearest_view_cache_root(&self, node: NodeId) -> Option<NodeId> {
+        let mut current = Some(node);
+        while let Some(id) = current {
+            let n = self.nodes.get(id)?;
+            if n.view_cache.enabled {
+                return Some(id);
+            }
+            current = n.parent;
+        }
+        None
+    }
+
+    fn collapse_observation_index_to_view_cache_roots(
+        &self,
+        mut index: ObservationIndex,
+    ) -> ObservationIndex {
+        let mut per_root: HashMap<NodeId, HashMap<ModelId, ObservationMask>> = HashMap::new();
+        for (node, entries) in index.by_node.drain() {
+            let target = self.nearest_view_cache_root(node).unwrap_or(node);
+            let models = per_root.entry(target).or_default();
+            for (model, mask) in entries {
+                models
+                    .entry(model)
+                    .and_modify(|m| *m = m.union(mask))
+                    .or_insert(mask);
+            }
+        }
+
+        let mut out = ObservationIndex::default();
+        for (node, models) in per_root {
+            let mut list: Vec<(ModelId, ObservationMask)> = Vec::with_capacity(models.len());
+            for (model, mask) in models {
+                list.push((model, mask));
+            }
+            out.by_node.insert(node, list.clone());
+            for (model, mask) in list {
+                out.by_model.entry(model).or_default().insert(node, mask);
+            }
+        }
+        out
+    }
+
+    fn collapse_global_observation_index_to_view_cache_roots(
+        &self,
+        mut index: GlobalObservationIndex,
+    ) -> GlobalObservationIndex {
+        let mut per_root: HashMap<NodeId, HashMap<TypeId, ObservationMask>> = HashMap::new();
+        for (node, entries) in index.by_node.drain() {
+            let target = self.nearest_view_cache_root(node).unwrap_or(node);
+            let globals = per_root.entry(target).or_default();
+            for (global, mask) in entries {
+                globals
+                    .entry(global)
+                    .and_modify(|m| *m = m.union(mask))
+                    .or_insert(mask);
+            }
+        }
+
+        let mut out = GlobalObservationIndex::default();
+        for (node, globals) in per_root {
+            let mut list: Vec<(TypeId, ObservationMask)> = Vec::with_capacity(globals.len());
+            for (global, mask) in globals {
+                list.push((global, mask));
+            }
+            out.by_node.insert(node, list.clone());
+            for (global, mask) in list {
+                out.by_global.entry(global).or_default().insert(node, mask);
+            }
+        }
+        out
+    }
+
+    fn collapse_layout_observations_to_view_cache_roots_if_needed(&mut self) {
+        if !self.view_cache_active() {
+            return;
+        }
+        let observed_in_layout = std::mem::take(&mut self.observed_in_layout);
+        self.observed_in_layout =
+            self.collapse_observation_index_to_view_cache_roots(observed_in_layout);
+
+        let observed_globals_in_layout = std::mem::take(&mut self.observed_globals_in_layout);
+        self.observed_globals_in_layout =
+            self.collapse_global_observation_index_to_view_cache_roots(observed_globals_in_layout);
+    }
+
+    fn collapse_paint_observations_to_view_cache_roots_if_needed(&mut self) {
+        if !self.view_cache_active() {
+            return;
+        }
+        let observed_in_paint = std::mem::take(&mut self.observed_in_paint);
+        self.observed_in_paint =
+            self.collapse_observation_index_to_view_cache_roots(observed_in_paint);
+
+        let observed_globals_in_paint = std::mem::take(&mut self.observed_globals_in_paint);
+        self.observed_globals_in_paint =
+            self.collapse_global_observation_index_to_view_cache_roots(observed_globals_in_paint);
+    }
+
+    fn expand_view_cache_layout_invalidations_if_needed(&mut self) {
+        if !self.view_cache_active() {
+            return;
+        }
+        let targets: Vec<NodeId> = self
+            .nodes
+            .iter()
+            .filter_map(|(id, n)| (n.view_cache.enabled && n.invalidation.layout).then_some(id))
+            .collect();
+        if targets.is_empty() {
+            return;
+        }
+        for root in targets {
+            self.mark_view_cache_layout_dirty_subtree(root);
+        }
+    }
+
+    fn mark_view_cache_layout_dirty_subtree(&mut self, root: NodeId) {
+        let mut stack: Vec<NodeId> = vec![root];
+        while let Some(id) = stack.pop() {
+            let Some(n) = self.nodes.get_mut(id) else {
+                continue;
+            };
+            n.invalidation.mark(Invalidation::Layout);
+            for &child in &n.children {
+                stack.push(child);
+            }
+        }
+    }
+
     /// Ingest the previous frame's recorded ops from `scene` for paint-cache replay.
     ///
     /// Call this **before** clearing `scene` for the next frame.
@@ -1325,6 +1453,7 @@ impl<H: UiHost> UiTree<H> {
                 self.debug_stats.invalidation_walk_calls.saturating_add(1);
         }
         let mut current = Some(node);
+        let mut hit_cache_root: Option<NodeId> = None;
         while let Some(id) = current {
             if let Some(n) = self.nodes.get_mut(id) {
                 if self.debug_enabled {
@@ -1332,6 +1461,80 @@ impl<H: UiHost> UiTree<H> {
                         self.debug_stats.invalidation_walk_nodes.saturating_add(1);
                 }
                 n.invalidation.mark(inv);
+                if stop_at_view_cache && n.view_cache.enabled {
+                    if self.debug_enabled {
+                        self.debug_stats.view_cache_invalidation_truncations = self
+                            .debug_stats
+                            .view_cache_invalidation_truncations
+                            .saturating_add(1);
+                    }
+                    hit_cache_root = Some(id);
+                    break;
+                }
+                current = n.parent;
+            } else {
+                break;
+            }
+        }
+
+        // Nested cache-root correctness: if a descendant cache root is invalidated, any ancestor
+        // cache roots must also be invalidated for the same categories so they cannot replay stale
+        // recorded ranges that include the old descendant output.
+        if stop_at_view_cache && let Some(cache_root) = hit_cache_root {
+            let mut parent = self.nodes.get(cache_root).and_then(|n| n.parent);
+            while let Some(id) = parent {
+                let next_parent = self.nodes.get(id).and_then(|n| n.parent);
+                if let Some(n) = self.nodes.get_mut(id)
+                    && n.view_cache.enabled
+                {
+                    n.invalidation.mark(inv);
+                }
+                parent = next_parent;
+            }
+        }
+    }
+
+    fn invalidation_mask(inv: Invalidation) -> u8 {
+        const PAINT: u8 = 1 << 0;
+        const LAYOUT: u8 = 1 << 1;
+        const HIT_TEST: u8 = 1 << 2;
+        match inv {
+            Invalidation::Paint => PAINT,
+            Invalidation::Layout => PAINT | LAYOUT,
+            Invalidation::HitTest => PAINT | LAYOUT | HIT_TEST,
+        }
+    }
+
+    fn mark_invalidation_dedup(
+        &mut self,
+        node: NodeId,
+        inv: Invalidation,
+        visited: &mut HashMap<NodeId, u8>,
+    ) {
+        let stop_at_view_cache = self.view_cache_active();
+        let needed = Self::invalidation_mask(inv);
+        if self.debug_enabled {
+            self.debug_stats.invalidation_walk_calls =
+                self.debug_stats.invalidation_walk_calls.saturating_add(1);
+        }
+
+        let mut current = Some(node);
+        let mut hit_cache_root: Option<NodeId> = None;
+        while let Some(id) = current {
+            let already = visited.get(&id).copied().unwrap_or_default();
+            if (already & needed) == needed {
+                break;
+            }
+
+            if let Some(n) = self.nodes.get_mut(id) {
+                if self.debug_enabled {
+                    self.debug_stats.invalidation_walk_nodes =
+                        self.debug_stats.invalidation_walk_nodes.saturating_add(1);
+                }
+
+                n.invalidation.mark(inv);
+                visited.insert(id, already | needed);
+
                 if stop_at_view_cache
                     && n.view_cache.enabled
                     && (inv == Invalidation::Paint || n.view_cache.contained_layout)
@@ -1342,11 +1545,32 @@ impl<H: UiHost> UiTree<H> {
                             .view_cache_invalidation_truncations
                             .saturating_add(1);
                     }
+                    hit_cache_root = Some(id);
                     break;
                 }
                 current = n.parent;
             } else {
                 break;
+            }
+        }
+
+        // Nested cache-root correctness: if a descendant cache root is invalidated, any ancestor
+        // cache roots must also be invalidated for the same categories so they cannot replay stale
+        // recorded ranges that include the old descendant output.
+        if stop_at_view_cache && let Some(cache_root) = hit_cache_root {
+            let mut parent = self.nodes.get(cache_root).and_then(|n| n.parent);
+            while let Some(id) = parent {
+                let next_parent = self.nodes.get(id).and_then(|n| n.parent);
+                let already = visited.get(&id).copied().unwrap_or_default();
+                if (already & needed) != needed
+                    && self.nodes.get(id).is_some_and(|n| n.view_cache.enabled)
+                {
+                    if let Some(n) = self.nodes.get_mut(id) {
+                        n.invalidation.mark(inv);
+                    }
+                    visited.insert(id, already | needed);
+                }
+                parent = next_parent;
             }
         }
     }
@@ -1386,19 +1610,19 @@ impl<H: UiHost> UiTree<H> {
                 combined.len().min(u32::MAX as usize) as u32;
         }
 
+        let mut visited = HashMap::<NodeId, u8>::new();
         let mut did_invalidate = false;
         for (node, mask) in combined {
             if mask.is_empty() || !self.nodes.contains_key(node) {
                 continue;
             }
+            // Only walk once per node: stronger invalidations already imply weaker ones.
             if mask.hit_test {
-                self.mark_invalidation(node, Invalidation::HitTest);
-            }
-            if mask.layout {
-                self.mark_invalidation(node, Invalidation::Layout);
-            }
-            if mask.paint {
-                self.mark_invalidation(node, Invalidation::Paint);
+                self.mark_invalidation_dedup(node, Invalidation::HitTest, &mut visited);
+            } else if mask.layout {
+                self.mark_invalidation_dedup(node, Invalidation::Layout, &mut visited);
+            } else if mask.paint {
+                self.mark_invalidation_dedup(node, Invalidation::Paint, &mut visited);
             }
             did_invalidate = true;
         }
@@ -1441,19 +1665,19 @@ impl<H: UiHost> UiTree<H> {
                 combined.len().min(u32::MAX as usize) as u32;
         }
 
+        let mut visited = HashMap::<NodeId, u8>::new();
         let mut did_invalidate = false;
         for (node, mask) in combined {
             if mask.is_empty() || !self.nodes.contains_key(node) {
                 continue;
             }
+            // Only walk once per node: stronger invalidations already imply weaker ones.
             if mask.hit_test {
-                self.mark_invalidation(node, Invalidation::HitTest);
-            }
-            if mask.layout {
-                self.mark_invalidation(node, Invalidation::Layout);
-            }
-            if mask.paint {
-                self.mark_invalidation(node, Invalidation::Paint);
+                self.mark_invalidation_dedup(node, Invalidation::HitTest, &mut visited);
+            } else if mask.layout {
+                self.mark_invalidation_dedup(node, Invalidation::Layout, &mut visited);
+            } else if mask.paint {
+                self.mark_invalidation_dedup(node, Invalidation::Paint, &mut visited);
             }
             did_invalidate = true;
         }

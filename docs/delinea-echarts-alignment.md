@@ -100,7 +100,7 @@ single “at a glance” view of:
 
 - ECharts reference: `repo-ref/echarts/src/component/dataZoom/AxisProxy.ts`, `repo-ref/echarts/src/component/dataZoom/dataZoomProcessor.ts`
 - ADR(s): `docs/adr/1129-delinea-transform-pipeline-and-datazoom-semantics.md`, `docs/adr/1138-delinea-datazoom-component-composition-and-span-policy.md`
-- Evidence: `ecosystem/delinea/src/engine/window.rs` (span limits), `ecosystem/delinea/src/engine/mod.rs` (interaction action routing), `ecosystem/fret-chart/src/retained/canvas.rs` (inside + slider gestures)
+- Evidence: `ecosystem/delinea/src/engine/window.rs` (span limits), `ecosystem/delinea/src/engine/mod.rs` (interaction action routing), `ecosystem/fret-chart/src/retained/canvas.rs` (inside + slider gestures), `ecosystem/fret-chart/src/echarts/mod.rs` (option adapter window seeding via `dataZoom.startValue/endValue` -> value-window actions, `dataZoom.start/end` -> `Action::SetAxisWindowPercent`)
 - Validation (desktop): `cargo run -p fret-demo --bin fret-demo -- chart_multi_axis_demo`
 - Validation (wasm): `cargo run -p fretboard -- dev web --demo chart_multi_axis_demo`
 - What to validate (P0):
@@ -113,13 +113,16 @@ single “at a glance” view of:
 
 - ECharts reference: `repo-ref/echarts/src/component/dataZoom/*` (order-sensitive multi-dim filtering)
 - ADR(s): `docs/adr/1136-delinea-datazoom-y-and-2d-semantics.md`, `docs/adr/1137-delinea-row-selection-and-filtering-contract.md`
-- Evidence: `ecosystem/delinea/src/engine/mod.rs` (Y window routing + stage order), `ecosystem/delinea/src/engine/stages/filter_processor.rs` (Y filtering materialization + participation snapshot), `ecosystem/delinea/src/transform/data_zoom_y.rs` (Y filter node), `ecosystem/delinea/src/engine/stages/data_view.rs` (budgeted indices materialization), `ecosystem/delinea/src/view/mod.rs` (view selection/mask policy), `ecosystem/delinea/src/transform/*` (RowSelection)
+- Evidence: `ecosystem/delinea/src/engine/mod.rs` (percent-window routing + stage order), `ecosystem/delinea/src/engine/stages/filter_processor.rs` (Y percent extent derivation + Y filtering materialization + participation snapshot), `ecosystem/delinea/src/transform/data_zoom_y.rs` (Y filter node), `ecosystem/delinea/src/transform_graph/data_view.rs` (budgeted indices materialization), `ecosystem/delinea/src/view/mod.rs` (view selection/mask policy), `ecosystem/delinea/src/transform/*` (RowSelection), `ecosystem/delinea/src/engine/tests.rs` (`percent_y_extent_is_scoped_by_x_percent_window`, `data_zoom_y_filter_mode_filter_ignores_x_window_when_x_filter_mode_empty`, `data_zoom_y_filter_mode_filter_culls_band_rows_by_interval_intersection`, `data_zoom_x_filter_mode_empty_masks_scatter_marks_without_culling_row_selection`)
+- Notes: The per-series participation contract (`ParticipationState::series_contract`) is the single source of truth for selection + mask consumption in marks and sampling.
 - Validation (desktop): `cargo run -p fret-demo --bin fret-demo -- chart_multi_axis_demo`
 - What to validate (current v1 behavior):
   - Wheel on Y axis band zooms Y only; Y span limits (when configured) clamp interaction-derived writes.
   - 2D box zoom writes a paired window update (no sparse filtering materialization).
   - When `DataZoomYSpec.filter_mode=Filter` is enabled, non-stacked scatter and line-family series (Line/Area) may materialize a sparse `RowSelection::Indices` filtered by the effective Y window (current: guarded by a view-size cap and disabled for stacked series; intersects with active X filter predicates when needed for non-monotonic inputs).
   - When X filtering is represented by an indices-backed carrier (large non-monotonic views), and Y filtering is materialized as indices, the engine applies X indices before materializing Y indices in the same frame (order-sensitive, ECharts-style).
+  - When percent windows are used (`Action::SetAxisWindowPercent`), the derived Y percent domain is computed after X has affected the selection/domain (order-sensitive, ECharts-style “X before Y” behavior within a grid; v1 cartesian subset).
+  - When `DataZoomXSpec.filter_mode=Empty` is enabled, X is represented as an empty mask (not a culling predicate). This can yield a non-empty selection while emitting zero marks when X and Y windows are disjoint.
   - When `DataZoomYSpec.filter_mode=Empty` is enabled, non-stacked line-family series (Line/Area/Band) may emit segment breaks for samples outside the Y window (masking preserves base row selection; tooltip/axisPointer sampling treats masked samples as `Missing`).
   - When both X and Y `filterMode=weakFilter` are enabled (one `dataZoom` per axis), non-stacked scatter and line-family series (Line/Area/Band) may materialize a sparse `RowSelection::Indices` implementing the ECharts `weakFilter` rule: filter only when **all** relevant dimensions are out-of-window on the **same** side (below/below or above/above). This is a v1 subset (cartesian XY only, size-capped, and budgeted via `DataViewStage`; for `Band`, the Y dimension is treated as an interval).
   - When the view is above the multi-dim `weakFilter` size cap, `delinea` currently degrades to per-axis filtering (effectively `Filter` behavior), because it does not materialize the indices-backed selection needed to preserve ECharts `weakFilter` semantics.
@@ -144,14 +147,20 @@ single “at a glance” view of:
 
 - ECharts reference: category axis + dataZoom behavior (series sampling under ordinal transforms)
 - ADR(s): `docs/adr/1130-delinea-axis-scales-and-coordinate-mapping.md`, `docs/adr/1140-delinea-dataset-storage-and-indices.md`
-- Evidence: `ecosystem/delinea/src/engine/stages/ordinal_index.rs` (ordinal mapping), `ecosystem/delinea/src/engine/axis.rs` (ticks)
+- Evidence: `ecosystem/delinea/src/engine/stages/ordinal_index.rs` (ordinal mapping), `ecosystem/delinea/src/engine/axis.rs` (category bands), `ecosystem/delinea/src/view/mod.rs` (band-edge mapping window under zoom), `ecosystem/delinea/src/engine/tests.rs` (`axis_pointer_shadow_rect_respects_category_band_edges_under_x_window`, `category_x_filter_culls_marks_for_non_monotonic_line_and_samples_first_duplicate`, `category_x_filter_materializes_indices_for_scatter_and_respects_base_row_range`)
 - Validation (existing coverage):
   - `cargo run -p fret-demo --bin fret-demo -- horizontal_bars_demo` (category Y axis + bar layout + axis pointer)
 - Validation (recommended):
   - `cargo run -p fret-demo --bin fret-demo -- category_line_demo` (category X axis + line/scatter + dataZoom)
 - Missing vs ECharts:
-  - fully stable ordinal mapping semantics for line/scatter under zoom (not just bars/axis pointer),
-  - conformance tests that lock “raw index ↔ ordinal index” invariants across transforms.
+  - Category data is currently represented as `f64` ordinals (indices). ECharts-style string/any-value
+    categories require a clearer adapter/engine mapping strategy and explicit constraints.
+  - Duplicate-category sampling policy (first/last/nearest/aggregate) is currently a v1 implicit rule
+    (biased towards first-in-selection). It needs to be specified and made consistent across more
+    series kinds (Area/Band/stacked) and sampling paths.
+  - Performance and consistency: the coordination between indices materialization and ordinal index
+    caching can still be improved (avoid redundant index builds; reuse ordinal mapping in more
+    sampling paths instead of scanning).
 
 **S5 - Tooltip content parity + formatting hooks** (`[~]`)
 
@@ -247,15 +256,17 @@ single “at a glance” view of:
 
 - ECharts reference: `large`, `progressive`, sampling/decimation knobs per series type
 - ADR(s): `docs/adr/1132-delinea-large-data-and-progressive-rendering.md`
-- Evidence: `ecosystem/delinea/src/engine/lod/*` + stage budgets
+- Evidence: `ecosystem/delinea/src/spec/mod.rs` (`SeriesSpec.lod`), `ecosystem/delinea/src/engine/lod/*` + stage budgets
 - v1 invariants (P0 baseline):
   - Line-family (line/area/band): min/max-per-pixel bucketing over the plot width, emitting `<= 4 * plot_width_px`
     points for monotonic-X inputs (preserves spikes while staying pixel-bounded).
-  - Scatter: exact mode for small datasets; large mode (`visible_len > 20_000`) switches to pixel-bounded LOD.
+  - Scatter: exact mode for small datasets; large mode (default: `visible_len > 20_000`) switches to pixel-bounded LOD.
+    The threshold and progressive cap are configurable via `SeriesSpec.lod` (v1 subset).
+  - Bar: exact mode (one rect per visible row); no pixel-bounded LOD yet (performance is budgeted but output size is not).
   - LOD outputs preserve index identity: `points.len() == data_indices.len()` and indices refer to raw rows.
 - Tests (headless):
   - `ecosystem/delinea/src/engine/lod/minmax_per_pixel.rs` (unit invariants for finalize ordering + bounds)
-  - `ecosystem/delinea/src/engine/tests.rs` (`scatter_large_mode_is_pixel_bounded`, `line_large_mode_is_pixel_bounded`)
+  - `ecosystem/delinea/src/engine/tests.rs` (`scatter_large_mode_is_pixel_bounded`, `scatter_large_threshold_can_force_large_mode`, `scatter_progressive_can_force_multiple_steps`, `line_large_mode_is_pixel_bounded`, `lod_scatter_large_mode_is_budget_invariant`, `lod_line_large_mode_is_budget_invariant`, `lod_bar_mode_is_budget_invariant`)
 - Conformance doc: `docs/delinea-lod-conformance.md`
 - Validation harness (native, v1):
   - `cargo run -p fret-demo --bin chart_stress_demo`
@@ -263,8 +274,10 @@ single “at a glance” view of:
     - `FRET_CHART_STRESS_POINTS` (default: 1_000_000)
     - `FRET_CHART_STRESS_EXIT_AFTER_FRAMES`
 - Missing vs ECharts:
-  - explicit policies per series kind (line vs scatter vs bar),
-  - a benchmark/conformance harness that locks frame-time and visual invariants.
+  - Full option-schema parity is not a goal; however, per-series LOD knobs are still partial:
+    `SeriesSpec.lod` exists (v1 subset, scatter wired), but line/bar/stacked scenarios need more coverage.
+  - A benchmark/conformance harness that can gate frame-time regressions on CI (richer invariants than
+    the current manual stress demo).
 
 **S9 - Append/update semantics (`appendData`)** (`[~]`)
 
@@ -273,7 +286,7 @@ single “at a glance” view of:
 - ADR(s): `docs/adr/1140-delinea-dataset-storage-and-indices.md` (append-only rule; v1 ingestion API)
 - Evidence:
   - `ecosystem/delinea/src/data/mod.rs` (`DataTable::append_row_f64`, `DataTable::append_columns_f64`)
-  - `ecosystem/delinea/src/engine/stages/data_view.rs` (append-only resume for XFilter index scans)
+  - `ecosystem/delinea/src/transform_graph/data_view.rs` (append-only resume for XFilter index scans)
   - `ecosystem/delinea/src/engine/stages/ordinal_index.rs` (append-only resume for ordinal inverted index scans)
   - `ecosystem/delinea/src/engine/stages/nearest_x_index.rs` (append-only resume + prefix reuse for nearest-X index scans)
 - Validation (headless): `cargo nextest run -p delinea` (see `data_view_stage_invalidates_indices_on_data_revision_change`)
@@ -385,6 +398,9 @@ single “at a glance” view of:
 
 - When multiple hits are equally close (distance ties within float epsilon), the chosen hover hit is
   deterministic and prefers earlier `series_order` (stable tooltip/marker behavior across refactors).
+- `ChartOutput.hover` is gated by `AxisPointerSpec.trigger_distance_px` and matches `AxisPointerOutput.hit`:
+  - `trigger=Item`: `hover` is `None` when the pointer is too far from a mark (same as `axis_pointer=None`).
+  - `trigger=Axis`: `axis_pointer` can remain active while `hover`/marker hit is `None`.
 - Axis-trigger tooltips keep a stable row set and order:
   - First row is always the trigger axis label/value.
   - Then one row per visible series in `series_order`.
@@ -400,7 +416,9 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 
 - X dataZoom can filter rows (`FilterMode::Filter`) and drive selection.
 - AxisPointer/tooltip sampling respects X filtering even for non-monotonic X (never samples out-of-window points).
-  - Evidence: `ecosystem/delinea/src/engine/mod.rs`, `ecosystem/delinea/src/engine/tests.rs`
+  - Evidence: `ecosystem/delinea/src/engine/mod.rs`, `ecosystem/delinea/src/engine/tests.rs` (`axis_pointer_tooltip_respects_y_empty_mask_under_x_weakfilter_for_scatter_series`)
+- AxisPointer/tooltip sampling respects `FilterMode::Empty` masks even when the underlying row selection is non-empty.
+  - Evidence: `ecosystem/delinea/src/engine/tests.rs` (`axis_pointer_tooltip_respects_y_empty_mask_for_scatter_series`, `axis_pointer_tooltip_respects_y_empty_mask_for_band_series`, `axis_pointer_tooltip_respects_y_empty_mask_under_x_weakfilter_for_scatter_series`, `axis_pointer_tooltip_respects_x_empty_mask_when_marks_are_empty_but_selection_is_not`, `axis_pointer_tooltip_respects_x_empty_mask_under_y_filtered_selection_for_line_series`, `axis_pointer_tooltip_respects_x_empty_mask_under_y_filtered_selection_for_band_series`, `axis_pointer_item_trigger_returns_none_when_marks_are_empty_under_x_empty_mask`, `axis_pointer_item_trigger_returns_none_when_line_marks_are_empty_under_x_empty_mask`, `axis_pointer_item_trigger_returns_none_when_band_marks_are_empty_under_x_empty_mask`, `axis_pointer_item_trigger_is_suppressed_for_y_empty_masked_line_samples`, `axis_pointer_item_trigger_does_not_hit_clamped_y_empty_gap_for_line_series`, `scatter_large_mode_does_not_hit_y_empty_masked_outlier`, `bar_item_trigger_does_not_hit_y_empty_masked_outlier`, `axis_pointer_shadow_rect_is_emitted_for_category_axis_when_bar_is_y_empty_masked`, `data_zoom_x_filter_mode_empty_masks_bar_marks_without_culling_row_selection`, `axis_pointer_tooltip_respects_x_empty_mask_for_bar_when_marks_are_empty_but_selection_is_not`, `axis_pointer_item_trigger_returns_none_for_bar_under_x_empty_mask_when_marks_are_empty`, `axis_pointer_item_trigger_returns_none_for_stacked_bar_under_x_empty_mask_when_marks_are_empty`, `axis_pointer_item_trigger_returns_none_for_horizontal_bar_under_x_empty_mask_when_marks_are_empty`, `axis_pointer_axis_trigger_emits_shadow_and_missing_tooltip_for_stacked_bar_under_x_empty_mask`, `axis_pointer_axis_trigger_emits_shadow_and_missing_tooltip_for_horizontal_bar_under_x_empty_mask`, `data_zoom_x_filter_mode_empty_keeps_axis_windows_stable_when_line_marks_are_empty`, `data_zoom_x_filter_mode_empty_keeps_axis_windows_stable_when_band_marks_are_empty`, `data_zoom_x_filter_mode_empty_keeps_axis_windows_stable_when_scatter_lod_marks_are_empty`)
 - Y dataZoom is mapping-only in v1 (no row filtering) (ADR 1136).
 - 2D zoom is expressed as a paired window write (`Action::SetViewWindow2DFromZoom`) without introducing
   sparse selections (ADR 1136).
@@ -468,14 +486,23 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 
 - `[~]` Token-driven chart styling (tracked in `docs/adr/0142-fret-chart-theme-tokens-and-style-resolution.md`).
 - `[~]` VisualMap-style data-driven color mapping (ECharts `visualMap`) (scatter + bar v1 buckets).
-  - Evidence: `docs/adr/1147-delinea-visualmap-and-data-driven-styling.md`, `ecosystem/delinea/src/engine/stages/marks.rs`, `ecosystem/fret-chart/src/retained/canvas.rs`.
+  - Evidence (engine): `docs/adr/1147-delinea-visualmap-and-data-driven-styling.md`, `ecosystem/delinea/src/engine/stages/marks.rs`, `ecosystem/delinea/src/spec/mod.rs` (`VisualMapSpec`).
+  - Evidence (translator): `ecosystem/fret-chart/src/echarts/mod.rs` (`translate_visual_maps_v1`) + `ecosystem/fret-chart/tests/echarts_headless_goldens.rs` (golden: `goldens/echarts-headless/v1/visualmap-scatter-opacity-and-size.json`).
   - Notes: v1 includes continuous + piecewise controller UI, scatter/bar bucket coloring, per-bucket opacity ramps, scatter point radius mapping, and optional stroke width ranges; per-item attribute pipelines are future work.
+  - Notes (ECharts adapter v1): supports `visualMap.type`, `seriesIndex` (or dataset-wide when single dataset), `dimension` (index/name), `min/max` (or inferred from data), `range`, `inRange.opacity`, `outOfRange.opacity`, and `inRange.symbolSize` (mapped to `point_radius_mul_range` using `symbolSize / 10.0` as a heuristic).
 
 ## Known Gaps vs ECharts (High Value)
 
-- Order-sensitive multi-dimensional filtering semantics (ECharts `dataZoomProcessor` ordering, per-axis composition) (S2).
+- Order-sensitive multi-dimensional filtering semantics beyond the current v1 subset (ECharts `dataZoomProcessor` ordering, per-axis composition) (S2).
 - General transform graph with cached node outputs + derived columns (ECharts-class dataset transforms).
-- Multi-grid layout (multiple independent grids in one chart).
+- `[~]` Multi-grid layout (multiple independent grids in one chart).
+  - Notes: v1 has `GridSpec` + `AxisSpec.grid` in the engine model, and the ECharts translator binds `gridIndex`.
+    The current UI adapter workaround renders multi-grid charts by splitting the `ChartSpec` into multiple single-grid charts (one viewport per chart) and laying them out side-by-side/stacked.
+  - Evidence:
+    - `ecosystem/fret-chart/src/echarts/mod.rs` (translates `gridIndex`)
+    - `ecosystem/fret-chart/src/multi_grid.rs` (split helper)
+    - `ecosystem/fret-chart/src/retained/multi_grid.rs` (retained multi-canvas builder)
+    - `apps/fret-examples/src/echarts_multi_grid_demo.rs` (demo)
 - Category axis indexing under zoom for non-bar series (S4).
 - VisualMap: multiple maps per series and per-item attribute pipelines (S7).
 - Series-specific LOD / downsampling policies + conformance harness (S8).
@@ -484,9 +511,98 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 
 ## Recommended Next Steps (P0 -> P1)
 
-1. P0: Add a dedicated “filter processor” stage that owns order-sensitive multi-dim composition (ECharts `dataZoomProcessor` analogue) and emits a unified participation contract (selection + masks) (S2).
+1. P0: Expand the existing “filter processor” stage (ECharts `dataZoomProcessor` analogue) to cover the remaining order-sensitive multi-dim composition gaps and to emit a unified participation contract (selection + masks) (S2).
 2. P0: Add a general transform graph (cached nodes + derived columns) and migrate DataZoom/filtering to it incrementally (ECharts-class dataset transforms).
 3. P0: Multi-grid layout + deterministic routing rules (UI adapter + engine layout) (ADR 1134 follow-ups).
+   - Note: the current v1 UI shows multi-grid charts via `ChartSpec` splitting; the long-term target is per-grid viewport/layout inside a single chart instance (crosshair/zoom/tooltip linking).
 4. P0/P1: Incremental dataset updates + stable partial recompute (append/update + cache invalidation boundaries) (S9 / ADR 1149).
 5. P1: VisualMap per-item attribute pipelines (beyond bucketization) and multi-map targeting semantics (S7).
 6. P1: Tooltip rich text / HTML parity and richer formatter surfaces (S5 / ADR 1148).
+
+## ECharts Replica P0 Backlog (Option -> Engine Baseline)
+
+This section is a **workable P0 execution plan** for the `fret-chart` ECharts translator and the
+headless engine contracts. It is intentionally narrower than the full ECharts option schema: the
+goal is to establish a stable “Option -> Engine” spine that scales to more series and components.
+
+### P0-0: Translator test harness (golden-ish, but allocation-free)
+
+- Goal: a repeatable way to validate that a given ECharts JSON option produces stable `delinea`
+  outputs (marks + axis windows), without requiring GPU rendering.
+- Evidence target:
+  - `ecosystem/fret-chart/src/echarts/mod.rs` (translator entrypoint + unit tests)
+  - `ecosystem/fret-chart/tests/echarts_headless_goldens.rs` (headless Option -> Engine golden harness)
+  - `goldens/echarts-headless/v1/*.json` (checked-in headless output snapshots)
+  - `ecosystem/delinea/src/engine/tests.rs` (engine-level invariants)
+- Suggested tests:
+  - “can build engine and run to completion” (already exists for minimal cases + goldens)
+  - “option change only affects expected revision family” (future: spec vs visual vs data)
+  - To update goldens:
+    - `$env:FRET_UPDATE_GOLDENS='1'; cargo test -p fret-chart -F echarts --test echarts_headless_goldens`
+
+### P0-1: `dataset + dimensions + encode` baseline (cartesian2d only)
+
+- Goal: support the ECharts “real” data path: `dataset.source` + `series.encode` mapping, so that
+  new series types do not require ad-hoc `series.data` parsing.
+- Scope:
+  - `dataset`: one or many datasets (at least `dataset[0]`).
+  - `source`: numeric table (array-of-arrays); string categories are P1.
+  - `series.datasetIndex` + `series.encode.{x,y}` (index or name).
+- Engine mapping:
+  - `dataset -> delinea::DatasetSpec + DataTable`
+  - `encode -> delinea::SeriesEncode` (`FieldId` bindings)
+- Code anchors:
+  - `ecosystem/fret-chart/src/echarts/mod.rs` (dataset parsing + encode mapping)
+  - `ecosystem/delinea/src/spec/mod.rs` (`DatasetSpec`, `FieldSpec`, `SeriesEncode`)
+- Missing vs ECharts:
+  - `[~]` `dataset.transform` (ECharts dataset transforms): v1 supports a small eager translator subset:
+    - `filter` (numeric dimension + `gte/gt/lte/lt/eq/ne`)
+    - `sort` (numeric dimension + `order=asc/desc`)
+    - `fromDatasetIndex` chaining for derived datasets
+    - Evidence: `ecosystem/fret-chart/src/echarts/mod.rs`, `ecosystem/fret-chart/tests/echarts_headless_goldens.rs`, `goldens/echarts-headless/v1/dataset-transform-*.json`
+    - Known gap: raw-index identity across dataset transforms is not yet modeled as an ECharts-class `DataStore` graph; derived datasets currently re-index rows (needs an engine-level transform graph contract).
+  - `source` object rows, `sourceHeader`, and type inference (P1)
+
+### P0-2: Multi-axis binding via indices (`xAxisIndex` / `yAxisIndex`)
+
+- Goal: support multiple axes and deterministic binding for series (still cartesian2d).
+- Scope:
+  - `xAxis` / `yAxis` as arrays.
+  - `series.xAxisIndex` / `series.yAxisIndex` (default 0).
+- Engine mapping:
+  - allocate `AxisId` per ECharts axis index; bind `SeriesSpec.{x_axis,y_axis}` accordingly.
+- Code anchors:
+  - `ecosystem/fret-chart/src/echarts/mod.rs` (axis array parsing + index -> `AxisId` mapping)
+  - `ecosystem/delinea/src/engine/model/mod.rs` (reference validation and routing)
+
+### P0-3: LOD/progressive knobs baseline (per-series surface)
+
+- Goal: ECharts-inspired knobs should flow through Option -> Spec -> Model -> Marks consistently.
+- Scope:
+  - `series.large`, `series.largeThreshold`, `series.progressive`, `series.progressiveThreshold`
+    (subset; not option-schema parity).
+- Evidence:
+  - Translator: `ecosystem/fret-chart/src/echarts/mod.rs`
+  - Engine: `ecosystem/delinea/src/spec/mod.rs` (`SeriesSpec.lod`), `ecosystem/delinea/src/engine/stages/marks.rs`
+  - Conformance: `docs/delinea-lod-conformance.md`
+
+### P0-4: Transform graph (ECharts-class, but minimal nodes)
+
+- Goal: stop baking filter/dataZoom semantics into bespoke code paths; move to a cached transform graph.
+- Status (current):
+  - `TransformGraph` exists as a minimal “derived output cache” surface, currently hosting:
+    - X axis data extents caching (used by percent->value mapping).
+    - Y percent extents scoped by X selection/filter (order-sensitive “X before Y” semantics per grid).
+    - Incremental indices view caching (`DataViewStage`) is owned by `TransformGraph` (implemented in `transform_graph/data_view.rs`).
+    - Filter plan scaffolding and the latest filter plan output snapshot are owned by `TransformGraph` (see `transform_graph/filter_plan.rs`, `transform_graph/filter_plan_output.rs`).
+    - Y indices materialization node (with caching for no-op cases) is owned by `TransformGraph` (see `transform_graph/y_indices.rs`).
+    - X range slicing node (monotonic fast path; cached) is owned by `TransformGraph` (see `transform_graph/x_range.rs`).
+    - Participation contract (`selection` + `empty_mask` + `data_revision`) is now derived from the transform graph filter plan output snapshot (see `engine/stages/filter_processor.rs` -> `ParticipationState::rebuild_from_plan_output`).
+- Minimum viable nodes:
+  - selection/slice node (monotonic fast path + non-monotonic index selection)
+  - derived columns (computed fields)
+  - (optional) sort/index helpers for nearest-X sampling
+- Code anchors:
+  - `ecosystem/delinea/src/transform/*`
+  - `ecosystem/delinea/src/transform_graph/data_view.rs` (current incremental indices builder)
+  - `ecosystem/delinea/src/transform_graph/mod.rs` (cached extents + Y percent extents caching)

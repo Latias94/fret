@@ -11,6 +11,11 @@ and **performance** (CPU frame time stability, cache effectiveness, predictable 
 
 This is a workstream note (not an ADR). Any “hard-to-change” contract changes must be captured as ADRs.
 
+Tracking:
+
+- TODO tracker (keep updated during implementation): `docs/workstreams/gpui-parity-refactor-todo.md`
+- Cache roots + cached subtree semantics (ViewCache v1): `docs/adr/1152-cache-roots-and-cached-subtree-semantics-v1.md`
+
 ---
 
 ## 0. Executive Summary (What We Should Refactor, Not What We Should Add)
