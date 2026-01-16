@@ -22,6 +22,7 @@ pub fn with_element_state<H: UiHost, S: Any, R>(
         let window_state = runtime.for_window_mut(window);
 
         let key = (element, TypeId::of::<S>());
+        window_state.record_state_key_access(key);
         let mut value = window_state
             .take_state_box(&key)
             .unwrap_or_else(|| Box::new(init()));

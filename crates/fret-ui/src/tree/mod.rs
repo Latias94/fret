@@ -557,6 +557,23 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    pub(crate) fn node_element(&self, node: NodeId) -> Option<GlobalElementId> {
+        self.nodes.get(node).and_then(|n| n.element)
+    }
+
+    pub(crate) fn should_reuse_view_cache_node(&self, node: NodeId) -> bool {
+        if !self.view_cache_active() {
+            return false;
+        }
+        let Some(n) = self.nodes.get(node) else {
+            return false;
+        };
+        if !n.view_cache.enabled {
+            return false;
+        }
+        !(n.invalidation.layout || n.invalidation.paint)
+    }
+
     pub(crate) fn set_node_view_cache_flags(
         &mut self,
         node: NodeId,

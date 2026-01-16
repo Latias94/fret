@@ -38,6 +38,7 @@ pub struct ElementContext<'a, H: UiHost> {
     window_state: &'a mut WindowElementState,
     stack: Vec<GlobalElementId>,
     child_counters: Vec<u32>,
+    view_cache_should_reuse: Option<&'a mut dyn FnMut(NodeId) -> bool>,
 }
 
 impl<'a, H: UiHost> ElementContext<'a, H> {
@@ -61,7 +62,12 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             window_state,
             stack: vec![root],
             child_counters: vec![0],
+            view_cache_should_reuse: None,
         }
+    }
+
+    pub(crate) fn set_view_cache_should_reuse(&mut self, f: &'a mut dyn FnMut(NodeId) -> bool) {
+        self.view_cache_should_reuse = Some(f);
     }
 
     pub fn new_for_root_name(
@@ -257,6 +263,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         f: impl FnOnce(&mut S) -> R,
     ) -> R {
         let key = (element, TypeId::of::<S>());
+        self.window_state.record_state_key_access(key);
         let mut value = self
             .window_state
             .take_state_box(&key)
@@ -538,7 +545,23 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     ) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx);
+            let reuse = cx
+                .window_state
+                .node_entry(id)
+                .map(|e| e.node)
+                .and_then(|node| cx.view_cache_should_reuse.as_mut().map(|f| f(node)))
+                .unwrap_or(false);
+
+            let children = if reuse {
+                cx.window_state.mark_view_cache_reuse_root(id);
+                cx.window_state.touch_view_cache_state_keys_if_recorded(id);
+                Vec::new()
+            } else {
+                cx.window_state.begin_view_cache_scope(id);
+                let children = f(cx);
+                cx.window_state.end_view_cache_scope(id);
+                children
+            };
             AnyElement::new(id, ElementKind::ViewCache(props), children)
         })
     }
