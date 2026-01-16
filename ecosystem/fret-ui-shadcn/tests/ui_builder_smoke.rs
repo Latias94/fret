@@ -4,14 +4,16 @@ use fret_runtime::ModelStore;
 use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
 use fret_ui_shadcn::prelude::*;
 use fret_ui_shadcn::{
-    Alert, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
-    AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Badge, Breadcrumb, Button, Card,
-    CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Command, CommandInput,
-    CommandItem, CommandPalette, DialogContent, DialogDescription, DialogFooter, DialogHeader,
-    DialogTitle, DrawerContent, DrawerFooter, DrawerHeader, HoverCardContent, Kbd, PopoverContent,
-    PopoverDescription, PopoverHeader, PopoverTitle, Progress, Select, SheetContent,
-    SheetDescription, SheetFooter, SheetHeader, SheetTitle, Slider, Switch, TableBody,
-    TableCaption, TableFooter, TableHead, TableHeader, TableRow, TabsRoot, TooltipContent,
+    Alert, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Badge,
+    Breadcrumb, Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle,
+    Combobox, Command, CommandInput, CommandItem, CommandPalette, ContextMenu, Dialog,
+    DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Drawer,
+    DrawerContent, DrawerFooter, DrawerHeader, DropdownMenu, HoverCardContent, Kbd, Menubar,
+    Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, Progress, Select,
+    Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, Slider, Switch,
+    TableBody, TableCaption, TableFooter, TableHead, TableHeader, TableRow, TabsRoot,
+    TooltipContent,
 };
 use time::{Date, OffsetDateTime};
 
@@ -32,6 +34,14 @@ fn ui_builder_smoke_applies_supported_patches() {
     let date_picker_open = store.insert(false);
     let date_range_picker_open = store.insert(false);
     let radio_group_model = store.insert(None::<Arc<str>>);
+    let dialog_open = store.insert(false);
+    let popover_open = store.insert(false);
+    let sheet_open = store.insert(false);
+    let drawer_open = store.insert(false);
+    let dropdown_menu_open = store.insert(false);
+    let context_menu_open = store.insert(false);
+    let combobox_open = store.insert(false);
+    let combobox_value = store.insert(None::<Arc<str>>);
 
     let _ = Button::new("OK").ui().px_3().w_full().build();
     let _ = Alert::new(Vec::new()).ui().build();
@@ -59,6 +69,16 @@ fn ui_builder_smoke_applies_supported_patches() {
 
     let _ = PopoverContent::new(Vec::new()).ui().p_4().build();
     let _ = TooltipContent::new(Vec::new()).ui().p_4().build();
+
+    let _ = Dialog::new(dialog_open).ui().build();
+    let _ = AlertDialog::new(alert_dialog_open.clone()).ui().build();
+    let _ = Popover::new(popover_open).ui().build();
+    let _ = Sheet::new(sheet_open).ui().build();
+    let _ = Drawer::new(drawer_open).ui().build();
+    let _ = DropdownMenu::new(dropdown_menu_open).ui().build();
+    let _ = ContextMenu::new(context_menu_open).ui().build();
+    let _ = Menubar::new(Vec::new()).ui().build();
+    let _ = Combobox::new(combobox_value, combobox_open).ui().build();
 
     let _ = fret_ui_shadcn::Calendar::new(calendar_month.clone(), calendar_selected.clone())
         .ui()
