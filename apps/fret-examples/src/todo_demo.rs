@@ -5,6 +5,13 @@ use fret_kit::prelude::*;
 const CMD_ADD: &str = "todo.add";
 const CMD_REMOVE_PREFIX: &str = "todo.remove.";
 
+const TEST_ID_INPUT: &str = "todo-input";
+const TEST_ID_ADD: &str = "todo-add";
+
+fn todo_item_test_id(id: u64, suffix: &str) -> Arc<str> {
+    Arc::from(format!("todo-item-{id}-{suffix}"))
+}
+
 #[derive(Clone)]
 struct TodoItem {
     id: u64,
@@ -69,7 +76,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
         todos,
         draft,
         filter,
-        next_id: 3,
+        next_id: 4,
     }
 }
 
@@ -79,6 +86,19 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
     cx.observe_model(&st.filter, Invalidation::Layout);
 
     let theme = Theme::global(&*cx.app).clone();
+
+    let filter_value = cx
+        .app
+        .models()
+        .read(&st.filter, |v| v.clone())
+        .ok()
+        .unwrap_or_default();
+
+    let done_invalidation = if filter_value.as_deref() == Some("all") {
+        Invalidation::Paint
+    } else {
+        Invalidation::Layout
+    };
 
     let draft_value = cx
         .app
@@ -96,12 +116,28 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
         .on_click(CMD_ADD)
         .children(vec![icon::icon(cx, IconId::new("lucide.plus"))])
         .into_element(cx);
+    let add_btn = cx.semantics(
+        SemanticsProps {
+            role: SemanticsRole::Button,
+            test_id: Some(Arc::from(TEST_ID_ADD)),
+            ..Default::default()
+        },
+        move |_cx| vec![add_btn],
+    );
 
     let input = shadcn::Input::new(st.draft.clone())
         .a11y_label("Todo")
         .placeholder("添加新任务...")
         .submit_command(CommandId::new(CMD_ADD))
         .into_element(cx);
+    let input = cx.semantics(
+        SemanticsProps {
+            role: SemanticsRole::TextField,
+            test_id: Some(Arc::from(TEST_ID_INPUT)),
+            ..Default::default()
+        },
+        move |_cx| vec![input],
+    );
 
     let todos = cx
         .app
@@ -111,7 +147,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
         .unwrap_or_default();
 
     for it in &todos {
-        cx.observe_model(&it.done, Invalidation::Layout);
+        cx.observe_model(&it.done, done_invalidation);
     }
 
     let completed = todos
@@ -397,6 +433,14 @@ fn todo_row(
     let checkbox = shadcn::Checkbox::new(it.done.clone())
         .a11y_label("Done")
         .into_element(cx);
+    let checkbox = cx.semantics(
+        SemanticsProps {
+            role: SemanticsRole::Checkbox,
+            test_id: Some(todo_item_test_id(it.id, "done")),
+            ..Default::default()
+        },
+        move |_cx| vec![checkbox],
+    );
 
     let remove_btn = shadcn::Button::new("")
         .size(shadcn::ButtonSize::IconSm)
@@ -409,6 +453,14 @@ fn todo_row(
             Some(ColorRef::Color(theme.color_required("muted-foreground"))),
         )])
         .into_element(cx);
+    let remove_btn = cx.semantics(
+        SemanticsProps {
+            role: SemanticsRole::Button,
+            test_id: Some(todo_item_test_id(it.id, "remove")),
+            ..Default::default()
+        },
+        move |_cx| vec![remove_btn],
+    );
 
     let mut hover = HoverRegionProps::default();
     hover.layout.size.width = Length::Fill;
