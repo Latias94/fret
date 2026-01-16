@@ -41,6 +41,8 @@ struct UiGalleryWindowState {
     view_cache_popover_open: Model<bool>,
     view_cache_continuous: Model<bool>,
     view_cache_counter: Model<u64>,
+    inspector_enabled: Model<bool>,
+    inspector_last_pointer: Model<Option<fret_core::Point>>,
     popover_open: Model<bool>,
     dialog_open: Model<bool>,
     alert_dialog_open: Model<bool>,
@@ -75,6 +77,83 @@ struct UiGalleryWindowState {
 struct UiGalleryDriver;
 
 impl UiGalleryDriver {
+    fn compute_inspector_status(
+        app: &mut App,
+        ui: &UiTree<App>,
+        window: AppWindowId,
+        pointer: Option<fret_core::Point>,
+    ) -> (Arc<str>, Arc<str>, Arc<str>) {
+        let hit = pointer.map(|p| ui.debug_hit_test(p));
+        let hit_node = hit.as_ref().and_then(|h| h.hit);
+        let hit_layers = hit
+            .as_ref()
+            .map(|h| h.active_layer_roots.len())
+            .unwrap_or(0);
+        let hit_barrier = hit.as_ref().and_then(|h| h.barrier_root);
+
+        let (focused_node, focused_element, hovered_pressable, pressed_pressable) = app
+            .with_global_mut(fret_ui::ElementRuntime::new, |runtime, _| {
+                let state = runtime.diagnostics_snapshot(window);
+                (
+                    ui.focus(),
+                    state.as_ref().and_then(|s| s.focused_element),
+                    state.as_ref().and_then(|s| s.hovered_pressable),
+                    state.as_ref().and_then(|s| s.pressed_pressable),
+                )
+            });
+
+        let hit_element = hit_node.and_then(|node| {
+            app.with_global_mut(fret_ui::ElementRuntime::new, |runtime, _| {
+                runtime.element_for_node(window, node)
+            })
+        });
+
+        let hit_path = hit_element.and_then(|element| {
+            app.with_global_mut(fret_ui::ElementRuntime::new, |runtime, _| {
+                runtime.debug_path_for_element(window, element)
+            })
+        });
+        let focused_path = focused_element.and_then(|element| {
+            app.with_global_mut(fret_ui::ElementRuntime::new, |runtime, _| {
+                runtime.debug_path_for_element(window, element)
+            })
+        });
+
+        let cursor = if let Some(pos) = pointer {
+            Arc::<str>::from(format!("cursor=({:.1},{:.1})", pos.x.0, pos.y.0))
+        } else {
+            Arc::<str>::from("cursor=<none>")
+        };
+
+        let hit = Arc::<str>::from(format!(
+            "hit={:?} el={} layers={} barrier={:?} {}",
+            hit_node,
+            hit_element
+                .map(|id| format!("{:#x}", id.0))
+                .unwrap_or_else(|| "<none>".to_string()),
+            hit_layers,
+            hit_barrier,
+            hit_path.as_deref().unwrap_or(""),
+        ));
+
+        let focus = Arc::<str>::from(format!(
+            "focus={:?} el={} hovered={} pressed={} {}",
+            focused_node,
+            focused_element
+                .map(|id| format!("{:#x}", id.0))
+                .unwrap_or_else(|| "<none>".to_string()),
+            hovered_pressable
+                .map(|id| format!("{:#x}", id.0))
+                .unwrap_or_else(|| "<none>".to_string()),
+            pressed_pressable
+                .map(|id| format!("{:#x}", id.0))
+                .unwrap_or_else(|| "<none>".to_string()),
+            focused_path.as_deref().unwrap_or(""),
+        ));
+
+        (cursor, hit, focus)
+    }
+
     fn build_ui(app: &mut App, window: AppWindowId) -> UiGalleryWindowState {
         let start_page = ui_gallery_start_page().unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
         let selected_page = app.models_mut().insert(start_page.clone());
@@ -160,6 +239,13 @@ impl UiGalleryDriver {
         let view_cache_continuous = app.models_mut().insert(false);
         let view_cache_counter = app.models_mut().insert(0u64);
 
+        let inspector_enabled = app.models_mut().insert(
+            std::env::var_os("FRET_UI_GALLERY_INSPECTOR").is_some_and(|v| !v.is_empty())
+                || std::env::var_os("FRET_UI_DEBUG_STATS").is_some_and(|v| !v.is_empty())
+                || std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty()),
+        );
+        let inspector_last_pointer = app.models_mut().insert(None::<fret_core::Point>);
+
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         ui.set_view_cache_enabled(
@@ -187,6 +273,8 @@ impl UiGalleryDriver {
             view_cache_popover_open,
             view_cache_continuous,
             view_cache_counter,
+            inspector_enabled,
+            inspector_last_pointer,
             popover_open,
             dialog_open,
             alert_dialog_open,
@@ -466,10 +554,23 @@ impl UiGalleryDriver {
         let cmdk_open = state.cmdk_open.clone();
         let cmdk_query = state.cmdk_query.clone();
         let last_action = state.last_action.clone();
+        let inspector_enabled = state.inspector_enabled.clone();
+        let inspector_last_pointer = state.inspector_last_pointer.clone();
 
         Self::sync_shadcn_theme(app, state);
 
         let last_debug_stats = state.ui.debug_stats();
+        let inspector_status = if app.models().get_copied(&inspector_enabled).unwrap_or(false) {
+            let pointer = app
+                .models()
+                .get_copied(&inspector_last_pointer)
+                .unwrap_or(None);
+            Some(Self::compute_inspector_status(
+                app, &state.ui, window, pointer,
+            ))
+        } else {
+            None
+        };
 
         let root =
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
@@ -806,22 +907,29 @@ impl UiGalleryDriver {
                             .get_model_copied(&view_cache_cache_shell, Invalidation::Layout)
                             .unwrap_or(false);
 
+                        let mut right_items: Vec<AnyElement> = vec![
+                            cx.text(format!("theme: {}", status_theme.as_ref())),
+                            cx.text(format!(
+                                "view_cache={} shell_cache={} active={} trunc={} relayouts={}",
+                                status_view_cache as u8,
+                                status_cache_shell as u8,
+                                last_debug_stats.view_cache_active as u8,
+                                last_debug_stats.view_cache_invalidation_truncations,
+                                last_debug_stats.view_cache_contained_relayouts
+                            )),
+                        ];
+                        if let Some((cursor, hit, focus)) = inspector_status.as_ref() {
+                            right_items.push(cx.text(format!("inspect: {}", cursor.as_ref())));
+                            right_items.push(cx.text(format!("inspect: {}", hit.as_ref())));
+                            right_items.push(cx.text(format!("inspect: {}", focus.as_ref())));
+                        }
+
                         WorkspaceStatusBar::new()
                             .left(vec![cx.text(format!(
                                 "last action: {}",
                                 status_last_action.as_ref()
                             ))])
-                            .right(vec![
-                                cx.text(format!("theme: {}", status_theme.as_ref())),
-                                cx.text(format!(
-                                    "view_cache={} shell_cache={} active={} trunc={} relayouts={}",
-                                    status_view_cache as u8,
-                                    status_cache_shell as u8,
-                                    last_debug_stats.view_cache_active as u8,
-                                    last_debug_stats.view_cache_invalidation_truncations,
-                                    last_debug_stats.view_cache_contained_relayouts
-                                )),
-                            ])
+                            .right(right_items)
                             .into_element(cx)
                     });
 
@@ -844,7 +952,7 @@ impl UiGalleryDriver {
                         .bottom(status_bar)
                         .into_element(cx);
 
-                    vec![
+                    let content: Vec<AnyElement> = vec![
                         cx.semantics(
                             SemanticsProps {
                                 role: SemanticsRole::Panel,
@@ -858,7 +966,53 @@ impl UiGalleryDriver {
                         } else {
                             shadcn::Toaster::new().into_element(cx)
                         },
-                    ]
+                    ];
+
+                    if cx
+                        .get_model_copied(&inspector_enabled, Invalidation::Layout)
+                        .unwrap_or(false)
+                    {
+                        let mut props = fret_ui::element::PointerRegionProps::default();
+                        props.layout.size.width = fret_ui::element::Length::Fill;
+                        props.layout.size.height = fret_ui::element::Length::Fill;
+
+                        let on_pointer_move = {
+                            let inspector_last_pointer = inspector_last_pointer.clone();
+                            Arc::new(
+                                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                                      cx: fret_ui::action::ActionCx,
+                                      mv: fret_ui::action::PointerMoveCx| {
+                                    let _ = host.models_mut().update(&inspector_last_pointer, |v| {
+                                        *v = Some(mv.position);
+                                    });
+                                    host.request_redraw(cx.window);
+                                    false
+                                },
+                            )
+                        };
+                        let on_pointer_down = {
+                            let inspector_last_pointer = inspector_last_pointer.clone();
+                            Arc::new(
+                                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                                      cx: fret_ui::action::ActionCx,
+                                      down: fret_ui::action::PointerDownCx| {
+                                    let _ = host.models_mut().update(&inspector_last_pointer, |v| {
+                                        *v = Some(down.position);
+                                    });
+                                    host.request_redraw(cx.window);
+                                    false
+                                },
+                            )
+                        };
+
+                        vec![cx.pointer_region(props, |cx| {
+                            cx.pointer_region_on_pointer_move(on_pointer_move);
+                            cx.pointer_region_on_pointer_down(on_pointer_down);
+                            content
+                        })]
+                    } else {
+                        content
+                    }
                 });
 
         state.ui.set_root(root);
