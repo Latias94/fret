@@ -240,6 +240,7 @@ impl ElementHostWidget {
                 cx.constraints,
             ),
             ElementInstance::Flex(props) => self.measure_flex(cx, window, props),
+            ElementInstance::SemanticFlex(props) => self.measure_flex(cx, window, props.flex),
             ElementInstance::RovingFlex(props) => self.measure_flex(cx, window, props.flex),
             ElementInstance::Grid(props) => self.measure_grid(cx, window, props),
         }

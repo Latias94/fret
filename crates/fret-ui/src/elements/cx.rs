@@ -429,6 +429,19 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
+    pub fn semantic_flex(
+        &mut self,
+        props: crate::element::SemanticFlexProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::SemanticFlex(props), children)
+        })
+    }
+
+    #[track_caller]
     pub fn focus_scope(
         &mut self,
         props: crate::element::FocusScopeProps,
