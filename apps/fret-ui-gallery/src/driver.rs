@@ -153,7 +153,7 @@ impl UiGalleryDriver {
             content_tab,
             theme_preset,
             theme_preset_open,
-            applied_theme_preset: Some(Arc::from("zinc/light")),
+            applied_theme_preset: None,
             popover_open,
             dialog_open,
             alert_dialog_open,

@@ -214,6 +214,12 @@ fn default_metric_tokens(metrics: ThemeMetrics) -> HashMap<String, Px> {
         metrics.mono_font_line_height,
     );
 
+    // Legacy generic size tokens used by some shadcn ports/tests.
+    // Prefer `component.size.*` tokens in new code.
+    out.insert("metric.size.sm".to_string(), Px(32.0));
+    out.insert("metric.size.md".to_string(), Px(36.0));
+    out.insert("metric.size.lg".to_string(), Px(40.0));
+
     // `fret-markdown` canonical metrics.
     //
     // Keep this value derived from baseline mono font metrics so it tracks theme typography.
@@ -1176,6 +1182,16 @@ mod tests {
             "popover.border",
         ] {
             assert!(theme.color_by_key(key).is_some(), "missing alias {key}");
+        }
+    }
+
+    #[test]
+    fn shadcn_legacy_size_metrics_exist_on_default_theme() {
+        let host = crate::test_host::TestHost::default();
+        let theme = Theme::global(&host);
+
+        for key in ["metric.size.sm", "metric.size.md", "metric.size.lg"] {
+            assert!(theme.metric_by_key(key).is_some(), "missing metric {key}");
         }
     }
 
