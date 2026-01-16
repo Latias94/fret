@@ -48,6 +48,7 @@ impl SvgBytes {
 #[derive(Debug, Default)]
 struct SvgCacheEntry {
     svg: Option<SvgId>,
+    bytes_len: u64,
     fingerprint: Option<SvgFingerprint>,
     last_used_frame: u64,
 }
@@ -59,6 +60,7 @@ struct SvgCacheEntry {
 #[derive(Debug, Default)]
 pub struct SvgCache {
     frame: u64,
+    bytes_ready: u64,
     entries: HashMap<SvgCacheKey, SvgCacheEntry>,
 }
 
@@ -69,6 +71,27 @@ impl SvgCache {
         self.frame
     }
 
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn bytes_ready(&self) -> u64 {
+        self.bytes_ready
+    }
+
+    /// Returns a cached SVG ID for `key` if present, updating `last_used_frame`.
+    pub fn get(&mut self, key: u64) -> Option<SvgId> {
+        let cache_key = SvgCacheKey { key };
+        let entry = self.entries.get_mut(&cache_key)?;
+        entry.last_used_frame = self.frame;
+        entry.svg
+    }
+
+    /// Returns a cached SVG ID for `key` if present, without updating `last_used_frame`.
+    pub fn peek(&self, key: u64) -> Option<SvgId> {
+        self.entries.get(&SvgCacheKey { key })?.svg
+    }
+
     /// Releases all cached SVG IDs.
     pub fn clear(&mut self, services: &mut dyn UiServices) {
         for entry in self.entries.values_mut() {
@@ -77,6 +100,18 @@ impl SvgCache {
             }
         }
         self.entries.clear();
+        self.bytes_ready = 0;
+    }
+
+    pub fn evict(&mut self, services: &mut dyn UiServices, key: u64) -> bool {
+        let Some(mut entry) = self.entries.remove(&SvgCacheKey { key }) else {
+            return false;
+        };
+        self.bytes_ready = self.bytes_ready.saturating_sub(entry.bytes_len);
+        if let Some(svg) = entry.svg.take() {
+            let _ = services.svg().unregister_svg(svg);
+        }
+        true
     }
 
     /// Registers `bytes` as an SVG and caches the resulting `SvgId` by `key`.
@@ -91,10 +126,16 @@ impl SvgCache {
         let fingerprint = bytes.fingerprint();
         let needs_prepare = entry.svg.is_none() || entry.fingerprint.as_ref() != Some(&fingerprint);
         if needs_prepare {
+            let bytes_len = bytes.bytes().len() as u64;
             let svg_id = services.svg().register_svg(bytes.bytes());
             if let Some(old) = entry.svg.replace(svg_id) {
                 let _ = services.svg().unregister_svg(old);
             }
+            self.bytes_ready = self
+                .bytes_ready
+                .saturating_sub(entry.bytes_len)
+                .saturating_add(bytes_len);
+            entry.bytes_len = bytes_len;
             entry.fingerprint = Some(fingerprint);
         }
 
@@ -108,6 +149,16 @@ impl SvgCache {
         max_age_frames: u64,
         max_entries: usize,
     ) {
+        self.prune_with_budget(services, max_age_frames, max_entries, u64::MAX);
+    }
+
+    pub fn prune_with_budget(
+        &mut self,
+        services: &mut dyn UiServices,
+        max_age_frames: u64,
+        max_entries: usize,
+        max_bytes: u64,
+    ) {
         let now = self.frame;
 
         self.entries.retain(|_, entry| {
@@ -116,33 +167,32 @@ impl SvgCache {
                 if let Some(svg) = entry.svg.take() {
                     let _ = services.svg().unregister_svg(svg);
                 }
+                self.bytes_ready = self.bytes_ready.saturating_sub(entry.bytes_len);
             }
             keep
         });
 
-        if max_entries == 0 {
+        if max_entries == 0 || max_bytes == 0 {
             self.clear(services);
             return;
         }
 
-        if self.entries.len() <= max_entries {
+        if self.entries.len() <= max_entries && self.bytes_ready <= max_bytes {
             return;
         }
 
-        let mut candidates: Vec<(u64, SvgCacheKey)> = self
+        let mut candidates: Vec<(u64, u64)> = self
             .entries
             .iter()
-            .map(|(k, v)| (v.last_used_frame, *k))
+            .map(|(k, v)| (v.last_used_frame, k.key))
             .collect();
         candidates.sort_by_key(|(last_used, _)| *last_used);
 
-        let over = self.entries.len().saturating_sub(max_entries);
-        for (_, key) in candidates.into_iter().take(over) {
-            if let Some(mut entry) = self.entries.remove(&key)
-                && let Some(svg) = entry.svg.take()
-            {
-                let _ = services.svg().unregister_svg(svg);
+        for (_, key) in candidates {
+            if self.entries.len() <= max_entries && self.bytes_ready <= max_bytes {
+                break;
             }
+            let _ = self.evict(services, key);
         }
     }
 }
