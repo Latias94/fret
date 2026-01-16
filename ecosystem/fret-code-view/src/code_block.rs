@@ -114,42 +114,27 @@ fn resolve_code_block_cached_text<H: UiHost>(
     })
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CodeBlockWrap {
     /// Do not wrap; use horizontal scrolling for long lines.
+    #[default]
     ScrollX,
     /// Wrap at word boundaries (best-effort, depends on the text system).
     Word,
 }
 
-impl Default for CodeBlockWrap {
-    fn default() -> Self {
-        Self::ScrollX
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CodeBlockCopyButtonPlacement {
+    #[default]
     Overlay,
     Header,
 }
 
-impl Default for CodeBlockCopyButtonPlacement {
-    fn default() -> Self {
-        Self::Overlay
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CodeBlockHeaderBackground {
+    #[default]
     None,
     Secondary,
-}
-
-impl Default for CodeBlockHeaderBackground {
-    fn default() -> Self {
-        Self::None
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -557,26 +542,26 @@ fn render_code_block_header<H: UiHost>(
                 .layout(LayoutRefinement::default().w_full()),
             |cx| {
                 let mut left = Vec::new();
-                if header.show_language {
-                    if let Some(lang) = language {
-                        left.push(cx.text_props(TextProps {
-                            layout: Default::default(),
-                            text: Arc::<str>::from(lang.to_string()),
-                            style: Some(TextStyle {
-                                font: FontId::monospace(),
-                                size: theme.metric_required("metric.font.mono_size"),
-                                weight: FontWeight::SEMIBOLD,
-                                slant: Default::default(),
-                                line_height: Some(
-                                    theme.metric_required("metric.font.mono_line_height"),
-                                ),
-                                letter_spacing_em: None,
-                            }),
-                            color: Some(theme.color_required("muted-foreground")),
-                            wrap: TextWrap::None,
-                            overflow: TextOverflow::Clip,
-                        }));
-                    }
+                if header.show_language
+                    && let Some(lang) = language
+                {
+                    left.push(cx.text_props(TextProps {
+                        layout: Default::default(),
+                        text: Arc::<str>::from(lang.to_string()),
+                        style: Some(TextStyle {
+                            font: FontId::monospace(),
+                            size: theme.metric_required("metric.font.mono_size"),
+                            weight: FontWeight::SEMIBOLD,
+                            slant: Default::default(),
+                            line_height: Some(
+                                theme.metric_required("metric.font.mono_line_height"),
+                            ),
+                            letter_spacing_em: None,
+                        }),
+                        color: Some(theme.color_required("muted-foreground")),
+                        wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
+                    }));
                 }
                 left.extend(header.left.iter().cloned());
 
@@ -857,7 +842,6 @@ fn render_code_block_text<H: UiHost>(
             axis: ScrollAxis::X,
             scroll_handle: Some(handle.clone()),
             probe_unbounded: matches!(text_wrap, TextWrap::None),
-            ..Default::default()
         },
         |cx| {
             vec![cx.selectable_text_props(SelectableTextProps {
