@@ -5,6 +5,8 @@ use std::collections::hash_map::Entry;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
+use crate::cache::CacheStats;
+
 fn hash_text(text: &str) -> u64 {
     let mut hasher = Fnv1a64::default();
     hasher.write(text.as_bytes());
@@ -93,6 +95,7 @@ struct TextCacheEntry {
 pub struct TextCache {
     frame: u64,
     entries: HashMap<TextCacheKey, TextCacheEntry>,
+    stats: CacheStats,
 }
 
 impl TextCache {
@@ -104,10 +107,20 @@ impl TextCache {
         self.frame
     }
 
+    pub fn stats(&self) -> CacheStats {
+        self.stats
+    }
+
+    pub fn reset_stats(&mut self) {
+        self.stats = CacheStats::default();
+    }
+
     /// Releases all cached blobs.
     pub fn clear(&mut self, services: &mut dyn UiServices) {
+        self.stats.clear_calls = self.stats.clear_calls.saturating_add(1);
         for t in self.entries.values() {
             services.text().release(t.prepared.blob);
+            self.stats.release_clear = self.stats.release_clear.saturating_add(1);
         }
         self.entries.clear();
     }
@@ -123,10 +136,12 @@ impl TextCache {
         style: &TextStyle,
         constraints: TextConstraints,
     ) -> PreparedText {
+        self.stats.prepare_calls = self.stats.prepare_calls.saturating_add(1);
         let key = TextCacheKey::new(text, style, constraints);
         match self.entries.entry(key) {
             Entry::Occupied(mut e) => {
                 e.get_mut().last_used_frame = self.frame;
+                self.stats.prepare_hits = self.stats.prepare_hits.saturating_add(1);
                 e.get().prepared
             }
             Entry::Vacant(e) => {
@@ -140,6 +155,7 @@ impl TextCache {
                     prepared,
                     last_used_frame: self.frame,
                 });
+                self.stats.prepare_misses = self.stats.prepare_misses.saturating_add(1);
                 prepared
             }
         }
@@ -155,11 +171,13 @@ impl TextCache {
         max_age_frames: u64,
         max_entries: usize,
     ) {
+        self.stats.prune_calls = self.stats.prune_calls.saturating_add(1);
         let now = self.frame;
         self.entries.retain(|_, entry| {
             let keep = now.saturating_sub(entry.last_used_frame) <= max_age_frames;
             if !keep {
                 services.text().release(entry.prepared.blob);
+                self.stats.release_prune_age = self.stats.release_prune_age.saturating_add(1);
             }
             keep
         });
@@ -178,6 +196,7 @@ impl TextCache {
         for (_, key) in keys.into_iter().skip(max_entries) {
             if let Some(entry) = self.entries.remove(&key) {
                 services.text().release(entry.prepared.blob);
+                self.stats.release_prune_budget = self.stats.release_prune_budget.saturating_add(1);
             }
         }
     }
@@ -211,7 +230,11 @@ impl Hasher for Fnv1a64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fret_core::{Px, TextOverflow, TextWrap};
+    use fret_core::{
+        PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle, Px, Size, SvgId,
+        SvgService, TextBlobId, TextConstraints, TextInput, TextMetrics, TextOverflow, TextService,
+        TextWrap,
+    };
 
     #[test]
     fn key_includes_line_height() {
@@ -268,5 +291,69 @@ mod tests {
         let a = TextCacheKey::new("hello", &TextStyle::default(), TextConstraints::default());
         let b = TextCacheKey::new("hello!", &TextStyle::default(), TextConstraints::default());
         assert_ne!(a, b);
+    }
+
+    #[derive(Default)]
+    struct FakeServices {
+        text_prepare_calls: u64,
+    }
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _input: &TextInput,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            self.text_prepare_calls += 1;
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::default(),
+                    baseline: Px(0.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    #[test]
+    fn stats_count_prepare_hits_and_misses() {
+        let mut cache = TextCache::default();
+        let mut services = FakeServices::default();
+        cache.begin_frame();
+
+        let style = TextStyle::default();
+        let constraints = TextConstraints::default();
+
+        let _ = cache.prepare(&mut services, "hello", &style, constraints);
+        let _ = cache.prepare(&mut services, "hello", &style, constraints);
+
+        assert_eq!(services.text_prepare_calls, 1);
+        assert_eq!(cache.stats().prepare_misses, 1);
+        assert_eq!(cache.stats().prepare_hits, 1);
     }
 }

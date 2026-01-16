@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathStyle, UiServices};
 
+use super::CacheStats;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct PathCacheKey {
     key: u64,
@@ -85,6 +87,7 @@ fn hash_path_commands(commands: &[PathCommand]) -> u64 {
 pub struct PathCache {
     frame: u64,
     entries: HashMap<PathCacheKey, PathCacheEntry>,
+    stats: CacheStats,
 }
 
 impl PathCache {
@@ -94,11 +97,21 @@ impl PathCache {
         self.frame
     }
 
+    pub fn stats(&self) -> CacheStats {
+        self.stats
+    }
+
+    pub fn reset_stats(&mut self) {
+        self.stats = CacheStats::default();
+    }
+
     /// Releases all cached paths.
     pub fn clear(&mut self, services: &mut dyn UiServices) {
+        self.stats.clear_calls = self.stats.clear_calls.saturating_add(1);
         for entry in self.entries.values_mut() {
             if let Some(path) = entry.path.take() {
                 services.path().release(path);
+                self.stats.release_clear = self.stats.release_clear.saturating_add(1);
             }
         }
         self.entries.clear();
@@ -108,12 +121,27 @@ impl PathCache {
     ///
     /// This updates the entry's `last_used_frame` for pruning purposes.
     pub fn get(&mut self, key: u64, constraints: PathConstraints) -> Option<(PathId, PathMetrics)> {
+        self.stats.get_calls = self.stats.get_calls.saturating_add(1);
         let scale_factor = normalize_scale_factor(constraints.scale_factor);
         let scale_bits = scale_factor.to_bits();
         let cache_key = PathCacheKey { key, scale_bits };
-        let entry = self.entries.get_mut(&cache_key)?;
+        let entry = match self.entries.get_mut(&cache_key) {
+            Some(entry) => entry,
+            None => {
+                self.stats.get_misses = self.stats.get_misses.saturating_add(1);
+                return None;
+            }
+        };
         entry.last_used_frame = self.frame;
-        Some((entry.path?, entry.metrics.unwrap_or_default()))
+        let path = match entry.path {
+            Some(path) => path,
+            None => {
+                self.stats.get_misses = self.stats.get_misses.saturating_add(1);
+                return None;
+            }
+        };
+        self.stats.get_hits = self.stats.get_hits.saturating_add(1);
+        Some((path, entry.metrics.unwrap_or_default()))
     }
 
     /// Prepares a path and caches it by a stable key derived from `(key, constraints.scale_factor)`.
@@ -128,6 +156,7 @@ impl PathCache {
         style: PathStyle,
         constraints: PathConstraints,
     ) -> (PathId, PathMetrics) {
+        self.stats.prepare_calls = self.stats.prepare_calls.saturating_add(1);
         let scale_factor = normalize_scale_factor(constraints.scale_factor);
         let scale_bits = scale_factor.to_bits();
         let cache_key = PathCacheKey { key, scale_bits };
@@ -147,6 +176,7 @@ impl PathCache {
         if needs_prepare {
             if let Some(path) = entry.path.take() {
                 services.path().release(path);
+                self.stats.release_replaced = self.stats.release_replaced.saturating_add(1);
             }
             let (path, metrics) =
                 services
@@ -155,6 +185,9 @@ impl PathCache {
             entry.path = Some(path);
             entry.metrics = Some(metrics);
             entry.fingerprint = Some(fingerprint);
+            self.stats.prepare_misses = self.stats.prepare_misses.saturating_add(1);
+        } else {
+            self.stats.prepare_hits = self.stats.prepare_hits.saturating_add(1);
         }
 
         (
@@ -170,6 +203,7 @@ impl PathCache {
         max_age_frames: u64,
         max_entries: usize,
     ) {
+        self.stats.prune_calls = self.stats.prune_calls.saturating_add(1);
         let now = self.frame;
 
         self.entries.retain(|_, entry| {
@@ -177,6 +211,7 @@ impl PathCache {
             if !keep {
                 if let Some(path) = entry.path.take() {
                     services.path().release(path);
+                    self.stats.release_prune_age = self.stats.release_prune_age.saturating_add(1);
                 }
             }
             keep
@@ -203,6 +238,8 @@ impl PathCache {
             if let Some(mut entry) = self.entries.remove(&key) {
                 if let Some(path) = entry.path.take() {
                     services.path().release(path);
+                    self.stats.release_prune_budget =
+                        self.stats.release_prune_budget.saturating_add(1);
                 }
             }
         }
@@ -410,5 +447,7 @@ mod tests {
         let hit = cache.get(1, constraints);
         assert!(hit.is_some());
         assert_eq!(services.path_prepare_calls, 1);
+        assert_eq!(cache.stats().get_hits, 1);
+        assert_eq!(cache.stats().get_misses, 0);
     }
 }
