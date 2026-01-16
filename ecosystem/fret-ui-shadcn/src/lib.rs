@@ -25,7 +25,7 @@ pub mod collapsible;
 pub mod combobox;
 pub mod command;
 pub mod context_menu;
-pub mod data_grid;
+mod data_grid;
 pub mod data_grid_canvas;
 pub mod data_table;
 mod data_table_controls;

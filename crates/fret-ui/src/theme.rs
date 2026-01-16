@@ -447,6 +447,9 @@ impl ThemeSnapshot {
             "metric.radius.lg" => self.metrics.radius_lg,
             "metric.padding.sm" => self.metrics.padding_sm,
             "metric.padding.md" => self.metrics.padding_md,
+            "metric.size.sm" => Px(32.0),
+            "metric.size.md" => Px(36.0),
+            "metric.size.lg" => Px(40.0),
             "metric.scrollbar.width" => self.metrics.scrollbar_width,
             "metric.font.size" => self.metrics.font_size,
             "metric.font.line_height" => self.metrics.font_line_height,
@@ -503,7 +506,10 @@ impl Theme {
 
     pub fn color_by_key(&self, key: &str) -> Option<Color> {
         let key = canonicalize_token_key(ThemeTokenKind::Color, key);
-        self.extra_colors.get(key).copied()
+        self.extra_colors
+            .get(key)
+            .copied()
+            .or_else(|| self.snapshot().color_by_key(key))
     }
 
     pub fn color_required(&self, key: &str) -> Color {
@@ -513,7 +519,10 @@ impl Theme {
 
     pub fn metric_by_key(&self, key: &str) -> Option<Px> {
         let key = canonicalize_token_key(ThemeTokenKind::Metric, key);
-        self.extra_metrics.get(key).copied()
+        self.extra_metrics
+            .get(key)
+            .copied()
+            .or_else(|| self.snapshot().metric_by_key(key))
     }
 
     pub fn metric_required(&self, key: &str) -> Px {
@@ -1211,6 +1220,20 @@ mod tests {
 
         for key in ["metric.size.sm", "metric.size.md", "metric.size.lg"] {
             assert!(theme.metric_by_key(key).is_some(), "missing metric {key}");
+        }
+    }
+
+    #[test]
+    fn shadcn_legacy_size_metrics_exist_on_default_snapshot() {
+        let host = crate::test_host::TestHost::default();
+        let theme = Theme::global(&host);
+        let snap = theme.snapshot();
+
+        for key in ["metric.size.sm", "metric.size.md", "metric.size.lg"] {
+            assert!(
+                snap.metric_by_key(key).is_some(),
+                "missing snapshot metric {key}"
+            );
         }
     }
 

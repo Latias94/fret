@@ -14,10 +14,15 @@ pub(crate) const USAGE_INTRO: &str = r#"
 // Native
 cargo run -p fret-ui-gallery
 
+// Web (dedicated harness)
+cd apps/fret-ui-gallery-web
+trunk serve --open
+// open: http://127.0.0.1:8080/?page=button
+
 // Web (via fret-demo-web host)
 cd apps/fret-demo-web
 trunk serve --open
-// open: http://127.0.0.1:8080/?demo=ui_gallery
+// open: http://127.0.0.1:8080/?demo=ui_gallery&page=button
 ```
 "#;
 
@@ -371,5 +376,168 @@ let dialog = shadcn::Dialog::new(open.clone()).into_element(
     |cx| shadcn::Button::new("Open").toggle_model(open.clone()).into_element(cx),
     |cx| shadcn::DialogContent::new(vec![cx.text("Hello")]).into_element(cx),
 );
+```
+"#;
+
+pub(crate) const DOC_CARD: &str = r#"
+## Card
+
+`Card` is a composition primitive used throughout the gallery:
+
+- header/title/description
+- content body
+- footer actions
+"#;
+
+pub(crate) const USAGE_CARD: &str = r#"
+```rust
+let card = shadcn::Card::new(vec![
+    shadcn::CardHeader::new(vec![
+        shadcn::CardTitle::new("Title").into_element(cx),
+        shadcn::CardDescription::new("Description").into_element(cx),
+    ])
+    .into_element(cx),
+    shadcn::CardContent::new(vec![cx.text("Body")]).into_element(cx),
+])
+.into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_BADGE: &str = r#"
+## Badge
+
+Small label component used for status, filters, and categories.
+"#;
+
+pub(crate) const USAGE_BADGE: &str = r#"
+```rust
+let badge = shadcn::Badge::new("Beta")
+    .variant(shadcn::BadgeVariant::Secondary)
+    .into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_AVATAR: &str = r#"
+## Avatar
+
+Avatar is a clipped, rounded container intended to host:
+
+- `AvatarImage` (optional)
+- `AvatarFallback` (initials / placeholder)
+"#;
+
+pub(crate) const USAGE_AVATAR: &str = r#"
+```rust
+let avatar = shadcn::Avatar::new(vec![
+    shadcn::AvatarFallback::new("FR").into_element(cx),
+])
+.into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_TOOLTIP: &str = r#"
+## Tooltip
+
+Tooltip is an overlay-driven component with hover/open-delay policies.
+"#;
+
+pub(crate) const USAGE_TOOLTIP: &str = r#"
+```rust
+let trigger = shadcn::Button::new("Hover").into_element(cx);
+let content = shadcn::TooltipContent::new(vec![
+    shadcn::TooltipContent::text(cx, "Hello"),
+])
+.into_element(cx);
+
+let tooltip = shadcn::Tooltip::new(trigger, content).into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_SLIDER: &str = r#"
+## Slider
+
+Slider is a pointer-driven control with support for:
+
+- single value
+- multi-thumb range
+
+This page uses `Slider::new_controllable` to keep demo state local to the subtree.
+"#;
+
+pub(crate) const USAGE_SLIDER: &str = r#"
+```rust
+let slider = shadcn::Slider::new_controllable(cx, None, || vec![50.0])
+    .range(0.0, 100.0)
+    .into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_SKELETON: &str = r#"
+## Skeleton
+
+Skeleton validates animation scheduling and theme-driven chrome defaults.
+"#;
+
+pub(crate) const USAGE_SKELETON: &str = r#"
+```rust
+let skeleton = shadcn::Skeleton::new().into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_SCROLL_AREA: &str = r#"
+## Scroll Area
+
+Scrollable region with custom scrollbars and nested content.
+"#;
+
+pub(crate) const USAGE_SCROLL_AREA: &str = r#"
+```rust
+let body = stack::vstack(cx, stack::VStackProps::default(), |_cx| items);
+let scroll = shadcn::ScrollArea::new(vec![body]).into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_ICONS: &str = r#"
+## Icons
+
+Fret uses renderer-agnostic `IconId`s to decouple UI components from specific icon packs:
+
+- UI code references semantic IDs (`ui.close`, `ui.search`, ...)
+- Icon packs (e.g. Lucide) register SVG sources into the global registry
+- Rendering can preload SVGs into `SvgId`s for performance
+"#;
+
+pub(crate) const USAGE_ICONS: &str = r#"
+```rust
+use fret_icons::ids;
+
+let icon = icon::icon(cx, ids::ui::SEARCH);
+let spinner = shadcn::Spinner::new().into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_FIELD: &str = r#"
+## Field
+
+`Field` is a composition helper for consistent form layout:
+
+- label + description + error slots
+- content wrapper for any control (input/select/checkbox groups)
+- optional separators and grouping (`FieldSet`)
+"#;
+
+pub(crate) const USAGE_FIELD: &str = r#"
+```rust
+let email = shadcn::Input::new(email_model)
+    .a11y_label("Email")
+    .placeholder("name@example.com")
+    .into_element(cx);
+
+let field = shadcn::Field::new(vec![
+    shadcn::FieldLabel::new("Email").into_element(cx),
+    shadcn::FieldDescription::new("We'll never share your email.").into_element(cx),
+    shadcn::FieldContent::new(vec![email]).into_element(cx),
+])
+.into_element(cx);
 ```
 "#;

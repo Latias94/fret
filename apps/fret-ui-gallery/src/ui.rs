@@ -223,7 +223,37 @@ pub(crate) fn content_view(
                 .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(220.0))))
                 .into_element(cx);
 
-            vec![left, theme_select]
+            let copy_actions = stack::hstack(
+                cx,
+                stack::HStackProps::default().gap(Space::N2).items_center(),
+                |cx| {
+                    vec![
+                        shadcn::Button::new("Copy link")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .size(shadcn::ButtonSize::Sm)
+                            .on_click(CMD_CLIPBOARD_COPY_LINK)
+                            .into_element(cx),
+                        shadcn::Button::new("Copy usage")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .size(shadcn::ButtonSize::Sm)
+                            .on_click(CMD_CLIPBOARD_COPY_USAGE)
+                            .into_element(cx),
+                        shadcn::Button::new("Copy notes")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .size(shadcn::ButtonSize::Sm)
+                            .on_click(CMD_CLIPBOARD_COPY_NOTES)
+                            .into_element(cx),
+                    ]
+                },
+            );
+
+            let right = stack::hstack(
+                cx,
+                stack::HStackProps::default().gap(Space::N3).items_center(),
+                |_cx| vec![theme_select, copy_actions],
+            );
+
+            vec![left, right]
         },
     );
 
@@ -354,6 +384,15 @@ fn page_preview(
     let body: Vec<AnyElement> = match selected {
         PAGE_LAYOUT => preview_layout(cx, theme),
         PAGE_BUTTON => preview_button(cx),
+        PAGE_CARD => preview_card(cx),
+        PAGE_BADGE => preview_badge(cx),
+        PAGE_AVATAR => preview_avatar(cx),
+        PAGE_SKELETON => preview_skeleton(cx),
+        PAGE_SCROLL_AREA => preview_scroll_area(cx),
+        PAGE_TOOLTIP => preview_tooltip(cx),
+        PAGE_SLIDER => preview_slider(cx),
+        PAGE_ICONS => preview_icons(cx),
+        PAGE_FIELD => preview_field(cx),
         PAGE_OVERLAY => {
             preview_overlay(cx, popover_open, dialog_open, alert_dialog_open, sheet_open)
         }
@@ -530,6 +569,411 @@ fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     );
 
     vec![variants, sizes]
+}
+
+fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let left = shadcn::Card::new(vec![
+        shadcn::CardHeader::new(vec![
+            shadcn::CardTitle::new("Card").into_element(cx),
+            shadcn::CardDescription::new("A composed surface primitive.").into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::CardContent::new(vec![
+            cx.text("Cards are used as building blocks for many gallery sections."),
+            stack::hstack(
+                cx,
+                stack::HStackProps::default().gap(Space::N2).items_center(),
+                |cx| {
+                    vec![
+                        shadcn::Badge::new("layout").into_element(cx),
+                        shadcn::Badge::new("chrome")
+                            .variant(shadcn::BadgeVariant::Secondary)
+                            .into_element(cx),
+                        shadcn::Badge::new("token")
+                            .variant(shadcn::BadgeVariant::Outline)
+                            .into_element(cx),
+                    ]
+                },
+            ),
+        ])
+        .into_element(cx),
+        shadcn::CardFooter::new(vec![
+            shadcn::Button::new("Cancel")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .into_element(cx),
+            shadcn::Button::new("Continue").into_element(cx),
+        ])
+        .into_element(cx),
+    ])
+    .refine_layout(LayoutRefinement::default().flex_1())
+    .into_element(cx);
+
+    let right = shadcn::Card::new(vec![
+        shadcn::CardHeader::new(vec![
+            shadcn::CardTitle::new("Embedded Content").into_element(cx),
+            shadcn::CardDescription::new("Cards stretch their sections by default.")
+                .into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::CardContent::new(vec![
+            shadcn::Button::new("Primary").into_element(cx),
+            shadcn::Button::new("Outline")
+                .variant(shadcn::ButtonVariant::Outline)
+                .into_element(cx),
+        ])
+        .into_element(cx),
+    ])
+    .refine_layout(LayoutRefinement::default().flex_1())
+    .into_element(cx);
+
+    vec![stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N4)
+            .items_stretch(),
+        |_cx| vec![left, right],
+    )]
+}
+
+fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let row = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        |cx| {
+            vec![
+                shadcn::Badge::new("Default").into_element(cx),
+                shadcn::Badge::new("Secondary")
+                    .variant(shadcn::BadgeVariant::Secondary)
+                    .into_element(cx),
+                shadcn::Badge::new("Destructive")
+                    .variant(shadcn::BadgeVariant::Destructive)
+                    .into_element(cx),
+                shadcn::Badge::new("Outline")
+                    .variant(shadcn::BadgeVariant::Outline)
+                    .into_element(cx),
+            ]
+        },
+    );
+
+    vec![
+        row,
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            |cx| {
+                vec![
+                    shadcn::Button::new("Filter")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .into_element(cx),
+                    shadcn::Badge::new("new")
+                        .variant(shadcn::BadgeVariant::Secondary)
+                        .into_element(cx),
+                    cx.text("Badges work well inline with buttons and text."),
+                ]
+            },
+        ),
+    ]
+}
+
+fn preview_avatar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let a = shadcn::Avatar::new(vec![shadcn::AvatarFallback::new("FR").into_element(cx)])
+        .into_element(cx);
+    let b = shadcn::Avatar::new(vec![
+        shadcn::AvatarFallback::new("WK")
+            .delay_ms(250)
+            .into_element(cx),
+    ])
+    .into_element(cx);
+    let c = shadcn::Avatar::new(vec![shadcn::AvatarFallback::new("?").into_element(cx)])
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_px(MetricRef::Px(Px(48.0)))
+                .h_px(MetricRef::Px(Px(48.0))),
+        )
+        .into_element(cx);
+
+    vec![
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N3).items_center(),
+            |_cx| vec![a, b, c],
+        ),
+        cx.text("Tip: use AvatarImage when you have an ImageId; AvatarFallback covers missing/slow loads."),
+    ]
+}
+
+fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let content = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                shadcn::Skeleton::new()
+                    .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(180.0))))
+                    .into_element(cx),
+                shadcn::Skeleton::new().into_element(cx),
+                shadcn::Skeleton::new()
+                    .secondary()
+                    .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(320.0))))
+                    .into_element(cx),
+                shadcn::Skeleton::new()
+                    .secondary()
+                    .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))))
+                    .into_element(cx),
+            ]
+        },
+    );
+
+    vec![
+        shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new("Loading…").into_element(cx),
+                shadcn::CardDescription::new("Skeleton requests animation frames while rendered.")
+                    .into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::CardContent::new(vec![content]).into_element(cx),
+        ])
+        .refine_layout(LayoutRefinement::default().w_full())
+        .into_element(cx),
+    ]
+}
+
+fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let items = (1..=64)
+        .map(|i| cx.text(format!("Item {i:02}")))
+        .collect::<Vec<_>>();
+
+    let body = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |_cx| items,
+    );
+
+    let scroll = shadcn::ScrollArea::new(vec![body])
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .h_px(MetricRef::Px(Px(240.0))),
+        )
+        .into_element(cx);
+
+    vec![
+        shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new("Scroll Area").into_element(cx),
+                shadcn::CardDescription::new("Fixed-height viewport with scrollbars.")
+                    .into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::CardContent::new(vec![scroll]).into_element(cx),
+        ])
+        .refine_layout(LayoutRefinement::default().w_full())
+        .into_element(cx),
+    ]
+}
+
+fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    shadcn::TooltipProvider::new().with(cx, |cx| {
+        let mk = |cx: &mut ElementContext<'_, App>, label: &str, side: shadcn::TooltipSide| {
+            shadcn::Tooltip::new(
+                shadcn::Button::new(label)
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .into_element(cx),
+                shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
+                    cx,
+                    format!("Tooltip on {label}"),
+                )])
+                .into_element(cx),
+            )
+            .arrow(true)
+            .side(side)
+            .open_delay_frames(10)
+            .close_delay_frames(10)
+            .into_element(cx)
+        };
+
+        vec![
+            stack::hstack(
+                cx,
+                stack::HStackProps::default().gap(Space::N2).items_center(),
+                |cx| {
+                    vec![
+                        mk(cx, "Top", shadcn::TooltipSide::Top),
+                        mk(cx, "Right", shadcn::TooltipSide::Right),
+                        mk(cx, "Bottom", shadcn::TooltipSide::Bottom),
+                        mk(cx, "Left", shadcn::TooltipSide::Left),
+                    ]
+                },
+            ),
+            cx.text(
+                "Hover the buttons to validate hover intent, delay group, and overlay placement.",
+            ),
+        ]
+    })
+}
+
+fn preview_slider(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    cx.keyed("ui_gallery.slider_page", |cx| {
+        let single = shadcn::Slider::new_controllable(cx, None, || vec![35.0])
+            .range(0.0, 100.0)
+            .into_element(cx);
+
+        let range = shadcn::Slider::new_controllable(cx, None, || vec![20.0, 80.0])
+            .range(0.0, 100.0)
+            .min_steps_between_thumbs(5)
+            .into_element(cx);
+
+        let disabled = shadcn::Slider::new_controllable(cx, None, || vec![60.0])
+            .disabled(true)
+            .into_element(cx);
+
+        let items: Vec<AnyElement> = vec![
+            cx.text("Single value"),
+            single,
+            cx.text("Range (two thumbs)"),
+            range,
+            cx.text("Disabled"),
+            disabled,
+        ];
+
+        vec![
+            stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .layout(LayoutRefinement::default().w_full())
+                    .gap(Space::N4),
+                move |_cx| items,
+            ),
+            cx.text("Note: this page uses uncontrolled sliders; state is stored in element state under a stable key."),
+        ]
+    })
+}
+
+fn preview_icons(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use fret_icons::ids;
+
+    let icon_cell =
+        |cx: &mut ElementContext<'_, App>, label: &str, icon_id: IconId| -> AnyElement {
+            let row = stack::hstack(
+                cx,
+                stack::HStackProps::default()
+                    .layout(LayoutRefinement::default().w_full())
+                    .gap(Space::N2)
+                    .items_center(),
+                |cx| {
+                    vec![
+                        icon::icon_with(cx, icon_id, Some(Px(16.0)), None),
+                        cx.text(label),
+                    ]
+                },
+            );
+
+            let theme = Theme::global(&*cx.app);
+            cx.container(
+                decl_style::container_props(
+                    theme,
+                    ChromeRefinement::default()
+                        .rounded(Radius::Md)
+                        .border_1()
+                        .p(Space::N3),
+                    LayoutRefinement::default().w_full(),
+                ),
+                |_cx| vec![row],
+            )
+        };
+
+    let grid = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                icon_cell(cx, "ui.search", ids::ui::SEARCH),
+                icon_cell(cx, "ui.settings", ids::ui::SETTINGS),
+                icon_cell(cx, "ui.chevron.right", ids::ui::CHEVRON_RIGHT),
+                icon_cell(cx, "ui.close", ids::ui::CLOSE),
+                icon_cell(
+                    cx,
+                    "lucide.loader-circle",
+                    IconId::new_static("lucide.loader-circle"),
+                ),
+            ]
+        },
+    );
+
+    let spinner_row = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        |cx| {
+            vec![
+                shadcn::Spinner::new().into_element(cx),
+                shadcn::Spinner::new().speed(0.0).into_element(cx),
+                cx.text("Spinner (animated / static)"),
+            ]
+        },
+    );
+
+    vec![grid, spinner_row]
+}
+
+fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    #[derive(Default)]
+    struct FieldPageModels {
+        name: Option<Model<String>>,
+        email: Option<Model<String>>,
+    }
+
+    let (name, email) = cx.with_state(FieldPageModels::default, |st| {
+        (st.name.clone(), st.email.clone())
+    });
+    let (name, email) = match (name, email) {
+        (Some(name), Some(email)) => (name, email),
+        _ => {
+            let name = cx.app.models_mut().insert(String::new());
+            let email = cx.app.models_mut().insert(String::new());
+            cx.with_state(FieldPageModels::default, |st| {
+                st.name = Some(name.clone());
+                st.email = Some(email.clone());
+            });
+            (name, email)
+        }
+    };
+
+    let field_name = shadcn::Field::new(vec![
+        shadcn::FieldLabel::new("Name").into_element(cx),
+        shadcn::FieldDescription::new("Shown in the sidebar and status bar.").into_element(cx),
+        shadcn::FieldContent::new(vec![
+            shadcn::Input::new(name)
+                .a11y_label("Name")
+                .placeholder("Rustacean")
+                .into_element(cx),
+        ])
+        .into_element(cx),
+    ])
+    .into_element(cx);
+
+    let field_email = shadcn::Field::new(vec![
+        shadcn::FieldLabel::new("Email").into_element(cx),
+        shadcn::FieldDescription::new("Used for notifications (demo only).").into_element(cx),
+        shadcn::FieldContent::new(vec![
+            shadcn::Input::new(email)
+                .a11y_label("Email")
+                .placeholder("name@example.com")
+                .into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::FieldError::new("Invalid email address").into_element(cx),
+    ])
+    .into_element(cx);
+
+    vec![shadcn::FieldSet::new(vec![field_name, field_email]).into_element(cx)]
 }
 
 fn preview_forms(

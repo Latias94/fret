@@ -20,6 +20,7 @@ fret-launch = { path = "../../crates/fret-launch" }
 fret-ui = { path = "../../crates/fret-ui" }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
+fret-icons = { path = "../../ecosystem/fret-icons" }
 fret-markdown = { path = "../../ecosystem/fret-markdown" }
 fret-workspace = { path = "../../ecosystem/fret-workspace" }
 fret-ui-headless = { path = "../../ecosystem/fret-ui-headless" }
