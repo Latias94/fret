@@ -249,6 +249,7 @@ fn ui_builder_smoke_applies_supported_patches() {
     .build();
     let _ = fret_ui_shadcn::RadioGroup::new(radio_group_model)
         .ui()
+        .p_4()
         .build();
 
     let _ = Command::new(Vec::new()).ui().p_4().build();

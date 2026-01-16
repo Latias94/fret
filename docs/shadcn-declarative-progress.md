@@ -97,7 +97,7 @@ Legend:
 | `empty` | `Empty` | Chrome+Layout |  |
 | `combobox` | `Combobox` | Pass-through |  |
 | `checkbox` | `Checkbox` | Chrome+Layout |  |
-| `radio_group` | `RadioGroup` | Pass-through |  |
+| `radio_group` | `RadioGroup` | Chrome+Layout |  |
 | `calendar` | `Calendar` | Pass-through |  |
 | `calendar_range` | `CalendarRange` | Pass-through |  |
 | `date_picker` | `DatePicker` | Pass-through |  |
