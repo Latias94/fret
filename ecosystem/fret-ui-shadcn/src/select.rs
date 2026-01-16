@@ -50,6 +50,8 @@ fn select_scroll_with_buttons<H: UiHost>(
     initial_scroll_to_y: Option<Px>,
     viewport_id_out: &Cell<Option<GlobalElementId>>,
     active_element_id_out: &Cell<Option<GlobalElementId>>,
+    should_align_active_to_top: impl Fn() -> bool + Clone + 'static,
+    on_aligned_active_to_top: impl Fn() + Clone + 'static,
     content: impl FnOnce(&mut ElementContext<'_, H>, &Cell<Option<GlobalElementId>>) -> Vec<AnyElement>,
 ) -> AnyElement {
     cx.flex(
@@ -237,12 +239,33 @@ fn select_scroll_with_buttons<H: UiHost>(
                     viewport_id_out.set(Some(scroll.id));
 
                     if let Some(active_element) = active_element_ref.get() {
-                        let _ = active_desc::scroll_active_element_into_view_y(
-                            cx,
-                            &handle_for_stack,
-                            scroll.id,
-                            active_element,
-                        );
+                        if has_scroll && should_align_active_to_top() {
+                            let did = active_desc::scroll_active_element_align_top_y(
+                                cx,
+                                &handle_for_stack,
+                                scroll.id,
+                                active_element,
+                            );
+                            if did {
+                                on_aligned_active_to_top();
+                            } else if let (Some(viewport), Some(child)) = (
+                                cx.last_bounds_for_element(scroll.id),
+                                cx.last_bounds_for_element(active_element),
+                            ) {
+                                let delta = (child.origin.y.0 - viewport.origin.y.0).abs();
+                                if delta <= 0.01 {
+                                    on_aligned_active_to_top();
+                                }
+                            }
+
+                        } else {
+                            let _ = active_desc::scroll_active_element_into_view_y(
+                                cx,
+                                &handle_for_stack,
+                                scroll.id,
+                                active_element,
+                            );
+                        }
                     }
 
                     vec![scroll]
@@ -763,6 +786,7 @@ fn select_impl<H: UiHost>(
             width_probe: Option<GlobalElementId>,
             pending_item_aligned_scroll_to_y: Option<Px>,
             did_item_aligned_scroll: bool,
+            pending_active_align_top_scroll: bool,
         }
 
         impl SelectTriggerKeyState {
@@ -781,6 +805,7 @@ fn select_impl<H: UiHost>(
                     width_probe: None,
                     pending_item_aligned_scroll_to_y: None,
                     did_item_aligned_scroll: false,
+                    pending_active_align_top_scroll: false,
                 }
             }
         }
@@ -1294,12 +1319,14 @@ fn select_impl<H: UiHost>(
                                     state.was_open = true;
                                     state.content.reset_on_open(initial_active_row);
                                     state.trigger.reset_typeahead_buffer();
+                                    state.pending_active_align_top_scroll = true;
                             } else if state.content.active_row().is_none() {
                                 state.content.set_active_row(initial_active_row);
                             }
                         } else {
                             state.was_open = false;
                             state.content.set_active_row(None);
+                            state.pending_active_align_top_scroll = false;
                         }
 
                         state.content.active_row()
@@ -1430,6 +1457,11 @@ fn select_impl<H: UiHost>(
                                             }),
                                         );
 
+                                        let state_for_align_check =
+                                            trigger_state_for_overlay_in_content.clone();
+                                        let state_for_align_done =
+                                            trigger_state_for_overlay_in_content.clone();
+
                                         let scroll = select_scroll_with_buttons(
                                             cx,
                                             theme_for_overlay.clone(),
@@ -1437,6 +1469,18 @@ fn select_impl<H: UiHost>(
                                             initial_scroll_to_y,
                                             viewport_id_out,
                                             active_element_id_out,
+                                            move || {
+                                                let state = state_for_align_check
+                                                    .lock()
+                                                    .unwrap_or_else(|e| e.into_inner());
+                                                state.pending_active_align_top_scroll
+                                            },
+                                            move || {
+                                                let mut state = state_for_align_done
+                                                    .lock()
+                                                    .unwrap_or_else(|e| e.into_inner());
+                                                state.pending_active_align_top_scroll = false;
+                                            },
                                             move |cx, active_element| {
                                                                 let mut out = Vec::with_capacity(rows.len());
                                                                 let mut item_ordinal: usize = 0;

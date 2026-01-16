@@ -64,6 +64,31 @@ pub fn scroll_handle_into_view_y(handle: &ScrollHandle, viewport: Rect, child: R
     (prev.y.0 - next.y.0).abs() > 0.01
 }
 
+/// Align a child rectangle's top edge with the viewport top edge by adjusting the scroll handle.
+///
+/// This is intentionally stronger than [`scroll_handle_into_view_y`]: it scrolls even when the
+/// child is already visible.
+pub fn scroll_handle_align_top_y(handle: &ScrollHandle, viewport: Rect, child: Rect) -> bool {
+    let viewport_h = viewport.size.height.0.max(0.0);
+    if viewport_h <= 0.0 {
+        return false;
+    }
+
+    let view_top = viewport.origin.y.0;
+    let child_top = child.origin.y.0;
+    let delta = child_top - view_top;
+
+    if delta.abs() <= 0.01 {
+        return false;
+    }
+
+    let prev = handle.offset();
+    handle.set_offset(Point::new(prev.x, Px(prev.y.0 + delta)));
+
+    let next = handle.offset();
+    (prev.y.0 - next.y.0).abs() > 0.01
+}
+
 /// Best-effort "scroll active option into view" helper for cmdk/listbox-like widgets.
 ///
 /// This uses last-frame bounds for both the scroll viewport element and the active item element.
@@ -82,4 +107,24 @@ pub fn scroll_active_element_into_view_y<H: UiHost>(
     };
 
     scroll_handle_into_view_y(handle, viewport, child)
+}
+
+/// Best-effort "scroll active option to top edge" helper for cmdk/listbox-like widgets.
+///
+/// This uses last-frame bounds for both the scroll viewport element and the active item element.
+/// When either bound is missing, it does nothing.
+pub fn scroll_active_element_align_top_y<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    handle: &ScrollHandle,
+    viewport_element: GlobalElementId,
+    active_element: GlobalElementId,
+) -> bool {
+    let Some(viewport) = cx.last_bounds_for_element(viewport_element) else {
+        return false;
+    };
+    let Some(child) = cx.last_bounds_for_element(active_element) else {
+        return false;
+    };
+
+    scroll_handle_align_top_y(handle, viewport, child)
 }
