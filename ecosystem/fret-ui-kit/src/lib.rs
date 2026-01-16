@@ -25,6 +25,8 @@ pub mod window_overlays;
 #[cfg(not(feature = "unstable-internals"))]
 mod window_overlays;
 
+mod ui_builder_impls;
+
 mod sizing;
 mod style;
 mod styled;

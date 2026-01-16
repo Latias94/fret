@@ -1,0 +1,72 @@
+use fret_ui::element::AnyElement;
+use fret_ui::{ElementContext, UiHost};
+
+use crate::primitives::aspect_ratio::AspectRatio;
+use crate::primitives::label::Label;
+use crate::primitives::separator::Separator;
+use crate::{UiIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout};
+
+impl UiPatchTarget for Label {
+    fn apply_ui_patch(self, _patch: UiPatch) -> Self {
+        self
+    }
+}
+
+impl UiIntoElement for Label {
+    fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        Label::into_element(self, cx)
+    }
+}
+
+impl UiPatchTarget for Separator {
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_layout(patch.layout)
+    }
+}
+
+impl UiSupportsLayout for Separator {}
+
+impl UiIntoElement for Separator {
+    fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        Separator::into_element(self, cx)
+    }
+}
+
+impl UiPatchTarget for AspectRatio {
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl UiSupportsChrome for AspectRatio {}
+impl UiSupportsLayout for AspectRatio {}
+
+impl UiIntoElement for AspectRatio {
+    fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        AspectRatio::into_element(self, cx)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::LayoutRefinement;
+    use crate::UiExt as _;
+
+    #[test]
+    fn ui_builder_supports_selected_primitives() {
+        let _ = Label::new("x").ui().build();
+        let _ = Separator::new()
+            .ui()
+            .layout(LayoutRefinement::default())
+            .build();
+        let _ = Separator::new().ui().w_full().build();
+
+        // Compile-only smoke: `AspectRatio::new` requires an `AnyElement` child, so we validate
+        // builder wiring via a type-checked helper.
+        fn assert_aspect_ratio_builds(ar: AspectRatio) {
+            let _ = ar.ui().p(crate::Space::N4).w_full().build();
+        }
+        let _ = assert_aspect_ratio_builds;
+    }
+}
