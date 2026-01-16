@@ -506,7 +506,10 @@ impl Theme {
 
     pub fn color_by_key(&self, key: &str) -> Option<Color> {
         let key = canonicalize_token_key(ThemeTokenKind::Color, key);
-        self.extra_colors.get(key).copied()
+        self.extra_colors
+            .get(key)
+            .copied()
+            .or_else(|| self.snapshot().color_by_key(key))
     }
 
     pub fn color_required(&self, key: &str) -> Color {
@@ -516,7 +519,10 @@ impl Theme {
 
     pub fn metric_by_key(&self, key: &str) -> Option<Px> {
         let key = canonicalize_token_key(ThemeTokenKind::Metric, key);
-        self.extra_metrics.get(key).copied()
+        self.extra_metrics
+            .get(key)
+            .copied()
+            .or_else(|| self.snapshot().metric_by_key(key))
     }
 
     pub fn metric_required(&self, key: &str) -> Px {
