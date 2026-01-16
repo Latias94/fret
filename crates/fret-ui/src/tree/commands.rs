@@ -220,7 +220,7 @@ impl<H: UiHost> UiTree<H> {
         true
     }
 
-    fn scroll_node_into_view(&mut self, app: &mut H, target: NodeId) -> bool {
+    pub(super) fn scroll_node_into_view(&mut self, app: &mut H, target: NodeId) -> bool {
         let Some(target_bounds) = self.nodes.get(target).map(|n| n.bounds) else {
             return false;
         };

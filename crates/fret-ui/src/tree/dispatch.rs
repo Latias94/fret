@@ -225,6 +225,7 @@ impl<H: UiHost> UiTree<H> {
                     }
                     self.focus = Some(focus);
                     self.mark_invalidation(focus, Invalidation::Paint);
+                    self.scroll_node_into_view(app, focus);
                 }
 
                 if let Some(capture) = requested_capture
@@ -301,6 +302,7 @@ impl<H: UiHost> UiTree<H> {
                 }
                 self.focus = Some(focus);
                 self.mark_invalidation(focus, Invalidation::Paint);
+                self.scroll_node_into_view(app, focus);
             }
 
             if let Some(capture) = requested_capture
@@ -951,6 +953,7 @@ impl<H: UiHost> UiTree<H> {
                     }
                     self.focus = Some(focus);
                     self.mark_invalidation(focus, Invalidation::Paint);
+                    self.scroll_node_into_view(app, focus);
                 }
 
                 if let Some(capture) = requested_capture {
@@ -1047,6 +1050,7 @@ impl<H: UiHost> UiTree<H> {
                     }
                     self.focus = Some(focus);
                     self.mark_invalidation(focus, Invalidation::Paint);
+                    self.scroll_node_into_view(app, focus);
                 }
 
                 if let Some(capture) = requested_capture {
