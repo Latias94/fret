@@ -27,6 +27,8 @@ pub struct UiDiagnosticsConfig {
     pub pick_result_path: PathBuf,
     pub pick_result_trigger_path: PathBuf,
     pub pick_auto_dump: bool,
+    pub inspect_path: PathBuf,
+    pub inspect_trigger_path: PathBuf,
     pub redact_text: bool,
     pub max_debug_string_bytes: usize,
 }
@@ -82,6 +84,14 @@ impl Default for UiDiagnosticsConfig {
             .map(PathBuf::from)
             .unwrap_or_else(|| out_dir.join("pick.result.touch"));
         let pick_auto_dump = env_flag_default_true("FRET_DIAG_PICK_AUTO_DUMP");
+        let inspect_path = std::env::var_os("FRET_DIAG_INSPECT_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| out_dir.join("inspect.json"));
+        let inspect_trigger_path = std::env::var_os("FRET_DIAG_INSPECT_TRIGGER_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| out_dir.join("inspect.touch"));
         let redact_text = env_flag_default_true("FRET_DIAG_REDACT_TEXT");
         let max_debug_string_bytes = std::env::var("FRET_DIAG_MAX_DEBUG_STRING_BYTES")
             .ok()
@@ -104,6 +114,8 @@ impl Default for UiDiagnosticsConfig {
             pick_result_path,
             pick_result_trigger_path,
             pick_auto_dump,
+            inspect_path,
+            inspect_trigger_path,
             redact_text,
             max_debug_string_bytes,
         }
@@ -117,6 +129,9 @@ pub struct UiDiagnosticsService {
     last_trigger_mtime: Option<std::time::SystemTime>,
     last_script_trigger_mtime: Option<std::time::SystemTime>,
     last_pick_trigger_mtime: Option<std::time::SystemTime>,
+    last_inspect_trigger_mtime: Option<std::time::SystemTime>,
+    inspect_enabled: bool,
+    inspect_consume_clicks: bool,
     pending_script: Option<UiActionScriptV1>,
     pending_script_run_id: Option<u64>,
     active_scripts: HashMap<AppWindowId, ActiveScript>,
@@ -1293,6 +1308,20 @@ pub struct UiFrameStatsV1 {
     pub layout_engine_solves: u64,
     pub layout_engine_solve_time_us: u64,
     pub layout_engine_widget_fallback_solves: u64,
+    #[serde(default)]
+    pub model_change_invalidation_roots: u32,
+    #[serde(default)]
+    pub global_change_invalidation_roots: u32,
+    #[serde(default)]
+    pub invalidation_walk_nodes: u32,
+    #[serde(default)]
+    pub invalidation_walk_calls: u32,
+    #[serde(default)]
+    pub view_cache_active: bool,
+    #[serde(default)]
+    pub view_cache_invalidation_truncations: u32,
+    #[serde(default)]
+    pub view_cache_contained_relayouts: u32,
     pub focused_node: Option<u64>,
     pub captured_node: Option<u64>,
 }
@@ -1312,6 +1341,13 @@ impl UiFrameStatsV1 {
             layout_engine_solves: stats.layout_engine_solves,
             layout_engine_solve_time_us: stats.layout_engine_solve_time.as_micros() as u64,
             layout_engine_widget_fallback_solves: stats.layout_engine_widget_fallback_solves,
+            model_change_invalidation_roots: stats.model_change_invalidation_roots,
+            global_change_invalidation_roots: stats.global_change_invalidation_roots,
+            invalidation_walk_nodes: stats.invalidation_walk_nodes,
+            invalidation_walk_calls: stats.invalidation_walk_calls,
+            view_cache_active: stats.view_cache_active,
+            view_cache_invalidation_truncations: stats.view_cache_invalidation_truncations,
+            view_cache_contained_relayouts: stats.view_cache_contained_relayouts,
             focused_node: stats.focus.map(key_to_u64),
             captured_node: stats.captured.map(key_to_u64),
         }

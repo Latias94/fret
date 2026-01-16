@@ -127,3 +127,30 @@ where
 
     frame
 }
+
+/// A `workspace_shell_model` convenience wrapper that renders the default editor-style menu bar
+/// provided by `fret-workspace`.
+pub fn workspace_shell_model_default_menu<H: UiHost, FTitle, FPane>(
+    cx: &mut ElementContext<'_, H>,
+    commands: Option<&CommandRegistry>,
+    window: Model<crate::workspace::layout::WorkspaceWindowLayout>,
+    tab_title: FTitle,
+    render_pane_content: FPane,
+) -> AnyElement
+where
+    FTitle: Fn(&str) -> Arc<str> + Clone,
+    FPane: FnMut(&mut ElementContext<'_, H>, &WorkspacePaneLayout, bool) -> AnyElement,
+{
+    let menu_bar = crate::workspace::menu::workspace_default_menu_bar(
+        crate::workspace::menu::WorkspaceMenuCommands::default(),
+    );
+
+    workspace_shell_model(
+        cx,
+        Some(&menu_bar),
+        commands,
+        window,
+        tab_title,
+        render_pane_content,
+    )
+}

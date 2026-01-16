@@ -5,9 +5,9 @@ use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 use time::Date;
 
-use crate::{docs::*, spec::*};
+use crate::spec::*;
 
-fn matches_query(query: &str, item: &NavItemSpec) -> bool {
+fn matches_query(query: &str, item: &PageSpec) -> bool {
     let q = query.trim();
     if q.is_empty() {
         return true;
@@ -52,12 +52,11 @@ pub(crate) fn sidebar_view(
 
     let query_input = shadcn::Input::new(nav_query)
         .a11y_label("Search components")
-        .placeholder("Search… (id / tag)")
         .placeholder("Search (id / tag)")
         .into_element(cx);
 
     let mut nav_sections: Vec<AnyElement> = Vec::new();
-    for group in NAV_GROUPS {
+    for group in PAGE_GROUPS {
         let group_sections = cx.keyed(group.title, |cx| {
             let mut group_items: Vec<AnyElement> = Vec::new();
             for item in group.items {
@@ -317,66 +316,6 @@ pub(crate) fn content_view(
         ),
         |_cx| vec![content],
     )
-}
-
-pub(crate) fn page_meta(
-    selected: &str,
-) -> (&'static str, &'static str, &'static str, &'static str) {
-    match selected {
-        PAGE_LAYOUT => (
-            "Layout / Stacks & Constraints",
-            "fret-ui + fret-ui-kit",
-            DOC_LAYOUT,
-            USAGE_LAYOUT,
-        ),
-        PAGE_BUTTON => ("Button", "fret-ui-shadcn", DOC_BUTTON, USAGE_BUTTON),
-        PAGE_FORMS => ("Forms", "fret-ui-shadcn", DOC_FORMS, USAGE_FORMS),
-        PAGE_SELECT => ("Select", "fret-ui-shadcn", DOC_SELECT, USAGE_SELECT),
-        PAGE_COMBOBOX => ("Combobox", "fret-ui-shadcn", DOC_COMBOBOX, USAGE_COMBOBOX),
-        PAGE_DATE_PICKER => (
-            "Date Picker",
-            "fret-ui-shadcn",
-            DOC_DATE_PICKER,
-            USAGE_DATE_PICKER,
-        ),
-        PAGE_RESIZABLE => (
-            "Resizable",
-            "fret-ui-shadcn",
-            DOC_RESIZABLE,
-            USAGE_RESIZABLE,
-        ),
-        PAGE_DATA_TABLE => (
-            "DataTable",
-            "fret-ui-shadcn + fret-ui-headless",
-            DOC_DATA_TABLE,
-            USAGE_DATA_TABLE,
-        ),
-        PAGE_DATA_GRID => ("DataGrid", "fret-ui-shadcn", DOC_DATA_GRID, USAGE_DATA_GRID),
-        PAGE_TABS => ("Tabs", "fret-ui-shadcn", DOC_TABS, USAGE_TABS),
-        PAGE_ACCORDION => (
-            "Accordion",
-            "fret-ui-shadcn",
-            DOC_ACCORDION,
-            USAGE_ACCORDION,
-        ),
-        PAGE_TABLE => ("Table", "fret-ui-shadcn", DOC_TABLE, USAGE_TABLE),
-        PAGE_PROGRESS => ("Progress", "fret-ui-shadcn", DOC_PROGRESS, USAGE_PROGRESS),
-        PAGE_MENUS => ("Menus", "fret-ui-shadcn", DOC_MENUS, USAGE_MENUS),
-        PAGE_COMMAND => (
-            "Command Palette",
-            "fret-ui-shadcn",
-            DOC_COMMAND,
-            USAGE_COMMAND,
-        ),
-        PAGE_TOAST => ("Toast", "fret-ui-shadcn", DOC_TOAST, USAGE_TOAST),
-        PAGE_OVERLAY => (
-            "Overlay / Popover & Dialog",
-            "fret-ui-shadcn (Radix-shaped primitives)",
-            DOC_OVERLAY,
-            USAGE_OVERLAY,
-        ),
-        _ => ("Introduction", "Core contracts", DOC_INTRO, USAGE_INTRO),
-    }
 }
 
 fn page_preview(

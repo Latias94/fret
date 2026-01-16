@@ -27,7 +27,7 @@ icons-lucide = ["fret-bootstrap/icons-lucide"]
 icons-radix = ["fret-bootstrap/icons-radix"]
 preload-icon-svgs = ["fret-bootstrap/preload-icon-svgs"]
 command-palette = ["fret-bootstrap/ui-app-command-palette"]
-workspace-shell = ["dep:fret-workspace"]
+workspace-shell = ["dep:fret-workspace", "fret-workspace/shadcn-context-menu"]
 
 [dependencies]
 thiserror.workspace = true

@@ -60,7 +60,7 @@ pub mod prelude {
         WorkspaceFrame, WorkspaceStatusBar, WorkspaceTab, WorkspaceTabStrip, WorkspaceTopBar,
     };
     #[cfg(feature = "workspace-shell")]
-    pub use crate::workspace_shell::workspace_shell_model;
+    pub use crate::workspace_shell::{workspace_shell_model, workspace_shell_model_default_menu};
 }
 
 #[derive(Debug, thiserror::Error)]
