@@ -979,11 +979,14 @@ impl UiDiagnosticsService {
         let role = semantics_role_label(node.role);
         let mut summary = format!("focus: {role} node={node_id}");
 
-        if let Some(element) = element_runtime
-            .and_then(|runtime| runtime.element_for_node(window, node.id))
-            .map(|id| id.0)
+        if let Some(runtime) = element_runtime
+            && let Some(element) = runtime.element_for_node(window, node.id)
         {
-            summary.push_str(&format!(" element={element}"));
+            summary.push_str(&format!(" element={}", element.0));
+            if let Some(path) = runtime.debug_path_for_element(window, element) {
+                let path = truncate_debug_value(&path, 200);
+                summary.push_str(&format!(" element_path={path}"));
+            }
         }
         if let Some(test_id) = node.test_id.as_deref() {
             summary.push_str(&format!(" test_id={test_id}"));
@@ -1405,10 +1408,15 @@ impl UiDiagnosticsService {
 
         let selection = match raw_semantics {
             Some(snapshot) => pick_semantics_node_at(snapshot, ui, position).map(|node| {
-                let element = element_runtime
-                    .and_then(|runtime| runtime.element_for_node(window, node.id))
-                    .map(|id| id.0);
-                UiPickSelectionV1::from_node(snapshot, node, element, &self.cfg)
+                let (element, element_path) = element_runtime
+                    .and_then(|runtime| {
+                        runtime.element_for_node(window, node.id).map(|id| {
+                            let path = runtime.debug_path_for_element(window, id);
+                            (Some(id.0), path)
+                        })
+                    })
+                    .unwrap_or((None, None));
+                UiPickSelectionV1::from_node(snapshot, node, element, element_path, &self.cfg)
             }),
             None => None,
         };
@@ -1764,6 +1772,8 @@ pub struct UiPickSelectionV1 {
     pub node: UiSemanticsNodeV1,
     #[serde(default)]
     pub element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element_path: Option<String>,
     pub selectors: Vec<UiSelectorV1>,
 }
 
@@ -1772,6 +1782,7 @@ impl UiPickSelectionV1 {
         snapshot: &fret_core::SemanticsSnapshot,
         node: &fret_core::SemanticsNode,
         element: Option<u64>,
+        element_path: Option<String>,
         cfg: &UiDiagnosticsConfig,
     ) -> Self {
         let exported =
@@ -1780,6 +1791,7 @@ impl UiPickSelectionV1 {
         Self {
             node: exported,
             element,
+            element_path,
             selectors,
         }
     }

@@ -100,6 +100,7 @@ This is the fastest way to author stable selectors (GPUI/Zed-style inspect):
 Notes:
 
 - While picking is active, the app renders a non-interactive inspect overlay (outline + label) to help confirm which semantics node is being targeted.
+- `pick.result.json` includes `selection.element_path` when the picked semantics node can be mapped to a declarative `GlobalElementId` (best-effort; diagnostics-only).
 
 ## Quick Start (continuous inspect mode)
 
@@ -166,7 +167,7 @@ At a high level:
   - `debug.stats`: layout/paint timings and counters
   - `debug.layers_in_paint_order`: overlay roots / barrier behavior / hit-test intent
   - `debug.hit_test`: last pointer position + hit summary
-  - `debug.element_runtime`: `ElementRuntime` window-level state (focus/selection/observed models/globals)
+  - `debug.element_runtime`: `ElementRuntime` window-level state (focus/selection/observed models/globals; includes optional `*_path` strings for key elements)
   - `debug.semantics`: the exported semantics snapshot (ADR 0033) when enabled
 
 For AI triage, the bundle is intentionally self-contained: it is the unit you attach to a bug report.
