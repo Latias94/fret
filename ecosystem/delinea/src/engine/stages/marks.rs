@@ -23,9 +23,10 @@ use crate::spec::AxisRange;
 use crate::spec::BarWidthSpec;
 use crate::stats::EngineStats;
 use crate::transform::RowSelection;
+use crate::transform_graph::DataViewStage;
 use std::collections::BTreeMap;
 
-use super::{BarLayoutStage, DataViewStage, ParticipationState, StackDimsStage};
+use super::{BarLayoutStage, ParticipationState, StackDimsStage};
 
 const SCATTER_LARGE_MODE_VISIBLE_LEN_THRESHOLD: usize = 20_000;
 

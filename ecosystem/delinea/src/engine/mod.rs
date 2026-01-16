@@ -6,8 +6,8 @@ use crate::engine::interaction::AxisInteractionLocks;
 use crate::engine::lod::LodScratch;
 use crate::engine::model::{ChartModel, ModelError};
 use crate::engine::stages::{
-    BarLayoutStage, DataViewStage, FilterProcessorStage, MarksStage, NearestXIndexKey,
-    NearestXIndexStage, OrdinalIndexStage, StackDimsStage,
+    BarLayoutStage, FilterProcessorStage, MarksStage, NearestXIndexKey, NearestXIndexStage,
+    OrdinalIndexStage, StackDimsStage,
 };
 use crate::ids::{ChartId, Revision};
 use crate::link::{LinkConfig, LinkEvent};
@@ -22,7 +22,7 @@ use crate::tooltip::{
 };
 use crate::transform::stack_base_at_index;
 use crate::transform::{RowRange, RowSelection};
-use crate::transform_graph::TransformGraph;
+use crate::transform_graph::{DataViewStage, TransformGraph};
 use crate::view::ViewState;
 use std::collections::BTreeMap;
 

@@ -7,10 +7,13 @@
 //!
 //! For now, we keep the surface intentionally small and migrate behavior incrementally.
 
+mod data_view;
+
+pub use data_view::*;
+
 use crate::data::DatasetStore;
 use crate::engine::ChartState;
 use crate::engine::model::ChartModel;
-use crate::engine::stages::DataViewStage;
 use crate::engine::window::DataWindow;
 use crate::engine::window_policy::AxisFilter1D;
 use crate::ids::{AxisId, Revision, SeriesId};

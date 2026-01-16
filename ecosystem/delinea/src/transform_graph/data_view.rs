@@ -1,3 +1,5 @@
+//! Incremental indices views (X filter / XY weakFilter).
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 

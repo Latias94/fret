@@ -113,7 +113,7 @@ single “at a glance” view of:
 
 - ECharts reference: `repo-ref/echarts/src/component/dataZoom/*` (order-sensitive multi-dim filtering)
 - ADR(s): `docs/adr/1136-delinea-datazoom-y-and-2d-semantics.md`, `docs/adr/1137-delinea-row-selection-and-filtering-contract.md`
-- Evidence: `ecosystem/delinea/src/engine/mod.rs` (percent-window routing + stage order), `ecosystem/delinea/src/engine/stages/filter_processor.rs` (Y percent extent derivation + Y filtering materialization + participation snapshot), `ecosystem/delinea/src/transform/data_zoom_y.rs` (Y filter node), `ecosystem/delinea/src/engine/stages/data_view.rs` (budgeted indices materialization), `ecosystem/delinea/src/view/mod.rs` (view selection/mask policy), `ecosystem/delinea/src/transform/*` (RowSelection), `ecosystem/delinea/src/engine/tests.rs` (`percent_y_extent_is_scoped_by_x_percent_window`, `data_zoom_y_filter_mode_filter_ignores_x_window_when_x_filter_mode_empty`, `data_zoom_y_filter_mode_filter_culls_band_rows_by_interval_intersection`, `data_zoom_x_filter_mode_empty_masks_scatter_marks_without_culling_row_selection`)
+- Evidence: `ecosystem/delinea/src/engine/mod.rs` (percent-window routing + stage order), `ecosystem/delinea/src/engine/stages/filter_processor.rs` (Y percent extent derivation + Y filtering materialization + participation snapshot), `ecosystem/delinea/src/transform/data_zoom_y.rs` (Y filter node), `ecosystem/delinea/src/transform_graph/data_view.rs` (budgeted indices materialization), `ecosystem/delinea/src/view/mod.rs` (view selection/mask policy), `ecosystem/delinea/src/transform/*` (RowSelection), `ecosystem/delinea/src/engine/tests.rs` (`percent_y_extent_is_scoped_by_x_percent_window`, `data_zoom_y_filter_mode_filter_ignores_x_window_when_x_filter_mode_empty`, `data_zoom_y_filter_mode_filter_culls_band_rows_by_interval_intersection`, `data_zoom_x_filter_mode_empty_masks_scatter_marks_without_culling_row_selection`)
 - Notes: The per-series participation contract (`ParticipationState::series_contract`) is the single source of truth for selection + mask consumption in marks and sampling.
 - Validation (desktop): `cargo run -p fret-demo --bin fret-demo -- chart_multi_axis_demo`
 - What to validate (current v1 behavior):
@@ -286,7 +286,7 @@ single “at a glance” view of:
 - ADR(s): `docs/adr/1140-delinea-dataset-storage-and-indices.md` (append-only rule; v1 ingestion API)
 - Evidence:
   - `ecosystem/delinea/src/data/mod.rs` (`DataTable::append_row_f64`, `DataTable::append_columns_f64`)
-  - `ecosystem/delinea/src/engine/stages/data_view.rs` (append-only resume for XFilter index scans)
+  - `ecosystem/delinea/src/transform_graph/data_view.rs` (append-only resume for XFilter index scans)
   - `ecosystem/delinea/src/engine/stages/ordinal_index.rs` (append-only resume for ordinal inverted index scans)
   - `ecosystem/delinea/src/engine/stages/nearest_x_index.rs` (append-only resume + prefix reuse for nearest-X index scans)
 - Validation (headless): `cargo nextest run -p delinea` (see `data_view_stage_invalidates_indices_on_data_revision_change`)
@@ -582,12 +582,12 @@ goal is to establish a stable “Option -> Engine” spine that scales to more s
   - `TransformGraph` exists as a minimal “derived output cache” surface, currently hosting:
     - X axis data extents caching (used by percent->value mapping).
     - Y percent extents scoped by X selection/filter (order-sensitive “X before Y” semantics per grid).
-    - Incremental indices view caching (`DataViewStage`) is owned by `TransformGraph` (still implemented in `engine/stages/data_view.rs`).
+    - Incremental indices view caching (`DataViewStage`) is owned by `TransformGraph` (implemented in `transform_graph/data_view.rs`).
 - Minimum viable nodes:
   - selection/slice node (monotonic fast path + non-monotonic index selection)
   - derived columns (computed fields)
   - (optional) sort/index helpers for nearest-X sampling
 - Code anchors:
   - `ecosystem/delinea/src/transform/*`
-  - `ecosystem/delinea/src/engine/stages/data_view.rs` (current incremental indices builder)
+  - `ecosystem/delinea/src/transform_graph/data_view.rs` (current incremental indices builder)
   - `ecosystem/delinea/src/transform_graph/mod.rs` (cached extents + Y percent extents caching)
