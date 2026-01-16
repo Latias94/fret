@@ -837,58 +837,16 @@ fn apply_y_percent_for_grid(
     y_percent_extents_by_grid: &mut BTreeMap<GridId, BTreeMap<AxisId, (f64, f64)>>,
     view_changed: &mut bool,
 ) {
-    let y_axes_in_grid = transform_graph.y_percent_extents_scoped_by_x_for_grid(
+    if transform_graph.apply_y_percent_for_grid(
         model,
         datasets,
         state,
         view,
         view_series_index,
-        grid,
         series,
-    );
-
-    if !y_axes_in_grid.is_empty() {
-        y_percent_extents_by_grid.insert(grid, y_axes_in_grid.clone());
-    }
-
-    for (axis, extent) in y_axes_in_grid {
-        let Some((start, end)) = state.axis_percent_windows.get(&axis).copied() else {
-            continue;
-        };
-
-        let axis_range = model.axes.get(&axis).map(|a| a.range).unwrap_or_default();
-        let Some(window) = crate::transform_graph::TransformGraph::percent_range_to_value_window(
-            extent, axis_range, start, end,
-        ) else {
-            continue;
-        };
-
-        let prev = state.data_window_y.get(&axis).copied();
-        if prev != Some(window) {
-            state.data_window_y.insert(axis, window);
-        }
-
-        // Ensure the view reflects the new y filter for this axis so Y indices materialization and
-        // `empty` masks are based on the derived window within the same step.
-        for series_id in series {
-            let Some(series_model) = model.series.get(series_id) else {
-                continue;
-            };
-            if !series_model.visible || series_model.y_axis != axis {
-                continue;
-            }
-            let Some(series_view_index) = view_series_index.get(series_id).copied() else {
-                continue;
-            };
-            let series_view = &mut view.series[series_view_index];
-
-            let mode = series_view.y_filter_mode;
-            let next_filter =
-                crate::engine::window_policy::axis_filter_1d(axis_range, Some(window), mode);
-            if series_view.y_filter != next_filter {
-                series_view.y_filter = next_filter;
-                *view_changed = true;
-            }
-        }
+        grid,
+        y_percent_extents_by_grid,
+    ) {
+        *view_changed = true;
     }
 }
