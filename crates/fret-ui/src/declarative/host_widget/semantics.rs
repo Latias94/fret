@@ -78,6 +78,52 @@ impl ElementHostWidget {
                     cx.push_controlled(node);
                 }
             }
+            ElementInstance::SemanticFlex(props) => {
+                let props = props.semantics;
+                cx.set_role(props.role);
+                if let Some(label) = props.label.as_ref() {
+                    cx.set_label(label.as_ref().to_string());
+                }
+                if let Some(test_id) = props.test_id.as_ref() {
+                    cx.set_test_id(test_id.as_ref().to_string());
+                }
+                if let Some(value) = props.value.as_ref() {
+                    cx.set_value(value.as_ref().to_string());
+                }
+                if props.focusable && !props.disabled {
+                    cx.set_focusable(true);
+                }
+                if props.disabled {
+                    cx.set_disabled(true);
+                }
+                if props.selected {
+                    cx.set_selected(true);
+                }
+                if let Some(expanded) = props.expanded {
+                    cx.set_expanded(expanded);
+                }
+                if props.checked.is_some() {
+                    cx.set_checked(props.checked);
+                }
+                if props.active_descendant.is_some() {
+                    cx.set_active_descendant(props.active_descendant);
+                }
+                if let Some(element) = props.labelled_by_element
+                    && let Some(node) = cx.resolve_declarative_element(element)
+                {
+                    cx.push_labelled_by(node);
+                }
+                if let Some(element) = props.described_by_element
+                    && let Some(node) = cx.resolve_declarative_element(element)
+                {
+                    cx.push_described_by(node);
+                }
+                if let Some(element) = props.controls_element
+                    && let Some(node) = cx.resolve_declarative_element(element)
+                {
+                    cx.push_controlled(node);
+                }
+            }
             ElementInstance::TextInput(props) => {
                 let model = props.model.clone();
                 let model_id = model.id();

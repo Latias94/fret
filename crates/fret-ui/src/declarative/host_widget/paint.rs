@@ -60,6 +60,13 @@ impl ElementHostWidget {
                     None,
                 );
             }
+            ElementInstance::SemanticFlex(props) => {
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.flex.layout.overflow, Overflow::Clip),
+                    None,
+                );
+            }
             ElementInstance::ViewCache(props) => {
                 paint_children_clipped_if(
                     cx,

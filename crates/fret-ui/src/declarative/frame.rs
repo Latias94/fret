@@ -25,6 +25,7 @@ impl Default for WindowFrame {
 pub(crate) enum ElementInstance {
     Container(ContainerProps),
     Semantics(crate::element::SemanticsProps),
+    SemanticFlex(crate::element::SemanticFlexProps),
     FocusScope(FocusScopeProps),
     InteractivityGate(crate::element::InteractivityGateProps),
     Opacity(crate::element::OpacityProps),
@@ -199,6 +200,7 @@ pub(crate) fn layout_style_for_node<H: UiHost>(
         .map(|r| match r.instance {
             ElementInstance::Container(p) => p.layout,
             ElementInstance::Semantics(p) => p.layout,
+            ElementInstance::SemanticFlex(p) => p.flex.layout,
             ElementInstance::FocusScope(p) => p.layout,
             ElementInstance::InteractivityGate(p) => p.layout,
             ElementInstance::Opacity(p) => p.layout,

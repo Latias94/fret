@@ -164,6 +164,7 @@ impl ElementHostWidget {
             ElementInstance::Semantics(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }
+            ElementInstance::SemanticFlex(props) => self.measure_flex(cx, window, props.flex),
             ElementInstance::ViewCache(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }

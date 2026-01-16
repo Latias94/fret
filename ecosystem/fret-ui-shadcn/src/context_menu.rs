@@ -535,34 +535,27 @@ fn menu_structural_group<H: UiHost>(
     role: fret_core::SemanticsRole,
     children: Vec<AnyElement>,
 ) -> AnyElement {
-    cx.semantics(
-        SemanticsProps {
-            layout: {
-                let mut layout = LayoutStyle::default();
-                layout.size.width = Length::Fill;
-                layout
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Fill;
+
+    cx.semantic_flex(
+        fret_ui::element::SemanticFlexProps {
+            flex: FlexProps {
+                layout,
+                direction: fret_core::Axis::Vertical,
+                gap: Px(0.0),
+                padding: Edges::all(Px(0.0)),
+                justify: MainAlign::Start,
+                align: CrossAlign::Stretch,
+                wrap: false,
             },
-            role,
-            ..Default::default()
+            semantics: SemanticsProps {
+                layout,
+                role,
+                ..Default::default()
+            },
         },
-        move |cx| {
-            vec![cx.flex(
-                FlexProps {
-                    layout: {
-                        let mut layout = LayoutStyle::default();
-                        layout.size.width = Length::Fill;
-                        layout
-                    },
-                    direction: fret_core::Axis::Vertical,
-                    gap: Px(0.0),
-                    padding: Edges::all(Px(0.0)),
-                    justify: MainAlign::Start,
-                    align: CrossAlign::Stretch,
-                    wrap: false,
-                },
-                move |_cx| children.clone(),
-            )]
-        },
+        |_cx| children,
     )
 }
 

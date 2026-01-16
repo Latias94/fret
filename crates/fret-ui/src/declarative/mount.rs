@@ -428,6 +428,7 @@ fn mount_element<H: UiHost>(
     let instance = match element.kind {
         ElementKind::Container(p) => ElementInstance::Container(p),
         ElementKind::Semantics(p) => ElementInstance::Semantics(p),
+        ElementKind::SemanticFlex(p) => ElementInstance::SemanticFlex(p),
         ElementKind::FocusScope(p) => ElementInstance::FocusScope(p),
         ElementKind::InteractivityGate(p) => ElementInstance::InteractivityGate(p),
         ElementKind::Opacity(p) => ElementInstance::Opacity(p),
