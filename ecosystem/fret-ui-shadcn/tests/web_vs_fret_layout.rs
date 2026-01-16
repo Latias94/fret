@@ -2322,6 +2322,108 @@ fn web_vs_fret_layout_scroll_area_demo_max_offset_y_matches_web() {
 }
 
 #[test]
+fn web_vs_fret_layout_scroll_area_horizontal_demo_max_offset_matches_web() {
+    let web = read_web_golden("scroll-area-horizontal-demo");
+    let theme = web_theme(&web);
+    let web_root = web_find_by_class_tokens(
+        &theme.root,
+        &[
+            "relative",
+            "w-96",
+            "rounded-md",
+            "border",
+            "whitespace-nowrap",
+        ],
+    )
+    .expect("web horizontal scroll area root");
+
+    let web_viewport = find_first(web_root, &|n| {
+        n.computed_style
+            .get("overflowX")
+            .is_some_and(|v| v == "scroll")
+    })
+    .expect("web scroll viewport (overflowX=scroll)");
+
+    let web_content = web_find_best_by(
+        web_viewport,
+        &|n| n.tag == "div" && n.rect.w > web_viewport.rect.w + 1.0,
+        &|n| -n.rect.w,
+    )
+    .expect("web scroll content (wider than viewport)");
+
+    let expected_max_offset_x = web_content.rect.w - web_viewport.rect.w;
+    let expected_max_offset_y = web_content.rect.h - web_viewport.rect.h;
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let handle = ScrollHandle::default();
+    let _ = run_fret_root(bounds, |cx| {
+        let content = cx.container(
+            ContainerProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Px(Px(web_content.rect.w));
+                    layout.size.height = Length::Px(Px(web_content.rect.h));
+                    layout
+                },
+                ..Default::default()
+            },
+            |_cx| vec![],
+        );
+
+        let scroll_area = fret_ui_shadcn::ScrollArea::new(vec![content])
+            .axis(fret_ui::element::ScrollAxis::Both)
+            .scroll_handle(handle.clone())
+            .refine_layout(LayoutRefinement::default().size_full())
+            .into_element(cx);
+
+        vec![cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:scroll-area-horizontal-demo:max-offset")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(web_root.rect.w));
+                            layout.size.height = Length::Px(Px(web_root.rect.h));
+                            layout
+                        },
+                        padding: Edges::all(Px(1.0)),
+                        ..Default::default()
+                    },
+                    move |_cx| vec![scroll_area],
+                )]
+            },
+        )]
+    });
+
+    let max = handle.max_offset();
+    assert_close_px(
+        "scroll area horizontal max_offset_x",
+        max.x,
+        expected_max_offset_x,
+        1.0,
+    );
+    assert_close_px(
+        "scroll area horizontal max_offset_y",
+        max.y,
+        expected_max_offset_y,
+        1.0,
+    );
+    assert!(
+        max.x.0 > 0.0,
+        "expected scroll area to overflow horizontally"
+    );
+}
+
+#[test]
 fn web_vs_fret_layout_select_scrollable_trigger_size() {
     let web = read_web_golden("select-scrollable");
     let theme = web_theme(&web);
