@@ -500,8 +500,11 @@ impl WorkspaceTabStrip {
                                             let pane_activate_cmd_for_drag = pane_activate_cmd.clone();
                                             let tab_close_command = tab.close_command.clone();
                                             let tab_dirty = tab.dirty;
+                                            #[cfg(feature = "shadcn-context-menu")]
                                             let has_left = index > 0;
+                                            #[cfg(feature = "shadcn-context-menu")]
                                             let has_right = index + 1 < tabs.len();
+                                            #[cfg(feature = "shadcn-context-menu")]
                                             let has_others = tabs.len() > 1;
                                             let is_active = active
                                                 .as_deref()

@@ -4,8 +4,8 @@ use std::sync::Arc;
 use fret_runtime::CommandId;
 
 use crate::commands::{
-    CMD_WORKSPACE_TAB_ACTIVATE_PREFIX, CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_PREFIX,
-    CMD_WORKSPACE_TAB_CLOSE_LEFT, CMD_WORKSPACE_TAB_CLOSE_OTHERS, CMD_WORKSPACE_TAB_CLOSE_RIGHT,
+    CMD_WORKSPACE_TAB_ACTIVATE_PREFIX, CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_LEFT,
+    CMD_WORKSPACE_TAB_CLOSE_OTHERS, CMD_WORKSPACE_TAB_CLOSE_PREFIX, CMD_WORKSPACE_TAB_CLOSE_RIGHT,
     CMD_WORKSPACE_TAB_MOVE_AFTER_PREFIX, CMD_WORKSPACE_TAB_MOVE_BEFORE_PREFIX,
     CMD_WORKSPACE_TAB_MOVE_LEFT, CMD_WORKSPACE_TAB_MOVE_RIGHT, CMD_WORKSPACE_TAB_NEXT,
     CMD_WORKSPACE_TAB_PREV,
@@ -236,9 +236,14 @@ impl WorkspaceTabs {
         for r in &removed {
             self.dirty.remove(r);
         }
-        self.mru.retain(|t| !removed.iter().any(|r| r.as_ref() == t.as_ref()));
+        self.mru
+            .retain(|t| !removed.iter().any(|r| r.as_ref() == t.as_ref()));
         self.active = Some(active.clone());
-        if self.mru.first().is_some_and(|t| t.as_ref() == active.as_ref()) {
+        if self
+            .mru
+            .first()
+            .is_some_and(|t| t.as_ref() == active.as_ref())
+        {
             // ok
         } else {
             self.mru.retain(|t| t.as_ref() != active.as_ref());
@@ -266,9 +271,14 @@ impl WorkspaceTabs {
         for r in &removed {
             self.dirty.remove(r);
         }
-        self.mru.retain(|t| !removed.iter().any(|r| r.as_ref() == t.as_ref()));
+        self.mru
+            .retain(|t| !removed.iter().any(|r| r.as_ref() == t.as_ref()));
         self.active = Some(active.clone());
-        if self.mru.first().is_some_and(|t| t.as_ref() == active.as_ref()) {
+        if self
+            .mru
+            .first()
+            .is_some_and(|t| t.as_ref() == active.as_ref())
+        {
             // ok
         } else {
             self.mru.retain(|t| t.as_ref() != active.as_ref());
