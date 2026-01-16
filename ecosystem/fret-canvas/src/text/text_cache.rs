@@ -111,6 +111,10 @@ impl TextCache {
         self.stats
     }
 
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
     pub fn reset_stats(&mut self) {
         self.stats = CacheStats::default();
     }
