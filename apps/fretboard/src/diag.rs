@@ -13,6 +13,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut script_trigger_path: Option<PathBuf> = None;
     let mut script_result_path: Option<PathBuf> = None;
     let mut script_result_trigger_path: Option<PathBuf> = None;
+    let mut pick_trigger_path: Option<PathBuf> = None;
+    let mut pick_result_path: Option<PathBuf> = None;
+    let mut pick_result_trigger_path: Option<PathBuf> = None;
     let mut timeout_ms: u64 = 30_000;
     let mut poll_ms: u64 = 50;
 
@@ -66,6 +69,30 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 };
                 rest.remove(0);
                 script_result_trigger_path = Some(PathBuf::from(v));
+            }
+            "--pick-trigger-path" => {
+                rest.remove(0);
+                let Some(v) = rest.first().cloned() else {
+                    return Err("missing value for --pick-trigger-path".to_string());
+                };
+                rest.remove(0);
+                pick_trigger_path = Some(PathBuf::from(v));
+            }
+            "--pick-result-path" => {
+                rest.remove(0);
+                let Some(v) = rest.first().cloned() else {
+                    return Err("missing value for --pick-result-path".to_string());
+                };
+                rest.remove(0);
+                pick_result_path = Some(PathBuf::from(v));
+            }
+            "--pick-result-trigger-path" => {
+                rest.remove(0);
+                let Some(v) = rest.first().cloned() else {
+                    return Err("missing value for --pick-result-trigger-path".to_string());
+                };
+                rest.remove(0);
+                pick_result_trigger_path = Some(PathBuf::from(v));
             }
             "--timeout-ms" => {
                 rest.remove(0);
@@ -159,6 +186,39 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     .map(PathBuf::from)
             })
             .unwrap_or_else(|| resolved_out_dir.join("script.result.touch"));
+        resolve_path(&workspace_root, raw)
+    };
+
+    let resolved_pick_trigger_path = {
+        let raw = pick_trigger_path
+            .or_else(|| {
+                std::env::var_os("FRET_DIAG_PICK_TRIGGER_PATH")
+                    .filter(|v| !v.is_empty())
+                    .map(PathBuf::from)
+            })
+            .unwrap_or_else(|| resolved_out_dir.join("pick.touch"));
+        resolve_path(&workspace_root, raw)
+    };
+
+    let resolved_pick_result_path = {
+        let raw = pick_result_path
+            .or_else(|| {
+                std::env::var_os("FRET_DIAG_PICK_RESULT_PATH")
+                    .filter(|v| !v.is_empty())
+                    .map(PathBuf::from)
+            })
+            .unwrap_or_else(|| resolved_out_dir.join("pick.result.json"));
+        resolve_path(&workspace_root, raw)
+    };
+
+    let resolved_pick_result_trigger_path = {
+        let raw = pick_result_trigger_path
+            .or_else(|| {
+                std::env::var_os("FRET_DIAG_PICK_RESULT_TRIGGER_PATH")
+                    .filter(|v| !v.is_empty())
+                    .map(PathBuf::from)
+            })
+            .unwrap_or_else(|| resolved_out_dir.join("pick.result.touch"));
         resolve_path(&workspace_root, raw)
     };
 
@@ -290,6 +350,27 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
             std::process::exit(0);
         }
+        "pick-arm" => {
+            if !rest.is_empty() {
+                return Err(format!("unexpected arguments: {}", rest.join(" ")));
+            }
+            touch(&resolved_pick_trigger_path)?;
+            println!("{}", resolved_pick_trigger_path.display());
+            Ok(())
+        }
+        "pick" => {
+            if !rest.is_empty() {
+                return Err(format!("unexpected arguments: {}", rest.join(" ")));
+            }
+            let result = run_pick_and_wait(
+                &resolved_pick_trigger_path,
+                &resolved_pick_result_path,
+                &resolved_pick_result_trigger_path,
+                timeout_ms,
+                poll_ms,
+            )?;
+            report_pick_result_and_exit(&result);
+        }
         other => Err(format!("unknown diag subcommand: {other}")),
     }
 }
@@ -372,12 +453,30 @@ fn read_script_result_run_id(path: &Path) -> Option<u64> {
     read_script_result(path)?.get("run_id")?.as_u64()
 }
 
+fn read_pick_result(path: &Path) -> Option<serde_json::Value> {
+    let bytes = std::fs::read(path).ok()?;
+    serde_json::from_slice(&bytes).ok()
+}
+
+fn read_pick_result_run_id(path: &Path) -> Option<u64> {
+    read_pick_result(path)?.get("run_id")?.as_u64()
+}
+
 #[derive(Debug, Clone)]
 struct ScriptResultSummary {
     run_id: u64,
     stage: Option<String>,
     reason: Option<String>,
     last_bundle_dir: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+struct PickResultSummary {
+    run_id: u64,
+    stage: Option<String>,
+    reason: Option<String>,
+    last_bundle_dir: Option<String>,
+    selector: Option<serde_json::Value>,
 }
 
 fn run_script_and_wait(
@@ -453,6 +552,94 @@ fn report_result_and_exit(result: &ScriptResultSummary) -> ! {
         }
         _ => {
             eprintln!("unexpected script stage: {:?}", result);
+            std::process::exit(1);
+        }
+    }
+}
+
+fn run_pick_and_wait(
+    pick_trigger_path: &Path,
+    pick_result_path: &Path,
+    pick_result_trigger_path: &Path,
+    timeout_ms: u64,
+    poll_ms: u64,
+) -> Result<PickResultSummary, String> {
+    let prev_run_id = read_pick_result_run_id(pick_result_path).unwrap_or(0);
+
+    touch(pick_trigger_path)?;
+
+    let deadline = Instant::now() + Duration::from_millis(timeout_ms);
+    loop {
+        if Instant::now() >= deadline {
+            return Err(format!(
+                "timeout waiting for pick result (result: {}, trigger: {})",
+                pick_result_path.display(),
+                pick_result_trigger_path.display()
+            ));
+        }
+
+        if let Some(result) = read_pick_result(pick_result_path) {
+            let run_id = result.get("run_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if run_id > prev_run_id {
+                let stage = result
+                    .get("stage")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+                let reason = result
+                    .get("reason")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+                let last_bundle_dir = result
+                    .get("last_bundle_dir")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+
+                let selector = result
+                    .get("selection")
+                    .and_then(|v| v.get("selectors"))
+                    .and_then(|v| v.as_array())
+                    .and_then(|arr| arr.first())
+                    .cloned();
+
+                return Ok(PickResultSummary {
+                    run_id,
+                    stage,
+                    reason,
+                    last_bundle_dir,
+                    selector,
+                });
+            }
+        }
+
+        std::thread::sleep(Duration::from_millis(poll_ms.max(1)));
+    }
+}
+
+fn report_pick_result_and_exit(result: &PickResultSummary) -> ! {
+    match result.stage.as_deref() {
+        Some("picked") => {
+            if let Some(sel) = result.selector.as_ref() {
+                println!("{}", serde_json::to_string(sel).unwrap_or_default());
+            } else {
+                println!("PICKED (run_id={})", result.run_id);
+            }
+            std::process::exit(0);
+        }
+        Some("failed") => {
+            let reason = result.reason.as_deref().unwrap_or("unknown");
+            let last_bundle_dir = result.last_bundle_dir.as_deref().unwrap_or("");
+            if last_bundle_dir.is_empty() {
+                eprintln!("FAIL (run_id={}) reason={reason}", result.run_id);
+            } else {
+                eprintln!(
+                    "FAIL (run_id={}) reason={reason} last_bundle_dir={last_bundle_dir}",
+                    result.run_id
+                );
+            }
+            std::process::exit(1);
+        }
+        _ => {
+            eprintln!("unexpected pick stage: {:?}", result);
             std::process::exit(1);
         }
     }

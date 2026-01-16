@@ -499,6 +499,13 @@ fn ui_app_handle_event<S>(
         svc.record_event(app, window, event);
     });
 
+    #[cfg(feature = "diagnostics")]
+    if app.with_global_mut(UiDiagnosticsService::default, |svc, app| {
+        svc.maybe_intercept_event_for_picking(app, window, event)
+    }) {
+        return;
+    }
+
     state.ui.dispatch_event(app, services, event);
 
     #[cfg(feature = "ui-assets")]

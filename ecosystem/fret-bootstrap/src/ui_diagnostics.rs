@@ -23,6 +23,10 @@ pub struct UiDiagnosticsConfig {
     pub script_result_path: PathBuf,
     pub script_result_trigger_path: PathBuf,
     pub script_auto_dump: bool,
+    pub pick_trigger_path: PathBuf,
+    pub pick_result_path: PathBuf,
+    pub pick_result_trigger_path: PathBuf,
+    pub pick_auto_dump: bool,
     pub redact_text: bool,
     pub max_debug_string_bytes: usize,
 }
@@ -65,6 +69,19 @@ impl Default for UiDiagnosticsConfig {
             .map(PathBuf::from)
             .unwrap_or_else(|| out_dir.join("script.result.touch"));
         let script_auto_dump = env_flag_default_true("FRET_DIAG_SCRIPT_AUTO_DUMP");
+        let pick_trigger_path = std::env::var_os("FRET_DIAG_PICK_TRIGGER_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| out_dir.join("pick.touch"));
+        let pick_result_path = std::env::var_os("FRET_DIAG_PICK_RESULT_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| out_dir.join("pick.result.json"));
+        let pick_result_trigger_path = std::env::var_os("FRET_DIAG_PICK_RESULT_TRIGGER_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| out_dir.join("pick.result.touch"));
+        let pick_auto_dump = env_flag_default_true("FRET_DIAG_PICK_AUTO_DUMP");
         let redact_text = env_flag_default_true("FRET_DIAG_REDACT_TEXT");
         let max_debug_string_bytes = std::env::var("FRET_DIAG_MAX_DEBUG_STRING_BYTES")
             .ok()
@@ -83,6 +100,10 @@ impl Default for UiDiagnosticsConfig {
             script_result_path,
             script_result_trigger_path,
             script_auto_dump,
+            pick_trigger_path,
+            pick_result_path,
+            pick_result_trigger_path,
+            pick_auto_dump,
             redact_text,
             max_debug_string_bytes,
         }
@@ -95,12 +116,16 @@ pub struct UiDiagnosticsService {
     per_window: HashMap<AppWindowId, WindowRing>,
     last_trigger_mtime: Option<std::time::SystemTime>,
     last_script_trigger_mtime: Option<std::time::SystemTime>,
+    last_pick_trigger_mtime: Option<std::time::SystemTime>,
     pending_script: Option<UiActionScriptV1>,
     pending_script_run_id: Option<u64>,
     active_scripts: HashMap<AppWindowId, ActiveScript>,
     pending_force_dump_label: Option<String>,
     last_dump_dir: Option<PathBuf>,
     last_script_run_id: u64,
+    last_pick_run_id: u64,
+    pick_armed_run_id: Option<u64>,
+    pending_pick: Option<PendingPick>,
 }
 
 impl UiDiagnosticsService {
@@ -108,11 +133,54 @@ impl UiDiagnosticsService {
         self.cfg.enabled
     }
 
-    pub fn wants_inspection_active(&self, window: AppWindowId) -> bool {
+    pub fn wants_inspection_active(&mut self, window: AppWindowId) -> bool {
         if !self.is_enabled() {
             return false;
         }
-        self.pending_script.is_some() || self.active_scripts.contains_key(&window)
+
+        self.poll_pick_trigger();
+
+        self.pending_script.is_some()
+            || self.active_scripts.contains_key(&window)
+            || self.pick_armed_run_id.is_some()
+            || self
+                .pending_pick
+                .as_ref()
+                .is_some_and(|p| p.window == window)
+    }
+
+    /// Returns `true` if the event was consumed by diagnostics picking.
+    ///
+    /// When a pick is armed, the next pointer down is intercepted (not dispatched to the UI tree)
+    /// to avoid triggering app behavior while selecting a target (GPUI/Zed inspect style).
+    pub fn maybe_intercept_event_for_picking(
+        &mut self,
+        app: &mut App,
+        window: AppWindowId,
+        event: &Event,
+    ) -> bool {
+        if !self.is_enabled() {
+            return false;
+        }
+
+        self.poll_pick_trigger();
+
+        let Some(run_id) = self.pick_armed_run_id else {
+            return false;
+        };
+
+        let Event::Pointer(PointerEvent::Down { position, .. }) = event else {
+            return false;
+        };
+
+        self.pick_armed_run_id = None;
+        self.pending_pick = Some(PendingPick {
+            run_id,
+            window,
+            position: *position,
+        });
+        app.request_redraw(window);
+        true
     }
 
     pub fn drive_script_for_window(
@@ -359,6 +427,13 @@ impl UiDiagnosticsService {
     pub fn clear_window(&mut self, window: AppWindowId) {
         self.per_window.remove(&window);
         self.active_scripts.remove(&window);
+        if self
+            .pending_pick
+            .as_ref()
+            .is_some_and(|p| p.window == window)
+        {
+            self.pending_pick = None;
+        }
     }
 
     pub fn record_model_changes(&mut self, window: AppWindowId, changed: &[ModelId]) {
@@ -381,6 +456,8 @@ impl UiDiagnosticsService {
         if !self.is_enabled() {
             return;
         }
+
+        self.poll_pick_trigger();
 
         let ring = self.per_window.entry(window).or_default();
         ring.update_pointer_position(event);
@@ -441,6 +518,13 @@ impl UiDiagnosticsService {
         };
 
         ring.push_snapshot(&self.cfg, snapshot);
+
+        if let Some(pending) = self.pending_pick.clone()
+            && pending.window == window
+        {
+            let raw_semantics = ui.semantics_snapshot();
+            self.resolve_pending_pick_for_window(window, pending.position, raw_semantics, ui);
+        }
     }
 
     pub fn maybe_dump_if_triggered(&mut self) -> Option<PathBuf> {
@@ -574,6 +658,15 @@ impl UiDiagnosticsService {
         id
     }
 
+    fn next_pick_run_id(&mut self) -> u64 {
+        let mut id = unix_ms_now();
+        if id <= self.last_pick_run_id {
+            id = self.last_pick_run_id.saturating_add(1);
+        }
+        self.last_pick_run_id = id;
+        id
+    }
+
     fn write_script_result(&self, result: UiScriptResultV1) {
         if !self.is_enabled() {
             return;
@@ -581,6 +674,109 @@ impl UiDiagnosticsService {
         let _ = write_json(self.cfg.script_result_path.clone(), &result);
         let _ = touch_file(&self.cfg.script_result_trigger_path);
     }
+
+    fn write_pick_result(&self, result: UiPickResultV1) {
+        if !self.is_enabled() {
+            return;
+        }
+        let _ = write_json(self.cfg.pick_result_path.clone(), &result);
+        let _ = touch_file(&self.cfg.pick_result_trigger_path);
+    }
+
+    fn poll_pick_trigger(&mut self) {
+        let modified =
+            match std::fs::metadata(&self.cfg.pick_trigger_path).and_then(|m| m.modified()) {
+                Ok(modified) => modified,
+                Err(_) => {
+                    if let Some(dir) = self.cfg.pick_trigger_path.parent() {
+                        let _ = std::fs::create_dir_all(dir);
+                    }
+                    if std::fs::OpenOptions::new()
+                        .create(true)
+                        .write(true)
+                        .open(&self.cfg.pick_trigger_path)
+                        .is_ok()
+                        && let Ok(modified) = std::fs::metadata(&self.cfg.pick_trigger_path)
+                            .and_then(|m| m.modified())
+                    {
+                        self.last_pick_trigger_mtime = Some(modified);
+                    }
+                    return;
+                }
+            };
+        if self
+            .last_pick_trigger_mtime
+            .is_some_and(|prev| prev >= modified)
+        {
+            return;
+        }
+        self.last_pick_trigger_mtime = Some(modified);
+
+        self.pending_pick = None;
+        self.pick_armed_run_id = Some(self.next_pick_run_id());
+    }
+
+    fn resolve_pending_pick_for_window(
+        &mut self,
+        window: AppWindowId,
+        position: Point,
+        raw_semantics: Option<&fret_core::SemanticsSnapshot>,
+        ui: &UiTree<App>,
+    ) {
+        let Some(pending) = self.pending_pick.clone() else {
+            return;
+        };
+        if pending.window != window {
+            return;
+        }
+
+        let mut result = UiPickResultV1 {
+            schema_version: 1,
+            run_id: pending.run_id,
+            updated_unix_ms: unix_ms_now(),
+            window: Some(window.data().as_ffi()),
+            stage: UiPickStageV1::Failed,
+            position: Some(PointV1::from(position)),
+            selection: None,
+            reason: None,
+            last_bundle_dir: self
+                .last_dump_dir
+                .as_ref()
+                .map(|p| display_path(&self.cfg.out_dir, p)),
+        };
+
+        let selection = match raw_semantics {
+            Some(snapshot) => pick_semantics_node_at(snapshot, ui, position)
+                .map(|node| UiPickSelectionV1::from_node(snapshot, node, &self.cfg)),
+            None => None,
+        };
+
+        match selection {
+            Some(sel) => {
+                result.stage = UiPickStageV1::Picked;
+                result.selection = Some(sel);
+            }
+            None => {
+                result.reason = Some("no matching semantics node under pointer".to_string());
+            }
+        }
+
+        if self.cfg.pick_auto_dump {
+            if let Some(dir) = self.dump_bundle(Some("pick")) {
+                result.last_bundle_dir = Some(display_path(&self.cfg.out_dir, &dir));
+            }
+        }
+
+        self.write_pick_result(result);
+        self.pending_pick = None;
+    }
+}
+
+#[derive(Debug, Clone)]
+struct PendingPick {
+    run_id: u64,
+    window: AppWindowId,
+    position: Point,
 }
 
 #[derive(Default)]
@@ -635,6 +831,10 @@ pub struct UiDiagnosticsBundleConfigV1 {
     pub script_result_path: String,
     pub script_result_trigger_path: String,
     pub script_auto_dump: bool,
+    pub pick_trigger_path: String,
+    pub pick_result_path: String,
+    pub pick_result_trigger_path: String,
+    pub pick_auto_dump: bool,
     pub redact_text: bool,
     pub max_debug_string_bytes: usize,
 }
@@ -671,6 +871,19 @@ impl UiDiagnosticsBundleV1 {
                     &svc.cfg.script_result_trigger_path,
                 ),
                 script_auto_dump: svc.cfg.script_auto_dump,
+                pick_trigger_path: sanitize_path_for_bundle(
+                    &svc.cfg.out_dir,
+                    &svc.cfg.pick_trigger_path,
+                ),
+                pick_result_path: sanitize_path_for_bundle(
+                    &svc.cfg.out_dir,
+                    &svc.cfg.pick_result_path,
+                ),
+                pick_result_trigger_path: sanitize_path_for_bundle(
+                    &svc.cfg.out_dir,
+                    &svc.cfg.pick_result_trigger_path,
+                ),
+                pick_auto_dump: svc.cfg.pick_auto_dump,
                 redact_text: svc.cfg.redact_text,
                 max_debug_string_bytes: svc.cfg.max_debug_string_bytes,
             },
@@ -828,6 +1041,48 @@ pub enum UiScriptStageV1 {
     Running,
     Passed,
     Failed,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiPickResultV1 {
+    pub schema_version: u32,
+    pub run_id: u64,
+    pub updated_unix_ms: u64,
+    pub window: Option<u64>,
+    pub stage: UiPickStageV1,
+    pub position: Option<PointV1>,
+    pub selection: Option<UiPickSelectionV1>,
+    pub reason: Option<String>,
+    pub last_bundle_dir: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiPickStageV1 {
+    Picked,
+    Failed,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiPickSelectionV1 {
+    pub node: UiSemanticsNodeV1,
+    pub selectors: Vec<UiSelectorV1>,
+}
+
+impl UiPickSelectionV1 {
+    fn from_node(
+        snapshot: &fret_core::SemanticsSnapshot,
+        node: &fret_core::SemanticsNode,
+        cfg: &UiDiagnosticsConfig,
+    ) -> Self {
+        let exported =
+            UiSemanticsNodeV1::from_node(node, cfg.redact_text, cfg.max_debug_string_bytes);
+        let selectors = suggest_selectors(snapshot, node, &exported, cfg);
+        Self {
+            node: exported,
+            selectors,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1601,6 +1856,112 @@ fn center_of_rect(rect: Rect) -> Point {
     Point::new(x, y)
 }
 
+fn pick_semantics_node_at<'a>(
+    snapshot: &'a fret_core::SemanticsSnapshot,
+    ui: &UiTree<App>,
+    position: Point,
+) -> Option<&'a fret_core::SemanticsNode> {
+    let index = SemanticsIndex::new(snapshot);
+
+    let hit = ui.debug_hit_test(position).hit;
+    if let Some(hit) = hit {
+        let mut cur = Some(hit.data().as_ffi());
+        while let Some(id) = cur {
+            if index.is_selectable(id)
+                && let Some(node) = index.by_id.get(&id).copied()
+            {
+                return Some(node);
+            }
+            cur = index
+                .by_id
+                .get(&id)
+                .and_then(|n| n.parent.map(|p| p.data().as_ffi()));
+        }
+    }
+
+    pick_semantics_node_by_bounds(snapshot, position)
+}
+
+fn pick_semantics_node_by_bounds<'a>(
+    snapshot: &'a fret_core::SemanticsSnapshot,
+    position: Point,
+) -> Option<&'a fret_core::SemanticsNode> {
+    let index = SemanticsIndex::new(snapshot);
+    pick_best_match(
+        snapshot.nodes.iter().filter(|n| {
+            let id = n.id.data().as_ffi();
+            index.is_selectable(id) && n.bounds.contains(position)
+        }),
+        &index,
+    )
+}
+
+fn suggest_selectors(
+    snapshot: &fret_core::SemanticsSnapshot,
+    raw_node: &fret_core::SemanticsNode,
+    exported_node: &UiSemanticsNodeV1,
+    cfg: &UiDiagnosticsConfig,
+) -> Vec<UiSelectorV1> {
+    let mut out = Vec::new();
+
+    if let Some(id) = raw_node.test_id.as_deref() {
+        out.push(UiSelectorV1::TestId { id: id.to_string() });
+    }
+
+    let role = semantics_role_label(raw_node.role).to_string();
+    if let Some(name) = exported_node.label.as_deref() {
+        if !(cfg.redact_text && is_redacted_string(name)) {
+            let ancestors = selector_ancestors_for(snapshot, raw_node);
+            if !ancestors.is_empty() {
+                out.push(UiSelectorV1::RoleAndPath {
+                    role: role.clone(),
+                    name: name.to_string(),
+                    ancestors,
+                });
+            }
+            out.push(UiSelectorV1::RoleAndName {
+                role: role.clone(),
+                name: name.to_string(),
+            });
+        }
+    }
+
+    out.push(UiSelectorV1::NodeId {
+        node: raw_node.id.data().as_ffi(),
+    });
+    out
+}
+
+fn selector_ancestors_for(
+    snapshot: &fret_core::SemanticsSnapshot,
+    node: &fret_core::SemanticsNode,
+) -> Vec<UiRoleAndNameV1> {
+    let index = SemanticsIndex::new(snapshot);
+    let mut rev: Vec<UiRoleAndNameV1> = Vec::new();
+
+    let mut cur = node
+        .parent
+        .and_then(|p| index.by_id.get(&p.data().as_ffi()).copied());
+    while let Some(n) = cur {
+        if let Some(label) = n.label.as_deref() {
+            rev.push(UiRoleAndNameV1 {
+                role: semantics_role_label(n.role).to_string(),
+                name: label.to_string(),
+            });
+        }
+        cur = n
+            .parent
+            .and_then(|p| index.by_id.get(&p.data().as_ffi()).copied());
+    }
+
+    rev.reverse();
+    rev
+}
+
+fn is_redacted_string(s: &str) -> bool {
+    s.trim_start().starts_with("<redacted")
+}
+
 fn click_events(position: Point, button: UiMouseButtonV1) -> [Event; 3] {
     let pointer_id = PointerId(0);
     let modifiers = Modifiers::default();
@@ -1766,6 +2127,176 @@ fn sanitize_label(label: &str) -> String {
         "bundle".to_string()
     } else {
         out
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_core::{
+        AppWindowId, Px, Rect, SemanticsActions, SemanticsFlags, SemanticsNode, SemanticsRole,
+        SemanticsRoot, SemanticsSnapshot, Size,
+    };
+    use slotmap::KeyData;
+
+    fn node_id(id: u64) -> NodeId {
+        NodeId::from(KeyData::from_ffi(id))
+    }
+
+    fn window_id(id: u64) -> AppWindowId {
+        AppWindowId::from(KeyData::from_ffi(id))
+    }
+
+    fn rect(x: f32, y: f32, w: f32, h: f32) -> Rect {
+        Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(w), Px(h)))
+    }
+
+    fn semantics_node(
+        id: u64,
+        parent: Option<u64>,
+        role: SemanticsRole,
+        bounds: Rect,
+        label: &str,
+    ) -> SemanticsNode {
+        SemanticsNode {
+            id: node_id(id),
+            parent: parent.map(node_id),
+            role,
+            bounds,
+            flags: SemanticsFlags::default(),
+            test_id: None,
+            active_descendant: None,
+            pos_in_set: None,
+            set_size: None,
+            label: Some(label.to_string()),
+            value: None,
+            text_selection: None,
+            text_composition: None,
+            actions: SemanticsActions::default(),
+            labelled_by: Vec::new(),
+            described_by: Vec::new(),
+            controls: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn pick_by_bounds_prefers_topmost_root_z() {
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![
+                SemanticsRoot {
+                    root: node_id(1),
+                    visible: true,
+                    blocks_underlay_input: false,
+                    hit_testable: true,
+                    z_index: 0,
+                },
+                SemanticsRoot {
+                    root: node_id(3),
+                    visible: true,
+                    blocks_underlay_input: false,
+                    hit_testable: true,
+                    z_index: 10,
+                },
+            ],
+            barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    1,
+                    None,
+                    SemanticsRole::Panel,
+                    rect(0.0, 0.0, 200.0, 200.0),
+                    "root-a",
+                ),
+                semantics_node(
+                    2,
+                    Some(1),
+                    SemanticsRole::Button,
+                    rect(0.0, 0.0, 100.0, 100.0),
+                    "a",
+                ),
+                semantics_node(
+                    3,
+                    None,
+                    SemanticsRole::Panel,
+                    rect(0.0, 0.0, 200.0, 200.0),
+                    "root-b",
+                ),
+                semantics_node(
+                    4,
+                    Some(3),
+                    SemanticsRole::Button,
+                    rect(0.0, 0.0, 100.0, 100.0),
+                    "b",
+                ),
+            ],
+        };
+
+        let picked = pick_semantics_node_by_bounds(&snapshot, Point::new(Px(10.0), Px(10.0)))
+            .expect("expected a pick");
+        assert_eq!(picked.id, node_id(4));
+    }
+
+    #[test]
+    fn pick_by_bounds_respects_modal_barrier() {
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![
+                SemanticsRoot {
+                    root: node_id(1),
+                    visible: true,
+                    blocks_underlay_input: false,
+                    hit_testable: true,
+                    z_index: 0,
+                },
+                SemanticsRoot {
+                    root: node_id(3),
+                    visible: true,
+                    blocks_underlay_input: true,
+                    hit_testable: true,
+                    z_index: 10,
+                },
+            ],
+            barrier_root: Some(node_id(3)),
+            focus: None,
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    1,
+                    None,
+                    SemanticsRole::Panel,
+                    rect(0.0, 0.0, 200.0, 200.0),
+                    "underlay",
+                ),
+                semantics_node(
+                    2,
+                    Some(1),
+                    SemanticsRole::Button,
+                    rect(0.0, 0.0, 100.0, 100.0),
+                    "underlay-button",
+                ),
+                semantics_node(
+                    3,
+                    None,
+                    SemanticsRole::Dialog,
+                    rect(0.0, 0.0, 200.0, 200.0),
+                    "modal",
+                ),
+                semantics_node(
+                    4,
+                    Some(3),
+                    SemanticsRole::Button,
+                    rect(0.0, 0.0, 100.0, 100.0),
+                    "modal-button",
+                ),
+            ],
+        };
+
+        let picked = pick_semantics_node_by_bounds(&snapshot, Point::new(Px(10.0), Px(10.0)))
+            .expect("expected a pick");
+        assert_eq!(picked.id, node_id(4));
     }
 }
 
