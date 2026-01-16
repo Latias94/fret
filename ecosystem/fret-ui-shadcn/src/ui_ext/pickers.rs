@@ -8,4 +8,4 @@ impl_ui_patch_passthrough!(Calendar);
 impl_ui_patch_passthrough!(CalendarRange);
 impl_ui_patch_passthrough!(DatePicker);
 impl_ui_patch_passthrough!(DateRangePicker);
-impl_ui_patch_passthrough!(RadioGroup);
+impl_ui_patch_chrome_layout!(RadioGroup);
