@@ -5,7 +5,7 @@ use fret_runtime::Model;
 use fret_ui::action::{OnInternalDrag, OnPointerDown};
 use fret_ui::element::{
     AnyElement, ContainerProps, InternalDragRegionProps, LayoutStyle, Length, PointerRegionProps,
-    ResizablePanelGroupProps,
+    ResizablePanelGroupProps, ViewCacheProps,
 };
 use fret_ui::{ElementContext, Invalidation, ResizablePanelGroupStyle, Theme, UiHost};
 
@@ -492,7 +492,15 @@ where
                     corner_radii,
                     ..Default::default()
                 },
-                |cx| vec![render_pane(cx, pane, is_active, tab_drag.clone())],
+                |cx| {
+                    vec![cx.view_cache(
+                        ViewCacheProps {
+                            layout: fill_layout(),
+                            contained_layout: true,
+                        },
+                        |cx| vec![render_pane(cx, pane, is_active, tab_drag.clone())],
+                    )]
+                },
             );
 
             vec![cx.internal_drag_region(
