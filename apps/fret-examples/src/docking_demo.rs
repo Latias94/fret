@@ -110,6 +110,7 @@ impl DockingDemoDriver {
     fn build_ui(_app: &mut App, window: AppWindowId) -> DockingDemoWindowState {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
+        ui.set_view_cache_enabled(std::env::var_os("FRET_EXAMPLES_VIEW_CACHE").is_some());
         DockingDemoWindowState { ui, root: None }
     }
 
