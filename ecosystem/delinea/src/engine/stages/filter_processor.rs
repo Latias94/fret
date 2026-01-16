@@ -4,7 +4,7 @@ use crate::engine::model::ChartModel;
 use crate::ids::{AxisId, DatasetId, GridId, Revision, SeriesId};
 use crate::spec::FilterMode;
 use crate::transform::{RowRange, RowSelection, SeriesXPolicy};
-use crate::transform_graph::TransformGraph;
+use crate::transform_graph::{FilterPlanStepKind, TransformGraph};
 use crate::view::SeriesEmptyMask;
 use crate::view::ViewState;
 use std::collections::BTreeMap;
@@ -176,26 +176,6 @@ pub struct FilterProcessorResult {
     pub y_indices_skipped_indices_scan_avoid_series: u32,
 }
 
-#[derive(Debug, Default, Clone)]
-struct GridFilterPlan {
-    series: Vec<SeriesId>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum FilterPlanStepKind {
-    XYWeakFilter,
-    XRange,
-    XIndices,
-    YPercent,
-    YIndices,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct FilterPlanStep {
-    grid: GridId,
-    kind: FilterPlanStepKind,
-}
-
 impl FilterProcessorStage {
     pub fn request_data_views(
         &mut self,
@@ -336,23 +316,10 @@ impl FilterProcessorStage {
         let mut y_indices_skipped_view_len_cap_series = 0u32;
         let mut y_indices_skipped_indices_scan_avoid_series = 0u32;
 
-        // ECharts `dataZoomProcessor` applies transforms in an order-sensitive way per grid (e.g. X
-        // before Y). We currently only allow one dataZoom per axis, but structuring this stage by
-        // grid provides a stable footing for a future general transform plan.
-        let mut grid_plans: BTreeMap<GridId, GridFilterPlan> = BTreeMap::new();
-        for series_id in &model.series_order {
-            let Some(series_model) = model.series.get(series_id) else {
-                continue;
-            };
-            let Some(axis) = model.axes.get(&series_model.x_axis) else {
-                continue;
-            };
-            let grid = axis.grid;
-            let plan = grid_plans
-                .entry(grid)
-                .or_insert_with(|| GridFilterPlan { series: Vec::new() });
-            plan.series.push(*series_id);
-        }
+        // ECharts `dataZoomProcessor` applies transforms in an order-sensitive way per grid (e.g.
+        // X before Y). `TransformGraph` owns the current v1 plan scaffold and caches it by model
+        // revision.
+        let plan = transform_graph.filter_plan(model).clone();
 
         let view_series_index: BTreeMap<SeriesId, usize> = view
             .series
@@ -361,40 +328,15 @@ impl FilterProcessorStage {
             .map(|(i, v)| (v.series, i))
             .collect();
 
-        let mut plan_steps: Vec<FilterPlanStep> = Vec::new();
-        plan_steps.reserve(grid_plans.len() * 4);
-        for grid in grid_plans.keys().copied() {
-            plan_steps.push(FilterPlanStep {
-                grid,
-                kind: FilterPlanStepKind::XYWeakFilter,
-            });
-            plan_steps.push(FilterPlanStep {
-                grid,
-                kind: FilterPlanStepKind::XRange,
-            });
-            plan_steps.push(FilterPlanStep {
-                grid,
-                kind: FilterPlanStepKind::XIndices,
-            });
-            plan_steps.push(FilterPlanStep {
-                grid,
-                kind: FilterPlanStepKind::YPercent,
-            });
-            plan_steps.push(FilterPlanStep {
-                grid,
-                kind: FilterPlanStepKind::YIndices,
-            });
-        }
-
         // Step ordering is intentionally explicit and per-grid (ECharts-style ordering scaffold).
         const MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN: usize = 200_000;
         const MAX_Y_FILTER_VIEW_LEN: usize = 200_000;
 
-        let plan_grids = grid_plans.len().min(u32::MAX as usize) as u32;
-        let plan_steps_run = plan_steps.len().min(u32::MAX as usize) as u32;
+        let plan_grids = plan.grids.len().min(u32::MAX as usize) as u32;
+        let plan_steps_run = plan.steps.len().min(u32::MAX as usize) as u32;
 
-        for step in &plan_steps {
-            let Some(plan) = grid_plans.get(&step.grid) else {
+        for step in &plan.steps {
+            let Some(series) = plan.grids.get(&step.grid) else {
                 continue;
             };
 
@@ -406,7 +348,7 @@ impl FilterProcessorStage {
                     view,
                     transform_graph,
                     &view_series_index,
-                    &plan.series,
+                    series,
                     MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN,
                     &mut xy_weak_filter_pending,
                     &mut view_changed,
@@ -419,7 +361,7 @@ impl FilterProcessorStage {
                     datasets,
                     view,
                     &view_series_index,
-                    &plan.series,
+                    series,
                     &mut view_changed,
                 ),
                 FilterPlanStepKind::XIndices => apply_x_indices_for_grid(
@@ -428,7 +370,7 @@ impl FilterProcessorStage {
                     view,
                     transform_graph,
                     &view_series_index,
-                    &plan.series,
+                    series,
                     &mut view_changed,
                     &mut x_indices_applied,
                     &mut x_indices_applied_series,
@@ -440,7 +382,7 @@ impl FilterProcessorStage {
                     state,
                     view,
                     &view_series_index,
-                    &plan.series,
+                    series,
                     step.grid,
                     &mut y_percent_extents_by_grid,
                     &mut view_changed,
@@ -451,7 +393,7 @@ impl FilterProcessorStage {
                     state,
                     view,
                     &view_series_index,
-                    &plan.series,
+                    series,
                     MAX_Y_FILTER_VIEW_LEN,
                     &x_indices_applied,
                     &mut view_changed,
@@ -470,7 +412,7 @@ impl FilterProcessorStage {
         }
 
         let plan_output =
-            build_filter_plan_output(model, view, &grid_plans, &y_percent_extents_by_grid);
+            build_filter_plan_output(model, view, &plan.grids, &y_percent_extents_by_grid);
         transform_graph.set_filter_plan_output(plan_output);
 
         FilterProcessorResult {
@@ -491,15 +433,15 @@ impl FilterProcessorStage {
 fn build_filter_plan_output(
     model: &ChartModel,
     view: &ViewState,
-    grid_plans: &BTreeMap<GridId, GridFilterPlan>,
+    grid_plans: &BTreeMap<GridId, Vec<SeriesId>>,
     y_percent_extents_by_grid: &BTreeMap<GridId, BTreeMap<AxisId, (f64, f64)>>,
 ) -> FilterPlanOutput {
     let mut grids: Vec<GridFilterOutput> = Vec::new();
     grids.reserve(grid_plans.len());
-    for (grid, plan) in grid_plans {
+    for (grid, series) in grid_plans {
         grids.push(GridFilterOutput {
             grid: *grid,
-            series: plan.series.clone(),
+            series: series.clone(),
             y_percent_extents: y_percent_extents_by_grid
                 .get(grid)
                 .cloned()

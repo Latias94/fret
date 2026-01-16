@@ -8,8 +8,10 @@
 //! For now, we keep the surface intentionally small and migrate behavior incrementally.
 
 mod data_view;
+mod filter_plan;
 
 pub use data_view::*;
+pub use filter_plan::*;
 
 use crate::data::DatasetStore;
 use crate::engine::ChartState;
@@ -31,6 +33,7 @@ pub struct TransformGraph {
     y_percent_extents_cache: BTreeMap<crate::ids::GridId, CachedYExtents>,
     data_views: DataViewStage,
     filter_plan_output: FilterPlanOutput,
+    filter_plan_cache: Option<CachedFilterPlan>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -45,12 +48,19 @@ struct CachedYExtents {
     extents: BTreeMap<AxisId, (f64, f64)>,
 }
 
+#[derive(Debug, Clone)]
+struct CachedFilterPlan {
+    model_rev: Revision,
+    plan: FilterPlan,
+}
+
 impl TransformGraph {
     pub fn clear(&mut self) {
         self.x_extent_cache.clear();
         self.y_percent_extents_cache.clear();
         self.data_views = DataViewStage::default();
         self.filter_plan_output = FilterPlanOutput::default();
+        self.filter_plan_cache = None;
     }
 
     pub fn data_views(&self) -> &DataViewStage {
@@ -71,6 +81,21 @@ impl TransformGraph {
 
     pub fn set_filter_plan_output(&mut self, output: FilterPlanOutput) {
         self.filter_plan_output = output;
+    }
+
+    pub fn filter_plan(&mut self, model: &ChartModel) -> &FilterPlan {
+        let model_rev = model.revs.spec;
+        let needs_rebuild = match self.filter_plan_cache.as_ref() {
+            Some(cached) => cached.model_rev != model_rev,
+            None => true,
+        };
+
+        if needs_rebuild {
+            let plan = build_filter_plan(model);
+            self.filter_plan_cache = Some(CachedFilterPlan { model_rev, plan });
+        }
+
+        &self.filter_plan_cache.as_ref().expect("cache set").plan
     }
 
     pub fn prepare_requests(&mut self, datasets: &DatasetStore) {
