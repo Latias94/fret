@@ -76,7 +76,12 @@ pub(crate) fn variant_colors(
     let fg_secondary = theme.color_required("secondary-foreground");
 
     let bg_destructive = theme.color_required("destructive");
-    let fg_destructive = theme.color_required("destructive-foreground");
+    let fg_white = Color {
+        r: 1.0,
+        g: 1.0,
+        b: 1.0,
+        a: 1.0,
+    };
 
     let fg_default = theme.color_required("foreground");
 
@@ -99,7 +104,7 @@ pub(crate) fn variant_colors(
             alpha_mul(bg_destructive, 0.9),
             alpha_mul(bg_destructive, 0.8),
             transparent,
-            fg_destructive,
+            fg_white,
         ),
         ButtonVariant::Secondary => (
             bg_secondary,

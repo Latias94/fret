@@ -143,9 +143,9 @@ fn parse_rgb(s: &str) -> Option<Rgba> {
         return None;
     }
 
-    let r: f32 = parts[0].parse::<f32>().ok()? / 255.0;
-    let g: f32 = parts[1].parse::<f32>().ok()? / 255.0;
-    let b: f32 = parts[2].parse::<f32>().ok()? / 255.0;
+    let r_srgb: f32 = parts[0].parse::<f32>().ok()? / 255.0;
+    let g_srgb: f32 = parts[1].parse::<f32>().ok()? / 255.0;
+    let b_srgb: f32 = parts[2].parse::<f32>().ok()? / 255.0;
     let a: f32 = if inner.1 {
         parts
             .get(3)
@@ -155,7 +155,20 @@ fn parse_rgb(s: &str) -> Option<Rgba> {
         1.0
     };
 
-    Some(Rgba { r, g, b, a })
+    Some(Rgba {
+        r: srgb_f32_to_linear(r_srgb.clamp(0.0, 1.0)),
+        g: srgb_f32_to_linear(g_srgb.clamp(0.0, 1.0)),
+        b: srgb_f32_to_linear(b_srgb.clamp(0.0, 1.0)),
+        a,
+    })
+}
+
+fn srgb_f32_to_linear(c_srgb: f32) -> f32 {
+    if c_srgb <= 0.04045 {
+        c_srgb / 12.92
+    } else {
+        ((c_srgb + 0.055) / 1.055).powf(2.4)
+    }
 }
 
 fn round3(v: f32) -> f32 {
@@ -164,11 +177,224 @@ fn round3(v: f32) -> f32 {
 
 fn color_to_rgba(c: fret_core::Color) -> Rgba {
     Rgba {
-        r: round3(c.r),
-        g: round3(c.g),
-        b: round3(c.b),
-        a: round3(c.a),
+        r: c.r,
+        g: c.g,
+        b: c.b,
+        a: c.a,
     }
+}
+
+fn parse_lab(s: &str) -> Option<Rgba> {
+    let s = s.trim();
+    let inner = s.strip_prefix("lab(")?.strip_suffix(')')?.trim();
+
+    let (main, alpha_part) = if let Some((l, r)) = inner.split_once('/') {
+        (l.trim(), Some(r.trim()))
+    } else {
+        (inner, None)
+    };
+
+    let parts: Vec<&str> = main
+        .split(|c: char| c.is_whitespace() || c == ',')
+        .filter(|p| !p.is_empty())
+        .collect();
+    if parts.len() != 3 {
+        return None;
+    }
+
+    let l_star: f32 = parts[0].trim_end_matches('%').parse().ok()?;
+    let a_star: f32 = parts[1].parse().ok()?;
+    let b_star: f32 = parts[2].parse().ok()?;
+
+    let alpha = if let Some(a) = alpha_part {
+        if let Some(pct) = a.trim_end_matches('%').parse::<f32>().ok()
+            && a.trim_end().ends_with('%')
+        {
+            (pct / 100.0).clamp(0.0, 1.0)
+        } else {
+            a.parse::<f32>().ok()?.clamp(0.0, 1.0)
+        }
+    } else {
+        1.0
+    };
+
+    let fy = (l_star + 16.0) / 116.0;
+    let fx = fy + a_star / 500.0;
+    let fz = fy - b_star / 200.0;
+
+    fn finv(t: f32) -> f32 {
+        const DELTA: f32 = 6.0 / 29.0;
+        const KAPPA: f32 = 24389.0 / 27.0;
+        if t > DELTA {
+            t * t * t
+        } else {
+            (116.0 * t - 16.0) / KAPPA
+        }
+    }
+
+    let xr = finv(fx);
+    let yr = finv(fy);
+    let zr = finv(fz);
+
+    // CSS `lab()` is defined in terms of CIE L*a*b* with a D50 whitepoint.
+    // Convert Lab(D50) -> XYZ(D50) -> XYZ(D65) (Bradford adaptation) -> linear sRGB.
+    // Reference: https://www.w3.org/TR/css-color-4/#lab-to-lch
+
+    // D50 reference white.
+    let x_d50 = xr * 0.96422;
+    let y_d50 = yr * 1.0;
+    let z_d50 = zr * 0.82521;
+
+    // Bradford adaptation matrix (D50 -> D65).
+    let x = 0.955_576_6 * x_d50 + -0.023_039_3 * y_d50 + 0.063_163_6 * z_d50;
+    let y = -0.028_289_5 * x_d50 + 1.009_941_6 * y_d50 + 0.021_007_7 * z_d50;
+    let z = 0.012_298_2 * x_d50 + -0.020_483_0 * y_d50 + 1.329_909_8 * z_d50;
+
+    // XYZ(D65) -> linear sRGB.
+    let r = (3.240_454_2 * x + -1.537_138_5 * y + -0.498_531_4 * z).clamp(0.0, 1.0);
+    let g = (-0.969_266_0 * x + 1.876_010_8 * y + 0.041_556_0 * z).clamp(0.0, 1.0);
+    let b = (0.055_643_4 * x + -0.204_025_9 * y + 1.057_225_2 * z).clamp(0.0, 1.0);
+
+    Some(Rgba { r, g, b, a: alpha })
+}
+
+fn parse_css_color(s: &str) -> Option<Rgba> {
+    let s = s.trim();
+    if s.eq_ignore_ascii_case("transparent") {
+        return Some(Rgba {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 0.0,
+        });
+    }
+    parse_rgb(s).or_else(|| parse_lab(s))
+}
+
+fn assert_rgba_close(label: &str, actual: Rgba, expected: Rgba, tol: f32) {
+    let dr = (actual.r - expected.r).abs();
+    let dg = (actual.g - expected.g).abs();
+    let db = (actual.b - expected.b).abs();
+    let da = (actual.a - expected.a).abs();
+    assert!(
+        dr <= tol && dg <= tol && db <= tol && da <= tol,
+        "{label}: expected≈({:.3},{:.3},{:.3},{:.3}) got=({:.3},{:.3},{:.3},{:.3}) tol={tol}",
+        expected.r,
+        expected.g,
+        expected.b,
+        expected.a,
+        actual.r,
+        actual.g,
+        actual.b,
+        actual.a
+    );
+}
+
+fn maybe_write_report(golden_name: &str, report: &ButtonReport) {
+    let write = std::env::var("WRITE_WEB_REPORT").ok().as_deref() == Some("1");
+    if !write {
+        return;
+    }
+
+    let out_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("web_reports");
+    std::fs::create_dir_all(&out_dir).expect("create web_reports dir");
+    let out_path = out_dir.join(format!("{golden_name}.json"));
+    let json = serde_json::to_string_pretty(&report).expect("serialize report");
+    std::fs::write(&out_path, format!("{json}\n")).expect("write report");
+}
+
+fn assert_button_variant_matches_web(golden_name: &str, variant: fret_ui_shadcn::ButtonVariant) {
+    let web = read_web_golden(golden_name);
+    let web_style = extract_web_button_style(&web);
+    let fret_style = extract_fret_button_style(variant);
+
+    // Catch “dev server / missing Tailwind” goldens early: these are stable invariants of the
+    // shadcn v4 button recipe and are used by downstream comparisons.
+    if golden_name != "button-link" {
+        assert_eq!(
+            web_style.display.as_deref(),
+            Some("inline-flex"),
+            "unexpected web button display"
+        );
+        assert_eq!(
+            web_style.padding_left.as_deref(),
+            Some("16px"),
+            "unexpected web button paddingLeft"
+        );
+        assert_eq!(
+            web_style.padding_top.as_deref(),
+            Some("8px"),
+            "unexpected web button paddingTop"
+        );
+    }
+
+    if let Some(px) = web_style.border_top_width.as_deref().and_then(parse_px) {
+        for (idx, edge) in fret_style.border.iter().enumerate() {
+            assert!(
+                (*edge - px).abs() <= 0.5,
+                "{golden_name} border[{idx}]: expected≈{px} got={edge}"
+            );
+        }
+    }
+
+    if let Some(px) = web_style.border_radius.as_deref().and_then(parse_px) {
+        for (idx, corner) in fret_style.corner_radii.iter().enumerate() {
+            assert!(
+                (*corner - px).abs() <= 1.0,
+                "{golden_name} corner_radii[{idx}]: expected≈{px} got={corner}"
+            );
+        }
+    }
+
+    if let Some(web_bg) = web_style
+        .background_color
+        .as_deref()
+        .and_then(parse_css_color)
+    {
+        assert_rgba_close(
+            &format!("{golden_name} background"),
+            fret_style.background,
+            web_bg,
+            0.02,
+        );
+    }
+
+    let border_px = web_style
+        .border_top_width
+        .as_deref()
+        .and_then(parse_px)
+        .unwrap_or(0.0);
+    if border_px > 0.0 {
+        if let Some(web_border) = web_style
+            .border_top_color
+            .as_deref()
+            .and_then(parse_css_color)
+        {
+            assert_rgba_close(
+                &format!("{golden_name} border_color"),
+                fret_style.border_color,
+                web_border,
+                0.02,
+            );
+        }
+    }
+
+    if let Some(web_fg) = web_style.color.as_deref().and_then(parse_css_color) {
+        let fret_fg = fret_style
+            .text_color
+            .unwrap_or_else(|| panic!("{golden_name} missing fret text color"));
+        assert_rgba_close(&format!("{golden_name} text_color"), fret_fg, web_fg, 0.02);
+    }
+
+    maybe_write_report(
+        golden_name,
+        &ButtonReport {
+            web: web_style,
+            fret: fret_style,
+        },
+    );
 }
 
 struct FakeServices;
@@ -217,7 +443,7 @@ impl fret_core::SvgService for FakeServices {
     }
 }
 
-fn extract_fret_button_style() -> FretButtonStyle {
+fn extract_fret_button_style(variant: fret_ui_shadcn::ButtonVariant) -> FretButtonStyle {
     let window = AppWindowId::default();
     let mut app = App::new();
 
@@ -244,7 +470,13 @@ fn extract_fret_button_style() -> FretButtonStyle {
         window,
         bounds,
         "web-vs-fret-button",
-        |cx| vec![fret_ui_shadcn::Button::new("Button").into_element(cx)],
+        |cx| {
+            vec![
+                fret_ui_shadcn::Button::new("Button")
+                    .variant(variant)
+                    .into_element(cx),
+            ]
+        },
     );
     ui.set_root(root);
     ui.request_semantics_snapshot();
@@ -362,67 +594,33 @@ fn extract_web_button_style(golden: &WebGolden) -> WebButtonStyle {
 
 #[test]
 fn web_vs_fret_button_default_pipeline_smoke() {
-    let web = read_web_golden("button-default");
-    let web_style = extract_web_button_style(&web);
-    let fret_style = extract_fret_button_style();
+    assert_button_variant_matches_web("button-default", fret_ui_shadcn::ButtonVariant::Default);
+}
 
-    // Catch “dev server / missing Tailwind” goldens early: these are stable invariants of the
-    // shadcn v4 button recipe and are used by downstream comparisons.
-    assert_eq!(
-        web_style.display.as_deref(),
-        Some("inline-flex"),
-        "unexpected web button display"
+#[test]
+fn web_vs_fret_button_destructive_matches_web() {
+    assert_button_variant_matches_web(
+        "button-destructive",
+        fret_ui_shadcn::ButtonVariant::Destructive,
     );
-    assert_eq!(
-        web_style.padding_left.as_deref(),
-        Some("16px"),
-        "unexpected web button paddingLeft"
-    );
-    assert_eq!(
-        web_style.padding_top.as_deref(),
-        Some("8px"),
-        "unexpected web button paddingTop"
-    );
+}
 
-    if let Some(px) = web_style.border_top_width.as_deref().and_then(parse_px) {
-        for (idx, edge) in fret_style.border.iter().enumerate() {
-            assert!(
-                (*edge - px).abs() <= 0.5,
-                "border[{idx}]: expected≈{px} got={edge}"
-            );
-        }
-    }
+#[test]
+fn web_vs_fret_button_outline_matches_web() {
+    assert_button_variant_matches_web("button-outline", fret_ui_shadcn::ButtonVariant::Outline);
+}
 
-    if let Some(px) = web_style.border_radius.as_deref().and_then(parse_px) {
-        for (idx, corner) in fret_style.corner_radii.iter().enumerate() {
-            assert!(
-                (*corner - px).abs() <= 1.0,
-                "corner_radii[{idx}]: expected≈{px} got={corner}"
-            );
-        }
-    }
+#[test]
+fn web_vs_fret_button_secondary_matches_web() {
+    assert_button_variant_matches_web("button-secondary", fret_ui_shadcn::ButtonVariant::Secondary);
+}
 
-    // Minimal sanity: ensure we can parse at least the core color fields from the web golden.
-    if let Some(bg) = web_style.background_color.as_deref() {
-        let _ = parse_rgb(bg);
-    }
-    if let Some(fg) = web_style.color.as_deref() {
-        let _ = parse_rgb(fg);
-    }
+#[test]
+fn web_vs_fret_button_ghost_matches_web() {
+    assert_button_variant_matches_web("button-ghost", fret_ui_shadcn::ButtonVariant::Ghost);
+}
 
-    let report = ButtonReport {
-        web: web_style,
-        fret: fret_style,
-    };
-
-    let write = std::env::var("WRITE_WEB_REPORT").ok().as_deref() == Some("1");
-    if write {
-        let out_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("tests")
-            .join("web_reports");
-        std::fs::create_dir_all(&out_dir).expect("create web_reports dir");
-        let out_path = out_dir.join("button-default.json");
-        let json = serde_json::to_string_pretty(&report).expect("serialize report");
-        std::fs::write(&out_path, format!("{json}\n")).expect("write report");
-    }
+#[test]
+fn web_vs_fret_button_link_matches_web() {
+    assert_button_variant_matches_web("button-link", fret_ui_shadcn::ButtonVariant::Link);
 }

@@ -136,6 +136,15 @@ Button “web vs Fret” pipeline (writes no files by default):
 
 `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_button`
 
+This test extracts the first `<button>` from the web golden and compares a small set of “style
+contract” fields against the Fret paint scene:
+
+- `backgroundColor`, `color`, `borderTopWidth`, `borderTopColor`, `borderTopLeftRadius`
+- It parses `rgb/rgba` and `lab()` values. Note that CSS `lab()` uses a D50 whitepoint, so the
+  comparison converts Lab(D50) -> linear sRGB via Bradford D50->D65 adaptation before asserting.
+- Border color is only asserted when the border width is > 0px (web goldens keep a `borderTopColor`
+  even when `borderTopWidth` is `0px`).
+
 To emit a JSON comparison report:
 
 `$env:WRITE_WEB_REPORT='1'; cargo nextest run -p fret-ui-shadcn --test web_vs_fret_button`
