@@ -102,6 +102,8 @@ pub(crate) const PAGE_SKELETON: &str = "skeleton";
 pub(crate) const PAGE_SCROLL_AREA: &str = "scroll_area";
 pub(crate) const PAGE_TOOLTIP: &str = "tooltip";
 pub(crate) const PAGE_SLIDER: &str = "slider";
+pub(crate) const PAGE_ICONS: &str = "icons";
+pub(crate) const PAGE_FIELD: &str = "field";
 pub(crate) const PAGE_OVERLAY: &str = "overlay";
 pub(crate) const PAGE_FORMS: &str = "forms";
 pub(crate) const PAGE_SELECT: &str = "select";
@@ -128,6 +130,8 @@ pub(crate) const CMD_NAV_SKELETON: &str = "ui_gallery.nav.select.skeleton";
 pub(crate) const CMD_NAV_SCROLL_AREA: &str = "ui_gallery.nav.select.scroll_area";
 pub(crate) const CMD_NAV_TOOLTIP: &str = "ui_gallery.nav.select.tooltip";
 pub(crate) const CMD_NAV_SLIDER: &str = "ui_gallery.nav.select.slider";
+pub(crate) const CMD_NAV_ICONS: &str = "ui_gallery.nav.select.icons";
+pub(crate) const CMD_NAV_FIELD: &str = "ui_gallery.nav.select.field";
 pub(crate) const CMD_NAV_OVERLAY: &str = "ui_gallery.nav.select.overlay";
 pub(crate) const CMD_NAV_FORMS: &str = "ui_gallery.nav.select.forms";
 pub(crate) const CMD_NAV_SELECT: &str = "ui_gallery.nav.select.select";
@@ -313,6 +317,26 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["slider", "range", "input"],
                 docs::DOC_SLIDER,
                 docs::USAGE_SLIDER,
+            ),
+            PageSpec::new(
+                PAGE_ICONS,
+                "Icons",
+                "Icons",
+                "fret-icons + fret-icons-lucide",
+                CMD_NAV_ICONS,
+                &["icon", "svg", "lucide"],
+                docs::DOC_ICONS,
+                docs::USAGE_ICONS,
+            ),
+            PageSpec::new(
+                PAGE_FIELD,
+                "Field",
+                "Field",
+                "fret-ui-shadcn",
+                CMD_NAV_FIELD,
+                &["field", "form", "label", "error"],
+                docs::DOC_FIELD,
+                docs::USAGE_FIELD,
             ),
             PageSpec::new(
                 PAGE_FORMS,
