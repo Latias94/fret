@@ -19,6 +19,8 @@ pub enum AlertVariant {
 pub struct Alert {
     children: Vec<AnyElement>,
     variant: AlertVariant,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
 }
 
 impl Alert {
@@ -26,6 +28,8 @@ impl Alert {
         Self {
             children,
             variant: AlertVariant::Default,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
         }
     }
 
@@ -34,8 +38,18 @@ impl Alert {
         self
     }
 
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        alert(cx, self.variant, self.children)
+        alert_with_patch(cx, self.variant, self.children, self.chrome, self.layout)
     }
 }
 
@@ -43,6 +57,22 @@ pub fn alert<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     variant: AlertVariant,
     children: Vec<AnyElement>,
+) -> AnyElement {
+    alert_with_patch(
+        cx,
+        variant,
+        children,
+        ChromeRefinement::default(),
+        LayoutRefinement::default(),
+    )
+}
+
+fn alert_with_patch<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    variant: AlertVariant,
+    children: Vec<AnyElement>,
+    chrome_override: ChromeRefinement,
+    layout_override: LayoutRefinement,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
 
@@ -62,8 +92,9 @@ pub fn alert<H: UiHost>(
             .rounded(Radius::Lg)
             .border_1()
             .bg(ColorRef::Color(bg))
-            .border_color(ColorRef::Color(border)),
-        LayoutRefinement::default(),
+            .border_color(ColorRef::Color(border))
+            .merge(chrome_override),
+        LayoutRefinement::default().merge(layout_override),
     );
 
     shadcn_layout::container_vstack_gap(cx, props, Space::N1p5, children)

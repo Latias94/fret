@@ -129,6 +129,14 @@ fn ui_builder_overlay_roots_compile<H: UiHost>(
         |col| Arc::clone(&col.id),
         |cx, _col, _row| cx.text("cell"),
     );
+
+    let _ = Alert::new(Vec::new())
+        .ui()
+        .p_4()
+        .border_1()
+        .into_element(cx);
+    let _ = Badge::new("x").ui().px_2().into_element(cx);
+    let _ = Kbd::new("x").ui().px_2().into_element(cx);
 }
 
 #[test]
@@ -163,9 +171,9 @@ fn ui_builder_smoke_applies_supported_patches() {
     let command_dialog_query = store.insert(String::new());
 
     let _ = Button::new("OK").ui().px_3().w_full().build();
-    let _ = Alert::new(Vec::new()).ui().build();
-    let _ = Badge::new("x").ui().build();
-    let _ = Kbd::new("x").ui().build();
+    let _ = Alert::new(Vec::new()).ui().p_4().border_1().build();
+    let _ = Badge::new("x").ui().px_2().build();
+    let _ = Kbd::new("x").ui().px_2().build();
     let _ = Breadcrumb::new().ui().build();
     let _ = Empty::new("Empty").ui().build();
     let _ = Card::new(Vec::new())
