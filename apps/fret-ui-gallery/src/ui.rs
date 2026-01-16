@@ -933,7 +933,7 @@ fn preview_data_grid(
 ) -> Vec<AnyElement> {
     let selected = cx.app.models().get_cloned(&selected_row).flatten();
 
-    let grid = shadcn::DataGridElement::new(["PID", "Name", "State", "CPU%"], 200)
+    let grid = shadcn::experimental::DataGridElement::new(["PID", "Name", "State", "CPU%"], 200)
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()
@@ -947,7 +947,7 @@ fn preview_data_grid(
             move |row| {
                 let is_selected = selected == Some(row as u64);
                 let cmd = CommandId::new(format!("{CMD_DATA_GRID_ROW_PREFIX}{row}"));
-                shadcn::DataGridRowState {
+                shadcn::experimental::DataGridRowState {
                     selected: is_selected,
                     enabled: row % 17 != 0,
                     on_click: Some(cmd),
