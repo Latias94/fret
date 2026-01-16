@@ -244,8 +244,7 @@ pub use ::fret_ui_kit::declarative::style as decl_style;
 /// the common “app + components” story down to `fret-ui-shadcn` + `fret-bootstrap`.
 pub use ::fret_ui_kit::declarative::{icon, stack};
 pub use ::fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Size, Space, StyledExt,
-    UiExt,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Size, Space, StyledExt, UiExt,
 };
 
 /// Common imports for application code using `fret-ui-shadcn`.

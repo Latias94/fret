@@ -5,9 +5,9 @@ use crate::hover_card::HoverCardContent;
 use crate::popover::PopoverContent;
 use crate::sheet::SheetContent;
 use crate::tooltip::TooltipContent;
+use ::fret_ui_kit::{UiIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout};
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
-use ::fret_ui_kit::{UiIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout};
 
 macro_rules! impl_ui_patch_chrome_layout {
     ($ty:ty) => {
