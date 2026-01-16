@@ -96,6 +96,17 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         ShadcnColorScheme::Dark => theme.css_vars.dark,
     };
 
+    // The upstream shadcn registry v4 theme JSONs focus on base palette tokens.
+    // Some `*-foreground` variables are still relied upon by component recipes (e.g. Button,
+    // Badge). Seed missing ones to match the upstream CSS defaults.
+    colors
+        .entry("destructive-foreground".to_string())
+        .or_insert_with(|| match scheme {
+            // Source: `repo-ref/ui/apps/v4/styles/globals.css`.
+            ShadcnColorScheme::Light => "oklch(0.97 0.01 17)".to_string(),
+            ShadcnColorScheme::Dark => "oklch(0.58 0.22 27)".to_string(),
+        });
+
     let mut metrics: HashMap<String, f32> = HashMap::new();
     if let Some(radius) = colors.remove("radius") {
         if let Some(px) = parse_css_length_px(&radius) {
