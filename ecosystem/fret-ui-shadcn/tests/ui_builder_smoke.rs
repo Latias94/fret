@@ -7,17 +7,18 @@ use fret_ui_shadcn::experimental::{DataGridElement, DataGridRowState};
 use fret_ui_shadcn::prelude::*;
 use fret_ui_shadcn::{
     Alert, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Badge,
-    Breadcrumb, Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle,
-    Collapsible, Combobox, Command, CommandDialog, CommandEmpty, CommandInput, CommandItem,
-    CommandList, CommandPalette, CommandShortcut, ContextMenu, ContextMenuEntry, DataGridCanvas,
-    DataGridCanvasAxis, DataTable, DataTableGlobalFilterInput, DataTableViewOptionItem,
-    DataTableViewOptions, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader,
-    DialogTitle, Drawer, DrawerContent, DrawerFooter, DrawerHeader, DropdownMenu,
-    DropdownMenuEntry, Empty, HoverCardContent, Kbd, Menubar, Popover, PopoverContent,
-    PopoverDescription, PopoverHeader, PopoverTitle, Progress, Select, Sheet, SheetContent,
-    SheetDescription, SheetFooter, SheetHeader, SheetTitle, Slider, Switch, TableBody,
-    TableCaption, TableFooter, TableHead, TableHeader, TableRow, TabsRoot, Toaster, TooltipContent,
+    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AvatarImage,
+    Badge, Breadcrumb, Button, Card, CardContent, CardDescription, CardFooter, CardHeader,
+    CardTitle, Collapsible, Combobox, Command, CommandDialog, CommandEmpty, CommandInput,
+    CommandItem, CommandList, CommandPalette, CommandShortcut, ContextMenu, ContextMenuEntry,
+    DataGridCanvas, DataGridCanvasAxis, DataTable, DataTableGlobalFilterInput,
+    DataTableViewOptionItem, DataTableViewOptions, Dialog, DialogContent, DialogDescription,
+    DialogFooter, DialogHeader, DialogTitle, Drawer, DrawerContent, DrawerFooter, DrawerHeader,
+    DropdownMenu, DropdownMenuEntry, Empty, HoverCardContent, Kbd, Menubar, Popover,
+    PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, Progress, Select, Sheet,
+    SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, Slider, Switch,
+    TableBody, TableCaption, TableFooter, TableHead, TableHeader, TableRow, TabsRoot, Toaster,
+    TooltipContent,
 };
 use time::{Date, OffsetDateTime};
 
@@ -174,6 +175,7 @@ fn ui_builder_smoke_applies_supported_patches() {
     let _ = Alert::new(Vec::new()).ui().p_4().border_1().build();
     let _ = Badge::new("x").ui().px_2().build();
     let _ = Kbd::new("x").ui().px_2().build();
+    let _ = AvatarImage::maybe(None).ui().px_2().build();
     let _ = Breadcrumb::new().ui().px_2().build();
     let _ = Empty::new("Empty").ui().p_4().border_1().build();
     let _ = Card::new(Vec::new())

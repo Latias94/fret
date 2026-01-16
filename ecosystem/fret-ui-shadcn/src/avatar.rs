@@ -69,6 +69,7 @@ impl Avatar {
 pub struct AvatarImage {
     source: AvatarImageSource,
     opacity: f32,
+    chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
 
@@ -94,6 +95,7 @@ impl AvatarImage {
         Self {
             source: AvatarImageSource::Ready(image),
             opacity: 1.0,
+            chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
     }
@@ -102,6 +104,7 @@ impl AvatarImage {
         Self {
             source: AvatarImageSource::Optional(image),
             opacity: 1.0,
+            chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
     }
@@ -110,12 +113,18 @@ impl AvatarImage {
         Self {
             source: AvatarImageSource::Model(image),
             opacity: 1.0,
+            chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
     }
 
     pub fn opacity(mut self, opacity: f32) -> Self {
         self.opacity = opacity;
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
         self
     }
 
@@ -132,21 +141,23 @@ impl AvatarImage {
             let present = image.is_some();
             let children = if let Some(image) = image {
                 let theme = Theme::global(&*cx.app).clone();
-                let layout = decl_style::layout_style(
-                    &theme,
-                    LayoutRefinement::default()
-                        .absolute()
-                        .inset(Space::N0)
-                        .size_full()
-                        .aspect_ratio(1.0)
-                        .merge(self.layout),
-                );
+                let layout = LayoutRefinement::default()
+                    .absolute()
+                    .inset(Space::N0)
+                    .size_full()
+                    .aspect_ratio(1.0)
+                    .merge(self.layout);
 
-                vec![cx.image_props(ImageProps {
-                    layout,
-                    image,
-                    opacity: self.opacity.clamp(0.0, 1.0),
-                    uv: None,
+                let wrapper = decl_style::container_props(&theme, self.chrome, layout);
+                let opacity = self.opacity.clamp(0.0, 1.0);
+
+                vec![cx.container(wrapper, move |cx| {
+                    vec![cx.image_props(ImageProps {
+                        layout: Default::default(),
+                        image,
+                        opacity,
+                        uv: None,
+                    })]
                 })]
             } else {
                 Vec::new()

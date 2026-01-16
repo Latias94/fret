@@ -9,7 +9,7 @@ use crate::toggle_group::ToggleGroup;
 
 impl_ui_patch_chrome_layout!(Avatar);
 impl_ui_patch_chrome_layout!(AvatarFallback);
-impl_ui_patch_layout_only!(AvatarImage);
+impl_ui_patch_chrome_layout!(AvatarImage);
 
 impl_ui_patch_chrome_layout!(Progress);
 impl_ui_patch_chrome_layout!(Skeleton);
