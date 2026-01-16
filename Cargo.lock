@@ -938,6 +938,7 @@ dependencies = [
 name = "fret-asset-cache"
 version = "0.1.0"
 dependencies = [
+ "fret-canvas",
  "fret-core",
  "fret-runtime",
  "slotmap",
