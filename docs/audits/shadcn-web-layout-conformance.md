@@ -95,8 +95,8 @@ patterns:
 - `popover-demo` (overlay placement + transform origin)
 - `dropdown-menu-demo` (overlay placement + max-height/scrolling)
 - `select-scrollable` (available-height clamping + scrolling + scroll buttons / top inset outcome)
-- `scroll-area-demo` (max offset + viewport sizing; scrollbar hover/scroll states need scripted variants)
-- `scroll-area-horizontal-demo` (max offset_x; scrollbar hover/scroll states need scripted variants)
+- `scroll-area-demo` (scroll range via viewport `scrollHeight/clientHeight`; `.hover` variant gates scrollbar track rect)
+- `scroll-area-horizontal-demo` (scroll range via viewport `scrollWidth/clientWidth`; `.hover` variant gates scrollbar track rect)
 - `slider-demo`
 - `avatar-demo`
 - `item-avatar`
@@ -104,6 +104,7 @@ patterns:
 - `textarea-demo`
 
 Goldens live at: `goldens/shadcn-web/v4/new-york-v4/<name>.json`.
+Variant goldens follow the same naming convention (e.g. `scroll-area-demo.hover.json`).
 
 ## Where the tests live
 

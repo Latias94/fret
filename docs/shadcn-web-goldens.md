@@ -12,6 +12,7 @@ For each component page, the exporter writes a JSON file with:
 - per-node `getBoundingClientRect()` relative to the root,
 - a whitelist of `window.getComputedStyle(...)` fields (layout + a few visuals),
 - selected accessibility-related attrs (`role`, `aria-*`, `data-state`, ...).
+- optional scroll metrics for scrollable viewports (`scrollWidth/clientWidth`, `scrollHeight/clientHeight`, ...).
 - `portals[]` and `portalWrappers[]` snapshots for Radix portal content (wrapper geometry is used for placement checks).
 
 ## Prerequisites
@@ -140,13 +141,18 @@ pixel diffs. See: `docs/audits/shadcn-web-layout-conformance.md`.
 - `--viewportW=1440` (default)
 - `--viewportH=900` (default)
 - `--deviceScaleFactor=2` (default; alias: `--dpr=2`)
+- `--variants="<variant>;..."` (optional; writes `name.<variant>.json` for each entry, regardless of mode)
 - `--openSelector=<css>` (optional override for the "open overlay" trigger)
 - `--openVariants="<variant>=<css>;..."` (optional; writes `name.<variant>.open.json` for each entry; overrides `--openSelector`)
 - `--openAction=click|hover|contextmenu|keys` (optional override for the "open overlay" action; default is inferred per page)
 - `--openKeys=<chord>` (optional; only used when `openAction=keys`; e.g. `Control+KeyJ` or `Meta+KeyJ`; env: `OPEN_KEYS`)
-- `--openSteps="<action>=<value>;..."` (optional; extra steps after the initial open; actions: `click|hover|contextmenu|keys|wait`)
+- `--steps="<action>=<value>;..."` (optional; scripted interactions before extraction; actions: `click|hover|contextmenu|keys|wait|waitFor|move|scroll`)
+- `--openSteps="<action>=<value>;..."` (optional; extra steps after the initial open; actions: `click|hover|contextmenu|keys|wait|waitFor|move|scroll`)
   - `keys=<selector>` uses `--openKeys` / `OPEN_KEYS`.
   - `keys=<selector>@<keys>` uses an inline key spec. `<keys>` supports a chord (`Shift+F10`) or a sequence (`ArrowDown ArrowRight` or `ArrowDown,ArrowRight`).
+  - `waitFor=<selector>` waits for a selector to appear (useful for hover-gated ScrollArea scrollbars).
+  - `move=<x>,<y>` moves the mouse to an absolute viewport position (useful to force pointerenter/leave).
+  - `scroll=<selector>@<dx>,<dy>` scrolls an element via `scrollBy(dx, dy)`.
 - `--baseUrl=http://localhost:4000`
 - `--all` (env: `ALL_GOLDENS=1`)
 - `--types=registry:block,registry:component,registry:example` (env: `TYPES=...`)
