@@ -1267,6 +1267,7 @@ dependencies = [
 name = "fret-plot"
 version = "0.1.0"
 dependencies = [
+ "fret-canvas",
  "fret-core",
  "fret-runtime",
  "fret-ui",
