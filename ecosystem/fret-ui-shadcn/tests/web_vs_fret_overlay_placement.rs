@@ -591,6 +591,14 @@ fn fret_largest_menu_height(snap: &fret_core::SemanticsSnapshot) -> Option<f32> 
         .map(|n| n.bounds.size.height.0)
 }
 
+fn fret_menu_heights(snap: &fret_core::SemanticsSnapshot) -> Vec<f32> {
+    snap.nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Menu)
+        .map(|n| n.bounds.size.height.0)
+        .collect()
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct InsetTriplet {
     left: f32,
@@ -2329,10 +2337,12 @@ fn web_vs_fret_dropdown_menu_demo_submenu_small_viewport_overlay_placement_match
 fn web_vs_fret_dropdown_menu_demo_submenu_small_viewport_menu_content_insets_match() {
     let web = read_web_golden_open("dropdown-menu-demo.submenu-kbd-vp1440x320");
     let theme = web_theme(&web);
-    let expected = web_menu_content_insets_for_slots(
-        &theme,
-        &["dropdown-menu-content", "dropdown-menu-sub-content"],
-    );
+    let expected_slots = ["dropdown-menu-content", "dropdown-menu-sub-content"];
+    let expected = web_menu_content_insets_for_slots(&theme, &expected_slots);
+    let expected_hs: Vec<f32> = expected_slots
+        .iter()
+        .map(|slot| web_portal_node_by_data_slot(&theme, slot).rect.h)
+        .collect();
 
     let window = AppWindowId::default();
     let mut app = App::new();
@@ -2546,6 +2556,25 @@ fn web_vs_fret_dropdown_menu_demo_submenu_small_viewport_menu_content_insets_mat
         &actual,
         &expected,
     );
+
+    let mut actual_hs = fret_menu_heights(&snap);
+    assert!(
+        actual_hs.len() == expected_hs.len(),
+        "dropdown-menu-demo.submenu-kbd-vp1440x320 expected {} menus, got {}",
+        expected_hs.len(),
+        actual_hs.len()
+    );
+    let mut expected_hs = expected_hs;
+    expected_hs.sort_by(|a, b| b.total_cmp(a));
+    actual_hs.sort_by(|a, b| b.total_cmp(a));
+    for (i, (a, e)) in actual_hs.iter().zip(expected_hs.iter()).enumerate() {
+        assert_close(
+            &format!("dropdown-menu-demo.submenu-kbd-vp1440x320 menu[{i}] height"),
+            *a,
+            *e,
+            2.0,
+        );
+    }
 }
 
 #[test]
@@ -3810,10 +3839,12 @@ fn web_vs_fret_context_menu_demo_submenu_small_viewport_overlay_placement_matche
 fn web_vs_fret_context_menu_demo_submenu_small_viewport_menu_content_insets_match() {
     let web = read_web_golden_open("context-menu-demo.submenu-kbd-vp1440x320");
     let theme = web_theme(&web);
-    let expected = web_menu_content_insets_for_slots(
-        &theme,
-        &["context-menu-content", "context-menu-sub-content"],
-    );
+    let expected_slots = ["context-menu-content", "context-menu-sub-content"];
+    let expected = web_menu_content_insets_for_slots(&theme, &expected_slots);
+    let expected_hs: Vec<f32> = expected_slots
+        .iter()
+        .map(|slot| web_portal_node_by_data_slot(&theme, slot).rect.h)
+        .collect();
 
     let window = AppWindowId::default();
     let mut app = App::new();
@@ -3966,6 +3997,25 @@ fn web_vs_fret_context_menu_demo_submenu_small_viewport_menu_content_insets_matc
         &actual,
         &expected,
     );
+
+    let mut actual_hs = fret_menu_heights(&snap);
+    assert!(
+        actual_hs.len() == expected_hs.len(),
+        "context-menu-demo.submenu-kbd-vp1440x320 expected {} menus, got {}",
+        expected_hs.len(),
+        actual_hs.len()
+    );
+    let mut expected_hs = expected_hs;
+    expected_hs.sort_by(|a, b| b.total_cmp(a));
+    actual_hs.sort_by(|a, b| b.total_cmp(a));
+    for (i, (a, e)) in actual_hs.iter().zip(expected_hs.iter()).enumerate() {
+        assert_close(
+            &format!("context-menu-demo.submenu-kbd-vp1440x320 menu[{i}] height"),
+            *a,
+            *e,
+            2.0,
+        );
+    }
 }
 
 #[test]
@@ -5419,8 +5469,12 @@ fn web_vs_fret_menubar_demo_submenu_small_viewport_overlay_placement_matches() {
 fn web_vs_fret_menubar_demo_submenu_small_viewport_menu_content_insets_match() {
     let web = read_web_golden_open("menubar-demo.submenu-kbd-vp1440x320");
     let theme = web_theme(&web);
-    let expected =
-        web_menu_content_insets_for_slots(&theme, &["menubar-content", "menubar-sub-content"]);
+    let expected_slots = ["menubar-content", "menubar-sub-content"];
+    let expected = web_menu_content_insets_for_slots(&theme, &expected_slots);
+    let expected_hs: Vec<f32> = expected_slots
+        .iter()
+        .map(|slot| web_portal_node_by_data_slot(&theme, slot).rect.h)
+        .collect();
 
     let window = AppWindowId::default();
     let mut app = App::new();
@@ -5555,6 +5609,25 @@ fn web_vs_fret_menubar_demo_submenu_small_viewport_menu_content_insets_match() {
     let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
     let actual = fret_menu_content_insets(&snap);
     assert_sorted_insets_match("menubar-demo.submenu-kbd-vp1440x320", &actual, &expected);
+
+    let mut actual_hs = fret_menu_heights(&snap);
+    assert!(
+        actual_hs.len() == expected_hs.len(),
+        "menubar-demo.submenu-kbd-vp1440x320 expected {} menus, got {}",
+        expected_hs.len(),
+        actual_hs.len()
+    );
+    let mut expected_hs = expected_hs;
+    expected_hs.sort_by(|a, b| b.total_cmp(a));
+    actual_hs.sort_by(|a, b| b.total_cmp(a));
+    for (i, (a, e)) in actual_hs.iter().zip(expected_hs.iter()).enumerate() {
+        assert_close(
+            &format!("menubar-demo.submenu-kbd-vp1440x320 menu[{i}] height"),
+            *a,
+            *e,
+            2.0,
+        );
+    }
 }
 
 #[test]
