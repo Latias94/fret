@@ -94,9 +94,13 @@ As of the initial audit:
     `ecosystem/fret-ui-shadcn/src/data_table.rs` -> `ecosystem/fret-ui-kit/src/declarative/table.rs::table_virtualized`.
     - It provides: fixed header + vertical virtualization + the headless pipeline (sorting/filtering/pagination/selection/visibility).
     - Public surface: `DataTable`.
+    - Current virtualization mode: the shared view uses `VirtualListMeasureMode::Fixed` and
+      `VirtualListKeyCacheMode::VisibleOnly` for the body rows (fast path for large tables; fixed row height).
+      Variable-height rows are supported by the runtime virtualizer, but are not enabled by default for tables yet.
   - `DataGrid` is the recommended performance-ceiling surface (canvas-backed):
     - API alias: `fret-ui-shadcn::DataGrid` -> `DataGridCanvas` (see `ecosystem/fret-ui-shadcn/src/lib.rs`).
     - Implementation: `ecosystem/fret-ui-shadcn/src/data_grid_canvas.rs`.
+    - Text caching: cell text blobs are keyed by `(row_key, col_key)` via `CanvasPainter.key_scope` + `child_key`.
   - `experimental::DataGridElement` prototype exists at `ecosystem/fret-ui-shadcn/src/data_grid.rs`.
     - It explores element-based 2D virtualization (rows + columns) and custom scrollbars.
   - `DataTable` and `DataGrid` used to be behind the `datagrid` crate feature; the gate has been removed because it had no heavy deps.
@@ -183,6 +187,9 @@ Glide’s renderer architecture is a useful reference for “spreadsheet scale�
 - For v1, `DataTable` currently exposes list semantics (`SemanticsRole::List` + `ListItem`) and uses `active_descendant` for the highlighted row.
 - How do we model cell focus vs row selection (and multi-select) without leaking policy into runtime?
 - Clipboard contract for cells vs rows (tie to ADR 0041 / existing selection primitives).
+- Do we want variable-height rows in `DataTable` (e.g. Markdown cells with wrapping)?
+  - The runtime supports measured virtualization, but the current table view forces fixed-height rows for performance.
+  - If we enable measured rows, we must validate scroll anchoring, key caching costs, and width-change reflow behavior.
 
 ## Decision: Performance-Ceiling DataGrid (Canvas/GPU-backed)
 

@@ -107,17 +107,31 @@ should be explicit-state-in, derived-model-out:
 This aligns with Fret’s general “app-owned models” and revision-driven invalidation patterns (ADR
 0031, ADR 0051).
 
-### 5) UI recipes live in `fret-ui-shadcn` behind features
+### 5) UI recipes live in `fret-ui-shadcn` (always available)
 
-We will provide convenience recipes in `ecosystem/fret-ui-shadcn`, but keep them clearly scoped as
-“guides / reusable examples”:
+We provide convenience recipes in `ecosystem/fret-ui-shadcn`, but keep them clearly scoped as
+“guides / reusable examples” rather than a monolithic runtime-owned `DataTable` widget.
 
-- Feature: `tanstack_table` (name not final)
-- Modules (indicative):
-  - `data_table` (renders with `Table` primitives + pagination/sorting/filters widgets)
-  - `data_grid_tanstack` (renders 2D virtualization when column sizing/pinning exist)
+Implementation status note:
 
-The recipes:
+- The shadcn table/grid surfaces are always available (no long-lived feature gate).
+- Feature flags are reserved for genuinely heavy/optional dependency boundaries, not core UI recipes.
+
+Current recipe surfaces:
+
+- `Table` primitives: `ecosystem/fret-ui-shadcn/src/table.rs`
+- `DataTable` (headless-backed): `ecosystem/fret-ui-shadcn/src/data_table.rs`
+  - Renders via the shared virtualized view:
+    `ecosystem/fret-ui-kit/src/declarative/table.rs::table_virtualized`
+  - Uses the headless engine:
+    `ecosystem/fret-ui-headless/src/table/` (re-exported as `fret-ui-kit::headless::table`)
+- `DataTableToolbar` / `DataTablePagination`: `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs`
+- `DataGrid` “performance ceiling” (canvas-backed): `ecosystem/fret-ui-shadcn/src/data_grid_canvas.rs`
+  (re-exported as `fret-ui-shadcn::DataGrid`)
+- `experimental::DataGridElement` (element-based prototype for rich per-cell UI):
+  `ecosystem/fret-ui-shadcn/src/data_grid.rs`
+
+Recipe guidance:
 
 - MAY depend on `fret-ui` primitives (VirtualList, Scrollbar, WheelRegion).
 - SHOULD emit accessibility semantics using the runtime semantics tree (ADR 0033).
@@ -134,9 +148,10 @@ The headless engine produces:
 
 Virtualization is applied by the UI layer:
 
-- `DataTable`: vertical virtualization via `VirtualList`.
-- `DataGrid`: 2D virtualization via `(VirtualList rows) + (VirtualList columns)` or an eventual
-  dedicated 2D virtualization primitive.
+- `DataTable`: vertical virtualization via `VirtualList` (typically fixed-height rows; variable-height
+  rows are an integration choice and must be measured/write-back driven when enabled).
+- `DataGrid`: 2D virtualization via a dedicated headless 2D viewport helper (`grid_viewport`) and
+  canvas-backed rendering, with optional per-row/per-column size overrides.
 
 UI recipes MUST ensure the virtualization viewport is bounded (e.g. `Fill` size + `flex: 1` and
 `overflow: clip/scroll` on the container); otherwise virtualization may degenerate into “render all

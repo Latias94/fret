@@ -1392,6 +1392,39 @@ mod tests {
         fn request_focus(&mut self, _target: GlobalElementId) {}
     }
 
+    impl fret_ui::action::UiDragActionHost for PointerHost<'_> {
+        fn begin_drag_with_kind(
+            &mut self,
+            _pointer_id: fret_core::PointerId,
+            _kind: fret_runtime::DragKindId,
+            _source_window: fret_core::AppWindowId,
+            _start: fret_core::Point,
+        ) {
+        }
+
+        fn begin_cross_window_drag_with_kind(
+            &mut self,
+            _pointer_id: fret_core::PointerId,
+            _kind: fret_runtime::DragKindId,
+            _source_window: fret_core::AppWindowId,
+            _start: fret_core::Point,
+        ) {
+        }
+
+        fn drag(&self, _pointer_id: fret_core::PointerId) -> Option<&fret_runtime::DragSession> {
+            None
+        }
+
+        fn drag_mut(
+            &mut self,
+            _pointer_id: fret_core::PointerId,
+        ) -> Option<&mut fret_runtime::DragSession> {
+            None
+        }
+
+        fn cancel_drag(&mut self, _pointer_id: fret_core::PointerId) {}
+    }
+
     impl UiPointerActionHost for PointerHost<'_> {
         fn bounds(&self) -> Rect {
             self.bounds
