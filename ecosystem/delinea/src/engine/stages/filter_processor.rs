@@ -972,119 +972,15 @@ fn apply_y_percent_for_grid(
     series: &[SeriesId],
     view_changed: &mut bool,
 ) {
-    let mut y_axes_in_grid: BTreeMap<crate::ids::AxisId, (f64, f64)> = BTreeMap::new();
-
-    for series_id in series {
-        let Some(series_model) = model.series.get(series_id) else {
-            continue;
-        };
-        if !series_model.visible {
-            continue;
-        }
-
-        let axis = series_model.y_axis;
-        let Some(_percent) = state.axis_percent_windows.get(&axis).copied() else {
-            continue;
-        };
-        // Only consider Y axes.
-        if !model
-            .axes
-            .get(&axis)
-            .is_some_and(|a| a.kind == crate::spec::AxisKind::Y)
-        {
-            continue;
-        }
-
-        let Some(series_view_index) = view_series_index.get(series_id).copied() else {
-            continue;
-        };
-        let series_view = &view.series[series_view_index];
-
-        // ECharts-class order sensitivity: when using percent windows, the Y extent should be
-        // computed based on data that have already been affected by X filtering. In v1, we scope
-        // the extent by the current selection and also apply the X predicate when it is active
-        // (including FilterMode::Empty which preserves row space but masks marks).
-        let x_filter_mode = series_view.x_filter_mode;
-        let x_filter = series_view.x_policy.filter;
-        let x_active = !matches!(x_filter_mode, FilterMode::None)
-            && (x_filter.min.is_some() || x_filter.max.is_some());
-
-        let Some(table) = datasets.dataset(series_model.dataset) else {
-            continue;
-        };
-        let Some(dataset) = model.datasets.get(&series_model.dataset) else {
-            continue;
-        };
-        let Some(x_col) = dataset.fields.get(&series_model.encode.x).copied() else {
-            continue;
-        };
-        let Some(y0_col) = dataset.fields.get(&series_model.encode.y).copied() else {
-            continue;
-        };
-        let y1_col = series_model
-            .encode
-            .y2
-            .and_then(|f| dataset.fields.get(&f).copied());
-
-        let Some(x_values) = table.column_f64(x_col) else {
-            continue;
-        };
-        let Some(y0_values) = table.column_f64(y0_col) else {
-            continue;
-        };
-        let y1_values = y1_col.and_then(|c| table.column_f64(c));
-
-        let len = table.row_count;
-        let view_len = series_view.selection.view_len(len);
-        if view_len == 0 {
-            continue;
-        }
-
-        let mut min = f64::INFINITY;
-        let mut max = f64::NEG_INFINITY;
-        for view_index in 0..view_len {
-            let Some(raw) = series_view.selection.get_raw_index(len, view_index) else {
-                continue;
-            };
-
-            if x_active {
-                let xv = x_values.get(raw).copied().unwrap_or(f64::NAN);
-                if !xv.is_finite() || !x_filter.contains(xv) {
-                    continue;
-                }
-            }
-
-            let y0 = y0_values.get(raw).copied().unwrap_or(f64::NAN);
-            if !y0.is_finite() {
-                continue;
-            }
-            if let Some(y1_values) = y1_values {
-                let y1 = y1_values.get(raw).copied().unwrap_or(f64::NAN);
-                if !y1.is_finite() {
-                    continue;
-                }
-                min = min.min(y0.min(y1));
-                max = max.max(y0.max(y1));
-            } else {
-                min = min.min(y0);
-                max = max.max(y0);
-            }
-        }
-
-        if !min.is_finite() || !max.is_finite() {
-            continue;
-        }
-
-        // Record extent; we will apply the percent mapping after we finalize the min/max across
-        // all series on the same axis.
-        y_axes_in_grid
-            .entry(axis)
-            .and_modify(|ext| {
-                ext.0 = ext.0.min(min);
-                ext.1 = ext.1.max(max);
-            })
-            .or_insert((min, max));
-    }
+    let y_axes_in_grid =
+        crate::transform_graph::TransformGraph::y_data_extents_scoped_by_x_for_grid(
+            model,
+            datasets,
+            state,
+            view,
+            view_series_index,
+            series,
+        );
 
     for (axis, extent) in y_axes_in_grid {
         let Some((start, end)) = state.axis_percent_windows.get(&axis).copied() else {

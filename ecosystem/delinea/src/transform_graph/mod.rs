@@ -11,8 +11,9 @@ use crate::data::DatasetStore;
 use crate::engine::ChartState;
 use crate::engine::model::ChartModel;
 use crate::engine::window::DataWindow;
-use crate::ids::{AxisId, Revision};
-use crate::spec::AxisRange;
+use crate::ids::{AxisId, Revision, SeriesId};
+use crate::spec::{AxisKind, AxisRange, FilterMode};
+use crate::view::ViewState;
 use std::collections::BTreeMap;
 
 #[derive(Debug, Default, Clone)]
@@ -108,6 +109,125 @@ impl TransformGraph {
         };
         window.clamp_non_degenerate();
         Some(window.apply_constraints(axis_range.locked_min(), axis_range.locked_max()))
+    }
+
+    /// Returns Y data extents for axes that currently have percent windows, scoped by the current
+    /// view selection and (when active) the X filter predicate.
+    ///
+    /// This is the "order-sensitive percent domain" building block: Y percent extents must be
+    /// derived after X has affected the visible selection/domain (ECharts `dataZoomProcessor`
+    /// semantics; v1 cartesian subset).
+    pub fn y_data_extents_scoped_by_x_for_grid(
+        model: &ChartModel,
+        datasets: &DatasetStore,
+        state: &ChartState,
+        view: &ViewState,
+        view_series_index: &BTreeMap<SeriesId, usize>,
+        series: &[SeriesId],
+    ) -> BTreeMap<AxisId, (f64, f64)> {
+        let mut out: BTreeMap<AxisId, (f64, f64)> = BTreeMap::new();
+
+        for series_id in series {
+            let Some(series_model) = model.series.get(series_id) else {
+                continue;
+            };
+            if !series_model.visible {
+                continue;
+            }
+
+            let axis = series_model.y_axis;
+            if !state.axis_percent_windows.contains_key(&axis) {
+                continue;
+            }
+            if !model.axes.get(&axis).is_some_and(|a| a.kind == AxisKind::Y) {
+                continue;
+            }
+
+            let Some(series_view_index) = view_series_index.get(series_id).copied() else {
+                continue;
+            };
+            let series_view = &view.series[series_view_index];
+
+            let x_filter_mode = series_view.x_filter_mode;
+            let x_filter = series_view.x_policy.filter;
+            let x_active = !matches!(x_filter_mode, FilterMode::None)
+                && (x_filter.min.is_some() || x_filter.max.is_some());
+
+            let Some(table) = datasets.dataset(series_model.dataset) else {
+                continue;
+            };
+            let Some(dataset) = model.datasets.get(&series_model.dataset) else {
+                continue;
+            };
+            let Some(x_col) = dataset.fields.get(&series_model.encode.x).copied() else {
+                continue;
+            };
+            let Some(y0_col) = dataset.fields.get(&series_model.encode.y).copied() else {
+                continue;
+            };
+            let y1_col = series_model
+                .encode
+                .y2
+                .and_then(|f| dataset.fields.get(&f).copied());
+
+            let Some(x_values) = table.column_f64(x_col) else {
+                continue;
+            };
+            let Some(y0_values) = table.column_f64(y0_col) else {
+                continue;
+            };
+            let y1_values = y1_col.and_then(|c| table.column_f64(c));
+
+            let len = table.row_count;
+            let view_len = series_view.selection.view_len(len);
+            if view_len == 0 {
+                continue;
+            }
+
+            let mut min = f64::INFINITY;
+            let mut max = f64::NEG_INFINITY;
+            for view_index in 0..view_len {
+                let Some(raw) = series_view.selection.get_raw_index(len, view_index) else {
+                    continue;
+                };
+
+                if x_active {
+                    let xv = x_values.get(raw).copied().unwrap_or(f64::NAN);
+                    if !xv.is_finite() || !x_filter.contains(xv) {
+                        continue;
+                    }
+                }
+
+                let y0 = y0_values.get(raw).copied().unwrap_or(f64::NAN);
+                if !y0.is_finite() {
+                    continue;
+                }
+                if let Some(y1_values) = y1_values {
+                    let y1 = y1_values.get(raw).copied().unwrap_or(f64::NAN);
+                    if !y1.is_finite() {
+                        continue;
+                    }
+                    min = min.min(y0.min(y1));
+                    max = max.max(y0.max(y1));
+                } else {
+                    min = min.min(y0);
+                    max = max.max(y0);
+                }
+            }
+
+            if !min.is_finite() || !max.is_finite() {
+                continue;
+            }
+
+            out.entry(axis)
+                .and_modify(|ext| {
+                    ext.0 = ext.0.min(min);
+                    ext.1 = ext.1.max(max);
+                })
+                .or_insert((min, max));
+        }
+
+        out
     }
 }
 
