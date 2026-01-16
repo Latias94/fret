@@ -7,13 +7,14 @@ use fret_ui_shadcn::{
     Alert, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
     AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Badge,
     Breadcrumb, Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle,
-    Combobox, Command, CommandInput, CommandItem, CommandPalette, ContextMenu, Dialog,
-    DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Drawer,
-    DrawerContent, DrawerFooter, DrawerHeader, DropdownMenu, HoverCardContent, Kbd, Menubar,
-    Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, Progress, Select,
-    Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, Slider, Switch,
-    TableBody, TableCaption, TableFooter, TableHead, TableHeader, TableRow, TabsRoot,
-    TooltipContent,
+    Combobox, Command, CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList,
+    CommandPalette, CommandShortcut, ContextMenu, DataTableGlobalFilterInput,
+    DataTableViewOptionItem, DataTableViewOptions, Dialog, DialogContent, DialogDescription,
+    DialogFooter, DialogHeader, DialogTitle, Drawer, DrawerContent, DrawerFooter, DrawerHeader,
+    DropdownMenu, Empty, HoverCardContent, Kbd, Menubar, Popover, PopoverContent,
+    PopoverDescription, PopoverHeader, PopoverTitle, Progress, Select, Sheet, SheetContent,
+    SheetDescription, SheetFooter, SheetHeader, SheetTitle, Slider, Switch, TableBody,
+    TableCaption, TableFooter, TableHead, TableHeader, TableRow, TabsRoot, Toaster, TooltipContent,
 };
 use time::{Date, OffsetDateTime};
 
@@ -42,12 +43,18 @@ fn ui_builder_smoke_applies_supported_patches() {
     let context_menu_open = store.insert(false);
     let combobox_open = store.insert(false);
     let combobox_value = store.insert(None::<Arc<str>>);
+    let data_table_filter = store.insert(String::new());
+    let data_table_view_options_open = store.insert(false);
+    let data_table_view_option_checked = store.insert(false);
+    let command_dialog_open = store.insert(false);
+    let command_dialog_query = store.insert(String::new());
 
     let _ = Button::new("OK").ui().px_3().w_full().build();
     let _ = Alert::new(Vec::new()).ui().build();
     let _ = Badge::new("x").ui().build();
     let _ = Kbd::new("x").ui().build();
     let _ = Breadcrumb::new().ui().build();
+    let _ = Empty::new("Empty").ui().build();
     let _ = Card::new(Vec::new())
         .ui()
         .p_4()
@@ -79,6 +86,20 @@ fn ui_builder_smoke_applies_supported_patches() {
     let _ = ContextMenu::new(context_menu_open).ui().build();
     let _ = Menubar::new(Vec::new()).ui().build();
     let _ = Combobox::new(combobox_value, combobox_open).ui().build();
+    let _ = Toaster::new().ui().build();
+
+    let _ = DataTableGlobalFilterInput::new(data_table_filter)
+        .ui()
+        .build();
+    let _ = DataTableViewOptions::new(
+        data_table_view_options_open,
+        vec![DataTableViewOptionItem::new(
+            data_table_view_option_checked,
+            "col",
+        )],
+    )
+    .ui()
+    .build();
 
     let _ = fret_ui_shadcn::Calendar::new(calendar_month.clone(), calendar_selected.clone())
         .ui()
@@ -111,6 +132,16 @@ fn ui_builder_smoke_applies_supported_patches() {
         .ui()
         .p_4()
         .build();
+    let _ = CommandEmpty::new("No results.").ui().build();
+    let _ = CommandList::new(Vec::<CommandItem>::new()).ui().build();
+    let _ = CommandShortcut::new("Ctrl+K").ui().build();
+    let _ = CommandDialog::new(
+        command_dialog_open,
+        command_dialog_query,
+        Vec::<CommandItem>::new(),
+    )
+    .ui()
+    .build();
 
     let _ = DialogContent::new(Vec::new()).ui().p_4().build();
     let _ = DialogHeader::new(Vec::new()).ui().build();

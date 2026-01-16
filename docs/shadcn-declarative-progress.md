@@ -166,8 +166,12 @@ Additional pass-through subcomponents also opt into `ui()` (not tracked individu
 
 - Alert/Dialog/Sheet: `*Header/*Footer/*Title/*Description` (+ `AlertDialogAction/AlertDialogCancel`).
 - Card: `CardHeader/CardContent/CardFooter/CardTitle/CardDescription`.
+- Command: `CommandEmpty/CommandList/CommandShortcut` (plus `CommandDialog` as Patch-only).
+- Field/Item/Pagination: `FieldSet/FieldLegend/FieldLabel/FieldTitle/FieldDescription/FieldError/FieldSeparator/FieldGroup/FieldContent`, `ItemGroup/ItemHeader/ItemContent/ItemTitle/ItemDescription/ItemMedia/ItemActions/ItemFooter/ItemSeparator`, `PaginationContent/PaginationItem/PaginationLink/PaginationPrevious/PaginationNext/PaginationEllipsis`.
+- Data table controls: `DataTableGlobalFilterInput/DataTableViewOptions`.
+- Sonner: `Toaster`.
 - Table: `TableHeader/TableBody/TableFooter/TableRow/TableHead/TableCaption`.
-- Wrappers: `PopoverTrigger/PopoverAnchor/TooltipTrigger/TooltipAnchor/HoverCardTrigger/HoverCardAnchor`.
+- Wrappers: `PopoverTrigger/PopoverAnchor/TooltipTrigger/TooltipAnchor/HoverCardTrigger/HoverCardAnchor/DrawerTrigger`.
 
 ## shadcn/ui v4 Registry Baseline
 
