@@ -148,6 +148,13 @@ Legend:
 | `alert_dialog` | `AlertDialogTrigger` | Pass-through | `ui()` is available for consistency; chrome/layout are not supported |
 | `drawer` | `DrawerClose` | Chrome+Layout |  |
 
+Additional pass-through subcomponents also opt into `ui()` (not tracked individually in the table):
+
+- Alert/Dialog/Sheet: `*Header/*Footer/*Title/*Description` (+ `AlertDialogAction/AlertDialogCancel`).
+- Card: `CardHeader/CardContent/CardFooter/CardTitle/CardDescription`.
+- Table: `TableHeader/TableBody/TableFooter/TableRow/TableHead/TableCaption`.
+- Wrappers: `PopoverTrigger/PopoverAnchor/TooltipTrigger/TooltipAnchor/HoverCardTrigger/HoverCardAnchor`.
+
 ## shadcn/ui v4 Registry Baseline
 
 The upstream reference in `repo-ref/ui` defines 54 `registry:ui` components (`repo-ref/ui/apps/v4/registry.json`).
