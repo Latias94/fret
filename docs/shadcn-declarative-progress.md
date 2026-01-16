@@ -94,6 +94,11 @@ Legend:
 | `kbd` | `Kbd` | Pass-through |  |
 | `breadcrumb` | `Breadcrumb` | Pass-through |  |
 | `checkbox` | `Checkbox` | Chrome+Layout |  |
+| `radio_group` | `RadioGroup` | Pass-through |  |
+| `calendar` | `Calendar` | Pass-through |  |
+| `calendar_range` | `CalendarRange` | Pass-through |  |
+| `date_picker` | `DatePicker` | Pass-through |  |
+| `date_range_picker` | `DateRangePicker` | Pass-through |  |
 | `input` | `Input` | Chrome+Layout |  |
 | `textarea` | `Textarea` | Chrome+Layout |  |
 | `switch` | `Switch` | Chrome+Layout |  |

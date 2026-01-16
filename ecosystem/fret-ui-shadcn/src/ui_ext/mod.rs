@@ -9,5 +9,6 @@ mod layout;
 mod misc;
 mod navigation;
 mod overlays;
+mod pickers;
 mod subcomponents;
 mod wrappers;

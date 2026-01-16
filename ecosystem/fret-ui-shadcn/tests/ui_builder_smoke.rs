@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret_runtime::ModelStore;
+use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
 use fret_ui_shadcn::prelude::*;
 use fret_ui_shadcn::{
     Alert, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -12,6 +13,7 @@ use fret_ui_shadcn::{
     SheetDescription, SheetFooter, SheetHeader, SheetTitle, Slider, Switch, TableBody,
     TableCaption, TableFooter, TableHead, TableHeader, TableRow, TabsRoot, TooltipContent,
 };
+use time::{Date, OffsetDateTime};
 
 #[test]
 fn ui_builder_smoke_applies_supported_patches() {
@@ -24,6 +26,12 @@ fn ui_builder_smoke_applies_supported_patches() {
     let command_palette_model = store.insert(String::new());
     let progress_model = store.insert(0.5_f32);
     let alert_dialog_open = store.insert(false);
+    let calendar_month = store.insert(CalendarMonth::from_date(OffsetDateTime::now_utc().date()));
+    let calendar_selected = store.insert(None::<Date>);
+    let calendar_range_selected = store.insert(DateRangeSelection::default());
+    let date_picker_open = store.insert(false);
+    let date_range_picker_open = store.insert(false);
+    let radio_group_model = store.insert(None::<Arc<str>>);
 
     let _ = Button::new("OK").ui().px_3().w_full().build();
     let _ = Alert::new(Vec::new()).ui().build();
@@ -51,6 +59,31 @@ fn ui_builder_smoke_applies_supported_patches() {
 
     let _ = PopoverContent::new(Vec::new()).ui().p_4().build();
     let _ = TooltipContent::new(Vec::new()).ui().p_4().build();
+
+    let _ = fret_ui_shadcn::Calendar::new(calendar_month.clone(), calendar_selected.clone())
+        .ui()
+        .build();
+    let _ =
+        fret_ui_shadcn::CalendarRange::new(calendar_month.clone(), calendar_range_selected.clone())
+            .ui()
+            .build();
+    let _ = fret_ui_shadcn::DatePicker::new(
+        date_picker_open,
+        calendar_month.clone(),
+        calendar_selected.clone(),
+    )
+    .ui()
+    .build();
+    let _ = fret_ui_shadcn::DateRangePicker::new(
+        date_range_picker_open,
+        calendar_month,
+        calendar_range_selected,
+    )
+    .ui()
+    .build();
+    let _ = fret_ui_shadcn::RadioGroup::new(radio_group_model)
+        .ui()
+        .build();
 
     let _ = Command::new(Vec::new()).ui().p_4().build();
     let _ = CommandInput::new(command_input_model).ui().w_full().build();
