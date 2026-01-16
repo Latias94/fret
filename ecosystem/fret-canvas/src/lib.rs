@@ -19,3 +19,6 @@ pub mod wires;
 
 #[cfg(feature = "declarative")]
 pub mod declarative;
+
+#[cfg(feature = "ui")]
+pub mod ui;
