@@ -68,7 +68,7 @@ fn ui_builder_smoke_applies_supported_patches() {
     let _ = CardDescription::new("x").ui().build();
 
     let _ = Switch::new(switch_model).ui().px_2().build();
-    let _ = Slider::new(slider_model).ui().w_full().build();
+    let _ = Slider::new(slider_model).ui().px_2().w_full().build();
     let _ = Select::new(select_model, select_open)
         .ui()
         .px_2()

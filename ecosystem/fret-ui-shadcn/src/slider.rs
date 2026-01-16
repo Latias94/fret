@@ -10,10 +10,10 @@ use fret_ui::element::{
     MarginEdges, Overflow, PointerRegionProps, PositionStyle, RowProps,
 };
 use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
-use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::slider as radix_slider;
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement};
 
 #[derive(Debug, Clone)]
 pub struct SliderStyle {
@@ -107,6 +107,7 @@ pub struct Slider {
     min_steps_between_thumbs: u32,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
+    chrome: ChromeRefinement,
     layout: LayoutRefinement,
     style: Option<SliderStyle>,
 }
@@ -121,6 +122,7 @@ impl Slider {
             min_steps_between_thumbs: 0,
             disabled: false,
             a11y_label: None,
+            chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             style: None,
         }
@@ -166,6 +168,11 @@ impl Slider {
         self
     }
 
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
         self
@@ -186,6 +193,7 @@ impl Slider {
             self.min_steps_between_thumbs,
             self.disabled,
             self.a11y_label,
+            self.chrome,
             self.layout,
             self.style,
         )
@@ -201,6 +209,7 @@ pub fn slider<H: UiHost>(
     min_steps_between_thumbs: u32,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
+    chrome: ChromeRefinement,
     layout: LayoutRefinement,
     style: Option<SliderStyle>,
 ) -> AnyElement {
@@ -373,15 +382,9 @@ pub fn slider<H: UiHost>(
             let track_top = 0.0;
             let thumb_r = Px(style.thumb_size.0.max(0.0) * 0.5);
 
-            let root_container = ContainerProps {
-                layout: semantics_layout,
-                padding: Edges::all(Px(0.0)),
-                background: None,
-                shadow: None,
-                border: Edges::all(Px(0.0)),
-                border_color: None,
-                corner_radii: Corners::all(Px(0.0)),
-            };
+            let mut root_container =
+                decl_style::container_props(&theme, chrome.clone(), LayoutRefinement::default());
+            root_container.layout = semantics_layout;
 
             let track = ContainerProps {
                 layout: LayoutStyle {
