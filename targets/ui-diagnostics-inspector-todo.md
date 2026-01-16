@@ -27,6 +27,9 @@ Related docs:
    - Render label: `role`, `label`, `test_id`, `node_id`, and root `z_index`.
    - Interaction: toggle on/off; lock selection; copy selector to clipboard.
    - Ownership: should live in `fret-ui-kit` / app overlay, not `fret-ui`.
+   - Status:
+     - MVP implemented in `fret-bootstrap` as a diagnostics-only overlay layer (border + label) while inspection is active (scripts/picking).
+     - Gaps: no continuous inspect toggle yet; no clipboard copy; no “locked selection”.
 
 2. **Pick modes**
    - One-shot pick (already): click once and write `pick.result.json`.

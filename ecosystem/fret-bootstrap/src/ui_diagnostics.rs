@@ -124,6 +124,8 @@ pub struct UiDiagnosticsService {
     last_dump_dir: Option<PathBuf>,
     last_script_run_id: u64,
     last_pick_run_id: u64,
+    last_picked_node_id: HashMap<AppWindowId, u64>,
+    pick_overlay_grace_frames: HashMap<AppWindowId, u32>,
     pick_armed_run_id: Option<u64>,
     pending_pick: Option<PendingPick>,
 }
@@ -133,6 +135,24 @@ impl UiDiagnosticsService {
         self.cfg.enabled
     }
 
+    pub fn redact_text(&self) -> bool {
+        self.cfg.redact_text
+    }
+
+    pub fn last_pointer_position(&self, window: AppWindowId) -> Option<Point> {
+        self.per_window
+            .get(&window)
+            .and_then(|ring| ring.last_pointer_position)
+    }
+
+    pub fn last_picked_node_id(&self, window: AppWindowId) -> Option<u64> {
+        self.last_picked_node_id.get(&window).copied()
+    }
+
+    pub fn pick_is_armed(&self) -> bool {
+        self.pick_armed_run_id.is_some()
+    }
+
     pub fn wants_inspection_active(&mut self, window: AppWindowId) -> bool {
         if !self.is_enabled() {
             return false;
@@ -140,9 +160,24 @@ impl UiDiagnosticsService {
 
         self.poll_pick_trigger();
 
+        let grace = self
+            .pick_overlay_grace_frames
+            .get(&window)
+            .copied()
+            .unwrap_or(0);
+        if grace > 0 {
+            let next = grace.saturating_sub(1);
+            if next == 0 {
+                self.pick_overlay_grace_frames.remove(&window);
+            } else {
+                self.pick_overlay_grace_frames.insert(window, next);
+            }
+        }
+
         self.pending_script.is_some()
             || self.active_scripts.contains_key(&window)
             || self.pick_armed_run_id.is_some()
+            || grace > 0
             || self
                 .pending_pick
                 .as_ref()
@@ -754,6 +789,8 @@ impl UiDiagnosticsService {
         match selection {
             Some(sel) => {
                 result.stage = UiPickStageV1::Picked;
+                self.last_picked_node_id.insert(window, sel.node.id);
+                self.pick_overlay_grace_frames.insert(window, 10);
                 result.selection = Some(sel);
             }
             None => {
@@ -1543,7 +1580,7 @@ fn env_flag_default_true(name: &str) -> bool {
     !matches!(v.as_str(), "0" | "false" | "no" | "off")
 }
 
-fn semantics_role_label(role: SemanticsRole) -> &'static str {
+pub(crate) fn semantics_role_label(role: SemanticsRole) -> &'static str {
     match role {
         SemanticsRole::Generic => "generic",
         SemanticsRole::Window => "window",
@@ -1882,7 +1919,7 @@ fn pick_semantics_node_at<'a>(
     pick_semantics_node_by_bounds(snapshot, position)
 }
 
-fn pick_semantics_node_by_bounds<'a>(
+pub(crate) fn pick_semantics_node_by_bounds<'a>(
     snapshot: &'a fret_core::SemanticsSnapshot,
     position: Point,
 ) -> Option<&'a fret_core::SemanticsNode> {

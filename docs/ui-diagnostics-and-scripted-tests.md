@@ -97,6 +97,10 @@ This is the fastest way to author stable selectors (GPUI/Zed-style inspect):
 
 4. The app writes `pick.result.json` (and, by default, also dumps a `bundle.json` labelled `pick`).
 
+Notes:
+
+- While picking is active, the app renders a non-interactive inspect overlay (outline + label) to help confirm which semantics node is being targeted.
+
 ### Generate a runnable script from a pick
 
 To reduce "pick → first repro script" friction, `fretboard` can generate a minimal script skeleton:
