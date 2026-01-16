@@ -1935,7 +1935,7 @@ impl ContextMenu {
             // `ContextMenuPrimitive.Content` uses `side="right" sideOffset={2} align="start"`.
             side: DropdownMenuSide::Right,
             side_offset: Px(2.0),
-            window_margin: Px(8.0),
+            window_margin: Px(0.0),
             min_width: Px(128.0),
             submenu_min_width: Px(128.0),
             typeahead_timeout_ticks: 30,
@@ -2211,6 +2211,7 @@ impl ContextMenu {
                     let anchor_rect = overlay::anchor_rect_from_point(anchor);
                     let popper_placement =
                         popper::PopperContentPlacement::new(direction, side, align, side_offset)
+                            .with_shift_cross_axis(true)
                             .with_arrow(arrow_options, arrow_protrusion);
                     let popper_vars = menu::context_menu_popper_vars(
                         outer,
