@@ -5,19 +5,20 @@ mod constraints;
 mod readout;
 mod util;
 
-use self::cache::{LegendEntry, PreparedText};
+use self::cache::LegendEntry;
 pub use self::constraints::AxisConstraints;
 use self::constraints::constrain_view_bounds_scaled;
 use self::readout::apply_readout_policy;
 pub(super) use self::util::contains_point;
 use self::util::{dim_color, offset_rect, overlay_rect_in_plot};
 
+use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
+use fret_canvas::text::{PreparedText, TextCache};
 use fret_core::geometry::{Point, Px, Rect, Size};
 use fret_core::scene::{Color, DrawOrder, SceneOp};
 use fret_core::{
     Event, FontId, FontWeight, KeyCode, MouseButton, PathId, PointerEvent, SemanticsRole,
-    TextBlobId, TextConstraints, TextMetrics, TextOverflow, TextSlant, TextStyle, TextWrap,
-    UiServices,
+    TextConstraints, TextOverflow, TextSlant, TextStyle, TextWrap, UiServices,
 };
 use fret_runtime::{Model, TextFontStackKey};
 use fret_ui::Theme;
@@ -25,6 +26,7 @@ use fret_ui::UiHost;
 use fret_ui::retained_bridge::{
     Invalidation, LayoutCx, PaintCx, SemanticsCx, UiTreeRetainedExt, Widget,
 };
+use slotmap::Key;
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 
@@ -424,6 +426,7 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     query_drag_current: Option<Point>,
     drag_capture: Option<DragCapture>,
     drag_output: Option<PlotDragOutput>,
+    axis_text_cache: TextCache,
     axis_label_key: Option<u64>,
     axis_ticks_x: Vec<f64>,
     axis_ticks_y: Vec<f64>,
@@ -440,6 +443,7 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     axis_lock_indicator_y2: Option<PreparedText>,
     axis_lock_indicator_y3: Option<PreparedText>,
     axis_lock_indicator_y4: Option<PreparedText>,
+    legend_text_cache: TextCache,
     legend_key: Option<u64>,
     legend_entries: Vec<LegendEntry>,
     tooltip_text: Option<PreparedText>,
@@ -949,6 +953,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             query_drag_current: None,
             drag_capture: None,
             drag_output: None,
+            axis_text_cache: TextCache::default(),
             axis_label_key: None,
             axis_ticks_x: Vec::new(),
             axis_ticks_y: Vec::new(),
@@ -965,6 +970,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             axis_lock_indicator_y2: None,
             axis_lock_indicator_y3: None,
             axis_lock_indicator_y4: None,
+            legend_text_cache: TextCache::default(),
             legend_key: None,
             legend_entries: Vec::new(),
             tooltip_text: None,
@@ -4453,6 +4459,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         cx.observe_global::<TextFontStackKey>(Invalidation::Paint);
         self.last_scale_factor = cx.scale_factor;
 
+        self.axis_text_cache.begin_frame();
+        self.legend_text_cache.begin_frame();
+
         self.ensure_required_axes_enabled(cx.app);
         self.sync_axis_locks(cx.app);
 
@@ -4780,6 +4789,33 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             view_bounds_y4,
         );
         self.rebuild_legend_if_needed(cx, theme_revision, font_stack_key);
+
+        if let Some(window) = cx.window {
+            let frame_id = cx.app.frame_id().0;
+            let node = cx.node.data().as_ffi();
+            let window = window.data().as_ffi();
+            let axis_key = CanvasCacheKey {
+                window,
+                node,
+                name: "fret-plot.canvas.text.axis",
+            };
+            let legend_key = CanvasCacheKey {
+                window,
+                node,
+                name: "fret-plot.canvas.text.legend",
+            };
+
+            let axis_entries = self.axis_text_cache.len();
+            let axis_stats = self.axis_text_cache.stats();
+            let legend_entries = self.legend_text_cache.len();
+            let legend_stats = self.legend_text_cache.stats();
+
+            cx.app
+                .with_global_mut(CanvasCacheStatsRegistry::default, |registry, _app| {
+                    registry.record_text_cache(axis_key, frame_id, axis_entries, axis_stats);
+                    registry.record_text_cache(legend_key, frame_id, legend_entries, legend_stats);
+                });
+        }
 
         // Grid + series + hover are clipped to the plot area.
         cx.scene.push(SceneOp::PushClipRect { rect: layout.plot });
