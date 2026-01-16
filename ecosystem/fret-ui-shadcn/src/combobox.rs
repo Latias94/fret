@@ -67,6 +67,8 @@ pub struct Combobox {
     a11y_label: Option<Arc<str>>,
     search_enabled: bool,
     consume_outside_pointer_events: bool,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
 }
 
 impl Combobox {
@@ -86,6 +88,8 @@ impl Combobox {
             // shadcn/ui Combobox is a Popover + Command recipe; Popover is click-through by default.
             // (ADR 0069)
             consume_outside_pointer_events: false,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
         }
     }
 
@@ -167,8 +171,18 @@ impl Combobox {
         self
     }
 
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        combobox(
+        combobox_with_patch(
             cx,
             self.model,
             self.open,
@@ -182,6 +196,8 @@ impl Combobox {
             self.a11y_label,
             self.search_enabled,
             self.consume_outside_pointer_events,
+            self.chrome,
+            self.layout,
         )
     }
 }
@@ -201,6 +217,43 @@ pub fn combobox<H: UiHost>(
     a11y_label: Option<Arc<str>>,
     search_enabled: bool,
     consume_outside_pointer_events: bool,
+) -> AnyElement {
+    combobox_with_patch(
+        cx,
+        model,
+        open,
+        query,
+        items,
+        width,
+        placeholder,
+        search_placeholder,
+        empty_text,
+        disabled,
+        a11y_label,
+        search_enabled,
+        consume_outside_pointer_events,
+        ChromeRefinement::default(),
+        LayoutRefinement::default(),
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn combobox_with_patch<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    model: Model<Option<Arc<str>>>,
+    open: Model<bool>,
+    query: Option<Model<String>>,
+    items: &[ComboboxItem],
+    width: Option<Px>,
+    placeholder: Arc<str>,
+    search_placeholder: Arc<str>,
+    empty_text: Arc<str>,
+    disabled: bool,
+    a11y_label: Option<Arc<str>>,
+    search_enabled: bool,
+    consume_outside_pointer_events: bool,
+    chrome_patch: ChromeRefinement,
+    layout_patch: LayoutRefinement,
 ) -> AnyElement {
     cx.scope(|cx| {
         let theme = Theme::global(&*cx.app).clone();
@@ -231,7 +284,11 @@ pub fn combobox<H: UiHost>(
         }
 
         let size = Size::default();
-        let radius = size.control_radius(&theme);
+        let radius = chrome_patch
+            .radius
+            .as_ref()
+            .map(|m| m.resolve(&theme))
+            .unwrap_or_else(|| size.control_radius(&theme));
         let ring = decl_style::focus_ring(&theme, radius);
 
         let resolved_label = selected
@@ -251,10 +308,18 @@ pub fn combobox<H: UiHost>(
             letter_spacing_em: None,
         };
 
-        let min_h = size.button_h(&theme);
+        let min_h = chrome_patch
+            .min_height
+            .as_ref()
+            .map(|m| m.resolve(&theme))
+            .unwrap_or_else(|| size.button_h(&theme));
         let pad_x = size.button_px(&theme);
         let pad_y = size.button_py(&theme);
-        let border_w = Px(1.0);
+        let border_w = chrome_patch
+            .border_width
+            .as_ref()
+            .map(|m| m.resolve(&theme))
+            .unwrap_or(Px(1.0));
 
         let mut trigger_layout = decl_style::layout_style(
             &theme,
@@ -264,36 +329,61 @@ pub fn combobox<H: UiHost>(
                     LayoutRefinement::default().w_px(MetricRef::Px(w))
                 } else {
                     LayoutRefinement::default().w_full()
-                }),
+                })
+                .merge(layout_patch),
         );
         trigger_layout.size.height = Length::Auto;
         trigger_layout.size.min_height = Some(min_h);
 
-        let bg = theme
-            .color_by_key("background")
-            .unwrap_or_else(|| theme.color_required("background"));
+        let bg = chrome_patch
+            .background
+            .as_ref()
+            .map(|c| c.resolve(&theme))
+            .unwrap_or_else(|| {
+                theme
+                    .color_by_key("background")
+                    .unwrap_or_else(|| theme.color_required("background"))
+            });
         let bg_hover = theme
             .color_by_key("accent")
             .or_else(|| theme.color_by_key("accent.background"))
             .unwrap_or_else(|| theme.color_required("accent"));
         let bg_pressed = theme.color_required("accent");
-        let fg = theme
-            .color_by_key("foreground")
-            .unwrap_or_else(|| theme.color_required("foreground"));
+        let fg = chrome_patch
+            .text_color
+            .as_ref()
+            .map(|c| c.resolve(&theme))
+            .unwrap_or_else(|| {
+                theme
+                    .color_by_key("foreground")
+                    .unwrap_or_else(|| theme.color_required("foreground"))
+            });
         let fg_hover = theme
             .color_by_key("accent-foreground")
             .or_else(|| theme.color_by_key("accent.foreground"))
             .unwrap_or(fg);
-        let border = theme
-            .color_by_key("input")
-            .or_else(|| theme.color_by_key("border"))
-            .unwrap_or_else(|| theme.color_required("border"));
+        let border = chrome_patch
+            .border_color
+            .as_ref()
+            .map(|c| c.resolve(&theme))
+            .unwrap_or_else(|| {
+                theme
+                    .color_by_key("input")
+                    .or_else(|| theme.color_by_key("border"))
+                    .unwrap_or_else(|| theme.color_required("border"))
+            });
 
         let enabled = !disabled;
         let items: Vec<ComboboxItem> = items.to_vec();
         let open_for_trigger = open.clone();
         let trigger_gap = MetricRef::space(Space::N2).resolve(&theme);
         let a11y_label_for_trigger = a11y_label.clone();
+
+        let padding = chrome_patch.padding.clone().unwrap_or_default();
+        let pad_top = padding.top.map(|m| m.resolve(&theme)).unwrap_or(pad_y);
+        let pad_right = padding.right.map(|m| m.resolve(&theme)).unwrap_or(pad_x);
+        let pad_bottom = padding.bottom.map(|m| m.resolve(&theme)).unwrap_or(pad_y);
+        let pad_left = padding.left.map(|m| m.resolve(&theme)).unwrap_or(pad_x);
 
         Popover::new(open.clone())
             .auto_focus(true)
@@ -333,10 +423,10 @@ pub fn combobox<H: UiHost>(
                             ContainerProps {
                                 layout: LayoutStyle::default(),
                                 padding: Edges {
-                                    top: pad_y,
-                                    right: pad_x,
-                                    bottom: pad_y,
-                                    left: pad_x,
+                                    top: pad_top,
+                                    right: pad_right,
+                                    bottom: pad_bottom,
+                                    left: pad_left,
                                 },
                                 background: Some(bg),
                                 shadow: None,

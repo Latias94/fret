@@ -95,7 +95,7 @@ Legend:
 | `kbd` | `Kbd` | Chrome+Layout |  |
 | `breadcrumb` | `Breadcrumb` | Chrome+Layout |  |
 | `empty` | `Empty` | Chrome+Layout |  |
-| `combobox` | `Combobox` | Pass-through |  |
+| `combobox` | `Combobox` | Chrome+Layout |  |
 | `checkbox` | `Checkbox` | Chrome+Layout |  |
 | `radio_group` | `RadioGroup` | Chrome+Layout |  |
 | `calendar` | `Calendar` | Chrome+Layout |  |
