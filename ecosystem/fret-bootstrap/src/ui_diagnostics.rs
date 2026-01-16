@@ -1076,9 +1076,11 @@ impl UiDiagnosticsService {
         let hit_test = last_pointer_position
             .map(|pos| UiHitTestSnapshotV1::from_hit_test(pos, ui.debug_hit_test(pos)));
 
-        let element_diag = element_runtime
-            .and_then(|runtime| runtime.diagnostics_snapshot(window))
-            .map(ElementDiagnosticsSnapshotV1::from_runtime);
+        let element_diag = element_runtime.and_then(|runtime| {
+            runtime.diagnostics_snapshot(window).map(|snapshot| {
+                ElementDiagnosticsSnapshotV1::from_runtime(window, runtime, snapshot)
+            })
+        });
 
         let raw_semantics = ui.semantics_snapshot();
 
@@ -2090,10 +2092,20 @@ impl UiHitTestSnapshotV1 {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ElementDiagnosticsSnapshotV1 {
     pub focused_element: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub focused_element_path: Option<String>,
     pub active_text_selection: Option<(u64, u64)>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub active_text_selection_path: Option<(String, String)>,
     pub hovered_pressable: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hovered_pressable_path: Option<String>,
     pub pressed_pressable: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pressed_pressable_path: Option<String>,
     pub hovered_hover_region: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hovered_hover_region_path: Option<String>,
     pub wants_continuous_frames: bool,
     pub observed_models: Vec<ElementObservedModelsV1>,
     pub observed_globals: Vec<ElementObservedGlobalsV1>,
@@ -2112,13 +2124,40 @@ pub struct ElementObservedGlobalsV1 {
 }
 
 impl ElementDiagnosticsSnapshotV1 {
-    fn from_runtime(snapshot: fret_ui::elements::WindowElementDiagnosticsSnapshot) -> Self {
+    fn from_runtime(
+        window: AppWindowId,
+        runtime: &ElementRuntime,
+        snapshot: fret_ui::elements::WindowElementDiagnosticsSnapshot,
+    ) -> Self {
+        let focused_element_path = snapshot
+            .focused_element
+            .and_then(|id| runtime.debug_path_for_element(window, id));
+        let active_text_selection_path = snapshot.active_text_selection.and_then(|(a, b)| {
+            let a = runtime.debug_path_for_element(window, a)?;
+            let b = runtime.debug_path_for_element(window, b)?;
+            Some((a, b))
+        });
+        let hovered_pressable_path = snapshot
+            .hovered_pressable
+            .and_then(|id| runtime.debug_path_for_element(window, id));
+        let pressed_pressable_path = snapshot
+            .pressed_pressable
+            .and_then(|id| runtime.debug_path_for_element(window, id));
+        let hovered_hover_region_path = snapshot
+            .hovered_hover_region
+            .and_then(|id| runtime.debug_path_for_element(window, id));
+
         Self {
             focused_element: snapshot.focused_element.map(|id| id.0),
+            focused_element_path,
             active_text_selection: snapshot.active_text_selection.map(|(a, b)| (a.0, b.0)),
+            active_text_selection_path,
             hovered_pressable: snapshot.hovered_pressable.map(|id| id.0),
+            hovered_pressable_path,
             pressed_pressable: snapshot.pressed_pressable.map(|id| id.0),
+            pressed_pressable_path,
             hovered_hover_region: snapshot.hovered_hover_region.map(|id| id.0),
+            hovered_hover_region_path,
             wants_continuous_frames: snapshot.wants_continuous_frames,
             observed_models: snapshot
                 .observed_models
