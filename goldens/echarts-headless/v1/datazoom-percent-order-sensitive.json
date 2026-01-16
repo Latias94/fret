@@ -1,0 +1,69 @@
+{
+  "axis_windows": [
+    {
+      "axis": 1,
+      "min": 0.8,
+      "max": 3.2
+    },
+    {
+      "axis": 2,
+      "min": 10.0,
+      "max": 30.0
+    }
+  ],
+  "filter_plan": {
+    "revision": 2,
+    "grids": [
+      {
+        "grid": 1,
+        "series": [
+          1
+        ],
+        "y_percent_extents": [
+          {
+            "axis": 2,
+            "min": 10.0,
+            "max": 30.0
+          }
+        ]
+      }
+    ]
+  },
+  "marks": {
+    "revision": 3,
+    "total_nodes": 1,
+    "arena_points": 3,
+    "arena_rects": 0,
+    "by_series": [
+      {
+        "series": 1,
+        "nodes": 1,
+        "points": 3,
+        "polylines": 0,
+        "rects": 0,
+        "texts": 0
+      }
+    ]
+  },
+  "participation": {
+    "revision": 2,
+    "series": [
+      {
+        "series": 1,
+        "dataset": 1,
+        "revision": 2,
+        "data_revision": 2,
+        "selection": {
+          "kind": "range",
+          "start": 1,
+          "end": 4,
+          "view_len": 3
+        },
+        "x_filter_mode": "Filter",
+        "y_filter_mode": "Filter",
+        "empty_mask_active": false,
+        "empty_mask_y_is_interval": false
+      }
+    ]
+  }
+}

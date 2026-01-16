@@ -529,10 +529,14 @@ goal is to establish a stable “Option -> Engine” spine that scales to more s
   outputs (marks + axis windows), without requiring GPU rendering.
 - Evidence target:
   - `ecosystem/fret-chart/src/echarts/mod.rs` (translator entrypoint + unit tests)
+  - `ecosystem/fret-chart/tests/echarts_headless_goldens.rs` (headless Option -> Engine golden harness)
+  - `goldens/echarts-headless/v1/*.json` (checked-in headless output snapshots)
   - `ecosystem/delinea/src/engine/tests.rs` (engine-level invariants)
 - Suggested tests:
-  - “can build engine and run to completion” (already exists for minimal cases)
+  - “can build engine and run to completion” (already exists for minimal cases + goldens)
   - “option change only affects expected revision family” (future: spec vs visual vs data)
+  - To update goldens:
+    - `$env:FRET_UPDATE_GOLDENS='1'; cargo test -p fret-chart -F echarts --test echarts_headless_goldens`
 
 ### P0-1: `dataset + dimensions + encode` baseline (cartesian2d only)
 
