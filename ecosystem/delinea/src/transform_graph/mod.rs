@@ -10,6 +10,7 @@
 use crate::data::DatasetStore;
 use crate::engine::ChartState;
 use crate::engine::model::ChartModel;
+use crate::engine::stages::DataViewStage;
 use crate::engine::window::DataWindow;
 use crate::ids::{AxisId, Revision, SeriesId};
 use crate::spec::{AxisKind, AxisRange, FilterMode};
@@ -20,6 +21,7 @@ use std::collections::BTreeMap;
 pub struct TransformGraph {
     x_extent_cache: BTreeMap<AxisId, CachedExtent>,
     y_percent_extents_cache: BTreeMap<crate::ids::GridId, CachedYExtents>,
+    data_views: DataViewStage,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -38,6 +40,15 @@ impl TransformGraph {
     pub fn clear(&mut self) {
         self.x_extent_cache.clear();
         self.y_percent_extents_cache.clear();
+        self.data_views = DataViewStage::default();
+    }
+
+    pub fn data_views(&self) -> &DataViewStage {
+        &self.data_views
+    }
+
+    pub fn data_views_mut(&mut self) -> &mut DataViewStage {
+        &mut self.data_views
     }
 
     /// Returns a finite `(min, max)` data extent for the X axis based on visible series and the

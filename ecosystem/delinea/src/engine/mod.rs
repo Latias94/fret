@@ -129,7 +129,6 @@ pub struct ChartEngine {
     stats: EngineStats,
     view: ViewState,
     transform_graph: TransformGraph,
-    data_view_stage: DataViewStage,
     filter_processor_stage: FilterProcessorStage,
     participation: crate::engine::stages::ParticipationState,
     ordinal_index_stage: OrdinalIndexStage,
@@ -219,7 +218,6 @@ impl ChartEngine {
             stats: EngineStats::default(),
             view: ViewState::default(),
             transform_graph: TransformGraph::default(),
-            data_view_stage: DataViewStage::default(),
             filter_processor_stage: FilterProcessorStage::default(),
             participation: crate::engine::stages::ParticipationState::default(),
             ordinal_index_stage: OrdinalIndexStage::default(),
@@ -1003,16 +1001,21 @@ impl ChartEngine {
             .bar_layout_stage
             .step(&self.model, &self.datasets, &mut budget);
 
-        self.data_view_stage.begin_frame();
+        self.transform_graph.data_views_mut().begin_frame();
         self.filter_processor_stage.request_data_views(
             &self.model,
             &self.datasets,
             &self.state,
             &self.view,
-            &mut self.data_view_stage,
+            self.transform_graph.data_views_mut(),
         );
-        self.data_view_stage.prepare_requests(&self.datasets);
-        let selection_done = self.data_view_stage.step(&self.datasets, &mut budget);
+        self.transform_graph
+            .data_views_mut()
+            .prepare_requests(&self.datasets);
+        let selection_done = self
+            .transform_graph
+            .data_views_mut()
+            .step(&self.datasets, &mut budget);
 
         // Multi-dimensional `weakFilter` (v1 subset) is materialized as an indices-backed selection.
         // Apply the cached selection when available so all downstream consumers observe the correct
@@ -1023,7 +1026,6 @@ impl ChartEngine {
             &self.datasets,
             &mut self.state,
             &mut self.view,
-            &self.data_view_stage,
         );
         let xy_weak_filter_pending = filter_result.xy_weak_filter_pending;
 
@@ -1151,7 +1153,7 @@ impl ChartEngine {
                 &self.model,
                 &self.datasets,
                 &self.state,
-                &self.data_view_stage,
+                self.transform_graph.data_views(),
                 &self.stack_dims_stage,
                 &self.bar_layout_stage,
                 &self.participation,
@@ -1251,7 +1253,7 @@ impl ChartEngine {
                                     &self.model,
                                     &self.datasets,
                                     &self.participation,
-                                    &self.data_view_stage,
+                                    self.transform_graph.data_views(),
                                     &self.stack_dims_stage,
                                     &self.ordinal_index_stage,
                                     &self.nearest_x_index_stage,

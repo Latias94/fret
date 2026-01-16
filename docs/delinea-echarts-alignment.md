@@ -582,6 +582,7 @@ goal is to establish a stable “Option -> Engine” spine that scales to more s
   - `TransformGraph` exists as a minimal “derived output cache” surface, currently hosting:
     - X axis data extents caching (used by percent->value mapping).
     - Y percent extents scoped by X selection/filter (order-sensitive “X before Y” semantics per grid).
+    - Incremental indices view caching (`DataViewStage`) is owned by `TransformGraph` (still implemented in `engine/stages/data_view.rs`).
 - Minimum viable nodes:
   - selection/slice node (monotonic fast path + non-monotonic index selection)
   - derived columns (computed fields)

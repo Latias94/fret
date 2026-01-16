@@ -111,6 +111,7 @@ Status symbols:
   - Engine stages: `ecosystem/delinea/src/engine/stages/`
   - View participation: `ecosystem/delinea/src/view/mod.rs`
   - Transform graph scaffolding: `ecosystem/delinea/src/transform_graph/mod.rs`
+  - Data view indices cache: `ecosystem/delinea/src/engine/stages/data_view.rs` (owned by `TransformGraph`)
   - UI adapter: `ecosystem/fret-chart/src/retained/canvas.rs`
   - ECharts option adapter (feature-gated): `ecosystem/fret-chart/src/echarts/mod.rs`
   - ECharts smoke demo: `apps/fret-examples/src/echarts_demo.rs`

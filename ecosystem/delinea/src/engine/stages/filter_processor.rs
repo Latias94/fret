@@ -328,7 +328,6 @@ impl FilterProcessorStage {
         datasets: &DatasetStore,
         state: &mut ChartState,
         view: &mut ViewState,
-        data_views: &DataViewStage,
     ) -> FilterProcessorResult {
         let mut xy_weak_filter_pending = false;
         let mut view_changed = false;
@@ -412,7 +411,7 @@ impl FilterProcessorStage {
                     datasets,
                     state,
                     view,
-                    data_views,
+                    transform_graph.data_views(),
                     &view_series_index,
                     &plan.series,
                     MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN,
@@ -434,7 +433,7 @@ impl FilterProcessorStage {
                     model,
                     datasets,
                     view,
-                    data_views,
+                    transform_graph.data_views(),
                     &view_series_index,
                     &plan.series,
                     &mut view_changed,
