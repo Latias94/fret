@@ -93,7 +93,8 @@ Legend:
 | `alert` | `Alert` | Chrome+Layout |  |
 | `badge` | `Badge` | Chrome+Layout |  |
 | `kbd` | `Kbd` | Chrome+Layout |  |
-| `breadcrumb` | `Breadcrumb` | Pass-through |  |
+| `breadcrumb` | `Breadcrumb` | Chrome+Layout |  |
+| `empty` | `Empty` | Chrome+Layout |  |
 | `combobox` | `Combobox` | Pass-through |  |
 | `checkbox` | `Checkbox` | Chrome+Layout |  |
 | `radio_group` | `RadioGroup` | Pass-through |  |

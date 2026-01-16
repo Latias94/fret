@@ -5,7 +5,8 @@ use fret_runtime::CommandId;
 use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, PressableProps, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
-use fret_ui_kit::{MetricRef, Space};
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum BreadcrumbItemKind {
@@ -22,11 +23,17 @@ enum BreadcrumbItemKind {
 #[derive(Debug, Clone, Default)]
 pub struct Breadcrumb {
     items: Vec<BreadcrumbItem>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
 }
 
 impl Breadcrumb {
     pub fn new() -> Self {
-        Self { items: Vec::new() }
+        Self {
+            items: Vec::new(),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
     }
 
     pub fn item(mut self, item: BreadcrumbItem) -> Self {
@@ -39,63 +46,87 @@ impl Breadcrumb {
         self
     }
 
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        breadcrumb_with_patch(cx, self.items, self.chrome, self.layout)
+    }
+}
 
-        let gap = theme
-            .metric_by_key("component.breadcrumb.gap")
-            .unwrap_or_else(|| MetricRef::space(Space::N1p5).resolve(&theme));
+fn breadcrumb_with_patch<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    items: Vec<BreadcrumbItem>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app).clone();
 
-        let text_px = theme
-            .metric_by_key("component.breadcrumb.text_px")
-            .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
-        let line_height = theme
-            .metric_by_key("component.breadcrumb.line_height")
-            .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+    let gap = theme
+        .metric_by_key("component.breadcrumb.gap")
+        .unwrap_or_else(|| MetricRef::space(Space::N1p5).resolve(&theme));
 
-        let fg = theme.color_required("foreground");
-        let muted = theme.color_required("muted-foreground");
+    let text_px = theme
+        .metric_by_key("component.breadcrumb.text_px")
+        .or_else(|| theme.metric_by_key("font.size"))
+        .unwrap_or_else(|| theme.metric_required("font.size"));
+    let line_height = theme
+        .metric_by_key("component.breadcrumb.line_height")
+        .or_else(|| theme.metric_by_key("font.line_height"))
+        .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
-        let style = TextStyle {
-            font: FontId::default(),
-            size: text_px,
-            weight: FontWeight::NORMAL,
-            slant: Default::default(),
-            line_height: Some(line_height),
-            letter_spacing_em: None,
+    let fg = theme.color_required("foreground");
+    let muted = theme.color_required("muted-foreground");
+
+    let style = TextStyle {
+        font: FontId::default(),
+        size: text_px,
+        weight: FontWeight::NORMAL,
+        slant: Default::default(),
+        line_height: Some(line_height),
+        letter_spacing_em: None,
+    };
+
+    let mut children: Vec<AnyElement> = Vec::new();
+    let n = items.len();
+    for (i, mut item) in items.into_iter().enumerate() {
+        let is_last = i + 1 == n;
+        item.kind = match item.kind {
+            BreadcrumbItemKind::Ellipsis => BreadcrumbItemKind::Ellipsis,
+            _ if is_last => BreadcrumbItemKind::Page,
+            _ => BreadcrumbItemKind::Link,
         };
 
-        let mut children: Vec<AnyElement> = Vec::new();
-        let n = self.items.len();
-        for (i, mut item) in self.items.into_iter().enumerate() {
-            let is_last = i + 1 == n;
-            item.kind = match item.kind {
-                BreadcrumbItemKind::Ellipsis => BreadcrumbItemKind::Ellipsis,
-                _ if is_last => BreadcrumbItemKind::Page,
-                _ => BreadcrumbItemKind::Link,
-            };
-
-            children.push(item.render(cx, &style, muted, fg));
-            if !is_last {
-                children.push(breadcrumb_separator(cx, &style, muted));
-            }
+        children.push(item.render(cx, &style, muted, fg));
+        if !is_last {
+            children.push(breadcrumb_separator(cx, &style, muted));
         }
-
-        cx.flex(
-            FlexProps {
-                layout: Default::default(),
-                direction: fret_core::Axis::Horizontal,
-                gap,
-                padding: fret_core::Edges::all(Px(0.0)),
-                justify: MainAlign::Start,
-                align: CrossAlign::Center,
-                wrap: true,
-            },
-            move |_cx| children,
-        )
     }
+
+    cx.container(
+        decl_style::container_props(&theme, chrome, layout),
+        move |cx| {
+            vec![cx.flex(
+                FlexProps {
+                    layout: Default::default(),
+                    direction: fret_core::Axis::Horizontal,
+                    gap,
+                    padding: fret_core::Edges::all(Px(0.0)),
+                    justify: MainAlign::Start,
+                    align: CrossAlign::Center,
+                    wrap: true,
+                },
+                move |_cx| children,
+            )]
+        },
+    )
 }
 
 #[derive(Debug, Clone)]

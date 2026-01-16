@@ -174,8 +174,8 @@ fn ui_builder_smoke_applies_supported_patches() {
     let _ = Alert::new(Vec::new()).ui().p_4().border_1().build();
     let _ = Badge::new("x").ui().px_2().build();
     let _ = Kbd::new("x").ui().px_2().build();
-    let _ = Breadcrumb::new().ui().build();
-    let _ = Empty::new("Empty").ui().build();
+    let _ = Breadcrumb::new().ui().px_2().build();
+    let _ = Empty::new("Empty").ui().p_4().border_1().build();
     let _ = Card::new(Vec::new())
         .ui()
         .p_4()
