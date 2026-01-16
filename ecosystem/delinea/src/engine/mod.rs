@@ -22,6 +22,7 @@ use crate::tooltip::{
 };
 use crate::transform::stack_base_at_index;
 use crate::transform::{RowRange, RowSelection};
+use crate::transform_graph::TransformGraph;
 use crate::view::ViewState;
 use std::collections::BTreeMap;
 
@@ -127,6 +128,7 @@ pub struct ChartEngine {
     output: ChartOutput,
     stats: EngineStats,
     view: ViewState,
+    transform_graph: TransformGraph,
     data_view_stage: DataViewStage,
     filter_processor_stage: FilterProcessorStage,
     participation: crate::engine::stages::ParticipationState,
@@ -155,63 +157,6 @@ struct BrushLinkCache {
 
 impl ChartEngine {
     fn apply_percent_windows_pre_view(&mut self) {
-        let mut axis_extents_x: BTreeMap<crate::ids::AxisId, (f64, f64)> = BTreeMap::new();
-
-        for series in self.model.series.values() {
-            if !series.visible {
-                continue;
-            }
-            if !self.state.axis_percent_windows.contains_key(&series.x_axis) {
-                continue;
-            }
-
-            let Some(table) = self.datasets.dataset(series.dataset) else {
-                continue;
-            };
-            let Some(dataset) = self.model.datasets.get(&series.dataset) else {
-                continue;
-            };
-            let Some(x_col) = dataset.fields.get(&series.encode.x).copied() else {
-                continue;
-            };
-            let Some(x_values) = table.column_f64(x_col) else {
-                continue;
-            };
-
-            let mut range = self
-                .state
-                .dataset_row_ranges
-                .get(&series.dataset)
-                .copied()
-                .unwrap_or(crate::transform::RowRange {
-                    start: 0,
-                    end: table.row_count,
-                });
-            range.clamp_to_len(table.row_count);
-
-            let mut min = f64::INFINITY;
-            let mut max = f64::NEG_INFINITY;
-            for i in range.start..range.end {
-                let v = x_values.get(i).copied().unwrap_or(f64::NAN);
-                if !v.is_finite() {
-                    continue;
-                }
-                min = min.min(v);
-                max = max.max(v);
-            }
-            if !min.is_finite() || !max.is_finite() {
-                continue;
-            }
-
-            axis_extents_x
-                .entry(series.x_axis)
-                .and_modify(|ext| {
-                    ext.0 = ext.0.min(min);
-                    ext.1 = ext.1.max(max);
-                })
-                .or_insert((min, max));
-        }
-
         for (axis, (start, end)) in self.state.axis_percent_windows.clone() {
             let Some(axis_model) = self.model.axes.get(&axis) else {
                 continue;
@@ -220,50 +165,19 @@ impl ChartEngine {
                 continue;
             }
 
-            let Some((mut dmin, mut dmax)) = axis_extents_x.get(&axis).copied() else {
+            let Some(extent) =
+                self.transform_graph
+                    .x_data_extent(&self.model, &self.datasets, &self.state, axis)
+            else {
                 continue;
             };
-            if dmin > dmax {
-                core::mem::swap(&mut dmin, &mut dmax);
-            }
 
             let range = self.axis_range(axis);
-            match range {
-                crate::spec::AxisRange::Fixed { min, max } => {
-                    dmin = min;
-                    dmax = max;
-                }
-                crate::spec::AxisRange::Auto
-                | crate::spec::AxisRange::LockMin { .. }
-                | crate::spec::AxisRange::LockMax { .. } => {
-                    if let Some(min) = range.locked_min() {
-                        dmin = min;
-                    }
-                    if let Some(max) = range.locked_max() {
-                        dmax = max;
-                    }
-                }
-            }
-            if !dmin.is_finite() || !dmax.is_finite() {
+            let Some(window) =
+                TransformGraph::percent_range_to_value_window(extent, range, start, end)
+            else {
                 continue;
-            }
-
-            let span = dmax - dmin;
-            if !span.is_finite() || span <= 0.0 {
-                continue;
-            }
-
-            let mut a = (start / 100.0).clamp(0.0, 1.0);
-            let mut b = (end / 100.0).clamp(0.0, 1.0);
-            if a > b {
-                core::mem::swap(&mut a, &mut b);
-            }
-            let mut window = window::DataWindow {
-                min: dmin + span * a,
-                max: dmin + span * b,
             };
-            window.clamp_non_degenerate();
-            window = window.apply_constraints(range.locked_min(), range.locked_max());
 
             let entry = self
                 .state
@@ -304,6 +218,7 @@ impl ChartEngine {
             output: ChartOutput::default(),
             stats: EngineStats::default(),
             view: ViewState::default(),
+            transform_graph: TransformGraph::default(),
             data_view_stage: DataViewStage::default(),
             filter_processor_stage: FilterProcessorStage::default(),
             participation: crate::engine::stages::ParticipationState::default(),

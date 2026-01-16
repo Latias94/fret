@@ -1086,52 +1086,17 @@ fn apply_y_percent_for_grid(
             .or_insert((min, max));
     }
 
-    for (axis, (mut dmin, mut dmax)) in y_axes_in_grid {
+    for (axis, extent) in y_axes_in_grid {
         let Some((start, end)) = state.axis_percent_windows.get(&axis).copied() else {
             continue;
         };
-        if dmin > dmax {
-            core::mem::swap(&mut dmin, &mut dmax);
-        }
 
         let axis_range = model.axes.get(&axis).map(|a| a.range).unwrap_or_default();
-        match axis_range {
-            crate::spec::AxisRange::Fixed { min, max } => {
-                dmin = min;
-                dmax = max;
-            }
-            crate::spec::AxisRange::Auto
-            | crate::spec::AxisRange::LockMin { .. }
-            | crate::spec::AxisRange::LockMax { .. } => {
-                if let Some(min) = axis_range.locked_min() {
-                    dmin = min;
-                }
-                if let Some(max) = axis_range.locked_max() {
-                    dmax = max;
-                }
-            }
-        }
-        if !dmin.is_finite() || !dmax.is_finite() {
+        let Some(window) = crate::transform_graph::TransformGraph::percent_range_to_value_window(
+            extent, axis_range, start, end,
+        ) else {
             continue;
-        }
-
-        let span = dmax - dmin;
-        if !span.is_finite() || span <= 0.0 {
-            continue;
-        }
-
-        let mut a = (start / 100.0).clamp(0.0, 1.0);
-        let mut b = (end / 100.0).clamp(0.0, 1.0);
-        if a > b {
-            core::mem::swap(&mut a, &mut b);
-        }
-
-        let mut window = crate::engine::window::DataWindow {
-            min: dmin + span * a,
-            max: dmin + span * b,
         };
-        window.clamp_non_degenerate();
-        window = window.apply_constraints(axis_range.locked_min(), axis_range.locked_max());
 
         let prev = state.data_window_y.get(&axis).copied();
         if prev != Some(window) {
