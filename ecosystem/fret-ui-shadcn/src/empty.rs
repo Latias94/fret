@@ -12,6 +12,8 @@ use fret_ui_kit::declarative::stack;
 pub struct Empty {
     title: Arc<str>,
     description: Option<Arc<str>>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
 }
 
 impl Empty {
@@ -19,6 +21,8 @@ impl Empty {
         Self {
             title: title.into(),
             description: None,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
         }
     }
 
@@ -27,8 +31,18 @@ impl Empty {
         self
     }
 
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        empty(cx, self.title, self.description)
+        empty_with_patch(cx, self.title, self.description, self.chrome, self.layout)
     }
 }
 
@@ -36,6 +50,22 @@ pub fn empty<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     title: impl Into<Arc<str>>,
     description: Option<Arc<str>>,
+) -> AnyElement {
+    empty_with_patch(
+        cx,
+        title,
+        description,
+        ChromeRefinement::default(),
+        LayoutRefinement::default(),
+    )
+}
+
+fn empty_with_patch<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    title: impl Into<Arc<str>>,
+    description: Option<Arc<str>>,
+    chrome_override: ChromeRefinement,
+    layout_override: LayoutRefinement,
 ) -> AnyElement {
     let title = title.into();
     let theme = Theme::global(&*cx.app).clone();
@@ -52,8 +82,9 @@ pub fn empty<H: UiHost>(
             .rounded(Radius::Lg)
             .border_1()
             .bg(ColorRef::Color(bg))
-            .border_color(ColorRef::Color(border)),
-        LayoutRefinement::default(),
+            .border_color(ColorRef::Color(border))
+            .merge(chrome_override),
+        LayoutRefinement::default().merge(layout_override),
     );
 
     cx.container(props, |cx| {
