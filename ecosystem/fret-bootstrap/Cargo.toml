@@ -21,7 +21,7 @@ hotpatch-subsecond = ["fret-launch/hotpatch-subsecond", "dep:subsecond"]
 ui-app-driver = ["dep:fret-ui", "fret-ui/diagnostics", "dep:fret-ui-app", "dep:fret-ui-kit"]
 ui-app-command-palette = ["ui-app-driver", "dep:fret-ui-shadcn"]
 tracing = ["dep:tracing", "dep:tracing-subscriber"]
-diagnostics = ["tracing"]
+diagnostics = ["tracing", "dep:fret-canvas"]
 
 [dependencies]
 thiserror.workspace = true

@@ -134,7 +134,7 @@ pub struct UiDiagnosticsService {
     cfg: UiDiagnosticsConfig,
     per_window: HashMap<AppWindowId, WindowRing>,
     last_trigger_mtime: Option<std::time::SystemTime>,
-    last_script_trigger_mtime: Option<std::time::SystemTime>,
+    last_script_trigger_stamp: Option<u64>,
     last_pick_trigger_mtime: Option<std::time::SystemTime>,
     last_inspect_trigger_mtime: Option<std::time::SystemTime>,
     ready_written: bool,
@@ -1174,7 +1174,11 @@ impl UiDiagnosticsService {
 
         let resource_caches = {
             let icon_svg_cache = icon_svg_cache_stats(app);
-            (icon_svg_cache.is_some()).then_some(UiResourceCachesV1 { icon_svg_cache })
+            let canvas = canvas_cache_stats_for_window(app, window.data().as_ffi());
+            (icon_svg_cache.is_some() || !canvas.is_empty()).then_some(UiResourceCachesV1 {
+                icon_svg_cache,
+                canvas,
+            })
         };
 
         let snapshot = UiDiagnosticsSnapshotV1 {
@@ -1248,33 +1252,27 @@ impl UiDiagnosticsService {
     }
 
     fn poll_script_trigger(&mut self) {
-        let modified =
-            match std::fs::metadata(&self.cfg.script_trigger_path).and_then(|m| m.modified()) {
-                Ok(modified) => modified,
-                Err(_) => {
-                    if let Some(dir) = self.cfg.script_trigger_path.parent() {
-                        let _ = std::fs::create_dir_all(dir);
-                    }
-                    if std::fs::OpenOptions::new()
-                        .create(true)
-                        .write(true)
-                        .open(&self.cfg.script_trigger_path)
-                        .is_ok()
-                        && let Ok(modified) = std::fs::metadata(&self.cfg.script_trigger_path)
-                            .and_then(|m| m.modified())
-                    {
-                        self.last_script_trigger_mtime = Some(modified);
-                    }
-                    return;
-                }
-            };
-        if self
-            .last_script_trigger_mtime
-            .is_some_and(|prev| prev >= modified)
-        {
+        let Some(stamp) = read_touch_stamp(&self.cfg.script_trigger_path) else {
+            if let Some(dir) = self.cfg.script_trigger_path.parent() {
+                let _ = std::fs::create_dir_all(dir);
+            }
+            // Prime the trigger file with a baseline stamp so external drivers can reliably
+            // advance it (Windows mtime resolution is not always sufficient for edge detection).
+            let _ = std::fs::write(&self.cfg.script_trigger_path, b"0\n");
+            self.last_script_trigger_stamp = Some(0);
+            return;
+        };
+
+        // Treat the first observed value as a baseline, not a trigger (avoids re-running stale scripts
+        // when the diagnostics directory is reused between runs).
+        let Some(prev) = self.last_script_trigger_stamp else {
+            self.last_script_trigger_stamp = Some(stamp);
+            return;
+        };
+        if prev == stamp {
             return;
         }
-        self.last_script_trigger_mtime = Some(modified);
+        self.last_script_trigger_stamp = Some(stamp);
 
         let bytes = std::fs::read(&self.cfg.script_path).ok();
         let Some(bytes) = bytes else {
@@ -1517,6 +1515,14 @@ impl UiDiagnosticsService {
     }
 }
 
+fn read_touch_stamp(path: &Path) -> Option<u64> {
+    let bytes = std::fs::read(path).ok()?;
+    let text = std::str::from_utf8(&bytes).ok()?;
+    text.lines()
+        .rev()
+        .find_map(|line| line.trim().parse::<u64>().ok())
+}
+
 #[derive(Debug, Clone)]
 struct PendingPick {
     run_id: u64,
@@ -1678,6 +1684,8 @@ pub struct UiDiagnosticsSnapshotV1 {
 pub struct UiResourceCachesV1 {
     #[serde(default)]
     pub icon_svg_cache: Option<UiRetainedSvgCacheStatsV1>,
+    #[serde(default)]
+    pub canvas: Vec<UiCanvasCacheEntryV1>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -1703,6 +1711,25 @@ pub struct UiCacheStatsV1 {
     pub release_prune_budget: u64,
     pub release_clear: u64,
     pub release_evict: u64,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiCanvasCacheEntryV1 {
+    pub node: u64,
+    pub name: String,
+    #[serde(default)]
+    pub path: Option<UiCacheKindSnapshotV1>,
+    #[serde(default)]
+    pub svg: Option<UiCacheKindSnapshotV1>,
+    #[serde(default)]
+    pub text: Option<UiCacheKindSnapshotV1>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiCacheKindSnapshotV1 {
+    pub entries: usize,
+    pub bytes_ready: u64,
+    pub stats: UiCacheStatsV1,
 }
 
 #[cfg(feature = "preload-icon-svgs")]
@@ -1734,6 +1761,81 @@ fn icon_svg_cache_stats(app: &App) -> Option<UiRetainedSvgCacheStatsV1> {
 #[cfg(not(feature = "preload-icon-svgs"))]
 fn icon_svg_cache_stats(_app: &App) -> Option<UiRetainedSvgCacheStatsV1> {
     None
+}
+
+fn canvas_cache_stats_for_window(app: &App, window: u64) -> Vec<UiCanvasCacheEntryV1> {
+    let Some(registry) = app.global::<fret_canvas::diagnostics::CanvasCacheStatsRegistry>() else {
+        return Vec::new();
+    };
+
+    registry
+        .iter()
+        .filter_map(|(key, snap)| (key.window == window).then_some((key, snap)))
+        .map(|(key, snap)| UiCanvasCacheEntryV1 {
+            node: key.node,
+            name: key.name.to_string(),
+            path: snap.path.map(|s| UiCacheKindSnapshotV1 {
+                entries: s.entries,
+                bytes_ready: s.bytes_ready,
+                stats: UiCacheStatsV1 {
+                    get_calls: s.stats.get_calls,
+                    get_hits: s.stats.get_hits,
+                    get_misses: s.stats.get_misses,
+                    prepare_calls: s.stats.prepare_calls,
+                    prepare_hits: s.stats.prepare_hits,
+                    prepare_misses: s.stats.prepare_misses,
+                    prune_calls: s.stats.prune_calls,
+                    clear_calls: s.stats.clear_calls,
+                    evict_calls: s.stats.evict_calls,
+                    release_replaced: s.stats.release_replaced,
+                    release_prune_age: s.stats.release_prune_age,
+                    release_prune_budget: s.stats.release_prune_budget,
+                    release_clear: s.stats.release_clear,
+                    release_evict: s.stats.release_evict,
+                },
+            }),
+            svg: snap.svg.map(|s| UiCacheKindSnapshotV1 {
+                entries: s.entries,
+                bytes_ready: s.bytes_ready,
+                stats: UiCacheStatsV1 {
+                    get_calls: s.stats.get_calls,
+                    get_hits: s.stats.get_hits,
+                    get_misses: s.stats.get_misses,
+                    prepare_calls: s.stats.prepare_calls,
+                    prepare_hits: s.stats.prepare_hits,
+                    prepare_misses: s.stats.prepare_misses,
+                    prune_calls: s.stats.prune_calls,
+                    clear_calls: s.stats.clear_calls,
+                    evict_calls: s.stats.evict_calls,
+                    release_replaced: s.stats.release_replaced,
+                    release_prune_age: s.stats.release_prune_age,
+                    release_prune_budget: s.stats.release_prune_budget,
+                    release_clear: s.stats.release_clear,
+                    release_evict: s.stats.release_evict,
+                },
+            }),
+            text: snap.text.map(|s| UiCacheKindSnapshotV1 {
+                entries: s.entries,
+                bytes_ready: s.bytes_ready,
+                stats: UiCacheStatsV1 {
+                    get_calls: s.stats.get_calls,
+                    get_hits: s.stats.get_hits,
+                    get_misses: s.stats.get_misses,
+                    prepare_calls: s.stats.prepare_calls,
+                    prepare_hits: s.stats.prepare_hits,
+                    prepare_misses: s.stats.prepare_misses,
+                    prune_calls: s.stats.prune_calls,
+                    clear_calls: s.stats.clear_calls,
+                    evict_calls: s.stats.evict_calls,
+                    release_replaced: s.stats.release_replaced,
+                    release_prune_age: s.stats.release_prune_age,
+                    release_prune_budget: s.stats.release_prune_budget,
+                    release_clear: s.stats.release_clear,
+                    release_evict: s.stats.release_evict,
+                },
+            }),
+        })
+        .collect()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -2666,12 +2768,22 @@ fn select_semantics_node<'a>(
             )
         }
         UiSelectorV1::TestId { id } => pick_best_match(
-            snapshot
-                .nodes
-                .iter()
-                .filter(|n| n.test_id.as_deref().is_some_and(|v| v == id)),
+            snapshot.nodes.iter().filter(|n| {
+                let node_id = n.id.data().as_ffi();
+                index.is_selectable(node_id) && n.test_id.as_deref().is_some_and(|v| v == id)
+            }),
             &index,
-        ),
+        )
+        .or_else(|| {
+            // Fallback for debugging: allow selecting hidden nodes if no visible match exists.
+            pick_best_match(
+                snapshot
+                    .nodes
+                    .iter()
+                    .filter(|n| n.test_id.as_deref().is_some_and(|v| v == id)),
+                &index,
+            )
+        }),
         UiSelectorV1::GlobalElementId { element } => {
             let node = element_runtime.and_then(|runtime| {
                 runtime.node_for_element(window, fret_ui::elements::GlobalElementId(*element))

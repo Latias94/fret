@@ -6,12 +6,14 @@
 //! - convenience `*PlotCanvas` aliases for `PlotCanvas<L>`.
 
 use fret_canvas::cache::PathCache;
+use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_core::geometry::{Point, Px, Rect, Size};
 use fret_core::scene::{Color, DrawOrder};
 use fret_core::{PathConstraints, PathId, PathStyle, UiServices};
 use fret_runtime::Model;
 use fret_ui::UiHost;
 use fret_ui::retained_bridge::PaintCx;
+use slotmap::Key;
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -28,6 +30,28 @@ use crate::plot::decimate::{
 use crate::plot::histogram::histogram_bins;
 use crate::plot::view::data_rect_key_scaled;
 use crate::series::{SeriesData, SeriesId};
+
+fn report_layer_path_cache_stats<H: UiHost>(
+    cx: &mut PaintCx<'_, H>,
+    layer_name: &'static str,
+    cache: &PathCache,
+) {
+    let Some(window) = cx.window else {
+        return;
+    };
+
+    let frame_id = cx.app.frame_id().0;
+    let key = CanvasCacheKey {
+        window: window.data().as_ffi(),
+        node: cx.node.data().as_ffi(),
+        name: layer_name,
+    };
+
+    cx.app
+        .with_global_mut(CanvasCacheStatsRegistry::default, |registry, _app| {
+            registry.record_path_cache(key, frame_id, cache.len(), cache.stats());
+        });
+}
 
 struct ResolvedSeriesStyle {
     stroke_color: Color,
@@ -1569,6 +1593,7 @@ impl PlotLayer for LinePlotLayer {
         args: PlotPaintArgs<'_>,
     ) -> Vec<(SeriesId, PathId, Color)> {
         self.path_cache.begin_frame();
+        report_layer_path_cache_stats(cx, "fret-plot.line.paths", &self.path_cache);
         let PlotPaintArgs {
             model_revision,
             plot,
@@ -1862,6 +1887,7 @@ impl PlotLayer for StemsPlotLayer {
         args: PlotPaintArgs<'_>,
     ) -> Vec<(SeriesId, PathId, Color)> {
         self.path_cache.begin_frame();
+        report_layer_path_cache_stats(cx, "fret-plot.stems.paths", &self.path_cache);
         let PlotPaintArgs {
             model_revision,
             plot,
@@ -2324,6 +2350,7 @@ impl PlotLayer for ScatterPlotLayer {
         args: PlotPaintArgs<'_>,
     ) -> Vec<(SeriesId, PathId, Color)> {
         self.path_cache.begin_frame();
+        report_layer_path_cache_stats(cx, "fret-plot.scatter.paths", &self.path_cache);
         let PlotPaintArgs {
             model_revision,
             plot,
@@ -2626,6 +2653,7 @@ impl PlotLayer for ErrorBarsPlotLayer {
         args: PlotPaintArgs<'_>,
     ) -> Vec<(SeriesId, PathId, Color)> {
         self.path_cache.begin_frame();
+        report_layer_path_cache_stats(cx, "fret-plot.error_bars.paths", &self.path_cache);
         let PlotPaintArgs {
             model_revision,
             plot,
@@ -2935,6 +2963,7 @@ impl PlotLayer for CandlestickPlotLayer {
         args: PlotPaintArgs<'_>,
     ) -> Vec<(SeriesId, PathId, Color)> {
         self.path_cache.begin_frame();
+        report_layer_path_cache_stats(cx, "fret-plot.candlestick.paths", &self.path_cache);
         let PlotPaintArgs {
             model_revision,
             plot,
@@ -3445,6 +3474,7 @@ impl PlotLayer for StairsPlotLayer {
         args: PlotPaintArgs<'_>,
     ) -> Vec<(SeriesId, PathId, Color)> {
         self.path_cache.begin_frame();
+        report_layer_path_cache_stats(cx, "fret-plot.stairs.paths", &self.path_cache);
         let PlotPaintArgs {
             model_revision,
             plot,
@@ -3789,6 +3819,7 @@ impl PlotLayer for HistogramPlotLayer {
         args: PlotPaintArgs<'_>,
     ) -> Vec<(SeriesId, PathId, Color)> {
         self.path_cache.begin_frame();
+        report_layer_path_cache_stats(cx, "fret-plot.histogram.paths", &self.path_cache);
         let PlotPaintArgs {
             model_revision,
             plot,
@@ -4196,6 +4227,7 @@ impl PlotLayer for BarsPlotLayer {
         args: PlotPaintArgs<'_>,
     ) -> Vec<(SeriesId, PathId, Color)> {
         self.path_cache.begin_frame();
+        report_layer_path_cache_stats(cx, "fret-plot.bars.paths", &self.path_cache);
         let PlotPaintArgs {
             model_revision,
             plot,
@@ -5086,6 +5118,7 @@ impl PlotLayer for AreaPlotLayer {
         args: PlotPaintArgs<'_>,
     ) -> Vec<(SeriesId, PathId, Color)> {
         self.path_cache.begin_frame();
+        report_layer_path_cache_stats(cx, "fret-plot.area.paths", &self.path_cache);
         let PlotPaintArgs {
             model_revision,
             plot,
@@ -5588,6 +5621,7 @@ impl PlotLayer for ShadedPlotLayer {
         args: PlotPaintArgs<'_>,
     ) -> Vec<(SeriesId, PathId, Color)> {
         self.path_cache.begin_frame();
+        report_layer_path_cache_stats(cx, "fret-plot.shaded.paths", &self.path_cache);
         let PlotPaintArgs {
             model_revision,
             plot,
