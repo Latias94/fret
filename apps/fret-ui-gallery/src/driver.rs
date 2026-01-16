@@ -707,6 +707,22 @@ pub fn build_app() -> App {
             .with_keywords(["settings", "preferences"]),
     );
 
+    for group in PAGE_GROUPS {
+        for page in group.items {
+            let mut keywords: Vec<&'static str> = Vec::new();
+            keywords.push(page.id);
+            keywords.push(page.origin);
+            keywords.extend_from_slice(page.tags);
+
+            app.commands_mut().register(
+                CommandId::new(page.command),
+                CommandMeta::new(page.label)
+                    .with_category(format!("Gallery: {}", group.title))
+                    .with_keywords(keywords),
+            );
+        }
+    }
+
     fret_workspace::commands::register_workspace_commands(app.commands_mut());
     fret_app::install_command_default_keybindings_into_keymap(&mut app);
 

@@ -95,6 +95,13 @@ pub(crate) const CMD_DATA_GRID_ROW_PREFIX: &str = "ui_gallery.data_grid.row.";
 pub(crate) const PAGE_INTRO: &str = "intro";
 pub(crate) const PAGE_LAYOUT: &str = "layout";
 pub(crate) const PAGE_BUTTON: &str = "button";
+pub(crate) const PAGE_CARD: &str = "card";
+pub(crate) const PAGE_BADGE: &str = "badge";
+pub(crate) const PAGE_AVATAR: &str = "avatar";
+pub(crate) const PAGE_SKELETON: &str = "skeleton";
+pub(crate) const PAGE_SCROLL_AREA: &str = "scroll_area";
+pub(crate) const PAGE_TOOLTIP: &str = "tooltip";
+pub(crate) const PAGE_SLIDER: &str = "slider";
 pub(crate) const PAGE_OVERLAY: &str = "overlay";
 pub(crate) const PAGE_FORMS: &str = "forms";
 pub(crate) const PAGE_SELECT: &str = "select";
@@ -114,6 +121,13 @@ pub(crate) const PAGE_TOAST: &str = "toast";
 pub(crate) const CMD_NAV_INTRO: &str = "ui_gallery.nav.select.intro";
 pub(crate) const CMD_NAV_LAYOUT: &str = "ui_gallery.nav.select.layout";
 pub(crate) const CMD_NAV_BUTTON: &str = "ui_gallery.nav.select.button";
+pub(crate) const CMD_NAV_CARD: &str = "ui_gallery.nav.select.card";
+pub(crate) const CMD_NAV_BADGE: &str = "ui_gallery.nav.select.badge";
+pub(crate) const CMD_NAV_AVATAR: &str = "ui_gallery.nav.select.avatar";
+pub(crate) const CMD_NAV_SKELETON: &str = "ui_gallery.nav.select.skeleton";
+pub(crate) const CMD_NAV_SCROLL_AREA: &str = "ui_gallery.nav.select.scroll_area";
+pub(crate) const CMD_NAV_TOOLTIP: &str = "ui_gallery.nav.select.tooltip";
+pub(crate) const CMD_NAV_SLIDER: &str = "ui_gallery.nav.select.slider";
 pub(crate) const CMD_NAV_OVERLAY: &str = "ui_gallery.nav.select.overlay";
 pub(crate) const CMD_NAV_FORMS: &str = "ui_gallery.nav.select.forms";
 pub(crate) const CMD_NAV_SELECT: &str = "ui_gallery.nav.select.select";
@@ -229,6 +243,76 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["button", "variant"],
                 docs::DOC_BUTTON,
                 docs::USAGE_BUTTON,
+            ),
+            PageSpec::new(
+                PAGE_CARD,
+                "Card",
+                "Card",
+                "fret-ui-shadcn",
+                CMD_NAV_CARD,
+                &["card", "layout", "surface"],
+                docs::DOC_CARD,
+                docs::USAGE_CARD,
+            ),
+            PageSpec::new(
+                PAGE_BADGE,
+                "Badge",
+                "Badge",
+                "fret-ui-shadcn",
+                CMD_NAV_BADGE,
+                &["badge", "status", "tag"],
+                docs::DOC_BADGE,
+                docs::USAGE_BADGE,
+            ),
+            PageSpec::new(
+                PAGE_AVATAR,
+                "Avatar",
+                "Avatar",
+                "fret-ui-shadcn",
+                CMD_NAV_AVATAR,
+                &["avatar", "image", "fallback"],
+                docs::DOC_AVATAR,
+                docs::USAGE_AVATAR,
+            ),
+            PageSpec::new(
+                PAGE_SKELETON,
+                "Skeleton",
+                "Skeleton",
+                "fret-ui-shadcn",
+                CMD_NAV_SKELETON,
+                &["skeleton", "loading", "animation"],
+                docs::DOC_SKELETON,
+                docs::USAGE_SKELETON,
+            ),
+            PageSpec::new(
+                PAGE_SCROLL_AREA,
+                "Scroll Area",
+                "Scroll Area",
+                "fret-ui-shadcn",
+                CMD_NAV_SCROLL_AREA,
+                &["scroll", "scrollbar", "virtual"],
+                docs::DOC_SCROLL_AREA,
+                docs::USAGE_SCROLL_AREA,
+            ),
+            PageSpec::new(
+                PAGE_TOOLTIP,
+                "Tooltip",
+                "Tooltip",
+                "fret-ui-shadcn",
+                CMD_NAV_TOOLTIP,
+                &["tooltip", "overlay", "hover"],
+                docs::DOC_TOOLTIP,
+                docs::USAGE_TOOLTIP,
+            ),
+            PageSpec::new(
+                PAGE_SLIDER,
+                "Slider",
+                "Slider",
+                "fret-ui-shadcn",
+                CMD_NAV_SLIDER,
+                &["slider", "range", "input"],
+                docs::DOC_SLIDER,
+                docs::USAGE_SLIDER,
             ),
             PageSpec::new(
                 PAGE_FORMS,
