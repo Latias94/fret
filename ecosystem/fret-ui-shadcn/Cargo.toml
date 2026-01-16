@@ -12,7 +12,6 @@ documentation.workspace = true
 [features]
 default = []
 app-integration = ["dep:fret-app"]
-tanstack-table = []
 
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }

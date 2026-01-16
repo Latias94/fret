@@ -3,8 +3,7 @@
 //! Upstream reference:
 //! - `repo-ref/primitives/packages/react/select/src/select.tsx` (`SelectItemAlignedPosition`)
 
-use fret_core::{Px, Rect};
-use fret_ui::overlay_placement::LayoutDirection;
+use fret_core::{LayoutDirection, Px, Rect};
 
 /// Matches Radix `CONTENT_MARGIN` (px).
 pub const SELECT_ITEM_ALIGNED_CONTENT_MARGIN: Px = Px(10.0);

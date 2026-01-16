@@ -7,7 +7,7 @@ use time::Date;
 
 use crate::{docs::*, spec::*};
 
-fn matches_query(query: &str, item: &NavItemSpec) -> bool {
+fn matches_query(query: &str, item: &PageSpec) -> bool {
     let q = query.trim();
     if q.is_empty() {
         return true;
@@ -57,7 +57,7 @@ pub(crate) fn sidebar_view(
         .into_element(cx);
 
     let mut nav_sections: Vec<AnyElement> = Vec::new();
-    for group in NAV_GROUPS {
+    for group in PAGE_GROUPS {
         let group_sections = cx.keyed(group.title, |cx| {
             let mut group_items: Vec<AnyElement> = Vec::new();
             for item in group.items {

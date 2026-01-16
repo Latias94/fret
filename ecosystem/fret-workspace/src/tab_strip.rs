@@ -23,7 +23,7 @@ use crate::commands::{
     tab_activate_command, tab_close_command, tab_move_active_after_command,
     tab_move_active_before_command,
 };
-use crate::tab_drag::{DRAG_KIND_WORKSPACE_TAB, WorkspaceTabDragState};
+use crate::tab_drag::{DRAG_KIND_WORKSPACE_TAB, WorkspaceTabDragState, WorkspaceTabDropZone};
 
 fn fill_layout() -> LayoutStyle {
     let mut layout = LayoutStyle::default();
@@ -88,6 +88,14 @@ fn scroll_rect_into_view_x(handle: &ScrollHandle, viewport: Rect, child: Rect) {
     if next_x != current.x {
         handle.set_offset(Point::new(next_x, current.y));
     }
+}
+
+fn fixed_square_layout(size: Px) -> LayoutStyle {
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Px(size);
+    layout.size.height = Length::Px(size);
+    layout.flex.shrink = 0.0;
+    layout
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -312,7 +320,9 @@ impl WorkspaceTabStrip {
             bar_bg,
             bar_border,
             active_bg,
+            active_fg,
             inactive_fg,
+            dirty_fg,
             hover_bg,
             indicator_color,
             text_style,
@@ -329,7 +339,13 @@ impl WorkspaceTabStrip {
             let active_bg = theme
                 .color_by_key("workspace.tab.active_bg")
                 .or_else(|| theme.color_by_key("background"));
-            let inactive_fg = theme.color_required("foreground");
+            let active_fg = theme.color_required("foreground");
+            let inactive_fg = theme.color_by_key("muted-foreground").unwrap_or(active_fg);
+            let dirty_fg = theme
+                .color_by_key("workspace.tab.dirty_fg")
+                .or_else(|| theme.color_by_key("ring"))
+                .or_else(|| theme.color_by_key("primary"))
+                .unwrap_or(active_fg);
             let hover_bg = theme
                 .color_by_key("accent")
                 .or_else(|| theme.color_by_key("workspace.tab.hover_bg"))
@@ -347,7 +363,9 @@ impl WorkspaceTabStrip {
                 bar_bg,
                 bar_border,
                 active_bg,
+                active_fg,
                 inactive_fg,
+                dirty_fg,
                 hover_bg,
                 indicator_color,
                 text_style,
@@ -405,6 +423,7 @@ impl WorkspaceTabStrip {
                                             let tab_command = tab.command.clone();
                                             let tab_activate_command = tab_command.clone();
                                             let tab_drag_command = tab_command.clone();
+                                            let text_style = text_style.clone();
                                             let pane_id_for_drag = pane_id.clone();
                                             let tab_drag_model_for_drag = tab_drag_model.clone();
                                             let pane_activate_cmd_for_activate = pane_activate_cmd.clone();
@@ -443,16 +462,25 @@ impl WorkspaceTabStrip {
                                                             active_tab_element.set(Some(element_id));
                                                         }
 
+                                                        let tab_activate_cmd_for_activate =
+                                                            tab_activate_command.clone();
+                                                        let pane_activate_cmd_for_activate_handler =
+                                                            pane_activate_cmd_for_activate.clone();
                                                         let handler: OnActivate = Arc::new(
                                                             move |host, acx, _reason| {
                                                                 if let Some(cmd) =
-                                                                    pane_activate_cmd_for_activate.clone()
+                                                                    pane_activate_cmd_for_activate_handler
+                                                                        .clone()
                                                                 {
-                                                                    host.dispatch_command(Some(acx.window), cmd);
+                                                                    host.dispatch_command(
+                                                                        Some(acx.window),
+                                                                        cmd,
+                                                                    );
                                                                 }
                                                                 host.dispatch_command(
                                                                     Some(acx.window),
-                                                                    tab_activate_command.clone(),
+                                                                    tab_activate_cmd_for_activate
+                                                                        .clone(),
                                                                 );
                                                             },
                                                         );
@@ -461,8 +489,63 @@ impl WorkspaceTabStrip {
                                                         let dnd_on_down: OnPressablePointerDown = {
                                                             let drag_model = drag_model.clone();
                                                             let tab_id = tab_id.clone();
-                                                            Arc::new(move |host, _acx, down| {
-                                                                if down.button != MouseButton::Left {
+                                                            let tab_activate_command =
+                                                                tab_activate_command.clone();
+                                                            let pane_activate_cmd_for_pointer =
+                                                                pane_activate_cmd_for_activate
+                                                                    .clone();
+                                                            let tab_close_command =
+                                                                tab_close_command.clone();
+                                                            Arc::new(move |host, acx, down| {
+                                                                match down.button {
+                                                                    MouseButton::Middle => {
+                                                                        if let Some(cmd) =
+                                                                            pane_activate_cmd_for_pointer
+                                                                                .clone()
+                                                                        {
+                                                                            host.dispatch_command(
+                                                                                Some(acx.window),
+                                                                                cmd,
+                                                                            );
+                                                                        }
+                                                                        if let Some(cmd) =
+                                                                            tab_close_command.clone()
+                                                                        {
+                                                                            host.dispatch_command(
+                                                                                Some(acx.window),
+                                                                                cmd,
+                                                                            );
+                                                                            host.request_redraw(
+                                                                                acx.window,
+                                                                            );
+                                                                        }
+                                                                        return PressablePointerDownResult::SkipDefaultAndStopPropagation;
+                                                                    }
+                                                                    MouseButton::Right => {
+                                                                        if let Some(cmd) =
+                                                                            pane_activate_cmd_for_pointer
+                                                                                .clone()
+                                                                        {
+                                                                            host.dispatch_command(
+                                                                                Some(acx.window),
+                                                                                cmd,
+                                                                            );
+                                                                        }
+                                                                        host.dispatch_command(
+                                                                            Some(acx.window),
+                                                                            tab_activate_command
+                                                                                .clone(),
+                                                                        );
+                                                                        host.request_redraw(
+                                                                            acx.window,
+                                                                        );
+                                                                        return PressablePointerDownResult::SkipDefaultAndStopPropagation;
+                                                                    }
+                                                                    _ => {}
+                                                                }
+
+                                                                if down.button != MouseButton::Left
+                                                                {
                                                                     return PressablePointerDownResult::Continue;
                                                                 }
                                                                 if down.modifiers != Modifiers::default() {
@@ -545,9 +628,14 @@ impl WorkspaceTabStrip {
                                                                         let dragged_tab_id = dragged_tab_id.clone();
                                                                         let _ = host.models_mut().update(&model, |st| {
                                                                             st.pointer = Some(mv.pointer_id);
+                                                                            st.source_window =
+                                                                                Some(acx.window);
                                                                             st.source_pane = Some(source.clone());
                                                                             st.dragged_tab = Some(dragged_tab_id);
                                                                             st.hovered_pane = Some(source);
+                                                                            st.hovered_zone = Some(
+                                                                                WorkspaceTabDropZone::Center,
+                                                                            );
                                                                         });
                                                                     }
 
@@ -584,15 +672,33 @@ impl WorkspaceTabStrip {
                                                                     .and_then(|m| {
                                                                         host.models_mut()
                                                                             .read(m, |st| {
-                                                                                st.pointer
-                                                                                    == Some(up.pointer_id)
-                                                                                    && st.source_pane
-                                                                                        .as_deref()
-                                                                                        .is_some_and(|src| {
-                                                                                            st.hovered_pane
-                                                                                                .as_deref()
-                                                                                                .is_some_and(|p| p != src)
-                                                                                        })
+                                                                                if st.pointer != Some(up.pointer_id)
+                                                                                    || st.source_window
+                                                                                        != Some(acx.window)
+                                                                                {
+                                                                                    return false;
+                                                                                }
+
+                                                                                let Some(source) =
+                                                                                    st.source_pane.as_deref()
+                                                                                else {
+                                                                                    return false;
+                                                                                };
+                                                                                let Some(hovered) =
+                                                                                    st.hovered_pane.as_deref()
+                                                                                else {
+                                                                                    return false;
+                                                                                };
+
+                                                                                let zone = st
+                                                                                    .hovered_zone
+                                                                                    .unwrap_or(
+                                                                                        WorkspaceTabDropZone::Center,
+                                                                                    );
+
+                                                                                !(hovered == source
+                                                                                    && zone
+                                                                                        == WorkspaceTabDropZone::Center)
                                                                             })
                                                                             .ok()
                                                                     })
@@ -643,13 +749,7 @@ impl WorkspaceTabStrip {
                                                             None
                                                         };
 
-                                                        let mut label = tab_title.clone();
-                                                        if tab_dirty {
-                                                            label = Arc::from(format!(
-                                                                "{} \u{2022}",
-                                                                tab_title.as_ref()
-                                                            ));
-                                                        }
+                                                        let label = tab_title.clone();
 
                                                         let (indicator_border, indicator_border_color) = match (
                                                             dragging,
@@ -720,71 +820,133 @@ impl WorkspaceTabStrip {
                                                                         ..Default::default()
                                                                     },
                                                                     |cx| {
+                                                                        let tab_fg = if is_active {
+                                                                            active_fg
+                                                                        } else {
+                                                                            inactive_fg
+                                                                        };
+
+                                                                        let show_close = tab_close_command
+                                                                            .is_some()
+                                                                            && (is_active
+                                                                                || press_state.hovered
+                                                                                || press_state.pressed);
+                                                                        let has_trailing_slot =
+                                                                            tab_close_command.is_some()
+                                                                                || tab_dirty;
+
                                                                         let mut children = vec![
                                                                             cx.text_props(TextProps {
                                                                                 layout: LayoutStyle::default(),
                                                                                 text: label,
                                                                                 style: Some(text_style.clone()),
-                                                                                color: Some(inactive_fg),
+                                                                                color: Some(tab_fg),
                                                                                 wrap: TextWrap::None,
                                                                                 overflow: TextOverflow::Ellipsis,
                                                                             }),
                                                                         ];
 
-                                                                        if let Some(
-                                                                            close_command,
-                                                                        ) = tab_close_command
-                                                                            .clone()
-                                                                        {
-                                                                            children.push(cx.pressable(
-                                                                                PressableProps {
-                                                                                    layout: {
-                                                                                        let mut layout = LayoutStyle::default();
-                                                                                        layout.size.width = Length::Px(Px(18.0));
-                                                                                        layout.size.height = Length::Px(Px(18.0));
-                                                                                        layout
-                                                                                    },
-                                                                                    focusable: false,
-                                                                                    a11y: PressableA11y {
-                                                                                        role: Some(SemanticsRole::Button),
-                                                                                        label: Some(Arc::from("Close tab")),
-                                                                                        ..Default::default()
-                                                                                    },
-                                                                                    ..Default::default()
-                                                                                },
-                                                                                move |cx, close_state| {
-                                                                                    let close_handler: OnActivate = Arc::new(
-                                                                                        move |host, acx, _reason| {
-                                                                                            if let Some(cmd) =
-                                                                                                pane_activate_cmd_for_close.clone()
-                                                                                            {
-                                                                                                host.dispatch_command(Some(acx.window), cmd);
-                                                                                            }
-                                                                                            host.dispatch_command(
-                                                                                                Some(acx.window),
-                                                                                                close_command.clone(),
-                                                                                            );
-                                                                                        },
-                                                                                    );
-                                                                                    cx.pressable_on_activate(close_handler);
-
-                                                                                    let bg = if close_state.hovered || close_state.pressed {
-                                                                                        Some(hover_bg)
-                                                                                    } else {
-                                                                                        None
-                                                                                    };
-
-                                                                                    vec![cx.container(
-                                                                                        ContainerProps {
-                                                                                            layout: fill_layout(),
-                                                                                            background: bg,
-                                                                                            corner_radii: Corners::all(Px(4.0)),
+                                                                        if has_trailing_slot {
+                                                                            if show_close {
+                                                                                if let Some(close_command) =
+                                                                                    tab_close_command.clone()
+                                                                                {
+                                                                                    children.push(cx.pressable(
+                                                                                        PressableProps {
+                                                                                            layout: fixed_square_layout(Px(18.0)),
+                                                                                            focusable: false,
+                                                                                            a11y: PressableA11y {
+                                                                                                role: Some(SemanticsRole::Button),
+                                                                                                label: Some(Arc::from("Close tab")),
+                                                                                                ..Default::default()
+                                                                                            },
                                                                                             ..Default::default()
                                                                                         },
-                                                                                        |cx| vec![cx.text("×")],
-                                                                                    )]
-                                                                                },
-                                                                            ));
+                                                                                        move |cx, close_state| {
+                                                                                            let close_handler: OnActivate = Arc::new(
+                                                                                                move |host, acx, _reason| {
+                                                                                                    if let Some(cmd) =
+                                                                                                        pane_activate_cmd_for_close.clone()
+                                                                                                    {
+                                                                                                        host.dispatch_command(Some(acx.window), cmd);
+                                                                                                    }
+                                                                                                    host.dispatch_command(
+                                                                                                        Some(acx.window),
+                                                                                                        close_command.clone(),
+                                                                                                    );
+                                                                                                },
+                                                                                            );
+                                                                                            cx.pressable_on_activate(close_handler);
+
+                                                                                            let bg = if close_state.hovered || close_state.pressed {
+                                                                                                Some(hover_bg)
+                                                                                            } else {
+                                                                                                None
+                                                                                            };
+
+                                                                                            vec![cx.container(
+                                                                                                ContainerProps {
+                                                                                                    layout: fill_layout(),
+                                                                                                    background: bg,
+                                                                                                    corner_radii: Corners::all(Px(4.0)),
+                                                                                                    ..Default::default()
+                                                                                                },
+                                                                                                |cx| {
+                                                                                                    vec![cx.text_props(TextProps {
+                                                                                                        layout: LayoutStyle::default(),
+                                                                                                        text: Arc::from("×"),
+                                                                                                        style: Some(text_style.clone()),
+                                                                                                        color: Some(tab_fg),
+                                                                                                        wrap: TextWrap::None,
+                                                                                                        overflow: TextOverflow::Clip,
+                                                                                                    })]
+                                                                                                },
+                                                                                            )]
+                                                                                        },
+                                                                                    ));
+                                                                                }
+                                                                            } else if tab_dirty {
+                                                                                let mut dot_style = text_style.clone();
+                                                                                dot_style.size =
+                                                                                    Px((dot_style.size.0 - 1.0).max(10.0));
+                                                                                children.push(cx.container(
+                                                                                    ContainerProps {
+                                                                                        layout: fixed_square_layout(Px(18.0)),
+                                                                                        ..Default::default()
+                                                                                    },
+                                                                                    |cx| {
+                                                                                        vec![cx.flex(
+                                                                                            FlexProps {
+                                                                                                layout: fill_layout(),
+                                                                                                direction:
+                                                                                                    fret_core::Axis::Horizontal,
+                                                                                                justify:
+                                                                                                    MainAlign::Center,
+                                                                                                align: CrossAlign::Center,
+                                                                                                ..Default::default()
+                                                                                            },
+                                                                                            |cx| {
+                                                                                                vec![cx.text_props(TextProps {
+                                                                                                    layout: LayoutStyle::default(),
+                                                                                                    text: Arc::from("•"),
+                                                                                                    style: Some(dot_style),
+                                                                                                    color: Some(dirty_fg),
+                                                                                                    wrap: TextWrap::None,
+                                                                                                    overflow: TextOverflow::Clip,
+                                                                                                })]
+                                                                                            },
+                                                                                        )]
+                                                                                    },
+                                                                                ));
+                                                                            } else {
+                                                                                children.push(cx.container(
+                                                                                    ContainerProps {
+                                                                                        layout: fixed_square_layout(Px(18.0)),
+                                                                                        ..Default::default()
+                                                                                    },
+                                                                                    |_cx| Vec::new(),
+                                                                                ));
+                                                                            }
                                                                         }
 
                                                                         children

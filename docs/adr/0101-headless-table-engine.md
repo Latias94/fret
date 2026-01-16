@@ -36,12 +36,16 @@ Reference implementation and terminology:
 
 ## Decision
 
-### 1) Put the headless table engine in `ecosystem/fret-ui-kit` (always available)
+### 1) Put the headless table engine in the ecosystem (always available)
 
-We will implement a TanStack-aligned headless table engine under:
+We will implement a TanStack-aligned headless table engine under the ecosystem layer and expose it
+via stable re-exports.
 
-- `ecosystem/fret-ui-kit/src/headless/table/` (module name: `headless::table`)
-- Cargo feature: `table` (compatibility flag; no longer gates compilation)
+Implementation note:
+
+- The concrete implementation currently lives in `ecosystem/fret-ui-headless/src/table/`.
+- It is re-exported as `fret-ui-kit::headless::table` (see `ecosystem/fret-ui-kit/src/headless/mod.rs`).
+- There is no long-lived feature gate for the table engine; it is always available.
 
 The headless engine:
 
