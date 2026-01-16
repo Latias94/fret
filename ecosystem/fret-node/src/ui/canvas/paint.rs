@@ -6,9 +6,11 @@
 //! not re-tessellate every edge on every frame.
 
 use std::collections::HashMap;
+use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
+use fret_canvas::cache::PathCache;
 use fret_core::{
     FillStyle, PathCommand, PathConstraints, PathId, PathStyle, Point, Px, StrokeStyle, TextBlobId,
     TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
@@ -28,12 +30,6 @@ struct WirePathKey {
     zoom: i64,
     scale: i64,
     stroke_width: i64,
-}
-
-#[derive(Debug)]
-struct PathCacheEntry {
-    id: PathId,
-    last_used_frame: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -141,8 +137,7 @@ struct TextMetricsEntry {
 #[derive(Debug, Default)]
 pub(crate) struct CanvasPaintCache {
     frame: u64,
-    wire_paths: HashMap<WirePathKey, PathCacheEntry>,
-    marker_paths: HashMap<MarkerPathKey, PathCacheEntry>,
+    paths: PathCache,
     text_blobs: HashMap<TextBlobKey, TextBlobEntry>,
     text_metrics: HashMap<TextMetricsKey, TextMetricsEntry>,
 }
@@ -150,16 +145,12 @@ pub(crate) struct CanvasPaintCache {
 impl CanvasPaintCache {
     pub(crate) fn begin_frame(&mut self) -> u64 {
         self.frame = self.frame.wrapping_add(1);
+        self.paths.begin_frame();
         self.frame
     }
 
     pub(crate) fn clear(&mut self, services: &mut dyn fret_core::UiServices) {
-        for entry in self.wire_paths.drain().map(|(_, e)| e) {
-            services.path().release(entry.id);
-        }
-        for entry in self.marker_paths.drain().map(|(_, e)| e) {
-            services.path().release(entry.id);
-        }
+        self.paths.clear(services);
         for entry in self.text_blobs.drain().map(|(_, e)| e) {
             services.text().release(entry.id);
         }
@@ -172,24 +163,19 @@ impl CanvasPaintCache {
         max_age_frames: u64,
         max_entries: usize,
     ) {
-        fn prune_map_by_age<K: Copy + Eq + Hash>(
-            map: &mut HashMap<K, PathCacheEntry>,
-            services: &mut dyn fret_core::UiServices,
-            now: u64,
-            max_age_frames: u64,
-        ) {
-            map.retain(|_, entry| {
-                let keep = now.saturating_sub(entry.last_used_frame) <= max_age_frames;
-                if !keep {
-                    services.path().release(entry.id);
-                }
-                keep
-            });
+        let now = self.frame;
+        if max_entries == 0 {
+            self.clear(services);
+            return;
         }
 
-        let now = self.frame;
-        prune_map_by_age(&mut self.wire_paths, services, now, max_age_frames);
-        prune_map_by_age(&mut self.marker_paths, services, now, max_age_frames);
+        // Approximate budgets: paths are typically the heaviest and most numerous in node graphs.
+        let path_budget = (max_entries.saturating_mul(6)) / 10;
+        let text_budget = max_entries.saturating_sub(path_budget);
+        let text_blob_budget = (text_budget.saturating_mul(7)) / 10;
+        let metrics_budget = text_budget.saturating_sub(text_blob_budget);
+
+        self.paths.prune(services, max_age_frames, path_budget);
 
         self.text_blobs.retain(|_, entry| {
             let keep = now.saturating_sub(entry.last_used_frame) <= max_age_frames;
@@ -202,68 +188,33 @@ impl CanvasPaintCache {
         self.text_metrics
             .retain(|_, entry| now.saturating_sub(entry.last_used_frame) <= max_age_frames);
 
-        let total = self
-            .wire_paths
-            .len()
-            .saturating_add(self.marker_paths.len());
-        let total = total.saturating_add(self.text_blobs.len());
-        let total = total.saturating_add(self.text_metrics.len());
-        if total <= max_entries {
-            return;
+        if text_blob_budget > 0 && self.text_blobs.len() > text_blob_budget {
+            let mut candidates: Vec<(u64, TextBlobKey)> = self
+                .text_blobs
+                .iter()
+                .map(|(k, v)| (v.last_used_frame, k.clone()))
+                .collect();
+            candidates.sort_by_key(|(last_used, _)| *last_used);
+
+            let over = self.text_blobs.len().saturating_sub(text_blob_budget);
+            for (_, key) in candidates.into_iter().take(over) {
+                if let Some(entry) = self.text_blobs.remove(&key) {
+                    services.text().release(entry.id);
+                }
+            }
         }
 
-        #[derive(Debug, Clone)]
-        enum EvictKey {
-            Wire(WirePathKey),
-            Marker(MarkerPathKey),
-            Text(TextBlobKey),
-            Metrics(TextMetricsKey),
-        }
+        if metrics_budget > 0 && self.text_metrics.len() > metrics_budget {
+            let mut candidates: Vec<(u64, TextMetricsKey)> = self
+                .text_metrics
+                .iter()
+                .map(|(k, v)| (v.last_used_frame, k.clone()))
+                .collect();
+            candidates.sort_by_key(|(last_used, _)| *last_used);
 
-        let mut entries: Vec<(EvictKey, u64)> = Vec::with_capacity(total);
-        entries.extend(
-            self.wire_paths
-                .iter()
-                .map(|(k, v)| (EvictKey::Wire(*k), v.last_used_frame)),
-        );
-        entries.extend(
-            self.marker_paths
-                .iter()
-                .map(|(k, v)| (EvictKey::Marker(*k), v.last_used_frame)),
-        );
-        entries.extend(
-            self.text_blobs
-                .iter()
-                .map(|(k, v)| (EvictKey::Text(k.clone()), v.last_used_frame)),
-        );
-        entries.extend(
-            self.text_metrics
-                .iter()
-                .map(|(k, v)| (EvictKey::Metrics(k.clone()), v.last_used_frame)),
-        );
-        entries.sort_by_key(|(_k, last)| *last);
-
-        let over = total.saturating_sub(max_entries);
-        for (key, _last) in entries.into_iter().take(over) {
-            match key {
-                EvictKey::Wire(key) => {
-                    if let Some(entry) = self.wire_paths.remove(&key) {
-                        services.path().release(entry.id);
-                    }
-                }
-                EvictKey::Marker(key) => {
-                    if let Some(entry) = self.marker_paths.remove(&key) {
-                        services.path().release(entry.id);
-                    }
-                }
-                EvictKey::Text(key) => {
-                    if let Some(entry) = self.text_blobs.remove(&key) {
-                        services.text().release(entry.id);
-                    }
-                }
-                EvictKey::Metrics(key) => {
-                    self.text_metrics.remove(&key);
-                }
+            let over = self.text_metrics.len().saturating_sub(metrics_budget);
+            for (_, key) in candidates.into_iter().take(over) {
+                self.text_metrics.remove(&key);
             }
         }
     }
@@ -314,33 +265,78 @@ impl CanvasPaintCache {
             stroke_width: q(stroke_width, 0.0001),
         };
 
-        let now = self.frame;
-        if let Some(entry) = self.wire_paths.get_mut(&key) {
-            entry.last_used_frame = now;
-            return Some(entry.id);
-        }
-
-        let id = match route {
+        let cache_key = stable_path_key(1, &key);
+        match route {
             EdgeRouteKind::Bezier => {
-                prepare_bezier_wire_path(services, from, to, zoom, scale_factor, width_px)?
+                let dx = to.x.0 - from.x.0;
+                let ctrl = (dx.abs() * 0.5).clamp(40.0 / zoom, 160.0 / zoom);
+                let dir = if dx >= 0.0 { 1.0 } else { -1.0 };
+                let c1 = Point::new(Px(from.x.0 + dir * ctrl), from.y);
+                let c2 = Point::new(Px(to.x.0 - dir * ctrl), to.y);
+
+                let commands = [
+                    PathCommand::MoveTo(from),
+                    PathCommand::CubicTo {
+                        ctrl1: c1,
+                        ctrl2: c2,
+                        to,
+                    },
+                ];
+
+                let (id, _metrics) = self.paths.prepare(
+                    services,
+                    cache_key,
+                    &commands,
+                    PathStyle::Stroke(StrokeStyle {
+                        width: Px(width_px / zoom),
+                    }),
+                    PathConstraints {
+                        scale_factor: scale_factor * zoom,
+                    },
+                );
+                Some(id)
             }
             EdgeRouteKind::Straight => {
-                prepare_straight_path(services, from, to, zoom, scale_factor, width_px)?
+                let commands = [PathCommand::MoveTo(from), PathCommand::LineTo(to)];
+                let (id, _metrics) = self.paths.prepare(
+                    services,
+                    cache_key,
+                    &commands,
+                    PathStyle::Stroke(StrokeStyle {
+                        width: Px(width_px / zoom),
+                    }),
+                    PathConstraints {
+                        scale_factor: scale_factor * zoom,
+                    },
+                );
+                Some(id)
             }
             EdgeRouteKind::Step => {
-                prepare_step_path(services, from, to, zoom, scale_factor, width_px)?
+                let mx = 0.5 * (from.x.0 + to.x.0);
+                let p1 = Point::new(Px(mx), from.y);
+                let p2 = Point::new(Px(mx), to.y);
+
+                let commands = [
+                    PathCommand::MoveTo(from),
+                    PathCommand::LineTo(p1),
+                    PathCommand::LineTo(p2),
+                    PathCommand::LineTo(to),
+                ];
+
+                let (id, _metrics) = self.paths.prepare(
+                    services,
+                    cache_key,
+                    &commands,
+                    PathStyle::Stroke(StrokeStyle {
+                        width: Px(width_px / zoom),
+                    }),
+                    PathConstraints {
+                        scale_factor: scale_factor * zoom,
+                    },
+                );
+                Some(id)
             }
-        };
-
-        self.wire_paths.insert(
-            key,
-            PathCacheEntry {
-                id,
-                last_used_frame: now,
-            },
-        );
-
-        Some(id)
+        }
     }
 
     pub(crate) fn edge_end_marker_path(
@@ -441,31 +437,65 @@ impl CanvasPaintCache {
             pin_radius_screen: q(pin_radius_screen.max(0.0), 0.01),
         };
 
-        let now = self.frame;
-        if let Some(entry) = self.marker_paths.get_mut(&key) {
-            entry.last_used_frame = now;
-            return Some(entry.id);
-        }
+        let cache_key = stable_path_key(2, &key);
+        let zoom = zoom.max(1.0e-6);
+        let dir = match side {
+            MarkerSide::Start => edge_route_start_tangent(route, from, to, zoom),
+            MarkerSide::End => edge_route_end_tangent(route, from, to, zoom),
+        };
 
-        let id = prepare_marker_path(
-            services,
-            side,
-            route,
-            from,
-            to,
-            zoom,
-            scale_factor,
-            marker,
-            pin_radius_screen,
-        )?;
-        self.marker_paths.insert(
-            key,
-            PathCacheEntry {
-                id,
-                last_used_frame: now,
-            },
-        );
-        Some(id)
+        let len = (dir.x.0 * dir.x.0 + dir.y.0 * dir.y.0).sqrt();
+        if !len.is_finite() || len <= 1.0e-6 {
+            return None;
+        }
+        let ux = dir.x.0 / len;
+        let uy = dir.y.0 / len;
+        let nx = -uy;
+        let ny = ux;
+
+        let size_screen = marker.size.max(1.0);
+        let size = size_screen / zoom;
+
+        let pin_r = pin_radius_screen.max(0.0) / zoom;
+        let tip = match side {
+            MarkerSide::Start => Point::new(Px(from.x.0 + ux * pin_r), Px(from.y.0 + uy * pin_r)),
+            MarkerSide::End => Point::new(Px(to.x.0 - ux * pin_r), Px(to.y.0 - uy * pin_r)),
+        };
+
+        match marker.kind {
+            EdgeMarkerKind::Arrow => {
+                let arrow_len = size;
+                let half_w = (0.65 * size).max(0.5 / zoom);
+                let base = match side {
+                    MarkerSide::Start => {
+                        Point::new(Px(tip.x.0 + ux * arrow_len), Px(tip.y.0 + uy * arrow_len))
+                    }
+                    MarkerSide::End => {
+                        Point::new(Px(tip.x.0 - ux * arrow_len), Px(tip.y.0 - uy * arrow_len))
+                    }
+                };
+                let p1 = Point::new(Px(base.x.0 + nx * half_w), Px(base.y.0 + ny * half_w));
+                let p2 = Point::new(Px(base.x.0 - nx * half_w), Px(base.y.0 - ny * half_w));
+
+                let commands = [
+                    PathCommand::MoveTo(tip),
+                    PathCommand::LineTo(p1),
+                    PathCommand::LineTo(p2),
+                    PathCommand::Close,
+                ];
+
+                let (id, _metrics) = self.paths.prepare(
+                    services,
+                    cache_key,
+                    &commands,
+                    PathStyle::Fill(FillStyle::default()),
+                    PathConstraints {
+                        scale_factor: scale_factor * zoom,
+                    },
+                );
+                Some(id)
+            }
+        }
     }
 
     pub(crate) fn text_blob(
@@ -590,162 +620,9 @@ impl CanvasPaintCache {
     }
 }
 
-fn prepare_marker_path(
-    services: &mut dyn fret_core::UiServices,
-    side: MarkerSide,
-    route: EdgeRouteKind,
-    from: Point,
-    to: Point,
-    zoom: f32,
-    scale_factor: f32,
-    marker: &EdgeMarker,
-    pin_radius_screen: f32,
-) -> Option<PathId> {
-    let zoom = zoom.max(1.0e-6);
-    let dir = match side {
-        MarkerSide::Start => edge_route_start_tangent(route, from, to, zoom),
-        MarkerSide::End => edge_route_end_tangent(route, from, to, zoom),
-    };
-
-    let len = (dir.x.0 * dir.x.0 + dir.y.0 * dir.y.0).sqrt();
-    if !len.is_finite() || len <= 1.0e-6 {
-        return None;
-    }
-    let ux = dir.x.0 / len;
-    let uy = dir.y.0 / len;
-    let nx = -uy;
-    let ny = ux;
-
-    let size_screen = marker.size.max(1.0);
-    let size = size_screen / zoom;
-
-    let pin_r = pin_radius_screen.max(0.0) / zoom;
-    let tip = match side {
-        MarkerSide::Start => Point::new(Px(from.x.0 + ux * pin_r), Px(from.y.0 + uy * pin_r)),
-        MarkerSide::End => Point::new(Px(to.x.0 - ux * pin_r), Px(to.y.0 - uy * pin_r)),
-    };
-
-    match marker.kind {
-        EdgeMarkerKind::Arrow => {
-            let arrow_len = size;
-            let half_w = (0.65 * size).max(0.5 / zoom);
-            let base = match side {
-                MarkerSide::Start => {
-                    Point::new(Px(tip.x.0 + ux * arrow_len), Px(tip.y.0 + uy * arrow_len))
-                }
-                MarkerSide::End => {
-                    Point::new(Px(tip.x.0 - ux * arrow_len), Px(tip.y.0 - uy * arrow_len))
-                }
-            };
-            let p1 = Point::new(Px(base.x.0 + nx * half_w), Px(base.y.0 + ny * half_w));
-            let p2 = Point::new(Px(base.x.0 - nx * half_w), Px(base.y.0 - ny * half_w));
-
-            let commands = [
-                PathCommand::MoveTo(tip),
-                PathCommand::LineTo(p1),
-                PathCommand::LineTo(p2),
-                PathCommand::Close,
-            ];
-
-            let (id, _metrics) = services.path().prepare(
-                &commands,
-                PathStyle::Fill(FillStyle::default()),
-                PathConstraints {
-                    scale_factor: scale_factor * zoom,
-                },
-            );
-            Some(id)
-        }
-    }
-}
-
-fn prepare_bezier_wire_path(
-    services: &mut dyn fret_core::UiServices,
-    from: Point,
-    to: Point,
-    zoom: f32,
-    scale_factor: f32,
-    width_px: f32,
-) -> Option<PathId> {
-    let dx = to.x.0 - from.x.0;
-    let ctrl = (dx.abs() * 0.5).clamp(40.0 / zoom, 160.0 / zoom);
-    let dir = if dx >= 0.0 { 1.0 } else { -1.0 };
-    let c1 = Point::new(Px(from.x.0 + dir * ctrl), from.y);
-    let c2 = Point::new(Px(to.x.0 - dir * ctrl), to.y);
-
-    let commands = [
-        PathCommand::MoveTo(from),
-        PathCommand::CubicTo {
-            ctrl1: c1,
-            ctrl2: c2,
-            to,
-        },
-    ];
-
-    let (id, _metrics) = services.path().prepare(
-        &commands,
-        PathStyle::Stroke(StrokeStyle {
-            width: Px(width_px / zoom),
-        }),
-        PathConstraints {
-            scale_factor: scale_factor * zoom,
-        },
-    );
-
-    Some(id)
-}
-
-fn prepare_step_path(
-    services: &mut dyn fret_core::UiServices,
-    from: Point,
-    to: Point,
-    zoom: f32,
-    scale_factor: f32,
-    width_px: f32,
-) -> Option<PathId> {
-    let mx = 0.5 * (from.x.0 + to.x.0);
-    let p1 = Point::new(Px(mx), from.y);
-    let p2 = Point::new(Px(mx), to.y);
-
-    let commands = [
-        PathCommand::MoveTo(from),
-        PathCommand::LineTo(p1),
-        PathCommand::LineTo(p2),
-        PathCommand::LineTo(to),
-    ];
-
-    let (id, _metrics) = services.path().prepare(
-        &commands,
-        PathStyle::Stroke(StrokeStyle {
-            width: Px(width_px / zoom),
-        }),
-        PathConstraints {
-            scale_factor: scale_factor * zoom,
-        },
-    );
-
-    Some(id)
-}
-
-fn prepare_straight_path(
-    services: &mut dyn fret_core::UiServices,
-    from: Point,
-    to: Point,
-    zoom: f32,
-    scale_factor: f32,
-    width_px: f32,
-) -> Option<PathId> {
-    let commands = [PathCommand::MoveTo(from), PathCommand::LineTo(to)];
-
-    let (id, _metrics) = services.path().prepare(
-        &commands,
-        PathStyle::Stroke(StrokeStyle {
-            width: Px(width_px / zoom),
-        }),
-        PathConstraints {
-            scale_factor: scale_factor * zoom,
-        },
-    );
-
-    Some(id)
+fn stable_path_key<T: Hash>(tag: u8, key: &T) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    tag.hash(&mut hasher);
+    key.hash(&mut hasher);
+    hasher.finish()
 }
