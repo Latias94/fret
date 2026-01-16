@@ -74,5 +74,7 @@ _None tracked at this time._
   (`web_vs_fret_menubar_panel_chrome_matches`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json`).
 - shadcn-web placement gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
   (`web_vs_fret_menubar_demo_overlay_placement_matches`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json`).
+- shadcn-web placement gate (constrained viewport): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
+  (`web_vs_fret_menubar_demo_small_viewport_overlay_placement_matches`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.vp1440x320.open.json`).
 - shadcn-web submenu placement gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
   (`web_vs_fret_menubar_demo_submenu_overlay_placement_matches`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.submenu-kbd.open.json`).

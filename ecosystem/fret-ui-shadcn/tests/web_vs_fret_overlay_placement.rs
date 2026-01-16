@@ -1385,6 +1385,79 @@ fn web_vs_fret_dropdown_menu_demo_overlay_placement_matches() {
     );
 }
 
+#[test]
+fn web_vs_fret_dropdown_menu_demo_small_viewport_overlay_placement_matches() {
+    assert_overlay_placement_matches(
+        "dropdown-menu-demo.vp1440x320",
+        Some("menu"),
+        |cx, open| {
+            use fret_ui_shadcn::{
+                Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuItem,
+                DropdownMenuLabel, DropdownMenuShortcut,
+            };
+
+            DropdownMenu::new(open.clone())
+                // new-york-v4 dropdown-menu-demo: `DropdownMenuContent className="w-56"`.
+                .min_width(Px(224.0))
+                .into_element(
+                    cx,
+                    |cx| {
+                        Button::new("Open")
+                            .variant(ButtonVariant::Outline)
+                            .into_element(cx)
+                    },
+                    |cx| {
+                        vec![
+                            DropdownMenuEntry::Label(DropdownMenuLabel::new("My Account")),
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Profile")
+                                    .trailing(DropdownMenuShortcut::new("??P").into_element(cx)),
+                            ),
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Billing")
+                                    .trailing(DropdownMenuShortcut::new("?B").into_element(cx)),
+                            ),
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Settings")
+                                    .trailing(DropdownMenuShortcut::new("?S").into_element(cx)),
+                            ),
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Keyboard shortcuts")
+                                    .trailing(DropdownMenuShortcut::new("?K").into_element(cx)),
+                            ),
+                            DropdownMenuEntry::Separator,
+                            DropdownMenuEntry::Item(DropdownMenuItem::new("Team")),
+                            DropdownMenuEntry::Item(DropdownMenuItem::new("Invite users").submenu(
+                                vec![
+                                    DropdownMenuEntry::Item(DropdownMenuItem::new("Email")),
+                                    DropdownMenuEntry::Item(DropdownMenuItem::new("Message")),
+                                    DropdownMenuEntry::Separator,
+                                    DropdownMenuEntry::Item(DropdownMenuItem::new("More...")),
+                                ],
+                            )),
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("New Team")
+                                    .trailing(DropdownMenuShortcut::new("?+T").into_element(cx)),
+                            ),
+                            DropdownMenuEntry::Separator,
+                            DropdownMenuEntry::Item(DropdownMenuItem::new("GitHub")),
+                            DropdownMenuEntry::Item(DropdownMenuItem::new("Support")),
+                            DropdownMenuEntry::Item(DropdownMenuItem::new("API").disabled(true)),
+                            DropdownMenuEntry::Separator,
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Log out")
+                                    .trailing(DropdownMenuShortcut::new("??Q").into_element(cx)),
+                            ),
+                        ]
+                    },
+                )
+        },
+        SemanticsRole::Button,
+        Some("Open"),
+        SemanticsRole::Menu,
+    );
+}
+
 fn assert_dropdown_menu_demo_submenu_overlay_placement_matches(web_name: &str) {
     use fret_ui_shadcn::{Button, DropdownMenu, DropdownMenuEntry, DropdownMenuItem};
 
@@ -2042,6 +2115,186 @@ fn web_vs_fret_context_menu_demo_overlay_placement_matches() {
                     ]
                 },
             )
+        },
+        |ui, app, services, _window, point| {
+            ui.dispatch_event(
+                app,
+                services,
+                &Event::Pointer(PointerEvent::Down {
+                    pointer_id: fret_core::PointerId::default(),
+                    position: Point::new(Px(point.x), Px(point.y)),
+                    button: MouseButton::Right,
+                    modifiers: Modifiers::default(),
+                    pointer_type: PointerType::Mouse,
+                    click_count: 1,
+                }),
+            );
+            ui.dispatch_event(
+                app,
+                services,
+                &Event::Pointer(PointerEvent::Up {
+                    pointer_id: fret_core::PointerId::default(),
+                    position: Point::new(Px(point.x), Px(point.y)),
+                    button: MouseButton::Right,
+                    modifiers: Modifiers::default(),
+                    pointer_type: PointerType::Mouse,
+                    click_count: 1,
+                }),
+            );
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_small_viewport_overlay_placement_matches() {
+    assert_point_anchored_overlay_placement_matches(
+        "context-menu-demo.vp1440x320",
+        "menu",
+        SemanticsRole::Menu,
+        |cx, open| {
+            #[derive(Default)]
+            struct Models {
+                checked_bookmarks: Option<Model<bool>>,
+                checked_full_urls: Option<Model<bool>>,
+                radio_person: Option<Model<Option<Arc<str>>>>,
+            }
+
+            let existing = cx.with_state(Models::default, |st| {
+                match (
+                    st.checked_bookmarks.as_ref(),
+                    st.checked_full_urls.as_ref(),
+                    st.radio_person.as_ref(),
+                ) {
+                    (Some(a), Some(b), Some(c)) => Some((a.clone(), b.clone(), c.clone())),
+                    _ => None,
+                }
+            });
+
+            let (checked_bookmarks, checked_full_urls, radio_person) =
+                if let Some(existing) = existing {
+                    existing
+                } else {
+                    let checked_bookmarks = cx.app.models_mut().insert(true);
+                    let checked_full_urls = cx.app.models_mut().insert(false);
+                    let radio_person = cx.app.models_mut().insert(Some(Arc::from("pedro")));
+
+                    cx.with_state(Models::default, |st| {
+                        st.checked_bookmarks = Some(checked_bookmarks.clone());
+                        st.checked_full_urls = Some(checked_full_urls.clone());
+                        st.radio_person = Some(radio_person.clone());
+                    });
+
+                    (checked_bookmarks, checked_full_urls, radio_person)
+                };
+
+            fret_ui_shadcn::ContextMenu::new(open.clone())
+                // new-york-v4 context-menu-demo: `ContextMenuContent className="w-52"`.
+                .min_width(Px(208.0))
+                // new-york-v4 context-menu-demo: `ContextMenuSubContent className="w-44"`.
+                .submenu_min_width(Px(176.0))
+                .into_element(
+                    cx,
+                    |cx| {
+                        cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(300.0));
+                                    layout.size.height = Length::Px(Px(150.0));
+                                    layout
+                                },
+                                ..Default::default()
+                            },
+                            |cx| vec![cx.text("Right click here")],
+                        )
+                    },
+                    |cx| {
+                        vec![
+                            fret_ui_shadcn::ContextMenuEntry::Item(
+                                fret_ui_shadcn::ContextMenuItem::new("Back")
+                                    .inset(true)
+                                    .trailing(
+                                        fret_ui_shadcn::ContextMenuShortcut::new("?[")
+                                            .into_element(cx),
+                                    ),
+                            ),
+                            fret_ui_shadcn::ContextMenuEntry::Item(
+                                fret_ui_shadcn::ContextMenuItem::new("Forward")
+                                    .inset(true)
+                                    .disabled(true)
+                                    .trailing(
+                                        fret_ui_shadcn::ContextMenuShortcut::new("?]")
+                                            .into_element(cx),
+                                    ),
+                            ),
+                            fret_ui_shadcn::ContextMenuEntry::Item(
+                                fret_ui_shadcn::ContextMenuItem::new("Reload")
+                                    .inset(true)
+                                    .trailing(
+                                        fret_ui_shadcn::ContextMenuShortcut::new("?R")
+                                            .into_element(cx),
+                                    ),
+                            ),
+                            fret_ui_shadcn::ContextMenuEntry::Item(
+                                fret_ui_shadcn::ContextMenuItem::new("More Tools")
+                                    .inset(true)
+                                    .submenu(vec![
+                                        fret_ui_shadcn::ContextMenuEntry::Item(
+                                            fret_ui_shadcn::ContextMenuItem::new("Save Page..."),
+                                        ),
+                                        fret_ui_shadcn::ContextMenuEntry::Item(
+                                            fret_ui_shadcn::ContextMenuItem::new(
+                                                "Create Shortcut...",
+                                            ),
+                                        ),
+                                        fret_ui_shadcn::ContextMenuEntry::Item(
+                                            fret_ui_shadcn::ContextMenuItem::new("Name Window..."),
+                                        ),
+                                        fret_ui_shadcn::ContextMenuEntry::Separator,
+                                        fret_ui_shadcn::ContextMenuEntry::Item(
+                                            fret_ui_shadcn::ContextMenuItem::new(
+                                                "Developer Tools",
+                                            ),
+                                        ),
+                                        fret_ui_shadcn::ContextMenuEntry::Separator,
+                                        fret_ui_shadcn::ContextMenuEntry::Item(
+                                            fret_ui_shadcn::ContextMenuItem::new("Delete").variant(
+                                                fret_ui_shadcn::context_menu::ContextMenuItemVariant::Destructive,
+                                            ),
+                                        ),
+                                    ]),
+                            ),
+                            fret_ui_shadcn::ContextMenuEntry::Separator,
+                            fret_ui_shadcn::ContextMenuEntry::CheckboxItem(
+                                fret_ui_shadcn::ContextMenuCheckboxItem::new(
+                                    checked_bookmarks.clone(),
+                                    "Show Bookmarks",
+                                ),
+                            ),
+                            fret_ui_shadcn::ContextMenuEntry::CheckboxItem(
+                                fret_ui_shadcn::ContextMenuCheckboxItem::new(
+                                    checked_full_urls.clone(),
+                                    "Show Full URLs",
+                                ),
+                            ),
+                            fret_ui_shadcn::ContextMenuEntry::Separator,
+                            fret_ui_shadcn::ContextMenuEntry::Label(
+                                fret_ui_shadcn::ContextMenuLabel::new("People").inset(true),
+                            ),
+                            fret_ui_shadcn::ContextMenuEntry::RadioGroup(
+                                fret_ui_shadcn::ContextMenuRadioGroup::new(radio_person.clone())
+                                    .item(fret_ui_shadcn::ContextMenuRadioItemSpec::new(
+                                        "pedro",
+                                        "Pedro Duarte",
+                                    ))
+                                    .item(fret_ui_shadcn::ContextMenuRadioItemSpec::new(
+                                        "colm",
+                                        "Colm Tuite",
+                                    )),
+                            ),
+                        ]
+                    },
+                )
         },
         |ui, app, services, _window, point| {
             ui.dispatch_event(
@@ -3056,6 +3309,249 @@ fn web_vs_fret_menubar_demo_overlay_placement_matches() {
     );
     assert_close(
         "menubar-demo portal_h",
+        fret_portal.h,
+        expected_portal_h,
+        2.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_small_viewport_overlay_placement_matches() {
+    let web = read_web_golden_open("menubar-demo.vp1440x320");
+    let theme = web_theme(&web);
+
+    let web_trigger = web_find_by_data_slot_and_state(&theme.root, "menubar-trigger", "open")
+        .unwrap_or_else(|| {
+            find_first(&theme.root, &|n| {
+                n.attrs
+                    .get("data-slot")
+                    .is_some_and(|v| v.as_str() == "menubar-trigger")
+            })
+            .expect("web trigger slot=menubar-trigger")
+        });
+
+    let web_portal_index = theme
+        .portals
+        .iter()
+        .position(|n| n.attrs.get("role").is_some_and(|v| v == "menu"))
+        .expect("web portal role=menu");
+    let web_portal_leaf = &theme.portals[web_portal_index];
+    let web_portal = theme
+        .portal_wrappers
+        .get(web_portal_index)
+        .unwrap_or(web_portal_leaf);
+
+    let web_side = find_attr_in_subtree(web_portal_leaf, "data-side")
+        .or_else(|| find_attr_in_subtree(web_portal, "data-side"))
+        .and_then(parse_side)
+        .unwrap_or_else(|| infer_side(web_trigger.rect, web_portal.rect));
+    let web_align = find_attr_in_subtree(web_portal_leaf, "data-align")
+        .or_else(|| find_attr_in_subtree(web_portal, "data-align"))
+        .and_then(parse_align)
+        .unwrap_or_else(|| infer_align(web_side, web_trigger.rect, web_portal.rect));
+
+    let expected_gap = rect_main_gap(web_side, web_trigger.rect, web_portal.rect);
+    let expected_cross = rect_cross_delta(web_side, web_align, web_trigger.rect, web_portal.rect);
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+    let view_bookmarks_bar: Model<bool> = app.models_mut().insert(false);
+    let view_full_urls: Model<bool> = app.models_mut().insert(true);
+    let profile_value: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("benoit")));
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| {
+            let menubar = build_menubar_demo(
+                cx,
+                view_bookmarks_bar.clone(),
+                view_full_urls.clone(),
+                profile_value.clone(),
+            );
+            vec![pad_root(cx, Px(0.0), menubar)]
+        },
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("File"))
+        .expect("fret menubar trigger semantics (File)");
+    let click_point = Point::new(
+        Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+        Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| {
+                let menubar = build_menubar_demo(
+                    cx,
+                    view_bookmarks_bar.clone(),
+                    view_full_urls.clone(),
+                    profile_value.clone(),
+                );
+                vec![pad_root(cx, Px(0.0), menubar)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("File"))
+        .expect("fret menubar trigger semantics (File)");
+
+    let expected_portal_w = web_portal.rect.w;
+    let expected_portal_h = web_portal.rect.h;
+
+    let fret_trigger = WebRect {
+        x: trigger.bounds.origin.x.0,
+        y: trigger.bounds.origin.y.0,
+        w: trigger.bounds.size.width.0,
+        h: trigger.bounds.size.height.0,
+    };
+
+    let debug = std::env::var("FRET_DEBUG_OVERLAY_PLACEMENT")
+        .ok()
+        .is_some_and(|v| v == "1");
+
+    let portal = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Menu)
+        .min_by(|a, b| {
+            let rect_a = WebRect {
+                x: a.bounds.origin.x.0,
+                y: a.bounds.origin.y.0,
+                w: a.bounds.size.width.0,
+                h: a.bounds.size.height.0,
+            };
+            let rect_b = WebRect {
+                x: b.bounds.origin.x.0,
+                y: b.bounds.origin.y.0,
+                w: b.bounds.size.width.0,
+                h: b.bounds.size.height.0,
+            };
+
+            let score_for = |r: WebRect| {
+                let gap = rect_main_gap(web_side, fret_trigger, r);
+                let cross = rect_cross_delta(web_side, web_align, fret_trigger, r);
+                let size = (r.w - expected_portal_w).abs() + (r.h - expected_portal_h).abs();
+                (gap - expected_gap).abs() + (cross - expected_cross).abs() + 0.05 * size
+            };
+
+            let score_a = score_for(rect_a);
+            let score_b = score_for(rect_b);
+            score_a
+                .partial_cmp(&score_b)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .expect("fret menubar portal semantics (Menu)");
+
+    if debug {
+        let candidates: Vec<_> = snap
+            .nodes
+            .iter()
+            .filter(|n| n.role == SemanticsRole::Menu)
+            .collect();
+        eprintln!(
+            "menubar-demo.vp1440x320 fret Menu candidates: {}",
+            candidates.len()
+        );
+        for (idx, n) in candidates.iter().enumerate().take(8) {
+            eprintln!("  [{idx}] bounds={:?} label={:?}", n.bounds, n.label);
+        }
+        eprintln!(
+            "menubar-demo.vp1440x320 web trigger={:?} web portal={:?}\n  fret trigger={:?}\n  selected portal={:?}",
+            web_trigger.rect, web_portal.rect, fret_trigger, portal.bounds
+        );
+        eprintln!(
+            "menubar-demo.vp1440x320 fret trigger flags={:?} root_count={} node_count={}",
+            trigger.flags,
+            snap.roots.len(),
+            snap.nodes.len()
+        );
+    }
+
+    let fret_portal = WebRect {
+        x: portal.bounds.origin.x.0,
+        y: portal.bounds.origin.y.0,
+        w: portal.bounds.size.width.0,
+        h: portal.bounds.size.height.0,
+    };
+
+    let actual_gap = rect_main_gap(web_side, fret_trigger, fret_portal);
+    let actual_cross = rect_cross_delta(web_side, web_align, fret_trigger, fret_portal);
+
+    assert_close(
+        "menubar-demo.vp1440x320 main_gap",
+        actual_gap,
+        expected_gap,
+        1.0,
+    );
+    assert_close(
+        "menubar-demo.vp1440x320 cross_delta",
+        actual_cross,
+        expected_cross,
+        1.5,
+    );
+    assert_close(
+        "menubar-demo.vp1440x320 portal_w",
+        fret_portal.w,
+        expected_portal_w,
+        2.0,
+    );
+    assert_close(
+        "menubar-demo.vp1440x320 portal_h",
         fret_portal.h,
         expected_portal_h,
         2.0,
