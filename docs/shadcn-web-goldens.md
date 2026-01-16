@@ -81,7 +81,7 @@ If you also extract open overlay states (`--modes=open` or `--open`), you will g
 `*.open.json` files alongside the base closed-mode goldens. In this repo, the current snapshot is:
 
 - `362` closed-mode files (`*.json`, excluding `*.open.json`)
-- `22` open-mode files (`*.open.json`)
+- `23` open-mode files (`*.open.json`)
 
 Note: `*.open.json` also matches the glob `*.json`, so "total .json files" will include open-mode
 snapshots unless you exclude `*.open.json`.
@@ -128,6 +128,10 @@ pixel diffs. See: `docs/audits/shadcn-web-layout-conformance.md`.
 - `--themes=light,dark` (default)
 - `--modes=closed,open` (default: `closed`)
 - `--open` (shorthand for `--modes=closed,open`)
+- `--repoRefUiDir=<path>` (optional; default: `<repo>/repo-ref/ui`)
+- `--viewportW=1440` (default)
+- `--viewportH=900` (default)
+- `--deviceScaleFactor=2` (default; alias: `--dpr=2`)
 - `--openSelector=<css>` (optional override for the "open overlay" trigger)
 - `--openVariants="<variant>=<css>;..."` (optional; writes `name.<variant>.open.json` for each entry; overrides `--openSelector`)
 - `--openAction=click|hover|contextmenu|keys` (optional override for the "open overlay" action; default is inferred per page)

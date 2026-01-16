@@ -30,7 +30,15 @@ struct WebGoldenTheme {
     #[serde(rename = "portalWrappers", default)]
     portal_wrappers: Vec<WebNode>,
     #[serde(default)]
+    viewport: Option<WebViewport>,
+    #[serde(default)]
     open: Option<WebOpenMeta>,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize)]
+struct WebViewport {
+    w: f32,
+    h: f32,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize)]
@@ -81,6 +89,12 @@ enum Align {
     Start,
     Center,
     End,
+}
+
+fn bounds_for_web_theme(theme: &WebGoldenTheme) -> Rect {
+    let w = theme.viewport.map(|v| v.w).unwrap_or(1440.0);
+    let h = theme.viewport.map(|v| v.h).unwrap_or(900.0);
+    Rect::new(Point::new(Px(0.0), Px(0.0)), CoreSize::new(Px(w), Px(h)))
 }
 
 fn pad_root<H: UiHost>(cx: &mut ElementContext<'_, H>, pad: Px, child: AnyElement) -> AnyElement {
@@ -721,10 +735,7 @@ fn assert_overlay_placement_matches(
     ui.set_window(window);
     let mut services = StyleAwareServices::default();
 
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(1440.0), Px(900.0)),
-    );
+    let bounds = bounds_for_web_theme(&theme);
 
     let open: Model<bool> = app.models_mut().insert(false);
     let build_frame1 = build.clone();
@@ -931,10 +942,7 @@ fn assert_centered_overlay_placement_matches(
     ui.set_window(window);
     let mut services = StyleAwareServices::default();
 
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(1440.0), Px(900.0)),
-    );
+    let bounds = bounds_for_web_theme(&theme);
 
     let open: Model<bool> = app.models_mut().insert(false);
     let build_frame1 = build.clone();
@@ -1113,10 +1121,7 @@ fn assert_viewport_anchored_overlay_placement_matches(
     ui.set_window(window);
     let mut services = StyleAwareServices::default();
 
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(1440.0), Px(900.0)),
-    );
+    let bounds = bounds_for_web_theme(&theme);
 
     let open: Model<bool> = app.models_mut().insert(false);
     let build_frame1 = build.clone();
@@ -1402,10 +1407,7 @@ fn assert_dropdown_menu_demo_submenu_overlay_placement_matches(web_name: &str) {
     ui.set_window(window);
     let mut services = StyleAwareServices::default();
 
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(1440.0), Px(900.0)),
-    );
+    let bounds = bounds_for_web_theme(&theme);
 
     let open: Model<bool> = app.models_mut().insert(false);
 
@@ -1662,6 +1664,82 @@ fn web_vs_fret_select_scrollable_overlay_placement_matches() {
     );
 }
 
+#[test]
+fn web_vs_fret_select_scrollable_small_viewport_overlay_placement_matches() {
+    assert_overlay_placement_matches(
+        "select-scrollable.vp1440x450",
+        Some("listbox"),
+        |cx, open| {
+            let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+            use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
+
+            let entries: Vec<SelectEntry> = vec![
+                SelectGroup::new(vec![
+                    SelectLabel::new("North America").into(),
+                    SelectItem::new("est", "Eastern Standard Time (EST)").into(),
+                    SelectItem::new("cst", "Central Standard Time (CST)").into(),
+                    SelectItem::new("mst", "Mountain Standard Time (MST)").into(),
+                    SelectItem::new("pst", "Pacific Standard Time (PST)").into(),
+                    SelectItem::new("akst", "Alaska Standard Time (AKST)").into(),
+                    SelectItem::new("hst", "Hawaii Standard Time (HST)").into(),
+                ])
+                .into(),
+                SelectGroup::new(vec![
+                    SelectLabel::new("Europe & Africa").into(),
+                    SelectItem::new("gmt", "Greenwich Mean Time (GMT)").into(),
+                    SelectItem::new("cet", "Central European Time (CET)").into(),
+                    SelectItem::new("eet", "Eastern European Time (EET)").into(),
+                    SelectItem::new("west", "Western European Summer Time (WEST)").into(),
+                    SelectItem::new("cat", "Central Africa Time (CAT)").into(),
+                    SelectItem::new("eat", "East Africa Time (EAT)").into(),
+                ])
+                .into(),
+                SelectGroup::new(vec![
+                    SelectLabel::new("Asia").into(),
+                    SelectItem::new("msk", "Moscow Time (MSK)").into(),
+                    SelectItem::new("ist", "India Standard Time (IST)").into(),
+                    SelectItem::new("cst_china", "China Standard Time (CST)").into(),
+                    SelectItem::new("jst", "Japan Standard Time (JST)").into(),
+                    SelectItem::new("kst", "Korea Standard Time (KST)").into(),
+                    SelectItem::new("ist_indonesia", "Indonesia Central Standard Time (WITA)")
+                        .into(),
+                ])
+                .into(),
+                SelectGroup::new(vec![
+                    SelectLabel::new("Australia & Pacific").into(),
+                    SelectItem::new("awst", "Australian Western Standard Time (AWST)").into(),
+                    SelectItem::new("acst", "Australian Central Standard Time (ACST)").into(),
+                    SelectItem::new("aest", "Australian Eastern Standard Time (AEST)").into(),
+                    SelectItem::new("nzst", "New Zealand Standard Time (NZST)").into(),
+                    SelectItem::new("fjt", "Fiji Time (FJT)").into(),
+                ])
+                .into(),
+                SelectGroup::new(vec![
+                    SelectLabel::new("South America").into(),
+                    SelectItem::new("art", "Argentina Time (ART)").into(),
+                    SelectItem::new("bot", "Bolivia Time (BOT)").into(),
+                    SelectItem::new("brt", "Brasilia Time (BRT)").into(),
+                    SelectItem::new("clt", "Chile Standard Time (CLT)").into(),
+                ])
+                .into(),
+            ];
+
+            fret_ui_shadcn::Select::new(value, open.clone())
+                .a11y_label("Select")
+                .placeholder("Select a timezone")
+                .refine_layout(
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(fret_ui_kit::MetricRef::Px(Px(280.0))),
+                )
+                .entries(entries)
+                .into_element(cx)
+        },
+        SemanticsRole::ComboBox,
+        Some("Select"),
+        SemanticsRole::ListBox,
+    );
+}
+
 fn assert_point_anchored_overlay_placement_matches(
     web_name: &str,
     web_portal_role: &str,
@@ -1715,10 +1793,7 @@ fn assert_point_anchored_overlay_placement_matches(
     ui.set_window(window);
     let mut services = StyleAwareServices::default();
 
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(1440.0), Px(900.0)),
-    );
+    let bounds = bounds_for_web_theme(&theme);
 
     let open: Model<bool> = app.models_mut().insert(false);
     let build_frame1 = build.clone();
@@ -2017,10 +2092,7 @@ fn assert_context_menu_demo_submenu_overlay_placement_matches(web_name: &str) {
     ui.set_window(window);
     let mut services = StyleAwareServices::default();
 
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(1440.0), Px(900.0)),
-    );
+    let bounds = bounds_for_web_theme(&theme);
 
     let open: Model<bool> = app.models_mut().insert(false);
     let checked_bookmarks: Model<bool> = app.models_mut().insert(true);
@@ -2262,10 +2334,7 @@ fn web_vs_fret_tooltip_demo_overlay_placement_matches() {
     ui.set_window(window);
     let mut services = StyleAwareServices::default();
 
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(1440.0), Px(900.0)),
-    );
+    let bounds = bounds_for_web_theme(&theme);
 
     let trigger_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
     let content_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
@@ -2427,10 +2496,7 @@ fn web_vs_fret_hover_card_demo_overlay_placement_matches() {
     ui.set_window(window);
     let mut services = StyleAwareServices::default();
 
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(1440.0), Px(900.0)),
-    );
+    let bounds = bounds_for_web_theme(&theme);
 
     let trigger_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
     let content_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
@@ -2607,10 +2673,7 @@ fn web_vs_fret_navigation_menu_demo_overlay_placement_matches() {
     ui.set_window(window);
     let mut services = StyleAwareServices::default();
 
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(1440.0), Px(900.0)),
-    );
+    let bounds = bounds_for_web_theme(&theme);
 
     let model: Model<Option<Arc<str>>> = app.models_mut().insert(None);
     let root_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
@@ -2813,10 +2876,7 @@ fn web_vs_fret_menubar_demo_overlay_placement_matches() {
     ui.set_window(window);
     let mut services = StyleAwareServices::default();
 
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(1440.0), Px(900.0)),
-    );
+    let bounds = bounds_for_web_theme(&theme);
 
     render_frame(
         &mut ui,
@@ -3025,10 +3085,7 @@ fn assert_menubar_demo_submenu_overlay_placement_matches(web_name: &str) {
     ui.set_window(window);
     let mut services = StyleAwareServices::default();
 
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(1440.0), Px(900.0)),
-    );
+    let bounds = bounds_for_web_theme(&theme);
 
     render_frame(
         &mut ui,

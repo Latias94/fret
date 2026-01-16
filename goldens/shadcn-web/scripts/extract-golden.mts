@@ -28,9 +28,13 @@ type GoldenOptions = {
   modes: Mode[]
   names: string[]
   types: string[]
+  repoRefUiDir: string
   outDir: string
   update: boolean
   timeoutMs: number
+  viewportW: number
+  viewportH: number
+  deviceScaleFactor: number
   openSelector?: string
   openAction?: OpenAction
   openKeys?: KeyChord
@@ -1036,11 +1040,13 @@ function repoRootFromScript(): string {
 
 const repoRoot = repoRootFromScript()
 
-async function loadPuppeteer(): Promise<typeof import("puppeteer")> {
+async function loadPuppeteer(
+  repoRefUiDir: string
+): Promise<typeof import("puppeteer")> {
   const require = createRequire(import.meta.url)
 
   const candidates = [
-    path.join(repoRoot, "repo-ref", "ui"),
+    repoRefUiDir,
     repoRoot,
     process.cwd(),
   ]
@@ -1060,13 +1066,15 @@ async function loadPuppeteer(): Promise<typeof import("puppeteer")> {
   return ((mod as any).default ?? mod) as typeof import("puppeteer")
 }
 
-async function resolveCssInjectionUrls(style: string, baseUrl: string) {
+async function resolveCssInjectionUrls(
+  repoRefUiDir: string,
+  style: string,
+  baseUrl: string
+) {
   // Next's HTML output for this route can omit some CSS links depending on how RSC streaming resolves.
   // We use the server-side RSC manifest to discover the actual CSS chunks and inject them ourselves.
   const manifestPath = path.join(
-    repoRoot,
-    "repo-ref",
-    "ui",
+    repoRefUiDir,
     "apps",
     "v4",
     ".next",
@@ -1114,9 +1122,7 @@ async function resolveCssInjectionUrls(style: string, baseUrl: string) {
   // Also inject the style-specific theme file if present (legacyStyles currently only includes
   // `new-york-v4`, but we keep this generic).
   const styleManifestPath = path.join(
-    repoRoot,
-    "repo-ref",
-    "ui",
+    repoRefUiDir,
     "apps",
     "v4",
     "public",
@@ -1205,7 +1211,7 @@ async function run(options: GoldenOptions): Promise<string[]> {
 
   const executablePath = resolveBrowserExecutablePath()
 
-  const puppeteer = await loadPuppeteer()
+  const puppeteer = await loadPuppeteer(options.repoRefUiDir)
 
   let browser: puppeteer.Browser
   try {
@@ -1214,9 +1220,9 @@ async function run(options: GoldenOptions): Promise<string[]> {
       headless: "new",
       protocolTimeout: Math.max(180_000, options.timeoutMs + 30_000),
       defaultViewport: {
-        width: 1440,
-        height: 900,
-        deviceScaleFactor: 2,
+        width: Math.round(options.viewportW),
+        height: Math.round(options.viewportH),
+        deviceScaleFactor: options.deviceScaleFactor,
       },
     })
   } catch (error) {
@@ -1235,6 +1241,7 @@ async function run(options: GoldenOptions): Promise<string[]> {
     const failures: string[] = []
 
     const cssInjectionUrls = await resolveCssInjectionUrls(
+      options.repoRefUiDir,
       options.style,
       options.baseUrl
     )
@@ -1467,6 +1474,11 @@ const types = typesRaw
   .map((t) => t.trim())
   .filter(Boolean)
 
+const repoRefUiDir =
+  (typeof flags.repoRefUiDir === "string" ? flags.repoRefUiDir : undefined) ??
+  process.env.REPO_REF_UI_DIR ??
+  path.join(repoRoot, "repo-ref", "ui")
+
 const outDir =
   (typeof flags.outDir === "string" ? flags.outDir : undefined) ??
   process.env.OUT_DIR ??
@@ -1491,6 +1503,41 @@ const timeoutMs =
   ) || 60000
 
 const update = flags.update === true || process.env.UPDATE_GOLDENS === "1"
+
+const viewportW =
+  Number(
+    (typeof flags.viewportW === "string" ? flags.viewportW : undefined) ??
+      process.env.VIEWPORT_W ??
+      "1440"
+  ) || 1440
+
+const viewportH =
+  Number(
+    (typeof flags.viewportH === "string" ? flags.viewportH : undefined) ??
+      process.env.VIEWPORT_H ??
+      "900"
+  ) || 900
+
+const deviceScaleFactor =
+  Number(
+    (typeof flags.deviceScaleFactor === "string" ? flags.deviceScaleFactor : undefined) ??
+      (typeof flags.dpr === "string" ? flags.dpr : undefined) ??
+      process.env.DEVICE_SCALE_FACTOR ??
+      process.env.DPR ??
+      "2"
+  ) || 2
+
+if (!Number.isFinite(viewportW) || viewportW <= 0) {
+  throw new Error(`invalid --viewportW=${String(flags.viewportW)} (expected positive number)`)
+}
+if (!Number.isFinite(viewportH) || viewportH <= 0) {
+  throw new Error(`invalid --viewportH=${String(flags.viewportH)} (expected positive number)`)
+}
+if (!Number.isFinite(deviceScaleFactor) || deviceScaleFactor <= 0) {
+  throw new Error(
+    `invalid --deviceScaleFactor=${String(flags.deviceScaleFactor ?? flags.dpr)} (expected positive number)`
+  )
+}
 
 const modesRaw =
   (typeof flags.modes === "string" ? flags.modes : undefined) ??
@@ -1554,9 +1601,7 @@ async function resolveNames(): Promise<string[]> {
   }
 
   const indexPath = path.join(
-    repoRoot,
-    "repo-ref",
-    "ui",
+    repoRefUiDir,
     "apps",
     "v4",
     "registry",
@@ -1591,9 +1636,11 @@ try {
   console.log(`- modes: ${modes.join(", ")}`)
   console.log(`- types: ${types.join(", ")}`)
   console.log(`- outDir: ${outDir}`)
+  console.log(`- repoRefUiDir: ${repoRefUiDir}`)
   console.log(`- timeoutMs: ${timeoutMs}`)
   console.log(`- update: ${update ? "yes" : "no (skip existing)"}`)
   console.log(`- all: ${all ? "yes" : "no"}`)
+  console.log(`- viewport: ${viewportW}x${viewportH} @ ${deviceScaleFactor}x`)
   console.log(`- openVariants: ${openVariants?.length ?? 0}`)
   console.log(`- openKeys: ${openKeys ? `${openKeys.modifiers.join("+")}+${openKeys.key}` : ""}`)
   console.log(`- openSteps: ${openSteps?.length ?? 0}`)
@@ -1608,9 +1655,13 @@ try {
     modes: modes.length > 0 ? modes : ["closed"],
     names: finalNames,
     types,
+    repoRefUiDir,
     outDir,
     update,
     timeoutMs,
+    viewportW,
+    viewportH,
+    deviceScaleFactor,
     openSelector,
     openAction,
     openKeys,
