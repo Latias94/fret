@@ -1293,6 +1293,20 @@ pub struct UiFrameStatsV1 {
     pub layout_engine_solves: u64,
     pub layout_engine_solve_time_us: u64,
     pub layout_engine_widget_fallback_solves: u64,
+    #[serde(default)]
+    pub model_change_invalidation_roots: u32,
+    #[serde(default)]
+    pub global_change_invalidation_roots: u32,
+    #[serde(default)]
+    pub invalidation_walk_nodes: u32,
+    #[serde(default)]
+    pub invalidation_walk_calls: u32,
+    #[serde(default)]
+    pub view_cache_active: bool,
+    #[serde(default)]
+    pub view_cache_invalidation_truncations: u32,
+    #[serde(default)]
+    pub view_cache_contained_relayouts: u32,
     pub focused_node: Option<u64>,
     pub captured_node: Option<u64>,
 }
@@ -1312,6 +1326,13 @@ impl UiFrameStatsV1 {
             layout_engine_solves: stats.layout_engine_solves,
             layout_engine_solve_time_us: stats.layout_engine_solve_time.as_micros() as u64,
             layout_engine_widget_fallback_solves: stats.layout_engine_widget_fallback_solves,
+            model_change_invalidation_roots: stats.model_change_invalidation_roots,
+            global_change_invalidation_roots: stats.global_change_invalidation_roots,
+            invalidation_walk_nodes: stats.invalidation_walk_nodes,
+            invalidation_walk_calls: stats.invalidation_walk_calls,
+            view_cache_active: stats.view_cache_active,
+            view_cache_invalidation_truncations: stats.view_cache_invalidation_truncations,
+            view_cache_contained_relayouts: stats.view_cache_contained_relayouts,
             focused_node: stats.focus.map(key_to_u64),
             captured_node: stats.captured.map(key_to_u64),
         }
