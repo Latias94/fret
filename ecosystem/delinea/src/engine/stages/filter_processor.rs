@@ -388,6 +388,7 @@ impl FilterProcessorStage {
                     &mut view_changed,
                 ),
                 FilterPlanStepKind::YIndices => apply_y_indices_for_grid(
+                    transform_graph,
                     model,
                     datasets,
                     state,
@@ -758,6 +759,7 @@ fn apply_x_indices_for_grid(
 }
 
 fn apply_y_indices_for_grid(
+    transform_graph: &mut TransformGraph,
     model: &ChartModel,
     datasets: &DatasetStore,
     state: &ChartState,
@@ -818,124 +820,41 @@ fn apply_y_indices_for_grid(
         let Some(series_view_index) = view_series_index.get(series_id).copied() else {
             continue;
         };
-        let series_view = &mut view.series[series_view_index];
-
-        let y_filter = series_view.y_filter;
-        if y_filter.min.is_none() && y_filter.max.is_none() {
-            continue;
-        }
-
-        let base_selection = series_view.selection.clone();
-        if matches!(base_selection, RowSelection::Indices(_))
-            && !x_indices_applied.contains(series_id)
-        {
-            // Avoid repeatedly scanning indices selections every frame. The primary order-sensitive
-            // behavior we need is X-before-Y in the same frame when X indices were just applied.
-            *y_indices_skipped_indices_scan_avoid_series =
-                y_indices_skipped_indices_scan_avoid_series.saturating_add(1);
-            continue;
-        }
-
-        let Some(table) = datasets.dataset(series_model.dataset) else {
-            continue;
-        };
-        let Some(dataset) = model.datasets.get(&series_model.dataset) else {
-            continue;
-        };
-        let Some(x_col) = dataset.fields.get(&series_model.encode.x).copied() else {
-            continue;
-        };
-        let Some(y0_col) = dataset.fields.get(&series_model.encode.y).copied() else {
-            continue;
-        };
-        let y1_col = if series_model.kind == crate::spec::SeriesKind::Band {
-            let Some(y1_field) = series_model.encode.y2 else {
-                continue;
-            };
-            let Some(y1_col) = dataset.fields.get(&y1_field).copied() else {
-                continue;
-            };
-            Some(y1_col)
-        } else {
-            None
-        };
-        let Some(x) = table.column_f64(x_col) else {
-            continue;
-        };
-        let Some(y0) = table.column_f64(y0_col) else {
-            continue;
-        };
-        let y1 = y1_col.and_then(|c| table.column_f64(c));
-        if y1_col.is_some() && y1.is_none() {
-            continue;
-        }
-
-        let len = match y1 {
-            Some(y1) => x.len().min(y0.len()).min(y1.len()),
-            None => x.len().min(y0.len()),
-        };
-        let view_len = base_selection.view_len(len);
-        if view_len == 0 {
-            continue;
-        }
-        if view_len > max_view_len {
-            *y_indices_skipped_view_len_cap_series =
-                y_indices_skipped_view_len_cap_series.saturating_add(1);
-            continue;
-        }
-
-        // Apply the X filter predicate only when X is in a filtering mode (Filter/WeakFilter).
-        // For `Empty`, the X window is represented as a masking predicate and must not cull the
-        // row participation space.
-        let x_filter_mode = series_view.x_filter_mode;
-        let x_filter = series_view.x_policy.filter;
-        let x_filter_active = x_filter.min.is_some() || x_filter.max.is_some();
-        let x_filter_should_cull_selection = matches!(
-            x_filter_mode,
-            crate::spec::FilterMode::Filter | crate::spec::FilterMode::WeakFilter
+        let x_indices_applied = x_indices_applied.contains(series_id);
+        let out = transform_graph.y_indices_node_for_series(
+            model,
+            datasets,
+            view,
+            *series_id,
+            series_view_index,
+            max_view_len,
+            x_indices_applied,
         );
 
-        let mut indices: Vec<u32> = Vec::new();
-        indices.reserve(view_len.min(4096));
-
-        let mut kept = 0usize;
-        for view_index in 0..view_len {
-            let Some(raw_index) = base_selection.get_raw_index(len, view_index) else {
-                continue;
-            };
-            let xi = x.get(raw_index).copied().unwrap_or(f64::NAN);
-            if !xi.is_finite() {
-                continue;
+        match out.result {
+            crate::transform_graph::YIndicesNodeResult::NoChange => {}
+            crate::transform_graph::YIndicesNodeResult::SkippedViewLenCap => {
+                *y_indices_skipped_view_len_cap_series =
+                    y_indices_skipped_view_len_cap_series.saturating_add(1);
             }
-            if x_filter_should_cull_selection && x_filter_active && !x_filter.contains(xi) {
-                continue;
+            crate::transform_graph::YIndicesNodeResult::SkippedIndicesScanAvoid => {
+                *y_indices_skipped_indices_scan_avoid_series =
+                    y_indices_skipped_indices_scan_avoid_series.saturating_add(1);
             }
-
-            let y_ok = if let Some(y1) = y1 {
-                let y0i = y0.get(raw_index).copied().unwrap_or(f64::NAN);
-                let y1i = y1.get(raw_index).copied().unwrap_or(f64::NAN);
-                y0i.is_finite() && y1i.is_finite() && y_filter.intersects_interval(y0i, y1i)
-            } else {
-                let yi = y0.get(raw_index).copied().unwrap_or(f64::NAN);
-                yi.is_finite() && y_filter.contains(yi)
-            };
-            if !y_ok {
-                continue;
+            crate::transform_graph::YIndicesNodeResult::Indices(indices) => {
+                let series_view = &mut view.series[series_view_index];
+                *y_indices_applied_series = y_indices_applied_series.saturating_add(1);
+                if series_view.selection != RowSelection::Indices(indices.clone()) {
+                    series_view.selection = RowSelection::Indices(indices);
+                }
+                if out.x_filter_should_cull_selection
+                    && series_view.x_policy.filter != Default::default()
+                {
+                    series_view.x_policy.filter = Default::default();
+                }
+                *view_changed = true;
             }
-            indices.push(raw_index.min(u32::MAX as usize) as u32);
-            kept += 1;
         }
-
-        if kept == view_len {
-            continue;
-        }
-
-        *y_indices_applied_series = y_indices_applied_series.saturating_add(1);
-        series_view.selection = RowSelection::Indices(indices.into());
-        if x_filter_should_cull_selection && series_view.x_policy.filter != Default::default() {
-            series_view.x_policy.filter = Default::default();
-        }
-        *view_changed = true;
     }
 }
 

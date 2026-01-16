@@ -10,9 +10,11 @@
 mod data_view;
 mod filter_plan;
 mod filter_plan_output;
+mod y_indices;
 
 pub use data_view::*;
 pub use filter_plan::*;
+pub use y_indices::*;
 
 use crate::data::DatasetStore;
 use crate::engine::ChartState;
@@ -36,6 +38,7 @@ pub struct TransformGraph {
     filter_plan_output: FilterPlanOutput,
     filter_plan_cache: Option<CachedFilterPlan>,
     filter_plan_output_cache: Option<filter_plan_output::CachedFilterPlanOutput>,
+    y_indices_cache: BTreeMap<SeriesId, y_indices::CachedYIndicesNode>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -64,6 +67,7 @@ impl TransformGraph {
         self.filter_plan_output = FilterPlanOutput::default();
         self.filter_plan_cache = None;
         self.filter_plan_output_cache = None;
+        self.y_indices_cache.clear();
     }
 
     pub fn data_views(&self) -> &DataViewStage {
