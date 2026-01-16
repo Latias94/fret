@@ -18,6 +18,7 @@ Related docs:
 - Bundle export (`bundle.json`) + `latest.txt` pointer
 - Script harness (`diag run`, `diag suite ui-gallery`)
 - `test_id` contract: authoring → semantics snapshot → bundle → selector
+- Declarative identity: pick results include `GlobalElementId` and scripts can target it via `{"kind":"global_element_id","element":...}` (best for harness tests)
 - Picking (one-shot): `diag pick`, `diag pick-script`, `diag pick-apply`
 - Continuous inspect mode: `diag inspect on|off|toggle|status` (file-triggered, AI-friendly)
 - View cache frame stats exported in bundles (`debug.stats.view_cache_*`, `debug.stats.invalidation_*`)

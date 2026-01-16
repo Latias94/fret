@@ -1017,8 +1017,9 @@ fn ui_app_render<S>(
     #[cfg(feature = "diagnostics")]
     {
         let semantics_snapshot = state.ui.semantics_snapshot();
-        let drive = app.with_global_mut(UiDiagnosticsService::default, |svc, _app| {
-            svc.drive_script_for_window(window, semantics_snapshot)
+        let drive = app.with_global_mut(UiDiagnosticsService::default, |svc, app| {
+            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+            svc.drive_script_for_window(window, semantics_snapshot, element_runtime)
         });
         if drive.request_redraw {
             app.request_redraw(window);

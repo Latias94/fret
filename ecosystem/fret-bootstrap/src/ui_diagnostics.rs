@@ -255,6 +255,7 @@ impl UiDiagnosticsService {
         &mut self,
         window: AppWindowId,
         semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+        element_runtime: Option<&ElementRuntime>,
     ) -> UiScriptFrameOutput {
         if !self.is_enabled() {
             return UiScriptFrameOutput::default();
@@ -382,7 +383,7 @@ impl UiDiagnosticsService {
                         },
                     };
 
-                    if eval_predicate(snapshot, &predicate) {
+                    if eval_predicate(snapshot, window, element_runtime, &predicate) {
                         active.wait_until = None;
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
@@ -413,7 +414,7 @@ impl UiDiagnosticsService {
             UiActionStepV1::Assert { predicate } => {
                 active.wait_until = None;
                 if let Some(snapshot) = semantics_snapshot {
-                    if eval_predicate(snapshot, &predicate) {
+                    if eval_predicate(snapshot, window, element_runtime, &predicate) {
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
                     } else {
@@ -437,7 +438,8 @@ impl UiDiagnosticsService {
                     output.request_redraw = true;
                     return output;
                 };
-                let Some(node) = select_semantics_node(snapshot, &target) else {
+                let Some(node) = select_semantics_node(snapshot, window, element_runtime, &target)
+                else {
                     self.active_scripts.insert(window, active);
                     output.request_redraw = true;
                     return output;
@@ -592,7 +594,13 @@ impl UiDiagnosticsService {
             && pending.window == window
         {
             let raw_semantics = ui.semantics_snapshot();
-            self.resolve_pending_pick_for_window(window, pending.position, raw_semantics, ui);
+            self.resolve_pending_pick_for_window(
+                window,
+                pending.position,
+                raw_semantics,
+                ui,
+                element_runtime,
+            );
         }
     }
 
@@ -836,6 +844,7 @@ impl UiDiagnosticsService {
         position: Point,
         raw_semantics: Option<&fret_core::SemanticsSnapshot>,
         ui: &UiTree<App>,
+        element_runtime: Option<&ElementRuntime>,
     ) {
         let Some(pending) = self.pending_pick.clone() else {
             return;
@@ -860,8 +869,12 @@ impl UiDiagnosticsService {
         };
 
         let selection = match raw_semantics {
-            Some(snapshot) => pick_semantics_node_at(snapshot, ui, position)
-                .map(|node| UiPickSelectionV1::from_node(snapshot, node, &self.cfg)),
+            Some(snapshot) => pick_semantics_node_at(snapshot, ui, position).map(|node| {
+                let element = element_runtime
+                    .and_then(|runtime| runtime.element_for_node(window, node.id))
+                    .map(|id| id.0);
+                UiPickSelectionV1::from_node(snapshot, node, element, &self.cfg)
+            }),
             None => None,
         };
 
@@ -1130,6 +1143,9 @@ pub enum UiSelectorV1 {
     TestId {
         id: String,
     },
+    GlobalElementId {
+        element: u64,
+    },
     NodeId {
         node: u64,
     },
@@ -1203,6 +1219,8 @@ pub enum UiPickStageV1 {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiPickSelectionV1 {
     pub node: UiSemanticsNodeV1,
+    #[serde(default)]
+    pub element: Option<u64>,
     pub selectors: Vec<UiSelectorV1>,
 }
 
@@ -1210,13 +1228,15 @@ impl UiPickSelectionV1 {
     fn from_node(
         snapshot: &fret_core::SemanticsSnapshot,
         node: &fret_core::SemanticsNode,
+        element: Option<u64>,
         cfg: &UiDiagnosticsConfig,
     ) -> Self {
         let exported =
             UiSemanticsNodeV1::from_node(node, cfg.redact_text, cfg.max_debug_string_bytes);
-        let selectors = suggest_selectors(snapshot, node, &exported, cfg);
+        let selectors = suggest_selectors(snapshot, node, &exported, element, cfg);
         Self {
             node: exported,
+            element,
             selectors,
         }
     }
@@ -1776,6 +1796,8 @@ fn parse_semantics_role(s: &str) -> Option<SemanticsRole> {
 
 fn select_semantics_node<'a>(
     snapshot: &'a fret_core::SemanticsSnapshot,
+    window: AppWindowId,
+    element_runtime: Option<&ElementRuntime>,
     selector: &UiSelectorV1,
 ) -> Option<&'a fret_core::SemanticsNode> {
     let index = SemanticsIndex::new(snapshot);
@@ -1829,6 +1851,17 @@ fn select_semantics_node<'a>(
             }),
             &index,
         ),
+        UiSelectorV1::GlobalElementId { element } => {
+            let node = element_runtime.and_then(|runtime| {
+                runtime.node_for_element(window, fret_ui::elements::GlobalElementId(*element))
+            })?;
+            let node_id = node.data().as_ffi();
+            index
+                .by_id
+                .get(&node_id)
+                .copied()
+                .filter(|n| index.is_selectable(n.id.data().as_ffi()))
+        }
     }
 }
 
@@ -1993,14 +2026,22 @@ fn pick_best_match<'a>(
     best.map(|(n, _)| n)
 }
 
-fn eval_predicate(snapshot: &fret_core::SemanticsSnapshot, pred: &UiPredicateV1) -> bool {
+fn eval_predicate(
+    snapshot: &fret_core::SemanticsSnapshot,
+    window: AppWindowId,
+    element_runtime: Option<&ElementRuntime>,
+    pred: &UiPredicateV1,
+) -> bool {
     match pred {
-        UiPredicateV1::Exists { target } => select_semantics_node(snapshot, target).is_some(),
+        UiPredicateV1::Exists { target } => {
+            select_semantics_node(snapshot, window, element_runtime, target).is_some()
+        }
         UiPredicateV1::FocusIs { target } => {
             let Some(focus) = snapshot.focus else {
                 return false;
             };
-            let Some(node) = select_semantics_node(snapshot, target) else {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
                 return false;
             };
             node.id == focus
@@ -2058,6 +2099,7 @@ fn suggest_selectors(
     snapshot: &fret_core::SemanticsSnapshot,
     raw_node: &fret_core::SemanticsNode,
     exported_node: &UiSemanticsNodeV1,
+    element: Option<u64>,
     cfg: &UiDiagnosticsConfig,
 ) -> Vec<UiSelectorV1> {
     let mut out = Vec::new();
@@ -2082,6 +2124,10 @@ fn suggest_selectors(
                 name: name.to_string(),
             });
         }
+    }
+
+    if let Some(element) = element {
+        out.push(UiSelectorV1::GlobalElementId { element });
     }
 
     out.push(UiSelectorV1::NodeId {

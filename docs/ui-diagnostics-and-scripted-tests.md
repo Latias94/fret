@@ -210,6 +210,7 @@ Supported selectors (v1 MVP):
 - `{"kind":"test_id","id":"open-settings"}` (preferred when available; see "Test IDs")
 - `{"kind":"role_and_name","role":"button","name":"Open"}`
 - `{"kind":"role_and_path","role":"menu_item","name":"Close","ancestors":[{"role":"menu","name":"File"}]}`
+- `{"kind":"global_element_id","element":123}` (low-level / best for harness tests; not a user-facing contract)
 - `{"kind":"node_id","node":123456789}` (low-level / brittle; avoid for real tests)
 
 ## Supported scripted steps (v1 MVP)
