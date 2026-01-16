@@ -76,6 +76,10 @@ Extract ScrollArea hover/scrolled variants (useful for scrollbar + thumb geometr
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts scroll-area-demo --modes=closed --update --baseUrl=http://localhost:4020 --variants=scrolled --steps="wait=200;hover=[data-slot=scroll-area];waitFor=[data-slot=scroll-area-scrollbar];scroll=[data-radix-scroll-area-viewport]@0,80;wait=50"`
 
+Extract ScrollArea hover-out variants (useful for `scrollHideDelay` timing):
+
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts scroll-area-demo scroll-area-horizontal-demo --modes=closed --update --baseUrl=http://localhost:4020 --variants=hover-out-650ms --steps="wait=200;hover=body;wait=50;hover=[data-slot=scroll-area];waitFor=[data-slot=scroll-area-scrollbar];move=1,1;wait=650"`
+
 Extract a constrained-viewport submenu variant (useful for "submenu flips/clamps and scrolls" behavior):
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts dropdown-menu-demo --modes=open --update --baseUrl=http://localhost:4020 --viewportH=320 --openVariants="submenu-kbd-vp1440x320=[data-fret-golden-target] [data-slot='dropdown-menu-trigger']" --openSteps="keys=[data-slot='dropdown-menu-sub-trigger']@ArrowRight"`

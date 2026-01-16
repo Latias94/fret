@@ -97,8 +97,8 @@ patterns:
 - `context-menu-demo` (overlay placement + max-height/scrolling; `vp1440x320` gates menu panel height)
 - `menubar-demo` (overlay placement + max-height/scrolling; `vp1440x320` gates menu panel height)
 - `select-scrollable` (available-height clamping + scrolling + scroll buttons / top inset outcome)
-- `scroll-area-demo` (scroll range via viewport `scrollHeight/clientHeight`; `.hover` gates scrollbar track rect; `.scrolled` gates thumb rect)
-- `scroll-area-horizontal-demo` (scroll range via viewport `scrollWidth/clientWidth`; `.hover` gates scrollbar track rect; `.scrolled` gates thumb rect)
+- `scroll-area-demo` (scroll range via viewport `scrollHeight/clientHeight`; `.hover` gates scrollbar track rect; `.scrolled` gates thumb rect; `.hover-out-*` gates `scrollHideDelay`)
+- `scroll-area-horizontal-demo` (scroll range via viewport `scrollWidth/clientWidth`; `.hover` gates scrollbar track rect; `.scrolled` gates thumb rect; `.hover-out-*` gates `scrollHideDelay`)
 - `slider-demo`
 - `avatar-demo`
 - `item-avatar`

@@ -38,6 +38,7 @@ pub struct ScrollAreaVisibilityOutput {
 pub struct ScrollAreaVisibility {
     last_ty: Option<ScrollAreaType>,
     hover_visible_until: Option<u64>,
+    was_hovered: bool,
     scroll_state: ScrollVisibilityState,
     last_scroll_tick: Option<u64>,
     scroll_hide_deadline: Option<u64>,
@@ -48,6 +49,7 @@ impl Default for ScrollAreaVisibility {
         Self {
             last_ty: None,
             hover_visible_until: None,
+            was_hovered: false,
             scroll_state: ScrollVisibilityState::Hidden,
             last_scroll_tick: None,
             scroll_hide_deadline: None,
@@ -86,6 +88,7 @@ impl ScrollAreaVisibility {
     fn reset_for_type(&mut self, ty: ScrollAreaType) {
         self.last_ty = Some(ty);
         self.hover_visible_until = None;
+        self.was_hovered = false;
         self.scroll_state = ScrollVisibilityState::Hidden;
         self.last_scroll_tick = None;
         self.scroll_hide_deadline = None;
@@ -97,6 +100,7 @@ impl ScrollAreaVisibility {
         config: ScrollAreaVisibilityConfig,
     ) -> ScrollAreaVisibilityOutput {
         if input.hovered {
+            self.was_hovered = true;
             self.hover_visible_until = None;
             return ScrollAreaVisibilityOutput {
                 visible: true,
@@ -104,14 +108,20 @@ impl ScrollAreaVisibility {
             };
         }
 
-        if self.hover_visible_until.is_none() {
+        if self.was_hovered {
+            self.was_hovered = false;
             self.hover_visible_until =
                 Some(input.tick.saturating_add(config.scroll_hide_delay_ticks));
         }
 
-        let visible = self
-            .hover_visible_until
-            .is_some_and(|deadline| input.tick < deadline);
+        let Some(deadline) = self.hover_visible_until else {
+            return ScrollAreaVisibilityOutput {
+                visible: false,
+                animating: false,
+            };
+        };
+
+        let visible = input.tick < deadline;
         if !visible {
             self.hover_visible_until = None;
         }
@@ -198,6 +208,19 @@ mod tests {
     fn hover_hides_after_delay() {
         let mut vis = ScrollAreaVisibility::default();
 
+        let out_init = vis.update(
+            ScrollAreaVisibilityInput {
+                ty: ScrollAreaType::Hover,
+                hovered: false,
+                has_overflow: true,
+                scrolled: false,
+                tick: 0,
+            },
+            cfg(),
+        );
+        assert!(!out_init.visible);
+        assert!(!out_init.animating);
+
         let out0 = vis.update(
             ScrollAreaVisibilityInput {
                 ty: ScrollAreaType::Hover,
@@ -236,6 +259,22 @@ mod tests {
         );
         assert!(!out2.visible);
         assert!(!out2.animating);
+
+        let out3 = vis.update(
+            ScrollAreaVisibilityInput {
+                ty: ScrollAreaType::Hover,
+                hovered: false,
+                has_overflow: true,
+                scrolled: false,
+                tick: 3 + HIDE,
+            },
+            cfg(),
+        );
+        assert!(
+            !out3.visible,
+            "hover mode should remain hidden after the delay"
+        );
+        assert!(!out3.animating);
     }
 
     #[test]

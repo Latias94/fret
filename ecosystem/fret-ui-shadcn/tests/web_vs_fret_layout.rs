@@ -2732,6 +2732,304 @@ fn web_vs_fret_layout_scroll_area_demo_scrollbar_bounds_match_web_hover() {
 }
 
 #[test]
+fn web_vs_fret_layout_scroll_area_demo_scrollbar_hides_after_hover_out_delay() {
+    let web_early = read_web_golden("scroll-area-demo.hover-out-550ms");
+    let theme_early = web_theme(&web_early);
+    let web_root = web_find_by_class_tokens(
+        &theme_early.root,
+        &["relative", "h-72", "w-48", "rounded-md", "border"],
+    )
+    .expect("web scroll area root");
+
+    let web_viewport = web_find_by_data_slot(&theme_early.root, "scroll-area-viewport")
+        .expect("web scroll viewport");
+    let web_scrollbar_early = web_find_scroll_area_scrollbar(&theme_early.root, "vertical")
+        .expect("web scroll-area-scrollbar (vertical, early)");
+    let web_thumb_early =
+        web_find_scroll_area_thumb_in_scrollbar(web_scrollbar_early).expect("web thumb (early)");
+
+    assert!(
+        web_scrollbar_early
+            .attrs
+            .get("data-state")
+            .is_some_and(|v| v == "visible"),
+        "expected early web scrollbar to be visible"
+    );
+
+    let web_late = read_web_golden("scroll-area-demo.hover-out-650ms");
+    let theme_late = web_theme(&web_late);
+    assert!(
+        web_find_scroll_area_scrollbar(&theme_late.root, "vertical").is_none(),
+        "expected late web scrollbar to be absent"
+    );
+
+    let web_content = web_find_best_by(
+        web_viewport,
+        &|n| n.tag == "div" && n.rect.h > web_viewport.rect.h + 1.0,
+        &|n| -n.rect.h,
+    )
+    .expect("web scroll content (taller than viewport)");
+
+    let expected_rel = WebRect {
+        x: web_thumb_early.rect.x - web_root.rect.x,
+        y: web_thumb_early.rect.y - web_root.rect.y,
+        w: web_thumb_early.rect.w,
+        h: web_thumb_early.rect.h,
+    };
+
+    let inset = web_viewport.rect.x - web_root.rect.x;
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme_early.viewport.w), Px(theme_early.viewport.h)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let handle = ScrollHandle::default();
+    let content_h = web_content.rect.h;
+    let root_w = web_root.rect.w;
+    let root_h = web_root.rect.h;
+
+    let render = |cx: &mut fret_ui::ElementContext<'_, App>| {
+        let handle = handle.clone();
+        vec![cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:scroll-area-demo:hover-out")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(root_w));
+                            layout.size.height = Length::Px(Px(root_h));
+                            layout
+                        },
+                        padding: Edges::all(Px(inset)),
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        let content = cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout.size.height = Length::Px(Px(content_h));
+                                    layout
+                                },
+                                ..Default::default()
+                            },
+                            |_cx| vec![],
+                        );
+
+                        let scroll_area =
+                            fret_ui_shadcn::ScrollAreaRoot::new(
+                                fret_ui_shadcn::ScrollAreaViewport::new(vec![content]),
+                            )
+                            .scroll_handle(handle.clone())
+                            .scrollbar(fret_ui_shadcn::ScrollAreaScrollbar::new().orientation(
+                                fret_ui_shadcn::ScrollAreaScrollbarOrientation::Vertical,
+                            ))
+                            .refine_layout(LayoutRefinement::default().size_full())
+                            .into_element(cx);
+
+                        vec![scroll_area]
+                    },
+                )]
+            },
+        )]
+    };
+
+    macro_rules! render_at {
+        ($frame:expr) => {{
+            app.set_frame_id(FrameId($frame));
+            let root_node = fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                "web-vs-fret-layout",
+                &render,
+            );
+            ui.set_root(root_node);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            ui.semantics_snapshot()
+                .cloned()
+                .expect("expected semantics snapshot")
+        }};
+    }
+
+    let snap0 = render_at!(0);
+    let panel0 = find_semantics(
+        &snap0,
+        SemanticsRole::Panel,
+        Some("Golden:scroll-area-demo:hover-out"),
+    )
+    .expect("fret hover-out panel (initial)");
+    let expected_abs0 = WebRect {
+        x: panel0.bounds.origin.x.0 + expected_rel.x,
+        y: panel0.bounds.origin.y.0 + expected_rel.y,
+        w: expected_rel.w,
+        h: expected_rel.h,
+    };
+    let mut scene0 = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene0, 1.0);
+    assert!(
+        find_scene_quad_with_rect_close(&scene0, expected_abs0, 2.0).is_none(),
+        "expected thumb quad to be absent before hover"
+    );
+
+    let hover_pos = Point::new(
+        Px(panel0.bounds.origin.x.0 + (web_viewport.rect.x + web_viewport.rect.w * 0.5)),
+        Px(panel0.bounds.origin.y.0 + (web_viewport.rect.y + web_viewport.rect.h * 0.5)),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            position: hover_pos,
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: PointerId(0),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    let snap1 = render_at!(1);
+    let panel1 = find_semantics(
+        &snap1,
+        SemanticsRole::Panel,
+        Some("Golden:scroll-area-demo:hover-out"),
+    )
+    .expect("fret hover-out panel (hovered)");
+    let expected_abs1 = WebRect {
+        x: panel1.bounds.origin.x.0 + expected_rel.x,
+        y: panel1.bounds.origin.y.0 + expected_rel.y,
+        w: expected_rel.w,
+        h: expected_rel.h,
+    };
+    let mut scene1 = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene1, 1.0);
+    assert!(
+        find_scene_quad_with_rect_close(&scene1, expected_abs1, 2.0).is_some(),
+        "expected thumb quad to be present after hover"
+    );
+
+    // Move outside the ScrollArea hover region (Radix uses pointer leave on the root).
+    // Using the outer panel bounds is more robust than aiming for a "gap" near the viewport.
+    // Move inside the window but outside the ScrollArea bounds so hover state clears.
+    let leave_pos = Point::new(Px(root_w + 100.0), Px(root_h + 100.0));
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            position: leave_pos,
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: PointerId(0),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    // Render once at the "leave tick" so the hover timer is armed.
+    let snap_leave = render_at!(2);
+    let panel_leave = find_semantics(
+        &snap_leave,
+        SemanticsRole::Panel,
+        Some("Golden:scroll-area-demo:hover-out"),
+    )
+    .expect("fret hover-out panel (leave)");
+    let expected_abs_leave = WebRect {
+        x: panel_leave.bounds.origin.x.0 + expected_rel.x,
+        y: panel_leave.bounds.origin.y.0 + expected_rel.y,
+        w: expected_rel.w,
+        h: expected_rel.h,
+    };
+    let mut scene_leave = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene_leave, 1.0);
+    assert!(
+        find_scene_quad_with_rect_close(&scene_leave, expected_abs_leave, 2.0).is_some(),
+        "expected thumb quad to remain visible immediately after leave"
+    );
+
+    // The scrollHideDelay timer advances via per-frame ticks in the ScrollAreaVisibility driver.
+    // To match the web goldens, step through frames rather than jumping the FrameId.
+    let mut snap_early: Option<fret_core::SemanticsSnapshot> = None;
+    let mut snap_late: Option<fret_core::SemanticsSnapshot> = None;
+    let mut scene_early: Option<Scene> = None;
+    let mut scene_late: Option<Scene> = None;
+    for frame in 3..=(2 + 39) {
+        let snap = render_at!(frame);
+        if frame == 2 + 33 {
+            snap_early = Some(snap);
+            let mut scene = Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+            scene_early = Some(scene);
+        } else if frame == 2 + 39 {
+            snap_late = Some(snap);
+            let mut scene = Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+            scene_late = Some(scene);
+        }
+    }
+
+    // ~550ms after leaving (33 ticks at ~60fps): still visible.
+    let snap_early = snap_early.expect("missing snap_early");
+    let panel_early = find_semantics(
+        &snap_early,
+        SemanticsRole::Panel,
+        Some("Golden:scroll-area-demo:hover-out"),
+    )
+    .expect("fret hover-out panel (early)");
+    let expected_abs_early = WebRect {
+        x: panel_early.bounds.origin.x.0 + expected_rel.x,
+        y: panel_early.bounds.origin.y.0 + expected_rel.y,
+        w: expected_rel.w,
+        h: expected_rel.h,
+    };
+    let scene_early = scene_early.expect("missing scene_early");
+    assert!(
+        find_scene_quad_with_rect_close(&scene_early, expected_abs_early, 2.0).is_some(),
+        "expected thumb quad to remain visible before scrollHideDelay"
+    );
+
+    // ~650ms after leaving (39 ticks at ~60fps): hidden.
+    let snap_late = snap_late.expect("missing snap_late");
+    let panel_late = find_semantics(
+        &snap_late,
+        SemanticsRole::Panel,
+        Some("Golden:scroll-area-demo:hover-out"),
+    )
+    .expect("fret hover-out panel (late)");
+    let expected_abs_late = WebRect {
+        x: panel_late.bounds.origin.x.0 + expected_rel.x,
+        y: panel_late.bounds.origin.y.0 + expected_rel.y,
+        w: expected_rel.w,
+        h: expected_rel.h,
+    };
+    let scene_late = scene_late.expect("missing scene_late");
+    assert!(
+        find_scene_quad_with_rect_close(&scene_late, expected_abs_late, 2.0).is_none(),
+        "expected thumb quad to be hidden after scrollHideDelay"
+    );
+}
+
+#[test]
 fn web_vs_fret_layout_scroll_area_demo_thumb_bounds_match_web_scrolled() {
     let web = read_web_golden("scroll-area-demo.scrolled");
     let theme = web_theme(&web);
@@ -3144,6 +3442,300 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_scrollbar_bounds_match_web_hov
         scrollbar_bounds,
         expected_abs,
         2.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_scroll_area_horizontal_demo_scrollbar_hides_after_hover_out_delay() {
+    let web_early = read_web_golden("scroll-area-horizontal-demo.hover-out-550ms");
+    let theme_early = web_theme(&web_early);
+    let web_root = web_find_by_class_tokens(
+        &theme_early.root,
+        &["relative", "w-96", "rounded-md", "border"],
+    )
+    .expect("web scroll area root");
+
+    let web_viewport = web_find_by_data_slot(&theme_early.root, "scroll-area-viewport")
+        .expect("web scroll viewport");
+    let web_scrollbar_early = web_find_scroll_area_scrollbar(&theme_early.root, "horizontal")
+        .expect("web scroll-area-scrollbar (horizontal, early)");
+    let web_thumb_early =
+        web_find_scroll_area_thumb_in_scrollbar(web_scrollbar_early).expect("web thumb (early)");
+
+    assert!(
+        web_scrollbar_early
+            .attrs
+            .get("data-state")
+            .is_some_and(|v| v == "visible"),
+        "expected early web scrollbar to be visible"
+    );
+
+    let web_late = read_web_golden("scroll-area-horizontal-demo.hover-out-650ms");
+    let theme_late = web_theme(&web_late);
+    assert!(
+        web_find_scroll_area_scrollbar(&theme_late.root, "horizontal").is_none(),
+        "expected late web scrollbar to be absent"
+    );
+
+    let web_content = web_find_best_by(
+        web_viewport,
+        &|n| n.tag == "div" && n.rect.w > web_viewport.rect.w + 1.0,
+        &|n| -n.rect.w,
+    )
+    .expect("web scroll content (wider than viewport)");
+
+    let expected_rel = WebRect {
+        x: web_thumb_early.rect.x - web_root.rect.x,
+        y: web_thumb_early.rect.y - web_root.rect.y,
+        w: web_thumb_early.rect.w,
+        h: web_thumb_early.rect.h,
+    };
+
+    let inset = web_viewport.rect.x - web_root.rect.x;
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme_early.viewport.w), Px(theme_early.viewport.h)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let handle = ScrollHandle::default();
+    let content_w = web_content.rect.w;
+    let root_w = web_root.rect.w;
+    let root_h = web_root.rect.h;
+
+    let render = |cx: &mut fret_ui::ElementContext<'_, App>| {
+        let handle = handle.clone();
+        vec![cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:scroll-area-horizontal-demo:hover-out")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(root_w));
+                            layout.size.height = Length::Px(Px(root_h));
+                            layout
+                        },
+                        padding: Edges::all(Px(inset)),
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        let content = cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(content_w));
+                                    layout.size.height = Length::Fill;
+                                    layout
+                                },
+                                ..Default::default()
+                            },
+                            |_cx| vec![],
+                        );
+
+                        let scroll_area =
+                            fret_ui_shadcn::ScrollAreaRoot::new(
+                                fret_ui_shadcn::ScrollAreaViewport::new(vec![content]),
+                            )
+                            .scroll_handle(handle.clone())
+                            .scrollbar(fret_ui_shadcn::ScrollAreaScrollbar::new().orientation(
+                                fret_ui_shadcn::ScrollAreaScrollbarOrientation::Vertical,
+                            ))
+                            .scrollbar(fret_ui_shadcn::ScrollAreaScrollbar::new().orientation(
+                                fret_ui_shadcn::ScrollAreaScrollbarOrientation::Horizontal,
+                            ))
+                            .corner(true)
+                            .refine_layout(LayoutRefinement::default().size_full())
+                            .into_element(cx);
+
+                        vec![scroll_area]
+                    },
+                )]
+            },
+        )]
+    };
+
+    macro_rules! render_at {
+        ($frame:expr) => {{
+            app.set_frame_id(FrameId($frame));
+            let root_node = fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                "web-vs-fret-layout",
+                &render,
+            );
+            ui.set_root(root_node);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            ui.semantics_snapshot()
+                .cloned()
+                .expect("expected semantics snapshot")
+        }};
+    }
+
+    let snap0 = render_at!(0);
+    let panel0 = find_semantics(
+        &snap0,
+        SemanticsRole::Panel,
+        Some("Golden:scroll-area-horizontal-demo:hover-out"),
+    )
+    .expect("fret hover-out panel (initial)");
+    let expected_abs0 = WebRect {
+        x: panel0.bounds.origin.x.0 + expected_rel.x,
+        y: panel0.bounds.origin.y.0 + expected_rel.y,
+        w: expected_rel.w,
+        h: expected_rel.h,
+    };
+    let mut scene0 = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene0, 1.0);
+    assert!(
+        find_scene_quad_with_rect_close(&scene0, expected_abs0, 2.0).is_none(),
+        "expected thumb quad to be absent before hover"
+    );
+
+    let hover_pos = Point::new(
+        Px(panel0.bounds.origin.x.0 + (web_viewport.rect.x + web_viewport.rect.w * 0.5)),
+        Px(panel0.bounds.origin.y.0 + (web_viewport.rect.y + web_viewport.rect.h * 0.5)),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            position: hover_pos,
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: PointerId(0),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    let snap1 = render_at!(1);
+    let panel1 = find_semantics(
+        &snap1,
+        SemanticsRole::Panel,
+        Some("Golden:scroll-area-horizontal-demo:hover-out"),
+    )
+    .expect("fret hover-out panel (hovered)");
+    let expected_abs1 = WebRect {
+        x: panel1.bounds.origin.x.0 + expected_rel.x,
+        y: panel1.bounds.origin.y.0 + expected_rel.y,
+        w: expected_rel.w,
+        h: expected_rel.h,
+    };
+    let mut scene1 = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene1, 1.0);
+    assert!(
+        find_scene_quad_with_rect_close(&scene1, expected_abs1, 2.0).is_some(),
+        "expected thumb quad to be present after hover"
+    );
+
+    let leave_pos = Point::new(Px(root_w + 100.0), Px(root_h + 100.0));
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            position: leave_pos,
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: PointerId(0),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    let snap_leave = render_at!(2);
+    let panel_leave = find_semantics(
+        &snap_leave,
+        SemanticsRole::Panel,
+        Some("Golden:scroll-area-horizontal-demo:hover-out"),
+    )
+    .expect("fret hover-out panel (leave)");
+    let expected_abs_leave = WebRect {
+        x: panel_leave.bounds.origin.x.0 + expected_rel.x,
+        y: panel_leave.bounds.origin.y.0 + expected_rel.y,
+        w: expected_rel.w,
+        h: expected_rel.h,
+    };
+    let mut scene_leave = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene_leave, 1.0);
+    assert!(
+        find_scene_quad_with_rect_close(&scene_leave, expected_abs_leave, 2.0).is_some(),
+        "expected thumb quad to remain visible immediately after leave"
+    );
+
+    let mut snap_early: Option<fret_core::SemanticsSnapshot> = None;
+    let mut snap_late: Option<fret_core::SemanticsSnapshot> = None;
+    let mut scene_early: Option<Scene> = None;
+    let mut scene_late: Option<Scene> = None;
+    for frame in 3..=(2 + 39) {
+        let snap = render_at!(frame);
+        if frame == 2 + 33 {
+            snap_early = Some(snap);
+            let mut scene = Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+            scene_early = Some(scene);
+        } else if frame == 2 + 39 {
+            snap_late = Some(snap);
+            let mut scene = Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+            scene_late = Some(scene);
+        }
+    }
+
+    let snap_early = snap_early.expect("missing snap_early");
+    let panel_early = find_semantics(
+        &snap_early,
+        SemanticsRole::Panel,
+        Some("Golden:scroll-area-horizontal-demo:hover-out"),
+    )
+    .expect("fret hover-out panel (early)");
+    let expected_abs_early = WebRect {
+        x: panel_early.bounds.origin.x.0 + expected_rel.x,
+        y: panel_early.bounds.origin.y.0 + expected_rel.y,
+        w: expected_rel.w,
+        h: expected_rel.h,
+    };
+    let scene_early = scene_early.expect("missing scene_early");
+    assert!(
+        find_scene_quad_with_rect_close(&scene_early, expected_abs_early, 2.0).is_some(),
+        "expected thumb quad to remain visible before scrollHideDelay"
+    );
+
+    let snap_late = snap_late.expect("missing snap_late");
+    let panel_late = find_semantics(
+        &snap_late,
+        SemanticsRole::Panel,
+        Some("Golden:scroll-area-horizontal-demo:hover-out"),
+    )
+    .expect("fret hover-out panel (late)");
+    let expected_abs_late = WebRect {
+        x: panel_late.bounds.origin.x.0 + expected_rel.x,
+        y: panel_late.bounds.origin.y.0 + expected_rel.y,
+        w: expected_rel.w,
+        h: expected_rel.h,
+    };
+    let scene_late = scene_late.expect("missing scene_late");
+    assert!(
+        find_scene_quad_with_rect_close(&scene_late, expected_abs_late, 2.0).is_none(),
+        "expected thumb quad to be hidden after scrollHideDelay"
     );
 }
 
