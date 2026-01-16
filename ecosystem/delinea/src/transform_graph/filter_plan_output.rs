@@ -68,6 +68,7 @@ impl TransformGraph {
                     series: *series_id,
                     dataset: series_model.dataset,
                     grid,
+                    data_revision: Revision::default(),
                     ..Default::default()
                 });
                 continue;
@@ -78,6 +79,7 @@ impl TransformGraph {
                 series: *series_id,
                 dataset: series_model.dataset,
                 grid,
+                data_revision: v.data_revision,
                 selection: v.selection.clone(),
                 x_policy: v.x_policy,
                 x_filter_mode: v.x_filter_mode,

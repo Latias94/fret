@@ -586,7 +586,7 @@ goal is to establish a stable “Option -> Engine” spine that scales to more s
     - Filter plan scaffolding and the latest filter plan output snapshot are owned by `TransformGraph` (see `transform_graph/filter_plan.rs`, `transform_graph/filter_plan_output.rs`).
     - Y indices materialization node (with caching for no-op cases) is owned by `TransformGraph` (see `transform_graph/y_indices.rs`).
     - X range slicing node (monotonic fast path; cached) is owned by `TransformGraph` (see `transform_graph/x_range.rs`).
-    - Participation contract (`selection` + `empty_mask`) is now derived from the transform graph filter plan output snapshot (see `engine/stages/filter_processor.rs` -> `ParticipationState::rebuild_from_plan_output`).
+    - Participation contract (`selection` + `empty_mask` + `data_revision`) is now derived from the transform graph filter plan output snapshot (see `engine/stages/filter_processor.rs` -> `ParticipationState::rebuild_from_plan_output`).
 - Minimum viable nodes:
   - selection/slice node (monotonic fast path + non-monotonic index selection)
   - derived columns (computed fields)
