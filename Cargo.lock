@@ -1230,6 +1230,7 @@ dependencies = [
  "fret-ui-kit",
  "serde",
  "serde_json",
+ "slotmap",
  "thiserror 2.0.17",
  "tracing",
  "uuid",

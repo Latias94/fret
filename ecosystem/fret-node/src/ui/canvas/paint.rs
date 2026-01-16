@@ -10,6 +10,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
+use fret_canvas::cache::CacheStats;
 use fret_canvas::cache::PathCache;
 use fret_core::{
     FillStyle, PathCommand, PathConstraints, PathId, PathStyle, Point, Px, StrokeStyle, TextBlobId,
@@ -147,6 +148,10 @@ impl CanvasPaintCache {
         self.frame = self.frame.wrapping_add(1);
         self.paths.begin_frame();
         self.frame
+    }
+
+    pub(crate) fn diagnostics_path_cache_snapshot(&self) -> (usize, CacheStats) {
+        (self.paths.len(), self.paths.stats())
     }
 
     pub(crate) fn clear(&mut self, services: &mut dyn fret_core::UiServices) {

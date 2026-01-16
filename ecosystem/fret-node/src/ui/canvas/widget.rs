@@ -3,6 +3,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_canvas::scale::{canvas_units_from_screen_px, effective_scale_factor};
 use fret_canvas::view::PanZoom2D;
 use fret_core::{
@@ -11,6 +12,7 @@ use fret_core::{
 };
 use fret_runtime::{CommandId, Effect, Model};
 use fret_ui::{UiHost, retained_bridge::*};
+use slotmap::Key;
 
 use crate::REROUTE_KIND;
 use crate::core::{
@@ -8691,6 +8693,19 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
         let snapshot = self.sync_view_state(cx.app);
 
         self.paint_cache.begin_frame();
+        if let Some(window) = cx.window {
+            let (entries, stats) = self.paint_cache.diagnostics_path_cache_snapshot();
+            let frame_id = cx.app.frame_id().0;
+            let key = CanvasCacheKey {
+                window: window.data().as_ffi(),
+                node: cx.node.data().as_ffi(),
+                name: "fret-node.canvas.paths",
+            };
+            cx.app
+                .with_global_mut(CanvasCacheStatsRegistry::default, |registry, _app| {
+                    registry.record_path_cache(key, frame_id, entries, stats);
+                });
+        }
         for id in self.text_blobs.drain(..) {
             cx.services.text().release(id);
         }
