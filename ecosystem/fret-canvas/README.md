@@ -46,6 +46,10 @@ should be converted to canvas units before comparison:
 - `fret_canvas::text`
   - `TextCache`: a keyed cache for prepared `TextBlobId` + `TextMetrics` that releases resources
     via `UiServices`.
+- `fret_canvas::cache`
+  - `PathCache`: a keyed cache for prepared `PathId` + `PathMetrics` that releases resources via
+    `UiServices`.
+  - `SvgCache`: a keyed cache for registered `SvgId`s that unregisters SVGs via `UiServices`.
 
 ## Future: declarative surface
 
