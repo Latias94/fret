@@ -242,6 +242,7 @@ impl ChartMultiAxisDemoDriver {
                     stack_strategy: Default::default(),
                     bar_layout: Default::default(),
                     area_baseline: None,
+                    lod: None,
                 },
                 SeriesSpec {
                     id: delinea::ids::SeriesId::new(2),
@@ -259,6 +260,7 @@ impl ChartMultiAxisDemoDriver {
                     stack_strategy: Default::default(),
                     bar_layout: Default::default(),
                     area_baseline: None,
+                    lod: None,
                 },
                 SeriesSpec {
                     id: delinea::ids::SeriesId::new(3),
@@ -276,6 +278,7 @@ impl ChartMultiAxisDemoDriver {
                     stack_strategy: Default::default(),
                     bar_layout: Default::default(),
                     area_baseline: None,
+                    lod: None,
                 },
                 SeriesSpec {
                     id: delinea::ids::SeriesId::new(4),
@@ -293,6 +296,7 @@ impl ChartMultiAxisDemoDriver {
                     stack_strategy: Default::default(),
                     bar_layout: Default::default(),
                     area_baseline: None,
+                    lod: None,
                 },
             ],
         };

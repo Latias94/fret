@@ -120,6 +120,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> ChartDeclarativeState {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: Some(AreaBaseline::Zero),
+                lod: None,
             },
             SeriesSpec {
                 id: series_b_id,
@@ -137,6 +138,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> ChartDeclarativeState {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: Some(AreaBaseline::Zero),
+                lod: None,
             },
             SeriesSpec {
                 id: series_c_id,
@@ -154,6 +156,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> ChartDeclarativeState {
                 stack_strategy: Default::default(),
                 bar_layout: Default::default(),
                 area_baseline: None,
+                lod: None,
             },
         ],
     };

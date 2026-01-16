@@ -436,6 +436,7 @@ mod tests {
                     stack_strategy: Default::default(),
                     bar_layout: Default::default(),
                     area_baseline: None,
+                    lod: None,
                 },
                 SeriesSpec {
                     id: b,
@@ -453,6 +454,7 @@ mod tests {
                     stack_strategy: Default::default(),
                     bar_layout: Default::default(),
                     area_baseline: None,
+                    lod: None,
                 },
                 SeriesSpec {
                     id: c,
@@ -470,6 +472,7 @@ mod tests {
                     stack_strategy: Default::default(),
                     bar_layout: Default::default(),
                     area_baseline: None,
+                    lod: None,
                 },
             ],
         };
@@ -581,6 +584,7 @@ mod tests {
                     stack_strategy: Default::default(),
                     bar_layout,
                     area_baseline: None,
+                    lod: None,
                 },
                 SeriesSpec {
                     id: b,
@@ -598,6 +602,7 @@ mod tests {
                     stack_strategy: Default::default(),
                     bar_layout,
                     area_baseline: None,
+                    lod: None,
                 },
             ],
         };
@@ -708,6 +713,7 @@ mod tests {
                     stack_strategy: Default::default(),
                     bar_layout,
                     area_baseline: None,
+                    lod: None,
                 },
                 SeriesSpec {
                     id: b,
@@ -725,6 +731,7 @@ mod tests {
                     stack_strategy: Default::default(),
                     bar_layout,
                     area_baseline: None,
+                    lod: None,
                 },
             ],
         };
@@ -835,6 +842,7 @@ mod tests {
                     stack_strategy: Default::default(),
                     bar_layout,
                     area_baseline: None,
+                    lod: None,
                 },
                 SeriesSpec {
                     id: b,
@@ -852,6 +860,7 @@ mod tests {
                     stack_strategy: Default::default(),
                     bar_layout,
                     area_baseline: None,
+                    lod: None,
                 },
             ],
         };

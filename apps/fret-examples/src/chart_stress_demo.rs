@@ -14,7 +14,7 @@ use delinea::{
     AxisKind, AxisPointerTrigger, AxisPointerType, AxisRange, AxisScale, ChartSpec, DatasetSpec,
     FieldSpec,
 };
-use delinea::{SeriesEncode, SeriesKind, SeriesSpec};
+use delinea::{SeriesEncode, SeriesKind, SeriesLodSpecV1, SeriesSpec};
 use fret_chart::retained::ChartCanvas;
 use fret_ui::retained_bridge::{CommandCx, EventCx, LayoutCx, PaintCx, SemanticsCx, Widget};
 use std::time::{Duration, Instant};
@@ -29,6 +29,20 @@ fn parse_env_u64(key: &str) -> Option<u64> {
 
 fn parse_env_bool(key: &str) -> bool {
     std::env::var_os(key).is_some_and(|v| !v.is_empty() && v != "0")
+}
+
+fn parse_env_u32(key: &str) -> Option<u32> {
+    std::env::var_os(key).and_then(|v| v.to_string_lossy().parse::<u32>().ok())
+}
+
+fn parse_env_tri_bool(key: &str) -> Option<bool> {
+    let v = std::env::var_os(key)?;
+    let s = v.to_string_lossy();
+    match s.as_ref() {
+        "1" | "true" | "TRUE" | "True" => Some(true),
+        "0" | "false" | "FALSE" | "False" => Some(false),
+        _ => None,
+    }
 }
 
 struct ChartStressCanvas {
@@ -142,6 +156,7 @@ struct ChartStressWindowState {
 struct ChartStressDriver {
     points: usize,
     max_frames: Option<u64>,
+    scatter_lod: Option<SeriesLodSpecV1>,
 }
 
 impl ChartStressDriver {
@@ -150,13 +165,20 @@ impl ChartStressDriver {
         println!("  FRET_CHART_STRESS_POINTS=<usize> (default 1_000_000, clamp 1..=10_000_000)");
         println!("  FRET_CHART_STRESS_EXIT_AFTER_FRAMES=<u64> (optional)");
         println!("  FRET_CHART_STRESS_HELP=1 (print this help on start)");
+        println!(
+            "  FRET_CHART_STRESS_VALIDATE_LOD=1 (run headless LOD/progressive conformance check on start)"
+        );
+        println!("  FRET_CHART_STRESS_SCATTER_LARGE=<0|1> (optional tri-state)");
+        println!("  FRET_CHART_STRESS_SCATTER_LARGE_THRESHOLD=<u32> (optional)");
+        println!("  FRET_CHART_STRESS_SCATTER_PROGRESSIVE=<u32> (optional)");
+        println!("  FRET_CHART_STRESS_SCATTER_PROGRESSIVE_THRESHOLD=<u32> (optional)");
         println!();
         println!("controls:");
         println!("  H: print help");
         println!("  Esc: close");
     }
 
-    fn build_canvas(points: usize) -> ChartCanvas {
+    fn build_canvas(points: usize, scatter_lod: Option<SeriesLodSpecV1>) -> ChartCanvas {
         let dataset_id = DatasetId::new(1);
         let grid_id = GridId::new(1);
         let x_axis = AxisId::new(1);
@@ -236,6 +258,7 @@ impl ChartStressDriver {
                     stack_strategy: Default::default(),
                     bar_layout: Default::default(),
                     area_baseline: None,
+                    lod: None,
                 },
                 SeriesSpec {
                     id: SeriesId::new(2),
@@ -253,6 +276,7 @@ impl ChartStressDriver {
                     stack_strategy: Default::default(),
                     bar_layout: Default::default(),
                     area_baseline: None,
+                    lod: scatter_lod,
                 },
             ],
         };
@@ -291,6 +315,244 @@ impl ChartStressDriver {
         canvas.engine_mut().datasets_mut().insert(dataset_id, table);
 
         canvas
+    }
+
+    fn parse_scatter_lod() -> Option<SeriesLodSpecV1> {
+        let lod = SeriesLodSpecV1 {
+            large: parse_env_tri_bool("FRET_CHART_STRESS_SCATTER_LARGE"),
+            large_threshold: parse_env_u32("FRET_CHART_STRESS_SCATTER_LARGE_THRESHOLD"),
+            progressive: parse_env_u32("FRET_CHART_STRESS_SCATTER_PROGRESSIVE"),
+            progressive_threshold: parse_env_u32("FRET_CHART_STRESS_SCATTER_PROGRESSIVE_THRESHOLD"),
+        };
+
+        let any = lod.large.is_some()
+            || lod.large_threshold.is_some()
+            || lod.progressive.is_some()
+            || lod.progressive_threshold.is_some();
+        any.then_some(lod)
+    }
+
+    fn validate_lod_progressive(points: usize, configured: Option<SeriesLodSpecV1>) {
+        use delinea::engine::ChartEngine;
+        use delinea::marks::{MarkKind, MarkPayloadRef};
+        use delinea::text::TextMeasurer;
+        use delinea::{WorkBudget, ids::Revision};
+        use fret_core::{Point, Px, Rect, Size};
+
+        #[derive(Debug, Default)]
+        struct NullTextMeasurer;
+        impl TextMeasurer for NullTextMeasurer {
+            fn measure(
+                &mut self,
+                _text: delinea::ids::StringId,
+                _style: delinea::text::TextStyleId,
+            ) -> delinea::text::TextMetrics {
+                delinea::text::TextMetrics::default()
+            }
+        }
+
+        fn build_engine(points: usize, scatter_lod: Option<SeriesLodSpecV1>) -> ChartEngine {
+            let dataset_id = DatasetId::new(1);
+            let grid_id = GridId::new(1);
+            let x_axis = AxisId::new(1);
+            let y_axis = AxisId::new(2);
+            let x_field = FieldId::new(1);
+            let y_line_field = FieldId::new(2);
+            let y_scatter_field = FieldId::new(3);
+
+            let viewport = Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(900.0), Px(500.0)),
+            );
+
+            let spec = ChartSpec {
+                id: delinea::ids::ChartId::new(1),
+                viewport: Some(viewport),
+                datasets: vec![DatasetSpec {
+                    id: dataset_id,
+                    fields: vec![
+                        FieldSpec {
+                            id: x_field,
+                            column: 0,
+                        },
+                        FieldSpec {
+                            id: y_line_field,
+                            column: 1,
+                        },
+                        FieldSpec {
+                            id: y_scatter_field,
+                            column: 2,
+                        },
+                    ],
+                }],
+                grids: vec![delinea::GridSpec { id: grid_id }],
+                axes: vec![
+                    delinea::AxisSpec {
+                        id: x_axis,
+                        name: Some("X".to_string()),
+                        kind: AxisKind::X,
+                        grid: grid_id,
+                        position: None,
+                        scale: AxisScale::Value(Default::default()),
+                        range: Some(AxisRange::Auto),
+                    },
+                    delinea::AxisSpec {
+                        id: y_axis,
+                        name: Some("Y".to_string()),
+                        kind: AxisKind::Y,
+                        grid: grid_id,
+                        position: None,
+                        scale: AxisScale::Value(Default::default()),
+                        range: Some(AxisRange::Auto),
+                    },
+                ],
+                data_zoom_x: vec![],
+                data_zoom_y: vec![],
+                tooltip: None,
+                axis_pointer: None,
+                visual_maps: vec![],
+                series: vec![
+                    SeriesSpec {
+                        id: SeriesId::new(1),
+                        name: Some("Line".to_string()),
+                        kind: SeriesKind::Line,
+                        dataset: dataset_id,
+                        encode: SeriesEncode {
+                            x: x_field,
+                            y: y_line_field,
+                            y2: None,
+                        },
+                        x_axis,
+                        y_axis,
+                        stack: None,
+                        stack_strategy: Default::default(),
+                        bar_layout: Default::default(),
+                        area_baseline: None,
+                        lod: None,
+                    },
+                    SeriesSpec {
+                        id: SeriesId::new(2),
+                        name: Some("Scatter".to_string()),
+                        kind: SeriesKind::Scatter,
+                        dataset: dataset_id,
+                        encode: SeriesEncode {
+                            x: x_field,
+                            y: y_scatter_field,
+                            y2: None,
+                        },
+                        x_axis,
+                        y_axis,
+                        stack: None,
+                        stack_strategy: Default::default(),
+                        bar_layout: Default::default(),
+                        area_baseline: None,
+                        lod: scatter_lod,
+                    },
+                ],
+            };
+
+            let mut engine = ChartEngine::new(spec).expect("engine should accept stress spec");
+
+            let n = points.max(1);
+            let mut x: Vec<f64> = Vec::with_capacity(n);
+            let mut y_line: Vec<f64> = Vec::with_capacity(n);
+            let mut y_scatter: Vec<f64> = Vec::with_capacity(n);
+
+            for i in 0..n {
+                let t = i as f64 / (n as f64).max(1.0);
+                let xi = i as f64;
+
+                let yi_line = if i != 0 && i % 50_000 == 0 {
+                    f64::NAN
+                } else {
+                    (t * std::f64::consts::TAU * 64.0).sin() + (t * 7.0).cos() * 0.05
+                };
+
+                let yi_scatter = (t * std::f64::consts::TAU * 91.0).sin() * 0.7
+                    + ((i as u64 * 6364136223846793005u64 + 1) % 10_000) as f64 / 10_000.0 * 0.15;
+
+                x.push(xi);
+                y_line.push(yi_line);
+                y_scatter.push(yi_scatter);
+            }
+
+            let mut table = DataTable::default();
+            table.push_column(Column::F64(x));
+            table.push_column(Column::F64(y_line));
+            table.push_column(Column::F64(y_scatter));
+            engine.datasets_mut().insert(dataset_id, table);
+
+            engine
+        }
+
+        fn run_to_completion(engine: &mut ChartEngine) -> (u32, Revision) {
+            let mut measurer = NullTextMeasurer::default();
+            let mut steps = 0u32;
+            loop {
+                let points = 20_000_000u32;
+                let marks = 4_096u32;
+                let step = engine
+                    .step(&mut measurer, WorkBudget::new(points, 0, marks))
+                    .expect("engine step");
+                steps = steps.saturating_add(1);
+                if !step.unfinished || steps > 10_000 {
+                    break;
+                }
+            }
+            (steps, engine.output().marks.revision)
+        }
+
+        fn scatter_indices(engine: &ChartEngine) -> Vec<u32> {
+            let marks = &engine.output().marks;
+            let node = marks
+                .nodes
+                .iter()
+                .find(|n| n.kind == MarkKind::Points && n.source_series == Some(SeriesId::new(2)))
+                .expect("expected scatter points node");
+            let MarkPayloadRef::Points(points) = &node.payload else {
+                panic!("expected points payload");
+            };
+            marks.arena.data_indices[points.points.clone()].to_vec()
+        }
+
+        let base_lod = {
+            let cfg = configured.unwrap_or_default();
+            SeriesLodSpecV1 {
+                large: Some(true),
+                large_threshold: cfg.large_threshold.or(Some(1)),
+                progressive: None,
+                progressive_threshold: None,
+            }
+        };
+
+        let progressive_lod = {
+            let cfg = configured.unwrap_or_default();
+            SeriesLodSpecV1 {
+                large: Some(true),
+                large_threshold: cfg.large_threshold.or(Some(1)),
+                progressive: cfg.progressive.or(Some(1024)),
+                progressive_threshold: cfg.progressive_threshold.or(Some(1)),
+            }
+        };
+
+        let mut base = build_engine(points, Some(base_lod));
+        let (base_steps, base_rev) = run_to_completion(&mut base);
+        let base_indices = scatter_indices(&base);
+
+        let mut progressive = build_engine(points, Some(progressive_lod));
+        let (prog_steps, prog_rev) = run_to_completion(&mut progressive);
+        let prog_indices = scatter_indices(&progressive);
+
+        println!(
+            "chart_stress_demo: lod_validate points={} baseline_steps={} progressive_steps={} baseline_marks_rev={:?} progressive_marks_rev={:?} scatter_indices_equal={} emitted={}",
+            points,
+            base_steps,
+            prog_steps,
+            base_rev,
+            prog_rev,
+            base_indices == prog_indices,
+            base_indices.len(),
+        );
     }
 }
 
@@ -394,7 +656,7 @@ impl WinitAppDriver for ChartStressDriver {
         }
 
         let root = state.root.get_or_insert_with(|| {
-            let canvas = Self::build_canvas(self.points);
+            let canvas = Self::build_canvas(self.points, self.scatter_lod);
             let widget = ChartStressCanvas::new(self.points, canvas);
             let node = ChartStressCanvas::create_node(&mut state.ui, widget);
             state.ui.set_root(node);
@@ -480,12 +742,21 @@ pub fn build_driver() -> impl WinitAppDriver {
     let points = parse_env_usize("FRET_CHART_STRESS_POINTS").unwrap_or(1_000_000);
     let points = points.clamp(1, 10_000_000);
     let max_frames = parse_env_u64("FRET_CHART_STRESS_EXIT_AFTER_FRAMES");
+    let scatter_lod = ChartStressDriver::parse_scatter_lod();
+
+    if parse_env_bool("FRET_CHART_STRESS_VALIDATE_LOD") {
+        ChartStressDriver::validate_lod_progressive(points.min(2_000_000), scatter_lod);
+    }
 
     if parse_env_bool("FRET_CHART_STRESS_HELP") {
         ChartStressDriver::print_help();
     }
 
-    ChartStressDriver { points, max_frames }
+    ChartStressDriver {
+        points,
+        max_frames,
+        scatter_lod,
+    }
 }
 
 pub fn run() -> anyhow::Result<()> {

@@ -23,9 +23,12 @@ use crate::spec::AxisRange;
 use crate::spec::BarWidthSpec;
 use crate::stats::EngineStats;
 use crate::transform::RowSelection;
+use crate::transform_graph::DataViewStage;
 use std::collections::BTreeMap;
 
-use super::{BarLayoutStage, DataViewStage, ParticipationState, StackDimsStage};
+use super::{BarLayoutStage, ParticipationState, StackDimsStage};
+
+const SCATTER_LARGE_MODE_VISIBLE_LEN_THRESHOLD: usize = 20_000;
 
 #[derive(Debug, Default, Clone)]
 struct MinMaxAppendCache {
@@ -317,32 +320,13 @@ impl MarksStage {
                 self.series_index += 1;
                 continue;
             };
-            let (
-                base_selection,
-                view_x_filter,
-                view_x_mapping_window,
-                x_filter_mode,
-                y_filter_mode,
-                view_y_filter,
-            ) = if let Some(v) = participation.series_participation(series.id) {
-                (
-                    v.selection.clone(),
-                    v.x_policy.filter,
-                    v.x_policy.mapping_window,
-                    v.x_filter_mode,
-                    v.y_filter_mode,
-                    v.y_filter,
-                )
-            } else {
-                (
-                    RowSelection::All,
-                    crate::engine::window_policy::AxisFilter1D::default(),
-                    None,
-                    crate::spec::FilterMode::None,
-                    crate::spec::FilterMode::None,
-                    crate::engine::window_policy::AxisFilter1D::default(),
-                )
-            };
+            let contract = participation.series_contract(series.id, table.row_count);
+            let base_selection = contract.selection;
+            let selection_range = contract.selection_range;
+            let view_x_filter = contract.x_policy.filter;
+            let view_x_mapping_window = contract.x_policy.mapping_window;
+            let view_y_filter = contract.y_filter;
+            let empty_mask = contract.empty_mask;
 
             let Some(dataset) = model.datasets.get(&series.dataset) else {
                 self.series_index += 1;
@@ -357,12 +341,6 @@ impl MarksStage {
                 continue;
             };
 
-            let selection_range = base_selection.as_range(table.row_count);
-            let selection_range = crate::transform::RowRange {
-                start: selection_range.start,
-                end: selection_range.end,
-            };
-
             if self.active_series != Some(series.id) {
                 let view = selection_stage.table_view_for(
                     table,
@@ -370,7 +348,7 @@ impl MarksStage {
                     x_col,
                     selection_range,
                     view_x_filter,
-                    base_selection.clone(),
+                    base_selection,
                 );
                 self.active_series = Some(series.id);
                 self.active_selection = view.selection().clone();
@@ -654,7 +632,24 @@ impl MarksStage {
                 y_window.clamp_non_degenerate();
 
                 let visible_len = selection.view_len(table.row_count);
-                let use_lod = visible_len > 20_000;
+                let large_threshold = series
+                    .lod
+                    .large_threshold
+                    .map(|v| v as usize)
+                    .unwrap_or(SCATTER_LARGE_MODE_VISIBLE_LEN_THRESHOLD);
+                let large_enabled = series.lod.large != Some(false);
+                let use_lod = large_enabled && visible_len > large_threshold;
+
+                let progressive_cap = series.lod.progressive.and_then(|cap| {
+                    let cap = (cap.max(1)) as usize;
+                    let threshold = series
+                        .lod
+                        .progressive_threshold
+                        .map(|v| v as usize)
+                        .unwrap_or(large_threshold);
+                    (visible_len >= threshold).then_some(cap)
+                });
+                let mut progressive_spent = 0usize;
 
                 if use_lod {
                     let width_px = viewport.size.width.0.max(1.0).ceil() as usize;
@@ -672,21 +667,45 @@ impl MarksStage {
 
                     let mut finished_scan = false;
                     while !finished_scan {
-                        let points_budget = budget.take_points(4096) as usize;
+                        let mut request = 4096usize;
+                        if let Some(cap) = progressive_cap {
+                            let remaining = cap.saturating_sub(progressive_spent);
+                            if remaining == 0 {
+                                return false;
+                            }
+                            request = request.min(remaining);
+                        }
+
+                        let points_budget = budget.take_points(request as u32) as usize;
                         if points_budget == 0 {
                             return false;
                         }
+                        progressive_spent = progressive_spent.saturating_add(points_budget);
 
-                        finished_scan = minmax_per_pixel_step_selection(
+                        finished_scan = minmax_per_pixel_step_selection_with(
                             &mut self.cursor,
                             scratch,
                             x,
-                            y0,
                             &bounds,
                             viewport,
                             &selection,
                             points_budget,
+                            |i| {
+                                if (empty_mask.x_active || empty_mask.y_active)
+                                    && !empty_mask.allows_raw_index(i, x, y0, None)
+                                {
+                                    return f64::NAN;
+                                }
+                                y0.get(i).copied().unwrap_or(f64::NAN)
+                            },
                         );
+
+                        if let Some(cap) = progressive_cap
+                            && progressive_spent >= cap
+                            && !finished_scan
+                        {
+                            return false;
+                        }
                     }
 
                     if !self.finalized {
@@ -698,53 +717,61 @@ impl MarksStage {
                             &mut marks.arena.points,
                             &mut marks.arena.data_indices,
                         );
-                        let base_order = self.series_index as u32;
                         let id = series_mark_id(series.id, 0);
                         let node_index = marks.nodes.iter().position(|n| n.id == id);
-
-                        let mut created = false;
-                        let node_index = if let Some(i) = node_index {
-                            i
-                        } else {
-                            if budget.take_marks(1) == 0 {
-                                return false;
+                        if range.is_empty() {
+                            if let Some(i) = node_index {
+                                marks.nodes.remove(i);
+                                marks.revision.bump();
                             }
-                            created = true;
-                            marks.nodes.push(MarkNode {
-                                id,
-                                parent: None,
-                                layer: crate::ids::LayerId(1),
-                                order: MarkOrderKey(base_order.saturating_mul(2)),
-                                kind: MarkKind::Points,
-                                source_series: Some(series.id),
-                                payload: MarkPayloadRef::Points(MarkPointsRef {
-                                    points: range.clone(),
-                                    fill: None,
-                                    opacity_mul: None,
-                                    radius_mul: None,
-                                    stroke: None,
-                                }),
-                            });
-                            marks.nodes.len() - 1
-                        };
+                            self.finalized = true;
+                        } else {
+                            let base_order = self.series_index as u32;
 
-                        if let Some(node) = marks.nodes.get_mut(node_index) {
-                            let MarkPayloadRef::Points(p) = &mut node.payload else {
-                                return false;
+                            let mut created = false;
+                            let node_index = if let Some(i) = node_index {
+                                i
+                            } else {
+                                if budget.take_marks(1) == 0 {
+                                    return false;
+                                }
+                                created = true;
+                                marks.nodes.push(MarkNode {
+                                    id,
+                                    parent: None,
+                                    layer: crate::ids::LayerId(1),
+                                    order: MarkOrderKey(base_order.saturating_mul(2)),
+                                    kind: MarkKind::Points,
+                                    source_series: Some(series.id),
+                                    payload: MarkPayloadRef::Points(MarkPointsRef {
+                                        points: range.clone(),
+                                        fill: None,
+                                        opacity_mul: None,
+                                        radius_mul: None,
+                                        stroke: None,
+                                    }),
+                                });
+                                marks.nodes.len() - 1
                             };
-                            p.points = range.clone();
-                            p.fill = None;
-                            p.opacity_mul = None;
-                            p.radius_mul = None;
-                            p.stroke = None;
-                        }
 
-                        stats.points_emitted += (range.end - range.start) as u64;
-                        if created {
-                            stats.marks_emitted += 1;
+                            if let Some(node) = marks.nodes.get_mut(node_index) {
+                                let MarkPayloadRef::Points(p) = &mut node.payload else {
+                                    return false;
+                                };
+                                p.points = range.clone();
+                                p.fill = None;
+                                p.opacity_mul = None;
+                                p.radius_mul = None;
+                                p.stroke = None;
+                            }
+
+                            stats.points_emitted += (range.end - range.start) as u64;
+                            if created {
+                                stats.marks_emitted += 1;
+                            }
+                            marks.revision.bump();
+                            self.finalized = true;
                         }
-                        marks.revision.bump();
-                        self.finalized = true;
                     }
 
                     {
@@ -1055,6 +1082,11 @@ impl MarksStage {
                         let xi = x.get(i).copied().unwrap_or(f64::NAN);
                         let yi = y0.get(i).copied().unwrap_or(f64::NAN);
                         if !xi.is_finite() || !yi.is_finite() {
+                            continue;
+                        }
+                        if (empty_mask.x_active || empty_mask.y_active)
+                            && !empty_mask.allows_raw_index(i, x, y0, None)
+                        {
                             continue;
                         }
                         if xi < x_window.min || xi > x_window.max {
@@ -1554,6 +1586,11 @@ impl MarksStage {
                         if !xi.is_finite() || !yi.is_finite() {
                             continue;
                         }
+                        if (empty_mask.x_active || empty_mask.y_active)
+                            && !empty_mask.allows_raw_index(i, x, y0, None)
+                        {
+                            continue;
+                        }
                         if !view_x_filter.contains(xi) {
                             continue;
                         }
@@ -1681,15 +1718,8 @@ impl MarksStage {
             ) {
                 // v1 policy: `Empty` masking is implemented via mark-level segmentation for line-family series.
                 // For now, apply Y-empty only for non-stacked series (stacked empty semantics are TBD).
-                let y_empty_active = y_filter_mode == crate::spec::FilterMode::Empty
-                    && series.stack.is_none()
-                    && matches!(
-                        series.kind,
-                        crate::spec::SeriesKind::Line
-                            | crate::spec::SeriesKind::Area
-                            | crate::spec::SeriesKind::Band
-                    );
-                let break_on_out_of_window = x_filter_mode == crate::spec::FilterMode::Empty;
+                let y_empty_active = empty_mask.y_active;
+                let break_on_out_of_window = empty_mask.x_active;
                 if self.segmented_series != Some(series.id) {
                     self.segmented_series = Some(series.id);
                     self.segmented_cursor =
@@ -1737,8 +1767,7 @@ impl MarksStage {
                                     return true;
                                 }
                                 y_empty_active
-                                    && (!view_y_filter.contains(yi)
-                                        || !view_y_filter.contains(y_upper))
+                                    && !empty_mask.y_filter.intersects_interval(yi, y_upper)
                             },
                         )
                     } else if series.kind == crate::spec::SeriesKind::Area && series.stack.is_some()

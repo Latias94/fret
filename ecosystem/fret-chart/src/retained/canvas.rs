@@ -5464,6 +5464,7 @@ mod tests {
                     stack_strategy: Default::default(),
                     bar_layout: Default::default(),
                     area_baseline: None,
+                    lod: None,
                 },
                 SeriesSpec {
                     id: SeriesId::new(2),
@@ -5481,6 +5482,7 @@ mod tests {
                     stack_strategy: Default::default(),
                     bar_layout: Default::default(),
                     area_baseline: None,
+                    lod: None,
                 },
             ],
         }

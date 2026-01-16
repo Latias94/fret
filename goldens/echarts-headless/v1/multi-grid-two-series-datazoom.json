@@ -1,0 +1,134 @@
+{
+  "axis_windows": [
+    {
+      "axis": 1,
+      "min": 4.75,
+      "max": 14.25
+    },
+    {
+      "axis": 2,
+      "min": 4.75,
+      "max": 14.25
+    },
+    {
+      "axis": 3,
+      "min": 5.0,
+      "max": 14.0
+    },
+    {
+      "axis": 4,
+      "min": 5.0,
+      "max": 14.0
+    }
+  ],
+  "filter_plan": {
+    "revision": 2,
+    "grids": [
+      {
+        "grid": 1,
+        "series": [
+          1
+        ],
+        "y_percent_extents": []
+      },
+      {
+        "grid": 2,
+        "series": [
+          2
+        ],
+        "y_percent_extents": []
+      }
+    ]
+  },
+  "marks": {
+    "revision": 4,
+    "total_nodes": 2,
+    "arena_points": 20,
+    "arena_rects": 0,
+    "data_indices": {
+      "len": 20,
+      "head": [
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "tail": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "hash": 7628272148601460433
+    },
+    "rect_data_indices": {
+      "len": 0,
+      "head": [],
+      "tail": [],
+      "hash": 14695981039346656037
+    },
+    "by_series": [
+      {
+        "series": 1,
+        "nodes": 1,
+        "points": 10,
+        "polylines": 0,
+        "rects": 0,
+        "texts": 0
+      },
+      {
+        "series": 2,
+        "nodes": 1,
+        "points": 10,
+        "polylines": 1,
+        "rects": 0,
+        "texts": 0
+      }
+    ]
+  },
+  "participation": {
+    "revision": 2,
+    "series": [
+      {
+        "series": 1,
+        "dataset": 1,
+        "revision": 2,
+        "data_revision": 3,
+        "selection": {
+          "kind": "range",
+          "start": 5,
+          "end": 15,
+          "view_len": 10
+        },
+        "x_filter_mode": "Filter",
+        "y_filter_mode": "None",
+        "empty_mask_active": false,
+        "empty_mask_y_is_interval": false
+      },
+      {
+        "series": 2,
+        "dataset": 1,
+        "revision": 2,
+        "data_revision": 3,
+        "selection": {
+          "kind": "range",
+          "start": 5,
+          "end": 15,
+          "view_len": 10
+        },
+        "x_filter_mode": "Filter",
+        "y_filter_mode": "None",
+        "empty_mask_active": false,
+        "empty_mask_y_is_interval": false
+      }
+    ]
+  }
+}

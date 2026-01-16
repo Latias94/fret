@@ -28,8 +28,20 @@ This preserves spikes while staying stable under large data.
 
 Implementation: `ecosystem/delinea/src/engine/stages/marks.rs`
 
-- If `visible_len <= 20_000`, emit all visible points (exact mode).
-- If `visible_len > 20_000`, switch to the same min/max-per-pixel strategy as line-family.
+- Default threshold: `20_000` visible rows.
+- If `visible_len <= threshold`, emit all visible points (exact mode).
+- If `visible_len > threshold`, switch to the same min/max-per-pixel strategy as line-family.
+- Threshold and progressive cap are configurable via `SeriesSpec.lod` (v1 subset):
+  - `large` / `large_threshold`
+  - `progressive` / `progressive_threshold` (forces multi-step building even with large `WorkBudget`)
+
+### Bar: exact rectangles (not pixel-bounded)
+
+Implementation: `ecosystem/delinea/src/engine/stages/marks.rs`
+
+- Bars currently emit one rectangle per visible row (exact mode).
+- This is budgeted (incremental stepping), but not pixel-bounded. A future LOD/progressive strategy
+  is expected for large categorical datasets and stacked bars.
 
 ## P0 invariants (must stay stable)
 
@@ -42,6 +54,11 @@ For a plot viewport with `plot_width_px = ceil(viewport.size.width)`:
 - Index validity: every emitted `data_index` must be within the dataset row range.
 - View bounds: emitted points must lie inside the viewport rectangle (after clamping).
 
+For bars:
+
+- Identity alignment: `rects.len() == rect_data_indices.len()`.
+- Index validity: every emitted `rect_data_index` must be within the dataset row range.
+
 ### Ordering and determinism (monotonic X precondition)
 
 When the input X is monotonic:
@@ -50,6 +67,14 @@ When the input X is monotonic:
 - The output is deterministic: same inputs and viewport produce the same output sequence.
 
 Note: if X is not monotonic, ordering invariants are not guaranteed by the current algorithm.
+
+### Budget invariance (incremental stepping)
+
+Given the same spec, dataset, state, and viewport:
+
+- Running the engine to completion with different `WorkBudget` values must converge to the same
+  `marks` output and `axis_windows` (i.e. budgets only affect *how fast* we build, not *what* we
+  build).
 
 ## Where these invariants are enforced
 
@@ -62,7 +87,12 @@ Note: if X is not monotonic, ordering invariants are not guaranteed by the curre
 
 - `ecosystem/delinea/src/engine/tests.rs`
   - `scatter_large_mode_is_pixel_bounded`
+  - `scatter_large_threshold_can_force_large_mode`
+  - `scatter_progressive_can_force_multiple_steps`
   - `line_large_mode_is_pixel_bounded`
+  - `lod_scatter_large_mode_is_budget_invariant`
+  - `lod_line_large_mode_is_budget_invariant`
+  - `lod_bar_mode_is_budget_invariant`
 
 ### Manual stress harness
 
@@ -77,6 +107,6 @@ Environment knobs:
 
 ## Follow-ups (P1)
 
-- Expose spec knobs aligned with ECharts (`large`, `largeThreshold`, `progressive`, `progressiveThreshold`).
+- Extend per-series knobs coverage (`SeriesSpec.lod` exists; wiring beyond scatter is still pending).
 - Add optional higher-fidelity sampling (e.g. LTTB) for moderate sizes.
 - Add a benchmark harness that can gate frame-time regressions on CI.

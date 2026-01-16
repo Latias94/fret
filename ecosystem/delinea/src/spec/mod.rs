@@ -477,6 +477,33 @@ pub enum SeriesKind {
     Scatter,
 }
 
+/// Large-data / progressive rendering knobs (v1 subset, ECharts-inspired).
+///
+/// Notes:
+/// - These knobs do not aim for option-schema parity with ECharts; they are a policy surface.
+/// - `delinea` is budgeted and incremental by design; `progressive` here is an additional hint to
+///   intentionally spread work across multiple `ChartEngine::step` calls, even when the caller
+///   provides a large `WorkBudget`.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct SeriesLodSpecV1 {
+    /// ECharts-like `large` switch.
+    ///
+    /// - `None` uses the engine defaults (typically threshold-based).
+    /// - `Some(true)` forces large-mode eligibility (still gated by thresholds).
+    /// - `Some(false)` disables large-mode for the series.
+    pub large: Option<bool>,
+    /// Threshold for enabling large-mode (ECharts `largeThreshold`-like).
+    pub large_threshold: Option<u32>,
+    /// Maximum work per frame when progressive mode is active (ECharts `progressive`-like).
+    ///
+    /// This value is interpreted as a cap on processed data items per `ChartEngine::step` for the
+    /// series when `visible_len >= progressive_threshold`.
+    pub progressive: Option<u32>,
+    /// Threshold for enabling progressive mode (ECharts `progressiveThreshold`-like).
+    pub progressive_threshold: Option<u32>,
+}
+
 /// Bar width specification (ECharts-inspired).
 ///
 /// ECharts semantics:
@@ -656,4 +683,6 @@ pub struct SeriesSpec {
     pub bar_layout: BarLayoutSpec,
     /// Area baseline configuration (only used when `kind == Area`).
     pub area_baseline: Option<AreaBaseline>,
+    /// LOD / progressive rendering knobs (v1 subset).
+    pub lod: Option<SeriesLodSpecV1>,
 }

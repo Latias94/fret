@@ -25,6 +25,7 @@ pub mod text;
 pub mod time_axis;
 pub mod tooltip;
 pub mod transform;
+pub mod transform_graph;
 pub mod view;
 pub mod visual_map;
 
