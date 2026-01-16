@@ -516,6 +516,7 @@ pub struct CommandInput {
     a11y_label: Option<Arc<str>>,
     placeholder: Option<Arc<str>>,
     disabled: bool,
+    chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
 
@@ -537,6 +538,7 @@ impl CommandInput {
             a11y_label: None,
             placeholder: None,
             disabled: false,
+            chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
     }
@@ -553,6 +555,11 @@ impl CommandInput {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
         self
     }
 
@@ -580,6 +587,31 @@ impl CommandInput {
             let gap = theme
                 .metric_by_key("component.command.input.gap")
                 .unwrap_or(Px(8.0));
+
+            let chrome = self.chrome.clone();
+            let border_w = chrome
+                .border_width
+                .as_ref()
+                .map(|m| m.resolve(&theme))
+                .unwrap_or(Px(1.0));
+            let border_color = chrome
+                .border_color
+                .as_ref()
+                .map(|c| c.resolve(&theme))
+                .unwrap_or(border);
+            let background = chrome.background.as_ref().map(|c| c.resolve(&theme));
+            let radius = chrome
+                .radius
+                .as_ref()
+                .map(|m| m.resolve(&theme))
+                .unwrap_or(Px(0.0));
+
+            let padding = chrome.padding.clone().unwrap_or_default();
+            let pad_top = padding.top.map(|m| m.resolve(&theme)).unwrap_or(Px(0.0));
+            let pad_right = padding.right.map(|m| m.resolve(&theme)).unwrap_or(pad_x);
+            let pad_bottom = padding.bottom.map(|m| m.resolve(&theme)).unwrap_or(Px(0.0));
+            let pad_left = padding.left.map(|m| m.resolve(&theme)).unwrap_or(pad_x);
+
             let mut wrapper = decl_style::container_props(
                 &theme,
                 ChromeRefinement::default(),
@@ -588,18 +620,20 @@ impl CommandInput {
             wrapper.border = Edges {
                 top: Px(0.0),
                 right: Px(0.0),
-                bottom: Px(1.0),
+                bottom: border_w,
                 left: Px(0.0),
             };
-            wrapper.border_color = Some(border);
+            wrapper.border_color = Some(border_color);
+            wrapper.background = background;
+            wrapper.corner_radii = Corners::all(radius);
             if matches!(wrapper.layout.size.height, Length::Auto) {
                 wrapper.layout.size.height = Length::Px(wrapper_h);
             }
             wrapper.padding = Edges {
-                top: Px(0.0),
-                right: pad_x,
-                bottom: Px(0.0),
-                left: pad_x,
+                top: pad_top,
+                right: pad_right,
+                bottom: pad_bottom,
+                left: pad_left,
             };
 
             cx.container(wrapper, move |cx| {
