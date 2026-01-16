@@ -167,6 +167,10 @@ pub(crate) const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 pub(crate) const CMD_APP_SAVE: &str = "ui_gallery.app.save";
 pub(crate) const CMD_APP_SETTINGS: &str = "ui_gallery.app.settings";
 
+pub(crate) const CMD_CLIPBOARD_COPY_LINK: &str = "ui_gallery.clipboard.copy_link";
+pub(crate) const CMD_CLIPBOARD_COPY_USAGE: &str = "ui_gallery.clipboard.copy_usage";
+pub(crate) const CMD_CLIPBOARD_COPY_NOTES: &str = "ui_gallery.clipboard.copy_notes";
+
 #[derive(Clone, Copy)]
 pub(crate) struct PageSpec {
     pub(crate) id: &'static str,

@@ -223,7 +223,37 @@ pub(crate) fn content_view(
                 .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(220.0))))
                 .into_element(cx);
 
-            vec![left, theme_select]
+            let copy_actions = stack::hstack(
+                cx,
+                stack::HStackProps::default().gap(Space::N2).items_center(),
+                |cx| {
+                    vec![
+                        shadcn::Button::new("Copy link")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .size(shadcn::ButtonSize::Sm)
+                            .on_click(CMD_CLIPBOARD_COPY_LINK)
+                            .into_element(cx),
+                        shadcn::Button::new("Copy usage")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .size(shadcn::ButtonSize::Sm)
+                            .on_click(CMD_CLIPBOARD_COPY_USAGE)
+                            .into_element(cx),
+                        shadcn::Button::new("Copy notes")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .size(shadcn::ButtonSize::Sm)
+                            .on_click(CMD_CLIPBOARD_COPY_NOTES)
+                            .into_element(cx),
+                    ]
+                },
+            );
+
+            let right = stack::hstack(
+                cx,
+                stack::HStackProps::default().gap(Space::N3).items_center(),
+                |_cx| vec![theme_select, copy_actions],
+            );
+
+            vec![left, right]
         },
     );
 
