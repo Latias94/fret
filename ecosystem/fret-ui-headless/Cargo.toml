@@ -11,6 +11,5 @@ documentation.workspace = true
 
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
-fret-ui = { path = "../../crates/fret-ui" }
 time.workspace = true
 virtualizer.workspace = true

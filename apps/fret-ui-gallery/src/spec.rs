@@ -1,5 +1,7 @@
 use std::sync::{Arc, OnceLock};
 
+use crate::docs;
+
 pub(crate) const ENV_UI_GALLERY_BISECT: &str = "FRET_UI_GALLERY_BISECT";
 pub(crate) const ENV_UI_GALLERY_START_PAGE: &str = "FRET_UI_GALLERY_START_PAGE";
 
@@ -25,21 +27,66 @@ pub(crate) fn ui_gallery_bisect_flags() -> u32 {
 }
 
 pub(crate) fn ui_gallery_start_page() -> Option<Arc<str>> {
-    let id = std::env::var(ENV_UI_GALLERY_START_PAGE).ok()?;
-    if id.trim().is_empty() {
+    #[cfg(target_arch = "wasm32")]
+    {
+        ui_gallery_start_page_from_url()
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let id = std::env::var(ENV_UI_GALLERY_START_PAGE).ok()?;
+        ui_gallery_start_page_from_id(&id)
+    }
+}
+
+fn ui_gallery_start_page_from_id(id: &str) -> Option<Arc<str>> {
+    let id = id.trim();
+    if id.is_empty() {
         return None;
     }
 
-    let id = id.trim();
-    let known = NAV_GROUPS
-        .iter()
-        .flat_map(|group| group.items.iter())
-        .any(|item| item.id == id);
-    if known {
+    if page_spec(id).is_some() {
         Some(Arc::<str>::from(id))
     } else {
         None
     }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn ui_gallery_start_page_from_url() -> Option<Arc<str>> {
+    fn find_key_value(raw: &str, key: &str) -> Option<String> {
+        let raw = raw.trim();
+        if raw.is_empty() {
+            return None;
+        }
+
+        for part in raw.split('&') {
+            let (k, v) = part.split_once('=').unwrap_or((part, ""));
+            if k.trim() == key {
+                let v = v.trim();
+                if v.is_empty() {
+                    return None;
+                }
+                return Some(v.to_string());
+            }
+        }
+        None
+    }
+
+    let window = web_sys::window()?;
+    let location = window.location();
+    let search = location.search().ok().unwrap_or_default();
+    let hash = location.hash().ok().unwrap_or_default();
+
+    let search = search.strip_prefix('?').unwrap_or(search.as_str());
+    let hash = hash.strip_prefix('#').unwrap_or(hash.as_str());
+
+    let id = find_key_value(search, "page")
+        .or_else(|| find_key_value(hash, "page"))
+        .or_else(|| find_key_value(search, "start_page"))
+        .or_else(|| find_key_value(hash, "start_page"))?;
+
+    ui_gallery_start_page_from_id(&id)
 }
 
 pub(crate) const CMD_NAV_SELECT_PREFIX: &str = "ui_gallery.nav.select.";
@@ -103,173 +150,251 @@ pub(crate) const CMD_APP_SAVE: &str = "ui_gallery.app.save";
 pub(crate) const CMD_APP_SETTINGS: &str = "ui_gallery.app.settings";
 
 #[derive(Clone, Copy)]
-pub(crate) struct NavItemSpec {
+pub(crate) struct PageSpec {
     pub(crate) id: &'static str,
     pub(crate) label: &'static str,
+    pub(crate) title: &'static str,
     pub(crate) origin: &'static str,
     pub(crate) command: &'static str,
     pub(crate) tags: &'static [&'static str],
+    pub(crate) docs_md: &'static str,
+    pub(crate) usage_md: &'static str,
 }
 
-impl NavItemSpec {
+impl PageSpec {
     pub(crate) const fn new(
         id: &'static str,
         label: &'static str,
+        title: &'static str,
         origin: &'static str,
         command: &'static str,
         tags: &'static [&'static str],
+        docs_md: &'static str,
+        usage_md: &'static str,
     ) -> Self {
         Self {
             id,
             label,
+            title,
             origin,
             command,
             tags,
+            docs_md,
+            usage_md,
         }
     }
 }
 
 #[derive(Clone, Copy)]
-pub(crate) struct NavGroupSpec {
+pub(crate) struct PageGroupSpec {
     pub(crate) title: &'static str,
-    pub(crate) items: &'static [NavItemSpec],
+    pub(crate) items: &'static [PageSpec],
 }
 
-pub(crate) static NAV_GROUPS: &[NavGroupSpec] = &[
-    NavGroupSpec {
+pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
+    PageGroupSpec {
         title: "Core",
         items: &[
-            NavItemSpec::new(
+            PageSpec::new(
                 PAGE_INTRO,
+                "Introduction",
                 "Introduction",
                 "Core contracts",
                 CMD_NAV_INTRO,
                 &["overview", "contracts"],
+                docs::DOC_INTRO,
+                docs::USAGE_INTRO,
             ),
-            NavItemSpec::new(
+            PageSpec::new(
                 PAGE_LAYOUT,
                 "Layout",
+                "Layout / Stacks & Constraints",
                 "Layout system",
                 CMD_NAV_LAYOUT,
                 &["layout", "flex", "stack"],
+                docs::DOC_LAYOUT,
+                docs::USAGE_LAYOUT,
             ),
         ],
     },
-    NavGroupSpec {
+    PageGroupSpec {
         title: "Shadcn",
         items: &[
-            NavItemSpec::new(
+            PageSpec::new(
                 PAGE_BUTTON,
+                "Button",
                 "Button",
                 "fret-ui-shadcn",
                 CMD_NAV_BUTTON,
                 &["button", "variant"],
+                docs::DOC_BUTTON,
+                docs::USAGE_BUTTON,
             ),
-            NavItemSpec::new(
+            PageSpec::new(
                 PAGE_FORMS,
                 "Forms",
+                "Inputs / TextArea / Checkbox / Switch",
                 "fret-ui-shadcn",
                 CMD_NAV_FORMS,
                 &["input", "textarea", "checkbox", "switch"],
+                docs::DOC_FORMS,
+                docs::USAGE_FORMS,
             ),
-            NavItemSpec::new(
+            PageSpec::new(
                 PAGE_SELECT,
+                "Select",
                 "Select",
                 "fret-ui-shadcn",
                 CMD_NAV_SELECT,
                 &["select", "popover", "listbox"],
+                docs::DOC_SELECT,
+                docs::USAGE_SELECT,
             ),
-            NavItemSpec::new(
+            PageSpec::new(
                 PAGE_COMBOBOX,
+                "Combobox",
                 "Combobox",
                 "fret-ui-shadcn",
                 CMD_NAV_COMBOBOX,
                 &["combobox", "cmdk", "search"],
+                docs::DOC_COMBOBOX,
+                docs::USAGE_COMBOBOX,
             ),
-            NavItemSpec::new(
+            PageSpec::new(
                 PAGE_DATE_PICKER,
+                "Date Picker",
                 "Date Picker",
                 "fret-ui-shadcn",
                 CMD_NAV_DATE_PICKER,
                 &["date", "calendar", "popover"],
+                docs::DOC_DATE_PICKER,
+                docs::USAGE_DATE_PICKER,
             ),
-            NavItemSpec::new(
+            PageSpec::new(
                 PAGE_RESIZABLE,
                 "Resizable",
+                "Resizable Panels",
                 "fret-ui-shadcn",
                 CMD_NAV_RESIZABLE,
                 &["split", "panel", "resize"],
+                docs::DOC_RESIZABLE,
+                docs::USAGE_RESIZABLE,
             ),
-            NavItemSpec::new(
+            PageSpec::new(
                 PAGE_DATA_TABLE,
+                "DataTable",
                 "DataTable",
                 "fret-ui-shadcn + fret-ui-headless",
                 CMD_NAV_DATA_TABLE,
                 &["table", "virtualized", "tanstack"],
+                docs::DOC_DATA_TABLE,
+                docs::USAGE_DATA_TABLE,
             ),
-            NavItemSpec::new(
+            PageSpec::new(
                 PAGE_DATA_GRID,
+                "DataGrid",
                 "DataGrid",
                 "fret-ui-shadcn",
                 CMD_NAV_DATA_GRID,
                 &["grid", "viewport", "virtualized"],
+                docs::DOC_DATA_GRID,
+                docs::USAGE_DATA_GRID,
             ),
-            NavItemSpec::new(
+            PageSpec::new(
                 PAGE_TABS,
+                "Tabs",
                 "Tabs",
                 "fret-ui-shadcn",
                 CMD_NAV_TABS,
                 &["tabs", "roving", "focus"],
+                docs::DOC_TABS,
+                docs::USAGE_TABS,
             ),
-            NavItemSpec::new(
+            PageSpec::new(
                 PAGE_ACCORDION,
+                "Accordion",
                 "Accordion",
                 "fret-ui-shadcn",
                 CMD_NAV_ACCORDION,
                 &["accordion", "collapsible"],
+                docs::DOC_ACCORDION,
+                docs::USAGE_ACCORDION,
             ),
-            NavItemSpec::new(
+            PageSpec::new(
                 PAGE_TABLE,
+                "Table",
                 "Table",
                 "fret-ui-shadcn",
                 CMD_NAV_TABLE,
                 &["table", "grid"],
+                docs::DOC_TABLE,
+                docs::USAGE_TABLE,
             ),
-            NavItemSpec::new(
+            PageSpec::new(
                 PAGE_PROGRESS,
+                "Progress",
                 "Progress",
                 "fret-ui-shadcn",
                 CMD_NAV_PROGRESS,
                 &["progress"],
+                docs::DOC_PROGRESS,
+                docs::USAGE_PROGRESS,
             ),
-            NavItemSpec::new(
+            PageSpec::new(
                 PAGE_MENUS,
                 "Menus",
+                "Menus (Dropdown / Context)",
                 "fret-ui-shadcn",
                 CMD_NAV_MENUS,
                 &["dropdown", "context-menu"],
+                docs::DOC_MENUS,
+                docs::USAGE_MENUS,
             ),
-            NavItemSpec::new(
+            PageSpec::new(
                 PAGE_COMMAND,
+                "Command Palette",
                 "Command Palette",
                 "fret-ui-shadcn",
                 CMD_NAV_COMMAND,
                 &["cmdk", "command"],
+                docs::DOC_COMMAND,
+                docs::USAGE_COMMAND,
             ),
-            NavItemSpec::new(
+            PageSpec::new(
                 PAGE_TOAST,
+                "Toast",
                 "Toast",
                 "fret-ui-shadcn",
                 CMD_NAV_TOAST,
                 &["sonner", "toast"],
+                docs::DOC_TOAST,
+                docs::USAGE_TOAST,
             ),
-            NavItemSpec::new(
+            PageSpec::new(
                 PAGE_OVERLAY,
                 "Overlay",
+                "Overlay / Popover & Dialog",
                 "Radix-shaped primitives",
                 CMD_NAV_OVERLAY,
                 &["dialog", "popover"],
+                docs::DOC_OVERLAY,
+                docs::USAGE_OVERLAY,
             ),
         ],
     },
 ];
+
+pub(crate) fn page_spec(id: &str) -> Option<&'static PageSpec> {
+    PAGE_GROUPS
+        .iter()
+        .flat_map(|group| group.items.iter())
+        .find(|item| item.id == id)
+}
+
+pub(crate) fn page_meta(
+    selected: &str,
+) -> (&'static str, &'static str, &'static str, &'static str) {
+    let fallback = page_spec(PAGE_INTRO).expect("intro page exists");
+    let page = page_spec(selected).unwrap_or(fallback);
+    (page.title, page.origin, page.docs_md, page.usage_md)
+}

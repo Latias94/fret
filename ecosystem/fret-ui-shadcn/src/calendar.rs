@@ -13,6 +13,7 @@ use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 use time::{Date, OffsetDateTime, Weekday};
 
@@ -162,10 +163,10 @@ impl Calendar {
         let weekday_labels = weekday_labels(self.week_start);
 
         let text_sm_px = theme
-            .metric_by_key("component.text.sm_px")
+            .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX)
             .unwrap_or_else(|| theme.metric_required("font.size"));
         let text_sm_line_height = theme
-            .metric_by_key("component.text.sm_line_height")
+            .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
             .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
         let grid_text_style = TextStyle {
@@ -547,10 +548,10 @@ fn calendar_day_cell<H: UiHost>(
     let date_label: Arc<str> = Arc::from(date.to_string());
 
     let text_sm_px = theme
-        .metric_by_key("component.text.sm_px")
+        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX)
         .unwrap_or_else(|| theme.metric_required("font.size"));
     let text_sm_line_height = theme
-        .metric_by_key("component.text.sm_line_height")
+        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
         .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
     let text_style = TextStyle {

@@ -1,5 +1,7 @@
 use fret_core::{Edges, Px, Rect, Size};
 
+pub type LayoutDirection = fret_core::LayoutDirection;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Side {
     Top,
@@ -13,13 +15,6 @@ pub enum Align {
     Start,
     Center,
     End,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum LayoutDirection {
-    #[default]
-    Ltr,
-    Rtl,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

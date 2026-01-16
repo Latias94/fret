@@ -499,6 +499,13 @@ fn ui_app_handle_event<S>(
         svc.record_event(app, window, event);
     });
 
+    #[cfg(feature = "diagnostics")]
+    if app.with_global_mut(UiDiagnosticsService::default, |svc, app| {
+        svc.maybe_intercept_event_for_picking(app, window, event)
+    }) {
+        return;
+    }
+
     state.ui.dispatch_event(app, services, event);
 
     #[cfg(feature = "ui-assets")]
@@ -918,7 +925,7 @@ fn ui_app_render<S>(
             #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
             {
                 let out = direction_prim::with_direction_provider(cx, dir, |cx| {
-                    let out = (driver.view)(cx, &mut state.state);
+                    let mut out = (driver.view)(cx, &mut state.state);
 
                     #[cfg(feature = "ui-app-command-palette")]
                     if driver.command_palette_enabled

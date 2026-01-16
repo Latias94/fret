@@ -31,10 +31,11 @@ impl AnyElement {
 pub enum ElementKind {
     Container(ContainerProps),
     Semantics(SemanticsProps),
-    /// Flex layout container that also contributes an explicit semantics node.
+    /// A flex container that also contributes a semantics node with a fixed role.
     ///
-    /// This avoids inserting a separate `Semantics` wrapper above a `Flex` node when the
-    /// semantics tree structure must match upstream DOM primitives (e.g. Radix `Menu.Group`).
+    /// This is used by higher-level libraries (e.g. Radix/shadcn ports) to model structural
+    /// grouping (`role="group"`) without introducing an extra semantics wrapper layer that would
+    /// otherwise be separated from layout.
     SemanticFlex(SemanticFlexProps),
     FocusScope(FocusScopeProps),
     /// A transparent wrapper that gates subtree presence and interactivity.
@@ -93,10 +94,10 @@ pub enum ElementKind {
     Scrollbar(ScrollbarProps),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct SemanticFlexProps {
+    pub role: SemanticsRole,
     pub flex: FlexProps,
-    pub semantics: SemanticsProps,
 }
 
 /// Per-element pointer state for `PointerRegion`.

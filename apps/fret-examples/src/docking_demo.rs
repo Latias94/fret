@@ -7,7 +7,7 @@ use fret_core::{
 use fret_docking::{
     DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockViewportOverlayHooks,
     DockViewportOverlayHooksService, handle_dock_before_close_window, handle_dock_op,
-    handle_dock_window_created, render_and_bind_dock_panels,
+    handle_dock_window_created, render_and_bind_dock_panels, render_cached_panel_root,
 };
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
@@ -41,27 +41,30 @@ impl DockPanelRegistry<App> for DemoDockPanelRegistry {
         };
 
         let root_name = format!("dock_demo.panel.{}", panel.kind.0);
-        Some(
-            declarative::RenderRootContext::new(ui, app, services, window, bounds).render_root(
-                &root_name,
-                |cx| {
-                    vec![cx.container(
-                        ContainerProps {
-                            layout: {
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Fill;
-                                layout.size.height = Length::Fill;
-                                layout
-                            },
-                            padding: fret_core::Edges::all(padding),
-                            background: Some(background),
-                            ..Default::default()
+        Some(render_cached_panel_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            &root_name,
+            |cx| {
+                vec![cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
                         },
-                        |cx| vec![cx.text(label)],
-                    )]
-                },
-            ),
-        )
+                        padding: fret_core::Edges::all(padding),
+                        background: Some(background),
+                        ..Default::default()
+                    },
+                    |cx| vec![cx.text(label)],
+                )]
+            },
+        ))
     }
 }
 
@@ -107,6 +110,7 @@ impl DockingDemoDriver {
     fn build_ui(_app: &mut App, window: AppWindowId) -> DockingDemoWindowState {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
+        ui.set_view_cache_enabled(std::env::var_os("FRET_EXAMPLES_VIEW_CACHE").is_some());
         DockingDemoWindowState { ui, root: None }
     }
 

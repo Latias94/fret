@@ -91,6 +91,7 @@ fn kind_flex_grow(kind: &ElementKind) -> Option<f32> {
     match kind {
         ElementKind::Container(props) => Some(props.layout.flex.grow),
         ElementKind::Semantics(props) => Some(props.layout.flex.grow),
+        ElementKind::SemanticFlex(props) => Some(props.flex.layout.flex.grow),
         ElementKind::Pressable(props) => Some(props.layout.flex.grow),
         ElementKind::PointerRegion(props) => Some(props.layout.flex.grow),
         ElementKind::InternalDragRegion(props) => Some(props.layout.flex.grow),
@@ -125,7 +126,6 @@ fn kind_flex_grow(kind: &ElementKind) -> Option<f32> {
         ElementKind::ResizablePanelGroup(props) => Some(props.layout.flex.grow),
         ElementKind::ViewportSurface(props) => Some(props.layout.flex.grow),
         ElementKind::ViewCache(props) => Some(props.layout.flex.grow),
-        _ => None,
     }
 }
 

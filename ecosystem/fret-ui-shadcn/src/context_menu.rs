@@ -10,7 +10,7 @@ use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PointerRegionProps, PositionStyle, PressableProps, RingStyle, RovingFlexProps,
-    RovingFocusProps, ScrollAxis, ScrollProps, SemanticsProps, SizeStyle, TextProps,
+    RovingFocusProps, ScrollAxis, ScrollProps, SizeStyle, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -535,13 +535,15 @@ fn menu_structural_group<H: UiHost>(
     role: fret_core::SemanticsRole,
     children: Vec<AnyElement>,
 ) -> AnyElement {
-    let mut layout = LayoutStyle::default();
-    layout.size.width = Length::Fill;
-
     cx.semantic_flex(
         fret_ui::element::SemanticFlexProps {
+            role,
             flex: FlexProps {
-                layout,
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout
+                },
                 direction: fret_core::Axis::Vertical,
                 gap: Px(0.0),
                 padding: Edges::all(Px(0.0)),
@@ -549,13 +551,8 @@ fn menu_structural_group<H: UiHost>(
                 align: CrossAlign::Stretch,
                 wrap: false,
             },
-            semantics: SemanticsProps {
-                layout,
-                role,
-                ..Default::default()
-            },
         },
-        |_cx| children,
+        move |_cx| children,
     )
 }
 

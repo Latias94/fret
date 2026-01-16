@@ -212,7 +212,7 @@ impl WorkspaceWindowLayout {
         true
     }
 
-    fn generate_next_pane_id(&self) -> Arc<str> {
+    pub fn generate_next_pane_id(&self) -> Arc<str> {
         let prefix = format!("{}.pane.", self.id);
         for i in 1u32.. {
             let candidate = format!("{prefix}{i}");
@@ -968,6 +968,67 @@ mod tests {
         assert_eq!(window.active_pane_id().unwrap().as_ref(), "p2");
         assert!(window.pane_tree.find_pane("p1").is_some());
         assert!(window.pane_tree.find_pane("p2").is_some());
+    }
+
+    #[test]
+    fn generate_next_pane_id_skips_existing_leaf_ids() {
+        let window = WorkspaceWindowLayout::new("w", "w.pane.1");
+        assert_eq!(window.generate_next_pane_id().as_ref(), "w.pane.2");
+    }
+
+    #[test]
+    fn drag_split_then_move_active_tab_via_commands() {
+        let mut window = WorkspaceWindowLayout::new("main", "p1");
+        window.pane_tree = WorkspacePaneTree::split(
+            Axis::Horizontal,
+            0.5,
+            WorkspacePaneTree::leaf("p1"),
+            WorkspacePaneTree::leaf("p2"),
+        );
+        window.active_pane = Some(Arc::<str>::from("p1"));
+
+        window
+            .pane_tree
+            .find_pane_mut("p1")
+            .unwrap()
+            .tabs
+            .open_and_activate(Arc::<str>::from("a"));
+
+        // Split `p2` into a new pane, then move the active tab from `p1` into that new pane.
+        assert!(window.apply_command(&crate::commands::pane_activate_command("p2").unwrap()));
+        assert!(
+            window.apply_command(
+                &crate::commands::pane_split_command(Axis::Horizontal, SplitSide::Second, "p3")
+                    .unwrap()
+            )
+        );
+        assert!(window.pane_tree.find_pane("p3").is_some());
+
+        assert!(window.apply_command(&crate::commands::pane_activate_command("p1").unwrap()));
+        assert!(
+            window.apply_command(&crate::commands::pane_move_active_tab_to_command("p3").unwrap())
+        );
+
+        assert_eq!(window.active_pane_id().unwrap().as_ref(), "p3");
+        assert!(
+            window
+                .pane_tree
+                .find_pane("p3")
+                .unwrap()
+                .tabs
+                .tabs()
+                .iter()
+                .any(|t| t.as_ref() == "a")
+        );
+        assert!(
+            window
+                .pane_tree
+                .find_pane("p1")
+                .unwrap()
+                .tabs
+                .tabs()
+                .is_empty()
+        );
     }
 
     #[test]

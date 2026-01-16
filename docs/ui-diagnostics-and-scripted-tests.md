@@ -80,6 +80,43 @@ By default bundles go under `target/fret-diag/<timestamp>/` and `target/fret-dia
 5. The app executes **one step per frame** (deterministic), and (by default) auto-dumps after actions.
    Use `cargo run -p fretboard -- diag latest` to grab the newest bundle.
 
+## Quick Start (picking / "inspect target")
+
+This is the fastest way to author stable selectors (GPUI/Zed-style inspect):
+
+1. Run the app with diagnostics enabled:
+
+   - `FRET_DIAG=1`
+
+2. Arm a one-shot pick (this waits for the next click and prints a selector JSON on success):
+
+   - `cargo run -p fretboard -- diag pick`
+
+3. Click the UI element you want to target.
+
+4. The app writes `pick.result.json` (and, by default, also dumps a `bundle.json` labelled `pick`).
+
+### Generate a runnable script from a pick
+
+To reduce "pick → first repro script" friction, `fretboard` can generate a minimal script skeleton:
+
+- `cargo run -p fretboard -- diag pick-script`
+
+This writes `target/fret-diag/picked.script.json` (override with `--pick-script-out`), which you can then run via:
+
+- `cargo run -p fretboard -- diag run target/fret-diag/picked.script.json`
+
+### Patch an existing script using a pick (JSON Pointer)
+
+When UI structure or labels change, use pick to update a script step's selector in-place:
+
+- Update a click step:
+  - `cargo run -p fretboard -- diag pick-apply tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json --ptr /steps/0/target`
+- Update a predicate target (e.g. `wait_until` / `assert`):
+  - `cargo run -p fretboard -- diag pick-apply tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json --ptr /steps/1/predicate/target`
+
+By default this overwrites the script file; use `--out <path>` to write to a new file.
+
 ## What's inside `bundle.json`
 
 Bundles are a per-window ring history plus snapshots (schema is versioned and intended to evolve).
@@ -122,6 +159,13 @@ Script harness:
 - `FRET_DIAG_SCRIPT_RESULT_PATH=...`: script result JSON path (default `<dir>/script.result.json`).
 - `FRET_DIAG_SCRIPT_RESULT_TRIGGER_PATH=...`: script result trigger file (default `<dir>/script.result.touch`).
 - `FRET_DIAG_SCRIPT_AUTO_DUMP=0`: disable auto-dump after steps (default enabled).
+
+Picking:
+
+- `FRET_DIAG_PICK_TRIGGER_PATH=...`: pick trigger file (default `<dir>/pick.touch`).
+- `FRET_DIAG_PICK_RESULT_PATH=...`: pick result JSON path (default `<dir>/pick.result.json`).
+- `FRET_DIAG_PICK_RESULT_TRIGGER_PATH=...`: pick result trigger file (default `<dir>/pick.result.touch`).
+- `FRET_DIAG_PICK_AUTO_DUMP=0`: disable auto-dump after a pick (default enabled).
 
 ## Target selection rules (MVP)
 

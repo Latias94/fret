@@ -4,7 +4,8 @@ use std::sync::Arc;
 use fret_runtime::CommandId;
 
 use crate::commands::{
-    CMD_WORKSPACE_TAB_ACTIVATE_PREFIX, CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_PREFIX,
+    CMD_WORKSPACE_TAB_ACTIVATE_PREFIX, CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_LEFT,
+    CMD_WORKSPACE_TAB_CLOSE_OTHERS, CMD_WORKSPACE_TAB_CLOSE_PREFIX, CMD_WORKSPACE_TAB_CLOSE_RIGHT,
     CMD_WORKSPACE_TAB_MOVE_AFTER_PREFIX, CMD_WORKSPACE_TAB_MOVE_BEFORE_PREFIX,
     CMD_WORKSPACE_TAB_MOVE_LEFT, CMD_WORKSPACE_TAB_MOVE_RIGHT, CMD_WORKSPACE_TAB_NEXT,
     CMD_WORKSPACE_TAB_PREV,
@@ -199,6 +200,94 @@ impl WorkspaceTabs {
         true
     }
 
+    pub fn close_others(&mut self) -> bool {
+        let Some(active) = self.active.clone() else {
+            return false;
+        };
+
+        if self.tabs.len() <= 1 {
+            return false;
+        }
+
+        let before = self.tabs.len();
+        self.tabs.retain(|t| t.as_ref() == active.as_ref());
+        self.dirty.retain(|t| t.as_ref() == active.as_ref());
+        self.mru.retain(|t| t.as_ref() == active.as_ref());
+        self.mru = vec![active.clone()];
+        self.active = Some(active);
+        self.tabs.len() != before
+    }
+
+    pub fn close_left_of_active(&mut self) -> bool {
+        let Some(active) = self.active.clone() else {
+            return false;
+        };
+        let Some(index) = self.tabs.iter().position(|t| t.as_ref() == active.as_ref()) else {
+            return false;
+        };
+        if index == 0 {
+            return false;
+        }
+
+        let keep_from = index;
+        let removed: Vec<Arc<str>> = self.tabs[..keep_from].to_vec();
+        self.tabs = self.tabs[keep_from..].to_vec();
+
+        for r in &removed {
+            self.dirty.remove(r);
+        }
+        self.mru
+            .retain(|t| !removed.iter().any(|r| r.as_ref() == t.as_ref()));
+        self.active = Some(active.clone());
+        if self
+            .mru
+            .first()
+            .is_some_and(|t| t.as_ref() == active.as_ref())
+        {
+            // ok
+        } else {
+            self.mru.retain(|t| t.as_ref() != active.as_ref());
+            self.mru.insert(0, active);
+        }
+
+        !removed.is_empty()
+    }
+
+    pub fn close_right_of_active(&mut self) -> bool {
+        let Some(active) = self.active.clone() else {
+            return false;
+        };
+        let Some(index) = self.tabs.iter().position(|t| t.as_ref() == active.as_ref()) else {
+            return false;
+        };
+        if index + 1 >= self.tabs.len() {
+            return false;
+        }
+
+        let keep_to = index + 1;
+        let removed: Vec<Arc<str>> = self.tabs[keep_to..].to_vec();
+        self.tabs.truncate(keep_to);
+
+        for r in &removed {
+            self.dirty.remove(r);
+        }
+        self.mru
+            .retain(|t| !removed.iter().any(|r| r.as_ref() == t.as_ref()));
+        self.active = Some(active.clone());
+        if self
+            .mru
+            .first()
+            .is_some_and(|t| t.as_ref() == active.as_ref())
+        {
+            // ok
+        } else {
+            self.mru.retain(|t| t.as_ref() != active.as_ref());
+            self.mru.insert(0, active);
+        }
+
+        !removed.is_empty()
+    }
+
     pub fn next(&mut self) -> bool {
         if self.tabs.len() <= 1 {
             return false;
@@ -281,6 +370,9 @@ impl WorkspaceTabs {
                 };
                 return self.close(active.as_ref());
             }
+            CMD_WORKSPACE_TAB_CLOSE_OTHERS => return self.close_others(),
+            CMD_WORKSPACE_TAB_CLOSE_LEFT => return self.close_left_of_active(),
+            CMD_WORKSPACE_TAB_CLOSE_RIGHT => return self.close_right_of_active(),
             CMD_WORKSPACE_TAB_MOVE_LEFT => return self.move_active_by(-1),
             CMD_WORKSPACE_TAB_MOVE_RIGHT => return self.move_active_by(1),
             _ => {}

@@ -137,6 +137,20 @@ pub struct UiDebugFrameStats {
     /// barriers (scroll/virtualization/splits/...) register viewport roots or explicitly solve
     /// their child roots.
     pub layout_engine_widget_fallback_solves: u64,
+    /// Unique nodes observed as invalidation roots for model changes during the current frame.
+    pub model_change_invalidation_roots: u32,
+    /// Unique nodes observed as invalidation roots for global changes during the current frame.
+    pub global_change_invalidation_roots: u32,
+    /// Total nodes visited across invalidation walks during the current frame.
+    pub invalidation_walk_nodes: u32,
+    /// Total invalidation walks performed during the current frame.
+    pub invalidation_walk_calls: u32,
+    /// Whether view-cache mode is active for this frame.
+    pub view_cache_active: bool,
+    /// How many invalidation walks were truncated by a view-cache boundary.
+    pub view_cache_invalidation_truncations: u32,
+    /// How many "contained" view-cache roots were re-laid out during the final pass.
+    pub view_cache_contained_relayouts: u32,
     pub focus: Option<NodeId>,
     pub captured: Option<NodeId>,
 }
@@ -515,6 +529,24 @@ struct MeasureStackKey {
 }
 
 impl<H: UiHost> UiTree<H> {
+    fn begin_debug_frame_if_needed(&mut self, frame_id: FrameId) {
+        if !self.debug_enabled {
+            return;
+        }
+        if self.debug_stats.frame_id == frame_id {
+            return;
+        }
+
+        self.debug_stats.frame_id = frame_id;
+        self.debug_stats.model_change_invalidation_roots = 0;
+        self.debug_stats.global_change_invalidation_roots = 0;
+        self.debug_stats.invalidation_walk_nodes = 0;
+        self.debug_stats.invalidation_walk_calls = 0;
+        self.debug_stats.view_cache_active = self.view_cache_active();
+        self.debug_stats.view_cache_invalidation_truncations = 0;
+        self.debug_stats.view_cache_contained_relayouts = 0;
+    }
+
     pub(crate) fn node_bounds(&self, node: NodeId) -> Option<Rect> {
         self.nodes.get(node).map(|n| n.bounds)
     }
@@ -1288,14 +1320,28 @@ impl<H: UiHost> UiTree<H> {
 
     fn mark_invalidation(&mut self, node: NodeId, inv: Invalidation) {
         let stop_at_view_cache = self.view_cache_active();
+        if self.debug_enabled {
+            self.debug_stats.invalidation_walk_calls =
+                self.debug_stats.invalidation_walk_calls.saturating_add(1);
+        }
         let mut current = Some(node);
         while let Some(id) = current {
             if let Some(n) = self.nodes.get_mut(id) {
+                if self.debug_enabled {
+                    self.debug_stats.invalidation_walk_nodes =
+                        self.debug_stats.invalidation_walk_nodes.saturating_add(1);
+                }
                 n.invalidation.mark(inv);
                 if stop_at_view_cache
                     && n.view_cache.enabled
                     && (inv == Invalidation::Paint || n.view_cache.contained_layout)
                 {
+                    if self.debug_enabled {
+                        self.debug_stats.view_cache_invalidation_truncations = self
+                            .debug_stats
+                            .view_cache_invalidation_truncations
+                            .saturating_add(1);
+                    }
                     break;
                 }
                 current = n.parent;
@@ -1313,6 +1359,7 @@ impl<H: UiHost> UiTree<H> {
         if changed.is_empty() {
             return false;
         }
+        self.begin_debug_frame_if_needed(app.frame_id());
 
         let mut combined: HashMap<NodeId, ObservationMask> = HashMap::new();
         for &model in changed {
@@ -1332,6 +1379,11 @@ impl<H: UiHost> UiTree<H> {
                         .or_insert(mask);
                 }
             }
+        }
+
+        if self.debug_enabled {
+            self.debug_stats.model_change_invalidation_roots =
+                combined.len().min(u32::MAX as usize) as u32;
         }
 
         let mut did_invalidate = false;
@@ -1362,6 +1414,7 @@ impl<H: UiHost> UiTree<H> {
         if changed.is_empty() {
             return false;
         }
+        self.begin_debug_frame_if_needed(app.frame_id());
 
         let mut combined: HashMap<NodeId, ObservationMask> = HashMap::new();
         for &global in changed {
@@ -1381,6 +1434,11 @@ impl<H: UiHost> UiTree<H> {
                         .or_insert(mask);
                 }
             }
+        }
+
+        if self.debug_enabled {
+            self.debug_stats.global_change_invalidation_roots =
+                combined.len().min(u32::MAX as usize) as u32;
         }
 
         let mut did_invalidate = false;

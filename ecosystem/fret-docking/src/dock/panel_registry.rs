@@ -6,6 +6,36 @@ use fret_ui::{UiHost, UiTree, declarative};
 use super::DockManager;
 use super::services::DockPanelContentService;
 
+fn fill_layout() -> fret_ui::element::LayoutStyle {
+    let mut layout = fret_ui::element::LayoutStyle::default();
+    layout.size.width = fret_ui::element::Length::Fill;
+    layout.size.height = fret_ui::element::Length::Fill;
+    layout
+}
+
+/// Render a dock panel root wrapped in a view-cache boundary.
+///
+/// This is a mechanism-level helper intended for GPUI-style view caching experiments.
+pub fn render_cached_panel_root<H: UiHost>(
+    ui: &mut UiTree<H>,
+    app: &mut H,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    root_name: &str,
+    f: impl FnOnce(&mut fret_ui::ElementContext<'_, H>) -> Vec<fret_ui::element::AnyElement>,
+) -> NodeId {
+    declarative::render_root(ui, app, services, window, bounds, root_name, |cx| {
+        vec![cx.view_cache(
+            fret_ui::element::ViewCacheProps {
+                layout: fill_layout(),
+                contained_layout: true,
+            },
+            f,
+        )]
+    })
+}
+
 /// App-owned registry that can render panel UI content for docking.
 ///
 /// The docking graph (`DockGraph`) is the source of truth for which panels exist in a window.
@@ -68,18 +98,13 @@ fn render_missing_panel<H: UiHost>(
     panel: &PanelKey,
 ) -> NodeId {
     let root_name = missing_panel_root_name(panel);
-    declarative::render_root(ui, app, services, window, bounds, &root_name, |cx| {
+    render_cached_panel_root(ui, app, services, window, bounds, &root_name, |cx| {
         let theme = cx.theme().snapshot();
         let padding = theme.metric_required("metric.padding.md");
         let background = theme.color_required("background");
         vec![cx.container(
             fret_ui::element::ContainerProps {
-                layout: {
-                    let mut layout = fret_ui::element::LayoutStyle::default();
-                    layout.size.width = fret_ui::element::Length::Fill;
-                    layout.size.height = fret_ui::element::Length::Fill;
-                    layout
-                },
+                layout: fill_layout(),
                 padding: Edges::all(padding),
                 background: Some(background),
                 ..Default::default()

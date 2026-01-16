@@ -4,6 +4,8 @@ use fret_core::{FontId, Px, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{AnyElement, LayoutStyle, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 
+use crate::theme_tokens;
+
 fn font_size(theme: &Theme) -> Px {
     theme
         .metric_by_key("font.size")
@@ -18,10 +20,10 @@ fn font_line_height(theme: &Theme) -> Px {
 
 fn text_sm_style(theme: &Theme) -> TextStyle {
     let size = theme
-        .metric_by_key("component.text.sm_px")
+        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX)
         .unwrap_or_else(|| font_size(theme));
     let line_height = theme
-        .metric_by_key("component.text.sm_line_height")
+        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
         .unwrap_or_else(|| font_line_height(theme));
 
     TextStyle {
@@ -34,10 +36,10 @@ fn text_sm_style(theme: &Theme) -> TextStyle {
 
 fn text_base_style(theme: &Theme) -> TextStyle {
     let size = theme
-        .metric_by_key("component.text.base_px")
+        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_BASE_PX)
         .unwrap_or_else(|| Px(font_size(theme).0 + 1.0));
     let line_height = theme
-        .metric_by_key("component.text.base_line_height")
+        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_BASE_LINE_HEIGHT)
         .unwrap_or_else(|| font_line_height(theme));
 
     TextStyle {
