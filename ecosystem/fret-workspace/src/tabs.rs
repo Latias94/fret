@@ -570,6 +570,87 @@ mod tests {
     }
 
     #[test]
+    fn close_others_keeps_only_active_tab_and_state() {
+        let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
+        for id in tabs(&["a", "b", "c"]) {
+            state.open_and_activate(id);
+        }
+
+        assert!(state.activate(Arc::<str>::from("b")));
+        state.set_dirty(Arc::<str>::from("a"), true);
+        state.set_dirty(Arc::<str>::from("b"), true);
+        state.set_dirty(Arc::<str>::from("c"), true);
+
+        assert!(state.apply_command(&CommandId::from(CMD_WORKSPACE_TAB_CLOSE_OTHERS)));
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["b"]
+        );
+        assert_eq!(state.active().unwrap().as_ref(), "b");
+        assert_eq!(
+            state.mru().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["b"]
+        );
+        assert!(!state.is_dirty("a"));
+        assert!(state.is_dirty("b"));
+        assert!(!state.is_dirty("c"));
+
+        assert!(!state.apply_command(&CommandId::from(CMD_WORKSPACE_TAB_CLOSE_OTHERS)));
+    }
+
+    #[test]
+    fn close_left_of_active_removes_tabs_and_dirty_left_of_active() {
+        let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
+        for id in tabs(&["a", "b", "c", "d"]) {
+            state.open_and_activate(id);
+        }
+
+        assert!(state.activate(Arc::<str>::from("c")));
+        state.set_dirty(Arc::<str>::from("a"), true);
+        state.set_dirty(Arc::<str>::from("c"), true);
+        state.set_dirty(Arc::<str>::from("d"), true);
+
+        assert!(state.apply_command(&CommandId::from(CMD_WORKSPACE_TAB_CLOSE_LEFT)));
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["c", "d"]
+        );
+        assert_eq!(state.active().unwrap().as_ref(), "c");
+        assert_eq!(
+            state.mru().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["c", "d"]
+        );
+        assert!(!state.is_dirty("a"));
+        assert!(state.is_dirty("c"));
+        assert!(state.is_dirty("d"));
+    }
+
+    #[test]
+    fn close_right_of_active_removes_tabs_and_dirty_right_of_active() {
+        let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
+        for id in tabs(&["a", "b", "c", "d"]) {
+            state.open_and_activate(id);
+        }
+
+        assert!(state.activate(Arc::<str>::from("b")));
+        state.set_dirty(Arc::<str>::from("b"), true);
+        state.set_dirty(Arc::<str>::from("d"), true);
+
+        assert!(state.apply_command(&CommandId::from(CMD_WORKSPACE_TAB_CLOSE_RIGHT)));
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["a", "b"]
+        );
+        assert_eq!(state.active().unwrap().as_ref(), "b");
+        assert_eq!(
+            state.mru().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["b", "a"]
+        );
+        assert!(state.is_dirty("b"));
+        assert!(!state.is_dirty("d"));
+    }
+
+    #[test]
     fn snapshot_round_trip_preserves_active_dirty_and_mru() {
         let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
         for id in tabs(&["a", "b", "c"]) {
