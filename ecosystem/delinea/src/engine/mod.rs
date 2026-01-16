@@ -1001,21 +1001,16 @@ impl ChartEngine {
             .bar_layout_stage
             .step(&self.model, &self.datasets, &mut budget);
 
-        self.transform_graph.data_views_mut().begin_frame();
+        self.transform_graph.begin_frame();
         self.filter_processor_stage.request_data_views(
             &self.model,
             &self.datasets,
             &self.state,
             &self.view,
-            self.transform_graph.data_views_mut(),
+            &mut self.transform_graph,
         );
-        self.transform_graph
-            .data_views_mut()
-            .prepare_requests(&self.datasets);
-        let selection_done = self
-            .transform_graph
-            .data_views_mut()
-            .step(&self.datasets, &mut budget);
+        self.transform_graph.prepare_requests(&self.datasets);
+        let selection_done = self.transform_graph.step(&self.datasets, &mut budget);
 
         // Multi-dimensional `weakFilter` (v1 subset) is materialized as an indices-backed selection.
         // Apply the cached selection when available so all downstream consumers observe the correct

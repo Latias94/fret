@@ -1,4 +1,3 @@
-use super::DataViewStage;
 use crate::data::DatasetStore;
 use crate::engine::ChartState;
 use crate::engine::model::ChartModel;
@@ -210,7 +209,7 @@ impl FilterProcessorStage {
         datasets: &DatasetStore,
         state: &ChartState,
         view: &ViewState,
-        data_view: &mut DataViewStage,
+        transform_graph: &mut TransformGraph,
     ) {
         for series_id in &model.series_order {
             let Some(series) = model.series.get(series_id) else {
@@ -287,12 +286,12 @@ impl FilterProcessorStage {
                         );
 
                         requested_xy_weak_filter = match series.kind {
-                            crate::spec::SeriesKind::Band => data_view
+                            crate::spec::SeriesKind::Band => transform_graph
                                 .request_xy_weak_filter_band_for_series(
                                     model, datasets, view, *series_id, base_range, x_filter,
                                     y_filter,
                                 ),
-                            _ => data_view.request_xy_weak_filter_for_series(
+                            _ => transform_graph.request_xy_weak_filter_for_series(
                                 model, datasets, view, *series_id, base_range, x_filter, y_filter,
                             ),
                         };
@@ -317,7 +316,7 @@ impl FilterProcessorStage {
                 continue;
             }
 
-            data_view.request_x_filter_for_series(model, datasets, view, *series_id);
+            transform_graph.request_x_filter_for_series(model, datasets, view, *series_id);
         }
     }
 
@@ -411,7 +410,7 @@ impl FilterProcessorStage {
                     datasets,
                     state,
                     view,
-                    transform_graph.data_views(),
+                    transform_graph,
                     &view_series_index,
                     &plan.series,
                     MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN,
@@ -433,7 +432,7 @@ impl FilterProcessorStage {
                     model,
                     datasets,
                     view,
-                    transform_graph.data_views(),
+                    transform_graph,
                     &view_series_index,
                     &plan.series,
                     &mut view_changed,
@@ -566,7 +565,7 @@ fn apply_xy_weak_filter_for_grid(
     datasets: &DatasetStore,
     state: &ChartState,
     view: &mut ViewState,
-    data_views: &DataViewStage,
+    transform_graph: &TransformGraph,
     view_series_index: &BTreeMap<SeriesId, usize>,
     series: &[SeriesId],
     max_view_len: usize,
@@ -692,7 +691,7 @@ fn apply_xy_weak_filter_for_grid(
         }
 
         let sel = match y1_col {
-            Some(y1_col) => data_views.selection_for_xy_weak_filter_band(
+            Some(y1_col) => transform_graph.selection_for_xy_weak_filter_band(
                 series_model.dataset,
                 x_col,
                 y0_col,
@@ -702,7 +701,7 @@ fn apply_xy_weak_filter_for_grid(
                 y_filter,
                 table.revision,
             ),
-            None => data_views.selection_for_xy_weak_filter(
+            None => transform_graph.selection_for_xy_weak_filter(
                 series_model.dataset,
                 x_col,
                 y0_col,
@@ -815,7 +814,7 @@ fn apply_x_indices_for_grid(
     model: &ChartModel,
     datasets: &DatasetStore,
     view: &mut ViewState,
-    data_views: &DataViewStage,
+    transform_graph: &TransformGraph,
     view_series_index: &BTreeMap<SeriesId, usize>,
     series: &[SeriesId],
     view_changed: &mut bool,
@@ -867,7 +866,7 @@ fn apply_x_indices_for_grid(
             end: selection_range.end,
         };
 
-        let Some(sel) = data_views.selection_for(
+        let Some(sel) = transform_graph.selection_for_x_filter(
             series_model.dataset,
             x_col,
             selection_range,

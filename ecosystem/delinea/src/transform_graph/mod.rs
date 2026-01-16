@@ -12,8 +12,12 @@ use crate::engine::ChartState;
 use crate::engine::model::ChartModel;
 use crate::engine::stages::DataViewStage;
 use crate::engine::window::DataWindow;
+use crate::engine::window_policy::AxisFilter1D;
 use crate::ids::{AxisId, Revision, SeriesId};
+use crate::scheduler::WorkBudget;
 use crate::spec::{AxisKind, AxisRange, FilterMode};
+use crate::transform::RowRange;
+use crate::transform::RowSelection;
 use crate::view::ViewState;
 use std::collections::BTreeMap;
 
@@ -49,6 +53,127 @@ impl TransformGraph {
 
     pub fn data_views_mut(&mut self) -> &mut DataViewStage {
         &mut self.data_views
+    }
+
+    pub fn begin_frame(&mut self) {
+        self.data_views.begin_frame();
+    }
+
+    pub fn prepare_requests(&mut self, datasets: &DatasetStore) {
+        self.data_views.prepare_requests(datasets);
+    }
+
+    pub fn step(&mut self, datasets: &DatasetStore, budget: &mut WorkBudget) -> bool {
+        self.data_views.step(datasets, budget)
+    }
+
+    pub fn request_x_filter_for_series(
+        &mut self,
+        model: &ChartModel,
+        datasets: &DatasetStore,
+        view: &ViewState,
+        series_id: crate::ids::SeriesId,
+    ) -> bool {
+        self.data_views
+            .request_x_filter_for_series(model, datasets, view, series_id)
+    }
+
+    pub fn request_xy_weak_filter_for_series(
+        &mut self,
+        model: &ChartModel,
+        datasets: &DatasetStore,
+        view: &ViewState,
+        series_id: crate::ids::SeriesId,
+        selection_range: RowRange,
+        x_filter: AxisFilter1D,
+        y_filter: AxisFilter1D,
+    ) -> bool {
+        self.data_views.request_xy_weak_filter_for_series(
+            model,
+            datasets,
+            view,
+            series_id,
+            selection_range,
+            x_filter,
+            y_filter,
+        )
+    }
+
+    pub fn request_xy_weak_filter_band_for_series(
+        &mut self,
+        model: &ChartModel,
+        datasets: &DatasetStore,
+        view: &ViewState,
+        series_id: crate::ids::SeriesId,
+        selection_range: RowRange,
+        x_filter: AxisFilter1D,
+        y_filter: AxisFilter1D,
+    ) -> bool {
+        self.data_views.request_xy_weak_filter_band_for_series(
+            model,
+            datasets,
+            view,
+            series_id,
+            selection_range,
+            x_filter,
+            y_filter,
+        )
+    }
+
+    pub fn selection_for_x_filter(
+        &self,
+        dataset: crate::ids::DatasetId,
+        x_col: usize,
+        selection_range: RowRange,
+        filter: AxisFilter1D,
+        table_rev: Revision,
+    ) -> Option<RowSelection> {
+        self.data_views
+            .selection_for(dataset, x_col, selection_range, filter, table_rev)
+    }
+
+    pub fn selection_for_xy_weak_filter(
+        &self,
+        dataset: crate::ids::DatasetId,
+        x_col: usize,
+        y_col: usize,
+        selection_range: RowRange,
+        x_filter: AxisFilter1D,
+        y_filter: AxisFilter1D,
+        table_rev: Revision,
+    ) -> Option<RowSelection> {
+        self.data_views.selection_for_xy_weak_filter(
+            dataset,
+            x_col,
+            y_col,
+            selection_range,
+            x_filter,
+            y_filter,
+            table_rev,
+        )
+    }
+
+    pub fn selection_for_xy_weak_filter_band(
+        &self,
+        dataset: crate::ids::DatasetId,
+        x_col: usize,
+        y0_col: usize,
+        y1_col: usize,
+        selection_range: RowRange,
+        x_filter: AxisFilter1D,
+        y_filter: AxisFilter1D,
+        table_rev: Revision,
+    ) -> Option<RowSelection> {
+        self.data_views.selection_for_xy_weak_filter_band(
+            dataset,
+            x_col,
+            y0_col,
+            y1_col,
+            selection_range,
+            x_filter,
+            y_filter,
+            table_rev,
+        )
     }
 
     /// Returns a finite `(min, max)` data extent for the X axis based on visible series and the
