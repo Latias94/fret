@@ -22,6 +22,7 @@ use fret_ui_headless::grid_viewport::{
     GridAxisItem, GridAxisMeasureMode, GridAxisMetrics, GridViewport2D, compute_grid_viewport_2d,
 };
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius};
 use std::time::Instant;
 
@@ -39,13 +40,13 @@ fn foreground_color(theme: &Theme) -> Color {
 
 fn font_size(theme: &Theme) -> Px {
     theme
-        .metric_by_key("component.text.sm_px")
+        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX)
         .unwrap_or_else(|| theme.metric_required("font.size"))
 }
 
 fn font_line_height(theme: &Theme) -> Px {
     theme
-        .metric_by_key("component.text.sm_line_height")
+        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
         .unwrap_or_else(|| theme.metric_required("font.line_height"))
 }
 

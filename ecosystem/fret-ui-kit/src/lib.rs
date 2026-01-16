@@ -15,6 +15,7 @@ pub mod overlay;
 pub mod overlay_controller;
 pub mod primitives;
 pub mod recipes;
+pub mod theme_tokens;
 pub mod tooltip_provider;
 pub mod tree;
 pub mod viewport_tooling;

@@ -7,6 +7,7 @@
 use std::collections::HashMap;
 
 use fret_ui::{Theme, ThemeConfig, UiHost};
+use fret_ui_kit::theme_tokens;
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -134,16 +135,16 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
     // Default typography scales used across shadcn recipes (via fret-ui-kit helpers).
     // These are also accessed directly by some components (e.g. Calendar) via `metric_required`.
     metrics
-        .entry("component.text.sm_px".to_string())
+        .entry(theme_tokens::metric::COMPONENT_TEXT_SM_PX.to_string())
         .or_insert(14.0);
     metrics
-        .entry("component.text.sm_line_height".to_string())
+        .entry(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT.to_string())
         .or_insert(20.0);
     metrics
-        .entry("component.text.base_px".to_string())
+        .entry(theme_tokens::metric::COMPONENT_TEXT_BASE_PX.to_string())
         .or_insert(15.0);
     metrics
-        .entry("component.text.base_line_height".to_string())
+        .entry(theme_tokens::metric::COMPONENT_TEXT_BASE_LINE_HEIGHT.to_string())
         .or_insert(20.0);
 
     metrics
@@ -354,10 +355,22 @@ mod tests {
         for &base in ShadcnBaseColor::ALL {
             for scheme in [ShadcnColorScheme::Light, ShadcnColorScheme::Dark] {
                 let cfg = shadcn_new_york_v4_config(base, scheme);
-                assert!(cfg.metrics.contains_key("component.text.sm_px"));
-                assert!(cfg.metrics.contains_key("component.text.sm_line_height"));
-                assert!(cfg.metrics.contains_key("component.text.base_px"));
-                assert!(cfg.metrics.contains_key("component.text.base_line_height"));
+                assert!(
+                    cfg.metrics
+                        .contains_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX)
+                );
+                assert!(
+                    cfg.metrics
+                        .contains_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
+                );
+                assert!(
+                    cfg.metrics
+                        .contains_key(theme_tokens::metric::COMPONENT_TEXT_BASE_PX)
+                );
+                assert!(
+                    cfg.metrics
+                        .contains_key(theme_tokens::metric::COMPONENT_TEXT_BASE_LINE_HEIGHT)
+                );
             }
         }
     }

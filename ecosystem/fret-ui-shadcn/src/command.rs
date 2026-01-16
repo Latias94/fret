@@ -34,6 +34,7 @@ use fret_ui_kit::primitives::active_descendant as active_desc;
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::roving_focus_group;
+use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
 use crate::layout as shadcn_layout;
@@ -375,11 +376,11 @@ fn heading_text_style(theme: &Theme) -> TextStyle {
 
     let size = theme
         .metric_by_key("component.command.heading.text_px")
-        .or_else(|| theme.metric_by_key("component.text.sm_px"))
+        .or_else(|| theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX))
         .unwrap_or_else(|| Px((base_size.0 - 2.0).max(10.0)));
     let line_height = theme
         .metric_by_key("component.command.heading.line_height")
-        .or_else(|| theme.metric_by_key("component.text.sm_line_height"))
+        .or_else(|| theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT))
         .unwrap_or_else(|| Px((base_line_height.0 - 4.0).max(size.0)));
 
     TextStyle {
@@ -398,11 +399,11 @@ pub(crate) fn shortcut_text_style(theme: &Theme) -> TextStyle {
 
     let px = theme
         .metric_by_key("component.command.shortcut.text_px")
-        .or_else(|| theme.metric_by_key("component.text.sm_px"))
+        .or_else(|| theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX))
         .unwrap_or_else(|| Px((base_size.0 - 2.0).max(10.0)));
     let line_height = theme
         .metric_by_key("component.command.shortcut.line_height")
-        .or_else(|| theme.metric_by_key("component.text.sm_line_height"))
+        .or_else(|| theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT))
         .unwrap_or_else(|| Px((base_line_height.0 - 4.0).max(px.0)));
     TextStyle {
         font: FontId::default(),
