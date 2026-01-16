@@ -223,7 +223,37 @@ pub(crate) fn content_view(
                 .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(220.0))))
                 .into_element(cx);
 
-            vec![left, theme_select]
+            let copy_actions = stack::hstack(
+                cx,
+                stack::HStackProps::default().gap(Space::N2).items_center(),
+                |cx| {
+                    vec![
+                        shadcn::Button::new("Copy link")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .size(shadcn::ButtonSize::Sm)
+                            .on_click(CMD_CLIPBOARD_COPY_LINK)
+                            .into_element(cx),
+                        shadcn::Button::new("Copy usage")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .size(shadcn::ButtonSize::Sm)
+                            .on_click(CMD_CLIPBOARD_COPY_USAGE)
+                            .into_element(cx),
+                        shadcn::Button::new("Copy notes")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .size(shadcn::ButtonSize::Sm)
+                            .on_click(CMD_CLIPBOARD_COPY_NOTES)
+                            .into_element(cx),
+                    ]
+                },
+            );
+
+            let right = stack::hstack(
+                cx,
+                stack::HStackProps::default().gap(Space::N3).items_center(),
+                |_cx| vec![theme_select, copy_actions],
+            );
+
+            vec![left, right]
         },
     );
 
@@ -361,6 +391,8 @@ fn page_preview(
         PAGE_SCROLL_AREA => preview_scroll_area(cx),
         PAGE_TOOLTIP => preview_tooltip(cx),
         PAGE_SLIDER => preview_slider(cx),
+        PAGE_ICONS => preview_icons(cx),
+        PAGE_FIELD => preview_field(cx),
         PAGE_OVERLAY => {
             preview_overlay(cx, popover_open, dialog_open, alert_dialog_open, sheet_open)
         }
@@ -821,6 +853,127 @@ fn preview_slider(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             cx.text("Note: this page uses uncontrolled sliders; state is stored in element state under a stable key."),
         ]
     })
+}
+
+fn preview_icons(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use fret_icons::ids;
+
+    let icon_cell =
+        |cx: &mut ElementContext<'_, App>, label: &str, icon_id: IconId| -> AnyElement {
+            let row = stack::hstack(
+                cx,
+                stack::HStackProps::default()
+                    .layout(LayoutRefinement::default().w_full())
+                    .gap(Space::N2)
+                    .items_center(),
+                |cx| {
+                    vec![
+                        icon::icon_with(cx, icon_id, Some(Px(16.0)), None),
+                        cx.text(label),
+                    ]
+                },
+            );
+
+            let theme = Theme::global(&*cx.app);
+            cx.container(
+                decl_style::container_props(
+                    theme,
+                    ChromeRefinement::default()
+                        .rounded(Radius::Md)
+                        .border_1()
+                        .p(Space::N3),
+                    LayoutRefinement::default().w_full(),
+                ),
+                |_cx| vec![row],
+            )
+        };
+
+    let grid = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                icon_cell(cx, "ui.search", ids::ui::SEARCH),
+                icon_cell(cx, "ui.settings", ids::ui::SETTINGS),
+                icon_cell(cx, "ui.chevron.right", ids::ui::CHEVRON_RIGHT),
+                icon_cell(cx, "ui.close", ids::ui::CLOSE),
+                icon_cell(
+                    cx,
+                    "lucide.loader-circle",
+                    IconId::new_static("lucide.loader-circle"),
+                ),
+            ]
+        },
+    );
+
+    let spinner_row = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        |cx| {
+            vec![
+                shadcn::Spinner::new().into_element(cx),
+                shadcn::Spinner::new().speed(0.0).into_element(cx),
+                cx.text("Spinner (animated / static)"),
+            ]
+        },
+    );
+
+    vec![grid, spinner_row]
+}
+
+fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    #[derive(Default)]
+    struct FieldPageModels {
+        name: Option<Model<String>>,
+        email: Option<Model<String>>,
+    }
+
+    let (name, email) = cx.with_state(FieldPageModels::default, |st| {
+        (st.name.clone(), st.email.clone())
+    });
+    let (name, email) = match (name, email) {
+        (Some(name), Some(email)) => (name, email),
+        _ => {
+            let name = cx.app.models_mut().insert(String::new());
+            let email = cx.app.models_mut().insert(String::new());
+            cx.with_state(FieldPageModels::default, |st| {
+                st.name = Some(name.clone());
+                st.email = Some(email.clone());
+            });
+            (name, email)
+        }
+    };
+
+    let field_name = shadcn::Field::new(vec![
+        shadcn::FieldLabel::new("Name").into_element(cx),
+        shadcn::FieldDescription::new("Shown in the sidebar and status bar.").into_element(cx),
+        shadcn::FieldContent::new(vec![
+            shadcn::Input::new(name)
+                .a11y_label("Name")
+                .placeholder("Rustacean")
+                .into_element(cx),
+        ])
+        .into_element(cx),
+    ])
+    .into_element(cx);
+
+    let field_email = shadcn::Field::new(vec![
+        shadcn::FieldLabel::new("Email").into_element(cx),
+        shadcn::FieldDescription::new("Used for notifications (demo only).").into_element(cx),
+        shadcn::FieldContent::new(vec![
+            shadcn::Input::new(email)
+                .a11y_label("Email")
+                .placeholder("name@example.com")
+                .into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::FieldError::new("Invalid email address").into_element(cx),
+    ])
+    .into_element(cx);
+
+    vec![shadcn::FieldSet::new(vec![field_name, field_email]).into_element(cx)]
 }
 
 fn preview_forms(

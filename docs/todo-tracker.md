@@ -93,6 +93,22 @@ It complements (but does not replace) ADRs:
   - Reference: Zed/GPUI `LineWrapper` (`repo-ref/zed/crates/gpui/src/text_system/line_wrapper.rs`)
   - Workstream: `docs/workstreams/text-system-v2-parley.md`
 
+- **Text quality baseline: gamma/contrast tuning + subpixel coherence**
+  - Problem: current text shaders apply raw atlas coverage without contrast/gamma correction, which can look "soft" under DPI scaling and on light-on-dark surfaces.
+  - Problem: subpixel glyph variants are selected during shaping using local glyph positions, but final device-pixel placement also depends on the element origin/transform; a mismatch can cause jitter/blur when scrolling or when origins land on fractional device pixels.
+  - ADRs: `docs/adr/0157-text-system-v2-parley-attributed-spans-and-quality-baseline.md`, `docs/adr/0109-rich-text-runs-and-text-quality-v2.md`
+  - References:
+    - Zed blade shader gamma/contrast helpers: `repo-ref/zed/crates/gpui/src/platform/blade/shaders.wgsl`
+    - Zed subpixel variant constants: `repo-ref/zed/crates/gpui/src/text_system.rs`
+  - Code (current Fret implementation):
+    - Atlas sampler is filtering: `crates/fret-render/src/text.rs`
+    - Text shaders: `crates/fret-render/src/renderer/shaders.rs` (`TEXT_SHADER`, `TEXT_SUBPIXEL_SHADER`)
+    - Text draw origin uses `origin * scale_factor`: `crates/fret-render/src/renderer/render_scene/encode/draw/text.rs`
+  - TODO:
+    - Add an explicit "text rendering parameters" uniform (gamma ratios + contrast knobs) and apply it in text fragment shaders (mask + subpixel).
+    - Decide and implement a single rule for subpixel variant selection: either snap device-pixel origins (translation-only) or choose variants using the final device-pixel fractional offset at encode time (with a safe fallback under non-translation transforms).
+    - Make hinting and subpixel mode policy explicit/configurable (per-platform defaults + conformance strings).
+
 - **Budgeted, evictable glyph atlases**
   - Problem: append-only atlas growth is a long-session risk; eviction must be deterministic and observable.
   - ADRs: `docs/adr/0157-text-system-v2-parley-attributed-spans-and-quality-baseline.md`, `docs/adr/0029-text-pipeline-and-atlas-strategy.md`

@@ -129,16 +129,18 @@ pub(crate) fn render_copy_button<H: UiHost>(
         let pad_y = MetricRef::space(Space::N0p5).resolve(theme);
         let pad_x = MetricRef::space(Space::N1p5).resolve(theme);
 
-        let mut container = ContainerProps::default();
-        container.padding = Edges {
-            top: pad_y,
-            right: pad_x,
-            bottom: pad_y,
-            left: pad_x,
+        let container = ContainerProps {
+            padding: Edges {
+                top: pad_y,
+                right: pad_x,
+                bottom: pad_y,
+                left: pad_x,
+            },
+            corner_radii: fret_core::Corners::all(radius_sm),
+            background: Some(bg),
+            border: Edges::all(Px(0.0)),
+            ..Default::default()
         };
-        container.corner_radii = fret_core::Corners::all(radius_sm);
-        container.background = Some(bg);
-        container.border = Edges::all(Px(0.0));
 
         (
             props,

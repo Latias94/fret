@@ -1446,6 +1446,7 @@ dependencies = [
  "fret-app",
  "fret-bootstrap",
  "fret-core",
+ "fret-icons",
  "fret-launch",
  "fret-markdown",
  "fret-render",

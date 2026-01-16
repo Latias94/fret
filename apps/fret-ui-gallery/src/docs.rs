@@ -496,3 +496,48 @@ let body = stack::vstack(cx, stack::VStackProps::default(), |_cx| items);
 let scroll = shadcn::ScrollArea::new(vec![body]).into_element(cx);
 ```
 "#;
+
+pub(crate) const DOC_ICONS: &str = r#"
+## Icons
+
+Fret uses renderer-agnostic `IconId`s to decouple UI components from specific icon packs:
+
+- UI code references semantic IDs (`ui.close`, `ui.search`, ...)
+- Icon packs (e.g. Lucide) register SVG sources into the global registry
+- Rendering can preload SVGs into `SvgId`s for performance
+"#;
+
+pub(crate) const USAGE_ICONS: &str = r#"
+```rust
+use fret_icons::ids;
+
+let icon = icon::icon(cx, ids::ui::SEARCH);
+let spinner = shadcn::Spinner::new().into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_FIELD: &str = r#"
+## Field
+
+`Field` is a composition helper for consistent form layout:
+
+- label + description + error slots
+- content wrapper for any control (input/select/checkbox groups)
+- optional separators and grouping (`FieldSet`)
+"#;
+
+pub(crate) const USAGE_FIELD: &str = r#"
+```rust
+let email = shadcn::Input::new(email_model)
+    .a11y_label("Email")
+    .placeholder("name@example.com")
+    .into_element(cx);
+
+let field = shadcn::Field::new(vec![
+    shadcn::FieldLabel::new("Email").into_element(cx),
+    shadcn::FieldDescription::new("We'll never share your email.").into_element(cx),
+    shadcn::FieldContent::new(vec![email]).into_element(cx),
+])
+.into_element(cx);
+```
+"#;

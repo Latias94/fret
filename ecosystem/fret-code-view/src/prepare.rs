@@ -20,25 +20,13 @@ impl CodeBlockPreparedState {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 struct CodeBlockKey {
     code_hash: u64,
     code_len: usize,
     language_hash: u64,
     language_len: usize,
     show_line_numbers: bool,
-}
-
-impl Default for CodeBlockKey {
-    fn default() -> Self {
-        Self {
-            code_hash: 0,
-            code_len: 0,
-            language_hash: 0,
-            language_len: 0,
-            show_line_numbers: false,
-        }
-    }
 }
 
 impl CodeBlockKey {
@@ -154,11 +142,11 @@ fn coalesce_segments(
         if text.is_empty() {
             continue;
         }
-        if let Some((last_text, last_highlight)) = out.last_mut() {
-            if *last_highlight == highlight {
-                last_text.push_str(&text);
-                continue;
-            }
+        if let Some((last_text, last_highlight)) = out.last_mut()
+            && *last_highlight == highlight
+        {
+            last_text.push_str(&text);
+            continue;
         }
         out.push((text, highlight));
     }
@@ -213,7 +201,7 @@ fn normalize_spans_to_char_boundaries(
 
     for span in spans {
         let mut start = clamp_down_to_char_boundary(text, span.range.start);
-        let mut end = clamp_up_to_char_boundary(text, span.range.end);
+        let end = clamp_up_to_char_boundary(text, span.range.end);
 
         if start < cursor {
             start = cursor;
