@@ -83,7 +83,8 @@ Legend:
 
 - `Chrome+Layout`: supports both style and layout fluent methods (`UiSupportsChrome + UiSupportsLayout`).
 - `Layout-only`: supports only layout fluent methods (`UiSupportsLayout`); chrome methods are gated.
-- `Patch-only`: supports `ui().build()` but not `ui().into_element(cx)` (the component’s `into_element` requires extra args/closures).
+- `Patch-only`: supports `ui().build()`. Components that require extra args/closures may still support
+  `ui().into_element(cx, ...)` via `fret-ui-shadcn` builder extension traits (re-exported by the prelude).
 - `Pass-through`: supports `ui().into_element(cx)` but does not accept chrome/layout patches (no fluent style/layout methods; patch is ignored).
 
 | Module | Type | Status | Notes |
@@ -105,19 +106,19 @@ Legend:
 | `switch` | `Switch` | Chrome+Layout |  |
 | `card` | `Card` | Chrome+Layout |  |
 | `popover` | `PopoverContent` | Chrome+Layout |  |
-| `popover` | `Popover` | Patch-only | `into_element` requires trigger/content closures |
+| `popover` | `Popover` | Patch-only | `ui().into_element(cx, trigger, content)` (extra args) |
 | `tooltip` | `TooltipContent` | Chrome+Layout |  |
 | `dialog` | `DialogContent` | Chrome+Layout |  |
-| `dialog` | `Dialog` | Patch-only | `into_element` requires trigger/content closures |
+| `dialog` | `Dialog` | Patch-only | `ui().into_element(cx, trigger, content)` (extra args) |
 | `alert_dialog` | `AlertDialogContent` | Chrome+Layout |  |
-| `alert_dialog` | `AlertDialog` | Patch-only | `into_element` requires trigger/content closures |
+| `alert_dialog` | `AlertDialog` | Patch-only | `ui().into_element(cx, trigger, content)` (extra args) |
 | `sheet` | `SheetContent` | Chrome+Layout |  |
-| `sheet` | `Sheet` | Patch-only | `into_element` requires trigger/content closures |
+| `sheet` | `Sheet` | Patch-only | `ui().into_element(cx, trigger, content)` (extra args) |
 | `hover_card` | `HoverCardContent` | Chrome+Layout |  |
 | `drawer` | `DrawerContent` | Chrome+Layout |  |
-| `drawer` | `Drawer` | Patch-only | `into_element` requires trigger/content closures |
-| `dropdown_menu` | `DropdownMenu` | Patch-only | `into_element` requires trigger/entries closures |
-| `context_menu` | `ContextMenu` | Patch-only | `into_element` requires trigger/entries closures |
+| `drawer` | `Drawer` | Patch-only | `ui().into_element(cx, trigger, content)` (extra args) |
+| `dropdown_menu` | `DropdownMenu` | Patch-only | `ui().into_element(cx, trigger, entries)` (extra args) |
+| `context_menu` | `ContextMenu` | Patch-only | `ui().into_element(cx, trigger, entries)` (extra args) |
 | `menubar` | `Menubar` | Pass-through |  |
 | `select` | `Select` | Chrome+Layout |  |
 | `slider` | `Slider` | Chrome+Layout |  |
@@ -142,10 +143,10 @@ Legend:
 | `input_group` | `InputGroup` | Chrome+Layout |  |
 | `input_otp` | `InputOtp` | Chrome+Layout |  |
 | `sidebar` | `Sidebar` | Chrome+Layout |  |
-| `data_table` | `DataTable` | Chrome+Layout (Patch-only) | `into_element` requires data/columns callbacks |
-| `data_grid` | `DataGrid` | Chrome+Layout (Patch-only) | `into_element` requires row/col callbacks |
-| `data_grid_canvas` | `DataGridCanvas` | Chrome+Layout (Patch-only) | `into_element` requires cell callback |
-| `collapsible` | `Collapsible` | Layout-only (Patch-only) | `into_element` requires trigger/content closures |
+| `data_table` | `DataTable` | Chrome+Layout (Patch-only) | `ui().into_element(cx, data, data_revision, state, columns, ...)` (extra args) |
+| `data_grid` | `DataGridElement` | Chrome+Layout (Patch-only) | Exported as `experimental::DataGridElement`; `ui().into_element(cx, rows_revision, cols_revision, ...)` (extra args) |
+| `data_grid_canvas` | `DataGridCanvas` | Chrome+Layout (Patch-only) | `ui().into_element(cx, cell_text_at)` (extra args) |
+| `collapsible` | `Collapsible` | Layout-only (Patch-only) | `ui().into_element(cx, trigger, content)` (extra args) |
 | `collapsible` | `CollapsibleContent` | Layout-only |  |
 | `field` | `Field` | Layout-only |  |
 | `item` | `Item` | Layout-only |  |
