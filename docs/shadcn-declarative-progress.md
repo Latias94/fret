@@ -49,6 +49,76 @@ Exception (explicitly gated):
   This must remain **off by default** and must not be used by shadcn/tailwind component crates.
   - Current gate: `fret-ui/unstable-retained-bridge` (ADR 0075).
 
+---
+
+## Authoring Ergonomics: `ui()` Fluent Builder (P1)
+
+Goal (P1): make shadcn components feel like gpui-component by providing **one** fluent, discoverable
+chain for layout + chrome overrides:
+
+- `Button::new("OK").ui().px_2().w_full().rounded_md().into_element(cx)`
+
+This is ecosystem-only (no runtime contract changes). The builder holds a merged `UiPatch`:
+
+- `ChromeRefinement` (control chrome: padding/border/radius/colors, etc)
+- `LayoutRefinement` (layout: size, min/max, margins/insets, etc)
+
+Implementation anchors:
+
+- Builder substrate: `ecosystem/fret-ui-kit/src/ui_builder.rs`
+- shadcn opt-in glue: `ecosystem/fret-ui-shadcn/src/ui_ext/mod.rs`
+- ADR: `docs/adr/0175-unified-authoring-builder-surface-v1.md`
+
+### Status
+
+- `fret-ui-kit`: `ui()` is available for any type that implements `UiPatchTarget`.
+- `fret-ui-shadcn`: coverage is incremental via `ui_ext/*` (no component internals required unless a
+  component does not yet support chrome/layout refinements).
+- Dev note (Windows worktrees): if incremental builds pick up stale artifacts from another worktree,
+  run `cargo clean -p fret-ui-kit -p fret-ui-shadcn` (or set a per-worktree `CARGO_TARGET_DIR`).
+
+### Coverage Tracker (Update as we proceed)
+
+Legend:
+
+- `Chrome+Layout`: supports both style and layout fluent methods (`UiSupportsChrome + UiSupportsLayout`).
+- `Layout-only`: supports only layout fluent methods (`UiSupportsLayout`); chrome methods are gated.
+
+| Module | Type | Status | Notes |
+| --- | --- | --- | --- |
+| `button` | `Button` | Chrome+Layout |  |
+| `checkbox` | `Checkbox` | Chrome+Layout |  |
+| `input` | `Input` | Chrome+Layout |  |
+| `textarea` | `Textarea` | Chrome+Layout |  |
+| `switch` | `Switch` | Chrome+Layout |  |
+| `card` | `Card` | Chrome+Layout |  |
+| `popover` | `PopoverContent` | Chrome+Layout |  |
+| `tooltip` | `TooltipContent` | Chrome+Layout |  |
+| `dialog` | `DialogContent` | Chrome+Layout |  |
+| `alert_dialog` | `AlertDialogContent` | Chrome+Layout |  |
+| `sheet` | `SheetContent` | Chrome+Layout |  |
+| `hover_card` | `HoverCardContent` | Chrome+Layout |  |
+| `drawer` | `DrawerContent` | Chrome+Layout |  |
+| `select` | `Select` | Layout-only | Needs chrome support for full parity |
+| `slider` | `Slider` | Layout-only | Needs chrome support for full parity |
+| `accordion` | `AccordionTrigger` | Chrome+Layout |  |
+| `accordion` | `AccordionContent` | Chrome+Layout |  |
+| `accordion` | `AccordionItem` | Chrome+Layout |  |
+| `accordion` | `Accordion` | Layout-only | Needs chrome support for full parity |
+| `avatar` | `Avatar` | Chrome+Layout |  |
+| `avatar` | `AvatarFallback` | Chrome+Layout |  |
+| `avatar` | `AvatarImage` | Layout-only | Needs chrome support for full parity |
+| `progress` | `Progress` | Chrome+Layout |  |
+| `skeleton` | `Skeleton` | Chrome+Layout |  |
+| `tabs` | `Tabs` | Chrome+Layout |  |
+| `toggle` | `Toggle` | Chrome+Layout |  |
+| `toggle_group` | `ToggleGroup` | Chrome+Layout |  |
+| `table` | `Table` | Chrome+Layout |  |
+| `table` | `TableCell` | Chrome+Layout |  |
+| `command` | `Command` | Chrome+Layout |  |
+| `command` | `CommandPalette` | Chrome+Layout |  |
+| `command` | `CommandInput` | Layout-only | Needs chrome support for full parity |
+
 ## shadcn/ui v4 Registry Baseline
 
 The upstream reference in `repo-ref/ui` defines 54 `registry:ui` components (`repo-ref/ui/apps/v4/registry.json`).
