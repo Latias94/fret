@@ -53,6 +53,29 @@ let root = stack::hstack(
 ```
 "#;
 
+pub(crate) const DOC_VIEW_CACHE: &str = r#"
+## View Cache (experimental)
+
+This page is a **stress + acceptance** harness for GPUI-style cached subtree execution.
+
+When view-cache mode is enabled, a `ViewCache` wrapper can become a cache boundary:
+
+- model/global invalidations stop at the nearest cache root,
+- paint-cache is only allowed for cache roots (so they can range-replay),
+- on cache-hit, the runtime may skip executing the child render closure and reuse the previous retained subtree.
+
+The goal is "editor-grade smoothness" with fewer full-tree re-renders, while keeping correctness (state + invalidation).
+"#;
+
+pub(crate) const USAGE_VIEW_CACHE: &str = r#"
+```rust
+let subtree = cx.view_cache(ViewCacheProps::default(), |cx| {
+    // expensive subtree build here
+    vec![cx.text("...")]
+});
+```
+"#;
+
 pub(crate) const DOC_BUTTON: &str = r#"
 ## Button
 
