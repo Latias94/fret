@@ -506,6 +506,13 @@ fn ui_app_handle_event<S>(
         return;
     }
 
+    #[cfg(feature = "diagnostics")]
+    if app.with_global_mut(UiDiagnosticsService::default, |svc, app| {
+        svc.maybe_intercept_event_for_inspect_shortcuts(app, window, event)
+    }) {
+        return;
+    }
+
     state.ui.dispatch_event(app, services, event);
 
     #[cfg(feature = "ui-assets")]
@@ -1140,15 +1147,25 @@ fn render_diag_inspect_overlay(
 
     const ROOT_NAME: &str = "__diag_inspect";
 
-    let (pointer_pos, picked_node_id, redact_text, pick_armed) =
-        app.with_global_mut(UiDiagnosticsService::default, |svc, _app| {
-            (
-                svc.last_pointer_position(window),
-                svc.last_picked_node_id(window),
-                svc.redact_text(),
-                svc.pick_is_armed(),
-            )
-        });
+    let (
+        pointer_pos,
+        picked_node_id,
+        redact_text,
+        pick_armed,
+        inspect_enabled,
+        consume_clicks,
+        locked,
+    ) = app.with_global_mut(UiDiagnosticsService::default, |svc, _app| {
+        (
+            svc.last_pointer_position(window),
+            svc.last_picked_node_id(window),
+            svc.redact_text(),
+            svc.pick_is_armed(),
+            svc.inspect_is_enabled(),
+            svc.inspect_consume_clicks(),
+            svc.inspect_is_locked(window),
+        )
+    });
 
     struct InspectNodeInfo {
         bounds: fret_core::Rect,
@@ -1158,38 +1175,54 @@ fn render_diag_inspect_overlay(
         label: Option<String>,
     }
 
-    let (hovered, picked) = {
-        let snapshot = ui.semantics_snapshot();
-        let hovered = pointer_pos
-            .and_then(|pos| {
-                snapshot.and_then(|snap| {
-                    crate::ui_diagnostics::pick_semantics_node_by_bounds(snap, pos)
-                })
-            })
-            .map(|node| InspectNodeInfo {
-                bounds: node.bounds,
-                role: node.role,
-                node_id: node.id.data().as_ffi(),
-                test_id: node.test_id.clone(),
-                label: node.label.clone(),
-            });
+    let snapshot = ui.semantics_snapshot();
+    let hovered = pointer_pos
+        .and_then(|pos| {
+            snapshot
+                .and_then(|snap| crate::ui_diagnostics::pick_semantics_node_by_bounds(snap, pos))
+        })
+        .map(|node| InspectNodeInfo {
+            bounds: node.bounds,
+            role: node.role,
+            node_id: node.id.data().as_ffi(),
+            test_id: node.test_id.clone(),
+            label: node.label.clone(),
+        });
 
-        let picked = picked_node_id
-            .and_then(|id| {
-                snapshot.and_then(|snap| snap.nodes.iter().find(|n| n.id.data().as_ffi() == id))
-            })
-            .map(|node| InspectNodeInfo {
-                bounds: node.bounds,
-                role: node.role,
-                node_id: node.id.data().as_ffi(),
-                test_id: node.test_id.clone(),
-                label: node.label.clone(),
-            });
+    let picked = picked_node_id
+        .and_then(|id| {
+            snapshot.and_then(|snap| snap.nodes.iter().find(|n| n.id.data().as_ffi() == id))
+        })
+        .map(|node| InspectNodeInfo {
+            bounds: node.bounds,
+            role: node.role,
+            node_id: node.id.data().as_ffi(),
+            test_id: node.test_id.clone(),
+            label: node.label.clone(),
+        });
 
-        (hovered, picked)
-    };
+    let hovered_id = hovered.as_ref().map(|h| h.node_id);
+    app.with_global_mut(UiDiagnosticsService::default, |svc, app| {
+        let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+        svc.update_inspect_hover(window, snapshot, hovered_id, element_runtime);
+    });
 
-    let present = pick_armed || hovered.is_some() || picked.is_some();
+    let hovered = if locked { None } else { hovered };
+
+    let (toast, best_selector) = app.with_global_mut(UiDiagnosticsService::default, |svc, _app| {
+        (
+            svc.inspect_toast_message(window).map(|s| s.to_string()),
+            svc.inspect_best_selector_json(window)
+                .map(|s| s.to_string()),
+        )
+    });
+
+    let present = pick_armed
+        || inspect_enabled
+        || toast.is_some()
+        || best_selector.is_some()
+        || hovered.is_some()
+        || picked.is_some();
 
     let root_node = fret_ui::declarative::render_root(
         ui,
@@ -1210,7 +1243,7 @@ fn render_diag_inspect_overlay(
 
             let mut children = Vec::new();
 
-            if pick_armed {
+            if pick_armed || inspect_enabled {
                 let mut layout = LayoutStyle::default();
                 layout.position = PositionStyle::Absolute;
                 layout.inset = InsetStyle {
@@ -1237,9 +1270,29 @@ fn render_diag_inspect_overlay(
                     a: 1.0,
                 });
 
-                children.push(cx.container(props, |cx| {
-                    vec![cx.text("INSPECT: click to pick a target (diagnostics)")]
-                }));
+                let mut lines: Vec<String> = Vec::new();
+                if pick_armed {
+                    lines.push("INSPECT: click to pick a target (Esc to cancel)".to_string());
+                } else {
+                    lines.push(format!(
+                        "INSPECT: Esc exit | Ctrl+C copy | L lock (consume_clicks={consume_clicks}, locked={locked})"
+                    ));
+                }
+                if let Some(t) = toast.as_deref() {
+                    lines.push(format!("status: {t}"));
+                }
+                if let Some(sel) = best_selector.as_deref() {
+                    let trimmed = if sel.len() > 180 {
+                        format!("{}…", &sel[..180])
+                    } else {
+                        sel.to_string()
+                    };
+                    lines.push(format!("selector: {trimmed}"));
+                }
+
+                children.push(
+                    cx.container(props, |cx| lines.into_iter().map(|t| cx.text(t)).collect()),
+                );
             }
 
             let outlines = [

@@ -125,6 +125,12 @@ This is closer to Zed/GPUI’s inspector workflow: keep an inspect overlay activ
    - `cargo run -p fretboard -- diag inspect toggle`
    - `cargo run -p fretboard -- diag inspect status` (prints a 1-line JSON payload)
 
+In-app shortcuts while inspect mode is active:
+
+- `Esc`: disable inspect (writes `inspect.json` + touches `inspect.touch`)
+- `Ctrl+C` / `Cmd+C`: copy the best selector JSON for the current selection (or hovered node) to the clipboard
+- `L`: lock/unlock selection (freezes hover highlight; uses last hovered node)
+
 ### Generate a runnable script from a pick
 
 To reduce "pick → first repro script" friction, `fretboard` can generate a minimal script skeleton:
