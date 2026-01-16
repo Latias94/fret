@@ -581,7 +581,7 @@ impl UiGalleryDriver {
                         WorkspaceTabStrip::new(selected.clone())
                             .tabs(workspace_tab_ids.iter().map(|tab_id| {
                                 let (title, _origin, _docs, _usage) =
-                                    ui::page_meta(tab_id.as_ref());
+                                    crate::spec::page_meta(tab_id.as_ref());
                                 let dirty = workspace_dirty_ids
                                     .iter()
                                     .any(|d| d.as_ref() == tab_id.as_ref());
