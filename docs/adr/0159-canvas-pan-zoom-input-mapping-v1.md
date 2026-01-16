@@ -38,11 +38,11 @@ We need:
 
 ## Decision
 
-### 1) Policy lives in `ecosystem/fret-ui-kit` recipes, not in `fret-ui`
+### 1) Policy lives in `ecosystem/fret-canvas` (feature-gated), not in `fret-ui`
 
 - `fret-ui` provides the `Canvas` leaf element and low-level pointer hooks (`PointerRegion`).
-- `fret-ui-kit` provides reusable *policy* recipes that wire pointer hooks + state (`Model<T>`)
-  into common interaction outcomes.
+- `fret-canvas` provides reusable *canvas-specific policy* recipes behind an opt-in feature (e.g.
+  `fret-canvas/ui`) so users can depend on a single canvas crate without pulling the full UI kit.
 - A minimal `CanvasSurface` helper exists as wiring substrate (`PointerRegion + Canvas`), but it
   remains policy-free.
 
