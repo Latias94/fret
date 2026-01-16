@@ -2,7 +2,7 @@ use super::DataViewStage;
 use crate::data::DatasetStore;
 use crate::engine::ChartState;
 use crate::engine::model::ChartModel;
-use crate::ids::{DatasetId, GridId, Revision, SeriesId};
+use crate::ids::{AxisId, DatasetId, GridId, Revision, SeriesId};
 use crate::spec::FilterMode;
 use crate::transform::{RowRange, RowSelection, SeriesXPolicy};
 use crate::view::SeriesEmptyMask;
@@ -11,7 +11,36 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
 #[derive(Debug, Default, Clone)]
-pub struct FilterProcessorStage;
+pub struct FilterProcessorStage {
+    last_plan_output: FilterPlanOutput,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct FilterPlanOutput {
+    pub revision: Revision,
+    pub grids: Vec<GridFilterOutput>,
+    pub series: Vec<SeriesFilterOutput>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct GridFilterOutput {
+    pub grid: GridId,
+    pub series: Vec<SeriesId>,
+    pub y_percent_extents: BTreeMap<AxisId, (f64, f64)>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct SeriesFilterOutput {
+    pub series: SeriesId,
+    pub dataset: DatasetId,
+    pub grid: GridId,
+    pub selection: RowSelection,
+    pub x_policy: SeriesXPolicy,
+    pub x_filter_mode: FilterMode,
+    pub y_filter_mode: FilterMode,
+    pub y_filter: crate::engine::window_policy::AxisFilter1D,
+    pub empty_mask: SeriesEmptyMask,
+}
 
 #[derive(Debug, Default, Clone)]
 pub struct SeriesParticipation {
@@ -170,6 +199,10 @@ struct FilterPlanStep {
 }
 
 impl FilterProcessorStage {
+    pub fn plan_output(&self) -> &FilterPlanOutput {
+        &self.last_plan_output
+    }
+
     pub fn request_data_views(
         &mut self,
         model: &ChartModel,
@@ -298,6 +331,8 @@ impl FilterProcessorStage {
         let mut xy_weak_filter_pending = false;
         let mut view_changed = false;
         let mut x_indices_applied: BTreeSet<SeriesId> = BTreeSet::new();
+        let mut y_percent_extents_by_grid: BTreeMap<GridId, BTreeMap<AxisId, (f64, f64)>> =
+            BTreeMap::new();
 
         let mut xy_weak_filter_applied_series = 0u32;
         let mut xy_weak_filter_pending_series = 0u32;
@@ -411,6 +446,8 @@ impl FilterProcessorStage {
                     view,
                     &view_series_index,
                     &plan.series,
+                    step.grid,
+                    &mut y_percent_extents_by_grid,
                     &mut view_changed,
                 ),
                 FilterPlanStepKind::YIndices => apply_y_indices_for_grid(
@@ -437,6 +474,9 @@ impl FilterProcessorStage {
             }
         }
 
+        self.last_plan_output =
+            build_filter_plan_output(model, view, &grid_plans, &y_percent_extents_by_grid);
+
         FilterProcessorResult {
             xy_weak_filter_pending,
             plan_grids,
@@ -449,6 +489,73 @@ impl FilterProcessorStage {
             y_indices_skipped_view_len_cap_series,
             y_indices_skipped_indices_scan_avoid_series,
         }
+    }
+}
+
+fn build_filter_plan_output(
+    model: &ChartModel,
+    view: &ViewState,
+    grid_plans: &BTreeMap<GridId, GridFilterPlan>,
+    y_percent_extents_by_grid: &BTreeMap<GridId, BTreeMap<AxisId, (f64, f64)>>,
+) -> FilterPlanOutput {
+    let mut grids: Vec<GridFilterOutput> = Vec::new();
+    grids.reserve(grid_plans.len());
+    for (grid, plan) in grid_plans {
+        grids.push(GridFilterOutput {
+            grid: *grid,
+            series: plan.series.clone(),
+            y_percent_extents: y_percent_extents_by_grid
+                .get(grid)
+                .cloned()
+                .unwrap_or_default(),
+        });
+    }
+
+    let mut series: Vec<SeriesFilterOutput> = Vec::new();
+    series.reserve(model.series_order.len());
+    for series_id in &model.series_order {
+        let Some(series_model) = model.series.get(series_id) else {
+            series.push(SeriesFilterOutput {
+                series: *series_id,
+                ..Default::default()
+            });
+            continue;
+        };
+
+        let grid = model
+            .axes
+            .get(&series_model.x_axis)
+            .map(|a| a.grid)
+            .unwrap_or_default();
+
+        let Some(v) = view.series_view(*series_id) else {
+            series.push(SeriesFilterOutput {
+                series: *series_id,
+                dataset: series_model.dataset,
+                grid,
+                ..Default::default()
+            });
+            continue;
+        };
+
+        let empty_mask = v.empty_mask(series_model.kind, series_model.stack.is_some());
+        series.push(SeriesFilterOutput {
+            series: *series_id,
+            dataset: series_model.dataset,
+            grid,
+            selection: v.selection.clone(),
+            x_policy: v.x_policy,
+            x_filter_mode: v.x_filter_mode,
+            y_filter_mode: v.y_filter_mode,
+            y_filter: v.y_filter,
+            empty_mask,
+        });
+    }
+
+    FilterPlanOutput {
+        revision: view.revision,
+        grids,
+        series,
     }
 }
 
@@ -970,6 +1077,8 @@ fn apply_y_percent_for_grid(
     view: &mut ViewState,
     view_series_index: &BTreeMap<SeriesId, usize>,
     series: &[SeriesId],
+    grid: GridId,
+    y_percent_extents_by_grid: &mut BTreeMap<GridId, BTreeMap<AxisId, (f64, f64)>>,
     view_changed: &mut bool,
 ) {
     let y_axes_in_grid =
@@ -981,6 +1090,10 @@ fn apply_y_percent_for_grid(
             view_series_index,
             series,
         );
+
+    if !y_axes_in_grid.is_empty() {
+        y_percent_extents_by_grid.insert(grid, y_axes_in_grid.clone());
+    }
 
     for (axis, extent) in y_axes_in_grid {
         let Some((start, end)) = state.axis_percent_windows.get(&axis).copied() else {

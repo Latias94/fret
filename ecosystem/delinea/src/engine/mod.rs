@@ -275,6 +275,10 @@ impl ChartEngine {
         &self.participation
     }
 
+    pub fn filter_plan_output(&self) -> &crate::engine::stages::FilterPlanOutput {
+        self.filter_processor_stage.plan_output()
+    }
+
     pub fn stats(&self) -> &EngineStats {
         &self.stats
     }

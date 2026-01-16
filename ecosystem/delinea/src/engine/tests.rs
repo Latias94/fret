@@ -16844,4 +16844,18 @@ fn percent_y_extent_is_scoped_by_x_percent_window() {
         (y_window.max - 70.0).abs() < 1e-9,
         "expected Y percent extent to ignore out-of-window outliers (got {y_window:?})"
     );
+
+    let plan = engine.filter_plan_output();
+    let grid = plan
+        .grids
+        .iter()
+        .find(|g| g.series.iter().any(|s| *s == crate::ids::SeriesId::new(1)))
+        .expect("expected grid output");
+    let y_extent = grid
+        .y_percent_extents
+        .get(&y_axis)
+        .copied()
+        .expect("expected y percent extent");
+    assert!((y_extent.0 - 30.0).abs() < 1e-9);
+    assert!((y_extent.1 - 70.0).abs() < 1e-9);
 }
