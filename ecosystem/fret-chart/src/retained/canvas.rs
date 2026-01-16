@@ -3894,20 +3894,63 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
         // Advance per-frame counters for optional cache pruning.
         self.axis_text.begin_frame();
+        self.tooltip_text.begin_frame();
         self.legend_text.begin_frame();
         self.path_cache.begin_frame();
         if let Some(window) = cx.window {
             let frame_id = cx.app.frame_id().0;
-            let entries = self.path_cache.len();
-            let stats = self.path_cache.stats();
-            let key = CanvasCacheKey {
+            let path_entries = self.path_cache.len();
+            let path_stats = self.path_cache.stats();
+            let path_key = CanvasCacheKey {
                 window: window.data().as_ffi(),
                 node: cx.node.data().as_ffi(),
                 name: "fret-chart.canvas.paths",
             };
+
+            let axis_text_entries = self.axis_text.len();
+            let axis_text_stats = self.axis_text.stats();
+            let axis_text_key = CanvasCacheKey {
+                window: window.data().as_ffi(),
+                node: cx.node.data().as_ffi(),
+                name: "fret-chart.canvas.text.axis",
+            };
+
+            let tooltip_text_entries = self.tooltip_text.len();
+            let tooltip_text_stats = self.tooltip_text.stats();
+            let tooltip_text_key = CanvasCacheKey {
+                window: window.data().as_ffi(),
+                node: cx.node.data().as_ffi(),
+                name: "fret-chart.canvas.text.tooltip",
+            };
+
+            let legend_text_entries = self.legend_text.len();
+            let legend_text_stats = self.legend_text.stats();
+            let legend_text_key = CanvasCacheKey {
+                window: window.data().as_ffi(),
+                node: cx.node.data().as_ffi(),
+                name: "fret-chart.canvas.text.legend",
+            };
             cx.app
                 .with_global_mut(CanvasCacheStatsRegistry::default, |registry, _app| {
-                    registry.record_path_cache(key, frame_id, entries, stats);
+                    registry.record_path_cache(path_key, frame_id, path_entries, path_stats);
+                    registry.record_text_cache(
+                        axis_text_key,
+                        frame_id,
+                        axis_text_entries,
+                        axis_text_stats,
+                    );
+                    registry.record_text_cache(
+                        tooltip_text_key,
+                        frame_id,
+                        tooltip_text_entries,
+                        tooltip_text_stats,
+                    );
+                    registry.record_text_cache(
+                        legend_text_key,
+                        frame_id,
+                        legend_text_entries,
+                        legend_text_stats,
+                    );
                 });
         }
 
