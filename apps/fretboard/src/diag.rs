@@ -17,6 +17,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut pick_result_path: Option<PathBuf> = None;
     let mut pick_result_trigger_path: Option<PathBuf> = None;
     let mut pick_script_out: Option<PathBuf> = None;
+    let mut pick_apply_pointer: Option<String> = None;
+    let mut pick_apply_out: Option<PathBuf> = None;
     let mut timeout_ms: u64 = 30_000;
     let mut poll_ms: u64 = 50;
 
@@ -102,6 +104,22 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 };
                 rest.remove(0);
                 pick_script_out = Some(PathBuf::from(v));
+            }
+            "--ptr" => {
+                rest.remove(0);
+                let Some(v) = rest.first().cloned() else {
+                    return Err("missing value for --ptr".to_string());
+                };
+                rest.remove(0);
+                pick_apply_pointer = Some(v);
+            }
+            "--out" => {
+                rest.remove(0);
+                let Some(v) = rest.first().cloned() else {
+                    return Err("missing value for --out".to_string());
+                };
+                rest.remove(0);
+                pick_apply_out = Some(PathBuf::from(v));
             }
             "--timeout-ms" => {
                 rest.remove(0);
@@ -405,6 +423,40 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             println!("{}", resolved_pick_script_out.display());
             Ok(())
         }
+        "pick-apply" => {
+            let Some(script) = rest.first().cloned() else {
+                return Err(
+                    "missing script path (try: fretboard diag pick-apply ./script.json --ptr /steps/0/target)".to_string(),
+                );
+            };
+            if rest.len() != 1 {
+                return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
+            }
+            let Some(ptr) = pick_apply_pointer.as_deref() else {
+                return Err("missing --ptr (example: --ptr /steps/0/target)".to_string());
+            };
+
+            let result = run_pick_and_wait(
+                &resolved_pick_trigger_path,
+                &resolved_pick_result_path,
+                &resolved_pick_result_trigger_path,
+                timeout_ms,
+                poll_ms,
+            )?;
+
+            let Some(selector) = result.selector.clone() else {
+                return Err("pick succeeded but no selector was returned".to_string());
+            };
+
+            let script_path = resolve_path(&workspace_root, PathBuf::from(script));
+            let out_path = pick_apply_out
+                .map(|p| resolve_path(&workspace_root, p))
+                .unwrap_or_else(|| script_path.clone());
+
+            apply_pick_to_script(&script_path, &out_path, ptr, selector)?;
+            println!("{}", out_path.display());
+            Ok(())
+        }
         other => Err(format!("unknown diag subcommand: {other}")),
     }
 }
@@ -694,4 +746,165 @@ fn write_pick_script(selector: &serde_json::Value, dst: &Path) -> Result<(), Str
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
     std::fs::write(dst, bytes).map_err(|e| e.to_string())
+}
+
+fn apply_pick_to_script(
+    src: &Path,
+    dst: &Path,
+    json_pointer: &str,
+    selector: serde_json::Value,
+) -> Result<(), String> {
+    let bytes = std::fs::read(src).map_err(|e| e.to_string())?;
+    let mut script: serde_json::Value =
+        serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+
+    json_pointer_set(&mut script, json_pointer, selector)?;
+
+    let bytes = serde_json::to_vec_pretty(&script).map_err(|e| e.to_string())?;
+    if let Some(parent) = dst.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    std::fs::write(dst, bytes).map_err(|e| e.to_string())
+}
+
+fn json_pointer_set(
+    root: &mut serde_json::Value,
+    pointer: &str,
+    value: serde_json::Value,
+) -> Result<(), String> {
+    if pointer.is_empty() {
+        *root = value;
+        return Ok(());
+    }
+    if !pointer.starts_with('/') {
+        return Err(format!(
+            "invalid JSON pointer (must start with '/'): {pointer}"
+        ));
+    }
+
+    let mut tokens: Vec<String> = pointer[1..]
+        .split('/')
+        .map(unescape_json_pointer_token)
+        .collect();
+    if tokens.is_empty() {
+        *root = value;
+        return Ok(());
+    }
+
+    let last = tokens
+        .pop()
+        .ok_or_else(|| "invalid JSON pointer".to_string())?;
+
+    let mut cur: &mut serde_json::Value = root;
+    for t in tokens {
+        match cur {
+            serde_json::Value::Object(map) => {
+                let Some(next) = map.get_mut(&t) else {
+                    return Err(format!("JSON pointer path does not exist: {pointer}"));
+                };
+                cur = next;
+            }
+            serde_json::Value::Array(arr) => {
+                let idx = t
+                    .parse::<usize>()
+                    .map_err(|_| format!("JSON pointer expected array index, got: {t}"))?;
+                let Some(next) = arr.get_mut(idx) else {
+                    return Err(format!("JSON pointer array index out of bounds: {pointer}"));
+                };
+                cur = next;
+            }
+            _ => {
+                return Err(format!(
+                    "JSON pointer path does not resolve to a container: {pointer}"
+                ));
+            }
+        }
+    }
+
+    match cur {
+        serde_json::Value::Object(map) => {
+            map.insert(last, value);
+            Ok(())
+        }
+        serde_json::Value::Array(arr) => {
+            if last == "-" {
+                arr.push(value);
+                return Ok(());
+            }
+            let idx = last
+                .parse::<usize>()
+                .map_err(|_| format!("JSON pointer expected array index, got: {last}"))?;
+            if idx < arr.len() {
+                arr[idx] = value;
+                return Ok(());
+            }
+            if idx == arr.len() {
+                arr.push(value);
+                return Ok(());
+            }
+            Err(format!("JSON pointer array index out of bounds: {pointer}"))
+        }
+        _ => Err(format!(
+            "JSON pointer final target is not a container: {pointer}"
+        )),
+    }
+}
+
+fn unescape_json_pointer_token(raw: &str) -> String {
+    let mut out = String::with_capacity(raw.len());
+    let mut it = raw.chars();
+    while let Some(c) = it.next() {
+        if c == '~' {
+            match it.next() {
+                Some('0') => out.push('~'),
+                Some('1') => out.push('/'),
+                Some(other) => {
+                    out.push('~');
+                    out.push(other);
+                }
+                None => out.push('~'),
+            }
+        } else {
+            out.push(c);
+        }
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn json_pointer_set_updates_object_field() {
+        let mut v = json!({
+            "steps": [
+                { "type": "click", "target": { "kind": "node_id", "node": 1 } }
+            ]
+        });
+        json_pointer_set(
+            &mut v,
+            "/steps/0/target",
+            json!({"kind":"test_id","id":"x"}),
+        )
+        .unwrap();
+        assert_eq!(v["steps"][0]["target"]["kind"], "test_id");
+    }
+
+    #[test]
+    fn json_pointer_set_updates_predicate_target() {
+        let mut v = json!({
+            "steps": [
+                { "type": "wait_until", "predicate": { "kind": "exists", "target": { "kind": "node_id", "node": 1 } }, "timeout_frames": 10 }
+            ]
+        });
+        json_pointer_set(
+            &mut v,
+            "/steps/0/predicate/target",
+            json!({"kind":"test_id","id":"open"}),
+        )
+        .unwrap();
+        assert_eq!(v["steps"][0]["predicate"]["target"]["id"], "open");
+    }
 }

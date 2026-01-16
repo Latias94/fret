@@ -106,6 +106,17 @@ This writes `target/fret-diag/picked.script.json` (override with `--pick-script-
 
 - `cargo run -p fretboard -- diag run target/fret-diag/picked.script.json`
 
+### Patch an existing script using a pick (JSON Pointer)
+
+When UI structure or labels change, use pick to update a script step's selector in-place:
+
+- Update a click step:
+  - `cargo run -p fretboard -- diag pick-apply tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json --ptr /steps/0/target`
+- Update a predicate target (e.g. `wait_until` / `assert`):
+  - `cargo run -p fretboard -- diag pick-apply tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json --ptr /steps/1/predicate/target`
+
+By default this overwrites the script file; use `--out <path>` to write to a new file.
+
 ## What's inside `bundle.json`
 
 Bundles are a per-window ring history plus snapshots (schema is versioned and intended to evolve).
