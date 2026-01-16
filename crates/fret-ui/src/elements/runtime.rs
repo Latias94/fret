@@ -438,6 +438,17 @@ impl WindowElementState {
     }
 
     #[cfg(feature = "diagnostics")]
+    pub(crate) fn touch_debug_identity_for_element(
+        &mut self,
+        frame_id: FrameId,
+        element: GlobalElementId,
+    ) {
+        if let Some(entry) = self.debug_identity.entries.get_mut(&element) {
+            entry.last_seen_frame = frame_id;
+        }
+    }
+
+    #[cfg(feature = "diagnostics")]
     pub(crate) fn debug_path_for_element(&self, element: GlobalElementId) -> Option<String> {
         let mut segments: Vec<String> = Vec::new();
         let mut cur = element;

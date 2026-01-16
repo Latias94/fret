@@ -563,6 +563,9 @@ fn mark_existing_declarative_subtree_seen<H: UiHost>(
                     root: root_id,
                 },
             );
+
+            #[cfg(feature = "diagnostics")]
+            window_state.touch_debug_identity_for_element(frame_id, element);
         }
 
         for child in ui.children(node) {

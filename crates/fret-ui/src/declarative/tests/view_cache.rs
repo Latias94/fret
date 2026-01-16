@@ -70,4 +70,15 @@ fn view_cache_skips_child_render_when_clean_and_preserves_element_state() {
     let leaf = leaf_id.lock().unwrap().expect("leaf id should be recorded");
     let value = crate::elements::with_element_state(&mut app, window, leaf, || 0u32, |v| *v);
     assert_eq!(value, 123, "element state should survive cache-hit frames");
+
+    #[cfg(feature = "diagnostics")]
+    {
+        let debug_path = app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, _| {
+            runtime.debug_path_for_element(window, leaf)
+        });
+        assert!(
+            debug_path.is_some(),
+            "debug identity should survive cache-hit frames"
+        );
+    }
 }
