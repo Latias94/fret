@@ -89,6 +89,10 @@ Legend:
 | Module | Type | Status | Notes |
 | --- | --- | --- | --- |
 | `button` | `Button` | Chrome+Layout |  |
+| `alert` | `Alert` | Pass-through |  |
+| `badge` | `Badge` | Pass-through |  |
+| `kbd` | `Kbd` | Pass-through |  |
+| `breadcrumb` | `Breadcrumb` | Pass-through |  |
 | `checkbox` | `Checkbox` | Chrome+Layout |  |
 | `input` | `Input` | Chrome+Layout |  |
 | `textarea` | `Textarea` | Chrome+Layout |  |

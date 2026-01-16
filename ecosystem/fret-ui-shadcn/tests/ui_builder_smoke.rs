@@ -3,9 +3,9 @@ use std::sync::Arc;
 use fret_runtime::ModelStore;
 use fret_ui_shadcn::prelude::*;
 use fret_ui_shadcn::{
-    AlertDialogContent, Button, Card, Command, CommandInput, CommandItem, CommandPalette,
-    DialogContent, DrawerContent, HoverCardContent, PopoverContent, Progress, Select, SheetContent,
-    Slider, Switch, TabsRoot, TooltipContent,
+    Alert, AlertDialogContent, Badge, Breadcrumb, Button, Card, Command, CommandInput, CommandItem,
+    CommandPalette, DialogContent, DrawerContent, HoverCardContent, Kbd, PopoverContent, Progress,
+    Select, SheetContent, Slider, Switch, TabsRoot, TooltipContent,
 };
 
 #[test]
@@ -20,6 +20,10 @@ fn ui_builder_smoke_applies_supported_patches() {
     let progress_model = store.insert(0.5_f32);
 
     let _ = Button::new("OK").ui().px_3().w_full().build();
+    let _ = Alert::new(Vec::new()).ui().build();
+    let _ = Badge::new("x").ui().build();
+    let _ = Kbd::new("x").ui().build();
+    let _ = Breadcrumb::new().ui().build();
     let _ = Card::new(Vec::new())
         .ui()
         .p_4()

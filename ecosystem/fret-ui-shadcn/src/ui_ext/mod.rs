@@ -6,5 +6,6 @@ mod controls;
 mod data;
 mod forms;
 mod layout;
+mod misc;
 mod navigation;
 mod overlays;
