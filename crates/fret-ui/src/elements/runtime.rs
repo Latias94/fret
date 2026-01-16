@@ -66,6 +66,22 @@ impl ElementRuntime {
         let state = self.windows.get(&window)?;
         Some(state.diagnostics_snapshot())
     }
+
+    #[cfg(feature = "diagnostics")]
+    pub fn element_for_node(&self, window: AppWindowId, node: NodeId) -> Option<GlobalElementId> {
+        let state = self.windows.get(&window)?;
+        state.element_for_node(node)
+    }
+
+    #[cfg(feature = "diagnostics")]
+    pub fn node_for_element(
+        &self,
+        window: AppWindowId,
+        element: GlobalElementId,
+    ) -> Option<NodeId> {
+        let state = self.windows.get(&window)?;
+        state.node_entry(element).map(|e| e.node)
+    }
 }
 
 #[derive(Default)]

@@ -10,7 +10,7 @@ use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PointerRegionProps, PositionStyle, PressableProps, RingStyle, RovingFlexProps,
-    RovingFocusProps, ScrollAxis, ScrollProps, SemanticsProps, SizeStyle, TextProps,
+    RovingFocusProps, ScrollAxis, ScrollProps, SizeStyle, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -535,34 +535,24 @@ fn menu_structural_group<H: UiHost>(
     role: fret_core::SemanticsRole,
     children: Vec<AnyElement>,
 ) -> AnyElement {
-    cx.semantics(
-        SemanticsProps {
-            layout: {
-                let mut layout = LayoutStyle::default();
-                layout.size.width = Length::Fill;
-                layout
-            },
+    cx.semantic_flex(
+        fret_ui::element::SemanticFlexProps {
             role,
-            ..Default::default()
-        },
-        move |cx| {
-            vec![cx.flex(
-                FlexProps {
-                    layout: {
-                        let mut layout = LayoutStyle::default();
-                        layout.size.width = Length::Fill;
-                        layout
-                    },
-                    direction: fret_core::Axis::Vertical,
-                    gap: Px(0.0),
-                    padding: Edges::all(Px(0.0)),
-                    justify: MainAlign::Start,
-                    align: CrossAlign::Stretch,
-                    wrap: false,
+            flex: FlexProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout
                 },
-                move |_cx| children.clone(),
-            )]
+                direction: fret_core::Axis::Vertical,
+                gap: Px(0.0),
+                padding: Edges::all(Px(0.0)),
+                justify: MainAlign::Start,
+                align: CrossAlign::Stretch,
+                wrap: false,
+            },
         },
+        move |_cx| children.clone(),
     )
 }
 

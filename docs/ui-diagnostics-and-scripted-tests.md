@@ -19,6 +19,7 @@ Related ADRs:
 
 - ADR 0174: `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 - ADR 0033 (Semantics/a11y): `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
+- Roadmap/TODO: `targets/ui-diagnostics-inspector-todo.md`
 
 ## Quick Start (manual bundle dump)
 
@@ -80,6 +81,80 @@ By default bundles go under `target/fret-diag/<timestamp>/` and `target/fret-dia
 5. The app executes **one step per frame** (deterministic), and (by default) auto-dumps after actions.
    Use `cargo run -p fretboard -- diag latest` to grab the newest bundle.
 
+## Quick Start (picking / "inspect target")
+
+This is the fastest way to author stable selectors (GPUI/Zed-style inspect):
+
+1. Run the app with diagnostics enabled:
+
+   - `FRET_DIAG=1`
+
+2. Arm a one-shot pick (this waits for the next click and prints a selector JSON on success):
+
+   - `cargo run -p fretboard -- diag pick`
+
+3. Click the UI element you want to target.
+
+4. The app writes `pick.result.json` (and, by default, also dumps a `bundle.json` labelled `pick`).
+
+Notes:
+
+- While picking is active, the app renders a non-interactive inspect overlay (outline + label) to help confirm which semantics node is being targeted.
+
+## Quick Start (continuous inspect mode)
+
+This is closer to Zed/GPUI’s inspector workflow: keep an inspect overlay active while you hover, and (optionally) pick targets repeatedly on click.
+
+1. Run the app with diagnostics enabled:
+
+   - `FRET_DIAG=1`
+
+2. Enable inspect mode (writes `inspect.json` and touches `inspect.touch`):
+
+   - `cargo run -p fretboard -- diag inspect on`
+
+   Optional: allow clicks to keep reaching the app UI while still producing pick results:
+
+   - `cargo run -p fretboard -- diag inspect on --consume-clicks false`
+
+3. Hover to see the candidate node; click to write `pick.result.json` (each click updates `run_id`).
+
+4. Disable or toggle:
+
+   - `cargo run -p fretboard -- diag inspect off`
+   - `cargo run -p fretboard -- diag inspect toggle`
+   - `cargo run -p fretboard -- diag inspect status` (prints a 1-line JSON payload)
+
+In-app shortcuts while inspect mode is active:
+
+- `Esc`: disable inspect (writes `inspect.json` + touches `inspect.touch`)
+- `Ctrl+C` / `Cmd+C`: copy the best selector JSON for the current selection (or hovered node) to the clipboard
+- `Ctrl+Shift+C` / `Cmd+Shift+C`: copy a multi-line "selector + focus + path" payload (useful for bug reports and AI triage)
+- `F`: lock selection to the currently focused semantics node (keyboard-first inspect)
+- `L`: lock/unlock selection (freezes hover highlight; uses last hovered node)
+- `Alt+Up` / `Alt+Down`: navigate the locked selection up/down the semantics parent chain (uses a small down-stack for “back to child”)
+
+### Generate a runnable script from a pick
+
+To reduce "pick → first repro script" friction, `fretboard` can generate a minimal script skeleton:
+
+- `cargo run -p fretboard -- diag pick-script`
+
+This writes `target/fret-diag/picked.script.json` (override with `--pick-script-out`), which you can then run via:
+
+- `cargo run -p fretboard -- diag run target/fret-diag/picked.script.json`
+
+### Patch an existing script using a pick (JSON Pointer)
+
+When UI structure or labels change, use pick to update a script step's selector in-place:
+
+- Update a click step:
+  - `cargo run -p fretboard -- diag pick-apply tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json --ptr /steps/0/target`
+- Update a predicate target (e.g. `wait_until` / `assert`):
+  - `cargo run -p fretboard -- diag pick-apply tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json --ptr /steps/1/predicate/target`
+
+By default this overwrites the script file; use `--out <path>` to write to a new file.
+
 ## What's inside `bundle.json`
 
 Bundles are a per-window ring history plus snapshots (schema is versioned and intended to evolve).
@@ -123,6 +198,18 @@ Script harness:
 - `FRET_DIAG_SCRIPT_RESULT_TRIGGER_PATH=...`: script result trigger file (default `<dir>/script.result.touch`).
 - `FRET_DIAG_SCRIPT_AUTO_DUMP=0`: disable auto-dump after steps (default enabled).
 
+Picking:
+
+- `FRET_DIAG_PICK_TRIGGER_PATH=...`: pick trigger file (default `<dir>/pick.touch`).
+- `FRET_DIAG_PICK_RESULT_PATH=...`: pick result JSON path (default `<dir>/pick.result.json`).
+- `FRET_DIAG_PICK_RESULT_TRIGGER_PATH=...`: pick result trigger file (default `<dir>/pick.result.touch`).
+- `FRET_DIAG_PICK_AUTO_DUMP=0`: disable auto-dump after a pick (default enabled).
+
+Inspect mode:
+
+- `FRET_DIAG_INSPECT_PATH=...`: inspect config JSON path (default `<dir>/inspect.json`).
+- `FRET_DIAG_INSPECT_TRIGGER_PATH=...`: inspect config trigger file (default `<dir>/inspect.touch`).
+
 ## Target selection rules (MVP)
 
 Selection is evaluated against the current `SemanticsSnapshot` (ADR 0033).
@@ -132,6 +219,7 @@ Supported selectors (v1 MVP):
 - `{"kind":"test_id","id":"open-settings"}` (preferred when available; see "Test IDs")
 - `{"kind":"role_and_name","role":"button","name":"Open"}`
 - `{"kind":"role_and_path","role":"menu_item","name":"Close","ancestors":[{"role":"menu","name":"File"}]}`
+- `{"kind":"global_element_id","element":123}` (low-level / best for harness tests; not a user-facing contract)
 - `{"kind":"node_id","node":123456789}` (low-level / brittle; avoid for real tests)
 
 ## Supported scripted steps (v1 MVP)

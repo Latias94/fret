@@ -13,12 +13,14 @@ impl<H: UiHost> UiTree<H> {
     ) {
         let started = self.debug_enabled.then(Instant::now);
         if self.debug_enabled {
+            self.begin_debug_frame_if_needed(app.frame_id());
             self.debug_stats.frame_id = app.frame_id();
             self.debug_stats.paint_nodes = 0;
             self.debug_stats.paint_nodes_performed = 0;
             self.debug_stats.paint_cache_hits = 0;
             self.debug_stats.paint_cache_misses = 0;
             self.debug_stats.paint_cache_replayed_ops = 0;
+            self.debug_stats.view_cache_active = self.view_cache_active();
             self.debug_stats.focus = self.focus;
             self.debug_stats.captured = self.captured_for(fret_core::PointerId(0));
         }

@@ -22,6 +22,7 @@ mod space;
 pub use manager::{ActivatePanelOptions, DockManager};
 pub use panel_registry::{
     DockPanelRegistry, DockPanelRegistryService, render_and_bind_dock_panels,
+    render_cached_panel_root,
 };
 pub use services::{DockPanelContentService, DockViewportOverlayHooksService};
 pub use space::DockSpace;

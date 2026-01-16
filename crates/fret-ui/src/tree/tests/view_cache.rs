@@ -5,6 +5,7 @@ fn view_cache_invalidation_stops_at_boundary_for_paint() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(AppWindowId::default());
     ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
 
     let root = ui.create_node(TestStack::default());
     let a = ui.create_node(TestStack::default());
@@ -28,6 +29,7 @@ fn view_cache_invalidation_stops_at_boundary_for_paint() {
     assert!(ui.nodes[b].invalidation.paint);
     assert!(!ui.nodes[a].invalidation.paint);
     assert!(!ui.nodes[root].invalidation.paint);
+    assert_eq!(ui.debug_stats().view_cache_invalidation_truncations, 1);
 }
 
 #[test]
@@ -102,6 +104,7 @@ fn view_cache_runs_contained_relayout_for_invalidated_boundaries() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(AppWindowId::default());
     ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
 
     let root = ui.create_node(TestStack::default());
     let boundary = ui.create_node(TestStack::default());
@@ -126,4 +129,5 @@ fn view_cache_runs_contained_relayout_for_invalidated_boundaries() {
     let mut services = FakeUiServices;
     ui.layout_all(&mut app, &mut services, root_bounds, 1.0);
     assert!(!ui.nodes[boundary].invalidation.layout);
+    assert_eq!(ui.debug_stats().view_cache_contained_relayouts, 1);
 }

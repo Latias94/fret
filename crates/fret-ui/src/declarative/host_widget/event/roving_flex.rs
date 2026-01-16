@@ -29,6 +29,10 @@ pub(super) fn handle_roving_flex<H: UiHost>(
                 props.role,
                 fret_core::SemanticsRole::Group | fret_core::SemanticsRole::RadioGroup
             ),
+            crate::declarative::frame::ElementInstance::SemanticFlex(props) => matches!(
+                props.role,
+                fret_core::SemanticsRole::Group | fret_core::SemanticsRole::RadioGroup
+            ),
             _ => false,
         }
     }

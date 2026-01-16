@@ -24,10 +24,20 @@ fn flex_grow_layout() -> LayoutStyle {
     layout
 }
 
+fn fill_grow_layout() -> LayoutStyle {
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Fill;
+    layout.size.height = Length::Fill;
+    layout.flex.grow = 1.0;
+    layout
+}
+
 #[derive(Debug, Clone)]
 pub struct WorkspaceFrame {
     top: Option<AnyElement>,
+    left: Option<AnyElement>,
     center: AnyElement,
+    right: Option<AnyElement>,
     bottom: Option<AnyElement>,
     background: Option<Color>,
 }
@@ -36,7 +46,9 @@ impl WorkspaceFrame {
     pub fn new(center: AnyElement) -> Self {
         Self {
             top: None,
+            left: None,
             center,
+            right: None,
             bottom: None,
             background: None,
         }
@@ -44,6 +56,16 @@ impl WorkspaceFrame {
 
     pub fn top(mut self, top: AnyElement) -> Self {
         self.top = Some(top);
+        self
+    }
+
+    pub fn left(mut self, left: AnyElement) -> Self {
+        self.left = Some(left);
+        self
+    }
+
+    pub fn right(mut self, right: AnyElement) -> Self {
+        self.right = Some(right);
         self
     }
 
@@ -61,26 +83,57 @@ impl WorkspaceFrame {
         let theme = Theme::global(cx.app);
         let background = self.background.or_else(|| theme.color_by_key("background"));
 
+        let top = self.top;
+        let left = self.left;
+        let center = self.center;
+        let right = self.right;
+        let bottom = self.bottom;
+
         cx.container(
             ContainerProps {
                 layout: fill_layout(),
                 background,
                 ..Default::default()
             },
-            |cx| {
+            move |cx| {
+                let center_row = cx.flex(
+                    FlexProps {
+                        layout: fill_grow_layout(),
+                        direction: fret_core::Axis::Horizontal,
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        let mut children = Vec::new();
+                        if let Some(left) = left {
+                            children.push(left);
+                        }
+                        children.push(cx.container(
+                            ContainerProps {
+                                layout: fill_grow_layout(),
+                                ..Default::default()
+                            },
+                            move |_cx| vec![center],
+                        ));
+                        if let Some(right) = right {
+                            children.push(right);
+                        }
+                        children
+                    },
+                );
+
                 vec![cx.flex(
                     FlexProps {
                         layout: fill_layout(),
                         direction: fret_core::Axis::Vertical,
                         ..Default::default()
                     },
-                    |_cx| {
+                    move |_cx| {
                         let mut children = Vec::new();
-                        if let Some(top) = self.top {
+                        if let Some(top) = top {
                             children.push(top);
                         }
-                        children.push(self.center);
-                        if let Some(bottom) = self.bottom {
+                        children.push(center_row);
+                        if let Some(bottom) = bottom {
                             children.push(bottom);
                         }
                         children

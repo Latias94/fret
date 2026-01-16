@@ -7,7 +7,9 @@ use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, Overflow, T
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::declarative::table::{TableViewOutput, TableViewProps, table_virtualized};
+use fret_ui_kit::declarative::table::{
+    TableRowMeasureMode, TableViewOutput, TableViewProps, table_virtualized,
+};
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius};
 
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
@@ -57,6 +59,7 @@ fn mixed_revision(a: u64, b: u64) -> u64 {
 pub struct DataTable {
     overscan: usize,
     row_height: Option<Px>,
+    measure_rows: bool,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     output: Option<Model<TableViewOutput>>,
@@ -67,6 +70,7 @@ impl Default for DataTable {
         Self {
             overscan: 4,
             row_height: None,
+            measure_rows: false,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             output: None,
@@ -86,6 +90,15 @@ impl DataTable {
 
     pub fn row_height(mut self, row_height: Px) -> Self {
         self.row_height = Some(row_height);
+        self
+    }
+
+    /// Enables measured (variable-height) body rows.
+    ///
+    /// This is intended for content-driven row heights (e.g. wrapping Markdown).
+    /// The default remains fixed-height rows for performance.
+    pub fn measure_rows(mut self, enabled: bool) -> Self {
+        self.measure_rows = enabled;
         self
     }
 
@@ -121,6 +134,7 @@ impl DataTable {
         let DataTable {
             overscan,
             row_height,
+            measure_rows,
             chrome,
             layout,
             output,
@@ -160,6 +174,11 @@ impl DataTable {
             let mut view_props = TableViewProps::default();
             view_props.overscan = overscan;
             view_props.row_height = row_height;
+            view_props.row_measure_mode = if measure_rows {
+                TableRowMeasureMode::Measured
+            } else {
+                TableRowMeasureMode::Fixed
+            };
             view_props.enable_column_grouping = false;
             view_props.enable_column_resizing = false;
             view_props.draw_frame = false;

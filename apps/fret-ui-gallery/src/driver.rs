@@ -77,6 +77,11 @@ impl UiGalleryDriver {
             Arc::<str>::from(PAGE_INTRO),
             Arc::<str>::from(PAGE_LAYOUT),
             Arc::<str>::from(PAGE_BUTTON),
+            Arc::<str>::from(PAGE_CARD),
+            Arc::<str>::from(PAGE_BADGE),
+            Arc::<str>::from(PAGE_AVATAR),
+            Arc::<str>::from(PAGE_ICONS),
+            Arc::<str>::from(PAGE_FIELD),
             Arc::<str>::from(PAGE_OVERLAY),
             Arc::<str>::from(PAGE_COMMAND),
         ];
@@ -153,7 +158,7 @@ impl UiGalleryDriver {
             content_tab,
             theme_preset,
             theme_preset_open,
-            applied_theme_preset: Some(Arc::from("zinc/light")),
+            applied_theme_preset: None,
             popover_open,
             dialog_open,
             alert_dialog_open,
@@ -581,7 +586,7 @@ impl UiGalleryDriver {
                         WorkspaceTabStrip::new(selected.clone())
                             .tabs(workspace_tab_ids.iter().map(|tab_id| {
                                 let (title, _origin, _docs, _usage) =
-                                    ui::page_meta(tab_id.as_ref());
+                                    crate::spec::page_meta(tab_id.as_ref());
                                 let dirty = workspace_dirty_ids
                                     .iter()
                                     .any(|d| d.as_ref() == tab_id.as_ref());
@@ -705,6 +710,41 @@ pub fn build_app() -> App {
         CommandMeta::new("Settings")
             .with_category("View")
             .with_keywords(["settings", "preferences"]),
+    );
+
+    for group in PAGE_GROUPS {
+        for page in group.items {
+            let mut keywords: Vec<&'static str> = Vec::new();
+            keywords.push(page.id);
+            keywords.push(page.origin);
+            keywords.extend_from_slice(page.tags);
+
+            app.commands_mut().register(
+                CommandId::new(page.command),
+                CommandMeta::new(page.label)
+                    .with_category(format!("Gallery: {}", group.title))
+                    .with_keywords(keywords),
+            );
+        }
+    }
+
+    app.commands_mut().register(
+        CommandId::new(CMD_CLIPBOARD_COPY_LINK),
+        CommandMeta::new("Copy page link")
+            .with_category("Gallery")
+            .with_keywords(["copy", "clipboard", "link", "page"]),
+    );
+    app.commands_mut().register(
+        CommandId::new(CMD_CLIPBOARD_COPY_USAGE),
+        CommandMeta::new("Copy usage")
+            .with_category("Gallery")
+            .with_keywords(["copy", "clipboard", "usage", "code"]),
+    );
+    app.commands_mut().register(
+        CommandId::new(CMD_CLIPBOARD_COPY_NOTES),
+        CommandMeta::new("Copy notes")
+            .with_category("Gallery")
+            .with_keywords(["copy", "clipboard", "notes", "docs"]),
     );
 
     fret_workspace::commands::register_workspace_commands(app.commands_mut());
@@ -838,6 +878,36 @@ impl WinitAppDriver for UiGalleryDriver {
         }
 
         match command.as_str() {
+            CMD_CLIPBOARD_COPY_LINK | CMD_CLIPBOARD_COPY_USAGE | CMD_CLIPBOARD_COPY_NOTES => {
+                let selected = app
+                    .models()
+                    .get_cloned(&state.selected_page)
+                    .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+                let (_title, _origin, notes_md, usage_md) =
+                    crate::spec::page_meta(selected.as_ref());
+
+                let text = match command.as_str() {
+                    CMD_CLIPBOARD_COPY_LINK => format!("?page={}", selected.as_ref()),
+                    CMD_CLIPBOARD_COPY_USAGE => usage_md.to_string(),
+                    CMD_CLIPBOARD_COPY_NOTES => notes_md.to_string(),
+                    _ => String::new(),
+                };
+
+                app.push_effect(Effect::ClipboardSetText { text });
+
+                let sonner = shadcn::Sonner::global(app);
+                let mut host = UiActionHostAdapter { app };
+                sonner.toast_success_message(
+                    &mut host,
+                    window,
+                    "Copied",
+                    shadcn::ToastMessageOptions::new().description("Copied to clipboard."),
+                );
+
+                let _ = host.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("clipboard.copy");
+                });
+            }
             CMD_MENU_DROPDOWN_APPLE => {
                 let _ = app.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("menu.dropdown.apple");

@@ -17,7 +17,7 @@ use fret_ui::element::{
 };
 use fret_ui::{Invalidation, Theme, UiTree};
 use fret_ui_kit::tree::{TreeItem, TreeItemId, TreeState};
-use fret_ui_kit::{LayoutRefinement, MetricRef, OverlayController};
+use fret_ui_kit::{LayoutRefinement, MetricRef, OverlayController, UiExt};
 use fret_ui_shadcn as shadcn;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -580,6 +580,8 @@ impl ComponentsGalleryDriver {
                                                                     .on_click(CommandId::from(
                                                                         "gallery.text_smoke.fonts.load",
                                                                     ))
+                                                                    .ui()
+                                                                    .px_3()
                                                                     .into_element(cx),
                                                                 shadcn::Button::new("Reset UI")
                                                                     .variant(

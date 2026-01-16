@@ -1,4 +1,4 @@
-use fret_app::{App, ModelId};
+use fret_app::{App, Effect, ModelId};
 use fret_core::{
     AppWindowId, Event, KeyCode, Modifiers, MouseButton, MouseButtons, NodeId, Point, PointerEvent,
     PointerId, PointerType, Rect, Scene, SemanticsRole,
@@ -23,6 +23,12 @@ pub struct UiDiagnosticsConfig {
     pub script_result_path: PathBuf,
     pub script_result_trigger_path: PathBuf,
     pub script_auto_dump: bool,
+    pub pick_trigger_path: PathBuf,
+    pub pick_result_path: PathBuf,
+    pub pick_result_trigger_path: PathBuf,
+    pub pick_auto_dump: bool,
+    pub inspect_path: PathBuf,
+    pub inspect_trigger_path: PathBuf,
     pub redact_text: bool,
     pub max_debug_string_bytes: usize,
 }
@@ -65,6 +71,27 @@ impl Default for UiDiagnosticsConfig {
             .map(PathBuf::from)
             .unwrap_or_else(|| out_dir.join("script.result.touch"));
         let script_auto_dump = env_flag_default_true("FRET_DIAG_SCRIPT_AUTO_DUMP");
+        let pick_trigger_path = std::env::var_os("FRET_DIAG_PICK_TRIGGER_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| out_dir.join("pick.touch"));
+        let pick_result_path = std::env::var_os("FRET_DIAG_PICK_RESULT_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| out_dir.join("pick.result.json"));
+        let pick_result_trigger_path = std::env::var_os("FRET_DIAG_PICK_RESULT_TRIGGER_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| out_dir.join("pick.result.touch"));
+        let pick_auto_dump = env_flag_default_true("FRET_DIAG_PICK_AUTO_DUMP");
+        let inspect_path = std::env::var_os("FRET_DIAG_INSPECT_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| out_dir.join("inspect.json"));
+        let inspect_trigger_path = std::env::var_os("FRET_DIAG_INSPECT_TRIGGER_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| out_dir.join("inspect.touch"));
         let redact_text = env_flag_default_true("FRET_DIAG_REDACT_TEXT");
         let max_debug_string_bytes = std::env::var("FRET_DIAG_MAX_DEBUG_STRING_BYTES")
             .ok()
@@ -83,6 +110,12 @@ impl Default for UiDiagnosticsConfig {
             script_result_path,
             script_result_trigger_path,
             script_auto_dump,
+            pick_trigger_path,
+            pick_result_path,
+            pick_result_trigger_path,
+            pick_auto_dump,
+            inspect_path,
+            inspect_trigger_path,
             redact_text,
             max_debug_string_bytes,
         }
@@ -95,12 +128,45 @@ pub struct UiDiagnosticsService {
     per_window: HashMap<AppWindowId, WindowRing>,
     last_trigger_mtime: Option<std::time::SystemTime>,
     last_script_trigger_mtime: Option<std::time::SystemTime>,
+    last_pick_trigger_mtime: Option<std::time::SystemTime>,
+    last_inspect_trigger_mtime: Option<std::time::SystemTime>,
+    inspect_enabled: bool,
+    inspect_consume_clicks: bool,
     pending_script: Option<UiActionScriptV1>,
     pending_script_run_id: Option<u64>,
     active_scripts: HashMap<AppWindowId, ActiveScript>,
     pending_force_dump_label: Option<String>,
     last_dump_dir: Option<PathBuf>,
     last_script_run_id: u64,
+    last_pick_run_id: u64,
+    last_picked_node_id: HashMap<AppWindowId, u64>,
+    last_picked_selector_json: HashMap<AppWindowId, String>,
+    last_hovered_node_id: HashMap<AppWindowId, u64>,
+    last_hovered_selector_json: HashMap<AppWindowId, String>,
+    inspect_focus_node_id: HashMap<AppWindowId, u64>,
+    inspect_focus_selector_json: HashMap<AppWindowId, String>,
+    inspect_focus_down_stack: HashMap<AppWindowId, Vec<u64>>,
+    inspect_pending_nav: HashMap<AppWindowId, InspectNavCommand>,
+    inspect_focus_summary_line: HashMap<AppWindowId, String>,
+    inspect_focus_path_line: HashMap<AppWindowId, String>,
+    inspect_locked_windows: HashSet<AppWindowId>,
+    inspect_toast: HashMap<AppWindowId, InspectToast>,
+    pick_overlay_grace_frames: HashMap<AppWindowId, u32>,
+    pick_armed_run_id: Option<u64>,
+    pending_pick: Option<PendingPick>,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum InspectNavCommand {
+    Up,
+    Down,
+    Focus,
+}
+
+#[derive(Debug, Clone)]
+struct InspectToast {
+    message: String,
+    remaining_frames: u32,
 }
 
 impl UiDiagnosticsService {
@@ -108,17 +174,336 @@ impl UiDiagnosticsService {
         self.cfg.enabled
     }
 
-    pub fn wants_inspection_active(&self, window: AppWindowId) -> bool {
+    pub fn redact_text(&self) -> bool {
+        self.cfg.redact_text
+    }
+
+    pub fn last_pointer_position(&self, window: AppWindowId) -> Option<Point> {
+        self.per_window
+            .get(&window)
+            .and_then(|ring| ring.last_pointer_position)
+    }
+
+    pub fn last_picked_node_id(&self, window: AppWindowId) -> Option<u64> {
+        self.last_picked_node_id.get(&window).copied()
+    }
+
+    pub fn pick_is_armed(&self) -> bool {
+        self.pick_armed_run_id.is_some()
+    }
+
+    pub fn inspect_is_enabled(&self) -> bool {
+        self.inspect_enabled
+    }
+
+    pub fn inspect_consume_clicks(&self) -> bool {
+        self.inspect_consume_clicks
+    }
+
+    pub fn inspect_is_locked(&self, window: AppWindowId) -> bool {
+        self.inspect_locked_windows.contains(&window)
+    }
+
+    pub fn inspect_focus_node_id(&self, window: AppWindowId) -> Option<u64> {
+        self.inspect_focus_node_id.get(&window).copied()
+    }
+
+    pub fn inspect_focus_summary_line(&self, window: AppWindowId) -> Option<&str> {
+        self.inspect_focus_summary_line
+            .get(&window)
+            .map(|s| s.as_str())
+    }
+
+    pub fn inspect_focus_path_line(&self, window: AppWindowId) -> Option<&str> {
+        self.inspect_focus_path_line
+            .get(&window)
+            .map(|s| s.as_str())
+    }
+
+    pub fn inspect_toast_message(&self, window: AppWindowId) -> Option<&str> {
+        self.inspect_toast.get(&window).map(|t| t.message.as_str())
+    }
+
+    pub fn inspect_best_selector_json(&self, window: AppWindowId) -> Option<&str> {
+        self.inspect_focus_selector_json
+            .get(&window)
+            .map(|s| s.as_str())
+            .or_else(|| {
+                self.last_picked_selector_json
+                    .get(&window)
+                    .map(|s| s.as_str())
+            })
+            .or_else(|| {
+                self.last_hovered_selector_json
+                    .get(&window)
+                    .map(|s| s.as_str())
+            })
+    }
+
+    pub fn wants_inspection_active(&mut self, window: AppWindowId) -> bool {
         if !self.is_enabled() {
             return false;
         }
-        self.pending_script.is_some() || self.active_scripts.contains_key(&window)
+
+        self.poll_pick_trigger();
+        self.poll_inspect_trigger();
+
+        let grace = self
+            .pick_overlay_grace_frames
+            .get(&window)
+            .copied()
+            .unwrap_or(0);
+        if grace > 0 {
+            let next = grace.saturating_sub(1);
+            if next == 0 {
+                self.pick_overlay_grace_frames.remove(&window);
+            } else {
+                self.pick_overlay_grace_frames.insert(window, next);
+            }
+        }
+
+        if let Some(toast) = self.inspect_toast.get_mut(&window) {
+            toast.remaining_frames = toast.remaining_frames.saturating_sub(1);
+            if toast.remaining_frames == 0 {
+                self.inspect_toast.remove(&window);
+            }
+        }
+
+        self.pending_script.is_some()
+            || self.active_scripts.contains_key(&window)
+            || self.pick_armed_run_id.is_some()
+            || grace > 0
+            || self.inspect_enabled
+            || self.inspect_toast.contains_key(&window)
+            || self
+                .pending_pick
+                .as_ref()
+                .is_some_and(|p| p.window == window)
+    }
+
+    /// Returns `true` if the event was consumed by inspect-mode shortcuts.
+    pub fn maybe_intercept_event_for_inspect_shortcuts(
+        &mut self,
+        app: &mut App,
+        window: AppWindowId,
+        event: &Event,
+    ) -> bool {
+        if !self.is_enabled() {
+            return false;
+        }
+
+        self.poll_pick_trigger();
+        self.poll_inspect_trigger();
+
+        let Event::KeyDown {
+            key,
+            modifiers,
+            repeat,
+        } = event
+        else {
+            return false;
+        };
+        if *repeat {
+            return false;
+        }
+
+        let inspection_active = self.pick_armed_run_id.is_some() || self.inspect_enabled;
+        if !inspection_active {
+            return false;
+        }
+
+        match *key {
+            KeyCode::Escape => {
+                if self.pick_armed_run_id.take().is_some() {
+                    self.push_inspect_toast(window, "inspect: pick disarmed".to_string());
+                    app.request_redraw(window);
+                    return true;
+                }
+
+                if self.inspect_enabled {
+                    self.inspect_enabled = false;
+                    self.inspect_locked_windows.clear();
+                    self.last_hovered_selector_json.clear();
+                    self.last_picked_selector_json.clear();
+                    self.last_hovered_node_id.clear();
+                    self.inspect_focus_node_id.clear();
+                    self.inspect_focus_selector_json.clear();
+                    self.inspect_focus_down_stack.clear();
+                    self.inspect_pending_nav.clear();
+                    self.inspect_focus_summary_line.clear();
+                    self.inspect_focus_path_line.clear();
+
+                    let _ = write_json(
+                        self.cfg.inspect_path.clone(),
+                        &UiInspectConfigV1 {
+                            schema_version: 1,
+                            enabled: false,
+                            consume_clicks: self.inspect_consume_clicks,
+                        },
+                    );
+                    let _ = touch_file(&self.cfg.inspect_trigger_path);
+
+                    self.push_inspect_toast(window, "inspect: disabled".to_string());
+                    app.request_redraw(window);
+                    return true;
+                }
+                false
+            }
+            KeyCode::KeyL => {
+                if self.inspect_locked_windows.remove(&window) {
+                    self.inspect_focus_down_stack.remove(&window);
+                    self.push_inspect_toast(window, "inspect: unlocked".to_string());
+                } else if let Some(hovered) = self.last_hovered_node_id.get(&window).copied() {
+                    self.last_picked_node_id.insert(window, hovered);
+                    if let Some(sel) = self.last_hovered_selector_json.get(&window).cloned() {
+                        self.last_picked_selector_json.insert(window, sel);
+                    }
+                    self.inspect_focus_node_id.insert(window, hovered);
+                    if let Some(sel) = self.last_hovered_selector_json.get(&window).cloned() {
+                        self.inspect_focus_selector_json.insert(window, sel);
+                    }
+                    self.inspect_focus_down_stack.insert(window, Vec::new());
+                    self.inspect_locked_windows.insert(window);
+                    self.push_inspect_toast(window, "inspect: locked selection".to_string());
+                } else {
+                    self.push_inspect_toast(window, "inspect: nothing to lock".to_string());
+                }
+                app.request_redraw(window);
+                true
+            }
+            KeyCode::KeyC => {
+                let wants_copy = modifiers.ctrl || modifiers.meta;
+                if !wants_copy {
+                    return false;
+                }
+                if modifiers.shift {
+                    let payload = self.inspect_copy_details_payload(window);
+                    if payload.is_empty() {
+                        self.push_inspect_toast(
+                            window,
+                            "inspect: no details available to copy".to_string(),
+                        );
+                        app.request_redraw(window);
+                        return true;
+                    }
+                    app.push_effect(Effect::ClipboardSetText { text: payload });
+                    self.push_inspect_toast(window, "inspect: copied inspect details".to_string());
+                    app.request_redraw(window);
+                    return true;
+                }
+
+                let Some(payload) = self
+                    .inspect_best_selector_json(window)
+                    .map(|s| s.to_string())
+                else {
+                    self.push_inspect_toast(window, "inspect: no selector to copy".to_string());
+                    app.request_redraw(window);
+                    return true;
+                };
+                app.push_effect(Effect::ClipboardSetText { text: payload });
+                self.push_inspect_toast(window, "inspect: copied selector".to_string());
+                app.request_redraw(window);
+                true
+            }
+            KeyCode::KeyF => {
+                if !self.inspect_enabled {
+                    return false;
+                }
+                self.inspect_pending_nav
+                    .insert(window, InspectNavCommand::Focus);
+                self.push_inspect_toast(window, "inspect: select focused node".to_string());
+                app.request_redraw(window);
+                true
+            }
+            KeyCode::ArrowUp => {
+                if !modifiers.alt {
+                    return false;
+                }
+                if !self.inspect_is_locked(window) {
+                    self.push_inspect_toast(
+                        window,
+                        "inspect: lock selection first (press L)".to_string(),
+                    );
+                    app.request_redraw(window);
+                    return true;
+                }
+                self.inspect_pending_nav
+                    .insert(window, InspectNavCommand::Up);
+                app.request_redraw(window);
+                true
+            }
+            KeyCode::ArrowDown => {
+                if !modifiers.alt {
+                    return false;
+                }
+                if !self.inspect_is_locked(window) {
+                    self.push_inspect_toast(
+                        window,
+                        "inspect: lock selection first (press L)".to_string(),
+                    );
+                    app.request_redraw(window);
+                    return true;
+                }
+                self.inspect_pending_nav
+                    .insert(window, InspectNavCommand::Down);
+                app.request_redraw(window);
+                true
+            }
+            _ => false,
+        }
+    }
+
+    /// Returns `true` if the event was consumed by diagnostics picking.
+    ///
+    /// When a pick is armed, the next pointer down is intercepted (not dispatched to the UI tree)
+    /// to avoid triggering app behavior while selecting a target (GPUI/Zed inspect style).
+    pub fn maybe_intercept_event_for_picking(
+        &mut self,
+        app: &mut App,
+        window: AppWindowId,
+        event: &Event,
+    ) -> bool {
+        if !self.is_enabled() {
+            return false;
+        }
+
+        self.poll_pick_trigger();
+        self.poll_inspect_trigger();
+
+        let Event::Pointer(PointerEvent::Down { position, .. }) = event else {
+            return false;
+        };
+
+        if let Some(run_id) = self.pick_armed_run_id.take() {
+            self.pending_pick = Some(PendingPick {
+                run_id,
+                window,
+                position: *position,
+            });
+            app.request_redraw(window);
+            return true;
+        }
+
+        if !self.inspect_enabled {
+            return false;
+        }
+
+        let run_id = self.next_pick_run_id();
+
+        self.pending_pick = Some(PendingPick {
+            run_id,
+            window,
+            position: *position,
+        });
+        app.request_redraw(window);
+        self.inspect_consume_clicks
     }
 
     pub fn drive_script_for_window(
         &mut self,
         window: AppWindowId,
         semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+        element_runtime: Option<&ElementRuntime>,
     ) -> UiScriptFrameOutput {
         if !self.is_enabled() {
             return UiScriptFrameOutput::default();
@@ -246,7 +631,7 @@ impl UiDiagnosticsService {
                         },
                     };
 
-                    if eval_predicate(snapshot, &predicate) {
+                    if eval_predicate(snapshot, window, element_runtime, &predicate) {
                         active.wait_until = None;
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
@@ -277,7 +662,7 @@ impl UiDiagnosticsService {
             UiActionStepV1::Assert { predicate } => {
                 active.wait_until = None;
                 if let Some(snapshot) = semantics_snapshot {
-                    if eval_predicate(snapshot, &predicate) {
+                    if eval_predicate(snapshot, window, element_runtime, &predicate) {
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
                     } else {
@@ -301,7 +686,8 @@ impl UiDiagnosticsService {
                     output.request_redraw = true;
                     return output;
                 };
-                let Some(node) = select_semantics_node(snapshot, &target) else {
+                let Some(node) = select_semantics_node(snapshot, window, element_runtime, &target)
+                else {
                     self.active_scripts.insert(window, active);
                     output.request_redraw = true;
                     return output;
@@ -359,6 +745,282 @@ impl UiDiagnosticsService {
     pub fn clear_window(&mut self, window: AppWindowId) {
         self.per_window.remove(&window);
         self.active_scripts.remove(&window);
+        self.last_picked_node_id.remove(&window);
+        self.last_picked_selector_json.remove(&window);
+        self.last_hovered_node_id.remove(&window);
+        self.last_hovered_selector_json.remove(&window);
+        self.inspect_focus_node_id.remove(&window);
+        self.inspect_focus_selector_json.remove(&window);
+        self.inspect_focus_down_stack.remove(&window);
+        self.inspect_pending_nav.remove(&window);
+        self.inspect_focus_summary_line.remove(&window);
+        self.inspect_focus_path_line.remove(&window);
+        self.inspect_locked_windows.remove(&window);
+        self.inspect_toast.remove(&window);
+        if self
+            .pending_pick
+            .as_ref()
+            .is_some_and(|p| p.window == window)
+        {
+            self.pending_pick = None;
+        }
+    }
+
+    pub fn update_inspect_hover(
+        &mut self,
+        window: AppWindowId,
+        snapshot: Option<&fret_core::SemanticsSnapshot>,
+        hovered_node_id: Option<u64>,
+        element_runtime: Option<&ElementRuntime>,
+    ) {
+        if !self.is_enabled() {
+            return;
+        }
+        if !self.inspect_enabled {
+            return;
+        }
+        let Some(snapshot) = snapshot else {
+            return;
+        };
+        let Some(hovered_id) = hovered_node_id else {
+            self.last_hovered_node_id.remove(&window);
+            self.last_hovered_selector_json.remove(&window);
+            return;
+        };
+        if self.inspect_is_locked(window) {
+            return;
+        }
+
+        let Some(node) = snapshot
+            .nodes
+            .iter()
+            .find(|n| n.id.data().as_ffi() == hovered_id)
+        else {
+            return;
+        };
+        let element = element_runtime
+            .and_then(|runtime| runtime.element_for_node(window, node.id))
+            .map(|id| id.0);
+        let Some(selector) = best_selector_for_node(snapshot, node, element, &self.cfg) else {
+            return;
+        };
+        if let Ok(json) = serde_json::to_string(&selector) {
+            self.last_hovered_node_id.insert(window, hovered_id);
+            self.last_hovered_selector_json.insert(window, json);
+            self.inspect_focus_node_id.insert(window, hovered_id);
+            if let Some(sel) = self.last_hovered_selector_json.get(&window).cloned() {
+                self.inspect_focus_selector_json.insert(window, sel);
+            }
+            self.inspect_focus_down_stack.insert(window, Vec::new());
+        }
+    }
+
+    fn push_inspect_toast(&mut self, window: AppWindowId, message: String) {
+        self.inspect_toast.insert(
+            window,
+            InspectToast {
+                message,
+                remaining_frames: 90,
+            },
+        );
+    }
+
+    pub fn apply_inspect_navigation(
+        &mut self,
+        window: AppWindowId,
+        snapshot: Option<&fret_core::SemanticsSnapshot>,
+        element_runtime: Option<&ElementRuntime>,
+    ) {
+        if !self.is_enabled() {
+            return;
+        }
+        if !self.inspect_enabled {
+            self.inspect_pending_nav.remove(&window);
+            return;
+        }
+        let Some(cmd) = self.inspect_pending_nav.remove(&window) else {
+            return;
+        };
+        let Some(snapshot) = snapshot else {
+            self.push_inspect_toast(window, "inspect: no semantics snapshot".to_string());
+            return;
+        };
+
+        match cmd {
+            InspectNavCommand::Focus => {
+                let Some(node) = snapshot.focus else {
+                    self.push_inspect_toast(window, "inspect: no focused node".to_string());
+                    return;
+                };
+                let id = node.data().as_ffi();
+                self.inspect_focus_down_stack.insert(window, Vec::new());
+                self.inspect_locked_windows.insert(window);
+                self.set_inspect_focus(window, snapshot, id, element_runtime);
+            }
+            InspectNavCommand::Up => {
+                if !self.inspect_is_locked(window) {
+                    self.push_inspect_toast(
+                        window,
+                        "inspect: lock selection first (press L)".to_string(),
+                    );
+                    return;
+                }
+
+                let current = self
+                    .inspect_focus_node_id
+                    .get(&window)
+                    .copied()
+                    .or_else(|| self.last_picked_node_id.get(&window).copied())
+                    .or_else(|| self.last_hovered_node_id.get(&window).copied());
+                let Some(current) = current else {
+                    self.push_inspect_toast(window, "inspect: no focused node".to_string());
+                    return;
+                };
+
+                let Some(parent) = parent_node_id(snapshot, current) else {
+                    self.push_inspect_toast(window, "inspect: reached root".to_string());
+                    return;
+                };
+                self.inspect_focus_down_stack
+                    .entry(window)
+                    .or_default()
+                    .push(current);
+                self.set_inspect_focus(window, snapshot, parent, element_runtime);
+                self.push_inspect_toast(window, "inspect: parent".to_string());
+            }
+            InspectNavCommand::Down => {
+                if !self.inspect_is_locked(window) {
+                    self.push_inspect_toast(
+                        window,
+                        "inspect: lock selection first (press L)".to_string(),
+                    );
+                    return;
+                }
+                let Some(prev) = self
+                    .inspect_focus_down_stack
+                    .get_mut(&window)
+                    .and_then(|s| s.pop())
+                else {
+                    self.push_inspect_toast(window, "inspect: no child history".to_string());
+                    return;
+                };
+                self.set_inspect_focus(window, snapshot, prev, element_runtime);
+                self.push_inspect_toast(window, "inspect: child".to_string());
+            }
+        }
+    }
+
+    fn set_inspect_focus(
+        &mut self,
+        window: AppWindowId,
+        snapshot: &fret_core::SemanticsSnapshot,
+        node_id: u64,
+        element_runtime: Option<&ElementRuntime>,
+    ) {
+        let Some(node) = snapshot
+            .nodes
+            .iter()
+            .find(|n| n.id.data().as_ffi() == node_id)
+        else {
+            return;
+        };
+        let element = element_runtime
+            .and_then(|runtime| runtime.element_for_node(window, node.id))
+            .map(|id| id.0);
+        let Some(selector) = best_selector_for_node(snapshot, node, element, &self.cfg) else {
+            return;
+        };
+        if let Ok(json) = serde_json::to_string(&selector) {
+            self.inspect_focus_node_id.insert(window, node_id);
+            self.inspect_focus_selector_json
+                .insert(window, json.clone());
+            self.last_picked_node_id.insert(window, node_id);
+            self.last_picked_selector_json.insert(window, json);
+        }
+    }
+
+    fn update_inspect_focus_lines(
+        &mut self,
+        window: AppWindowId,
+        snapshot: Option<&fret_core::SemanticsSnapshot>,
+        element_runtime: Option<&ElementRuntime>,
+    ) {
+        if !self.is_enabled() {
+            return;
+        }
+        let Some(snapshot) = snapshot else {
+            self.inspect_focus_summary_line.remove(&window);
+            self.inspect_focus_path_line.remove(&window);
+            return;
+        };
+
+        let node_id = self
+            .inspect_focus_node_id
+            .get(&window)
+            .copied()
+            .or_else(|| self.last_picked_node_id.get(&window).copied())
+            .or_else(|| self.last_hovered_node_id.get(&window).copied());
+        let Some(node_id) = node_id else {
+            self.inspect_focus_summary_line.remove(&window);
+            self.inspect_focus_path_line.remove(&window);
+            return;
+        };
+
+        let Some(node) = snapshot
+            .nodes
+            .iter()
+            .find(|n| n.id.data().as_ffi() == node_id)
+        else {
+            self.inspect_focus_summary_line.remove(&window);
+            self.inspect_focus_path_line.remove(&window);
+            return;
+        };
+
+        let role = semantics_role_label(node.role);
+        let mut summary = format!("focus: {role} node={node_id}");
+
+        if let Some(element) = element_runtime
+            .and_then(|runtime| runtime.element_for_node(window, node.id))
+            .map(|id| id.0)
+        {
+            summary.push_str(&format!(" element={element}"));
+        }
+        if let Some(test_id) = node.test_id.as_deref() {
+            summary.push_str(&format!(" test_id={test_id}"));
+        }
+        if !self.cfg.redact_text
+            && let Some(label) = node.label.as_deref()
+        {
+            let label = truncate_debug_value(label, 120);
+            summary.push_str(&format!(" label={label}"));
+        }
+
+        let path = format_inspect_path(snapshot, node_id, self.cfg.redact_text, 10);
+
+        self.inspect_focus_summary_line.insert(window, summary);
+        if let Some(path) = path {
+            self.inspect_focus_path_line.insert(window, path);
+        } else {
+            self.inspect_focus_path_line.remove(&window);
+        }
+    }
+
+    fn inspect_copy_details_payload(&self, window: AppWindowId) -> String {
+        let selector = self.inspect_best_selector_json(window);
+        let summary = self.inspect_focus_summary_line(window);
+        let path = self.inspect_focus_path_line(window);
+
+        let mut lines: Vec<String> = Vec::new();
+        if let Some(selector) = selector {
+            lines.push(format!("selector: {selector}"));
+        }
+        if let Some(summary) = summary {
+            lines.push(summary.to_string());
+        }
+        if let Some(path) = path {
+            lines.push(path.to_string());
+        }
+        lines.join("\n")
     }
 
     pub fn record_model_changes(&mut self, window: AppWindowId, changed: &[ModelId]) {
@@ -382,6 +1044,9 @@ impl UiDiagnosticsService {
             return;
         }
 
+        self.poll_pick_trigger();
+        self.poll_inspect_trigger();
+
         let ring = self.per_window.entry(window).or_default();
         ring.update_pointer_position(event);
 
@@ -404,19 +1069,34 @@ impl UiDiagnosticsService {
             return;
         }
 
-        let ring = self.per_window.entry(window).or_default();
-        let hit_test = ring
-            .last_pointer_position
+        let last_pointer_position = self
+            .per_window
+            .get(&window)
+            .and_then(|ring| ring.last_pointer_position);
+        let hit_test = last_pointer_position
             .map(|pos| UiHitTestSnapshotV1::from_hit_test(pos, ui.debug_hit_test(pos)));
 
         let element_diag = element_runtime
             .and_then(|runtime| runtime.diagnostics_snapshot(window))
             .map(ElementDiagnosticsSnapshotV1::from_runtime);
 
+        let raw_semantics = ui.semantics_snapshot();
+
+        if self.inspect_enabled {
+            let hovered = last_pointer_position.and_then(|pos| {
+                raw_semantics.and_then(|snap| {
+                    pick_semantics_node_by_bounds(snap, pos).map(|n| n.id.data().as_ffi())
+                })
+            });
+            self.update_inspect_hover(window, raw_semantics, hovered, element_runtime);
+        }
+        self.apply_inspect_navigation(window, raw_semantics, element_runtime);
+        self.update_inspect_focus_lines(window, raw_semantics, element_runtime);
+
         let semantics = self
             .cfg
             .capture_semantics
-            .then(|| ui.semantics_snapshot())
+            .then_some(raw_semantics)
             .flatten()
             .map(|snap| {
                 UiSemanticsSnapshotV1::from_snapshot(
@@ -425,6 +1105,8 @@ impl UiDiagnosticsService {
                     self.cfg.max_debug_string_bytes,
                 )
             });
+
+        let ring = self.per_window.entry(window).or_default();
 
         let snapshot = UiDiagnosticsSnapshotV1 {
             schema_version: 1,
@@ -441,6 +1123,18 @@ impl UiDiagnosticsService {
         };
 
         ring.push_snapshot(&self.cfg, snapshot);
+
+        if let Some(pending) = self.pending_pick.clone()
+            && pending.window == window
+        {
+            self.resolve_pending_pick_for_window(
+                window,
+                pending.position,
+                raw_semantics,
+                ui,
+                element_runtime,
+            );
+        }
     }
 
     pub fn maybe_dump_if_triggered(&mut self) -> Option<PathBuf> {
@@ -574,6 +1268,15 @@ impl UiDiagnosticsService {
         id
     }
 
+    fn next_pick_run_id(&mut self) -> u64 {
+        let mut id = unix_ms_now();
+        if id <= self.last_pick_run_id {
+            id = self.last_pick_run_id.saturating_add(1);
+        }
+        self.last_pick_run_id = id;
+        id
+    }
+
     fn write_script_result(&self, result: UiScriptResultV1) {
         if !self.is_enabled() {
             return;
@@ -581,6 +1284,169 @@ impl UiDiagnosticsService {
         let _ = write_json(self.cfg.script_result_path.clone(), &result);
         let _ = touch_file(&self.cfg.script_result_trigger_path);
     }
+
+    fn write_pick_result(&self, result: UiPickResultV1) {
+        if !self.is_enabled() {
+            return;
+        }
+        let _ = write_json(self.cfg.pick_result_path.clone(), &result);
+        let _ = touch_file(&self.cfg.pick_result_trigger_path);
+    }
+
+    fn poll_pick_trigger(&mut self) {
+        let modified =
+            match std::fs::metadata(&self.cfg.pick_trigger_path).and_then(|m| m.modified()) {
+                Ok(modified) => modified,
+                Err(_) => {
+                    if let Some(dir) = self.cfg.pick_trigger_path.parent() {
+                        let _ = std::fs::create_dir_all(dir);
+                    }
+                    if std::fs::OpenOptions::new()
+                        .create(true)
+                        .write(true)
+                        .open(&self.cfg.pick_trigger_path)
+                        .is_ok()
+                        && let Ok(modified) = std::fs::metadata(&self.cfg.pick_trigger_path)
+                            .and_then(|m| m.modified())
+                    {
+                        self.last_pick_trigger_mtime = Some(modified);
+                    }
+                    return;
+                }
+            };
+        if self
+            .last_pick_trigger_mtime
+            .is_some_and(|prev| prev >= modified)
+        {
+            return;
+        }
+        self.last_pick_trigger_mtime = Some(modified);
+
+        self.pending_pick = None;
+        self.pick_armed_run_id = Some(self.next_pick_run_id());
+    }
+
+    fn poll_inspect_trigger(&mut self) {
+        let modified =
+            match std::fs::metadata(&self.cfg.inspect_trigger_path).and_then(|m| m.modified()) {
+                Ok(modified) => modified,
+                Err(_) => {
+                    if let Some(dir) = self.cfg.inspect_trigger_path.parent() {
+                        let _ = std::fs::create_dir_all(dir);
+                    }
+                    if std::fs::OpenOptions::new()
+                        .create(true)
+                        .write(true)
+                        .open(&self.cfg.inspect_trigger_path)
+                        .is_ok()
+                        && let Ok(modified) = std::fs::metadata(&self.cfg.inspect_trigger_path)
+                            .and_then(|m| m.modified())
+                    {
+                        self.last_inspect_trigger_mtime = Some(modified);
+                    }
+                    return;
+                }
+            };
+        if self
+            .last_inspect_trigger_mtime
+            .is_some_and(|prev| prev >= modified)
+        {
+            return;
+        }
+        self.last_inspect_trigger_mtime = Some(modified);
+
+        let bytes = std::fs::read(&self.cfg.inspect_path).ok();
+        let Some(bytes) = bytes else {
+            return;
+        };
+        let cfg: UiInspectConfigV1 = match serde_json::from_slice(&bytes) {
+            Ok(cfg) => cfg,
+            Err(_) => return,
+        };
+        if cfg.schema_version != 1 {
+            return;
+        }
+
+        self.inspect_enabled = cfg.enabled;
+        self.inspect_consume_clicks = cfg.consume_clicks;
+    }
+
+    fn resolve_pending_pick_for_window(
+        &mut self,
+        window: AppWindowId,
+        position: Point,
+        raw_semantics: Option<&fret_core::SemanticsSnapshot>,
+        ui: &UiTree<App>,
+        element_runtime: Option<&ElementRuntime>,
+    ) {
+        let Some(pending) = self.pending_pick.clone() else {
+            return;
+        };
+        if pending.window != window {
+            return;
+        }
+
+        let mut result = UiPickResultV1 {
+            schema_version: 1,
+            run_id: pending.run_id,
+            updated_unix_ms: unix_ms_now(),
+            window: Some(window.data().as_ffi()),
+            stage: UiPickStageV1::Failed,
+            position: Some(PointV1::from(position)),
+            selection: None,
+            reason: None,
+            last_bundle_dir: self
+                .last_dump_dir
+                .as_ref()
+                .map(|p| display_path(&self.cfg.out_dir, p)),
+        };
+
+        let selection = match raw_semantics {
+            Some(snapshot) => pick_semantics_node_at(snapshot, ui, position).map(|node| {
+                let element = element_runtime
+                    .and_then(|runtime| runtime.element_for_node(window, node.id))
+                    .map(|id| id.0);
+                UiPickSelectionV1::from_node(snapshot, node, element, &self.cfg)
+            }),
+            None => None,
+        };
+
+        match selection {
+            Some(sel) => {
+                result.stage = UiPickStageV1::Picked;
+                self.last_picked_node_id.insert(window, sel.node.id);
+                if let Some(best) = sel.selectors.first()
+                    && let Ok(json) = serde_json::to_string(best)
+                {
+                    self.last_picked_selector_json.insert(window, json.clone());
+                    self.inspect_focus_node_id.insert(window, sel.node.id);
+                    self.inspect_focus_selector_json.insert(window, json);
+                    self.inspect_focus_down_stack.insert(window, Vec::new());
+                }
+                self.pick_overlay_grace_frames.insert(window, 10);
+                result.selection = Some(sel);
+            }
+            None => {
+                result.reason = Some("no matching semantics node under pointer".to_string());
+            }
+        }
+
+        if self.cfg.pick_auto_dump {
+            if let Some(dir) = self.dump_bundle(Some("pick")) {
+                result.last_bundle_dir = Some(display_path(&self.cfg.out_dir, &dir));
+            }
+        }
+
+        self.write_pick_result(result);
+        self.pending_pick = None;
+    }
+}
+
+#[derive(Debug, Clone)]
+struct PendingPick {
+    run_id: u64,
+    window: AppWindowId,
+    position: Point,
 }
 
 #[derive(Default)]
@@ -635,6 +1501,14 @@ pub struct UiDiagnosticsBundleConfigV1 {
     pub script_result_path: String,
     pub script_result_trigger_path: String,
     pub script_auto_dump: bool,
+    pub pick_trigger_path: String,
+    pub pick_result_path: String,
+    pub pick_result_trigger_path: String,
+    pub pick_auto_dump: bool,
+    #[serde(default)]
+    pub inspect_path: String,
+    #[serde(default)]
+    pub inspect_trigger_path: String,
     pub redact_text: bool,
     pub max_debug_string_bytes: usize,
 }
@@ -671,6 +1545,24 @@ impl UiDiagnosticsBundleV1 {
                     &svc.cfg.script_result_trigger_path,
                 ),
                 script_auto_dump: svc.cfg.script_auto_dump,
+                pick_trigger_path: sanitize_path_for_bundle(
+                    &svc.cfg.out_dir,
+                    &svc.cfg.pick_trigger_path,
+                ),
+                pick_result_path: sanitize_path_for_bundle(
+                    &svc.cfg.out_dir,
+                    &svc.cfg.pick_result_path,
+                ),
+                pick_result_trigger_path: sanitize_path_for_bundle(
+                    &svc.cfg.out_dir,
+                    &svc.cfg.pick_result_trigger_path,
+                ),
+                pick_auto_dump: svc.cfg.pick_auto_dump,
+                inspect_path: sanitize_path_for_bundle(&svc.cfg.out_dir, &svc.cfg.inspect_path),
+                inspect_trigger_path: sanitize_path_for_bundle(
+                    &svc.cfg.out_dir,
+                    &svc.cfg.inspect_trigger_path,
+                ),
                 redact_text: svc.cfg.redact_text,
                 max_debug_string_bytes: svc.cfg.max_debug_string_bytes,
             },
@@ -792,6 +1684,9 @@ pub enum UiSelectorV1 {
     TestId {
         id: String,
     },
+    GlobalElementId {
+        element: u64,
+    },
     NodeId {
         node: u64,
     },
@@ -828,6 +1723,64 @@ pub enum UiScriptStageV1 {
     Running,
     Passed,
     Failed,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiPickResultV1 {
+    pub schema_version: u32,
+    pub run_id: u64,
+    pub updated_unix_ms: u64,
+    pub window: Option<u64>,
+    pub stage: UiPickStageV1,
+    pub position: Option<PointV1>,
+    pub selection: Option<UiPickSelectionV1>,
+    pub reason: Option<String>,
+    pub last_bundle_dir: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiInspectConfigV1 {
+    pub schema_version: u32,
+    pub enabled: bool,
+    #[serde(default = "serde_default_true")]
+    pub consume_clicks: bool,
+}
+
+fn serde_default_true() -> bool {
+    true
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiPickStageV1 {
+    Picked,
+    Failed,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiPickSelectionV1 {
+    pub node: UiSemanticsNodeV1,
+    #[serde(default)]
+    pub element: Option<u64>,
+    pub selectors: Vec<UiSelectorV1>,
+}
+
+impl UiPickSelectionV1 {
+    fn from_node(
+        snapshot: &fret_core::SemanticsSnapshot,
+        node: &fret_core::SemanticsNode,
+        element: Option<u64>,
+        cfg: &UiDiagnosticsConfig,
+    ) -> Self {
+        let exported =
+            UiSemanticsNodeV1::from_node(node, cfg.redact_text, cfg.max_debug_string_bytes);
+        let selectors = suggest_selectors(snapshot, node, &exported, element, cfg);
+        Self {
+            node: exported,
+            element,
+            selectors,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1038,6 +1991,20 @@ pub struct UiFrameStatsV1 {
     pub layout_engine_solves: u64,
     pub layout_engine_solve_time_us: u64,
     pub layout_engine_widget_fallback_solves: u64,
+    #[serde(default)]
+    pub model_change_invalidation_roots: u32,
+    #[serde(default)]
+    pub global_change_invalidation_roots: u32,
+    #[serde(default)]
+    pub invalidation_walk_nodes: u32,
+    #[serde(default)]
+    pub invalidation_walk_calls: u32,
+    #[serde(default)]
+    pub view_cache_active: bool,
+    #[serde(default)]
+    pub view_cache_invalidation_truncations: u32,
+    #[serde(default)]
+    pub view_cache_contained_relayouts: u32,
     pub focused_node: Option<u64>,
     pub captured_node: Option<u64>,
 }
@@ -1057,6 +2024,13 @@ impl UiFrameStatsV1 {
             layout_engine_solves: stats.layout_engine_solves,
             layout_engine_solve_time_us: stats.layout_engine_solve_time.as_micros() as u64,
             layout_engine_widget_fallback_solves: stats.layout_engine_widget_fallback_solves,
+            model_change_invalidation_roots: stats.model_change_invalidation_roots,
+            global_change_invalidation_roots: stats.global_change_invalidation_roots,
+            invalidation_walk_nodes: stats.invalidation_walk_nodes,
+            invalidation_walk_calls: stats.invalidation_walk_calls,
+            view_cache_active: stats.view_cache_active,
+            view_cache_invalidation_truncations: stats.view_cache_invalidation_truncations,
+            view_cache_contained_relayouts: stats.view_cache_contained_relayouts,
             focused_node: stats.focus.map(key_to_u64),
             captured_node: stats.captured.map(key_to_u64),
         }
@@ -1288,7 +2262,7 @@ fn env_flag_default_true(name: &str) -> bool {
     !matches!(v.as_str(), "0" | "false" | "no" | "off")
 }
 
-fn semantics_role_label(role: SemanticsRole) -> &'static str {
+pub(crate) fn semantics_role_label(role: SemanticsRole) -> &'static str {
     match role {
         SemanticsRole::Generic => "generic",
         SemanticsRole::Window => "window",
@@ -1363,6 +2337,8 @@ fn parse_semantics_role(s: &str) -> Option<SemanticsRole> {
 
 fn select_semantics_node<'a>(
     snapshot: &'a fret_core::SemanticsSnapshot,
+    window: AppWindowId,
+    element_runtime: Option<&ElementRuntime>,
     selector: &UiSelectorV1,
 ) -> Option<&'a fret_core::SemanticsNode> {
     let index = SemanticsIndex::new(snapshot);
@@ -1416,6 +2392,17 @@ fn select_semantics_node<'a>(
             }),
             &index,
         ),
+        UiSelectorV1::GlobalElementId { element } => {
+            let node = element_runtime.and_then(|runtime| {
+                runtime.node_for_element(window, fret_ui::elements::GlobalElementId(*element))
+            })?;
+            let node_id = node.data().as_ffi();
+            index
+                .by_id
+                .get(&node_id)
+                .copied()
+                .filter(|n| index.is_selectable(n.id.data().as_ffi()))
+        }
     }
 }
 
@@ -1580,14 +2567,22 @@ fn pick_best_match<'a>(
     best.map(|(n, _)| n)
 }
 
-fn eval_predicate(snapshot: &fret_core::SemanticsSnapshot, pred: &UiPredicateV1) -> bool {
+fn eval_predicate(
+    snapshot: &fret_core::SemanticsSnapshot,
+    window: AppWindowId,
+    element_runtime: Option<&ElementRuntime>,
+    pred: &UiPredicateV1,
+) -> bool {
     match pred {
-        UiPredicateV1::Exists { target } => select_semantics_node(snapshot, target).is_some(),
+        UiPredicateV1::Exists { target } => {
+            select_semantics_node(snapshot, window, element_runtime, target).is_some()
+        }
         UiPredicateV1::FocusIs { target } => {
             let Some(focus) = snapshot.focus else {
                 return false;
             };
-            let Some(node) = select_semantics_node(snapshot, target) else {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
                 return false;
             };
             node.id == focus
@@ -1599,6 +2594,191 @@ fn center_of_rect(rect: Rect) -> Point {
     let x = rect.origin.x + rect.size.width * 0.5;
     let y = rect.origin.y + rect.size.height * 0.5;
     Point::new(x, y)
+}
+
+fn pick_semantics_node_at<'a>(
+    snapshot: &'a fret_core::SemanticsSnapshot,
+    ui: &UiTree<App>,
+    position: Point,
+) -> Option<&'a fret_core::SemanticsNode> {
+    let index = SemanticsIndex::new(snapshot);
+
+    let hit = ui.debug_hit_test(position).hit;
+    if let Some(hit) = hit {
+        let mut cur = Some(hit.data().as_ffi());
+        while let Some(id) = cur {
+            if index.is_selectable(id)
+                && let Some(node) = index.by_id.get(&id).copied()
+            {
+                return Some(node);
+            }
+            cur = index
+                .by_id
+                .get(&id)
+                .and_then(|n| n.parent.map(|p| p.data().as_ffi()));
+        }
+    }
+
+    pick_semantics_node_by_bounds(snapshot, position)
+}
+
+pub(crate) fn pick_semantics_node_by_bounds<'a>(
+    snapshot: &'a fret_core::SemanticsSnapshot,
+    position: Point,
+) -> Option<&'a fret_core::SemanticsNode> {
+    let index = SemanticsIndex::new(snapshot);
+    pick_best_match(
+        snapshot.nodes.iter().filter(|n| {
+            let id = n.id.data().as_ffi();
+            index.is_selectable(id) && n.bounds.contains(position)
+        }),
+        &index,
+    )
+}
+
+fn suggest_selectors(
+    snapshot: &fret_core::SemanticsSnapshot,
+    raw_node: &fret_core::SemanticsNode,
+    exported_node: &UiSemanticsNodeV1,
+    element: Option<u64>,
+    cfg: &UiDiagnosticsConfig,
+) -> Vec<UiSelectorV1> {
+    let mut out = Vec::new();
+
+    if let Some(id) = raw_node.test_id.as_deref() {
+        out.push(UiSelectorV1::TestId { id: id.to_string() });
+    }
+
+    let role = semantics_role_label(raw_node.role).to_string();
+    if let Some(name) = exported_node.label.as_deref() {
+        if !(cfg.redact_text && is_redacted_string(name)) {
+            let ancestors = selector_ancestors_for(snapshot, raw_node);
+            if !ancestors.is_empty() {
+                out.push(UiSelectorV1::RoleAndPath {
+                    role: role.clone(),
+                    name: name.to_string(),
+                    ancestors,
+                });
+            }
+            out.push(UiSelectorV1::RoleAndName {
+                role: role.clone(),
+                name: name.to_string(),
+            });
+        }
+    }
+
+    if let Some(element) = element {
+        out.push(UiSelectorV1::GlobalElementId { element });
+    }
+
+    out.push(UiSelectorV1::NodeId {
+        node: raw_node.id.data().as_ffi(),
+    });
+    out
+}
+
+fn best_selector_for_node(
+    snapshot: &fret_core::SemanticsSnapshot,
+    raw_node: &fret_core::SemanticsNode,
+    element: Option<u64>,
+    cfg: &UiDiagnosticsConfig,
+) -> Option<UiSelectorV1> {
+    let exported =
+        UiSemanticsNodeV1::from_node(raw_node, cfg.redact_text, cfg.max_debug_string_bytes);
+    suggest_selectors(snapshot, raw_node, &exported, element, cfg)
+        .into_iter()
+        .next()
+}
+
+fn parent_node_id(snapshot: &fret_core::SemanticsSnapshot, node: u64) -> Option<u64> {
+    let n = snapshot
+        .nodes
+        .iter()
+        .find(|n| n.id.data().as_ffi() == node)?;
+    n.parent.map(|p| p.data().as_ffi())
+}
+
+fn truncate_debug_value(s: &str, max_bytes: usize) -> String {
+    if s.len() <= max_bytes {
+        return s.to_string();
+    }
+    let mut out = s[..max_bytes.min(s.len())].to_string();
+    out.push('…');
+    out
+}
+
+fn format_inspect_path(
+    snapshot: &fret_core::SemanticsSnapshot,
+    focus_node_id: u64,
+    redact_text: bool,
+    max_parts: usize,
+) -> Option<String> {
+    if max_parts == 0 {
+        return None;
+    }
+    let mut parts: Vec<String> = Vec::new();
+    let mut cur: Option<u64> = Some(focus_node_id);
+    while let Some(id) = cur {
+        let Some(node) = snapshot.nodes.iter().find(|n| n.id.data().as_ffi() == id) else {
+            break;
+        };
+
+        let role = semantics_role_label(node.role);
+        let mut part = role.to_string();
+        if let Some(test_id) = node.test_id.as_deref() {
+            part.push('[');
+            part.push_str(&truncate_debug_value(test_id, 32));
+            part.push(']');
+        } else if !redact_text && let Some(label) = node.label.as_deref() {
+            part.push('(');
+            part.push_str(&truncate_debug_value(label, 32));
+            part.push(')');
+        }
+        parts.push(part);
+
+        cur = node.parent.map(|p| p.data().as_ffi());
+    }
+    if parts.is_empty() {
+        return None;
+    }
+    parts.reverse();
+
+    if parts.len() > max_parts {
+        parts = parts.split_off(parts.len() - max_parts);
+        parts.insert(0, "…".to_string());
+    }
+
+    Some(format!("path: {}", parts.join(" > ")))
+}
+
+fn selector_ancestors_for(
+    snapshot: &fret_core::SemanticsSnapshot,
+    node: &fret_core::SemanticsNode,
+) -> Vec<UiRoleAndNameV1> {
+    let index = SemanticsIndex::new(snapshot);
+    let mut rev: Vec<UiRoleAndNameV1> = Vec::new();
+
+    let mut cur = node
+        .parent
+        .and_then(|p| index.by_id.get(&p.data().as_ffi()).copied());
+    while let Some(n) = cur {
+        if let Some(label) = n.label.as_deref() {
+            rev.push(UiRoleAndNameV1 {
+                role: semantics_role_label(n.role).to_string(),
+                name: label.to_string(),
+            });
+        }
+        cur = n
+            .parent
+            .and_then(|p| index.by_id.get(&p.data().as_ffi()).copied());
+    }
+
+    rev.reverse();
+    rev
+}
+
+fn is_redacted_string(s: &str) -> bool {
+    s.trim_start().starts_with("<redacted")
 }
 
 fn click_events(position: Point, button: UiMouseButtonV1) -> [Event; 3] {
@@ -1766,6 +2946,313 @@ fn sanitize_label(label: &str) -> String {
         "bundle".to_string()
     } else {
         out
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_core::{
+        AppWindowId, Px, Rect, SemanticsActions, SemanticsFlags, SemanticsNode, SemanticsRole,
+        SemanticsRoot, SemanticsSnapshot, Size,
+    };
+    use slotmap::KeyData;
+
+    fn node_id(id: u64) -> NodeId {
+        NodeId::from(KeyData::from_ffi(id))
+    }
+
+    fn window_id(id: u64) -> AppWindowId {
+        AppWindowId::from(KeyData::from_ffi(id))
+    }
+
+    fn rect(x: f32, y: f32, w: f32, h: f32) -> Rect {
+        Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(w), Px(h)))
+    }
+
+    fn semantics_node(
+        id: u64,
+        parent: Option<u64>,
+        role: SemanticsRole,
+        bounds: Rect,
+        label: &str,
+    ) -> SemanticsNode {
+        SemanticsNode {
+            id: node_id(id),
+            parent: parent.map(node_id),
+            role,
+            bounds,
+            flags: SemanticsFlags::default(),
+            test_id: None,
+            active_descendant: None,
+            pos_in_set: None,
+            set_size: None,
+            label: Some(label.to_string()),
+            value: None,
+            text_selection: None,
+            text_composition: None,
+            actions: SemanticsActions::default(),
+            labelled_by: Vec::new(),
+            described_by: Vec::new(),
+            controls: Vec::new(),
+        }
+    }
+
+    fn semantics_node_with_test_id(
+        id: u64,
+        parent: Option<u64>,
+        role: SemanticsRole,
+        bounds: Rect,
+        label: &str,
+        test_id: &str,
+    ) -> SemanticsNode {
+        let mut n = semantics_node(id, parent, role, bounds, label);
+        n.test_id = Some(test_id.to_string());
+        n
+    }
+
+    #[test]
+    fn pick_by_bounds_prefers_topmost_root_z() {
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![
+                SemanticsRoot {
+                    root: node_id(1),
+                    visible: true,
+                    blocks_underlay_input: false,
+                    hit_testable: true,
+                    z_index: 0,
+                },
+                SemanticsRoot {
+                    root: node_id(3),
+                    visible: true,
+                    blocks_underlay_input: false,
+                    hit_testable: true,
+                    z_index: 10,
+                },
+            ],
+            barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    1,
+                    None,
+                    SemanticsRole::Panel,
+                    rect(0.0, 0.0, 200.0, 200.0),
+                    "root-a",
+                ),
+                semantics_node(
+                    2,
+                    Some(1),
+                    SemanticsRole::Button,
+                    rect(0.0, 0.0, 100.0, 100.0),
+                    "a",
+                ),
+                semantics_node(
+                    3,
+                    None,
+                    SemanticsRole::Panel,
+                    rect(0.0, 0.0, 200.0, 200.0),
+                    "root-b",
+                ),
+                semantics_node(
+                    4,
+                    Some(3),
+                    SemanticsRole::Button,
+                    rect(0.0, 0.0, 100.0, 100.0),
+                    "b",
+                ),
+            ],
+        };
+
+        let picked = pick_semantics_node_by_bounds(&snapshot, Point::new(Px(10.0), Px(10.0)))
+            .expect("expected a pick");
+        assert_eq!(picked.id, node_id(4));
+    }
+
+    #[test]
+    fn select_by_test_id_prefers_topmost_root_z() {
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![
+                SemanticsRoot {
+                    root: node_id(1),
+                    visible: true,
+                    blocks_underlay_input: false,
+                    hit_testable: true,
+                    z_index: 0,
+                },
+                SemanticsRoot {
+                    root: node_id(3),
+                    visible: true,
+                    blocks_underlay_input: false,
+                    hit_testable: true,
+                    z_index: 10,
+                },
+            ],
+            barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    1,
+                    None,
+                    SemanticsRole::Panel,
+                    rect(0.0, 0.0, 200.0, 200.0),
+                    "root-a",
+                ),
+                semantics_node_with_test_id(
+                    2,
+                    Some(1),
+                    SemanticsRole::Button,
+                    rect(0.0, 0.0, 100.0, 100.0),
+                    "a",
+                    "open",
+                ),
+                semantics_node(
+                    3,
+                    None,
+                    SemanticsRole::Panel,
+                    rect(0.0, 0.0, 200.0, 200.0),
+                    "root-b",
+                ),
+                semantics_node_with_test_id(
+                    4,
+                    Some(3),
+                    SemanticsRole::Button,
+                    rect(0.0, 0.0, 100.0, 100.0),
+                    "b",
+                    "open",
+                ),
+            ],
+        };
+
+        let selector = UiSelectorV1::TestId {
+            id: "open".to_string(),
+        };
+        let picked = select_semantics_node(&snapshot, window_id(1), None, &selector)
+            .expect("expected a pick");
+        assert_eq!(picked.id, node_id(4));
+
+        let cfg = UiDiagnosticsConfig::default();
+        let best = best_selector_for_node(&snapshot, &snapshot.nodes[1], None, &cfg)
+            .expect("expected a selector");
+        match best {
+            UiSelectorV1::TestId { id } => assert_eq!(id, "open"),
+            other => panic!("expected TestId selector, got: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn inspect_focus_shortcut_locks_to_semantics_focus() {
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus: Some(node_id(2)),
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    1,
+                    None,
+                    SemanticsRole::Panel,
+                    rect(0.0, 0.0, 200.0, 200.0),
+                    "root",
+                ),
+                semantics_node_with_test_id(
+                    2,
+                    Some(1),
+                    SemanticsRole::Button,
+                    rect(0.0, 0.0, 100.0, 100.0),
+                    "focus",
+                    "focused-btn",
+                ),
+            ],
+        };
+
+        let window = window_id(1);
+        let mut svc = UiDiagnosticsService::default();
+        svc.cfg.enabled = true;
+        svc.inspect_enabled = true;
+
+        svc.inspect_pending_nav
+            .insert(window, InspectNavCommand::Focus);
+        svc.apply_inspect_navigation(window, Some(&snapshot), None);
+
+        assert!(svc.inspect_is_locked(window));
+        let focus_id = snapshot.focus.expect("focus").data().as_ffi();
+        assert_eq!(svc.inspect_focus_node_id(window), Some(focus_id));
+        assert!(
+            svc.inspect_best_selector_json(window)
+                .is_some_and(|s| s.contains("test_id"))
+        );
+    }
+
+    #[test]
+    fn pick_by_bounds_respects_modal_barrier() {
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![
+                SemanticsRoot {
+                    root: node_id(1),
+                    visible: true,
+                    blocks_underlay_input: false,
+                    hit_testable: true,
+                    z_index: 0,
+                },
+                SemanticsRoot {
+                    root: node_id(3),
+                    visible: true,
+                    blocks_underlay_input: true,
+                    hit_testable: true,
+                    z_index: 10,
+                },
+            ],
+            barrier_root: Some(node_id(3)),
+            focus: None,
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    1,
+                    None,
+                    SemanticsRole::Panel,
+                    rect(0.0, 0.0, 200.0, 200.0),
+                    "underlay",
+                ),
+                semantics_node(
+                    2,
+                    Some(1),
+                    SemanticsRole::Button,
+                    rect(0.0, 0.0, 100.0, 100.0),
+                    "underlay-button",
+                ),
+                semantics_node(
+                    3,
+                    None,
+                    SemanticsRole::Dialog,
+                    rect(0.0, 0.0, 200.0, 200.0),
+                    "modal",
+                ),
+                semantics_node(
+                    4,
+                    Some(3),
+                    SemanticsRole::Button,
+                    rect(0.0, 0.0, 100.0, 100.0),
+                    "modal-button",
+                ),
+            ],
+        };
+
+        let picked = pick_semantics_node_by_bounds(&snapshot, Point::new(Px(10.0), Px(10.0)))
+            .expect("expected a pick");
+        assert_eq!(picked.id, node_id(4));
     }
 }
 

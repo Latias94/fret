@@ -1448,6 +1448,7 @@ dependencies = [
  "fret-app",
  "fret-bootstrap",
  "fret-core",
+ "fret-icons",
  "fret-launch",
  "fret-markdown",
  "fret-render",
@@ -1463,8 +1464,21 @@ dependencies = [
  "time",
  "tracing",
  "tracing-subscriber",
+ "web-sys",
  "wgpu",
  "winit",
+]
+
+[[package]]
+name = "fret-ui-gallery-web"
+version = "0.1.0"
+dependencies = [
+ "console_error_panic_hook",
+ "fret-launch",
+ "fret-ui-gallery",
+ "js-sys",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
@@ -1472,7 +1486,6 @@ name = "fret-ui-headless"
 version = "0.1.0"
 dependencies = [
  "fret-core",
- "fret-ui",
  "time",
  "virtualizer",
 ]
@@ -1547,6 +1560,7 @@ dependencies = [
  "fret-core",
  "fret-runtime",
  "fret-ui",
+ "fret-ui-shadcn",
  "serde",
 ]
 

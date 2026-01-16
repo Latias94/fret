@@ -48,6 +48,7 @@ impl ElementHostWidget {
             ElementInstance::PointerRegion(p) => p.enabled,
             ElementInstance::InternalDragRegion(p) => p.enabled,
             ElementInstance::Semantics(_) => false,
+            ElementInstance::SemanticFlex(_) => false,
             ElementInstance::FocusScope(_) => false,
             ElementInstance::InteractivityGate(_) => false,
             ElementInstance::DismissibleLayer(_) => false,
@@ -65,6 +66,7 @@ impl ElementHostWidget {
             ElementInstance::PointerRegion(_) => true,
             ElementInstance::InternalDragRegion(_) => true,
             ElementInstance::Semantics(_) => true,
+            ElementInstance::SemanticFlex(_) => true,
             ElementInstance::FocusScope(_) => true,
             ElementInstance::InteractivityGate(p) => p.present && p.interactive,
             ElementInstance::DismissibleLayer(_) => true,
@@ -106,6 +108,7 @@ impl ElementHostWidget {
         self.clips_hit_test = match &instance {
             ElementInstance::Container(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Semantics(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::SemanticFlex(p) => matches!(p.flex.layout.overflow, Overflow::Clip),
             ElementInstance::FocusScope(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::InteractivityGate(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Opacity(p) => matches!(p.layout.overflow, Overflow::Clip),
@@ -852,6 +855,7 @@ impl ElementHostWidget {
             }
             ElementInstance::VirtualList(props) => self.layout_virtual_list_impl(cx, window, props),
             ElementInstance::Flex(props) => self.layout_flex_impl(cx, window, props),
+            ElementInstance::SemanticFlex(props) => self.layout_flex_impl(cx, window, props.flex),
             ElementInstance::RovingFlex(props) => self.layout_flex_impl(cx, window, props.flex),
             ElementInstance::Grid(props) => self.layout_grid_impl(cx, window, props),
             ElementInstance::Image(props) => {

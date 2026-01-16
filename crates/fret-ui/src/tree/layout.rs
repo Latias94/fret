@@ -29,12 +29,14 @@ impl<H: UiHost> UiTree<H> {
     ) {
         let started = self.debug_enabled.then(Instant::now);
         if self.debug_enabled {
+            self.begin_debug_frame_if_needed(app.frame_id());
             self.debug_stats.frame_id = app.frame_id();
             self.debug_stats.layout_nodes_visited = 0;
             self.debug_stats.layout_nodes_performed = 0;
             self.debug_stats.layout_engine_solves = 0;
             self.debug_stats.layout_engine_solve_time = Duration::default();
             self.debug_stats.layout_engine_widget_fallback_solves = 0;
+            self.debug_stats.view_cache_active = self.view_cache_active();
             self.debug_stats.focus = self.focus;
             self.debug_stats.captured = self.captured_for(fret_core::PointerId(0));
         }
@@ -250,6 +252,12 @@ impl<H: UiHost> UiTree<H> {
         }
 
         for (root, bounds) in targets {
+            if self.debug_enabled {
+                self.debug_stats.view_cache_contained_relayouts = self
+                    .debug_stats
+                    .view_cache_contained_relayouts
+                    .saturating_add(1);
+            }
             let _ =
                 self.layout_in_with_pass_kind(app, services, root, bounds, scale_factor, pass_kind);
             self.flush_viewport_roots_after_root(

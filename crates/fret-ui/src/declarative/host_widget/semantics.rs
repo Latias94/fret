@@ -191,6 +191,9 @@ impl ElementHostWidget {
             ElementInstance::VirtualList(_) => {
                 cx.set_role(SemanticsRole::List);
             }
+            ElementInstance::SemanticFlex(props) => {
+                cx.set_role(props.role);
+            }
             ElementInstance::Flex(_)
             | ElementInstance::DismissibleLayer(_)
             | ElementInstance::FocusScope(_)

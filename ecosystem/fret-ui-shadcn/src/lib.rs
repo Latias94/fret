@@ -25,7 +25,7 @@ pub mod collapsible;
 pub mod combobox;
 pub mod command;
 pub mod context_menu;
-pub mod data_grid;
+mod data_grid;
 pub mod data_grid_canvas;
 pub mod data_table;
 mod data_table_controls;
@@ -76,6 +76,8 @@ pub mod tooltip;
 
 #[cfg(feature = "app-integration")]
 pub mod app_integration;
+
+mod ui_ext;
 
 pub use accordion::{
     Accordion, AccordionContent, AccordionItem, AccordionKind, AccordionTrigger,
@@ -234,15 +236,16 @@ pub use tooltip::{
 #[cfg(feature = "app-integration")]
 pub use app_integration::{install, install_app, install_app_with, install_app_with_theme};
 
-pub use fret_ui_kit::declarative::style as decl_style;
+pub use ::fret_ui_kit::declarative::style as decl_style;
 /// Re-exported “authoring glue” for app/component code.
 ///
 /// shadcn/ui recipes assume a lightweight layout/styling vocabulary (Tailwind on the web).
 /// In Fret, the closest analogue lives in `fret-ui-kit::declarative`. Re-exporting these keeps
 /// the common “app + components” story down to `fret-ui-shadcn` + `fret-bootstrap`.
-pub use fret_ui_kit::declarative::{icon, stack};
-pub use fret_ui_kit::{
+pub use ::fret_ui_kit::declarative::{icon, stack};
+pub use ::fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Size, Space, StyledExt,
+    UiExt,
 };
 
 /// Common imports for application code using `fret-ui-shadcn`.
@@ -252,6 +255,7 @@ pub use fret_ui_kit::{
 pub mod prelude {
     pub use crate::{
         ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Size, Space, StyledExt,
+        UiExt,
     };
     pub use crate::{decl_style, icon, stack};
 

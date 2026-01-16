@@ -135,6 +135,13 @@ fn resolve_column_width<TData>(
 pub struct TableViewProps {
     pub size: Size,
     pub row_height: Option<Px>,
+    /// Controls whether the virtualized body rows are treated as fixed-height or measured.
+    ///
+    /// - `Fixed` (default): fast path; row containers are forced to `row_height` and the virtualizer
+    ///   skips per-row measurement work.
+    /// - `Measured`: enables variable-height rows (e.g. wrapping Markdown) by letting the runtime
+    ///   measure visible rows and write sizes back into the virtualizer.
+    pub row_measure_mode: TableRowMeasureMode,
     pub overscan: usize,
     pub default_column_width: Px,
     pub min_column_width: Px,
@@ -177,11 +184,21 @@ pub struct TableViewProps {
     pub optimize_grid_lines: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TableRowMeasureMode {
+    /// Fixed-height body rows (fast path).
+    #[default]
+    Fixed,
+    /// Variable-height body rows (measurement + write-back).
+    Measured,
+}
+
 impl Default for TableViewProps {
     fn default() -> Self {
         Self {
             size: Size::Medium,
             row_height: None,
+            row_measure_mode: TableRowMeasureMode::Fixed,
             overscan: 2,
             default_column_width: Px(160.0),
             min_column_width: Px(40.0),
@@ -483,6 +500,10 @@ pub fn table_virtualized<H: UiHost, TData>(
     let row_h = props
         .row_height
         .unwrap_or_else(|| resolve_row_height(theme, props.size));
+    let body_row_height = match props.row_measure_mode {
+        TableRowMeasureMode::Fixed => Length::Px(row_h),
+        TableRowMeasureMode::Measured => Length::Auto,
+    };
     let cell_px = resolve_cell_padding_x(theme);
     let cell_py = resolve_cell_padding_y(theme);
 
@@ -945,8 +966,16 @@ pub fn table_virtualized<H: UiHost, TData>(
 
     let mut list_options = fret_ui::element::VirtualListOptions::new(row_h, props.overscan);
     list_options.items_revision = items_revision;
-    list_options.measure_mode = fret_ui::element::VirtualListMeasureMode::Fixed;
-    list_options.key_cache = fret_ui::element::VirtualListKeyCacheMode::VisibleOnly;
+    match props.row_measure_mode {
+        TableRowMeasureMode::Fixed => {
+            list_options.measure_mode = fret_ui::element::VirtualListMeasureMode::Fixed;
+            list_options.key_cache = fret_ui::element::VirtualListKeyCacheMode::VisibleOnly;
+        }
+        TableRowMeasureMode::Measured => {
+            list_options.measure_mode = fret_ui::element::VirtualListMeasureMode::Measured;
+            list_options.key_cache = fret_ui::element::VirtualListKeyCacheMode::AllKeys;
+        }
+    }
 
     let rendered_rows = Cell::new(0usize);
 
@@ -1968,7 +1997,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                         layout: LayoutStyle {
                                                                             size:
                                                                                 fret_ui::element::SizeStyle {
-                                                                                    height: Length::Px(row_h),
+                                                                                    height: body_row_height,
                                                                                     ..Default::default()
                                                                                 },
                                                                             ..Default::default()
@@ -2475,10 +2504,10 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                         None
                                                     };
 
-                                                    vec![cx.container(
-                                                        ContainerProps {
-                                                            background: bg,
-                                                            border: if is_active {
+                                                        vec![cx.container(
+                                                            ContainerProps {
+                                                                background: bg,
+                                                                border: if is_active {
                                                                 Edges {
                                                                     left: Px(2.0),
                                                                     ..Default::default()
@@ -2488,17 +2517,17 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                             },
                                                             border_color: if is_active {
                                                                 Some(ring)
-                                                            } else {
-                                                                None
-                                                            },
-                                                            layout: LayoutStyle {
-                                                                size: fret_ui::element::SizeStyle {
-                                                                    height: Length::Px(row_h),
+                                                                } else {
+                                                                    None
+                                                                },
+                                                                layout: LayoutStyle {
+                                                                    size: fret_ui::element::SizeStyle {
+                                                                        height: body_row_height,
+                                                                        ..Default::default()
+                                                                    },
                                                                     ..Default::default()
                                                                 },
                                                                 ..Default::default()
-                                                            },
-                                                            ..Default::default()
                                                         },
                                                         |cx| {
                                                             let mut render_row_group =

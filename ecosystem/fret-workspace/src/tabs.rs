@@ -4,7 +4,8 @@ use std::sync::Arc;
 use fret_runtime::CommandId;
 
 use crate::commands::{
-    CMD_WORKSPACE_TAB_ACTIVATE_PREFIX, CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_PREFIX,
+    CMD_WORKSPACE_TAB_ACTIVATE_PREFIX, CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_LEFT,
+    CMD_WORKSPACE_TAB_CLOSE_OTHERS, CMD_WORKSPACE_TAB_CLOSE_PREFIX, CMD_WORKSPACE_TAB_CLOSE_RIGHT,
     CMD_WORKSPACE_TAB_MOVE_AFTER_PREFIX, CMD_WORKSPACE_TAB_MOVE_BEFORE_PREFIX,
     CMD_WORKSPACE_TAB_MOVE_LEFT, CMD_WORKSPACE_TAB_MOVE_RIGHT, CMD_WORKSPACE_TAB_NEXT,
     CMD_WORKSPACE_TAB_PREV,
@@ -199,6 +200,94 @@ impl WorkspaceTabs {
         true
     }
 
+    pub fn close_others(&mut self) -> bool {
+        let Some(active) = self.active.clone() else {
+            return false;
+        };
+
+        if self.tabs.len() <= 1 {
+            return false;
+        }
+
+        let before = self.tabs.len();
+        self.tabs.retain(|t| t.as_ref() == active.as_ref());
+        self.dirty.retain(|t| t.as_ref() == active.as_ref());
+        self.mru.retain(|t| t.as_ref() == active.as_ref());
+        self.mru = vec![active.clone()];
+        self.active = Some(active);
+        self.tabs.len() != before
+    }
+
+    pub fn close_left_of_active(&mut self) -> bool {
+        let Some(active) = self.active.clone() else {
+            return false;
+        };
+        let Some(index) = self.tabs.iter().position(|t| t.as_ref() == active.as_ref()) else {
+            return false;
+        };
+        if index == 0 {
+            return false;
+        }
+
+        let keep_from = index;
+        let removed: Vec<Arc<str>> = self.tabs[..keep_from].to_vec();
+        self.tabs = self.tabs[keep_from..].to_vec();
+
+        for r in &removed {
+            self.dirty.remove(r);
+        }
+        self.mru
+            .retain(|t| !removed.iter().any(|r| r.as_ref() == t.as_ref()));
+        self.active = Some(active.clone());
+        if self
+            .mru
+            .first()
+            .is_some_and(|t| t.as_ref() == active.as_ref())
+        {
+            // ok
+        } else {
+            self.mru.retain(|t| t.as_ref() != active.as_ref());
+            self.mru.insert(0, active);
+        }
+
+        !removed.is_empty()
+    }
+
+    pub fn close_right_of_active(&mut self) -> bool {
+        let Some(active) = self.active.clone() else {
+            return false;
+        };
+        let Some(index) = self.tabs.iter().position(|t| t.as_ref() == active.as_ref()) else {
+            return false;
+        };
+        if index + 1 >= self.tabs.len() {
+            return false;
+        }
+
+        let keep_to = index + 1;
+        let removed: Vec<Arc<str>> = self.tabs[keep_to..].to_vec();
+        self.tabs.truncate(keep_to);
+
+        for r in &removed {
+            self.dirty.remove(r);
+        }
+        self.mru
+            .retain(|t| !removed.iter().any(|r| r.as_ref() == t.as_ref()));
+        self.active = Some(active.clone());
+        if self
+            .mru
+            .first()
+            .is_some_and(|t| t.as_ref() == active.as_ref())
+        {
+            // ok
+        } else {
+            self.mru.retain(|t| t.as_ref() != active.as_ref());
+            self.mru.insert(0, active);
+        }
+
+        !removed.is_empty()
+    }
+
     pub fn next(&mut self) -> bool {
         if self.tabs.len() <= 1 {
             return false;
@@ -281,6 +370,9 @@ impl WorkspaceTabs {
                 };
                 return self.close(active.as_ref());
             }
+            CMD_WORKSPACE_TAB_CLOSE_OTHERS => return self.close_others(),
+            CMD_WORKSPACE_TAB_CLOSE_LEFT => return self.close_left_of_active(),
+            CMD_WORKSPACE_TAB_CLOSE_RIGHT => return self.close_right_of_active(),
             CMD_WORKSPACE_TAB_MOVE_LEFT => return self.move_active_by(-1),
             CMD_WORKSPACE_TAB_MOVE_RIGHT => return self.move_active_by(1),
             _ => {}
@@ -475,6 +567,87 @@ mod tests {
         assert!(state.apply_command(&CommandId::from(CMD_WORKSPACE_TAB_CLOSE)));
         assert!(state.active().is_none());
         assert!(state.tabs().is_empty());
+    }
+
+    #[test]
+    fn close_others_keeps_only_active_tab_and_state() {
+        let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
+        for id in tabs(&["a", "b", "c"]) {
+            state.open_and_activate(id);
+        }
+
+        assert!(state.activate(Arc::<str>::from("b")));
+        state.set_dirty(Arc::<str>::from("a"), true);
+        state.set_dirty(Arc::<str>::from("b"), true);
+        state.set_dirty(Arc::<str>::from("c"), true);
+
+        assert!(state.apply_command(&CommandId::from(CMD_WORKSPACE_TAB_CLOSE_OTHERS)));
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["b"]
+        );
+        assert_eq!(state.active().unwrap().as_ref(), "b");
+        assert_eq!(
+            state.mru().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["b"]
+        );
+        assert!(!state.is_dirty("a"));
+        assert!(state.is_dirty("b"));
+        assert!(!state.is_dirty("c"));
+
+        assert!(!state.apply_command(&CommandId::from(CMD_WORKSPACE_TAB_CLOSE_OTHERS)));
+    }
+
+    #[test]
+    fn close_left_of_active_removes_tabs_and_dirty_left_of_active() {
+        let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
+        for id in tabs(&["a", "b", "c", "d"]) {
+            state.open_and_activate(id);
+        }
+
+        assert!(state.activate(Arc::<str>::from("c")));
+        state.set_dirty(Arc::<str>::from("a"), true);
+        state.set_dirty(Arc::<str>::from("c"), true);
+        state.set_dirty(Arc::<str>::from("d"), true);
+
+        assert!(state.apply_command(&CommandId::from(CMD_WORKSPACE_TAB_CLOSE_LEFT)));
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["c", "d"]
+        );
+        assert_eq!(state.active().unwrap().as_ref(), "c");
+        assert_eq!(
+            state.mru().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["c", "d"]
+        );
+        assert!(!state.is_dirty("a"));
+        assert!(state.is_dirty("c"));
+        assert!(state.is_dirty("d"));
+    }
+
+    #[test]
+    fn close_right_of_active_removes_tabs_and_dirty_right_of_active() {
+        let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
+        for id in tabs(&["a", "b", "c", "d"]) {
+            state.open_and_activate(id);
+        }
+
+        assert!(state.activate(Arc::<str>::from("b")));
+        state.set_dirty(Arc::<str>::from("b"), true);
+        state.set_dirty(Arc::<str>::from("d"), true);
+
+        assert!(state.apply_command(&CommandId::from(CMD_WORKSPACE_TAB_CLOSE_RIGHT)));
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["a", "b"]
+        );
+        assert_eq!(state.active().unwrap().as_ref(), "b");
+        assert_eq!(
+            state.mru().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["b", "a"]
+        );
+        assert!(state.is_dirty("b"));
+        assert!(!state.is_dirty("d"));
     }
 
     #[test]

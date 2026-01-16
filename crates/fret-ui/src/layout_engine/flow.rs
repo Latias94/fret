@@ -181,6 +181,7 @@ fn build_flow_subtree_impl<H: UiHost>(
         let child_is_layout_container = matches!(
             child_instance,
             Some(ElementInstance::Flex(_))
+                | Some(ElementInstance::SemanticFlex(_))
                 | Some(ElementInstance::RovingFlex(_))
                 | Some(ElementInstance::Stack(_))
                 | Some(ElementInstance::Grid(_))
@@ -290,6 +291,57 @@ fn build_flow_subtree_impl<H: UiHost>(
             engine.set_measured(node, false);
         }
         Some(ElementInstance::Flex(props)) => {
+            let mut style = style_for_item_in_parent(
+                app,
+                window,
+                sf,
+                parent_kind,
+                node,
+                Display::Flex,
+                root_override_size,
+            );
+            style.flex_direction = match props.direction {
+                fret_core::Axis::Horizontal => FlexDirection::Row,
+                fret_core::Axis::Vertical => FlexDirection::Column,
+            };
+            style.flex_wrap = if props.wrap {
+                FlexWrap::Wrap
+            } else {
+                FlexWrap::NoWrap
+            };
+            style.justify_content = Some(taffy_justify(props.justify));
+            style.align_items = Some(taffy_align_items(props.align));
+            style.gap = TaffySize {
+                width: LengthPercentage::length(scale_nonneg_px(props.gap, sf)),
+                height: LengthPercentage::length(scale_nonneg_px(props.gap, sf)),
+            };
+            style.padding = TaffyRect {
+                left: LengthPercentage::length(scale_nonneg_px(props.padding.left, sf)),
+                right: LengthPercentage::length(scale_nonneg_px(props.padding.right, sf)),
+                top: LengthPercentage::length(scale_nonneg_px(props.padding.top, sf)),
+                bottom: LengthPercentage::length(scale_nonneg_px(props.padding.bottom, sf)),
+            };
+
+            let children = tree.children(node).to_vec();
+            engine.set_style(node, style);
+            engine.set_children(node, &children);
+            engine.set_measured(node, false);
+            for child in children {
+                build_flow_subtree(
+                    engine,
+                    app,
+                    tree,
+                    window,
+                    sf,
+                    ParentLayoutKind::Flex {
+                        direction: props.direction,
+                    },
+                    child,
+                );
+            }
+        }
+        Some(ElementInstance::SemanticFlex(props)) => {
+            let props = props.flex;
             let mut style = style_for_item_in_parent(
                 app,
                 window,
