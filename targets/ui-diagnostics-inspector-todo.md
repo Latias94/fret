@@ -19,6 +19,7 @@ Related docs:
 - Script harness (`diag run`, `diag suite ui-gallery`)
 - `test_id` contract: authoring → semantics snapshot → bundle → selector
 - Picking (one-shot): `diag pick`, `diag pick-script`, `diag pick-apply`
+- Continuous inspect mode: `diag inspect on|off|toggle|status` (file-triggered, AI-friendly)
 - View cache frame stats exported in bundles (`debug.stats.view_cache_*`, `debug.stats.invalidation_*`)
 
 ## Milestone M1: “Inspect UX parity” (highest ROI)
@@ -30,11 +31,13 @@ Related docs:
    - Ownership: should live in `fret-ui-kit` / app overlay, not `fret-ui`.
    - Status:
      - MVP implemented in `fret-bootstrap` as a diagnostics-only overlay layer (border + label) while inspection is active (scripts/picking).
-     - Gaps: no continuous inspect toggle yet; no clipboard copy; no “locked selection”.
+     - Continuous inspect toggle implemented via file-triggered `inspect.json` + `inspect.touch` (`fretboard diag inspect ...`).
+     - Gaps: no clipboard copy; no “locked selection”; no in-app help/shortcuts (e.g. `Esc` to exit).
 
 2. **Pick modes**
    - One-shot pick (already): click once and write `pick.result.json`.
-   - Continuous picking mode: hover shows candidate, click selects, `Esc` exits.
+   - Continuous picking mode: hover shows candidate, click selects (optional click pass-through).
+     - Gap: `Esc` exit / in-app toggle not implemented yet (CLI/file-trigger only).
    - Keyboard “inspect focus”: select current focused node without pointer.
 
 3. **Selector quality improvements**

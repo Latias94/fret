@@ -27,6 +27,8 @@ pub struct UiDiagnosticsConfig {
     pub pick_result_path: PathBuf,
     pub pick_result_trigger_path: PathBuf,
     pub pick_auto_dump: bool,
+    pub inspect_path: PathBuf,
+    pub inspect_trigger_path: PathBuf,
     pub redact_text: bool,
     pub max_debug_string_bytes: usize,
 }
@@ -82,6 +84,14 @@ impl Default for UiDiagnosticsConfig {
             .map(PathBuf::from)
             .unwrap_or_else(|| out_dir.join("pick.result.touch"));
         let pick_auto_dump = env_flag_default_true("FRET_DIAG_PICK_AUTO_DUMP");
+        let inspect_path = std::env::var_os("FRET_DIAG_INSPECT_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| out_dir.join("inspect.json"));
+        let inspect_trigger_path = std::env::var_os("FRET_DIAG_INSPECT_TRIGGER_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| out_dir.join("inspect.touch"));
         let redact_text = env_flag_default_true("FRET_DIAG_REDACT_TEXT");
         let max_debug_string_bytes = std::env::var("FRET_DIAG_MAX_DEBUG_STRING_BYTES")
             .ok()
@@ -104,6 +114,8 @@ impl Default for UiDiagnosticsConfig {
             pick_result_path,
             pick_result_trigger_path,
             pick_auto_dump,
+            inspect_path,
+            inspect_trigger_path,
             redact_text,
             max_debug_string_bytes,
         }
@@ -117,6 +129,9 @@ pub struct UiDiagnosticsService {
     last_trigger_mtime: Option<std::time::SystemTime>,
     last_script_trigger_mtime: Option<std::time::SystemTime>,
     last_pick_trigger_mtime: Option<std::time::SystemTime>,
+    last_inspect_trigger_mtime: Option<std::time::SystemTime>,
+    inspect_enabled: bool,
+    inspect_consume_clicks: bool,
     pending_script: Option<UiActionScriptV1>,
     pending_script_run_id: Option<u64>,
     active_scripts: HashMap<AppWindowId, ActiveScript>,
@@ -153,12 +168,17 @@ impl UiDiagnosticsService {
         self.pick_armed_run_id.is_some()
     }
 
+    pub fn inspect_is_enabled(&self) -> bool {
+        self.inspect_enabled
+    }
+
     pub fn wants_inspection_active(&mut self, window: AppWindowId) -> bool {
         if !self.is_enabled() {
             return false;
         }
 
         self.poll_pick_trigger();
+        self.poll_inspect_trigger();
 
         let grace = self
             .pick_overlay_grace_frames
@@ -178,6 +198,7 @@ impl UiDiagnosticsService {
             || self.active_scripts.contains_key(&window)
             || self.pick_armed_run_id.is_some()
             || grace > 0
+            || self.inspect_enabled
             || self
                 .pending_pick
                 .as_ref()
@@ -199,23 +220,35 @@ impl UiDiagnosticsService {
         }
 
         self.poll_pick_trigger();
-
-        let Some(run_id) = self.pick_armed_run_id else {
-            return false;
-        };
+        self.poll_inspect_trigger();
 
         let Event::Pointer(PointerEvent::Down { position, .. }) = event else {
             return false;
         };
 
-        self.pick_armed_run_id = None;
+        if let Some(run_id) = self.pick_armed_run_id.take() {
+            self.pending_pick = Some(PendingPick {
+                run_id,
+                window,
+                position: *position,
+            });
+            app.request_redraw(window);
+            return true;
+        }
+
+        if !self.inspect_enabled {
+            return false;
+        }
+
+        let run_id = self.next_pick_run_id();
+
         self.pending_pick = Some(PendingPick {
             run_id,
             window,
             position: *position,
         });
         app.request_redraw(window);
-        true
+        self.inspect_consume_clicks
     }
 
     pub fn drive_script_for_window(
@@ -493,6 +526,7 @@ impl UiDiagnosticsService {
         }
 
         self.poll_pick_trigger();
+        self.poll_inspect_trigger();
 
         let ring = self.per_window.entry(window).or_default();
         ring.update_pointer_position(event);
@@ -751,6 +785,51 @@ impl UiDiagnosticsService {
         self.pick_armed_run_id = Some(self.next_pick_run_id());
     }
 
+    fn poll_inspect_trigger(&mut self) {
+        let modified =
+            match std::fs::metadata(&self.cfg.inspect_trigger_path).and_then(|m| m.modified()) {
+                Ok(modified) => modified,
+                Err(_) => {
+                    if let Some(dir) = self.cfg.inspect_trigger_path.parent() {
+                        let _ = std::fs::create_dir_all(dir);
+                    }
+                    if std::fs::OpenOptions::new()
+                        .create(true)
+                        .write(true)
+                        .open(&self.cfg.inspect_trigger_path)
+                        .is_ok()
+                        && let Ok(modified) = std::fs::metadata(&self.cfg.inspect_trigger_path)
+                            .and_then(|m| m.modified())
+                    {
+                        self.last_inspect_trigger_mtime = Some(modified);
+                    }
+                    return;
+                }
+            };
+        if self
+            .last_inspect_trigger_mtime
+            .is_some_and(|prev| prev >= modified)
+        {
+            return;
+        }
+        self.last_inspect_trigger_mtime = Some(modified);
+
+        let bytes = std::fs::read(&self.cfg.inspect_path).ok();
+        let Some(bytes) = bytes else {
+            return;
+        };
+        let cfg: UiInspectConfigV1 = match serde_json::from_slice(&bytes) {
+            Ok(cfg) => cfg,
+            Err(_) => return,
+        };
+        if cfg.schema_version != 1 {
+            return;
+        }
+
+        self.inspect_enabled = cfg.enabled;
+        self.inspect_consume_clicks = cfg.consume_clicks;
+    }
+
     fn resolve_pending_pick_for_window(
         &mut self,
         window: AppWindowId,
@@ -872,6 +951,10 @@ pub struct UiDiagnosticsBundleConfigV1 {
     pub pick_result_path: String,
     pub pick_result_trigger_path: String,
     pub pick_auto_dump: bool,
+    #[serde(default)]
+    pub inspect_path: String,
+    #[serde(default)]
+    pub inspect_trigger_path: String,
     pub redact_text: bool,
     pub max_debug_string_bytes: usize,
 }
@@ -921,6 +1004,11 @@ impl UiDiagnosticsBundleV1 {
                     &svc.cfg.pick_result_trigger_path,
                 ),
                 pick_auto_dump: svc.cfg.pick_auto_dump,
+                inspect_path: sanitize_path_for_bundle(&svc.cfg.out_dir, &svc.cfg.inspect_path),
+                inspect_trigger_path: sanitize_path_for_bundle(
+                    &svc.cfg.out_dir,
+                    &svc.cfg.inspect_trigger_path,
+                ),
                 redact_text: svc.cfg.redact_text,
                 max_debug_string_bytes: svc.cfg.max_debug_string_bytes,
             },
@@ -1091,6 +1179,18 @@ pub struct UiPickResultV1 {
     pub selection: Option<UiPickSelectionV1>,
     pub reason: Option<String>,
     pub last_bundle_dir: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiInspectConfigV1 {
+    pub schema_version: u32,
+    pub enabled: bool,
+    #[serde(default = "serde_default_true")]
+    pub consume_clicks: bool,
+}
+
+fn serde_default_true() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

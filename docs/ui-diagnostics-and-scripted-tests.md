@@ -101,6 +101,30 @@ Notes:
 
 - While picking is active, the app renders a non-interactive inspect overlay (outline + label) to help confirm which semantics node is being targeted.
 
+## Quick Start (continuous inspect mode)
+
+This is closer to Zed/GPUI’s inspector workflow: keep an inspect overlay active while you hover, and (optionally) pick targets repeatedly on click.
+
+1. Run the app with diagnostics enabled:
+
+   - `FRET_DIAG=1`
+
+2. Enable inspect mode (writes `inspect.json` and touches `inspect.touch`):
+
+   - `cargo run -p fretboard -- diag inspect on`
+
+   Optional: allow clicks to keep reaching the app UI while still producing pick results:
+
+   - `cargo run -p fretboard -- diag inspect on --consume-clicks false`
+
+3. Hover to see the candidate node; click to write `pick.result.json` (each click updates `run_id`).
+
+4. Disable or toggle:
+
+   - `cargo run -p fretboard -- diag inspect off`
+   - `cargo run -p fretboard -- diag inspect toggle`
+   - `cargo run -p fretboard -- diag inspect status` (prints a 1-line JSON payload)
+
 ### Generate a runnable script from a pick
 
 To reduce "pick → first repro script" friction, `fretboard` can generate a minimal script skeleton:
@@ -171,6 +195,11 @@ Picking:
 - `FRET_DIAG_PICK_RESULT_PATH=...`: pick result JSON path (default `<dir>/pick.result.json`).
 - `FRET_DIAG_PICK_RESULT_TRIGGER_PATH=...`: pick result trigger file (default `<dir>/pick.result.touch`).
 - `FRET_DIAG_PICK_AUTO_DUMP=0`: disable auto-dump after a pick (default enabled).
+
+Inspect mode:
+
+- `FRET_DIAG_INSPECT_PATH=...`: inspect config JSON path (default `<dir>/inspect.json`).
+- `FRET_DIAG_INSPECT_TRIGGER_PATH=...`: inspect config trigger file (default `<dir>/inspect.touch`).
 
 ## Target selection rules (MVP)
 
