@@ -119,7 +119,7 @@ Legend:
 | `dropdown_menu` | `DropdownMenu` | Patch-only | `into_element` requires trigger/entries closures |
 | `context_menu` | `ContextMenu` | Patch-only | `into_element` requires trigger/entries closures |
 | `menubar` | `Menubar` | Pass-through |  |
-| `select` | `Select` | Layout-only | Needs chrome support for full parity |
+| `select` | `Select` | Chrome+Layout |  |
 | `slider` | `Slider` | Layout-only | Needs chrome support for full parity |
 | `accordion` | `AccordionTrigger` | Chrome+Layout (Patch-only) | `into_element` requires root/value args |
 | `accordion` | `AccordionContent` | Chrome+Layout (Patch-only) | Rendered via `Accordion` |

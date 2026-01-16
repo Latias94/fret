@@ -402,6 +402,7 @@ pub struct Select {
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     on_dismiss_request: Option<OnDismissRequest>,
+    chrome: ChromeRefinement,
     layout: LayoutRefinement,
     align: SelectAlign,
     side: SelectSide,
@@ -424,6 +425,7 @@ impl Select {
             disabled: false,
             a11y_label: None,
             on_dismiss_request: None,
+            chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             align: SelectAlign::default(),
             side: SelectSide::default(),
@@ -509,6 +511,11 @@ impl Select {
         self
     }
 
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
     pub fn align(mut self, align: SelectAlign) -> Self {
         self.align = align;
         self
@@ -571,6 +578,7 @@ impl Select {
             self.disabled,
             self.a11y_label,
             self.on_dismiss_request,
+            self.chrome,
             self.layout,
             self.align,
             self.side,
@@ -605,6 +613,7 @@ pub fn select<H: UiHost>(
         disabled,
         a11y_label,
         None,
+        ChromeRefinement::default(),
         layout,
         SelectAlign::default(),
         SelectSide::default(),
@@ -627,6 +636,7 @@ fn select_impl<H: UiHost>(
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     on_dismiss_request: Option<OnDismissRequest>,
+    chrome: ChromeRefinement,
     layout: LayoutRefinement,
     align: SelectAlign,
     side: SelectSide,
@@ -702,7 +712,7 @@ fn select_impl<H: UiHost>(
         let resolved = resolve_input_chrome(
             &theme,
             fret_ui_kit::Size::default(),
-            &ChromeRefinement::default(),
+            &chrome,
             InputTokenKeys::none(),
         );
 

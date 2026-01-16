@@ -69,7 +69,11 @@ fn ui_builder_smoke_applies_supported_patches() {
 
     let _ = Switch::new(switch_model).ui().px_2().build();
     let _ = Slider::new(slider_model).ui().w_full().build();
-    let _ = Select::new(select_model, select_open).ui().w_full().build();
+    let _ = Select::new(select_model, select_open)
+        .ui()
+        .px_2()
+        .w_full()
+        .build();
 
     let _ = Progress::new(progress_model).ui().w_full().build();
     let _ = TabsRoot::uncontrolled::<Arc<str>>(None).ui().p_4().build();

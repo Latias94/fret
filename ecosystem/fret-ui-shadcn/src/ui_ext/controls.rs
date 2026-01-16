@@ -15,5 +15,5 @@ impl_ui_patch_chrome_layout!(Textarea);
 
 impl_ui_patch_chrome_layout!(Card);
 
-impl_ui_patch_layout_only!(Select);
+impl_ui_patch_chrome_layout!(Select);
 impl_ui_patch_layout_only!(Slider);
