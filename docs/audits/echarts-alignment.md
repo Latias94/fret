@@ -112,6 +112,8 @@ Status symbols:
   - View participation: `ecosystem/delinea/src/view/mod.rs`
   - Transform graph scaffolding: `ecosystem/delinea/src/transform_graph/mod.rs`
   - Data view indices cache: `ecosystem/delinea/src/transform_graph/data_view.rs` (owned by `TransformGraph`)
+  - Filter plan scaffolding: `ecosystem/delinea/src/transform_graph/filter_plan.rs`
+  - Filter plan output snapshot: `ecosystem/delinea/src/transform_graph/filter_plan_output.rs`
   - UI adapter: `ecosystem/fret-chart/src/retained/canvas.rs`
   - ECharts option adapter (feature-gated): `ecosystem/fret-chart/src/echarts/mod.rs`
   - ECharts smoke demo: `apps/fret-examples/src/echarts_demo.rs`

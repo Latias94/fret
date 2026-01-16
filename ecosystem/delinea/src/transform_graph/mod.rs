@@ -9,6 +9,7 @@
 
 mod data_view;
 mod filter_plan;
+mod filter_plan_output;
 
 pub use data_view::*;
 pub use filter_plan::*;
@@ -34,6 +35,7 @@ pub struct TransformGraph {
     data_views: DataViewStage,
     filter_plan_output: FilterPlanOutput,
     filter_plan_cache: Option<CachedFilterPlan>,
+    filter_plan_output_cache: Option<filter_plan_output::CachedFilterPlanOutput>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -61,6 +63,7 @@ impl TransformGraph {
         self.data_views = DataViewStage::default();
         self.filter_plan_output = FilterPlanOutput::default();
         self.filter_plan_cache = None;
+        self.filter_plan_output_cache = None;
     }
 
     pub fn data_views(&self) -> &DataViewStage {
@@ -77,10 +80,6 @@ impl TransformGraph {
 
     pub fn filter_plan_output(&self) -> &FilterPlanOutput {
         &self.filter_plan_output
-    }
-
-    pub fn set_filter_plan_output(&mut self, output: FilterPlanOutput) {
-        self.filter_plan_output = output;
     }
 
     pub fn filter_plan(&mut self, model: &ChartModel) -> &FilterPlan {

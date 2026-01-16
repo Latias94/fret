@@ -583,6 +583,7 @@ goal is to establish a stable “Option -> Engine” spine that scales to more s
     - X axis data extents caching (used by percent->value mapping).
     - Y percent extents scoped by X selection/filter (order-sensitive “X before Y” semantics per grid).
     - Incremental indices view caching (`DataViewStage`) is owned by `TransformGraph` (implemented in `transform_graph/data_view.rs`).
+    - Filter plan scaffolding and the latest filter plan output snapshot are owned by `TransformGraph` (see `transform_graph/filter_plan.rs`, `transform_graph/filter_plan_output.rs`).
 - Minimum viable nodes:
   - selection/slice node (monotonic fast path + non-monotonic index selection)
   - derived columns (computed fields)
