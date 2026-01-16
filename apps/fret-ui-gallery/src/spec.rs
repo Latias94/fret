@@ -153,6 +153,7 @@ pub(crate) const CMD_APP_SETTINGS: &str = "ui_gallery.app.settings";
 pub(crate) struct PageSpec {
     pub(crate) id: &'static str,
     pub(crate) label: &'static str,
+    pub(crate) title: &'static str,
     pub(crate) origin: &'static str,
     pub(crate) command: &'static str,
     pub(crate) tags: &'static [&'static str],
@@ -164,6 +165,7 @@ impl PageSpec {
     pub(crate) const fn new(
         id: &'static str,
         label: &'static str,
+        title: &'static str,
         origin: &'static str,
         command: &'static str,
         tags: &'static [&'static str],
@@ -173,6 +175,7 @@ impl PageSpec {
         Self {
             id,
             label,
+            title,
             origin,
             command,
             tags,
@@ -195,6 +198,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             PageSpec::new(
                 PAGE_INTRO,
                 "Introduction",
+                "Introduction",
                 "Core contracts",
                 CMD_NAV_INTRO,
                 &["overview", "contracts"],
@@ -204,6 +208,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             PageSpec::new(
                 PAGE_LAYOUT,
                 "Layout",
+                "Layout / Stacks & Constraints",
                 "Layout system",
                 CMD_NAV_LAYOUT,
                 &["layout", "flex", "stack"],
@@ -218,6 +223,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             PageSpec::new(
                 PAGE_BUTTON,
                 "Button",
+                "Button",
                 "fret-ui-shadcn",
                 CMD_NAV_BUTTON,
                 &["button", "variant"],
@@ -227,6 +233,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             PageSpec::new(
                 PAGE_FORMS,
                 "Forms",
+                "Inputs / TextArea / Checkbox / Switch",
                 "fret-ui-shadcn",
                 CMD_NAV_FORMS,
                 &["input", "textarea", "checkbox", "switch"],
@@ -235,6 +242,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             ),
             PageSpec::new(
                 PAGE_SELECT,
+                "Select",
                 "Select",
                 "fret-ui-shadcn",
                 CMD_NAV_SELECT,
@@ -245,6 +253,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             PageSpec::new(
                 PAGE_COMBOBOX,
                 "Combobox",
+                "Combobox",
                 "fret-ui-shadcn",
                 CMD_NAV_COMBOBOX,
                 &["combobox", "cmdk", "search"],
@@ -253,6 +262,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             ),
             PageSpec::new(
                 PAGE_DATE_PICKER,
+                "Date Picker",
                 "Date Picker",
                 "fret-ui-shadcn",
                 CMD_NAV_DATE_PICKER,
@@ -263,6 +273,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             PageSpec::new(
                 PAGE_RESIZABLE,
                 "Resizable",
+                "Resizable Panels",
                 "fret-ui-shadcn",
                 CMD_NAV_RESIZABLE,
                 &["split", "panel", "resize"],
@@ -271,6 +282,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             ),
             PageSpec::new(
                 PAGE_DATA_TABLE,
+                "DataTable",
                 "DataTable",
                 "fret-ui-shadcn + fret-ui-headless",
                 CMD_NAV_DATA_TABLE,
@@ -281,6 +293,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             PageSpec::new(
                 PAGE_DATA_GRID,
                 "DataGrid",
+                "DataGrid",
                 "fret-ui-shadcn",
                 CMD_NAV_DATA_GRID,
                 &["grid", "viewport", "virtualized"],
@@ -289,6 +302,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             ),
             PageSpec::new(
                 PAGE_TABS,
+                "Tabs",
                 "Tabs",
                 "fret-ui-shadcn",
                 CMD_NAV_TABS,
@@ -299,6 +313,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             PageSpec::new(
                 PAGE_ACCORDION,
                 "Accordion",
+                "Accordion",
                 "fret-ui-shadcn",
                 CMD_NAV_ACCORDION,
                 &["accordion", "collapsible"],
@@ -307,6 +322,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             ),
             PageSpec::new(
                 PAGE_TABLE,
+                "Table",
                 "Table",
                 "fret-ui-shadcn",
                 CMD_NAV_TABLE,
@@ -317,6 +333,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             PageSpec::new(
                 PAGE_PROGRESS,
                 "Progress",
+                "Progress",
                 "fret-ui-shadcn",
                 CMD_NAV_PROGRESS,
                 &["progress"],
@@ -326,6 +343,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             PageSpec::new(
                 PAGE_MENUS,
                 "Menus",
+                "Menus (Dropdown / Context)",
                 "fret-ui-shadcn",
                 CMD_NAV_MENUS,
                 &["dropdown", "context-menu"],
@@ -334,6 +352,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             ),
             PageSpec::new(
                 PAGE_COMMAND,
+                "Command Palette",
                 "Command Palette",
                 "fret-ui-shadcn",
                 CMD_NAV_COMMAND,
@@ -344,6 +363,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             PageSpec::new(
                 PAGE_TOAST,
                 "Toast",
+                "Toast",
                 "fret-ui-shadcn",
                 CMD_NAV_TOAST,
                 &["sonner", "toast"],
@@ -353,6 +373,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             PageSpec::new(
                 PAGE_OVERLAY,
                 "Overlay",
+                "Overlay / Popover & Dialog",
                 "Radix-shaped primitives",
                 CMD_NAV_OVERLAY,
                 &["dialog", "popover"],
@@ -375,5 +396,5 @@ pub(crate) fn page_meta(
 ) -> (&'static str, &'static str, &'static str, &'static str) {
     let fallback = page_spec(PAGE_INTRO).expect("intro page exists");
     let page = page_spec(selected).unwrap_or(fallback);
-    (page.label, page.origin, page.docs_md, page.usage_md)
+    (page.title, page.origin, page.docs_md, page.usage_md)
 }

@@ -12,9 +12,11 @@ publish = false
 
 [features]
 serde = ["dep:serde"]
+shadcn-context-menu = ["dep:fret-ui-shadcn"]
 
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
+fret-ui-shadcn = { path = "../fret-ui-shadcn", optional = true }
 serde = { workspace = true, optional = true, features = ["rc"] }
