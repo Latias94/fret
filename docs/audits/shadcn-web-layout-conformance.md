@@ -93,7 +93,9 @@ patterns:
 - `empty-avatar`
 - `empty-avatar-group`
 - `popover-demo` (overlay placement + transform origin)
-- `dropdown-menu-demo` (overlay placement + max-height/scrolling)
+- `dropdown-menu-demo` (overlay placement + max-height/scrolling; `vp1440x320` gates menu panel height)
+- `context-menu-demo` (overlay placement + max-height/scrolling; `vp1440x320` gates menu panel height)
+- `menubar-demo` (overlay placement + max-height/scrolling; `vp1440x320` gates menu panel height)
 - `select-scrollable` (available-height clamping + scrolling + scroll buttons / top inset outcome)
 - `scroll-area-demo` (scroll range via viewport `scrollHeight/clientHeight`; `.hover` gates scrollbar track rect; `.scrolled` gates thumb rect)
 - `scroll-area-horizontal-demo` (scroll range via viewport `scrollWidth/clientWidth`; `.hover` gates scrollbar track rect; `.scrolled` gates thumb rect)

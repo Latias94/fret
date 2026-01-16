@@ -579,6 +579,18 @@ fn fret_menu_item_heights_in_menus(snap: &fret_core::SemanticsSnapshot) -> Vec<f
         .collect()
 }
 
+fn fret_largest_menu_height(snap: &fret_core::SemanticsSnapshot) -> Option<f32> {
+    snap.nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Menu)
+        .max_by(|a, b| {
+            let area_a = a.bounds.size.width.0 * a.bounds.size.height.0;
+            let area_b = b.bounds.size.width.0 * b.bounds.size.height.0;
+            area_a.total_cmp(&area_b)
+        })
+        .map(|n| n.bounds.size.height.0)
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct InsetTriplet {
     left: f32,
@@ -1983,6 +1995,9 @@ fn web_vs_fret_dropdown_menu_demo_small_viewport_menu_content_insets_match() {
     let web = read_web_golden_open("dropdown-menu-demo.vp1440x320");
     let theme = web_theme(&web);
     let expected = web_menu_content_insets_for_slots(&theme, &["dropdown-menu-content"]);
+    let expected_menu_h = web_portal_node_by_data_slot(&theme, "dropdown-menu-content")
+        .rect
+        .h;
 
     let window = AppWindowId::default();
     let mut app = App::new();
@@ -2090,6 +2105,14 @@ fn web_vs_fret_dropdown_menu_demo_small_viewport_menu_content_insets_match() {
     let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
     let actual = fret_menu_content_insets(&snap);
     assert_sorted_insets_match("dropdown-menu-demo.vp1440x320", &actual, &expected);
+    let actual_menu_h = fret_largest_menu_height(&snap)
+        .unwrap_or_else(|| panic!("missing fret menu for dropdown-menu-demo.vp1440x320"));
+    assert_close(
+        "dropdown-menu-demo.vp1440x320 menu height",
+        actual_menu_h,
+        expected_menu_h,
+        2.0,
+    );
 }
 
 fn assert_dropdown_menu_demo_submenu_overlay_placement_matches(web_name: &str) {
@@ -3477,6 +3500,9 @@ fn web_vs_fret_context_menu_demo_small_viewport_menu_content_insets_match() {
     let web = read_web_golden_open("context-menu-demo.vp1440x320");
     let theme = web_theme(&web);
     let expected = web_menu_content_insets_for_slots(&theme, &["context-menu-content"]);
+    let expected_menu_h = web_portal_node_by_data_slot(&theme, "context-menu-content")
+        .rect
+        .h;
 
     let window = AppWindowId::default();
     let mut app = App::new();
@@ -3540,6 +3566,14 @@ fn web_vs_fret_context_menu_demo_small_viewport_menu_content_insets_match() {
     let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
     let actual = fret_menu_content_insets(&snap);
     assert_sorted_insets_match("context-menu-demo.vp1440x320", &actual, &expected);
+    let actual_menu_h = fret_largest_menu_height(&snap)
+        .unwrap_or_else(|| panic!("missing fret menu for context-menu-demo.vp1440x320"));
+    assert_close(
+        "context-menu-demo.vp1440x320 menu height",
+        actual_menu_h,
+        expected_menu_h,
+        2.0,
+    );
 }
 
 fn assert_context_menu_demo_submenu_overlay_placement_matches(web_name: &str) {
@@ -5068,6 +5102,9 @@ fn web_vs_fret_menubar_demo_small_viewport_menu_content_insets_match() {
     let web = read_web_golden_open("menubar-demo.vp1440x320");
     let theme = web_theme(&web);
     let expected = web_menu_content_insets_for_slots(&theme, &["menubar-content"]);
+    let expected_menu_h = web_portal_node_by_data_slot(&theme, "menubar-content")
+        .rect
+        .h;
 
     let window = AppWindowId::default();
     let mut app = App::new();
@@ -5162,6 +5199,14 @@ fn web_vs_fret_menubar_demo_small_viewport_menu_content_insets_match() {
     let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
     let actual = fret_menu_content_insets(&snap);
     assert_sorted_insets_match("menubar-demo.vp1440x320", &actual, &expected);
+    let actual_menu_h = fret_largest_menu_height(&snap)
+        .unwrap_or_else(|| panic!("missing fret menu for menubar-demo.vp1440x320"));
+    assert_close(
+        "menubar-demo.vp1440x320 menu height",
+        actual_menu_h,
+        expected_menu_h,
+        2.0,
+    );
 }
 
 fn assert_menubar_demo_submenu_overlay_placement_matches(web_name: &str) {

@@ -113,6 +113,10 @@ because turbopack dev output does not expose stable asset URLs (and computed sty
 If you want to keep a dev server running on `:4000`, start production on a different port and pass
 `--baseUrl=...` to the extractor script.
 
+If you use multiple git worktrees and the repo config points Cargo at a shared `target-dir`, you may
+hit stale cross-worktree artifacts. In that case, run `cargo clean -p fret-ui-kit -p fret-ui-shadcn`
+before re-running `cargo nextest`.
+
 
 Output directory (default):
 
