@@ -8,15 +8,86 @@ use fret_ui_shadcn::{
     AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Badge,
     Breadcrumb, Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle,
     Combobox, Command, CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList,
-    CommandPalette, CommandShortcut, ContextMenu, DataTableGlobalFilterInput,
+    CommandPalette, CommandShortcut, ContextMenu, ContextMenuEntry, DataTableGlobalFilterInput,
     DataTableViewOptionItem, DataTableViewOptions, Dialog, DialogContent, DialogDescription,
     DialogFooter, DialogHeader, DialogTitle, Drawer, DrawerContent, DrawerFooter, DrawerHeader,
-    DropdownMenu, Empty, HoverCardContent, Kbd, Menubar, Popover, PopoverContent,
-    PopoverDescription, PopoverHeader, PopoverTitle, Progress, Select, Sheet, SheetContent,
-    SheetDescription, SheetFooter, SheetHeader, SheetTitle, Slider, Switch, TableBody,
-    TableCaption, TableFooter, TableHead, TableHeader, TableRow, TabsRoot, Toaster, TooltipContent,
+    DropdownMenu, DropdownMenuEntry, Empty, HoverCardContent, Kbd, Menubar, Popover,
+    PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, Progress, Select, Sheet,
+    SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, Slider, Switch,
+    TableBody, TableCaption, TableFooter, TableHead, TableHeader, TableRow, TabsRoot, Toaster,
+    TooltipContent,
 };
 use time::{Date, OffsetDateTime};
+
+#[allow(dead_code, unused_variables)]
+fn ui_builder_overlay_roots_compile<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    dialog_open: Model<bool>,
+    popover_open: Model<bool>,
+    sheet_open: Model<bool>,
+    drawer_open: Model<bool>,
+    dropdown_menu_open: Model<bool>,
+    context_menu_open: Model<bool>,
+    alert_dialog_open: Model<bool>,
+    command_dialog_open: Model<bool>,
+    command_dialog_query: Model<String>,
+) {
+    let _ = Dialog::new(dialog_open.clone()).ui().into_element(
+        cx,
+        |cx| Button::new("trigger").into_element(cx),
+        |cx| DialogContent::new(Vec::new()).into_element(cx),
+    );
+
+    let _ = Popover::new(popover_open.clone()).ui().into_element(
+        cx,
+        |cx| Button::new("trigger").into_element(cx),
+        |cx| PopoverContent::new(Vec::new()).into_element(cx),
+    );
+
+    let _ = Sheet::new(sheet_open.clone()).ui().into_element(
+        cx,
+        |cx| Button::new("trigger").into_element(cx),
+        |cx| SheetContent::new(Vec::new()).into_element(cx),
+    );
+
+    let _ = Drawer::new(drawer_open.clone()).ui().into_element(
+        cx,
+        |cx| Button::new("trigger").into_element(cx),
+        |cx| DrawerContent::new(Vec::new()).into_element(cx),
+    );
+
+    let _ = DropdownMenu::new(dropdown_menu_open.clone())
+        .ui()
+        .into_element(
+            cx,
+            |cx| Button::new("trigger").into_element(cx),
+            |_cx| Vec::<DropdownMenuEntry>::new(),
+        );
+
+    let _ = ContextMenu::new(context_menu_open.clone())
+        .ui()
+        .into_element(
+            cx,
+            |cx| Button::new("trigger").into_element(cx),
+            |_cx| Vec::<ContextMenuEntry>::new(),
+        );
+
+    let _ = AlertDialog::new(alert_dialog_open.clone())
+        .ui()
+        .into_element(
+            cx,
+            |cx| Button::new("trigger").into_element(cx),
+            |cx| AlertDialogContent::new(Vec::new()).into_element(cx),
+        );
+
+    let _ = CommandDialog::new(
+        command_dialog_open.clone(),
+        command_dialog_query.clone(),
+        Vec::<CommandItem>::new(),
+    )
+    .ui()
+    .into_element(cx, |cx| Button::new("trigger").into_element(cx));
+}
 
 #[test]
 fn ui_builder_smoke_applies_supported_patches() {

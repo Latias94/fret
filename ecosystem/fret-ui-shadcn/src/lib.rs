@@ -77,6 +77,7 @@ pub mod tooltip;
 #[cfg(feature = "app-integration")]
 pub mod app_integration;
 
+mod ui_builder_ext;
 mod ui_ext;
 
 pub use accordion::{
@@ -246,12 +247,18 @@ pub use ::fret_ui_kit::declarative::{icon, stack};
 pub use ::fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Size, Space, StyledExt, UiExt,
 };
+pub use ui_builder_ext::*;
 
 /// Common imports for application code using `fret-ui-shadcn`.
 ///
 /// This keeps the “golden path” small: app code can typically depend on `fret-bootstrap` +
 /// `fret-ui-shadcn` and `use fret_ui_shadcn::prelude::*;`.
 pub mod prelude {
+    pub use crate::{
+        AlertDialogUiBuilderExt, CommandDialogUiBuilderExt, ContextMenuUiBuilderExt,
+        DialogUiBuilderExt, DrawerUiBuilderExt, DropdownMenuUiBuilderExt, PopoverUiBuilderExt,
+        SheetUiBuilderExt,
+    };
     pub use crate::{
         ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Size, Space, StyledExt,
         UiExt,
