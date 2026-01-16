@@ -129,7 +129,7 @@ Legend:
 | `accordion` | `Accordion` | Layout-only | Needs chrome support for full parity |
 | `avatar` | `Avatar` | Chrome+Layout |  |
 | `avatar` | `AvatarFallback` | Chrome+Layout |  |
-| `avatar` | `AvatarImage` | Layout-only | Needs chrome support for full parity |
+| `avatar` | `AvatarImage` | Chrome+Layout |  |
 | `progress` | `Progress` | Chrome+Layout |  |
 | `skeleton` | `Skeleton` | Chrome+Layout |  |
 | `tabs` | `Tabs` | Chrome+Layout |  |
