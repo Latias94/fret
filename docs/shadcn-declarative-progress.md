@@ -120,7 +120,7 @@ Legend:
 | `drawer` | `Drawer` | Patch-only | `ui().into_element(cx, trigger, content)` (extra args) |
 | `dropdown_menu` | `DropdownMenu` | Patch-only | `ui().into_element(cx, trigger, entries)` (extra args) |
 | `context_menu` | `ContextMenu` | Patch-only | `ui().into_element(cx, trigger, entries)` (extra args) |
-| `menubar` | `Menubar` | Pass-through |  |
+| `menubar` | `Menubar` | Chrome+Layout |  |
 | `select` | `Select` | Chrome+Layout |  |
 | `slider` | `Slider` | Chrome+Layout |  |
 | `accordion` | `AccordionTrigger` | Chrome+Layout (Patch-only) | `into_element` requires root/value args |
