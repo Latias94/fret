@@ -281,12 +281,12 @@ fn snapshot_from_engine(
     }
 }
 
-fn run_option_snapshot(option_json: &str) -> HeadlessSnapshot {
+fn run_option_snapshot_with_viewport(option_json: &str, viewport: Rect) -> HeadlessSnapshot {
     let translated = translate_json_str(option_json).expect("translate");
 
     let mut spec = translated.spec.clone();
     if spec.viewport.is_none() {
-        spec.viewport = Some(viewport_320x200());
+        spec.viewport = Some(viewport);
     }
 
     let mut row_count_by_dataset: BTreeMap<u64, usize> = BTreeMap::new();
@@ -319,7 +319,11 @@ fn run_option_snapshot(option_json: &str) -> HeadlessSnapshot {
 }
 
 fn assert_matches_golden(name: &str, option_json: &str) {
-    let actual = run_option_snapshot(option_json);
+    assert_matches_golden_with_viewport(name, option_json, viewport_320x200());
+}
+
+fn assert_matches_golden_with_viewport(name: &str, option_json: &str, viewport: Rect) {
+    let actual = run_option_snapshot_with_viewport(option_json, viewport);
     let actual_json = serde_json::to_string_pretty(&actual).expect("serialize");
     let actual_json = format!("{actual_json}\n");
 
@@ -401,4 +405,32 @@ fn golden_datazoom_percent_order_sensitive() {
     }
     "#;
     assert_matches_golden("datazoom-percent-order-sensitive", json);
+}
+
+#[test]
+fn golden_scatter_lod_forced_large_mode_is_pixel_bounded() {
+    let mut source = Vec::with_capacity(1 + 200);
+    source.push(serde_json::json!(["x", "y"]));
+    for i in 0..200 {
+        source.push(serde_json::json!([i as f64, (i % 50) as f64]));
+    }
+
+    let option = serde_json::json!({
+      "dataset": { "source": source },
+      "xAxis": [{ "type": "value" }],
+      "yAxis": [{ "type": "value" }],
+      "series": [
+        {
+          "type": "scatter",
+          "datasetIndex": 0,
+          "encode": { "x": "x", "y": "y" },
+          "large": true,
+          "largeThreshold": 1
+        }
+      ]
+    });
+    let json = serde_json::to_string(&option).expect("option json");
+
+    let viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(20.0), Px(200.0)));
+    assert_matches_golden_with_viewport("scatter-lod-forced-large", &json, viewport);
 }
