@@ -44,8 +44,8 @@ Fret mapping intent:
   - Trigger: ensure value slot truncation is always enabled (no premature ellipsis).
   - Trigger: chevron icon size/opacity and gap to value.
   - Content: `p-1`, `rounded-md`, `border`, `shadow-md`, max-height behavior.
-  - Content: web uses `min-width: trigger` (not `width: trigger`), so long items can expand the
-    listbox beyond the trigger width; Fret currently pins desired width to the trigger (not yet 1:1).
+  - Content: web uses a “min width = trigger, but allow wider for long items” outcome; Fret matches
+    this via a longest-item width probe in item-aligned mode (so listbox width can exceed trigger).
   - Items: `py-1.5`, `pl-2`, `pr-8`, `gap-2`, `rounded-sm`.
   - Selected indicator: absolute slot (`right-2`, `size-3.5`) + reserve `pr-8`.
   - Scroll buttons: `py-1` with centered `size-4` chevrons (only visible when scrollable).
@@ -59,7 +59,7 @@ Recent fixes:
 Conformance gates:
 
 - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_select_panel_chrome_matches`).
-- Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_select_scrollable_overlay_placement_matches`).
+- Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_select_scrollable_overlay_placement_matches`, `web_vs_fret_select_scrollable_small_viewport_overlay_placement_matches`).
 
 ### `DropdownMenu`
 

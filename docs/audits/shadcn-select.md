@@ -50,6 +50,8 @@ examples in `repo-ref/ui`.
 
 - Pass: Selected option shows a trailing checkmark (`ids::ui::CHECK`) and selection background.
 - Pass: Overlay content animates with shadcn’s motion taxonomy (fade + zoom, plus side-based slide-in on enter).
+- Pass: Content width behavior matches upstream: min width tracks the trigger, but long items can expand
+  the listbox wider (item-aligned mode uses a longest-item width probe).
 - Pass: Structural rows are supported via `SelectEntry` (`SelectLabel`, `SelectGroup`,
   `SelectSeparator`) rendered inside the listbox.
 - Pass: Scroll buttons (`SelectScrollUpButton` / `SelectScrollDownButton`) are rendered for
@@ -60,6 +62,7 @@ examples in `repo-ref/ui`.
 ## Validation
 
 - `cargo test -p fret-ui-shadcn --lib select`
+- Web golden placement + sizing: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
 
 ## Follow-ups (recommended)
 

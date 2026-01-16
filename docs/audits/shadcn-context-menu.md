@@ -71,6 +71,9 @@ _None tracked at this time._
 
 - Pass: Submenus (single-level) with Radix-style pointer grace intent (safe-hover corridor) via
   `fret-ui-kit::primitives::menu::sub` + `menu::root::submenu_pointer_move_handler`.
+- Pass: Group semantics structure matches upstream (`role="group"` is the direct parent of grouped
+  menu items) by using `ElementKind::SemanticFlex` (avoids inserting a separate semantics wrapper
+  layer above layout).
 - Pass: Chevron-right submenu affordance icon parity.
 - Pass: Destructive item variant styling via `ContextMenuItemVariant::Destructive`.
 

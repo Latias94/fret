@@ -64,3 +64,6 @@ Fret models Radix Select outcomes by composing:
 - Upstream style reference: `repo-ref/ui/apps/v4/public/r/styles/radix-vega/select.json` (`min-w-36`,
   `position=\"item-aligned\"`).
 - Run: `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
+- `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` validates select scrollable
+  placement + panel sizing against shadcn web goldens (including a constrained viewport variant:
+  `goldens/shadcn-web/v4/new-york-v4/select-scrollable.vp1440x450.open.json`).
