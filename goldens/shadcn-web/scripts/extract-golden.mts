@@ -14,12 +14,17 @@ type OpenMeta = { action: OpenAction; selector: string; point: { x: number; y: n
 
 type OpenVariant = { variant: string; selector: string }
 
+type GoldenVariant = { variant: string }
+
 type KeyChord = { modifiers: string[]; key: string }
 
 type OpenStep =
   | { action: "wait"; waitMs: number }
+  | { action: "waitFor"; selector: string }
+  | { action: "move"; x: number; y: number }
   | { action: Exclude<OpenAction, "keys">; selector: string }
   | { action: "keys"; selector: string; keys: KeyChord[] }
+  | { action: "scroll"; selector: string; dx: number; dy: number }
 
 type GoldenOptions = {
   baseUrl: string
@@ -28,18 +33,16 @@ type GoldenOptions = {
   modes: Mode[]
   names: string[]
   types: string[]
-  repoRefUiDir: string
   outDir: string
   update: boolean
   timeoutMs: number
-  viewportW: number
-  viewportH: number
-  deviceScaleFactor: number
   openSelector?: string
   openAction?: OpenAction
   openKeys?: KeyChord
+  steps?: OpenStep[]
   openSteps?: OpenStep[]
   openVariants?: OpenVariant[]
+  variants?: GoldenVariant[]
   mergeThemes?: boolean
 }
 
@@ -117,6 +120,29 @@ function parseOpenVariants(raw: string): OpenVariant[] {
       )
     }
     out.push({ variant, selector })
+  }
+
+  return out
+}
+
+function parseVariants(raw: string): GoldenVariant[] {
+  const parts = raw
+    .split(";")
+    .map((p) => p.trim())
+    .filter(Boolean)
+
+  const out: GoldenVariant[] = []
+  for (const part of parts) {
+    const variant = part.trim()
+    if (!variant) {
+      throw new Error(`invalid --variants entry "${part}" (empty variant)`)
+    }
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(variant)) {
+      throw new Error(
+        `invalid --variants variant "${variant}" (expected [a-zA-Z0-9][a-zA-Z0-9_-]*)`
+      )
+    }
+    out.push({ variant })
   }
 
   return out
@@ -243,6 +269,34 @@ function parseOpenSteps(raw: string, openKeys: KeyChord | undefined): OpenStep[]
       continue
     }
 
+    if (actionRaw === "waitFor") {
+      if (!valueRaw) {
+        throw new Error(`invalid --openSteps entry "${part}" (empty selector for waitFor)`)
+      }
+      out.push({ action: "waitFor", selector: valueRaw })
+      continue
+    }
+
+    if (actionRaw === "move") {
+      const comma = valueRaw.indexOf(",")
+      if (comma === -1) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (expected "move=<x>,<y>")`
+        )
+      }
+      const xRaw = valueRaw.slice(0, comma).trim()
+      const yRaw = valueRaw.slice(comma + 1).trim()
+      const x = Number(xRaw)
+      const y = Number(yRaw)
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (expected finite x,y numbers)`
+        )
+      }
+      out.push({ action: "move", x, y })
+      continue
+    }
+
     if (!valueRaw) {
       throw new Error(
         `invalid --openSteps entry "${part}" (empty value for action=${actionRaw})`
@@ -280,13 +334,46 @@ function parseOpenSteps(raw: string, openKeys: KeyChord | undefined): OpenStep[]
       continue
     }
 
+    if (actionRaw === "scroll") {
+      const at = valueRaw.indexOf("@")
+      if (at === -1) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (expected "scroll=<selector>@<dx>,<dy>")`
+        )
+      }
+      const selector = valueRaw.slice(0, at).trim()
+      const deltaRaw = valueRaw.slice(at + 1).trim()
+      if (!selector || !deltaRaw) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (expected "scroll=<selector>@<dx>,<dy>")`
+        )
+      }
+      const comma = deltaRaw.indexOf(",")
+      if (comma === -1) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (expected "scroll=<selector>@<dx>,<dy>")`
+        )
+      }
+      const dxRaw = deltaRaw.slice(0, comma).trim()
+      const dyRaw = deltaRaw.slice(comma + 1).trim()
+      const dx = Number(dxRaw)
+      const dy = Number(dyRaw)
+      if (!Number.isFinite(dx) || !Number.isFinite(dy)) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (expected finite dx,dy numbers)`
+        )
+      }
+      out.push({ action: "scroll", selector, dx, dy })
+      continue
+    }
+
     if (
       actionRaw !== "click" &&
       actionRaw !== "hover" &&
       actionRaw !== "contextmenu"
     ) {
       throw new Error(
-        `invalid --openSteps action "${actionRaw}" (expected click|hover|contextmenu|keys|wait)`
+        `invalid --openSteps action "${actionRaw}" (expected click|hover|contextmenu|keys|scroll|wait|waitFor|move)`
       )
     }
 
@@ -356,6 +443,14 @@ async function extractOne(page: puppeteer.Page) {
       "data-slot",
       "data-variant",
       "data-size",
+      // Minimal Radix attrs needed for stable ScrollArea matching.
+      "data-radix-scroll-area-root",
+      "data-radix-scroll-area-viewport",
+      "data-radix-scroll-area-scrollbar",
+      "data-radix-scroll-area-thumb",
+      "data-radix-scroll-area-corner",
+      // Useful for overlay wrapper alignment.
+      "data-radix-popper-content-wrapper",
     ];
 
     const styleKeys = [
@@ -463,6 +558,28 @@ async function extractOne(page: puppeteer.Page) {
         text: collectText(el) || undefined,
         children: [],
       };
+
+      // Scroll metrics are integer-valued in the DOM (scrollWidth, clientWidth, ...). We keep
+      // them separate from rect (getBoundingClientRect() can be fractional) so non-web runtimes
+      // can gate scroll range behavior 1:1.
+      const slot = attrs["data-slot"];
+      const isScrollViewport =
+        el.hasAttribute("data-radix-scroll-area-viewport") ||
+        slot === "scroll-area-viewport" ||
+        out.computedStyle.overflowX === "scroll" ||
+        out.computedStyle.overflowY === "scroll";
+      if (isScrollViewport) {
+        out.scroll = {
+          scrollWidth: el.scrollWidth,
+          scrollHeight: el.scrollHeight,
+          clientWidth: el.clientWidth,
+          clientHeight: el.clientHeight,
+          offsetWidth: el.offsetWidth,
+          offsetHeight: el.offsetHeight,
+          scrollLeft: el.scrollLeft,
+          scrollTop: el.scrollTop,
+        };
+      }
 
       const children = Array.from(el.children);
       for (let i = 0; i < children.length; i++) {
@@ -769,6 +886,102 @@ async function openOverlayOutsideCounts(
   }
 }
 
+async function applySteps(
+  page: puppeteer.Page,
+  name: string,
+  timeoutMs: number,
+  steps: OpenStep[],
+  rootSel: string
+) {
+  const debug = process.env.DEBUG_GOLDENS === "1"
+
+  for (const [idx, step] of steps.entries()) {
+    if (step.action === "wait") {
+      if (debug) console.log(`- steps: ${name} step[${idx}] wait ${step.waitMs}ms`)
+      await new Promise((r) => setTimeout(r, step.waitMs))
+      continue
+    }
+
+    if (step.action === "waitFor") {
+      if (debug) console.log(`- steps: ${name} step[${idx}] waitFor ${step.selector}`)
+      await page.waitForSelector(step.selector, { timeout: Math.min(timeoutMs, 30000) })
+      await waitForFonts(page, Math.min(2000, timeoutMs))
+      continue
+    }
+
+    if (step.action === "move") {
+      if (debug) console.log(`- steps: ${name} step[${idx}] move ${step.x},${step.y}`)
+      await page.mouse.move(step.x, step.y, { steps: 4 })
+      continue
+    }
+
+    if (step.action === "scroll") {
+      const expr = `(() => {
+        const sel = ${JSON.stringify(step.selector)};
+        const dx = ${JSON.stringify(step.dx)};
+        const dy = ${JSON.stringify(step.dy)};
+        const el = document.querySelector(sel);
+        if (!el || !(el instanceof Element)) return false;
+        if (typeof (el).scrollBy !== "function") return false;
+        (el).scrollBy(dx, dy);
+        return true;
+      })()`
+
+      const ok = (await page.evaluate(expr)) as boolean
+      if (!ok) {
+        throw new Error(`steps failed for ${name}: selector not found: ${step.selector}`)
+      }
+      await waitForFonts(page, Math.min(2000, timeoutMs))
+      continue
+    }
+
+    if (debug) {
+      console.log(`- steps: ${name} step[${idx}] ${step.action} ${step.selector}`)
+    }
+
+    const point = await (async () => {
+      const expr = `(() => {
+        const rootSel = ${JSON.stringify(rootSel)};
+        const sel = ${JSON.stringify(step.selector)};
+
+        const root = document.querySelector(rootSel) || document.body;
+        const el = document.querySelector(sel);
+        if (!el || !(el instanceof Element)) return null;
+
+        el.scrollIntoView({ block: "center", inline: "center" });
+        const r = el.getBoundingClientRect();
+        return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+      })()`
+      return (await page.evaluate(expr)) as { x: number; y: number } | null
+    })()
+
+    if (!point) {
+      throw new Error(`steps failed for ${name}: selector not found: ${step.selector}`)
+    }
+
+    if (step.action === "hover") {
+      await page.mouse.move(point.x, point.y, { steps: 4 })
+    } else if (step.action === "contextmenu") {
+      await page.mouse.click(point.x, point.y, { button: "right", delay: 10 })
+    } else if (step.action === "keys") {
+      await page.focus(step.selector)
+      for (const chord of step.keys) {
+        for (const mod of chord.modifiers) {
+          await page.keyboard.down(mod)
+        }
+        await page.keyboard.press(chord.key)
+        for (const mod of [...chord.modifiers].reverse()) {
+          await page.keyboard.up(mod)
+        }
+      }
+    } else {
+      await page.mouse.click(point.x, point.y, { button: "left", delay: 10 })
+    }
+
+    await waitForFonts(page, Math.min(2000, timeoutMs))
+  }
+}
+
 async function applyOpenSteps(
   page: puppeteer.Page,
   name: string,
@@ -782,6 +995,38 @@ async function applyOpenSteps(
     if (step.action === "wait") {
       if (debug) console.log(`- openSteps: ${name} step[${idx}] wait ${step.waitMs}ms`)
       await new Promise((r) => setTimeout(r, step.waitMs))
+      continue
+    }
+
+    if (step.action === "waitFor") {
+      if (debug) console.log(`- openSteps: ${name} step[${idx}] waitFor ${step.selector}`)
+      await page.waitForSelector(step.selector, { timeout: Math.min(timeoutMs, 30000) })
+      await waitForFonts(page, Math.min(2000, timeoutMs))
+      continue
+    }
+
+    if (step.action === "move") {
+      if (debug) console.log(`- openSteps: ${name} step[${idx}] move ${step.x},${step.y}`)
+      await page.mouse.move(step.x, step.y, { steps: 4 })
+      continue
+    }
+
+    if (step.action === "scroll") {
+      const expr = `(() => {
+        const sel = ${JSON.stringify(step.selector)};
+        const dx = ${JSON.stringify(step.dx)};
+        const dy = ${JSON.stringify(step.dy)};
+        const el = document.querySelector(sel);
+        if (!el || !(el instanceof Element)) return false;
+        if (typeof (el).scrollBy !== "function") return false;
+        (el).scrollBy(dx, dy);
+        return true;
+      })()`
+      const ok = (await page.evaluate(expr)) as boolean
+      if (!ok) {
+        throw new Error(`openSteps failed for ${name}: selector not found: ${step.selector}`)
+      }
+      await waitForFonts(page, Math.min(2000, timeoutMs))
       continue
     }
 
@@ -1040,13 +1285,11 @@ function repoRootFromScript(): string {
 
 const repoRoot = repoRootFromScript()
 
-async function loadPuppeteer(
-  repoRefUiDir: string
-): Promise<typeof import("puppeteer")> {
+async function loadPuppeteer(): Promise<typeof import("puppeteer")> {
   const require = createRequire(import.meta.url)
 
   const candidates = [
-    repoRefUiDir,
+    path.join(repoRoot, "repo-ref", "ui"),
     repoRoot,
     process.cwd(),
   ]
@@ -1066,15 +1309,13 @@ async function loadPuppeteer(
   return ((mod as any).default ?? mod) as typeof import("puppeteer")
 }
 
-async function resolveCssInjectionUrls(
-  repoRefUiDir: string,
-  style: string,
-  baseUrl: string
-) {
+async function resolveCssInjectionUrls(style: string, baseUrl: string) {
   // Next's HTML output for this route can omit some CSS links depending on how RSC streaming resolves.
   // We use the server-side RSC manifest to discover the actual CSS chunks and inject them ourselves.
   const manifestPath = path.join(
-    repoRefUiDir,
+    repoRoot,
+    "repo-ref",
+    "ui",
     "apps",
     "v4",
     ".next",
@@ -1122,7 +1363,9 @@ async function resolveCssInjectionUrls(
   // Also inject the style-specific theme file if present (legacyStyles currently only includes
   // `new-york-v4`, but we keep this generic).
   const styleManifestPath = path.join(
-    repoRefUiDir,
+    repoRoot,
+    "repo-ref",
+    "ui",
     "apps",
     "v4",
     "public",
@@ -1211,7 +1454,7 @@ async function run(options: GoldenOptions): Promise<string[]> {
 
   const executablePath = resolveBrowserExecutablePath()
 
-  const puppeteer = await loadPuppeteer(options.repoRefUiDir)
+  const puppeteer = await loadPuppeteer()
 
   let browser: puppeteer.Browser
   try {
@@ -1220,9 +1463,9 @@ async function run(options: GoldenOptions): Promise<string[]> {
       headless: "new",
       protocolTimeout: Math.max(180_000, options.timeoutMs + 30_000),
       defaultViewport: {
-        width: Math.round(options.viewportW),
-        height: Math.round(options.viewportH),
-        deviceScaleFactor: options.deviceScaleFactor,
+        width: 1440,
+        height: 900,
+        deviceScaleFactor: 2,
       },
     })
   } catch (error) {
@@ -1241,7 +1484,6 @@ async function run(options: GoldenOptions): Promise<string[]> {
     const failures: string[] = []
 
     const cssInjectionUrls = await resolveCssInjectionUrls(
-      options.repoRefUiDir,
       options.style,
       options.baseUrl
     )
@@ -1296,14 +1538,16 @@ async function run(options: GoldenOptions): Promise<string[]> {
 
     for (const name of options.names) {
       for (const mode of options.modes) {
-        const variants =
-          mode === "open" && options.openVariants && options.openVariants.length > 0
-            ? options.openVariants
-            : [null]
+        const variants: Array<GoldenVariant | OpenVariant | null> =
+          options.variants && options.variants.length > 0
+            ? options.variants
+            : mode === "open" && options.openVariants && options.openVariants.length > 0
+              ? options.openVariants
+              : [null]
 
         for (const variant of variants) {
           const variantSuffix = variant ? `.${variant.variant}` : ""
-          const suffix = mode === "closed" ? "" : `${variantSuffix}.${mode}`
+          const suffix = mode === "closed" ? `${variantSuffix}` : `${variantSuffix}.${mode}`
           const outPath = path.join(options.outDir, `${name}${suffix}.json`)
           if (!options.update && fs.existsSync(outPath)) {
             continue
@@ -1347,6 +1591,9 @@ async function run(options: GoldenOptions): Promise<string[]> {
                 waitUntil: "networkidle2",
                 timeout: options.timeoutMs,
               })
+              // Puppeteer mouse/keyboard input targets the active tab. When we keep one page per
+              // theme, ensure we always bring the current page to front before running steps.
+              await page.bringToFront()
               await page.waitForSelector("body", { timeout: 30000 })
               if (debug) {
                 console.log(`- ensureGoldenTarget: ${name}${suffix} (${theme})`)
@@ -1372,7 +1619,9 @@ async function run(options: GoldenOptions): Promise<string[]> {
               let openMeta: OpenMeta | null = null
               if (mode === "open") {
                 const action = options.openAction ?? inferOpenAction(name)
-                const selector = variant?.selector ?? options.openSelector
+                const selector =
+                  (variant && "selector" in variant ? variant.selector : undefined) ??
+                  options.openSelector
                 const keys =
                   action === "keys"
                     ? options.openKeys ?? inferOpenKeys(name) ?? undefined
@@ -1395,6 +1644,16 @@ async function run(options: GoldenOptions): Promise<string[]> {
                     "[data-fret-golden-target]"
                   )
                 }
+              }
+
+              if (options.steps && options.steps.length > 0) {
+                await applySteps(
+                  page,
+                  name,
+                  options.timeoutMs,
+                  options.steps,
+                  "[data-fret-golden-target]"
+                )
               }
 
               if (debug) console.log(`- extractOne: ${name}${suffix} (${theme})`)
@@ -1474,11 +1733,6 @@ const types = typesRaw
   .map((t) => t.trim())
   .filter(Boolean)
 
-const repoRefUiDir =
-  (typeof flags.repoRefUiDir === "string" ? flags.repoRefUiDir : undefined) ??
-  process.env.REPO_REF_UI_DIR ??
-  path.join(repoRoot, "repo-ref", "ui")
-
 const outDir =
   (typeof flags.outDir === "string" ? flags.outDir : undefined) ??
   process.env.OUT_DIR ??
@@ -1504,41 +1758,6 @@ const timeoutMs =
 
 const update = flags.update === true || process.env.UPDATE_GOLDENS === "1"
 
-const viewportW =
-  Number(
-    (typeof flags.viewportW === "string" ? flags.viewportW : undefined) ??
-      process.env.VIEWPORT_W ??
-      "1440"
-  ) || 1440
-
-const viewportH =
-  Number(
-    (typeof flags.viewportH === "string" ? flags.viewportH : undefined) ??
-      process.env.VIEWPORT_H ??
-      "900"
-  ) || 900
-
-const deviceScaleFactor =
-  Number(
-    (typeof flags.deviceScaleFactor === "string" ? flags.deviceScaleFactor : undefined) ??
-      (typeof flags.dpr === "string" ? flags.dpr : undefined) ??
-      process.env.DEVICE_SCALE_FACTOR ??
-      process.env.DPR ??
-      "2"
-  ) || 2
-
-if (!Number.isFinite(viewportW) || viewportW <= 0) {
-  throw new Error(`invalid --viewportW=${String(flags.viewportW)} (expected positive number)`)
-}
-if (!Number.isFinite(viewportH) || viewportH <= 0) {
-  throw new Error(`invalid --viewportH=${String(flags.viewportH)} (expected positive number)`)
-}
-if (!Number.isFinite(deviceScaleFactor) || deviceScaleFactor <= 0) {
-  throw new Error(
-    `invalid --deviceScaleFactor=${String(flags.deviceScaleFactor ?? flags.dpr)} (expected positive number)`
-  )
-}
-
 const modesRaw =
   (typeof flags.modes === "string" ? flags.modes : undefined) ??
   process.env.MODES ??
@@ -1561,6 +1780,13 @@ const openVariantsRaw =
   undefined
 
 const openVariants = openVariantsRaw ? parseOpenVariants(openVariantsRaw) : undefined
+
+const variantsRaw =
+  (typeof flags.variants === "string" ? flags.variants : undefined) ??
+  process.env.VARIANTS ??
+  undefined
+
+const variants = variantsRaw ? parseVariants(variantsRaw) : undefined
 
 const openActionRaw =
   (typeof flags.openAction === "string" ? flags.openAction : undefined) ??
@@ -1592,6 +1818,13 @@ const openStepsRaw =
 
 const openSteps = openStepsRaw ? parseOpenSteps(openStepsRaw, openKeys) : undefined
 
+const stepsRaw =
+  (typeof flags.steps === "string" ? flags.steps : undefined) ??
+  process.env.STEPS ??
+  undefined
+
+const steps = stepsRaw ? parseOpenSteps(stepsRaw, openKeys) : undefined
+
 const defaultNames = ["button-default", "tabs-demo"]
 const all = flags.all === true || process.env.ALL_GOLDENS === "1"
 
@@ -1601,7 +1834,9 @@ async function resolveNames(): Promise<string[]> {
   }
 
   const indexPath = path.join(
-    repoRefUiDir,
+    repoRoot,
+    "repo-ref",
+    "ui",
     "apps",
     "v4",
     "registry",
@@ -1636,13 +1871,13 @@ try {
   console.log(`- modes: ${modes.join(", ")}`)
   console.log(`- types: ${types.join(", ")}`)
   console.log(`- outDir: ${outDir}`)
-  console.log(`- repoRefUiDir: ${repoRefUiDir}`)
   console.log(`- timeoutMs: ${timeoutMs}`)
   console.log(`- update: ${update ? "yes" : "no (skip existing)"}`)
   console.log(`- all: ${all ? "yes" : "no"}`)
-  console.log(`- viewport: ${viewportW}x${viewportH} @ ${deviceScaleFactor}x`)
   console.log(`- openVariants: ${openVariants?.length ?? 0}`)
+  console.log(`- variants: ${variants?.length ?? 0}`)
   console.log(`- openKeys: ${openKeys ? `${openKeys.modifiers.join("+")}+${openKeys.key}` : ""}`)
+  console.log(`- steps: ${steps?.length ?? 0}`)
   console.log(`- openSteps: ${openSteps?.length ?? 0}`)
 
   const finalNames = await resolveNames()
@@ -1655,18 +1890,16 @@ try {
     modes: modes.length > 0 ? modes : ["closed"],
     names: finalNames,
     types,
-    repoRefUiDir,
     outDir,
     update,
     timeoutMs,
-    viewportW,
-    viewportH,
-    deviceScaleFactor,
     openSelector,
     openAction,
     openKeys,
+    steps,
     openSteps,
     openVariants,
+    variants,
     mergeThemes: flags.mergeThemes === true || process.env.MERGE_THEMES === "1",
   })
 
