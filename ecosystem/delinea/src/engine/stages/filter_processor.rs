@@ -5,6 +5,7 @@ use crate::engine::model::ChartModel;
 use crate::ids::{AxisId, DatasetId, GridId, Revision, SeriesId};
 use crate::spec::FilterMode;
 use crate::transform::{RowRange, RowSelection, SeriesXPolicy};
+use crate::transform_graph::TransformGraph;
 use crate::view::SeriesEmptyMask;
 use crate::view::ViewState;
 use std::collections::BTreeMap;
@@ -322,6 +323,7 @@ impl FilterProcessorStage {
 
     pub fn apply(
         &mut self,
+        transform_graph: &mut TransformGraph,
         model: &ChartModel,
         datasets: &DatasetStore,
         state: &mut ChartState,
@@ -440,6 +442,7 @@ impl FilterProcessorStage {
                     &mut x_indices_applied_series,
                 ),
                 FilterPlanStepKind::YPercent => apply_y_percent_for_grid(
+                    transform_graph,
                     model,
                     datasets,
                     state,
@@ -1071,6 +1074,7 @@ fn apply_y_indices_for_grid(
 }
 
 fn apply_y_percent_for_grid(
+    transform_graph: &mut TransformGraph,
     model: &ChartModel,
     datasets: &DatasetStore,
     state: &mut ChartState,
@@ -1081,15 +1085,15 @@ fn apply_y_percent_for_grid(
     y_percent_extents_by_grid: &mut BTreeMap<GridId, BTreeMap<AxisId, (f64, f64)>>,
     view_changed: &mut bool,
 ) {
-    let y_axes_in_grid =
-        crate::transform_graph::TransformGraph::y_data_extents_scoped_by_x_for_grid(
-            model,
-            datasets,
-            state,
-            view,
-            view_series_index,
-            series,
-        );
+    let y_axes_in_grid = transform_graph.y_percent_extents_scoped_by_x_for_grid(
+        model,
+        datasets,
+        state,
+        view,
+        view_series_index,
+        grid,
+        series,
+    );
 
     if !y_axes_in_grid.is_empty() {
         y_percent_extents_by_grid.insert(grid, y_axes_in_grid.clone());

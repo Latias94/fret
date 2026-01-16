@@ -16858,4 +16858,36 @@ fn percent_y_extent_is_scoped_by_x_percent_window() {
         .expect("expected y percent extent");
     assert!((y_extent.0 - 30.0).abs() < 1e-9);
     assert!((y_extent.1 - 70.0).abs() < 1e-9);
+
+    engine.apply_action(Action::SetAxisWindowPercent {
+        axis: x_axis,
+        range: Some((40.0, 60.0)),
+    });
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let y_window = engine
+        .state()
+        .data_window_y
+        .get(&y_axis)
+        .copied()
+        .expect("expected y window");
+    assert!((y_window.min - 40.0).abs() < 1e-9);
+    assert!((y_window.max - 60.0).abs() < 1e-9);
+
+    let plan = engine.filter_plan_output();
+    let grid = plan
+        .grids
+        .iter()
+        .find(|g| g.series.iter().any(|s| *s == crate::ids::SeriesId::new(1)))
+        .expect("expected grid output");
+    let y_extent = grid
+        .y_percent_extents
+        .get(&y_axis)
+        .copied()
+        .expect("expected y percent extent");
+    assert!((y_extent.0 - 40.0).abs() < 1e-9);
+    assert!((y_extent.1 - 60.0).abs() < 1e-9);
 }

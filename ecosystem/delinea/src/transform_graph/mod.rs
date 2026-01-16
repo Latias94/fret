@@ -19,6 +19,7 @@ use std::collections::BTreeMap;
 #[derive(Debug, Default, Clone)]
 pub struct TransformGraph {
     x_extent_cache: BTreeMap<AxisId, CachedExtent>,
+    y_percent_extents_cache: BTreeMap<crate::ids::GridId, CachedYExtents>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -27,9 +28,16 @@ struct CachedExtent {
     extent: Option<(f64, f64)>,
 }
 
+#[derive(Debug, Default, Clone)]
+struct CachedYExtents {
+    signature: u64,
+    extents: BTreeMap<AxisId, (f64, f64)>,
+}
+
 impl TransformGraph {
     pub fn clear(&mut self) {
         self.x_extent_cache.clear();
+        self.y_percent_extents_cache.clear();
     }
 
     /// Returns a finite `(min, max)` data extent for the X axis based on visible series and the
@@ -117,14 +125,24 @@ impl TransformGraph {
     /// This is the "order-sensitive percent domain" building block: Y percent extents must be
     /// derived after X has affected the visible selection/domain (ECharts `dataZoomProcessor`
     /// semantics; v1 cartesian subset).
-    pub fn y_data_extents_scoped_by_x_for_grid(
+    pub fn y_percent_extents_scoped_by_x_for_grid(
+        &mut self,
         model: &ChartModel,
         datasets: &DatasetStore,
         state: &ChartState,
         view: &ViewState,
         view_series_index: &BTreeMap<SeriesId, usize>,
+        grid: crate::ids::GridId,
         series: &[SeriesId],
     ) -> BTreeMap<AxisId, (f64, f64)> {
+        let signature =
+            y_percent_extents_signature(model, datasets, state, view, view_series_index, series);
+        if let Some(cached) = self.y_percent_extents_cache.get(&grid)
+            && cached.signature == signature
+        {
+            return cached.extents.clone();
+        }
+
         let mut out: BTreeMap<AxisId, (f64, f64)> = BTreeMap::new();
 
         for series_id in series {
@@ -227,6 +245,13 @@ impl TransformGraph {
                 .or_insert((min, max));
         }
 
+        self.y_percent_extents_cache.insert(
+            grid,
+            CachedYExtents {
+                signature,
+                extents: out.clone(),
+            },
+        );
         out
     }
 }
@@ -240,6 +265,85 @@ fn fnv1a_step(hash: u64, value: u64) -> u64 {
 
 fn rev_u64(rev: Revision) -> u64 {
     rev.0 as u64
+}
+
+fn hash_opt_f64(mut h: u64, v: Option<f64>) -> u64 {
+    match v {
+        Some(v) => {
+            h = fnv1a_step(h, 1);
+            fnv1a_step(h, v.to_bits())
+        }
+        None => fnv1a_step(h, 0),
+    }
+}
+
+fn hash_selection(mut h: u64, sel: &crate::transform::RowSelection) -> u64 {
+    match sel {
+        crate::transform::RowSelection::All => fnv1a_step(h, 1),
+        crate::transform::RowSelection::Range(r) => {
+            h = fnv1a_step(h, 2);
+            h = fnv1a_step(h, r.start as u64);
+            fnv1a_step(h, r.end as u64)
+        }
+        crate::transform::RowSelection::Indices(indices) => {
+            h = fnv1a_step(h, 3);
+            h = fnv1a_step(h, indices.len() as u64);
+            let ptr = indices.as_ref().as_ptr() as usize as u64;
+            fnv1a_step(h, ptr)
+        }
+    }
+}
+
+fn y_percent_extents_signature(
+    model: &ChartModel,
+    datasets: &DatasetStore,
+    state: &ChartState,
+    view: &ViewState,
+    view_series_index: &BTreeMap<SeriesId, usize>,
+    series: &[SeriesId],
+) -> u64 {
+    let mut h = FNV1A_OFFSET;
+    h = fnv1a_step(h, model.revs.spec.0 as u64);
+    h = fnv1a_step(h, view.revision.0 as u64);
+
+    for series_id in series {
+        let Some(series_model) = model.series.get(series_id) else {
+            continue;
+        };
+        if !series_model.visible {
+            continue;
+        }
+
+        h = fnv1a_step(h, series_id.0);
+        h = fnv1a_step(h, series_model.dataset.0);
+
+        let table_rev = datasets
+            .dataset(series_model.dataset)
+            .map(|t| rev_u64(t.revision))
+            .unwrap_or(0);
+        h = fnv1a_step(h, table_rev);
+
+        let axis = series_model.y_axis;
+        h = fnv1a_step(h, axis.0);
+        if let Some((a, b)) = state.axis_percent_windows.get(&axis) {
+            h = fnv1a_step(h, 1);
+            h = fnv1a_step(h, a.to_bits());
+            h = fnv1a_step(h, b.to_bits());
+        } else {
+            h = fnv1a_step(h, 0);
+        }
+
+        let Some(series_view_index) = view_series_index.get(series_id).copied() else {
+            continue;
+        };
+        let series_view = &view.series[series_view_index];
+        h = hash_selection(h, &series_view.selection);
+        h = fnv1a_step(h, series_view.x_filter_mode as u64);
+        h = hash_opt_f64(h, series_view.x_policy.filter.min);
+        h = hash_opt_f64(h, series_view.x_policy.filter.max);
+    }
+
+    h
 }
 
 fn x_extent_signature(
@@ -348,3 +452,6 @@ fn scan_x_extent(
         None
     }
 }
+
+#[cfg(test)]
+mod tests;

@@ -1018,6 +1018,7 @@ impl ChartEngine {
         // Apply the cached selection when available so all downstream consumers observe the correct
         // row participation contract.
         let filter_result = self.filter_processor_stage.apply(
+            &mut self.transform_graph,
             &self.model,
             &self.datasets,
             &mut self.state,
