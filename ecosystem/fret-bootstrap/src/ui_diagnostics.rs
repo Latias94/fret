@@ -979,11 +979,14 @@ impl UiDiagnosticsService {
         let role = semantics_role_label(node.role);
         let mut summary = format!("focus: {role} node={node_id}");
 
-        if let Some(element) = element_runtime
-            .and_then(|runtime| runtime.element_for_node(window, node.id))
-            .map(|id| id.0)
+        if let Some(runtime) = element_runtime
+            && let Some(element) = runtime.element_for_node(window, node.id)
         {
-            summary.push_str(&format!(" element={element}"));
+            summary.push_str(&format!(" element={}", element.0));
+            if let Some(path) = runtime.debug_path_for_element(window, element) {
+                let path = truncate_debug_value(&path, 200);
+                summary.push_str(&format!(" element_path={path}"));
+            }
         }
         if let Some(test_id) = node.test_id.as_deref() {
             summary.push_str(&format!(" test_id={test_id}"));
@@ -1076,9 +1079,11 @@ impl UiDiagnosticsService {
         let hit_test = last_pointer_position
             .map(|pos| UiHitTestSnapshotV1::from_hit_test(pos, ui.debug_hit_test(pos)));
 
-        let element_diag = element_runtime
-            .and_then(|runtime| runtime.diagnostics_snapshot(window))
-            .map(ElementDiagnosticsSnapshotV1::from_runtime);
+        let element_diag = element_runtime.and_then(|runtime| {
+            runtime.diagnostics_snapshot(window).map(|snapshot| {
+                ElementDiagnosticsSnapshotV1::from_runtime(window, runtime, snapshot)
+            })
+        });
 
         let raw_semantics = ui.semantics_snapshot();
 
@@ -1403,10 +1408,15 @@ impl UiDiagnosticsService {
 
         let selection = match raw_semantics {
             Some(snapshot) => pick_semantics_node_at(snapshot, ui, position).map(|node| {
-                let element = element_runtime
-                    .and_then(|runtime| runtime.element_for_node(window, node.id))
-                    .map(|id| id.0);
-                UiPickSelectionV1::from_node(snapshot, node, element, &self.cfg)
+                let (element, element_path) = element_runtime
+                    .and_then(|runtime| {
+                        runtime.element_for_node(window, node.id).map(|id| {
+                            let path = runtime.debug_path_for_element(window, id);
+                            (Some(id.0), path)
+                        })
+                    })
+                    .unwrap_or((None, None));
+                UiPickSelectionV1::from_node(snapshot, node, element, element_path, &self.cfg)
             }),
             None => None,
         };
@@ -1762,6 +1772,8 @@ pub struct UiPickSelectionV1 {
     pub node: UiSemanticsNodeV1,
     #[serde(default)]
     pub element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element_path: Option<String>,
     pub selectors: Vec<UiSelectorV1>,
 }
 
@@ -1770,6 +1782,7 @@ impl UiPickSelectionV1 {
         snapshot: &fret_core::SemanticsSnapshot,
         node: &fret_core::SemanticsNode,
         element: Option<u64>,
+        element_path: Option<String>,
         cfg: &UiDiagnosticsConfig,
     ) -> Self {
         let exported =
@@ -1778,6 +1791,7 @@ impl UiPickSelectionV1 {
         Self {
             node: exported,
             element,
+            element_path,
             selectors,
         }
     }
@@ -2090,10 +2104,20 @@ impl UiHitTestSnapshotV1 {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ElementDiagnosticsSnapshotV1 {
     pub focused_element: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub focused_element_path: Option<String>,
     pub active_text_selection: Option<(u64, u64)>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub active_text_selection_path: Option<(String, String)>,
     pub hovered_pressable: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hovered_pressable_path: Option<String>,
     pub pressed_pressable: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pressed_pressable_path: Option<String>,
     pub hovered_hover_region: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hovered_hover_region_path: Option<String>,
     pub wants_continuous_frames: bool,
     pub observed_models: Vec<ElementObservedModelsV1>,
     pub observed_globals: Vec<ElementObservedGlobalsV1>,
@@ -2112,13 +2136,40 @@ pub struct ElementObservedGlobalsV1 {
 }
 
 impl ElementDiagnosticsSnapshotV1 {
-    fn from_runtime(snapshot: fret_ui::elements::WindowElementDiagnosticsSnapshot) -> Self {
+    fn from_runtime(
+        window: AppWindowId,
+        runtime: &ElementRuntime,
+        snapshot: fret_ui::elements::WindowElementDiagnosticsSnapshot,
+    ) -> Self {
+        let focused_element_path = snapshot
+            .focused_element
+            .and_then(|id| runtime.debug_path_for_element(window, id));
+        let active_text_selection_path = snapshot.active_text_selection.and_then(|(a, b)| {
+            let a = runtime.debug_path_for_element(window, a)?;
+            let b = runtime.debug_path_for_element(window, b)?;
+            Some((a, b))
+        });
+        let hovered_pressable_path = snapshot
+            .hovered_pressable
+            .and_then(|id| runtime.debug_path_for_element(window, id));
+        let pressed_pressable_path = snapshot
+            .pressed_pressable
+            .and_then(|id| runtime.debug_path_for_element(window, id));
+        let hovered_hover_region_path = snapshot
+            .hovered_hover_region
+            .and_then(|id| runtime.debug_path_for_element(window, id));
+
         Self {
             focused_element: snapshot.focused_element.map(|id| id.0),
+            focused_element_path,
             active_text_selection: snapshot.active_text_selection.map(|(a, b)| (a.0, b.0)),
+            active_text_selection_path,
             hovered_pressable: snapshot.hovered_pressable.map(|id| id.0),
+            hovered_pressable_path,
             pressed_pressable: snapshot.pressed_pressable.map(|id| id.0),
+            pressed_pressable_path,
             hovered_hover_region: snapshot.hovered_hover_region.map(|id| id.0),
+            hovered_hover_region_path,
             wants_continuous_frames: snapshot.wants_continuous_frames,
             observed_models: snapshot
                 .observed_models

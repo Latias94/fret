@@ -1352,18 +1352,22 @@ mod tests {
             "expected tooltip layer to remain visible during fade-out"
         );
 
-        // Frame 9: close delay (2) + fade ticks (4) elapsed -> hidden.
-        app.set_frame_id(FrameId(9));
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            trigger_id.clone(),
-            content_id.clone(),
-        );
-        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        // Close delay elapsed on frame 6, then Presence keeps the layer mounted while fading out.
+        // Assert that it becomes hidden by the end of the fade-out window.
+        let settle_frame = 6 + crate::overlay_motion::SHADCN_MOTION_TICKS_100 + 1;
+        for frame in 7..=settle_frame {
+            app.set_frame_id(FrameId(frame));
+            render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                trigger_id.clone(),
+                content_id.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
 
         let tooltip_layer = ui
             .debug_layers_in_paint_order()

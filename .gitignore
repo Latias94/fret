@@ -15,6 +15,7 @@ crates/fret-fonts/assets/_sources/
 /.codannaignore
 .codex_tmp/
 .codex_tmp_metadata.json
+.codex-target/
 .idea/
 tools/_clippy*.txt
 /apps/fret-demo-web/dist/

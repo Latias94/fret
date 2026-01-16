@@ -49,6 +49,117 @@ Exception (explicitly gated):
   This must remain **off by default** and must not be used by shadcn/tailwind component crates.
   - Current gate: `fret-ui/unstable-retained-bridge` (ADR 0075).
 
+---
+
+## Authoring Ergonomics: `ui()` Fluent Builder (P1)
+
+Goal (P1): make shadcn components feel like gpui-component by providing **one** fluent, discoverable
+chain for layout + chrome overrides:
+
+- `Button::new("OK").ui().px_2().w_full().rounded_md().into_element(cx)`
+
+This is ecosystem-only (no runtime contract changes). The builder holds a merged `UiPatch`:
+
+- `ChromeRefinement` (control chrome: padding/border/radius/colors, etc)
+- `LayoutRefinement` (layout: size, min/max, margins/insets, etc)
+
+Implementation anchors:
+
+- Builder substrate: `ecosystem/fret-ui-kit/src/ui_builder.rs`
+- shadcn opt-in glue: `ecosystem/fret-ui-shadcn/src/ui_ext/mod.rs`
+- ADR: `docs/adr/0175-unified-authoring-builder-surface-v1.md`
+
+### Status
+
+- `fret-ui-kit`: `ui()` is available for any type that implements `UiPatchTarget`.
+- `fret-ui-shadcn`: coverage is incremental via `ui_ext/*` (no component internals required unless a
+  component does not yet support chrome/layout refinements).
+- Dev note (Windows worktrees): if incremental builds pick up stale artifacts from another worktree,
+  run `cargo clean -p fret-ui-kit -p fret-ui-shadcn` (or set a per-worktree `CARGO_TARGET_DIR`).
+
+### Coverage Tracker (Update as we proceed)
+
+Legend:
+
+- `Chrome+Layout`: supports both style and layout fluent methods (`UiSupportsChrome + UiSupportsLayout`).
+- `Layout-only`: supports only layout fluent methods (`UiSupportsLayout`); chrome methods are gated.
+- `Patch-only`: supports `ui().build()` but not `ui().into_element(cx)` (the component’s `into_element` requires extra args/closures).
+- `Pass-through`: supports `ui().into_element(cx)` but does not accept chrome/layout patches (no fluent style/layout methods; patch is ignored).
+
+| Module | Type | Status | Notes |
+| --- | --- | --- | --- |
+| `button` | `Button` | Chrome+Layout |  |
+| `alert` | `Alert` | Pass-through |  |
+| `badge` | `Badge` | Pass-through |  |
+| `kbd` | `Kbd` | Pass-through |  |
+| `breadcrumb` | `Breadcrumb` | Pass-through |  |
+| `checkbox` | `Checkbox` | Chrome+Layout |  |
+| `radio_group` | `RadioGroup` | Pass-through |  |
+| `calendar` | `Calendar` | Pass-through |  |
+| `calendar_range` | `CalendarRange` | Pass-through |  |
+| `date_picker` | `DatePicker` | Pass-through |  |
+| `date_range_picker` | `DateRangePicker` | Pass-through |  |
+| `input` | `Input` | Chrome+Layout |  |
+| `textarea` | `Textarea` | Chrome+Layout |  |
+| `switch` | `Switch` | Chrome+Layout |  |
+| `card` | `Card` | Chrome+Layout |  |
+| `popover` | `PopoverContent` | Chrome+Layout |  |
+| `tooltip` | `TooltipContent` | Chrome+Layout |  |
+| `dialog` | `DialogContent` | Chrome+Layout |  |
+| `alert_dialog` | `AlertDialogContent` | Chrome+Layout |  |
+| `sheet` | `SheetContent` | Chrome+Layout |  |
+| `hover_card` | `HoverCardContent` | Chrome+Layout |  |
+| `drawer` | `DrawerContent` | Chrome+Layout |  |
+| `select` | `Select` | Layout-only | Needs chrome support for full parity |
+| `slider` | `Slider` | Layout-only | Needs chrome support for full parity |
+| `accordion` | `AccordionTrigger` | Chrome+Layout (Patch-only) | `into_element` requires root/value args |
+| `accordion` | `AccordionContent` | Chrome+Layout (Patch-only) | Rendered via `Accordion` |
+| `accordion` | `AccordionItem` | Chrome+Layout (Patch-only) | Rendered via `Accordion` |
+| `accordion` | `Accordion` | Layout-only | Needs chrome support for full parity |
+| `avatar` | `Avatar` | Chrome+Layout |  |
+| `avatar` | `AvatarFallback` | Chrome+Layout |  |
+| `avatar` | `AvatarImage` | Layout-only | Needs chrome support for full parity |
+| `progress` | `Progress` | Chrome+Layout |  |
+| `skeleton` | `Skeleton` | Chrome+Layout |  |
+| `tabs` | `Tabs` | Chrome+Layout |  |
+| `tabs` | `TabsRoot` | Chrome+Layout |  |
+| `toggle` | `Toggle` | Chrome+Layout |  |
+| `toggle_group` | `ToggleGroup` | Chrome+Layout |  |
+| `table` | `Table` | Chrome+Layout |  |
+| `table` | `TableCell` | Chrome+Layout |  |
+| `command` | `Command` | Chrome+Layout |  |
+| `command` | `CommandPalette` | Chrome+Layout |  |
+| `command` | `CommandInput` | Layout-only | Needs chrome support for full parity |
+| `input_group` | `InputGroup` | Chrome+Layout |  |
+| `input_otp` | `InputOtp` | Chrome+Layout |  |
+| `sidebar` | `Sidebar` | Chrome+Layout |  |
+| `data_table` | `DataTable` | Chrome+Layout (Patch-only) | `into_element` requires data/columns callbacks |
+| `data_grid` | `DataGrid` | Chrome+Layout (Patch-only) | `into_element` requires row/col callbacks |
+| `data_grid_canvas` | `DataGridCanvas` | Chrome+Layout (Patch-only) | `into_element` requires cell callback |
+| `collapsible` | `Collapsible` | Layout-only (Patch-only) | `into_element` requires trigger/content closures |
+| `collapsible` | `CollapsibleContent` | Layout-only |  |
+| `field` | `Field` | Layout-only |  |
+| `item` | `Item` | Layout-only |  |
+| `pagination` | `Pagination` | Layout-only |  |
+| `navigation_menu` | `NavigationMenu` | Layout-only |  |
+| `scroll_area` | `ScrollArea` | Layout-only |  |
+| `scroll_area` | `ScrollAreaRoot` | Layout-only |  |
+| `resizable` | `ResizablePanelGroup` | Layout-only |  |
+| `resizable` | `ResizablePanel` | Layout-only (Patch-only) | `into_element` is not public; used via panel group |
+| `spinner` | `Spinner` | Layout-only |  |
+| `tooltip` | `Tooltip` | Layout-only |  |
+| `hover_card` | `HoverCard` | Layout-only |  |
+| `dialog` | `DialogClose` | Chrome+Layout |  |
+| `alert_dialog` | `AlertDialogTrigger` | Pass-through | `ui()` is available for consistency; chrome/layout are not supported |
+| `drawer` | `DrawerClose` | Chrome+Layout |  |
+
+Additional pass-through subcomponents also opt into `ui()` (not tracked individually in the table):
+
+- Alert/Dialog/Sheet: `*Header/*Footer/*Title/*Description` (+ `AlertDialogAction/AlertDialogCancel`).
+- Card: `CardHeader/CardContent/CardFooter/CardTitle/CardDescription`.
+- Table: `TableHeader/TableBody/TableFooter/TableRow/TableHead/TableCaption`.
+- Wrappers: `PopoverTrigger/PopoverAnchor/TooltipTrigger/TooltipAnchor/HoverCardTrigger/HoverCardAnchor`.
+
 ## shadcn/ui v4 Registry Baseline
 
 The upstream reference in `repo-ref/ui` defines 54 `registry:ui` components (`repo-ref/ui/apps/v4/registry.json`).
