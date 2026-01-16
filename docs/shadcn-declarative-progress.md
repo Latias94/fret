@@ -143,10 +143,10 @@ Legend:
 | `input_group` | `InputGroup` | Chrome+Layout |  |
 | `input_otp` | `InputOtp` | Chrome+Layout |  |
 | `sidebar` | `Sidebar` | Chrome+Layout |  |
-| `data_table` | `DataTable` | Chrome+Layout (Patch-only) | `into_element` requires data/columns callbacks |
-| `data_grid` | `DataGrid` | Chrome+Layout (Patch-only) | `into_element` requires row/col callbacks |
-| `data_grid_canvas` | `DataGridCanvas` | Chrome+Layout (Patch-only) | `into_element` requires cell callback |
-| `collapsible` | `Collapsible` | Layout-only (Patch-only) | `into_element` requires trigger/content closures |
+| `data_table` | `DataTable` | Chrome+Layout (Patch-only) | `ui().into_element(cx, data, data_revision, state, columns, ...)` (extra args) |
+| `data_grid` | `DataGridElement` | Chrome+Layout (Patch-only) | Exported as `experimental::DataGridElement`; `ui().into_element(cx, rows_revision, cols_revision, ...)` (extra args) |
+| `data_grid_canvas` | `DataGridCanvas` | Chrome+Layout (Patch-only) | `ui().into_element(cx, cell_text_at)` (extra args) |
+| `collapsible` | `Collapsible` | Layout-only (Patch-only) | `ui().into_element(cx, trigger, content)` (extra args) |
 | `collapsible` | `CollapsibleContent` | Layout-only |  |
 | `field` | `Field` | Layout-only |  |
 | `item` | `Item` | Layout-only |  |
