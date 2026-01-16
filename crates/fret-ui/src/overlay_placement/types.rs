@@ -2,8 +2,6 @@ pub use fret_core::LayoutDirection;
 
 use fret_core::{Edges, Px, Rect, Size};
 
-pub type LayoutDirection = fret_core::LayoutDirection;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Side {
     Top,
