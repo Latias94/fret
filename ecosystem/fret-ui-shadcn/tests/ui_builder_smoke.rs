@@ -241,6 +241,7 @@ fn ui_builder_smoke_applies_supported_patches() {
         calendar_selected.clone(),
     )
     .ui()
+    .p_4()
     .build();
     let _ = fret_ui_shadcn::DateRangePicker::new(
         date_range_picker_open,
@@ -248,6 +249,7 @@ fn ui_builder_smoke_applies_supported_patches() {
         calendar_range_selected,
     )
     .ui()
+    .p_4()
     .build();
     let _ = fret_ui_shadcn::RadioGroup::new(radio_group_model)
         .ui()
