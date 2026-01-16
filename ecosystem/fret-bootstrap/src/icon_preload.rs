@@ -35,7 +35,9 @@ pub fn preload_icon_svgs(app: &mut App, services: &mut dyn UiServices) {
         app.with_global_mut(IconRegistry::default, |icons, _app| {
             icons
                 .iter()
-                .filter_map(|(id, _source)| icons.resolve_svg_owned(id).map(|svg| (id.clone(), svg)))
+                .filter_map(|(id, _source)| {
+                    icons.resolve_svg_owned(id).map(|svg| (id.clone(), svg))
+                })
                 .collect()
         });
 
@@ -59,7 +61,9 @@ pub fn preload_icon_svgs(app: &mut App, services: &mut dyn UiServices) {
                         ResolvedSvgOwned::Static(bytes) => SvgBytes::Static(bytes),
                         ResolvedSvgOwned::Bytes(bytes) => SvgBytes::Bytes(bytes),
                     };
-                    let id = cache.cache.prepare(services, icon_svg_cache_key(&icon), bytes);
+                    let id = cache
+                        .cache
+                        .prepare(services, icon_svg_cache_key(&icon), bytes);
                     registry.insert(icon, id);
                 }
             },
