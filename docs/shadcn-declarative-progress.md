@@ -161,7 +161,7 @@ Legend:
 | `tooltip` | `Tooltip` | Layout-only |  |
 | `hover_card` | `HoverCard` | Layout-only |  |
 | `dialog` | `DialogClose` | Chrome+Layout |  |
-| `alert_dialog` | `AlertDialogTrigger` | Pass-through | `ui()` is available for consistency; chrome/layout are not supported |
+| `alert_dialog` | `AlertDialogTrigger` | Pass-through | Non-visual wrapper; apply chrome/layout patches on the child trigger element (e.g. `Button::ui()`) to avoid extra container nodes |
 | `drawer` | `DrawerClose` | Chrome+Layout |  |
 
 Additional pass-through subcomponents also opt into `ui()` (not tracked individually in the table):
