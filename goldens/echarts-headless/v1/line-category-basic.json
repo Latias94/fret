@@ -28,6 +28,30 @@
     "total_nodes": 1,
     "arena_points": 5,
     "arena_rects": 0,
+    "data_indices": {
+      "len": 5,
+      "head": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "tail": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "hash": 3708964778940489647
+    },
+    "rect_data_indices": {
+      "len": 0,
+      "head": [],
+      "tail": [],
+      "hash": 14695981039346656037
+    },
     "by_series": [
       {
         "series": 1,

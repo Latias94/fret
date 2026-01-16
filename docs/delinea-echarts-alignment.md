@@ -553,7 +553,12 @@ goal is to establish a stable “Option -> Engine” spine that scales to more s
   - `ecosystem/fret-chart/src/echarts/mod.rs` (dataset parsing + encode mapping)
   - `ecosystem/delinea/src/spec/mod.rs` (`DatasetSpec`, `FieldSpec`, `SeriesEncode`)
 - Missing vs ECharts:
-  - `transform` graph (`dataset.transform`) (P0-4 / P1 depending on scope)
+  - `[~]` `dataset.transform` (ECharts dataset transforms): v1 supports a small eager translator subset:
+    - `filter` (numeric dimension + `gte/gt/lte/lt/eq/ne`)
+    - `sort` (numeric dimension + `order=asc/desc`)
+    - `fromDatasetIndex` chaining for derived datasets
+    - Evidence: `ecosystem/fret-chart/src/echarts/mod.rs`, `ecosystem/fret-chart/tests/echarts_headless_goldens.rs`, `goldens/echarts-headless/v1/dataset-transform-*.json`
+    - Known gap: raw-index identity across dataset transforms is not yet modeled as an ECharts-class `DataStore` graph; derived datasets currently re-index rows (needs an engine-level transform graph contract).
   - `source` object rows, `sourceHeader`, and type inference (P1)
 
 ### P0-2: Multi-axis binding via indices (`xAxisIndex` / `yAxisIndex`)

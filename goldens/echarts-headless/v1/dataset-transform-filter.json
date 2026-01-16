@@ -2,13 +2,13 @@
   "axis_windows": [
     {
       "axis": 1,
-      "min": -0.5,
-      "max": 3.5
+      "min": 10.0,
+      "max": 19.0
     },
     {
       "axis": 2,
-      "min": 0.0,
-      "max": 36.0
+      "min": 10.0,
+      "max": 19.0
     }
   ],
   "filter_plan": {
@@ -26,37 +26,45 @@
   "marks": {
     "revision": 3,
     "total_nodes": 1,
-    "arena_points": 0,
-    "arena_rects": 4,
+    "arena_points": 10,
+    "arena_rects": 0,
     "data_indices": {
+      "len": 10,
+      "head": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "tail": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "hash": 10952987118811563378
+    },
+    "rect_data_indices": {
       "len": 0,
       "head": [],
       "tail": [],
       "hash": 14695981039346656037
     },
-    "rect_data_indices": {
-      "len": 4,
-      "head": [
-        0,
-        1,
-        2,
-        3
-      ],
-      "tail": [
-        0,
-        1,
-        2,
-        3
-      ],
-      "hash": 4932904490461320209
-    },
     "by_series": [
       {
         "series": 1,
         "nodes": 1,
-        "points": 0,
+        "points": 10,
         "polylines": 0,
-        "rects": 4,
+        "rects": 0,
         "texts": 0
       }
     ]
@@ -66,14 +74,14 @@
     "series": [
       {
         "series": 1,
-        "dataset": 1,
+        "dataset": 2,
         "revision": 1,
         "data_revision": 2,
         "selection": {
           "kind": "range",
           "start": 0,
-          "end": 4,
-          "view_len": 4
+          "end": 10,
+          "view_len": 10
         },
         "x_filter_mode": "Filter",
         "y_filter_mode": "None",

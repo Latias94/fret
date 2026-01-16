@@ -60,7 +60,17 @@ struct MarksSnapshot {
     total_nodes: usize,
     arena_points: usize,
     arena_rects: usize,
+    data_indices: IndicesSnapshot,
+    rect_data_indices: IndicesSnapshot,
     by_series: Vec<SeriesMarksSnapshot>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+struct IndicesSnapshot {
+    len: usize,
+    head: Vec<u32>,
+    tail: Vec<u32>,
+    hash: u64,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -214,11 +224,15 @@ fn snapshot_from_engine(
         }
     }
 
+    let data_indices = snapshot_indices(&marks.arena.data_indices);
+    let rect_data_indices = snapshot_indices(&marks.arena.rect_data_indices);
     let marks = MarksSnapshot {
         revision: marks.revision.0 as u64,
         total_nodes: marks.nodes.len(),
         arena_points: marks.arena.points.len(),
         arena_rects: marks.arena.rects.len(),
+        data_indices,
+        rect_data_indices,
         by_series: by_series.into_values().collect(),
     };
 
@@ -278,6 +292,23 @@ fn snapshot_from_engine(
         filter_plan,
         marks,
         participation,
+    }
+}
+
+fn snapshot_indices(indices: &[u32]) -> IndicesSnapshot {
+    let take = 8usize;
+    let head: Vec<u32> = indices.iter().copied().take(take).collect();
+    let mut tail: Vec<u32> = indices.iter().copied().rev().take(take).collect();
+    tail.reverse();
+    let hash = indices.iter().fold(14695981039346656037u64, |h, v| {
+        let v = *v as u64;
+        (h ^ v).wrapping_mul(1099511628211u64)
+    });
+    IndicesSnapshot {
+        len: indices.len(),
+        head,
+        tail,
+        hash,
     }
 }
 
@@ -477,4 +508,56 @@ fn golden_multi_grid_two_series_with_shared_datazoom() {
     let json = serde_json::to_string(&option).expect("option json");
 
     assert_matches_golden("multi-grid-two-series-datazoom", &json);
+}
+
+#[test]
+fn golden_dataset_transform_filter_from_dataset() {
+    let mut source = Vec::with_capacity(1 + 20);
+    source.push(serde_json::json!(["x", "y"]));
+    for i in 0..20 {
+        source.push(serde_json::json!([i as f64, i as f64]));
+    }
+
+    let option = serde_json::json!({
+      "dataset": [
+        { "source": source },
+        {
+          "fromDatasetIndex": 0,
+          "transform": { "type": "filter", "config": { "dimension": "y", "gte": 10 } }
+        }
+      ],
+      "xAxis": [{ "type": "value" }],
+      "yAxis": [{ "type": "value" }],
+      "series": [
+        { "type": "scatter", "datasetIndex": 1, "encode": { "x": "x", "y": "y" } }
+      ]
+    });
+    let json = serde_json::to_string(&option).expect("option json");
+    assert_matches_golden("dataset-transform-filter", &json);
+}
+
+#[test]
+fn golden_dataset_transform_sort_desc_from_dataset() {
+    let mut source = Vec::with_capacity(1 + 10);
+    source.push(serde_json::json!(["x", "y"]));
+    for i in 0..10 {
+        source.push(serde_json::json!([i as f64, i as f64]));
+    }
+
+    let option = serde_json::json!({
+      "dataset": [
+        { "source": source },
+        {
+          "fromDatasetIndex": 0,
+          "transform": { "type": "sort", "config": { "dimension": "y", "order": "desc" } }
+        }
+      ],
+      "xAxis": [{ "type": "value" }],
+      "yAxis": [{ "type": "value" }],
+      "series": [
+        { "type": "line", "datasetIndex": 1, "encode": { "x": "x", "y": "y" } }
+      ]
+    });
+    let json = serde_json::to_string(&option).expect("option json");
+    assert_matches_golden("dataset-transform-sort-desc", &json);
 }
