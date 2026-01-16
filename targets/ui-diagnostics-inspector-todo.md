@@ -19,6 +19,7 @@ Related docs:
 - Script harness (`diag run`, `diag suite ui-gallery`)
 - `test_id` contract: authoring → semantics snapshot → bundle → selector
 - Picking (one-shot): `diag pick`, `diag pick-script`, `diag pick-apply`
+- View cache frame stats exported in bundles (`debug.stats.view_cache_*`, `debug.stats.invalidation_*`)
 
 ## Milestone M1: “Inspect UX parity” (highest ROI)
 
