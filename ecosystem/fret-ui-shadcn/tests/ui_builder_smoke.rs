@@ -210,7 +210,10 @@ fn ui_builder_smoke_applies_supported_patches() {
     let _ = DropdownMenu::new(dropdown_menu_open).ui().build();
     let _ = ContextMenu::new(context_menu_open).ui().build();
     let _ = Menubar::new(Vec::new()).ui().build();
-    let _ = Combobox::new(combobox_value, combobox_open).ui().build();
+    let _ = Combobox::new(combobox_value, combobox_open)
+        .ui()
+        .px_2()
+        .build();
     let _ = Toaster::new().ui().build();
 
     let _ = DataTableGlobalFilterInput::new(data_table_filter)
