@@ -34,6 +34,7 @@ In-app shortcuts while inspect mode is active:
 - `Esc`: exit inspect (writes `inspect.json` + touches `inspect.touch`)
 - `Ctrl+C` / `Cmd+C`: copy the best selector JSON
 - `Ctrl+Shift+C` / `Cmd+Shift+C`: copy `selector + focus + path` details
+- `F`: lock selection to the current semantics focus
 - `L`: lock/unlock selection (freeze hover)
 - `Alt+Up` / `Alt+Down`: walk the semantics parent chain (and “back to child”)
 
@@ -143,4 +144,3 @@ Fret’s semantics snapshot is shared by:
 - it must not be mapped into platform a11y name fields by default.
 
 This means `test_id` should not “fight” a11y; it is designed to coexist safely.
-

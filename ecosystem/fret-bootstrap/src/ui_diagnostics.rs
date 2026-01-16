@@ -160,6 +160,7 @@ pub struct UiDiagnosticsService {
 enum InspectNavCommand {
     Up,
     Down,
+    Focus,
 }
 
 #[derive(Debug, Clone)]
@@ -401,6 +402,16 @@ impl UiDiagnosticsService {
                 };
                 app.push_effect(Effect::ClipboardSetText { text: payload });
                 self.push_inspect_toast(window, "inspect: copied selector".to_string());
+                app.request_redraw(window);
+                true
+            }
+            KeyCode::KeyF => {
+                if !self.inspect_enabled {
+                    return false;
+                }
+                self.inspect_pending_nav
+                    .insert(window, InspectNavCommand::Focus);
+                self.push_inspect_toast(window, "inspect: select focused node".to_string());
                 app.request_redraw(window);
                 true
             }
@@ -827,10 +838,6 @@ impl UiDiagnosticsService {
             self.inspect_pending_nav.remove(&window);
             return;
         }
-        if !self.inspect_is_locked(window) {
-            self.inspect_pending_nav.remove(&window);
-            return;
-        }
         let Some(cmd) = self.inspect_pending_nav.remove(&window) else {
             return;
         };
@@ -839,19 +846,37 @@ impl UiDiagnosticsService {
             return;
         };
 
-        let current = self
-            .inspect_focus_node_id
-            .get(&window)
-            .copied()
-            .or_else(|| self.last_picked_node_id.get(&window).copied())
-            .or_else(|| self.last_hovered_node_id.get(&window).copied());
-        let Some(current) = current else {
-            self.push_inspect_toast(window, "inspect: no focused node".to_string());
-            return;
-        };
-
         match cmd {
+            InspectNavCommand::Focus => {
+                let Some(node) = snapshot.focus else {
+                    self.push_inspect_toast(window, "inspect: no focused node".to_string());
+                    return;
+                };
+                let id = node.data().as_ffi();
+                self.inspect_focus_down_stack.insert(window, Vec::new());
+                self.inspect_locked_windows.insert(window);
+                self.set_inspect_focus(window, snapshot, id, element_runtime);
+            }
             InspectNavCommand::Up => {
+                if !self.inspect_is_locked(window) {
+                    self.push_inspect_toast(
+                        window,
+                        "inspect: lock selection first (press L)".to_string(),
+                    );
+                    return;
+                }
+
+                let current = self
+                    .inspect_focus_node_id
+                    .get(&window)
+                    .copied()
+                    .or_else(|| self.last_picked_node_id.get(&window).copied())
+                    .or_else(|| self.last_hovered_node_id.get(&window).copied());
+                let Some(current) = current else {
+                    self.push_inspect_toast(window, "inspect: no focused node".to_string());
+                    return;
+                };
+
                 let Some(parent) = parent_node_id(snapshot, current) else {
                     self.push_inspect_toast(window, "inspect: reached root".to_string());
                     return;
@@ -864,6 +889,13 @@ impl UiDiagnosticsService {
                 self.push_inspect_toast(window, "inspect: parent".to_string());
             }
             InspectNavCommand::Down => {
+                if !self.inspect_is_locked(window) {
+                    self.push_inspect_toast(
+                        window,
+                        "inspect: lock selection first (press L)".to_string(),
+                    );
+                    return;
+                }
                 let Some(prev) = self
                     .inspect_focus_down_stack
                     .get_mut(&window)
@@ -3110,6 +3142,57 @@ mod tests {
             UiSelectorV1::TestId { id } => assert_eq!(id, "open"),
             other => panic!("expected TestId selector, got: {other:?}"),
         }
+    }
+
+    #[test]
+    fn inspect_focus_shortcut_locks_to_semantics_focus() {
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus: Some(node_id(2)),
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    1,
+                    None,
+                    SemanticsRole::Panel,
+                    rect(0.0, 0.0, 200.0, 200.0),
+                    "root",
+                ),
+                semantics_node_with_test_id(
+                    2,
+                    Some(1),
+                    SemanticsRole::Button,
+                    rect(0.0, 0.0, 100.0, 100.0),
+                    "focus",
+                    "focused-btn",
+                ),
+            ],
+        };
+
+        let window = window_id(1);
+        let mut svc = UiDiagnosticsService::default();
+        svc.cfg.enabled = true;
+        svc.inspect_enabled = true;
+
+        svc.inspect_pending_nav
+            .insert(window, InspectNavCommand::Focus);
+        svc.apply_inspect_navigation(window, Some(&snapshot), None);
+
+        assert!(svc.inspect_is_locked(window));
+        let focus_id = snapshot.focus.expect("focus").data().as_ffi();
+        assert_eq!(svc.inspect_focus_node_id(window), Some(focus_id));
+        assert!(
+            svc.inspect_best_selector_json(window)
+                .is_some_and(|s| s.contains("test_id"))
+        );
     }
 
     #[test]

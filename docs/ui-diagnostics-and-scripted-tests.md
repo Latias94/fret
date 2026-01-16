@@ -130,6 +130,7 @@ In-app shortcuts while inspect mode is active:
 - `Esc`: disable inspect (writes `inspect.json` + touches `inspect.touch`)
 - `Ctrl+C` / `Cmd+C`: copy the best selector JSON for the current selection (or hovered node) to the clipboard
 - `Ctrl+Shift+C` / `Cmd+Shift+C`: copy a multi-line "selector + focus + path" payload (useful for bug reports and AI triage)
+- `F`: lock selection to the currently focused semantics node (keyboard-first inspect)
 - `L`: lock/unlock selection (freezes hover highlight; uses last hovered node)
 - `Alt+Up` / `Alt+Down`: navigate the locked selection up/down the semantics parent chain (uses a small down-stack for “back to child”)
 

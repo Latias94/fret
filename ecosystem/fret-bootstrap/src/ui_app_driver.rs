@@ -1293,7 +1293,7 @@ fn render_diag_inspect_overlay(
                     lines.push("INSPECT: click to pick a target (Esc to cancel)".to_string());
                 } else {
                     lines.push(format!(
-                        "INSPECT: Esc exit | Ctrl+C copy selector | Ctrl+Shift+C copy details | L lock | Alt+Up/Down nav (consume_clicks={consume_clicks}, locked={locked})"
+                        "INSPECT: Esc exit | Ctrl+C copy selector | Ctrl+Shift+C copy details | F focus | L lock | Alt+Up/Down nav (consume_clicks={consume_clicks}, locked={locked})"
                     ));
                 }
                 if let Some(t) = toast.as_deref() {

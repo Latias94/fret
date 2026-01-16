@@ -42,7 +42,7 @@ Related docs:
 2. **Pick modes**
    - One-shot pick (already): click once and write `pick.result.json`.
    - Continuous picking mode: hover shows candidate, click selects (optional click pass-through).
-   - Keyboard “inspect focus”: select current focused node without pointer.
+   - Keyboard “inspect focus”: select current focused node without pointer. (done: press `F` in inspect mode)
 
 3. **Selector quality improvements**
    - Score/select best selector:
