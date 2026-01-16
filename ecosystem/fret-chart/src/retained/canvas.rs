@@ -10,6 +10,8 @@ use delinea::engine::window::{DataWindow, WindowSpanAnchor};
 use delinea::marks::{MarkKind, MarkPayloadRef};
 use delinea::text::{TextMeasurer, TextMetrics};
 use delinea::{Action, BrushSelection2D, ChartEngine, WorkBudget};
+use fret_canvas::cache::PathCache;
+use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_canvas::scale::effective_scale_factor;
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, FontWeight, KeyCode, Modifiers, MouseButton,
@@ -20,12 +22,23 @@ use fret_runtime::Model;
 use fret_ui::Theme;
 use fret_ui::UiHost;
 use fret_ui::retained_bridge::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
+use slotmap::Key;
 
 use crate::input_map::{ChartInputMap, ModifierKey, ModifiersMask};
 use crate::retained::style::ChartStyle;
 use crate::retained::text_cache::{KeyBuilder, TextCacheGroup};
 use crate::retained::tooltip::{DefaultTooltipFormatter, TooltipFormatter};
 use crate::retained::{ChartCanvasOutput, ChartCanvasOutputSnapshot};
+
+fn mark_path_cache_key(mark_id: delinea::ids::MarkId, variant: u8) -> u64 {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    let mut hasher = DefaultHasher::new();
+    mark_id.hash(&mut hasher);
+    variant.hash(&mut hasher);
+    hasher.finish()
+}
 
 #[derive(Debug, Default)]
 struct NullTextMeasurer;
@@ -42,8 +55,6 @@ impl TextMeasurer for NullTextMeasurer {
 
 #[derive(Debug)]
 struct CachedPath {
-    stroke: fret_core::PathId,
-    fill: Option<fret_core::PathId>,
     fill_alpha: Option<f32>,
     order: u32,
     source_series: Option<delinea::SeriesId>,
@@ -166,6 +177,7 @@ pub struct ChartCanvas {
     active_y_axis: Option<delinea::AxisId>,
     last_marks_rev: delinea::ids::Revision,
     last_scale_factor_bits: u32,
+    path_cache: PathCache,
     cached_paths: BTreeMap<delinea::ids::MarkId, CachedPath>,
     cached_rects: Vec<CachedRect>,
     cached_points: Vec<CachedPoint>,
@@ -250,6 +262,7 @@ impl ChartCanvas {
             active_y_axis: None,
             last_marks_rev: delinea::ids::Revision::default(),
             last_scale_factor_bits: 0,
+            path_cache: PathCache::default(),
             cached_paths: BTreeMap::default(),
             cached_rects: Vec::default(),
             cached_points: Vec::default(),
@@ -2232,12 +2245,7 @@ impl ChartCanvas {
         self.last_marks_rev = marks_rev;
         self.last_scale_factor_bits = scale_factor_bits;
 
-        for cached in self.cached_paths.values() {
-            if let Some(fill) = cached.fill {
-                cx.services.path().release(fill);
-            }
-            cx.services.path().release(cached.stroke);
-        }
+        self.path_cache.clear(cx.services);
         self.cached_paths.clear();
         self.cached_rects.clear();
         self.cached_points.clear();
@@ -2361,17 +2369,22 @@ impl ChartCanvas {
                 .map(|(_, s)| s.width)
                 .unwrap_or(self.style.stroke_width);
 
-            let (stroke, _metrics) = cx.services.path().prepare(
+            let constraints = PathConstraints {
+                scale_factor: effective_scale_factor(cx.scale_factor, 1.0),
+            };
+
+            let _ = self.path_cache.prepare(
+                cx.services,
+                mark_path_cache_key(node.id, 0),
                 &commands,
                 PathStyle::Stroke(StrokeStyle {
                     width: stroke_width,
                 }),
-                PathConstraints {
-                    scale_factor: effective_scale_factor(cx.scale_factor, 1.0),
-                },
+                constraints,
             );
 
-            let fill = if let Some(baseline_y_local) = baseline_y_local {
+            let mut fill_prepared = false;
+            if let Some(baseline_y_local) = baseline_y_local {
                 let mut fill_commands: Vec<PathCommand> = Vec::with_capacity(commands.len() + 4);
                 fill_commands.extend_from_slice(&commands);
 
@@ -2391,28 +2404,22 @@ impl ChartCanvas {
                     )));
                     fill_commands.push(PathCommand::Close);
 
-                    let (fill, _metrics) = cx.services.path().prepare(
+                    let _ = self.path_cache.prepare(
+                        cx.services,
+                        mark_path_cache_key(node.id, 1),
                         &fill_commands,
                         PathStyle::Fill(fret_core::FillStyle::default()),
-                        PathConstraints {
-                            scale_factor: effective_scale_factor(cx.scale_factor, 1.0),
-                        },
+                        constraints,
                     );
-                    Some(fill)
-                } else {
-                    None
+                    fill_prepared = true;
                 }
-            } else {
-                None
             };
-            let fill_alpha = fill.map(|_| self.style.area_fill_color.a);
+            let fill_alpha = fill_prepared.then_some(self.style.area_fill_color.a);
 
             let mark_id = node.id;
             self.cached_paths.insert(
                 mark_id,
                 CachedPath {
-                    stroke,
-                    fill,
                     fill_alpha,
                     order: node.order.0,
                     source_series: node.source_series,
@@ -2464,25 +2471,28 @@ impl ChartCanvas {
                 }
                 fill_commands.push(PathCommand::Close);
 
-                let (fill_path, _metrics) = cx.services.path().prepare(
-                    &fill_commands,
-                    PathStyle::Fill(fret_core::FillStyle::default()),
-                    PathConstraints {
-                        scale_factor: effective_scale_factor(cx.scale_factor, 1.0),
-                    },
-                );
-
                 let fill_alpha = match model.series.get(&series_id).map(|s| s.kind) {
                     Some(delinea::SeriesKind::Band) => self.style.band_fill_color.a,
                     Some(delinea::SeriesKind::Area) => self.style.area_fill_color.a,
                     _ => self.style.area_fill_color.a,
                 };
 
-                if let Some(cached) = self.cached_paths.get_mut(&lower_id) {
-                    cached.fill = Some(fill_path);
-                    cached.fill_alpha = Some(fill_alpha);
-                } else {
-                    cx.services.path().release(fill_path);
+                let constraints = PathConstraints {
+                    scale_factor: effective_scale_factor(cx.scale_factor, 1.0),
+                };
+
+                if self.cached_paths.contains_key(&lower_id) {
+                    let _ = self.path_cache.prepare(
+                        cx.services,
+                        mark_path_cache_key(lower_id, 1),
+                        &fill_commands,
+                        PathStyle::Fill(fret_core::FillStyle::default()),
+                        constraints,
+                    );
+
+                    if let Some(cached) = self.cached_paths.get_mut(&lower_id) {
+                        cached.fill_alpha = Some(fill_alpha);
+                    }
                 }
             }
         }
@@ -3884,7 +3894,65 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
         // Advance per-frame counters for optional cache pruning.
         self.axis_text.begin_frame();
+        self.tooltip_text.begin_frame();
         self.legend_text.begin_frame();
+        self.path_cache.begin_frame();
+        if let Some(window) = cx.window {
+            let frame_id = cx.app.frame_id().0;
+            let path_entries = self.path_cache.len();
+            let path_stats = self.path_cache.stats();
+            let path_key = CanvasCacheKey {
+                window: window.data().as_ffi(),
+                node: cx.node.data().as_ffi(),
+                name: "fret-chart.canvas.paths",
+            };
+
+            let axis_text_entries = self.axis_text.len();
+            let axis_text_stats = self.axis_text.stats();
+            let axis_text_key = CanvasCacheKey {
+                window: window.data().as_ffi(),
+                node: cx.node.data().as_ffi(),
+                name: "fret-chart.canvas.text.axis",
+            };
+
+            let tooltip_text_entries = self.tooltip_text.len();
+            let tooltip_text_stats = self.tooltip_text.stats();
+            let tooltip_text_key = CanvasCacheKey {
+                window: window.data().as_ffi(),
+                node: cx.node.data().as_ffi(),
+                name: "fret-chart.canvas.text.tooltip",
+            };
+
+            let legend_text_entries = self.legend_text.len();
+            let legend_text_stats = self.legend_text.stats();
+            let legend_text_key = CanvasCacheKey {
+                window: window.data().as_ffi(),
+                node: cx.node.data().as_ffi(),
+                name: "fret-chart.canvas.text.legend",
+            };
+            cx.app
+                .with_global_mut(CanvasCacheStatsRegistry::default, |registry, _app| {
+                    registry.record_path_cache(path_key, frame_id, path_entries, path_stats);
+                    registry.record_text_cache(
+                        axis_text_key,
+                        frame_id,
+                        axis_text_entries,
+                        axis_text_stats,
+                    );
+                    registry.record_text_cache(
+                        tooltip_text_key,
+                        frame_id,
+                        tooltip_text_entries,
+                        tooltip_text_stats,
+                    );
+                    registry.record_text_cache(
+                        legend_text_key,
+                        frame_id,
+                        legend_text_entries,
+                        legend_text_stats,
+                    );
+                });
+        }
 
         let mut measurer = NullTextMeasurer::default();
 
@@ -4002,6 +4070,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             });
         }
 
+        let path_constraints = PathConstraints {
+            scale_factor: effective_scale_factor(cx.scale_factor, 1.0),
+        };
+
         for (mark_id, cached) in &self.cached_paths {
             let base_order = self
                 .style
@@ -4035,16 +4107,20 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 }
             }
 
-            if let Some(fill) = cached.fill {
-                let fill_alpha = cached.fill_alpha.unwrap_or(self.style.area_fill_color.a);
-                let mut fill_color = stroke_color;
-                fill_color.a = fill_alpha;
-                cx.scene.push(SceneOp::Path {
-                    order: DrawOrder(base_order),
-                    origin: self.last_layout.plot.origin,
-                    path: fill,
-                    color: fill_color,
-                });
+            if let Some(fill_alpha) = cached.fill_alpha {
+                if let Some((fill, _metrics)) = self
+                    .path_cache
+                    .get(mark_path_cache_key(*mark_id, 1), path_constraints)
+                {
+                    let mut fill_color = stroke_color;
+                    fill_color.a = fill_alpha;
+                    cx.scene.push(SceneOp::Path {
+                        order: DrawOrder(base_order),
+                        origin: self.last_layout.plot.origin,
+                        path: fill,
+                        color: fill_color,
+                    });
+                }
             }
 
             let suppress_stroke = cached.source_series.is_some_and(|series_id| {
@@ -4055,12 +4131,17 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     && delinea::ids::mark_variant(*mark_id) == 1
             });
             if !suppress_stroke {
-                cx.scene.push(SceneOp::Path {
-                    order: DrawOrder(base_order.saturating_add(1)),
-                    origin: self.last_layout.plot.origin,
-                    path: cached.stroke,
-                    color: stroke_color,
-                });
+                if let Some((stroke, _metrics)) = self
+                    .path_cache
+                    .get(mark_path_cache_key(*mark_id, 0), path_constraints)
+                {
+                    cx.scene.push(SceneOp::Path {
+                        order: DrawOrder(base_order.saturating_add(1)),
+                        origin: self.last_layout.plot.origin,
+                        path: stroke,
+                        color: stroke_color,
+                    });
+                }
             }
         }
 
@@ -4185,6 +4266,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 });
             }
 
+            let path_constraints = PathConstraints {
+                scale_factor: effective_scale_factor(cx.scale_factor, 1.0),
+            };
+
             for (mark_id, cached) in &self.cached_paths {
                 let Some(series_id) = cached.source_series else {
                     continue;
@@ -4211,16 +4296,20 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     stroke_color.a *= 0.25;
                 }
 
-                if let Some(fill) = cached.fill {
-                    let fill_alpha = cached.fill_alpha.unwrap_or(self.style.area_fill_color.a);
-                    let mut fill_color = stroke_color;
-                    fill_color.a = fill_alpha;
-                    cx.scene.push(SceneOp::Path {
-                        order: DrawOrder(base_order.saturating_add(highlight_bias)),
-                        origin: self.last_layout.plot.origin,
-                        path: fill,
-                        color: fill_color,
-                    });
+                if let Some(fill_alpha) = cached.fill_alpha {
+                    if let Some((fill, _metrics)) = self
+                        .path_cache
+                        .get(mark_path_cache_key(*mark_id, 1), path_constraints)
+                    {
+                        let mut fill_color = stroke_color;
+                        fill_color.a = fill_alpha;
+                        cx.scene.push(SceneOp::Path {
+                            order: DrawOrder(base_order.saturating_add(highlight_bias)),
+                            origin: self.last_layout.plot.origin,
+                            path: fill,
+                            color: fill_color,
+                        });
+                    }
                 }
 
                 let suppress_stroke =
@@ -4230,12 +4319,17 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         }) && delinea::ids::mark_variant(*mark_id) == 1
                     });
                 if !suppress_stroke {
-                    cx.scene.push(SceneOp::Path {
-                        order: DrawOrder(base_order.saturating_add(highlight_bias + 1)),
-                        origin: self.last_layout.plot.origin,
-                        path: cached.stroke,
-                        color: stroke_color,
-                    });
+                    if let Some((stroke, _metrics)) = self
+                        .path_cache
+                        .get(mark_path_cache_key(*mark_id, 0), path_constraints)
+                    {
+                        cx.scene.push(SceneOp::Path {
+                            order: DrawOrder(base_order.saturating_add(highlight_bias + 1)),
+                            origin: self.last_layout.plot.origin,
+                            path: stroke,
+                            color: stroke_color,
+                        });
+                    }
                 }
             }
 
@@ -5095,12 +5189,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
-        for cached in self.cached_paths.values() {
-            if let Some(fill) = cached.fill {
-                services.path().release(fill);
-            }
-            services.path().release(cached.stroke);
-        }
+        self.path_cache.clear(services);
         self.cached_paths.clear();
 
         self.axis_text.clear(services);

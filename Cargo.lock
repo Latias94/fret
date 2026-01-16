@@ -938,6 +938,7 @@ dependencies = [
 name = "fret-asset-cache"
 version = "0.1.0"
 dependencies = [
+ "fret-canvas",
  "fret-core",
  "fret-runtime",
  "slotmap",
@@ -948,6 +949,7 @@ name = "fret-bootstrap"
 version = "0.1.0"
 dependencies = [
  "fret-app",
+ "fret-canvas",
  "fret-core",
  "fret-icons",
  "fret-icons-lucide",
@@ -992,6 +994,7 @@ dependencies = [
  "fret-ui-kit",
  "serde",
  "serde_json",
+ "slotmap",
 ]
 
 [[package]]
@@ -1228,6 +1231,7 @@ dependencies = [
  "fret-ui-kit",
  "serde",
  "serde_json",
+ "slotmap",
  "thiserror 2.0.17",
  "tracing",
  "uuid",
@@ -1267,10 +1271,12 @@ dependencies = [
 name = "fret-plot"
 version = "0.1.0"
 dependencies = [
+ "fret-canvas",
  "fret-core",
  "fret-runtime",
  "fret-ui",
  "fret-ui-kit",
+ "slotmap",
 ]
 
 [[package]]

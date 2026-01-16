@@ -12,6 +12,14 @@ impl TextCacheGroup {
         self.cache.begin_frame()
     }
 
+    pub(crate) fn stats(&self) -> fret_canvas::cache::CacheStats {
+        self.cache.stats()
+    }
+
+    pub(crate) fn len(&self) -> usize {
+        self.cache.len()
+    }
+
     pub(crate) fn clear(&mut self, services: &mut dyn UiServices) {
         self.cache.clear(services);
         self.key = None;

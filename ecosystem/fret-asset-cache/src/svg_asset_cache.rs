@@ -1,7 +1,8 @@
-use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
+use std::sync::Arc;
 
-use fret_core::{SvgId, SvgService, UiServices};
+use fret_canvas::cache::{SvgBytes, SvgCache};
+use fret_core::{SvgId, UiServices};
 use fret_runtime::{GlobalsHost, TimeHost};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -27,27 +28,20 @@ pub struct SvgAssetStats {
 }
 
 #[derive(Debug)]
-struct SvgEntry {
-    svg: SvgId,
-    bytes: u64,
-    last_used_frame: u64,
-}
-
-#[derive(Debug)]
 pub struct SvgAssetCache {
-    entries: HashMap<SvgAssetKey, SvgEntry>,
-    bytes_ready: u64,
+    cache: SvgCache,
     bytes_budget: u64,
     max_ready_entries: usize,
+    last_frame_id: u64,
 }
 
 impl Default for SvgAssetCache {
     fn default() -> Self {
         Self {
-            entries: HashMap::new(),
-            bytes_ready: 0,
+            cache: SvgCache::default(),
             bytes_budget: 16 * 1024 * 1024,
             max_ready_entries: 4096,
+            last_frame_id: 0,
         }
     }
 }
@@ -63,9 +57,16 @@ impl SvgAssetCache {
 
     pub fn stats(&self) -> SvgAssetStats {
         SvgAssetStats {
-            ready_count: self.entries.len(),
-            bytes_ready: self.bytes_ready,
+            ready_count: self.cache.len(),
+            bytes_ready: self.cache.bytes_ready(),
             bytes_budget: self.bytes_budget,
+        }
+    }
+
+    fn begin_frame_if_needed(&mut self, frame: u64) {
+        if frame != self.last_frame_id {
+            self.cache.begin_frame();
+            self.last_frame_id = frame;
         }
     }
 
@@ -89,64 +90,31 @@ impl SvgAssetCache {
         bytes: &[u8],
     ) -> SvgId {
         let frame = host.frame_id().0;
+        self.begin_frame_if_needed(frame);
 
-        if let Some(entry) = self.entries.get_mut(&key) {
-            entry.last_used_frame = frame;
-            return entry.svg;
+        if let Some(svg) = self.cache.get(key.as_u64()) {
+            return svg;
         }
 
-        let svg = services.svg().register_svg(bytes);
-        let bytes_len = bytes.len() as u64;
-        self.bytes_ready = self.bytes_ready.saturating_add(bytes_len);
-        self.entries.insert(
-            key,
-            SvgEntry {
-                svg,
-                bytes: bytes_len,
-                last_used_frame: frame,
-            },
+        let bytes: Arc<[u8]> = Arc::from(bytes);
+        let svg = self
+            .cache
+            .prepare(services, key.as_u64(), SvgBytes::Bytes(bytes));
+        self.cache.prune_with_budget(
+            services,
+            u64::MAX,
+            self.max_ready_entries,
+            self.bytes_budget,
         );
-        self.prune(services.svg());
         svg
     }
 
     pub fn svg(&self, key: SvgAssetKey) -> Option<SvgId> {
-        self.entries.get(&key).map(|e| e.svg)
+        self.cache.peek(key.as_u64())
     }
 
-    pub fn evict(&mut self, services: &mut dyn SvgService, key: SvgAssetKey) -> bool {
-        let Some(entry) = self.entries.remove(&key) else {
-            return false;
-        };
-        self.bytes_ready = self.bytes_ready.saturating_sub(entry.bytes);
-        let _ = services.unregister_svg(entry.svg);
-        true
-    }
-
-    fn prune(&mut self, services: &mut dyn SvgService) {
-        loop {
-            let over_budget = self.bytes_ready > self.bytes_budget;
-            let over_entries = self.entries.len() > self.max_ready_entries;
-            if !over_budget && !over_entries {
-                break;
-            }
-
-            let mut victim: Option<(SvgAssetKey, u64)> = None;
-            for (key, entry) in &self.entries {
-                let replace = match victim {
-                    None => true,
-                    Some((_, cur)) => entry.last_used_frame < cur,
-                };
-                if replace {
-                    victim = Some((*key, entry.last_used_frame));
-                }
-            }
-
-            let Some((key, _)) = victim else {
-                break;
-            };
-            let _ = self.evict(services, key);
-        }
+    pub fn evict(&mut self, services: &mut dyn UiServices, key: SvgAssetKey) -> bool {
+        self.cache.evict(services, key.as_u64())
     }
 }
 
@@ -164,7 +132,8 @@ mod tests {
     use std::collections::HashMap;
 
     use fret_core::{
-        ClipboardToken, FrameId, PathId, TextBlobId, TextMetrics, TextService, TimerToken,
+        ClipboardToken, FrameId, PathId, SvgService, TextBlobId, TextMetrics, TextService,
+        TimerToken,
     };
     use fret_runtime::TickId;
     use slotmap::KeyData;

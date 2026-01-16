@@ -10,13 +10,6 @@ fn hash_value<T: Hash>(value: &T) -> u64 {
     hasher.finish()
 }
 
-#[derive(Debug, Clone, Copy)]
-pub(super) struct PreparedText {
-    pub(super) blob: TextBlobId,
-    pub(super) metrics: TextMetrics,
-    pub(super) key: u64,
-}
-
 #[derive(Debug, Clone)]
 pub(super) struct LegendEntry {
     pub(super) id: SeriesId,
@@ -25,21 +18,12 @@ pub(super) struct LegendEntry {
 
 impl<L: PlotLayer + 'static> PlotCanvas<L> {
     pub(super) fn clear_axis_label_cache(&mut self, services: &mut dyn UiServices) {
-        for t in self.axis_labels_x.drain(..) {
-            services.text().release(t.blob);
-        }
-        for t in self.axis_labels_y.drain(..) {
-            services.text().release(t.blob);
-        }
-        for t in self.axis_labels_y2.drain(..) {
-            services.text().release(t.blob);
-        }
-        for t in self.axis_labels_y3.drain(..) {
-            services.text().release(t.blob);
-        }
-        for t in self.axis_labels_y4.drain(..) {
-            services.text().release(t.blob);
-        }
+        self.axis_text_cache.clear(services);
+        self.axis_labels_x.clear();
+        self.axis_labels_y.clear();
+        self.axis_labels_y2.clear();
+        self.axis_labels_y3.clear();
+        self.axis_labels_y4.clear();
         self.axis_ticks_x.clear();
         self.axis_ticks_y.clear();
         self.axis_ticks_y2.clear();
@@ -49,9 +33,8 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
     }
 
     pub(super) fn clear_legend_cache(&mut self, services: &mut dyn UiServices) {
-        for e in self.legend_entries.drain(..) {
-            services.text().release(e.text.blob);
-        }
+        self.legend_text_cache.clear(services);
+        self.legend_entries.clear();
         self.legend_key = None;
     }
 
@@ -214,6 +197,28 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             metrics,
             key: state,
         }
+    }
+
+    pub(super) fn prepare_axis_text(
+        &mut self,
+        services: &mut dyn UiServices,
+        text: &str,
+        style: &TextStyle,
+        constraints: TextConstraints,
+    ) -> PreparedText {
+        self.axis_text_cache
+            .prepare(services, text, style, constraints)
+    }
+
+    pub(super) fn prepare_legend_text(
+        &mut self,
+        services: &mut dyn UiServices,
+        text: &str,
+        style: &TextStyle,
+        constraints: TextConstraints,
+    ) -> PreparedText {
+        self.legend_text_cache
+            .prepare(services, text, style, constraints)
     }
 
     pub(super) fn rebuild_axis_labels_if_needed<H: UiHost>(
@@ -548,7 +553,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             } else {
                 self.x_axis_labels.format(v, x_span)
             };
-            let prepared = self.prepare_text(cx.services, &text, &style, constraints_x);
+            let prepared = self.prepare_axis_text(cx.services, &text, &style, constraints_x);
             self.axis_labels_x.push(prepared);
         }
 
@@ -558,7 +563,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             } else {
                 self.y_axis_labels.format(v, y_span)
             };
-            let prepared = self.prepare_text(cx.services, &text, &style, constraints_y);
+            let prepared = self.prepare_axis_text(cx.services, &text, &style, constraints_y);
             self.axis_labels_y.push(prepared);
         }
 
@@ -571,7 +576,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
                     } else {
                         self.y2_axis_labels.format(v, y2_span)
                     };
-                let prepared = self.prepare_text(cx.services, &text, &style, constraints_y2);
+                let prepared = self.prepare_axis_text(cx.services, &text, &style, constraints_y2);
                 self.axis_labels_y2.push(prepared);
             }
         }
@@ -585,7 +590,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
                     } else {
                         self.y3_axis_labels.format(v, y3_span)
                     };
-                let prepared = self.prepare_text(cx.services, &text, &style, constraints_y3);
+                let prepared = self.prepare_axis_text(cx.services, &text, &style, constraints_y3);
                 self.axis_labels_y3.push(prepared);
             }
         }
@@ -599,7 +604,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
                     } else {
                         self.y4_axis_labels.format(v, y4_span)
                     };
-                let prepared = self.prepare_text(cx.services, &text, &style, constraints_y4);
+                let prepared = self.prepare_axis_text(cx.services, &text, &style, constraints_y4);
                 self.axis_labels_y4.push(prepared);
             }
         }
@@ -755,7 +760,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         self.legend_entries = Vec::with_capacity(series.len());
         for s in series {
             let text = s.label.to_string();
-            let prepared = self.prepare_text(cx.services, &text, &style, constraints);
+            let prepared = self.prepare_legend_text(cx.services, &text, &style, constraints);
             self.legend_entries.push(LegendEntry {
                 id: s.id,
                 text: prepared,

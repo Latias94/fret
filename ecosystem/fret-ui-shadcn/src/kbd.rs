@@ -9,19 +9,49 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 #[derive(Debug, Clone)]
 pub struct Kbd {
     text: Arc<str>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
 }
 
 impl Kbd {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            text: text.into(),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        kbd(cx, self.text)
+        kbd_with_patch(cx, self.text, self.chrome, self.layout)
     }
 }
 
 pub fn kbd<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
+    kbd_with_patch(
+        cx,
+        text,
+        ChromeRefinement::default(),
+        LayoutRefinement::default(),
+    )
+}
+
+fn kbd_with_patch<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+    chrome_override: ChromeRefinement,
+    layout_override: LayoutRefinement,
+) -> AnyElement {
     let text = text.into();
     let theme = Theme::global(&*cx.app).clone();
 
@@ -34,9 +64,10 @@ pub fn kbd<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>)
         .rounded(Radius::Sm)
         .border_1()
         .bg(ColorRef::Color(bg))
-        .border_color(ColorRef::Color(border));
+        .border_color(ColorRef::Color(border))
+        .merge(chrome_override);
 
-    let props = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
+    let props = decl_style::container_props(&theme, chrome, layout_override);
 
     let fg = theme.color_required("muted-foreground");
 

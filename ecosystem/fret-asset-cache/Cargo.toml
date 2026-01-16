@@ -10,6 +10,7 @@ homepage.workspace = true
 documentation.workspace = true
 
 [dependencies]
+fret-canvas = { path = "../fret-canvas" }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 

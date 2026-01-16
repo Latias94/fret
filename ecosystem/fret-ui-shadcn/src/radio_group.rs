@@ -11,7 +11,7 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::radio_group as radio_group_prim;
 use fret_ui_kit::primitives::roving_focus_group;
-use fret_ui_kit::{MetricRef, Space};
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -126,6 +126,8 @@ pub struct RadioGroup {
     a11y_label: Option<Arc<str>>,
     orientation: RadioGroupOrientation,
     loop_navigation: bool,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
 }
 
 impl RadioGroup {
@@ -138,6 +140,8 @@ impl RadioGroup {
             a11y_label: None,
             orientation: RadioGroupOrientation::default(),
             loop_navigation: true,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
         }
     }
 
@@ -151,6 +155,8 @@ impl RadioGroup {
             a11y_label: None,
             orientation: RadioGroupOrientation::default(),
             loop_navigation: true,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
         }
     }
 
@@ -188,7 +194,29 @@ impl RadioGroup {
         self
     }
 
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let Self {
+            model,
+            default_value,
+            items,
+            disabled,
+            a11y_label,
+            orientation,
+            loop_navigation,
+            chrome,
+            layout,
+        } = self;
+
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
             let gap_y = row_gap(&theme);
@@ -203,17 +231,15 @@ impl RadioGroup {
             let ring = radio_ring(&theme);
             let dot = radio_indicator(&theme);
 
-            let group_disabled = self.disabled;
-            let group_label = self.a11y_label.clone();
-            let items = self.items.clone();
+            let group_disabled = disabled;
+            let group_label = a11y_label.clone();
+            let items = items.clone();
             let model = radio_group_prim::radio_group_use_model(
                 cx,
-                self.model.clone(),
-                || self.default_value.clone(),
+                model.clone(),
+                || default_value.clone(),
             )
             .model();
-            let orientation = self.orientation;
-            let loop_navigation = self.loop_navigation;
 
             let selected: Option<Arc<str>> = cx.watch_model(&model).cloned().flatten();
             let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();
@@ -239,7 +265,9 @@ impl RadioGroup {
             let root_for_items = radix_root.clone();
             let list = radix_root.list(values_arc.clone(), disabled_arc.clone());
 
-            list.into_element(
+            let container_props = decl_style::container_props(&theme, chrome, layout);
+
+            let list_element = list.into_element(
                 cx,
                 RovingFlexProps {
                     flex: FlexProps {
@@ -420,7 +448,9 @@ impl RadioGroup {
                     }
                     out
                 },
-            )
+            );
+
+            cx.container(container_props, move |_cx| vec![list_element])
         })
     }
 }

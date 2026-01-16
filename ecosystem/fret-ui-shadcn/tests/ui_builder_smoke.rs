@@ -2,21 +2,143 @@ use std::sync::Arc;
 
 use fret_runtime::ModelStore;
 use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
+use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
+use fret_ui_shadcn::experimental::{DataGridElement, DataGridRowState};
 use fret_ui_shadcn::prelude::*;
 use fret_ui_shadcn::{
     Alert, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Badge,
-    Breadcrumb, Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle,
-    Combobox, Command, CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList,
-    CommandPalette, CommandShortcut, ContextMenu, DataTableGlobalFilterInput,
+    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AvatarImage,
+    Badge, Breadcrumb, Button, Card, CardContent, CardDescription, CardFooter, CardHeader,
+    CardTitle, Collapsible, Combobox, Command, CommandDialog, CommandEmpty, CommandInput,
+    CommandItem, CommandList, CommandPalette, CommandShortcut, ContextMenu, ContextMenuEntry,
+    DataGridCanvas, DataGridCanvasAxis, DataTable, DataTableGlobalFilterInput,
     DataTableViewOptionItem, DataTableViewOptions, Dialog, DialogContent, DialogDescription,
     DialogFooter, DialogHeader, DialogTitle, Drawer, DrawerContent, DrawerFooter, DrawerHeader,
-    DropdownMenu, Empty, HoverCardContent, Kbd, Menubar, Popover, PopoverContent,
-    PopoverDescription, PopoverHeader, PopoverTitle, Progress, Select, Sheet, SheetContent,
-    SheetDescription, SheetFooter, SheetHeader, SheetTitle, Slider, Switch, TableBody,
-    TableCaption, TableFooter, TableHead, TableHeader, TableRow, TabsRoot, Toaster, TooltipContent,
+    DropdownMenu, DropdownMenuEntry, Empty, HoverCardContent, Kbd, Menubar, Popover,
+    PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, Progress, Select, Sheet,
+    SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, Slider, Switch,
+    TableBody, TableCaption, TableFooter, TableHead, TableHeader, TableRow, TabsRoot, Toaster,
+    TooltipContent,
 };
 use time::{Date, OffsetDateTime};
+
+#[allow(dead_code, unused_variables)]
+fn ui_builder_overlay_roots_compile<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    dialog_open: Model<bool>,
+    popover_open: Model<bool>,
+    sheet_open: Model<bool>,
+    drawer_open: Model<bool>,
+    dropdown_menu_open: Model<bool>,
+    context_menu_open: Model<bool>,
+    alert_dialog_open: Model<bool>,
+    command_dialog_open: Model<bool>,
+    command_dialog_query: Model<String>,
+    collapsible_open: Model<bool>,
+    data_table_state: Model<TableState>,
+) {
+    let _ = Dialog::new(dialog_open.clone()).ui().into_element(
+        cx,
+        |cx| Button::new("trigger").into_element(cx),
+        |cx| DialogContent::new(Vec::new()).into_element(cx),
+    );
+
+    let _ = Popover::new(popover_open.clone()).ui().into_element(
+        cx,
+        |cx| Button::new("trigger").into_element(cx),
+        |cx| PopoverContent::new(Vec::new()).into_element(cx),
+    );
+
+    let _ = Sheet::new(sheet_open.clone()).ui().into_element(
+        cx,
+        |cx| Button::new("trigger").into_element(cx),
+        |cx| SheetContent::new(Vec::new()).into_element(cx),
+    );
+
+    let _ = Drawer::new(drawer_open.clone()).ui().into_element(
+        cx,
+        |cx| Button::new("trigger").into_element(cx),
+        |cx| DrawerContent::new(Vec::new()).into_element(cx),
+    );
+
+    let _ = DropdownMenu::new(dropdown_menu_open.clone())
+        .ui()
+        .into_element(
+            cx,
+            |cx| Button::new("trigger").into_element(cx),
+            |_cx| Vec::<DropdownMenuEntry>::new(),
+        );
+
+    let _ = ContextMenu::new(context_menu_open.clone())
+        .ui()
+        .into_element(
+            cx,
+            |cx| Button::new("trigger").into_element(cx),
+            |_cx| Vec::<ContextMenuEntry>::new(),
+        );
+
+    let _ = AlertDialog::new(alert_dialog_open.clone())
+        .ui()
+        .into_element(
+            cx,
+            |cx| Button::new("trigger").into_element(cx),
+            |cx| AlertDialogContent::new(Vec::new()).into_element(cx),
+        );
+
+    let _ = CommandDialog::new(
+        command_dialog_open.clone(),
+        command_dialog_query.clone(),
+        Vec::<CommandItem>::new(),
+    )
+    .ui()
+    .into_element(cx, |cx| Button::new("trigger").into_element(cx));
+
+    let _ = Collapsible::new(collapsible_open.clone())
+        .ui()
+        .into_element(
+            cx,
+            |cx, _is_open| Button::new("trigger").into_element(cx),
+            |cx| Empty::new("content").into_element(cx),
+        );
+
+    let grid_keys = Arc::new(vec![0u64]);
+    let rows = DataGridCanvasAxis::new(grid_keys.clone(), 0, Px(24.0));
+    let cols = DataGridCanvasAxis::new(grid_keys, 0, Px(80.0));
+    let _ = DataGridCanvas::new(rows, cols)
+        .ui()
+        .into_element(cx, |_row, _col| Arc::from("cell"));
+
+    let _ = DataGridElement::new(["A"], 1).ui().into_element(
+        cx,
+        0,
+        0,
+        |i| i as u64,
+        |_i| DataGridRowState::default(),
+        |cx, _row, _col| cx.text("cell"),
+    );
+
+    let data: Arc<[u32]> = Arc::from(Vec::<u32>::new().into_boxed_slice());
+    let columns: Arc<[ColumnDef<u32>]> =
+        Arc::from(vec![ColumnDef::<u32>::new("a")].into_boxed_slice());
+    let _ = DataTable::new().ui().into_element(
+        cx,
+        data,
+        0,
+        data_table_state,
+        columns,
+        |_row, index, _parent| RowKey::from_index(index),
+        |col| Arc::clone(&col.id),
+        |cx, _col, _row| cx.text("cell"),
+    );
+
+    let _ = Alert::new(Vec::new())
+        .ui()
+        .p_4()
+        .border_1()
+        .into_element(cx);
+    let _ = Badge::new("x").ui().px_2().into_element(cx);
+    let _ = Kbd::new("x").ui().px_2().into_element(cx);
+}
 
 #[test]
 fn ui_builder_smoke_applies_supported_patches() {
@@ -50,11 +172,12 @@ fn ui_builder_smoke_applies_supported_patches() {
     let command_dialog_query = store.insert(String::new());
 
     let _ = Button::new("OK").ui().px_3().w_full().build();
-    let _ = Alert::new(Vec::new()).ui().build();
-    let _ = Badge::new("x").ui().build();
-    let _ = Kbd::new("x").ui().build();
-    let _ = Breadcrumb::new().ui().build();
-    let _ = Empty::new("Empty").ui().build();
+    let _ = Alert::new(Vec::new()).ui().p_4().border_1().build();
+    let _ = Badge::new("x").ui().px_2().build();
+    let _ = Kbd::new("x").ui().px_2().build();
+    let _ = AvatarImage::maybe(None).ui().px_2().build();
+    let _ = Breadcrumb::new().ui().px_2().build();
+    let _ = Empty::new("Empty").ui().p_4().border_1().build();
     let _ = Card::new(Vec::new())
         .ui()
         .p_4()
@@ -88,8 +211,11 @@ fn ui_builder_smoke_applies_supported_patches() {
     let _ = Drawer::new(drawer_open).ui().build();
     let _ = DropdownMenu::new(dropdown_menu_open).ui().build();
     let _ = ContextMenu::new(context_menu_open).ui().build();
-    let _ = Menubar::new(Vec::new()).ui().build();
-    let _ = Combobox::new(combobox_value, combobox_open).ui().build();
+    let _ = Menubar::new(Vec::new()).ui().px_2().build();
+    let _ = Combobox::new(combobox_value, combobox_open)
+        .ui()
+        .px_2()
+        .build();
     let _ = Toaster::new().ui().build();
 
     let _ = DataTableGlobalFilterInput::new(data_table_filter)
@@ -107,10 +233,12 @@ fn ui_builder_smoke_applies_supported_patches() {
 
     let _ = fret_ui_shadcn::Calendar::new(calendar_month.clone(), calendar_selected.clone())
         .ui()
+        .p_4()
         .build();
     let _ =
         fret_ui_shadcn::CalendarRange::new(calendar_month.clone(), calendar_range_selected.clone())
             .ui()
+            .p_4()
             .build();
     let _ = fret_ui_shadcn::DatePicker::new(
         date_picker_open,
@@ -118,6 +246,7 @@ fn ui_builder_smoke_applies_supported_patches() {
         calendar_selected.clone(),
     )
     .ui()
+    .p_4()
     .build();
     let _ = fret_ui_shadcn::DateRangePicker::new(
         date_range_picker_open,
@@ -125,13 +254,19 @@ fn ui_builder_smoke_applies_supported_patches() {
         calendar_range_selected,
     )
     .ui()
+    .p_4()
     .build();
     let _ = fret_ui_shadcn::RadioGroup::new(radio_group_model)
         .ui()
+        .p_4()
         .build();
 
     let _ = Command::new(Vec::new()).ui().p_4().build();
-    let _ = CommandInput::new(command_input_model).ui().w_full().build();
+    let _ = CommandInput::new(command_input_model)
+        .ui()
+        .px_2()
+        .w_full()
+        .build();
     let _ = CommandPalette::new(command_palette_model, Vec::<CommandItem>::new())
         .ui()
         .p_4()

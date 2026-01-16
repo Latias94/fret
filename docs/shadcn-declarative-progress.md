@@ -83,42 +83,44 @@ Legend:
 
 - `Chrome+Layout`: supports both style and layout fluent methods (`UiSupportsChrome + UiSupportsLayout`).
 - `Layout-only`: supports only layout fluent methods (`UiSupportsLayout`); chrome methods are gated.
-- `Patch-only`: supports `ui().build()` but not `ui().into_element(cx)` (the component’s `into_element` requires extra args/closures).
+- `Patch-only`: supports `ui().build()`. Components that require extra args/closures may still support
+  `ui().into_element(cx, ...)` via `fret-ui-shadcn` builder extension traits (re-exported by the prelude).
 - `Pass-through`: supports `ui().into_element(cx)` but does not accept chrome/layout patches (no fluent style/layout methods; patch is ignored).
 
 | Module | Type | Status | Notes |
 | --- | --- | --- | --- |
 | `button` | `Button` | Chrome+Layout |  |
-| `alert` | `Alert` | Pass-through |  |
-| `badge` | `Badge` | Pass-through |  |
-| `kbd` | `Kbd` | Pass-through |  |
-| `breadcrumb` | `Breadcrumb` | Pass-through |  |
-| `combobox` | `Combobox` | Pass-through |  |
+| `alert` | `Alert` | Chrome+Layout |  |
+| `badge` | `Badge` | Chrome+Layout |  |
+| `kbd` | `Kbd` | Chrome+Layout |  |
+| `breadcrumb` | `Breadcrumb` | Chrome+Layout |  |
+| `empty` | `Empty` | Chrome+Layout |  |
+| `combobox` | `Combobox` | Chrome+Layout |  |
 | `checkbox` | `Checkbox` | Chrome+Layout |  |
-| `radio_group` | `RadioGroup` | Pass-through |  |
-| `calendar` | `Calendar` | Pass-through |  |
-| `calendar_range` | `CalendarRange` | Pass-through |  |
-| `date_picker` | `DatePicker` | Pass-through |  |
-| `date_range_picker` | `DateRangePicker` | Pass-through |  |
+| `radio_group` | `RadioGroup` | Chrome+Layout |  |
+| `calendar` | `Calendar` | Chrome+Layout |  |
+| `calendar_range` | `CalendarRange` | Chrome+Layout |  |
+| `date_picker` | `DatePicker` | Chrome+Layout |  |
+| `date_range_picker` | `DateRangePicker` | Chrome+Layout |  |
 | `input` | `Input` | Chrome+Layout |  |
 | `textarea` | `Textarea` | Chrome+Layout |  |
 | `switch` | `Switch` | Chrome+Layout |  |
 | `card` | `Card` | Chrome+Layout |  |
 | `popover` | `PopoverContent` | Chrome+Layout |  |
-| `popover` | `Popover` | Patch-only | `into_element` requires trigger/content closures |
+| `popover` | `Popover` | Patch-only | `ui().into_element(cx, trigger, content)` (extra args) |
 | `tooltip` | `TooltipContent` | Chrome+Layout |  |
 | `dialog` | `DialogContent` | Chrome+Layout |  |
-| `dialog` | `Dialog` | Patch-only | `into_element` requires trigger/content closures |
+| `dialog` | `Dialog` | Patch-only | `ui().into_element(cx, trigger, content)` (extra args) |
 | `alert_dialog` | `AlertDialogContent` | Chrome+Layout |  |
-| `alert_dialog` | `AlertDialog` | Patch-only | `into_element` requires trigger/content closures |
+| `alert_dialog` | `AlertDialog` | Patch-only | `ui().into_element(cx, trigger, content)` (extra args) |
 | `sheet` | `SheetContent` | Chrome+Layout |  |
-| `sheet` | `Sheet` | Patch-only | `into_element` requires trigger/content closures |
+| `sheet` | `Sheet` | Patch-only | `ui().into_element(cx, trigger, content)` (extra args) |
 | `hover_card` | `HoverCardContent` | Chrome+Layout |  |
 | `drawer` | `DrawerContent` | Chrome+Layout |  |
-| `drawer` | `Drawer` | Patch-only | `into_element` requires trigger/content closures |
-| `dropdown_menu` | `DropdownMenu` | Patch-only | `into_element` requires trigger/entries closures |
-| `context_menu` | `ContextMenu` | Patch-only | `into_element` requires trigger/entries closures |
-| `menubar` | `Menubar` | Pass-through |  |
+| `drawer` | `Drawer` | Patch-only | `ui().into_element(cx, trigger, content)` (extra args) |
+| `dropdown_menu` | `DropdownMenu` | Patch-only | `ui().into_element(cx, trigger, entries)` (extra args) |
+| `context_menu` | `ContextMenu` | Patch-only | `ui().into_element(cx, trigger, entries)` (extra args) |
+| `menubar` | `Menubar` | Chrome+Layout |  |
 | `select` | `Select` | Chrome+Layout |  |
 | `slider` | `Slider` | Chrome+Layout |  |
 | `accordion` | `AccordionTrigger` | Chrome+Layout (Patch-only) | `into_element` requires root/value args |
@@ -127,7 +129,7 @@ Legend:
 | `accordion` | `Accordion` | Layout-only | Needs chrome support for full parity |
 | `avatar` | `Avatar` | Chrome+Layout |  |
 | `avatar` | `AvatarFallback` | Chrome+Layout |  |
-| `avatar` | `AvatarImage` | Layout-only | Needs chrome support for full parity |
+| `avatar` | `AvatarImage` | Chrome+Layout |  |
 | `progress` | `Progress` | Chrome+Layout |  |
 | `skeleton` | `Skeleton` | Chrome+Layout |  |
 | `tabs` | `Tabs` | Chrome+Layout |  |
@@ -138,14 +140,14 @@ Legend:
 | `table` | `TableCell` | Chrome+Layout |  |
 | `command` | `Command` | Chrome+Layout |  |
 | `command` | `CommandPalette` | Chrome+Layout |  |
-| `command` | `CommandInput` | Layout-only | Needs chrome support for full parity |
+| `command` | `CommandInput` | Chrome+Layout |  |
 | `input_group` | `InputGroup` | Chrome+Layout |  |
 | `input_otp` | `InputOtp` | Chrome+Layout |  |
 | `sidebar` | `Sidebar` | Chrome+Layout |  |
-| `data_table` | `DataTable` | Chrome+Layout (Patch-only) | `into_element` requires data/columns callbacks |
-| `data_grid` | `DataGrid` | Chrome+Layout (Patch-only) | `into_element` requires row/col callbacks |
-| `data_grid_canvas` | `DataGridCanvas` | Chrome+Layout (Patch-only) | `into_element` requires cell callback |
-| `collapsible` | `Collapsible` | Layout-only (Patch-only) | `into_element` requires trigger/content closures |
+| `data_table` | `DataTable` | Chrome+Layout (Patch-only) | `ui().into_element(cx, data, data_revision, state, columns, ...)` (extra args) |
+| `data_grid` | `DataGridElement` | Chrome+Layout (Patch-only) | Exported as `experimental::DataGridElement`; `ui().into_element(cx, rows_revision, cols_revision, ...)` (extra args) |
+| `data_grid_canvas` | `DataGridCanvas` | Chrome+Layout (Patch-only) | `ui().into_element(cx, cell_text_at)` (extra args) |
+| `collapsible` | `Collapsible` | Layout-only (Patch-only) | `ui().into_element(cx, trigger, content)` (extra args) |
 | `collapsible` | `CollapsibleContent` | Layout-only |  |
 | `field` | `Field` | Layout-only |  |
 | `item` | `Item` | Layout-only |  |
@@ -159,7 +161,7 @@ Legend:
 | `tooltip` | `Tooltip` | Layout-only |  |
 | `hover_card` | `HoverCard` | Layout-only |  |
 | `dialog` | `DialogClose` | Chrome+Layout |  |
-| `alert_dialog` | `AlertDialogTrigger` | Pass-through | `ui()` is available for consistency; chrome/layout are not supported |
+| `alert_dialog` | `AlertDialogTrigger` | Pass-through | Non-visual wrapper; apply chrome/layout patches on the child trigger element (e.g. `Button::ui()`) to avoid extra container nodes |
 | `drawer` | `DrawerClose` | Chrome+Layout |  |
 
 Additional pass-through subcomponents also opt into `ui()` (not tracked individually in the table):

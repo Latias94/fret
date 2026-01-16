@@ -5,13 +5,17 @@
 //! - concrete 2D plot layers (line/scatter/bars/area/shaded/heatmap/etc),
 //! - convenience `*PlotCanvas` aliases for `PlotCanvas<L>`.
 
+use fret_canvas::cache::PathCache;
+use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_core::geometry::{Point, Px, Rect, Size};
 use fret_core::scene::{Color, DrawOrder};
 use fret_core::{PathConstraints, PathId, PathStyle, UiServices};
 use fret_runtime::Model;
 use fret_ui::UiHost;
 use fret_ui::retained_bridge::PaintCx;
+use slotmap::Key;
 use std::collections::HashSet;
+use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use super::canvas::PlotCanvas;
@@ -26,6 +30,28 @@ use crate::plot::decimate::{
 use crate::plot::histogram::histogram_bins;
 use crate::plot::view::data_rect_key_scaled;
 use crate::series::{SeriesData, SeriesId};
+
+fn report_layer_path_cache_stats<H: UiHost>(
+    cx: &mut PaintCx<'_, H>,
+    layer_name: &'static str,
+    cache: &PathCache,
+) {
+    let Some(window) = cx.window else {
+        return;
+    };
+
+    let frame_id = cx.app.frame_id().0;
+    let key = CanvasCacheKey {
+        window: window.data().as_ffi(),
+        node: cx.node.data().as_ffi(),
+        name: layer_name,
+    };
+
+    cx.app
+        .with_global_mut(CanvasCacheStatsRegistry::default, |registry, _app| {
+            registry.record_path_cache(key, frame_id, cache.len(), cache.stats());
+        });
+}
 
 struct ResolvedSeriesStyle {
     stroke_color: Color,
@@ -736,7 +762,6 @@ fn candlestick_paths(
 
 #[derive(Debug)]
 struct CachedPath {
-    id: Option<PathId>,
     series_id: SeriesId,
     model_revision: u64,
     scale_factor_bits: u32,
@@ -752,9 +777,6 @@ struct CachedPath {
 
 #[derive(Debug)]
 struct CachedCandlestickPath {
-    wick_id: Option<PathId>,
-    up_id: Option<PathId>,
-    down_id: Option<PathId>,
     series_id: SeriesId,
     model_revision: u64,
     scale_factor_bits: u32,
@@ -767,8 +789,6 @@ struct CachedCandlestickPath {
 
 #[derive(Debug)]
 struct CachedAreaPath {
-    fill_id: Option<PathId>,
-    stroke_id: Option<PathId>,
     series_id: SeriesId,
     model_revision: u64,
     scale_factor_bits: u32,
@@ -783,9 +803,6 @@ struct CachedAreaPath {
 
 #[derive(Debug)]
 struct CachedShadedPath {
-    fill_id: Option<PathId>,
-    upper_stroke_id: Option<PathId>,
-    lower_stroke_id: Option<PathId>,
     series_id: SeriesId,
     model_revision: u64,
     scale_factor_bits: u32,
@@ -795,6 +812,15 @@ struct CachedShadedPath {
     view_key: u64,
     fill_alpha_bits: u32,
     samples: Vec<SamplePoint>,
+}
+
+fn series_path_cache_key(series_id: SeriesId, variant: u8) -> u64 {
+    use std::collections::hash_map::DefaultHasher;
+
+    let mut hasher = DefaultHasher::new();
+    series_id.hash(&mut hasher);
+    variant.hash(&mut hasher);
+    hasher.finish()
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -939,6 +965,7 @@ pub struct PlotHitTestArgs<'a> {
 
 #[derive(Debug, Default)]
 pub struct LinePlotLayer {
+    path_cache: PathCache,
     cached_paths: Vec<CachedPath>,
 }
 
@@ -952,6 +979,7 @@ impl PlotCanvas<LinePlotLayer> {
 
 #[derive(Debug, Default)]
 pub struct StemsPlotLayer {
+    path_cache: PathCache,
     cached_paths: Vec<CachedPath>,
 }
 
@@ -965,6 +993,7 @@ impl PlotCanvas<StemsPlotLayer> {
 
 #[derive(Debug, Default)]
 pub struct ScatterPlotLayer {
+    path_cache: PathCache,
     cached_paths: Vec<CachedPath>,
 }
 
@@ -978,6 +1007,7 @@ impl PlotCanvas<ScatterPlotLayer> {
 
 #[derive(Debug, Default)]
 pub struct ErrorBarsPlotLayer {
+    path_cache: PathCache,
     cached_paths: Vec<CachedPath>,
 }
 
@@ -991,6 +1021,7 @@ impl PlotCanvas<ErrorBarsPlotLayer> {
 
 #[derive(Debug, Default)]
 pub struct CandlestickPlotLayer {
+    path_cache: PathCache,
     cached_paths: Vec<CachedCandlestickPath>,
 }
 
@@ -1004,6 +1035,7 @@ impl PlotCanvas<CandlestickPlotLayer> {
 
 #[derive(Debug, Default)]
 pub struct StairsPlotLayer {
+    path_cache: PathCache,
     cached_paths: Vec<CachedPath>,
     step_mode: StepMode,
 }
@@ -1015,6 +1047,7 @@ impl PlotCanvas<StairsPlotLayer> {
         Self::with_layer(
             model,
             StairsPlotLayer {
+                path_cache: PathCache::default(),
                 cached_paths: Vec::new(),
                 step_mode: StepMode::default(),
             },
@@ -1406,6 +1439,7 @@ impl PlotCanvas<Histogram2DPlotLayer> {
 
 #[derive(Debug, Default)]
 pub struct HistogramPlotLayer {
+    path_cache: PathCache,
     cached_paths: Vec<CachedPath>,
 }
 
@@ -1419,6 +1453,7 @@ impl PlotCanvas<HistogramPlotLayer> {
 
 #[derive(Debug, Default)]
 pub struct BarsPlotLayer {
+    path_cache: PathCache,
     cached_paths: Vec<CachedPath>,
 }
 
@@ -1432,6 +1467,7 @@ impl PlotCanvas<BarsPlotLayer> {
 
 #[derive(Debug, Default)]
 pub struct AreaPlotLayer {
+    path_cache: PathCache,
     cached_paths: Vec<CachedAreaPath>,
 }
 
@@ -1445,6 +1481,7 @@ impl PlotCanvas<AreaPlotLayer> {
 
 #[derive(Debug, Default)]
 pub struct ShadedPlotLayer {
+    path_cache: PathCache,
     cached_paths: Vec<CachedShadedPath>,
 }
 
@@ -1555,6 +1592,8 @@ impl PlotLayer for LinePlotLayer {
         model: &Self::Model,
         args: PlotPaintArgs<'_>,
     ) -> Vec<(SeriesId, PathId, Color)> {
+        self.path_cache.begin_frame();
+        report_layer_path_cache_stats(cx, "fret-plot.line.paths", &self.path_cache);
         let PlotPaintArgs {
             model_revision,
             plot,
@@ -1590,11 +1629,8 @@ impl PlotLayer for LinePlotLayer {
         let series_count = series.len();
 
         if series_count == 0 {
-            for cached in self.cached_paths.drain(..) {
-                if let Some(id) = cached.id {
-                    cx.services.path().release(id);
-                }
-            }
+            self.path_cache.clear(cx.services);
+            self.cached_paths.clear();
             return Vec::new();
         }
 
@@ -1614,12 +1650,16 @@ impl PlotLayer for LinePlotLayer {
             });
 
         if cached_ok {
+            let constraints = PathConstraints {
+                scale_factor: cx.scale_factor,
+            };
             let mut out: Vec<(SeriesId, PathId, Color)> = Vec::with_capacity(series_count);
             for (i, s) in series.iter().enumerate() {
                 if hidden.contains(&s.id) {
                     continue;
                 }
-                let Some(id) = self.cached_paths.get(i).and_then(|c| c.id) else {
+                let key = series_path_cache_key(s.id, 0);
+                let Some((id, _metrics)) = self.path_cache.get(key, constraints) else {
                     continue;
                 };
                 let style = series_style(s, i, style, series_count);
@@ -1628,11 +1668,7 @@ impl PlotLayer for LinePlotLayer {
             return out;
         }
 
-        for cached in self.cached_paths.drain(..) {
-            if let Some(id) = cached.id {
-                cx.services.path().release(id);
-            }
-        }
+        self.cached_paths.clear();
 
         let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
         let transform_y1 = PlotTransform {
@@ -1684,7 +1720,6 @@ impl PlotLayer for LinePlotLayer {
             if hidden.contains(&series_id) {
                 let view_key = view_key_for_axis(s.y_axis);
                 self.cached_paths.push(CachedPath {
-                    id: None,
                     series_id,
                     model_revision,
                     scale_factor_bits,
@@ -1708,15 +1743,14 @@ impl PlotLayer for LinePlotLayer {
             let id = if commands.is_empty() {
                 None
             } else {
-                let (id, _metrics) = cx
-                    .services
-                    .path()
-                    .prepare(&commands, path_style, constraints);
+                let key = series_path_cache_key(series_id, 0);
+                let (id, _metrics) =
+                    self.path_cache
+                        .prepare(cx.services, key, &commands, path_style, constraints);
                 Some(id)
             };
 
             self.cached_paths.push(CachedPath {
-                id,
                 series_id,
                 model_revision,
                 scale_factor_bits,
@@ -1748,11 +1782,8 @@ impl PlotLayer for LinePlotLayer {
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn UiServices) {
-        for cached in self.cached_paths.drain(..) {
-            if let Some(id) = cached.id {
-                services.path().release(id);
-            }
-        }
+        self.path_cache.clear(services);
+        self.cached_paths.clear();
     }
 }
 
@@ -1855,6 +1886,8 @@ impl PlotLayer for StemsPlotLayer {
         model: &Self::Model,
         args: PlotPaintArgs<'_>,
     ) -> Vec<(SeriesId, PathId, Color)> {
+        self.path_cache.begin_frame();
+        report_layer_path_cache_stats(cx, "fret-plot.stems.paths", &self.path_cache);
         let PlotPaintArgs {
             model_revision,
             plot,
@@ -1890,11 +1923,8 @@ impl PlotLayer for StemsPlotLayer {
         let series_count = series.len();
 
         if series_count == 0 {
-            for cached in self.cached_paths.drain(..) {
-                if let Some(id) = cached.id {
-                    cx.services.path().release(id);
-                }
-            }
+            self.path_cache.clear(cx.services);
+            self.cached_paths.clear();
             return Vec::new();
         }
 
@@ -1913,12 +1943,16 @@ impl PlotLayer for StemsPlotLayer {
             });
 
         if cached_ok {
+            let constraints = PathConstraints {
+                scale_factor: cx.scale_factor,
+            };
             let mut out: Vec<(SeriesId, PathId, Color)> = Vec::with_capacity(series_count);
             for (i, s) in series.iter().enumerate() {
                 if hidden.contains(&s.id) {
                     continue;
                 }
-                let Some(id) = self.cached_paths.get(i).and_then(|c| c.id) else {
+                let key = series_path_cache_key(s.id, 0);
+                let Some((id, _metrics)) = self.path_cache.get(key, constraints) else {
                     continue;
                 };
                 let color = resolve_series_color(i, style, series_count, s.stroke_color);
@@ -1927,11 +1961,7 @@ impl PlotLayer for StemsPlotLayer {
             return out;
         }
 
-        for cached in self.cached_paths.drain(..) {
-            if let Some(id) = cached.id {
-                cx.services.path().release(id);
-            }
-        }
+        self.cached_paths.clear();
 
         let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
         let transform_y1 = PlotTransform {
@@ -1983,7 +2013,6 @@ impl PlotLayer for StemsPlotLayer {
             if hidden.contains(&series_id) {
                 let view_key = view_key_for_axis(s.y_axis);
                 self.cached_paths.push(CachedPath {
-                    id: None,
                     series_id,
                     model_revision,
                     scale_factor_bits,
@@ -2024,15 +2053,14 @@ impl PlotLayer for StemsPlotLayer {
             let id = if commands.is_empty() || stroke_width.0 <= 0.0 {
                 None
             } else {
-                let (id, _metrics) = cx
-                    .services
-                    .path()
-                    .prepare(&commands, path_style, constraints);
+                let key = series_path_cache_key(series_id, 0);
+                let (id, _metrics) =
+                    self.path_cache
+                        .prepare(cx.services, key, &commands, path_style, constraints);
                 Some(id)
             };
 
             self.cached_paths.push(CachedPath {
-                id,
                 series_id,
                 model_revision,
                 scale_factor_bits,
@@ -2217,11 +2245,8 @@ impl PlotLayer for StemsPlotLayer {
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn UiServices) {
-        for cached in self.cached_paths.drain(..) {
-            if let Some(id) = cached.id {
-                services.path().release(id);
-            }
-        }
+        self.path_cache.clear(services);
+        self.cached_paths.clear();
     }
 }
 
@@ -2324,6 +2349,8 @@ impl PlotLayer for ScatterPlotLayer {
         model: &Self::Model,
         args: PlotPaintArgs<'_>,
     ) -> Vec<(SeriesId, PathId, Color)> {
+        self.path_cache.begin_frame();
+        report_layer_path_cache_stats(cx, "fret-plot.scatter.paths", &self.path_cache);
         let PlotPaintArgs {
             model_revision,
             plot,
@@ -2359,11 +2386,8 @@ impl PlotLayer for ScatterPlotLayer {
         let series_count = series.len();
 
         if series_count == 0 {
-            for cached in self.cached_paths.drain(..) {
-                if let Some(id) = cached.id {
-                    cx.services.path().release(id);
-                }
-            }
+            self.path_cache.clear(cx.services);
+            self.cached_paths.clear();
             return Vec::new();
         }
 
@@ -2388,12 +2412,16 @@ impl PlotLayer for ScatterPlotLayer {
             });
 
         if cached_ok {
+            let constraints = PathConstraints {
+                scale_factor: cx.scale_factor,
+            };
             let mut out: Vec<(SeriesId, PathId, Color)> = Vec::with_capacity(series_count);
             for (i, s) in series.iter().enumerate() {
                 if hidden.contains(&s.id) {
                     continue;
                 }
-                let Some(id) = self.cached_paths.get(i).and_then(|c| c.id) else {
+                let key = series_path_cache_key(s.id, 0);
+                let Some((id, _metrics)) = self.path_cache.get(key, constraints) else {
                     continue;
                 };
                 let color = resolve_series_color(i, style, series_count, s.stroke_color);
@@ -2402,11 +2430,7 @@ impl PlotLayer for ScatterPlotLayer {
             return out;
         }
 
-        for cached in self.cached_paths.drain(..) {
-            if let Some(id) = cached.id {
-                cx.services.path().release(id);
-            }
-        }
+        self.cached_paths.clear();
 
         let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
         let transform_y1 = PlotTransform {
@@ -2460,7 +2484,6 @@ impl PlotLayer for ScatterPlotLayer {
             if hidden.contains(&series_id) {
                 let view_key = view_key_for_axis(s.y_axis);
                 self.cached_paths.push(CachedPath {
-                    id: None,
                     series_id,
                     model_revision,
                     scale_factor_bits,
@@ -2485,15 +2508,14 @@ impl PlotLayer for ScatterPlotLayer {
             let id = if commands.is_empty() {
                 None
             } else {
-                let (id, _metrics) = cx
-                    .services
-                    .path()
-                    .prepare(&commands, path_style, constraints);
+                let key = series_path_cache_key(series_id, 0);
+                let (id, _metrics) =
+                    self.path_cache
+                        .prepare(cx.services, key, &commands, path_style, constraints);
                 Some(id)
             };
 
             self.cached_paths.push(CachedPath {
-                id,
                 series_id,
                 model_revision,
                 scale_factor_bits,
@@ -2526,11 +2548,8 @@ impl PlotLayer for ScatterPlotLayer {
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn UiServices) {
-        for cached in self.cached_paths.drain(..) {
-            if let Some(id) = cached.id {
-                services.path().release(id);
-            }
-        }
+        self.path_cache.clear(services);
+        self.cached_paths.clear();
     }
 }
 
@@ -2633,6 +2652,8 @@ impl PlotLayer for ErrorBarsPlotLayer {
         model: &Self::Model,
         args: PlotPaintArgs<'_>,
     ) -> Vec<(SeriesId, PathId, Color)> {
+        self.path_cache.begin_frame();
+        report_layer_path_cache_stats(cx, "fret-plot.error_bars.paths", &self.path_cache);
         let PlotPaintArgs {
             model_revision,
             plot,
@@ -2668,11 +2689,8 @@ impl PlotLayer for ErrorBarsPlotLayer {
         let series_count = series.len();
 
         if series_count == 0 {
-            for cached in self.cached_paths.drain(..) {
-                if let Some(id) = cached.id {
-                    cx.services.path().release(id);
-                }
-            }
+            self.path_cache.clear(cx.services);
+            self.cached_paths.clear();
             return Vec::new();
         }
 
@@ -2701,12 +2719,16 @@ impl PlotLayer for ErrorBarsPlotLayer {
             });
 
         if cached_ok {
+            let constraints = PathConstraints {
+                scale_factor: cx.scale_factor,
+            };
             let mut out: Vec<(SeriesId, PathId, Color)> = Vec::with_capacity(series_count);
             for (i, s) in series.iter().enumerate() {
                 if hidden.contains(&s.id) {
                     continue;
                 }
-                let Some(id) = self.cached_paths.get(i).and_then(|c| c.id) else {
+                let key = series_path_cache_key(s.id, 0);
+                let Some((id, _metrics)) = self.path_cache.get(key, constraints) else {
                     continue;
                 };
                 let color = resolve_series_color(i, style, series_count, s.stroke_color);
@@ -2715,11 +2737,7 @@ impl PlotLayer for ErrorBarsPlotLayer {
             return out;
         }
 
-        for cached in self.cached_paths.drain(..) {
-            if let Some(id) = cached.id {
-                cx.services.path().release(id);
-            }
-        }
+        self.cached_paths.clear();
 
         let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
         let transform_y1 = PlotTransform {
@@ -2777,7 +2795,6 @@ impl PlotLayer for ErrorBarsPlotLayer {
             if hidden.contains(&series_id) {
                 let view_key = view_key_for_axis(s.y_axis);
                 self.cached_paths.push(CachedPath {
-                    id: None,
                     series_id,
                     model_revision,
                     scale_factor_bits,
@@ -2801,15 +2818,14 @@ impl PlotLayer for ErrorBarsPlotLayer {
             let id = if commands.is_empty() {
                 None
             } else {
-                let (id, _metrics) = cx
-                    .services
-                    .path()
-                    .prepare(&commands, path_style, constraints);
+                let key = series_path_cache_key(series_id, 0);
+                let (id, _metrics) =
+                    self.path_cache
+                        .prepare(cx.services, key, &commands, path_style, constraints);
                 Some(id)
             };
 
             self.cached_paths.push(CachedPath {
-                id,
                 series_id,
                 model_revision,
                 scale_factor_bits,
@@ -2842,11 +2858,8 @@ impl PlotLayer for ErrorBarsPlotLayer {
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn UiServices) {
-        for cached in self.cached_paths.drain(..) {
-            if let Some(id) = cached.id {
-                services.path().release(id);
-            }
-        }
+        self.path_cache.clear(services);
+        self.cached_paths.clear();
     }
 }
 
@@ -2949,6 +2962,8 @@ impl PlotLayer for CandlestickPlotLayer {
         model: &Self::Model,
         args: PlotPaintArgs<'_>,
     ) -> Vec<(SeriesId, PathId, Color)> {
+        self.path_cache.begin_frame();
+        report_layer_path_cache_stats(cx, "fret-plot.candlestick.paths", &self.path_cache);
         let PlotPaintArgs {
             model_revision,
             plot,
@@ -2984,17 +2999,8 @@ impl PlotLayer for CandlestickPlotLayer {
         let series_count = series.len();
 
         if series_count == 0 {
-            for cached in self.cached_paths.drain(..) {
-                if let Some(id) = cached.wick_id {
-                    cx.services.path().release(id);
-                }
-                if let Some(id) = cached.up_id {
-                    cx.services.path().release(id);
-                }
-                if let Some(id) = cached.down_id {
-                    cx.services.path().release(id);
-                }
-            }
+            self.path_cache.clear(cx.services);
+            self.cached_paths.clear();
             return Vec::new();
         }
 
@@ -3026,6 +3032,9 @@ impl PlotLayer for CandlestickPlotLayer {
         };
 
         if cached_ok {
+            let constraints = PathConstraints {
+                scale_factor: cx.scale_factor,
+            };
             let mut out: Vec<(SeriesId, PathId, Color)> =
                 Vec::with_capacity(series_count.saturating_mul(3));
             for (i, s) in series.iter().enumerate() {
@@ -3039,33 +3048,29 @@ impl PlotLayer for CandlestickPlotLayer {
                 let up = s.up_fill.unwrap_or(default_up);
                 let down = s.down_fill.unwrap_or(default_down);
 
-                let Some(cached) = self.cached_paths.get(i) else {
-                    continue;
-                };
-                if let Some(id) = cached.wick_id {
+                if let Some((id, _metrics)) = self
+                    .path_cache
+                    .get(series_path_cache_key(s.id, 0), constraints)
+                {
                     out.push((s.id, id, wick));
                 }
-                if let Some(id) = cached.up_id {
+                if let Some((id, _metrics)) = self
+                    .path_cache
+                    .get(series_path_cache_key(s.id, 1), constraints)
+                {
                     out.push((s.id, id, up));
                 }
-                if let Some(id) = cached.down_id {
+                if let Some((id, _metrics)) = self
+                    .path_cache
+                    .get(series_path_cache_key(s.id, 2), constraints)
+                {
                     out.push((s.id, id, down));
                 }
             }
             return out;
         }
 
-        for cached in self.cached_paths.drain(..) {
-            if let Some(id) = cached.wick_id {
-                cx.services.path().release(id);
-            }
-            if let Some(id) = cached.up_id {
-                cx.services.path().release(id);
-            }
-            if let Some(id) = cached.down_id {
-                cx.services.path().release(id);
-            }
-        }
+        self.cached_paths.clear();
 
         let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
         let transform_y1 = PlotTransform {
@@ -3125,9 +3130,6 @@ impl PlotLayer for CandlestickPlotLayer {
             if hidden.contains(&series_id) {
                 let view_key = view_key_for_axis(s.y_axis);
                 self.cached_paths.push(CachedCandlestickPath {
-                    wick_id: None,
-                    up_id: None,
-                    down_id: None,
                     series_id,
                     model_revision,
                     scale_factor_bits,
@@ -3151,35 +3153,32 @@ impl PlotLayer for CandlestickPlotLayer {
             let wick_id = if wick_cmds.is_empty() {
                 None
             } else {
+                let key = series_path_cache_key(series_id, 0);
                 let (id, _metrics) =
-                    cx.services
-                        .path()
-                        .prepare(&wick_cmds, wick_style, constraints);
+                    self.path_cache
+                        .prepare(cx.services, key, &wick_cmds, wick_style, constraints);
                 Some(id)
             };
             let up_id = if up_cmds.is_empty() {
                 None
             } else {
-                let (id, _metrics) = cx
-                    .services
-                    .path()
-                    .prepare(&up_cmds, fill_style, constraints);
+                let key = series_path_cache_key(series_id, 1);
+                let (id, _metrics) =
+                    self.path_cache
+                        .prepare(cx.services, key, &up_cmds, fill_style, constraints);
                 Some(id)
             };
             let down_id = if down_cmds.is_empty() {
                 None
             } else {
+                let key = series_path_cache_key(series_id, 2);
                 let (id, _metrics) =
-                    cx.services
-                        .path()
-                        .prepare(&down_cmds, fill_style, constraints);
+                    self.path_cache
+                        .prepare(cx.services, key, &down_cmds, fill_style, constraints);
                 Some(id)
             };
 
             self.cached_paths.push(CachedCandlestickPath {
-                wick_id,
-                up_id,
-                down_id,
                 series_id,
                 model_revision,
                 scale_factor_bits,
@@ -3370,17 +3369,8 @@ impl PlotLayer for CandlestickPlotLayer {
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn UiServices) {
-        for cached in self.cached_paths.drain(..) {
-            if let Some(id) = cached.wick_id {
-                services.path().release(id);
-            }
-            if let Some(id) = cached.up_id {
-                services.path().release(id);
-            }
-            if let Some(id) = cached.down_id {
-                services.path().release(id);
-            }
-        }
+        self.path_cache.clear(services);
+        self.cached_paths.clear();
     }
 }
 
@@ -3483,6 +3473,8 @@ impl PlotLayer for StairsPlotLayer {
         model: &Self::Model,
         args: PlotPaintArgs<'_>,
     ) -> Vec<(SeriesId, PathId, Color)> {
+        self.path_cache.begin_frame();
+        report_layer_path_cache_stats(cx, "fret-plot.stairs.paths", &self.path_cache);
         let PlotPaintArgs {
             model_revision,
             plot,
@@ -3518,11 +3510,8 @@ impl PlotLayer for StairsPlotLayer {
         let series_count = series.len();
 
         if series_count == 0 {
-            for cached in self.cached_paths.drain(..) {
-                if let Some(id) = cached.id {
-                    cx.services.path().release(id);
-                }
-            }
+            self.path_cache.clear(cx.services);
+            self.cached_paths.clear();
             return Vec::new();
         }
 
@@ -3542,12 +3531,16 @@ impl PlotLayer for StairsPlotLayer {
             });
 
         if cached_ok {
+            let constraints = PathConstraints {
+                scale_factor: cx.scale_factor,
+            };
             let mut out: Vec<(SeriesId, PathId, Color)> = Vec::with_capacity(series_count);
             for (i, s) in series.iter().enumerate() {
                 if hidden.contains(&s.id) {
                     continue;
                 }
-                let Some(id) = self.cached_paths.get(i).and_then(|c| c.id) else {
+                let key = series_path_cache_key(s.id, 0);
+                let Some((id, _metrics)) = self.path_cache.get(key, constraints) else {
                     continue;
                 };
                 let style = series_style(s, i, style, series_count);
@@ -3556,11 +3549,7 @@ impl PlotLayer for StairsPlotLayer {
             return out;
         }
 
-        for cached in self.cached_paths.drain(..) {
-            if let Some(id) = cached.id {
-                cx.services.path().release(id);
-            }
-        }
+        self.cached_paths.clear();
 
         let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
         let transform_y1 = PlotTransform {
@@ -3612,7 +3601,6 @@ impl PlotLayer for StairsPlotLayer {
             if hidden.contains(&series_id) {
                 let view_key = view_key_for_axis(s.y_axis);
                 self.cached_paths.push(CachedPath {
-                    id: None,
                     series_id,
                     model_revision,
                     scale_factor_bits,
@@ -3638,15 +3626,14 @@ impl PlotLayer for StairsPlotLayer {
             let id = if commands.is_empty() {
                 None
             } else {
-                let (id, _metrics) = cx
-                    .services
-                    .path()
-                    .prepare(&commands, path_style, constraints);
+                let key = series_path_cache_key(series_id, 0);
+                let (id, _metrics) =
+                    self.path_cache
+                        .prepare(cx.services, key, &commands, path_style, constraints);
                 Some(id)
             };
 
             self.cached_paths.push(CachedPath {
-                id,
                 series_id,
                 model_revision,
                 scale_factor_bits,
@@ -3678,11 +3665,8 @@ impl PlotLayer for StairsPlotLayer {
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn UiServices) {
-        for cached in self.cached_paths.drain(..) {
-            if let Some(id) = cached.id {
-                services.path().release(id);
-            }
-        }
+        self.path_cache.clear(services);
+        self.cached_paths.clear();
     }
 }
 
@@ -3834,6 +3818,8 @@ impl PlotLayer for HistogramPlotLayer {
         model: &Self::Model,
         args: PlotPaintArgs<'_>,
     ) -> Vec<(SeriesId, PathId, Color)> {
+        self.path_cache.begin_frame();
+        report_layer_path_cache_stats(cx, "fret-plot.histogram.paths", &self.path_cache);
         let PlotPaintArgs {
             model_revision,
             plot,
@@ -3869,11 +3855,8 @@ impl PlotLayer for HistogramPlotLayer {
         let series_count = series.len();
 
         if series_count == 0 {
-            for cached in self.cached_paths.drain(..) {
-                if let Some(id) = cached.id {
-                    cx.services.path().release(id);
-                }
-            }
+            self.path_cache.clear(cx.services);
+            self.cached_paths.clear();
             return Vec::new();
         }
 
@@ -3890,12 +3873,16 @@ impl PlotLayer for HistogramPlotLayer {
             });
 
         if cached_ok {
+            let constraints = PathConstraints {
+                scale_factor: cx.scale_factor,
+            };
             let mut out: Vec<(SeriesId, PathId, Color)> = Vec::with_capacity(series_count);
             for (i, s) in series.iter().enumerate() {
                 if hidden.contains(&s.id) {
                     continue;
                 }
-                let Some(id) = self.cached_paths.get(i).and_then(|c| c.id) else {
+                let key = series_path_cache_key(s.id, 0);
+                let Some((id, _metrics)) = self.path_cache.get(key, constraints) else {
                     continue;
                 };
                 let color = resolve_series_color(i, style, series_count, s.fill_color);
@@ -3904,11 +3891,7 @@ impl PlotLayer for HistogramPlotLayer {
             return out;
         }
 
-        for cached in self.cached_paths.drain(..) {
-            if let Some(id) = cached.id {
-                cx.services.path().release(id);
-            }
-        }
+        self.cached_paths.clear();
 
         let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
         let transform_y1 = PlotTransform {
@@ -3956,7 +3939,6 @@ impl PlotLayer for HistogramPlotLayer {
             if hidden.contains(&series_id) {
                 let view_key = view_key_for_axis(s.y_axis);
                 self.cached_paths.push(CachedPath {
-                    id: None,
                     series_id,
                     model_revision,
                     scale_factor_bits,
@@ -3982,15 +3964,14 @@ impl PlotLayer for HistogramPlotLayer {
             let id = if commands.is_empty() {
                 None
             } else {
-                let (id, _metrics) = cx
-                    .services
-                    .path()
-                    .prepare(&commands, path_style, constraints);
+                let key = series_path_cache_key(series_id, 0);
+                let (id, _metrics) =
+                    self.path_cache
+                        .prepare(cx.services, key, &commands, path_style, constraints);
                 Some(id)
             };
 
             self.cached_paths.push(CachedPath {
-                id,
                 series_id,
                 model_revision,
                 scale_factor_bits,
@@ -4141,11 +4122,8 @@ impl PlotLayer for HistogramPlotLayer {
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn UiServices) {
-        for cached in self.cached_paths.drain(..) {
-            if let Some(id) = cached.id {
-                services.path().release(id);
-            }
-        }
+        self.path_cache.clear(services);
+        self.cached_paths.clear();
     }
 }
 
@@ -4248,6 +4226,8 @@ impl PlotLayer for BarsPlotLayer {
         model: &Self::Model,
         args: PlotPaintArgs<'_>,
     ) -> Vec<(SeriesId, PathId, Color)> {
+        self.path_cache.begin_frame();
+        report_layer_path_cache_stats(cx, "fret-plot.bars.paths", &self.path_cache);
         let PlotPaintArgs {
             model_revision,
             plot,
@@ -4283,11 +4263,8 @@ impl PlotLayer for BarsPlotLayer {
         let series_count = series.len();
 
         if series_count == 0 {
-            for cached in self.cached_paths.drain(..) {
-                if let Some(id) = cached.id {
-                    cx.services.path().release(id);
-                }
-            }
+            self.path_cache.clear(cx.services);
+            self.cached_paths.clear();
             return Vec::new();
         }
 
@@ -4304,12 +4281,16 @@ impl PlotLayer for BarsPlotLayer {
             });
 
         if cached_ok {
+            let constraints = PathConstraints {
+                scale_factor: cx.scale_factor,
+            };
             let mut out: Vec<(SeriesId, PathId, Color)> = Vec::with_capacity(series_count);
             for (i, s) in series.iter().enumerate() {
                 if hidden.contains(&s.id) {
                     continue;
                 }
-                let Some(id) = self.cached_paths.get(i).and_then(|c| c.id) else {
+                let key = series_path_cache_key(s.id, 0);
+                let Some((id, _metrics)) = self.path_cache.get(key, constraints) else {
                     continue;
                 };
                 let color = resolve_series_color(i, style, series_count, s.fill_color);
@@ -4318,11 +4299,7 @@ impl PlotLayer for BarsPlotLayer {
             return out;
         }
 
-        for cached in self.cached_paths.drain(..) {
-            if let Some(id) = cached.id {
-                cx.services.path().release(id);
-            }
-        }
+        self.cached_paths.clear();
 
         let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
         let transform_y1 = PlotTransform {
@@ -4370,7 +4347,6 @@ impl PlotLayer for BarsPlotLayer {
             if hidden.contains(&series_id) {
                 let view_key = view_key_for_axis(s.y_axis);
                 self.cached_paths.push(CachedPath {
-                    id: None,
                     series_id,
                     model_revision,
                     scale_factor_bits,
@@ -4401,15 +4377,14 @@ impl PlotLayer for BarsPlotLayer {
             let id = if commands.is_empty() {
                 None
             } else {
-                let (id, _metrics) = cx
-                    .services
-                    .path()
-                    .prepare(&commands, path_style, constraints);
+                let key = series_path_cache_key(series_id, 0);
+                let (id, _metrics) =
+                    self.path_cache
+                        .prepare(cx.services, key, &commands, path_style, constraints);
                 Some(id)
             };
 
             self.cached_paths.push(CachedPath {
-                id,
                 series_id,
                 model_revision,
                 scale_factor_bits,
@@ -4442,11 +4417,8 @@ impl PlotLayer for BarsPlotLayer {
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn UiServices) {
-        for cached in self.cached_paths.drain(..) {
-            if let Some(id) = cached.id {
-                services.path().release(id);
-            }
-        }
+        self.path_cache.clear(services);
+        self.cached_paths.clear();
     }
 }
 
@@ -5145,6 +5117,8 @@ impl PlotLayer for AreaPlotLayer {
         model: &Self::Model,
         args: PlotPaintArgs<'_>,
     ) -> Vec<(SeriesId, PathId, Color)> {
+        self.path_cache.begin_frame();
+        report_layer_path_cache_stats(cx, "fret-plot.area.paths", &self.path_cache);
         let PlotPaintArgs {
             model_revision,
             plot,
@@ -5180,14 +5154,8 @@ impl PlotLayer for AreaPlotLayer {
         let series_count = series.len();
 
         if series_count == 0 {
-            for cached in self.cached_paths.drain(..) {
-                if let Some(id) = cached.fill_id {
-                    cx.services.path().release(id);
-                }
-                if let Some(id) = cached.stroke_id {
-                    cx.services.path().release(id);
-                }
-            }
+            self.path_cache.clear(cx.services);
+            self.cached_paths.clear();
             return Vec::new();
         }
 
@@ -5211,6 +5179,9 @@ impl PlotLayer for AreaPlotLayer {
             });
 
         if cached_ok {
+            let constraints = PathConstraints {
+                scale_factor: cx.scale_factor,
+            };
             let mut out: Vec<(SeriesId, PathId, Color)> = Vec::with_capacity(series_count * 2);
             for (i, s) in series.iter().enumerate() {
                 if hidden.contains(&s.id) {
@@ -5227,24 +5198,19 @@ impl PlotLayer for AreaPlotLayer {
                     ..base_fill
                 };
 
-                if let Some(id) = self.cached_paths.get(i).and_then(|c| c.fill_id) {
+                let fill_key = series_path_cache_key(s.id, 0);
+                if let Some((id, _metrics)) = self.path_cache.get(fill_key, constraints) {
                     out.push((s.id, id, fill));
                 }
-                if let Some(id) = self.cached_paths.get(i).and_then(|c| c.stroke_id) {
+                let stroke_key = series_path_cache_key(s.id, 1);
+                if let Some((id, _metrics)) = self.path_cache.get(stroke_key, constraints) {
                     out.push((s.id, id, base_stroke));
                 }
             }
             return out;
         }
 
-        for cached in self.cached_paths.drain(..) {
-            if let Some(id) = cached.fill_id {
-                cx.services.path().release(id);
-            }
-            if let Some(id) = cached.stroke_id {
-                cx.services.path().release(id);
-            }
-        }
+        self.cached_paths.clear();
 
         let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
         let transform_y1 = PlotTransform {
@@ -5290,8 +5256,6 @@ impl PlotLayer for AreaPlotLayer {
             if hidden.contains(&series_id) {
                 let view_key = view_key_for_axis(s.y_axis);
                 self.cached_paths.push(CachedAreaPath {
-                    fill_id: None,
-                    stroke_id: None,
                     series_id,
                     model_revision,
                     scale_factor_bits,
@@ -5337,26 +5301,32 @@ impl PlotLayer for AreaPlotLayer {
             let fill_id = if fill_commands.is_empty() {
                 None
             } else {
-                let (id, _metrics) =
-                    cx.services
-                        .path()
-                        .prepare(&fill_commands, fill_style, constraints);
+                let key = series_path_cache_key(series_id, 0);
+                let (id, _metrics) = self.path_cache.prepare(
+                    cx.services,
+                    key,
+                    &fill_commands,
+                    fill_style,
+                    constraints,
+                );
                 Some(id)
             };
 
             let stroke_id = if line_commands.is_empty() || stroke_width.0 <= 0.0 {
                 None
             } else {
-                let (id, _metrics) =
-                    cx.services
-                        .path()
-                        .prepare(&line_commands, stroke_style, constraints);
+                let key = series_path_cache_key(series_id, 1);
+                let (id, _metrics) = self.path_cache.prepare(
+                    cx.services,
+                    key,
+                    &line_commands,
+                    stroke_style,
+                    constraints,
+                );
                 Some(id)
             };
 
             self.cached_paths.push(CachedAreaPath {
-                fill_id,
-                stroke_id,
                 series_id,
                 model_revision,
                 scale_factor_bits,
@@ -5537,14 +5507,8 @@ impl PlotLayer for AreaPlotLayer {
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn UiServices) {
-        for cached in self.cached_paths.drain(..) {
-            if let Some(id) = cached.fill_id {
-                services.path().release(id);
-            }
-            if let Some(id) = cached.stroke_id {
-                services.path().release(id);
-            }
-        }
+        self.path_cache.clear(services);
+        self.cached_paths.clear();
     }
 }
 
@@ -5656,6 +5620,8 @@ impl PlotLayer for ShadedPlotLayer {
         model: &Self::Model,
         args: PlotPaintArgs<'_>,
     ) -> Vec<(SeriesId, PathId, Color)> {
+        self.path_cache.begin_frame();
+        report_layer_path_cache_stats(cx, "fret-plot.shaded.paths", &self.path_cache);
         let PlotPaintArgs {
             model_revision,
             plot,
@@ -5691,17 +5657,8 @@ impl PlotLayer for ShadedPlotLayer {
         let series_count = series.len();
 
         if series_count == 0 {
-            for cached in self.cached_paths.drain(..) {
-                if let Some(id) = cached.fill_id {
-                    cx.services.path().release(id);
-                }
-                if let Some(id) = cached.upper_stroke_id {
-                    cx.services.path().release(id);
-                }
-                if let Some(id) = cached.lower_stroke_id {
-                    cx.services.path().release(id);
-                }
-            }
+            self.path_cache.clear(cx.services);
+            self.cached_paths.clear();
             return Vec::new();
         }
 
@@ -5724,6 +5681,9 @@ impl PlotLayer for ShadedPlotLayer {
             });
 
         if cached_ok {
+            let constraints = PathConstraints {
+                scale_factor: cx.scale_factor,
+            };
             let mut out: Vec<(SeriesId, PathId, Color)> = Vec::with_capacity(series_count * 3);
             for (i, s) in series.iter().enumerate() {
                 if hidden.contains(&s.id) {
@@ -5740,30 +5700,23 @@ impl PlotLayer for ShadedPlotLayer {
                     ..base_fill
                 };
 
-                if let Some(id) = self.cached_paths.get(i).and_then(|c| c.fill_id) {
+                let fill_key = series_path_cache_key(s.id, 0);
+                if let Some((id, _metrics)) = self.path_cache.get(fill_key, constraints) {
                     out.push((s.id, id, fill));
                 }
-                if let Some(id) = self.cached_paths.get(i).and_then(|c| c.upper_stroke_id) {
+                let upper_key = series_path_cache_key(s.id, 1);
+                if let Some((id, _metrics)) = self.path_cache.get(upper_key, constraints) {
                     out.push((s.id, id, base_stroke));
                 }
-                if let Some(id) = self.cached_paths.get(i).and_then(|c| c.lower_stroke_id) {
+                let lower_key = series_path_cache_key(s.id, 2);
+                if let Some((id, _metrics)) = self.path_cache.get(lower_key, constraints) {
                     out.push((s.id, id, base_stroke));
                 }
             }
             return out;
         }
 
-        for cached in self.cached_paths.drain(..) {
-            if let Some(id) = cached.fill_id {
-                cx.services.path().release(id);
-            }
-            if let Some(id) = cached.upper_stroke_id {
-                cx.services.path().release(id);
-            }
-            if let Some(id) = cached.lower_stroke_id {
-                cx.services.path().release(id);
-            }
-        }
+        self.cached_paths.clear();
 
         let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
         let transform_y1 = PlotTransform {
@@ -5816,9 +5769,6 @@ impl PlotLayer for ShadedPlotLayer {
             if hidden.contains(&series_id) {
                 let view_key = view_key_for_axis(s.y_axis);
                 self.cached_paths.push(CachedShadedPath {
-                    fill_id: None,
-                    upper_stroke_id: None,
-                    lower_stroke_id: None,
                     series_id,
                     model_revision,
                     scale_factor_bits,
@@ -5841,37 +5791,46 @@ impl PlotLayer for ShadedPlotLayer {
             let fill_id = if fill_commands.is_empty() {
                 None
             } else {
-                let (id, _metrics) =
-                    cx.services
-                        .path()
-                        .prepare(&fill_commands, fill_style, constraints);
+                let key = series_path_cache_key(series_id, 0);
+                let (id, _metrics) = self.path_cache.prepare(
+                    cx.services,
+                    key,
+                    &fill_commands,
+                    fill_style,
+                    constraints,
+                );
                 Some(id)
             };
 
             let upper_stroke_id = if upper_line_commands.is_empty() || stroke_width.0 <= 0.0 {
                 None
             } else {
-                let (id, _metrics) =
-                    cx.services
-                        .path()
-                        .prepare(&upper_line_commands, stroke_style, constraints);
+                let key = series_path_cache_key(series_id, 1);
+                let (id, _metrics) = self.path_cache.prepare(
+                    cx.services,
+                    key,
+                    &upper_line_commands,
+                    stroke_style,
+                    constraints,
+                );
                 Some(id)
             };
 
             let lower_stroke_id = if lower_line_commands.is_empty() || stroke_width.0 <= 0.0 {
                 None
             } else {
-                let (id, _metrics) =
-                    cx.services
-                        .path()
-                        .prepare(&lower_line_commands, stroke_style, constraints);
+                let key = series_path_cache_key(series_id, 2);
+                let (id, _metrics) = self.path_cache.prepare(
+                    cx.services,
+                    key,
+                    &lower_line_commands,
+                    stroke_style,
+                    constraints,
+                );
                 Some(id)
             };
 
             self.cached_paths.push(CachedShadedPath {
-                fill_id,
-                upper_stroke_id,
-                lower_stroke_id,
                 series_id,
                 model_revision,
                 scale_factor_bits,
@@ -6058,17 +6017,8 @@ impl PlotLayer for ShadedPlotLayer {
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn UiServices) {
-        for cached in self.cached_paths.drain(..) {
-            if let Some(id) = cached.fill_id {
-                services.path().release(id);
-            }
-            if let Some(id) = cached.upper_stroke_id {
-                services.path().release(id);
-            }
-            if let Some(id) = cached.lower_stroke_id {
-                services.path().release(id);
-            }
-        }
+        self.path_cache.clear(services);
+        self.cached_paths.clear();
     }
 }
 

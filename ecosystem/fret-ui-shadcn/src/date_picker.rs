@@ -29,6 +29,8 @@ pub struct DatePicker {
     show_outside_days: bool,
     disable_outside_days: bool,
     disabled_predicate: Option<Arc<dyn Fn(Date) -> bool + Send + Sync + 'static>>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
 }
 
 impl std::fmt::Debug for DatePicker {
@@ -65,6 +67,8 @@ impl DatePicker {
             show_outside_days: true,
             disable_outside_days: true,
             disabled_predicate: None,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
         }
     }
 
@@ -154,6 +158,16 @@ impl DatePicker {
         self
     }
 
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
@@ -166,6 +180,8 @@ impl DatePicker {
             let open_content = open.clone();
             let initial_focus_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
                 Rc::new(Cell::new(None));
+            let trigger_chrome = self.chrome.clone();
+            let trigger_layout = self.layout.clone();
 
             let selected_value = cx.watch_model(&selected).copied().flatten();
             let button_text: Arc<str> = match selected_value {
@@ -184,7 +200,12 @@ impl DatePicker {
                             .variant(ButtonVariant::Outline)
                             .toggle_model(open_trigger.clone())
                             .disabled(self.disabled)
-                            .refine_layout(LayoutRefinement::default().w_full())
+                            .refine_style(trigger_chrome.clone())
+                            .refine_layout(
+                                LayoutRefinement::default()
+                                    .w_full()
+                                    .merge(trigger_layout.clone()),
+                            )
                             .into_element(cx)
                     },
                     move |cx| {
