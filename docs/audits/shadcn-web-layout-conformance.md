@@ -95,8 +95,8 @@ patterns:
 - `popover-demo` (overlay placement + transform origin)
 - `dropdown-menu-demo` (overlay placement + max-height/scrolling)
 - `select-scrollable` (available-height clamping + scrolling + scroll buttons / top inset outcome)
-- `scroll-area-demo` (scroll range via viewport `scrollHeight/clientHeight`; `.hover` variant gates scrollbar track rect)
-- `scroll-area-horizontal-demo` (scroll range via viewport `scrollWidth/clientWidth`; `.hover` variant gates scrollbar track rect)
+- `scroll-area-demo` (scroll range via viewport `scrollHeight/clientHeight`; `.hover` gates scrollbar track rect; `.scrolled` gates thumb rect)
+- `scroll-area-horizontal-demo` (scroll range via viewport `scrollWidth/clientWidth`; `.hover` gates scrollbar track rect; `.scrolled` gates thumb rect)
 - `slider-demo`
 - `avatar-demo`
 - `item-avatar`

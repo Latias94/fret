@@ -12,7 +12,7 @@ For each component page, the exporter writes a JSON file with:
 - per-node `getBoundingClientRect()` relative to the root,
 - a whitelist of `window.getComputedStyle(...)` fields (layout + a few visuals),
 - selected accessibility-related attrs (`role`, `aria-*`, `data-state`, ...).
-- optional scroll metrics for scrollable viewports (`scrollWidth/clientWidth`, `scrollHeight/clientHeight`, ...).
+- optional scroll metrics for scrollable viewports (`scrollWidth/clientWidth`, `scrollHeight/clientHeight`, `scrollLeft/scrollTop`, ...).
 - `portals[]` and `portalWrappers[]` snapshots for Radix portal content (wrapper geometry is used for placement checks).
 
 ## Prerequisites
@@ -69,6 +69,12 @@ For keyboard-driven submenus, prefer `keys=<selector>@<keys>` (no global `--open
 Extract a constrained-viewport open variant (useful for max-height/clamp/scroll behavior):
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts dropdown-menu-demo --modes=open --update --baseUrl=http://localhost:4020 --viewportH=320 --openVariants="vp1440x320=[data-fret-golden-target] [aria-haspopup='menu'][data-state='closed']"`
+
+Extract ScrollArea hover/scrolled variants (useful for scrollbar + thumb geometry):
+
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts scroll-area-demo --modes=closed --update --baseUrl=http://localhost:4020 --variants=hover --steps="wait=200;hover=[data-slot=scroll-area];waitFor=[data-slot=scroll-area-scrollbar]"`
+
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts scroll-area-demo --modes=closed --update --baseUrl=http://localhost:4020 --variants=scrolled --steps="wait=200;hover=[data-slot=scroll-area];waitFor=[data-slot=scroll-area-scrollbar];scroll=[data-radix-scroll-area-viewport]@0,80;wait=50"`
 
 Extract a constrained-viewport submenu variant (useful for "submenu flips/clamps and scrolls" behavior):
 
