@@ -104,6 +104,18 @@ impl PathCache {
         self.entries.clear();
     }
 
+    /// Returns a cached path for `(key, constraints.scale_factor)` if present.
+    ///
+    /// This updates the entry's `last_used_frame` for pruning purposes.
+    pub fn get(&mut self, key: u64, constraints: PathConstraints) -> Option<(PathId, PathMetrics)> {
+        let scale_factor = normalize_scale_factor(constraints.scale_factor);
+        let scale_bits = scale_factor.to_bits();
+        let cache_key = PathCacheKey { key, scale_bits };
+        let entry = self.entries.get_mut(&cache_key)?;
+        entry.last_used_frame = self.frame;
+        Some((entry.path?, entry.metrics.unwrap_or_default()))
+    }
+
     /// Prepares a path and caches it by a stable key derived from `(key, constraints.scale_factor)`.
     ///
     /// If the commands or style change for the same stable key, the cached `PathId` is replaced
@@ -370,5 +382,33 @@ mod tests {
         );
         cache.prune(&mut services, 99, 1);
         assert!(services.path_release_calls >= 2);
+    }
+
+    #[test]
+    fn get_hits_without_preparing() {
+        let mut cache = PathCache::default();
+        let mut services = FakeServices::default();
+
+        let cmds = [
+            PathCommand::MoveTo(Point::new(Px(0.0), Px(0.0))),
+            PathCommand::LineTo(Point::new(Px(10.0), Px(0.0))),
+            PathCommand::Close,
+        ];
+        let constraints = PathConstraints { scale_factor: 1.0 };
+
+        cache.begin_frame();
+        let _ = cache.prepare(
+            &mut services,
+            1,
+            &cmds,
+            PathStyle::Fill(FillStyle::default()),
+            constraints,
+        );
+        assert_eq!(services.path_prepare_calls, 1);
+
+        cache.begin_frame();
+        let hit = cache.get(1, constraints);
+        assert!(hit.is_some());
+        assert_eq!(services.path_prepare_calls, 1);
     }
 }
