@@ -193,7 +193,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | avatar | `avatar` | Present | Unreviewed |  |
 | badge | `badge` | Present | Unreviewed |  |
 | breadcrumb | `breadcrumb` | Present | Unreviewed |  |
-| button | `button` | Present | Unreviewed |  |
+| button | `button` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`button-demo`) |
 | button-group | `button_group` | Present | Unreviewed | Thin wrapper over `toggle_group` styling |
 | calendar | `calendar` | Present | Unreviewed | Headless month grid lives in `fret-ui-kit` (`headless::calendar`); UI surface lives in `fret-ui-shadcn` |
 | card | `card` | Present | Unreviewed |  |
