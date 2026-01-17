@@ -8934,65 +8934,112 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                         ));
                     }
 
-                    let mut visible_nodes: HashSet<GraphNodeId> = HashSet::new();
                     if let Some(c) = cull {
                         let mut candidates: Vec<GraphNodeId> = Vec::new();
                         index.query_nodes_in_rect(c, &mut candidates);
+
+                        let mut visible: Vec<GraphNodeId> = Vec::with_capacity(candidates.len());
                         for node in candidates {
                             let Some(node_geom) = geom.nodes.get(&node) else {
                                 continue;
                             };
                             if rects_intersect(node_geom.rect, c) {
-                                visible_nodes.insert(node);
+                                visible.push(node);
                             }
                         }
-                    }
 
-                    for node in geom.order.iter().copied() {
-                        let Some(node_geom) = geom.nodes.get(&node) else {
-                            continue;
-                        };
-                        if cull.is_some() && !visible_nodes.contains(&node) {
-                            continue;
-                        }
-                        let is_selected = selected.contains(&node);
-                        let title = presenter.node_title(graph, node);
-                        let (inputs, outputs) = node_ports(graph, node);
-                        let pin_rows = inputs.len().max(outputs.len());
-                        let body = presenter.node_body_label(graph, node);
-                        let resize_handles =
-                            presenter.node_resize_handles(graph, node, &this.style);
-                        out.nodes.push((
-                            node,
-                            node_geom.rect,
-                            is_selected,
-                            title,
-                            body,
-                            pin_rows,
-                            resize_handles,
-                        ));
+                        visible.sort_unstable_by_key(|node| {
+                            geom.node_rank.get(node).copied().unwrap_or(u32::MAX)
+                        });
 
-                        // Only build port labels/pins for visible nodes (but keep edge endpoints
-                        // available via `CanvasGeometry` lookups).
-                        let screen_w = node_geom.rect.size.width.0 * zoom;
-                        let screen_max = (screen_w - label_overhead).max(0.0);
-                        let max_w = Px(screen_max / zoom);
-
-                        for port_id in inputs.iter().chain(outputs.iter()).copied() {
-                            let Some(handle) = geom.ports.get(&port_id) else {
+                        for node in visible {
+                            let Some(node_geom) = geom.nodes.get(&node) else {
                                 continue;
                             };
-                            out.port_centers.insert(port_id, handle.center);
-                            out.port_labels.insert(
-                                port_id,
-                                PortLabelRender {
-                                    label: presenter.port_label(graph, port_id),
-                                    dir: handle.dir,
-                                    max_width: max_w,
-                                },
-                            );
-                            let color = presenter.port_color(graph, port_id, &this.style);
-                            out.pins.push((port_id, handle.bounds, color));
+                            let is_selected = selected.contains(&node);
+                            let title = presenter.node_title(graph, node);
+                            let (inputs, outputs) = node_ports(graph, node);
+                            let pin_rows = inputs.len().max(outputs.len());
+                            let body = presenter.node_body_label(graph, node);
+                            let resize_handles =
+                                presenter.node_resize_handles(graph, node, &this.style);
+                            out.nodes.push((
+                                node,
+                                node_geom.rect,
+                                is_selected,
+                                title,
+                                body,
+                                pin_rows,
+                                resize_handles,
+                            ));
+
+                            // Only build port labels/pins for visible nodes (but keep edge endpoints
+                            // available via `CanvasGeometry` lookups).
+                            let screen_w = node_geom.rect.size.width.0 * zoom;
+                            let screen_max = (screen_w - label_overhead).max(0.0);
+                            let max_w = Px(screen_max / zoom);
+
+                            for port_id in inputs.iter().chain(outputs.iter()).copied() {
+                                let Some(handle) = geom.ports.get(&port_id) else {
+                                    continue;
+                                };
+                                out.port_centers.insert(port_id, handle.center);
+                                out.port_labels.insert(
+                                    port_id,
+                                    PortLabelRender {
+                                        label: presenter.port_label(graph, port_id),
+                                        dir: handle.dir,
+                                        max_width: max_w,
+                                    },
+                                );
+                                let color = presenter.port_color(graph, port_id, &this.style);
+                                out.pins.push((port_id, handle.bounds, color));
+                            }
+                        }
+                    } else {
+                        for node in geom.order.iter().copied() {
+                            let Some(node_geom) = geom.nodes.get(&node) else {
+                                continue;
+                            };
+                            let is_selected = selected.contains(&node);
+                            let title = presenter.node_title(graph, node);
+                            let (inputs, outputs) = node_ports(graph, node);
+                            let pin_rows = inputs.len().max(outputs.len());
+                            let body = presenter.node_body_label(graph, node);
+                            let resize_handles =
+                                presenter.node_resize_handles(graph, node, &this.style);
+                            out.nodes.push((
+                                node,
+                                node_geom.rect,
+                                is_selected,
+                                title,
+                                body,
+                                pin_rows,
+                                resize_handles,
+                            ));
+
+                            // Only build port labels/pins for visible nodes (but keep edge endpoints
+                            // available via `CanvasGeometry` lookups).
+                            let screen_w = node_geom.rect.size.width.0 * zoom;
+                            let screen_max = (screen_w - label_overhead).max(0.0);
+                            let max_w = Px(screen_max / zoom);
+
+                            for port_id in inputs.iter().chain(outputs.iter()).copied() {
+                                let Some(handle) = geom.ports.get(&port_id) else {
+                                    continue;
+                                };
+                                out.port_centers.insert(port_id, handle.center);
+                                out.port_labels.insert(
+                                    port_id,
+                                    PortLabelRender {
+                                        label: presenter.port_label(graph, port_id),
+                                        dir: handle.dir,
+                                        max_width: max_w,
+                                    },
+                                );
+                                let color = presenter.port_color(graph, port_id, &this.style);
+                                out.pins.push((port_id, handle.bounds, color));
+                            }
                         }
                     }
 
