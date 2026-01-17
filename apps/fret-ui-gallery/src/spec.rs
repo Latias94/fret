@@ -95,6 +95,7 @@ pub(crate) const CMD_DATA_GRID_ROW_PREFIX: &str = "ui_gallery.data_grid.row.";
 pub(crate) const PAGE_INTRO: &str = "intro";
 pub(crate) const PAGE_LAYOUT: &str = "layout";
 pub(crate) const PAGE_VIEW_CACHE: &str = "view_cache";
+pub(crate) const PAGE_VIRTUAL_LIST_TORTURE: &str = "virtual_list_torture";
 pub(crate) const PAGE_BUTTON: &str = "button";
 pub(crate) const PAGE_CARD: &str = "card";
 pub(crate) const PAGE_BADGE: &str = "badge";
@@ -124,6 +125,7 @@ pub(crate) const PAGE_TOAST: &str = "toast";
 pub(crate) const CMD_NAV_INTRO: &str = "ui_gallery.nav.select.intro";
 pub(crate) const CMD_NAV_LAYOUT: &str = "ui_gallery.nav.select.layout";
 pub(crate) const CMD_NAV_VIEW_CACHE: &str = "ui_gallery.nav.select.view_cache";
+pub(crate) const CMD_NAV_VIRTUAL_LIST_TORTURE: &str = "ui_gallery.nav.select.virtual_list_torture";
 pub(crate) const CMD_NAV_BUTTON: &str = "ui_gallery.nav.select.button";
 pub(crate) const CMD_NAV_CARD: &str = "ui_gallery.nav.select.card";
 pub(crate) const CMD_NAV_BADGE: &str = "ui_gallery.nav.select.badge";
@@ -156,6 +158,14 @@ pub(crate) const CMD_PROGRESS_RESET: &str = "ui_gallery.progress.reset";
 
 pub(crate) const CMD_VIEW_CACHE_BUMP: &str = "ui_gallery.view_cache.bump";
 pub(crate) const CMD_VIEW_CACHE_RESET: &str = "ui_gallery.view_cache.reset";
+
+pub(crate) const CMD_VIRTUAL_LIST_TORTURE_JUMP: &str = "ui_gallery.virtual_list_torture.jump";
+pub(crate) const CMD_VIRTUAL_LIST_TORTURE_SCROLL_BOTTOM: &str =
+    "ui_gallery.virtual_list_torture.scroll_bottom";
+pub(crate) const CMD_VIRTUAL_LIST_TORTURE_CLEAR_EDIT: &str =
+    "ui_gallery.virtual_list_torture.clear_edit";
+pub(crate) const CMD_VIRTUAL_LIST_TORTURE_ROW_EDIT_PREFIX: &str =
+    "ui_gallery.virtual_list_torture.row.edit.";
 
 pub(crate) const CMD_MENU_DROPDOWN_APPLE: &str = "ui_gallery.menu.dropdown.apple";
 pub(crate) const CMD_MENU_DROPDOWN_ORANGE: &str = "ui_gallery.menu.dropdown.orange";
@@ -251,6 +261,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["cache", "performance", "gpui-parity"],
                 docs::DOC_VIEW_CACHE,
                 docs::USAGE_VIEW_CACHE,
+            ),
+            PageSpec::new(
+                PAGE_VIRTUAL_LIST_TORTURE,
+                "Virtual List (Torture)",
+                "Virtual List / Torture Harness",
+                "fret-ui (virtualization contract)",
+                CMD_NAV_VIRTUAL_LIST_TORTURE,
+                &["virtual_list", "performance", "gpui-parity", "harness"],
+                docs::DOC_VIRTUAL_LIST_TORTURE,
+                docs::USAGE_VIRTUAL_LIST_TORTURE,
             ),
         ],
     },

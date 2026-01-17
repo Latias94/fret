@@ -76,6 +76,34 @@ let subtree = cx.view_cache(ViewCacheProps::default(), |cx| {
 ```
 "#;
 
+pub(crate) const DOC_VIRTUAL_LIST_TORTURE: &str = r#"
+## Virtual List (torture harness)
+
+This page exists to validate "editor-grade scrolling feel" under realistic composition:
+
+- 10k+ virtualized rows
+- row focus + selection-like interactions
+- scroll-to-item correctness (anchor preservation + measured heights)
+- a small inline text input inside the list
+
+The goal is not to ship a component; it is to provide a deterministic surface for performance
+instrumentation and regression scripts (GPUI parity workstream).
+"#;
+
+pub(crate) const USAGE_VIRTUAL_LIST_TORTURE: &str = r#"
+```rust
+let handle = VirtualListScrollHandle::new();
+
+let list = cx.virtual_list_keyed(
+    len,
+    VirtualListOptions::new(Px(28.0), 8),
+    &handle,
+    |i| i as ItemKey,
+    |cx, i| row(cx, i),
+);
+```
+"#;
+
 pub(crate) const DOC_BUTTON: &str = r#"
 ## Button
 
