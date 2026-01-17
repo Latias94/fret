@@ -1,4 +1,5 @@
 import fs from "fs"
+import http from "http"
 import os from "os"
 import path from "path"
 import type puppeteer from "puppeteer"
@@ -36,6 +37,9 @@ type GoldenOptions = {
   outDir: string
   update: boolean
   timeoutMs: number
+  viewportW: number
+  viewportH: number
+  deviceScaleFactor: number
   openSelector?: string
   openAction?: OpenAction
   openKeys?: KeyChord
@@ -88,6 +92,108 @@ function round3(v: number) {
 
 function ensureDir(dir: string) {
   fs.mkdirSync(dir, { recursive: true })
+}
+
+type StartedServer = {
+  baseUrl: string
+  close: () => Promise<void>
+}
+
+async function loadNext(nextDir: string) {
+  const require = createRequire(import.meta.url)
+
+  const candidates = [
+    nextDir,
+    path.join(repoRoot, "repo-ref", "ui", "apps", "v4"),
+    path.join(repoRoot, "repo-ref", "ui"),
+    repoRoot,
+    process.cwd(),
+  ]
+
+  for (const candidate of candidates) {
+    try {
+      const entry = require.resolve("next", { paths: [candidate] })
+      const mod = await import(pathToFileURL(entry).href)
+      return (mod as any).default ?? mod
+    } catch {
+      // keep searching
+    }
+  }
+
+  const mod = await import("next")
+  return (mod as any).default ?? mod
+}
+
+async function waitForHttpOk(url: string, timeoutMs: number) {
+  const start = Date.now()
+  let lastError: unknown = null
+
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const res = await fetch(url)
+      if (res.ok) return
+      lastError = new Error(`status ${res.status} for ${url}`)
+    } catch (err) {
+      lastError = err
+    }
+    await new Promise((r) => setTimeout(r, 200))
+  }
+
+  throw new Error(
+    `timed out waiting for ${url} (${timeoutMs}ms; lastError=${String(lastError)})`
+  )
+}
+
+async function startNextServer(
+  nextDir: string,
+  baseUrl: string
+): Promise<StartedServer> {
+  const url = new URL(baseUrl)
+  const hostname = url.hostname || "localhost"
+  const port = url.port ? Number(url.port) : url.protocol === "https:" ? 443 : 80
+
+  const prevCwd = process.cwd()
+  process.chdir(nextDir)
+
+  process.env.NODE_ENV = "production"
+  process.env.NEXT_PUBLIC_APP_URL = baseUrl
+  process.env.PORT = String(port)
+
+  const next = await loadNext(nextDir)
+  let app: any
+  let server: http.Server | null = null
+
+  try {
+    app = next({ dev: false, dir: nextDir, hostname, port })
+    const handle = app.getRequestHandler()
+    await app.prepare()
+
+    server = http.createServer((req, res) => handle(req, res))
+
+    await new Promise<void>((resolve, reject) => {
+      server!.once("error", reject)
+      server!.listen(port, hostname, () => resolve())
+    })
+
+    return {
+      baseUrl,
+      close: async () => {
+        try {
+          if (server) {
+            await new Promise<void>((resolve) => server.close(() => resolve()))
+          }
+          if (typeof app?.close === "function") {
+            await app.close()
+          }
+        } finally {
+          process.chdir(prevCwd)
+        }
+      },
+    }
+  } catch (err) {
+    process.chdir(prevCwd)
+    throw err
+  }
 }
 
 function parseOpenVariants(raw: string): OpenVariant[] {
@@ -914,7 +1020,6 @@ async function applySteps(
       await page.mouse.move(step.x, step.y, { steps: 4 })
       continue
     }
-
     if (step.action === "scroll") {
       const expr = `(() => {
         const sel = ${JSON.stringify(step.selector)};
@@ -1010,7 +1115,6 @@ async function applyOpenSteps(
       await page.mouse.move(step.x, step.y, { steps: 4 })
       continue
     }
-
     if (step.action === "scroll") {
       const expr = `(() => {
         const sel = ${JSON.stringify(step.selector)};
@@ -1348,14 +1452,14 @@ async function resolveCssInjectionUrls(style: string, baseUrl: string) {
     cssFiles.push(url)
   }
 
-  const entryCss =
-    entry.entryCSSFiles?.["[project]/apps/v4/app/layout"] ??
-    entry.entryCSSFiles?.[`[project]/apps/v4/app/(view)/view/[style]/[name]/page`]
-
-  if (Array.isArray(entryCss)) {
-    for (const item of entryCss) {
-      if (typeof item?.path === "string") {
-        add(item.path)
+  const entryCssFiles = entry.entryCSSFiles as Record<string, unknown> | undefined
+  if (entryCssFiles) {
+    for (const value of Object.values(entryCssFiles)) {
+      if (!Array.isArray(value)) continue
+      for (const item of value) {
+        if (typeof (item as any)?.path === "string") {
+          add((item as any).path)
+        }
       }
     }
   }
@@ -1463,9 +1567,9 @@ async function run(options: GoldenOptions): Promise<string[]> {
       headless: "new",
       protocolTimeout: Math.max(180_000, options.timeoutMs + 30_000),
       defaultViewport: {
-        width: 1440,
-        height: 900,
-        deviceScaleFactor: 2,
+        width: options.viewportW,
+        height: options.viewportH,
+        deviceScaleFactor: options.deviceScaleFactor,
       },
     })
   } catch (error) {
@@ -1717,10 +1821,18 @@ const style =
   process.env.STYLE ??
   "new-york-v4"
 
-const baseUrl =
+const baseUrlRaw =
   (typeof flags.baseUrl === "string" ? flags.baseUrl : undefined) ??
   process.env.BASE_URL ??
   "http://localhost:4000"
+
+const startServer =
+  flags.startServer === true || process.env.START_SERVER === "1"
+
+const nextDir =
+  (typeof flags.nextDir === "string" ? flags.nextDir : undefined) ??
+  process.env.NEXT_DIR ??
+  path.join(repoRoot, "repo-ref", "ui", "apps", "v4")
 
 const typesRaw =
   (typeof flags.types === "string" ? flags.types : undefined) ??
@@ -1755,6 +1867,29 @@ const timeoutMs =
       process.env.TIMEOUT_MS ??
       "60000"
   ) || 60000
+
+const viewportW =
+  Number(
+    (typeof flags.viewportW === "string" ? flags.viewportW : undefined) ??
+      process.env.VIEWPORT_W ??
+      "1440"
+  ) || 1440
+
+const viewportH =
+  Number(
+    (typeof flags.viewportH === "string" ? flags.viewportH : undefined) ??
+      process.env.VIEWPORT_H ??
+      "900"
+  ) || 900
+
+const deviceScaleFactor =
+  Number(
+    (typeof flags.deviceScaleFactor === "string"
+      ? flags.deviceScaleFactor
+      : undefined) ??
+      process.env.DEVICE_SCALE_FACTOR ??
+      "2"
+  ) || 2
 
 const update = flags.update === true || process.env.UPDATE_GOLDENS === "1"
 
@@ -1863,15 +1998,52 @@ async function resolveNames(): Promise<string[]> {
     .sort()
 }
 
+function printHelp() {
+  console.log("shadcn web golden extract")
+  console.log("")
+  console.log("Common flags:")
+  console.log("  --baseUrl=http://localhost:4020")
+  console.log("  --style=new-york-v4")
+  console.log("  --themes=light,dark")
+  console.log("  --modes=closed,open  (or --open)")
+  console.log("  --outDir=...")
+  console.log("  --update")
+  console.log("  --all")
+  console.log("")
+  console.log("Viewport flags:")
+  console.log("  --viewportW=1440 --viewportH=900 --deviceScaleFactor=2")
+  console.log("")
+  console.log("Open-mode flags:")
+  console.log("  --openAction=click|hover|contextmenu|keys")
+  console.log("  --openSelector=<css>")
+  console.log("  --openVariants=\"<variant>=<css>;<variant>=<css>\"")
+  console.log("  --openSteps=\"...\"")
+  console.log("")
+  console.log("Server flags:")
+  console.log("  --startServer        Start a Next.js production server in-process")
+  console.log("  --nextDir=<path>     Next.js app dir (default: repo-ref/ui/apps/v4)")
+}
+
+if (flags.help === true || flags.h === true) {
+  printHelp()
+  process.exit(0)
+}
+
+let startedServer: StartedServer | null = null
+let baseUrl = baseUrlRaw
+
 try {
   console.log(`?? shadcn web golden extract`)
   console.log(`- baseUrl: ${baseUrl}`)
+  console.log(`- startServer: ${startServer ? "yes" : "no"}`)
+  console.log(`- nextDir: ${nextDir}`)
   console.log(`- style: ${style}`)
   console.log(`- themes: ${themes.join(", ")}`)
   console.log(`- modes: ${modes.join(", ")}`)
   console.log(`- types: ${types.join(", ")}`)
   console.log(`- outDir: ${outDir}`)
   console.log(`- timeoutMs: ${timeoutMs}`)
+  console.log(`- viewport: ${viewportW}x${viewportH} @${deviceScaleFactor}x`)
   console.log(`- update: ${update ? "yes" : "no (skip existing)"}`)
   console.log(`- all: ${all ? "yes" : "no"}`)
   console.log(`- openVariants: ${openVariants?.length ?? 0}`)
@@ -1883,6 +2055,14 @@ try {
   const finalNames = await resolveNames()
   console.log(`- names: ${finalNames.length}`)
 
+  if (startServer) {
+    startedServer = await startNextServer(nextDir, baseUrl)
+    await waitForHttpOk(
+      `${baseUrl}/view/${style}/${finalNames[0] ?? "button-default"}`,
+      Math.min(30_000, timeoutMs)
+    )
+  }
+
   const failures = await run({
     baseUrl,
     style,
@@ -1893,6 +2073,9 @@ try {
     outDir,
     update,
     timeoutMs,
+    viewportW,
+    viewportH,
+    deviceScaleFactor,
     openSelector,
     openAction,
     openKeys,
@@ -1913,4 +2096,12 @@ try {
 } catch (error) {
   console.error(error)
   process.exit(1)
+} finally {
+  if (startedServer) {
+    try {
+      await startedServer.close()
+    } catch (err) {
+      console.error(`! failed to stop Next.js server: ${String(err)}`)
+    }
+  }
 }

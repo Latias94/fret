@@ -19,7 +19,10 @@ For each component page, the exporter writes a JSON file with:
 
 - `pnpm`
 - `repo-ref/ui` dependencies installed
-- a shadcn v4 **production** server (`next start`) running locally (recommended)
+- shadcn v4 **production assets** built (`next build --webpack`)
+- either:
+  - a local shadcn v4 **production** server (`next start`) running, or
+  - use `--startServer` to start/stop a production server in-process
 
 ## Run
 
@@ -43,6 +46,10 @@ Force webpack instead, and provide the required `NEXT_PUBLIC_*` env vars at buil
 4) Extract goldens (Terminal B):
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts button-default tabs-demo --baseUrl=http://localhost:4020`
+
+Alternative (in-process server, single command):
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 button-default tabs-demo`
 
 Extract both closed + open overlay states (writes `*.open.json` alongside the base file):
 
@@ -121,6 +128,19 @@ If you use multiple git worktrees and the repo config points Cargo at a shared `
 hit stale cross-worktree artifacts. In that case, run `cargo clean -p fret-ui-kit -p fret-ui-shadcn`
 before re-running `cargo nextest`.
 
+## NavigationMenu open variants
+
+We keep multiple open variants for `navigation-menu-demo` because each trigger exercises different
+panel content and can surface layout/placement regressions.
+
+Desktop (viewport disabled):
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 navigation-menu-demo --modes=open --update --openAction=click --openVariants="components=[data-fret-golden-target] li:nth-of-type(2) [data-slot='navigation-menu-trigger'];with-icon=[data-fret-golden-target] li:nth-of-type(6) [data-slot='navigation-menu-trigger']"`
+
+Mobile (viewport enabled, 375x812):
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 navigation-menu-demo --modes=open --update --viewportW=375 --viewportH=812 --openAction=click --openVariants="home-mobile=[data-fret-golden-target] li:nth-of-type(1) [data-slot='navigation-menu-trigger']"`
+
 
 Output directory (default):
 
@@ -160,10 +180,9 @@ pixel diffs. See: `docs/audits/shadcn-web-layout-conformance.md`.
 - `--themes=light,dark` (default)
 - `--modes=closed,open` (default: `closed`)
 - `--open` (shorthand for `--modes=closed,open`)
-- `--repoRefUiDir=<path>` (optional; default: `<repo>/repo-ref/ui`)
 - `--viewportW=1440` (default)
 - `--viewportH=900` (default)
-- `--deviceScaleFactor=2` (default; alias: `--dpr=2`)
+- `--deviceScaleFactor=2` (default)
 - `--variants="<variant>;..."` (optional; writes `name.<variant>.json` for each entry, regardless of mode)
 - `--openSelector=<css>` (optional override for the "open overlay" trigger)
 - `--openVariants="<variant>=<css>;..."` (optional; writes `name.<variant>.open.json` for each entry; overrides `--openSelector`)
@@ -177,6 +196,8 @@ pixel diffs. See: `docs/audits/shadcn-web-layout-conformance.md`.
   - `move=<x>,<y>` moves the mouse to an absolute viewport position (useful to force pointerenter/leave).
   - `scroll=<selector>@<dx>,<dy>` scrolls an element via `scrollBy(dx, dy)`.
 - `--baseUrl=http://localhost:4000`
+- `--startServer` (env: `START_SERVER=1`)
+- `--nextDir=<path>` (env: `NEXT_DIR=...`; default: `repo-ref/ui/apps/v4`)
 - `--all` (env: `ALL_GOLDENS=1`)
 - `--types=registry:block,registry:component,registry:example` (env: `TYPES=...`)
 - `--outDir=<path>`
