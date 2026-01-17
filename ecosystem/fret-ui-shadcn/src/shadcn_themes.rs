@@ -312,7 +312,7 @@ pub fn apply_shadcn_new_york_v4<H: UiHost>(
     scheme: ShadcnColorScheme,
 ) {
     let cfg = shadcn_new_york_v4_config(base, scheme);
-    Theme::global_mut(app).apply_config(&cfg);
+    Theme::with_global_mut(app, |theme| theme.apply_config(&cfg));
 }
 
 fn parse_css_length_px(s: &str) -> Option<f32> {

@@ -488,6 +488,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let mut request_focus_panel: Option<PanelKey> = None;
         let mut request_pointer_capture: Option<Option<NodeId>> = None;
         let mut request_cursor: Option<fret_core::CursorIcon> = None;
+        let mut stop_propagation = false;
 
         #[derive(Clone)]
         struct DockDragSnapshot {
@@ -756,363 +757,121 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let mut end_dock_drag = false;
         let mut mark_drag_tear_off_requested = false;
 
-        {
-            fret_ui::internal_drag::set_route(
-                cx.app,
-                self.window,
-                fret_runtime::DRAG_KIND_DOCK_PANEL,
-                cx.node,
-            );
-            let Some(dock) = cx.app.global_mut::<DockManager>() else {
-                return;
-            };
-            dock.register_dock_space_node(self.window, cx.node);
-            let Some(root) = dock.graph.window_root(self.window) else {
-                return;
-            };
+        fret_ui::internal_drag::set_route(
+            cx.app,
+            self.window,
+            fret_runtime::DRAG_KIND_DOCK_PANEL,
+            cx.node,
+        );
+        let dock_space_node = cx.node;
+        let allow_tear_off =
+            cx.input_ctx.caps.ui.window_tear_off && cx.input_ctx.caps.ui.multi_window;
 
-            match event {
-                fret_core::Event::Pointer(p) => match p {
-                    fret_core::PointerEvent::Down {
-                        position,
-                        button,
-                        modifiers,
-                        click_count,
-                        ..
-                    } => {
-                        // Arbitration: while a dock drag session is active (or viewport capture is
-                        // active), we do not allow starting competing capture sessions from a
-                        // secondary button press. The active session owns the interaction.
-                        if dock_drag.is_some()
-                            || has_pending_dock_drag
-                            || self.viewport_capture.is_some()
-                            || self.divider_drag.is_some()
-                            || self.floating_drag.is_some()
-                        {
-                            return;
-                        }
+        if cx.app.global::<DockManager>().is_none() {
+            return;
+        }
 
-                        let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
-                        let mut handled = false;
+        cx.app
+            .with_global_mut_untracked(DockManager::default, |dock, _app| {
+                dock.register_dock_space_node(self.window, dock_space_node);
+                let Some(root) = dock.graph.window_root(self.window) else {
+                    return;
+                };
 
-                        if *button == fret_core::MouseButton::Left
-                            && let Some((floating, _chrome, kind)) =
-                                hit_test_floating(&dock.graph, self.window, *position)
-                        {
-                            pending_effects.push(Effect::Dock(DockOp::RaiseFloating {
-                                window: self.window,
-                                floating,
-                            }));
-                            invalidate_paint = true;
-                            pending_redraws.push(self.window);
-
-                            match kind {
-                                FloatingHitKind::Close => {
-                                    self.hovered_floating_close = Some(floating);
-                                    self.pressed_floating_close = Some(floating);
-                                    request_pointer_capture = Some(Some(cx.node));
-                                    handled = true;
-                                }
-                                FloatingHitKind::TitleBar => {
-                                    if let Some(entry) = dock
-                                        .graph
-                                        .floating_windows(self.window)
-                                        .iter()
-                                        .find(|w| w.floating == floating)
-                                    {
-                                        self.floating_drag = Some(FloatingDragState {
-                                            floating,
-                                            grab_offset: Point::new(
-                                                Px(position.x.0 - entry.rect.origin.x.0),
-                                                Px(position.y.0 - entry.rect.origin.y.0),
-                                            ),
-                                            start_rect: entry.rect,
-                                        });
-                                        request_pointer_capture = Some(Some(cx.node));
-                                        request_cursor = Some(fret_core::CursorIcon::Default);
-                                        handled = true;
-                                    }
-                                }
-                                FloatingHitKind::Body => {}
-                            }
-                        }
-
-                        let (layout_root, layout_bounds) = layout_context_for_position(
-                            &dock.graph,
-                            self.window,
-                            root,
-                            dock_bounds,
-                            *position,
-                        );
-                        let layout = compute_layout_map(&dock.graph, layout_root, layout_bounds);
-                        if *button == fret_core::MouseButton::Left {
-                            if !handled
-                                && let Some(handle) =
-                                    hit_test_split_handle(&dock.graph, &layout, *position)
+                match event {
+                    fret_core::Event::Pointer(p) => match p {
+                        fret_core::PointerEvent::Down {
+                            position,
+                            button,
+                            modifiers,
+                            click_count,
+                            ..
+                        } => {
+                            // Arbitration: while a dock drag session is active (or viewport capture is
+                            // active), we do not allow starting competing capture sessions from a
+                            // secondary button press. The active session owns the interaction.
+                            if dock_drag.is_some()
+                                || has_pending_dock_drag
+                                || self.viewport_capture.is_some()
+                                || self.divider_drag.is_some()
+                                || self.floating_drag.is_some()
                             {
-                                let locks = compute_same_axis_locks_for_split_drag(
-                                    &dock.graph,
-                                    &layout,
-                                    handle.split,
-                                    handle.axis,
-                                    handle.handle_ix,
-                                );
-                                self.divider_drag = Some(DividerDragSession {
-                                    handle,
-                                    layout_root,
-                                    layout_bounds,
-                                    locks,
-                                });
-                                request_pointer_capture = Some(Some(cx.node));
-                                request_cursor = Some(match handle.axis {
-                                    fret_core::Axis::Horizontal => fret_core::CursorIcon::ColResize,
-                                    fret_core::Axis::Vertical => fret_core::CursorIcon::RowResize,
-                                });
+                                return;
+                            }
+
+                            let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
+                            let mut handled = false;
+
+                            if *button == fret_core::MouseButton::Left
+                                && let Some((floating, _chrome, kind)) =
+                                    hit_test_floating(&dock.graph, self.window, *position)
+                            {
+                                pending_effects.push(Effect::Dock(DockOp::RaiseFloating {
+                                    window: self.window,
+                                    floating,
+                                }));
                                 invalidate_paint = true;
                                 pending_redraws.push(self.window);
-                                handled = true;
-                            }
-                            if !handled
-                                && let Some((tabs_node, tab_index, panel_key, close)) = hit_test_tab(
-                                    &dock.graph,
-                                    &layout,
-                                    &self.tab_scroll,
-                                    &self.tab_widths,
-                                    theme,
-                                    *position,
-                                )
-                            {
-                                if close {
-                                    self.pressed_tab_close =
-                                        Some((tabs_node, tab_index, panel_key.clone()));
-                                    request_pointer_capture = Some(Some(cx.node));
-                                    dock.hover = None;
-                                    invalidate_paint = true;
-                                    pending_redraws.push(self.window);
-                                    handled = true;
-                                } else {
-                                    pending_effects.push(Effect::Dock(DockOp::SetActiveTab {
-                                        tabs: tabs_node,
-                                        active: tab_index,
-                                    }));
-                                    request_focus_panel = Some(panel_key.clone());
-                                    invalidate_layout = true;
-                                    // For tear-off, we want the tab itself to stay under the
-                                    // cursor after it becomes index 0 in its own floating window
-                                    // (ImGui-style). Our `DockFloating` windows render only a
-                                    // `DockSpace` starting at (0,0), so the correct anchor is the
-                                    // *tab-local* grab offset (not the window-local cursor pos).
-                                    let tab_rect = layout
-                                        .get(&tabs_node)
-                                        .copied()
-                                        .and_then(|rect| {
-                                            let (bar, _content) = split_tab_bar(rect);
-                                            let tab_count = match dock.graph.node(tabs_node) {
-                                                Some(DockNode::Tabs { tabs, .. }) => tabs.len(),
-                                                _ => 0,
-                                            };
-                                            (tab_index < tab_count).then(|| {
-                                                let scroll = self.tab_scroll_for(tabs_node);
-                                                self.tab_bar_geometry_for_node(
-                                                    tabs_node, bar, tab_count,
-                                                )
-                                                .tab_rect(tab_index, scroll)
-                                            })
-                                        })
-                                        .unwrap_or_else(|| Rect::new(*position, Size::default()));
-                                    let tab_local = Point::new(
-                                        Px((position.x.0 - tab_rect.origin.x.0).max(0.0)),
-                                        Px((position.y.0 - tab_rect.origin.y.0).max(0.0)),
-                                    );
-                                    self.pending_dock_drags.insert(
-                                        pointer_id,
-                                        PendingDockDrag {
-                                            start: *position,
-                                            panel: panel_key,
-                                            grab_offset: tab_local,
-                                            start_tick: now_tick,
-                                        },
-                                    );
-                                    request_pointer_capture = Some(Some(cx.node));
-                                    dock.hover = None;
-                                    invalidate_paint = true;
-                                    handled = true;
-                                }
-                            }
-                        }
 
-                        if !handled
-                            && *button == fret_core::MouseButton::Right
-                            && let Some((tabs_node, tab_index, panel_key, _close)) = hit_test_tab(
-                                &dock.graph,
-                                &layout,
-                                &self.tab_scroll,
-                                &self.tab_widths,
-                                theme,
-                                *position,
-                            )
-                        {
-                            pending_effects.push(Effect::Dock(DockOp::SetActiveTab {
-                                tabs: tabs_node,
-                                active: tab_index,
-                            }));
-                            request_focus_panel = Some(panel_key.clone());
-                            invalidate_layout = true;
-                            dock.hover = None;
-                            invalidate_paint = true;
-                            handled = true;
-                        }
-
-                        if !handled
-                            && let Some(hit) = hit_test_active_viewport_panel(
-                                &dock.graph,
-                                &dock.panels,
-                                &layout,
-                                *position,
-                            )
-                            && (*button == fret_core::MouseButton::Left
-                                || *button == fret_core::MouseButton::Right
-                                || *button == fret_core::MouseButton::Middle)
-                        {
-                            if let Some(e) = viewport_input_from_hit(
-                                self.window,
-                                hit.clone(),
-                                pixels_per_point,
-                                *position,
-                                ViewportInputKind::PointerDown {
-                                    button: *button,
-                                    modifiers: *modifiers,
-                                    click_count: *click_count,
-                                },
-                            ) {
-                                pending_effects.push(Effect::ViewportInput(e));
-                                pending_redraws.push(self.window);
-                            }
-
-                            self.viewport_capture = Some(ViewportCaptureState {
-                                hit,
-                                button: *button,
-                                start: *position,
-                                moved: false,
-                            });
-                            request_pointer_capture = Some(Some(cx.node));
-                        }
-                    }
-                    fret_core::PointerEvent::Move {
-                        position,
-                        buttons,
-                        modifiers,
-                        ..
-                    } => {
-                        if let Some(drag) = self.floating_drag {
-                            let desired = Rect::new(
-                                Point::new(
-                                    Px(position.x.0 - drag.grab_offset.x.0),
-                                    Px(position.y.0 - drag.grab_offset.y.0),
-                                ),
-                                drag.start_rect.size,
-                            );
-                            let rect = Self::clamp_rect_to_bounds(desired, window_bounds);
-                            cx.app.push_effect(Effect::Dock(DockOp::SetFloatingRect {
-                                window: self.window,
-                                floating: drag.floating,
-                                rect,
-                            }));
-                            cx.set_cursor_icon(fret_core::CursorIcon::Default);
-                            cx.invalidate(cx.node, Invalidation::Layout);
-                            cx.invalidate(cx.node, Invalidation::Paint);
-                            cx.request_redraw();
-                            cx.stop_propagation();
-                            return;
-                        }
-
-                        if has_pending_dock_drag {
-                            if !buttons.left {
-                                self.pending_dock_drags.remove(&pointer_id);
-                                request_pointer_capture = Some(None);
-                            } else {
-                                let activation = fret_dnd::ActivationConstraint::Distance {
-                                    px: docking_interaction_settings.tab_drag_threshold.0,
-                                };
-                                let should_activate = self
-                                    .pending_dock_drags
-                                    .get(&pointer_id)
-                                    .is_some_and(|pending| {
-                                        activation.is_satisfied(
-                                            pending.start_tick.0,
-                                            now_tick.0,
-                                            pending.start,
-                                            *position,
-                                        )
-                                    });
-                                if should_activate
-                                    && let Some(pending) =
-                                        self.pending_dock_drags.remove(&pointer_id)
-                                {
-                                    start_dock_drag = Some((
-                                        pending.start,
-                                        DockPanelDragPayload {
-                                            panel: pending.panel,
-                                            grab_offset: pending.grab_offset,
-                                            start_tick: pending.start_tick,
-                                            tear_off_requested: false,
-                                        },
-                                        *position,
-                                    ));
-                                    request_pointer_capture = Some(None);
-                                }
-                            }
-
-                            dock.hover = None;
-                            invalidate_paint = true;
-                            pending_redraws.push(self.window);
-                        } else {
-                            let hovered_floating =
-                                hit_test_floating(&dock.graph, self.window, *position);
-                            let hovered_close =
-                                hovered_floating.and_then(|(floating, _chrome, kind)| {
-                                    if kind == FloatingHitKind::Close {
-                                        Some(floating)
-                                    } else {
-                                        None
-                                    }
-                                });
-                            if hovered_close != self.hovered_floating_close {
-                                self.hovered_floating_close = hovered_close;
-                                invalidate_paint = true;
-                                pending_redraws.push(self.window);
-                            }
-                            if request_cursor.is_none()
-                                && let Some((_floating, _chrome, kind)) = hovered_floating
-                            {
                                 match kind {
                                     FloatingHitKind::Close => {
-                                        request_cursor = Some(fret_core::CursorIcon::Pointer);
+                                        self.hovered_floating_close = Some(floating);
+                                        self.pressed_floating_close = Some(floating);
+                                        request_pointer_capture = Some(Some(dock_space_node));
+                                        handled = true;
                                     }
                                     FloatingHitKind::TitleBar => {
-                                        request_cursor = Some(fret_core::CursorIcon::Default);
+                                        if let Some(entry) = dock
+                                            .graph
+                                            .floating_windows(self.window)
+                                            .iter()
+                                            .find(|w| w.floating == floating)
+                                        {
+                                            self.floating_drag = Some(FloatingDragState {
+                                                floating,
+                                                grab_offset: Point::new(
+                                                    Px(position.x.0 - entry.rect.origin.x.0),
+                                                    Px(position.y.0 - entry.rect.origin.y.0),
+                                                ),
+                                                start_rect: entry.rect,
+                                            });
+                                            request_pointer_capture = Some(Some(dock_space_node));
+                                            request_cursor = Some(fret_core::CursorIcon::Default);
+                                            handled = true;
+                                        }
                                     }
                                     FloatingHitKind::Body => {}
                                 }
                             }
 
-                            if self.viewport_capture.is_none()
-                                && self.divider_drag.is_none()
-                                && dock_drag.is_none()
-                            {
-                                let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
-                                let (layout_root, layout_bounds) = layout_context_for_position(
-                                    &dock.graph,
-                                    self.window,
-                                    root,
-                                    dock_bounds,
-                                    *position,
-                                );
-                                let layout =
-                                    compute_layout_map(&dock.graph, layout_root, layout_bounds);
-                                if let Some(handle) =
-                                    hit_test_split_handle(&dock.graph, &layout, *position)
+                            let (layout_root, layout_bounds) = layout_context_for_position(
+                                &dock.graph,
+                                self.window,
+                                root,
+                                dock_bounds,
+                                *position,
+                            );
+                            let layout =
+                                compute_layout_map(&dock.graph, layout_root, layout_bounds);
+                            if *button == fret_core::MouseButton::Left {
+                                if !handled
+                                    && let Some(handle) =
+                                        hit_test_split_handle(&dock.graph, &layout, *position)
                                 {
+                                    let locks = compute_same_axis_locks_for_split_drag(
+                                        &dock.graph,
+                                        &layout,
+                                        handle.split,
+                                        handle.axis,
+                                        handle.handle_ix,
+                                    );
+                                    self.divider_drag = Some(DividerDragSession {
+                                        handle,
+                                        layout_root,
+                                        layout_bounds,
+                                        locks,
+                                    });
+                                    request_pointer_capture = Some(Some(dock_space_node));
                                     request_cursor = Some(match handle.axis {
                                         fret_core::Axis::Horizontal => {
                                             fret_core::CursorIcon::ColResize
@@ -1121,24 +880,611 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             fret_core::CursorIcon::RowResize
                                         }
                                     });
+                                    invalidate_paint = true;
+                                    pending_redraws.push(self.window);
+                                    handled = true;
+                                }
+                                if !handled
+                                    && let Some((tabs_node, tab_index, panel_key, close)) =
+                                        hit_test_tab(
+                                            &dock.graph,
+                                            &layout,
+                                            &self.tab_scroll,
+                                            &self.tab_widths,
+                                            theme,
+                                            *position,
+                                        )
+                                {
+                                    if close {
+                                        self.pressed_tab_close =
+                                            Some((tabs_node, tab_index, panel_key.clone()));
+                                        request_pointer_capture = Some(Some(dock_space_node));
+                                        dock.hover = None;
+                                        invalidate_paint = true;
+                                        pending_redraws.push(self.window);
+                                        handled = true;
+                                    } else {
+                                        pending_effects.push(Effect::Dock(DockOp::SetActiveTab {
+                                            tabs: tabs_node,
+                                            active: tab_index,
+                                        }));
+                                        request_focus_panel = Some(panel_key.clone());
+                                        invalidate_layout = true;
+                                        // For tear-off, we want the tab itself to stay under the
+                                        // cursor after it becomes index 0 in its own floating window
+                                        // (ImGui-style). Our `DockFloating` windows render only a
+                                        // `DockSpace` starting at (0,0), so the correct anchor is the
+                                        // *tab-local* grab offset (not the window-local cursor pos).
+                                        let tab_rect = layout
+                                            .get(&tabs_node)
+                                            .copied()
+                                            .and_then(|rect| {
+                                                let (bar, _content) = split_tab_bar(rect);
+                                                let tab_count = match dock.graph.node(tabs_node) {
+                                                    Some(DockNode::Tabs { tabs, .. }) => tabs.len(),
+                                                    _ => 0,
+                                                };
+                                                (tab_index < tab_count).then(|| {
+                                                    let scroll = self.tab_scroll_for(tabs_node);
+                                                    self.tab_bar_geometry_for_node(
+                                                        tabs_node, bar, tab_count,
+                                                    )
+                                                    .tab_rect(tab_index, scroll)
+                                                })
+                                            })
+                                            .unwrap_or_else(|| {
+                                                Rect::new(*position, Size::default())
+                                            });
+                                        let tab_local = Point::new(
+                                            Px((position.x.0 - tab_rect.origin.x.0).max(0.0)),
+                                            Px((position.y.0 - tab_rect.origin.y.0).max(0.0)),
+                                        );
+                                        self.pending_dock_drags.insert(
+                                            pointer_id,
+                                            PendingDockDrag {
+                                                start: *position,
+                                                panel: panel_key,
+                                                grab_offset: tab_local,
+                                                start_tick: now_tick,
+                                            },
+                                        );
+                                        request_pointer_capture = Some(Some(dock_space_node));
+                                        dock.hover = None;
+                                        invalidate_paint = true;
+                                        handled = true;
+                                    }
                                 }
                             }
 
-                            let hovered = if self.viewport_capture.is_none()
-                                && self.divider_drag.is_none()
-                                && dock_drag.is_none()
+                            if !handled
+                                && *button == fret_core::MouseButton::Right
+                                && let Some((tabs_node, tab_index, panel_key, _close)) =
+                                    hit_test_tab(
+                                        &dock.graph,
+                                        &layout,
+                                        &self.tab_scroll,
+                                        &self.tab_widths,
+                                        theme,
+                                        *position,
+                                    )
                             {
-                                let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
-                                let (layout_root, layout_bounds) = layout_context_for_position(
+                                pending_effects.push(Effect::Dock(DockOp::SetActiveTab {
+                                    tabs: tabs_node,
+                                    active: tab_index,
+                                }));
+                                request_focus_panel = Some(panel_key.clone());
+                                invalidate_layout = true;
+                                dock.hover = None;
+                                invalidate_paint = true;
+                                handled = true;
+                            }
+
+                            if !handled
+                                && let Some(hit) = hit_test_active_viewport_panel(
                                     &dock.graph,
-                                    self.window,
-                                    root,
-                                    dock_bounds,
+                                    &dock.panels,
+                                    &layout,
                                     *position,
+                                )
+                                && (*button == fret_core::MouseButton::Left
+                                    || *button == fret_core::MouseButton::Right
+                                    || *button == fret_core::MouseButton::Middle)
+                            {
+                                if let Some(e) = viewport_input_from_hit(
+                                    self.window,
+                                    hit.clone(),
+                                    pixels_per_point,
+                                    *position,
+                                    ViewportInputKind::PointerDown {
+                                        button: *button,
+                                        modifiers: *modifiers,
+                                        click_count: *click_count,
+                                    },
+                                ) {
+                                    pending_effects.push(Effect::ViewportInput(e));
+                                    pending_redraws.push(self.window);
+                                }
+
+                                self.viewport_capture = Some(ViewportCaptureState {
+                                    hit,
+                                    button: *button,
+                                    start: *position,
+                                    moved: false,
+                                });
+                                request_pointer_capture = Some(Some(dock_space_node));
+                            }
+                        }
+                        fret_core::PointerEvent::Move {
+                            position,
+                            buttons,
+                            modifiers,
+                            ..
+                        } => {
+                            if let Some(drag) = self.floating_drag {
+                                let desired = Rect::new(
+                                    Point::new(
+                                        Px(position.x.0 - drag.grab_offset.x.0),
+                                        Px(position.y.0 - drag.grab_offset.y.0),
+                                    ),
+                                    drag.start_rect.size,
                                 );
-                                let layout =
-                                    compute_layout_map(&dock.graph, layout_root, layout_bounds);
-                                hit_test_tab(
+                                let rect = Self::clamp_rect_to_bounds(desired, window_bounds);
+                                pending_effects.push(Effect::Dock(DockOp::SetFloatingRect {
+                                    window: self.window,
+                                    floating: drag.floating,
+                                    rect,
+                                }));
+                                request_cursor = Some(fret_core::CursorIcon::Default);
+                                invalidate_layout = true;
+                                invalidate_paint = true;
+                                pending_redraws.push(self.window);
+                                stop_propagation = true;
+                            } else if has_pending_dock_drag {
+                                if !buttons.left {
+                                    self.pending_dock_drags.remove(&pointer_id);
+                                    request_pointer_capture = Some(None);
+                                } else {
+                                    let activation = fret_dnd::ActivationConstraint::Distance {
+                                        px: docking_interaction_settings.tab_drag_threshold.0,
+                                    };
+                                    let should_activate = self
+                                        .pending_dock_drags
+                                        .get(&pointer_id)
+                                        .is_some_and(|pending| {
+                                            activation.is_satisfied(
+                                                pending.start_tick.0,
+                                                now_tick.0,
+                                                pending.start,
+                                                *position,
+                                            )
+                                        });
+                                    if should_activate
+                                        && let Some(pending) =
+                                            self.pending_dock_drags.remove(&pointer_id)
+                                    {
+                                        start_dock_drag = Some((
+                                            pending.start,
+                                            DockPanelDragPayload {
+                                                panel: pending.panel,
+                                                grab_offset: pending.grab_offset,
+                                                start_tick: pending.start_tick,
+                                                tear_off_requested: false,
+                                            },
+                                            *position,
+                                        ));
+                                        request_pointer_capture = Some(None);
+                                    }
+                                }
+
+                                dock.hover = None;
+                                invalidate_paint = true;
+                                pending_redraws.push(self.window);
+                            } else {
+                                let hovered_floating =
+                                    hit_test_floating(&dock.graph, self.window, *position);
+                                let hovered_close =
+                                    hovered_floating.and_then(|(floating, _chrome, kind)| {
+                                        if kind == FloatingHitKind::Close {
+                                            Some(floating)
+                                        } else {
+                                            None
+                                        }
+                                    });
+                                if hovered_close != self.hovered_floating_close {
+                                    self.hovered_floating_close = hovered_close;
+                                    invalidate_paint = true;
+                                    pending_redraws.push(self.window);
+                                }
+                                if request_cursor.is_none()
+                                    && let Some((_floating, _chrome, kind)) = hovered_floating
+                                {
+                                    match kind {
+                                        FloatingHitKind::Close => {
+                                            request_cursor = Some(fret_core::CursorIcon::Pointer);
+                                        }
+                                        FloatingHitKind::TitleBar => {
+                                            request_cursor = Some(fret_core::CursorIcon::Default);
+                                        }
+                                        FloatingHitKind::Body => {}
+                                    }
+                                }
+
+                                if self.viewport_capture.is_none()
+                                    && self.divider_drag.is_none()
+                                    && dock_drag.is_none()
+                                {
+                                    let (_chrome, dock_bounds) =
+                                        dock_space_regions(self.last_bounds);
+                                    let (layout_root, layout_bounds) = layout_context_for_position(
+                                        &dock.graph,
+                                        self.window,
+                                        root,
+                                        dock_bounds,
+                                        *position,
+                                    );
+                                    let layout =
+                                        compute_layout_map(&dock.graph, layout_root, layout_bounds);
+                                    if let Some(handle) =
+                                        hit_test_split_handle(&dock.graph, &layout, *position)
+                                    {
+                                        request_cursor = Some(match handle.axis {
+                                            fret_core::Axis::Horizontal => {
+                                                fret_core::CursorIcon::ColResize
+                                            }
+                                            fret_core::Axis::Vertical => {
+                                                fret_core::CursorIcon::RowResize
+                                            }
+                                        });
+                                    }
+                                }
+
+                                let hovered = if self.viewport_capture.is_none()
+                                    && self.divider_drag.is_none()
+                                    && dock_drag.is_none()
+                                {
+                                    let (_chrome, dock_bounds) =
+                                        dock_space_regions(self.last_bounds);
+                                    let (layout_root, layout_bounds) = layout_context_for_position(
+                                        &dock.graph,
+                                        self.window,
+                                        root,
+                                        dock_bounds,
+                                        *position,
+                                    );
+                                    let layout =
+                                        compute_layout_map(&dock.graph, layout_root, layout_bounds);
+                                    hit_test_tab(
+                                        &dock.graph,
+                                        &layout,
+                                        &self.tab_scroll,
+                                        &self.tab_widths,
+                                        theme,
+                                        *position,
+                                    )
+                                    .map(|(node, idx, _panel, close)| (node, idx, close))
+                                } else {
+                                    None
+                                };
+                                let next_tab = hovered.map(|(node, idx, _close)| (node, idx));
+                                let next_close =
+                                    hovered.map(|(_node, _idx, close)| close).unwrap_or(false);
+                                if next_tab != self.hovered_tab
+                                    || next_close != self.hovered_tab_close
+                                {
+                                    self.hovered_tab = next_tab;
+                                    self.hovered_tab_close = next_close;
+                                    invalidate_paint = true;
+                                    pending_redraws.push(self.window);
+                                }
+
+                                if let Some(divider) = self.divider_drag.as_ref() {
+                                    request_cursor = Some(match divider.handle.axis {
+                                        fret_core::Axis::Horizontal => {
+                                            fret_core::CursorIcon::ColResize
+                                        }
+                                        fret_core::Axis::Vertical => {
+                                            fret_core::CursorIcon::RowResize
+                                        }
+                                    });
+                                    let Some((children_len, fractions_now)) = dock
+                                        .graph
+                                        .node(divider.handle.split)
+                                        .and_then(|n| match n {
+                                            DockNode::Split {
+                                                children,
+                                                fractions,
+                                                ..
+                                            } => Some((children.len(), fractions.clone())),
+                                            _ => None,
+                                        })
+                                    else {
+                                        return;
+                                    };
+                                    if let Some(next) = resizable::drag_update_fractions(
+                                        divider.handle.axis,
+                                        divider.handle.bounds,
+                                        children_len,
+                                        &fractions_now,
+                                        divider.handle.handle_ix,
+                                        DOCK_SPLIT_HANDLE_GAP,
+                                        DOCK_SPLIT_HANDLE_HIT_THICKNESS,
+                                        &[],
+                                        divider.handle.grab_offset,
+                                        *position,
+                                    ) {
+                                        dock.graph
+                                            .update_split_fractions(divider.handle.split, next);
+                                        apply_same_axis_locks(
+                                            &mut dock.graph,
+                                            divider.layout_root,
+                                            divider.layout_bounds,
+                                            divider.handle.axis,
+                                            &divider.locks,
+                                        );
+                                        invalidate_layout = true;
+                                        invalidate_paint = true;
+                                    }
+                                }
+
+                                if let Some(capture) = self.viewport_capture.as_mut() {
+                                    let hit = capture.hit.clone();
+                                    let e = viewport_input_from_hit_clamped(
+                                        self.window,
+                                        hit,
+                                        pixels_per_point,
+                                        *position,
+                                        ViewportInputKind::PointerMove {
+                                            buttons: *buttons,
+                                            modifiers: *modifiers,
+                                        },
+                                    );
+                                    pending_effects.push(Effect::ViewportInput(e));
+                                    pending_redraws.push(self.window);
+                                } else {
+                                    let (_chrome, dock_bounds) =
+                                        dock_space_regions(self.last_bounds);
+                                    let (layout_root, layout_bounds) = layout_context_for_position(
+                                        &dock.graph,
+                                        self.window,
+                                        root,
+                                        dock_bounds,
+                                        *position,
+                                    );
+                                    if allow_viewport_hover && layout_bounds.contains(*position) {
+                                        let layout = compute_layout_map(
+                                            &dock.graph,
+                                            layout_root,
+                                            layout_bounds,
+                                        );
+                                        let hit = hit_test_active_viewport_panel(
+                                            &dock.graph,
+                                            &dock.panels,
+                                            &layout,
+                                            *position,
+                                        );
+
+                                        if let Some(hit) = hit
+                                            && let Some(e) = viewport_input_from_hit(
+                                                self.window,
+                                                hit,
+                                                pixels_per_point,
+                                                *position,
+                                                ViewportInputKind::PointerMove {
+                                                    buttons: *buttons,
+                                                    modifiers: *modifiers,
+                                                },
+                                            )
+                                        {
+                                            pending_effects.push(Effect::ViewportInput(e));
+                                            pending_redraws.push(self.window);
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Dock/tab dragging uses `Event::InternalDrag` so it can work across
+                            // windows without relying on pointer-event broadcasting. Drag session
+                            // creation is delayed until activation crosses the drag threshold.
+                        }
+                        fret_core::PointerEvent::Wheel {
+                            position,
+                            delta,
+                            modifiers,
+                            ..
+                        } => {
+                            let bounds = self.last_bounds;
+                            if !bounds.contains(*position) {
+                                return;
+                            }
+                            if dock_drag.is_some() || has_pending_dock_drag {
+                                return;
+                            }
+                            let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
+                            let (layout_root, layout_bounds) = layout_context_for_position(
+                                &dock.graph,
+                                self.window,
+                                root,
+                                dock_bounds,
+                                *position,
+                            );
+                            let layout =
+                                compute_layout_map(&dock.graph, layout_root, layout_bounds);
+                            let mut scrolled_tabs = false;
+                            for (&node_id, &rect) in &layout {
+                                let Some(DockNode::Tabs { tabs, active }) =
+                                    dock.graph.node(node_id)
+                                else {
+                                    continue;
+                                };
+                                if tabs.is_empty() {
+                                    continue;
+                                }
+                                let (tab_bar, _content) = split_tab_bar(rect);
+                                if !tab_bar.contains(*position) {
+                                    continue;
+                                }
+
+                                self.clamp_and_ensure_active_visible(
+                                    node_id,
+                                    tab_bar,
+                                    tabs.len(),
+                                    *active,
+                                );
+
+                                let max_scroll = self.max_tab_scroll(node_id, tab_bar, tabs.len());
+                                if max_scroll.0 <= 0.0 {
+                                    scrolled_tabs = true;
+                                    break;
+                                }
+
+                                let wheel = delta.x.0 + delta.y.0;
+                                let scroll = self.tab_scroll_for(node_id);
+                                let next = Px((scroll.0 - wheel).clamp(0.0, max_scroll.0));
+                                self.set_tab_scroll_for(node_id, next);
+                                invalidate_paint = true;
+                                pending_redraws.push(self.window);
+                                scrolled_tabs = true;
+                                break;
+                            }
+
+                            if !scrolled_tabs
+                                && let Some(hit) = hit_test_active_viewport_panel(
+                                    &dock.graph,
+                                    &dock.panels,
+                                    &layout,
+                                    *position,
+                                )
+                                && let Some(e) = viewport_input_from_hit(
+                                    self.window,
+                                    hit,
+                                    pixels_per_point,
+                                    *position,
+                                    ViewportInputKind::Wheel {
+                                        delta: *delta,
+                                        modifiers: *modifiers,
+                                    },
+                                )
+                            {
+                                pending_effects.push(Effect::ViewportInput(e));
+                                pending_redraws.push(self.window);
+                            }
+                        }
+                        fret_core::PointerEvent::PinchGesture { .. } => {}
+                        fret_core::PointerEvent::Up {
+                            position,
+                            button,
+                            modifiers,
+                            click_count,
+                            ..
+                        } => {
+                            let mut handled = false;
+                            if *button == fret_core::MouseButton::Left && has_pending_dock_drag {
+                                self.pending_dock_drags.remove(&pointer_id);
+                                request_pointer_capture = Some(None);
+                                dock.hover = None;
+                                invalidate_paint = true;
+                                pending_redraws.push(self.window);
+                                handled = true;
+                            }
+                            if *button == fret_core::MouseButton::Left
+                                && self.floating_drag.take().is_some()
+                            {
+                                request_pointer_capture = Some(None);
+                                invalidate_paint = true;
+                                pending_redraws.push(self.window);
+                                handled = true;
+                            }
+
+                            if *button == fret_core::MouseButton::Left
+                                && let Some(floating) = self.pressed_floating_close.take()
+                            {
+                                request_pointer_capture = Some(None);
+                                self.hovered_floating_close = None;
+
+                                let clicked =
+                                    hit_test_floating(&dock.graph, self.window, *position)
+                                        .is_some_and(|(f, _chrome, kind)| {
+                                            f == floating && kind == FloatingHitKind::Close
+                                        });
+                                if clicked
+                                    && let Some(target_tabs) =
+                                        dock.graph.first_tabs_in_window(self.window)
+                                {
+                                    pending_effects.push(Effect::Dock(DockOp::MergeFloatingInto {
+                                        window: self.window,
+                                        floating,
+                                        target_tabs,
+                                    }));
+                                    invalidate_layout = true;
+                                }
+
+                                invalidate_paint = true;
+                                pending_redraws.push(self.window);
+                                handled = true;
+                            }
+
+                            if *button == fret_core::MouseButton::Left
+                                && let Some(divider) = self.divider_drag.take()
+                            {
+                                let mut seen: std::collections::HashSet<DockNodeId> =
+                                    std::collections::HashSet::new();
+                                let mut updates: Vec<fret_core::SplitFractionsUpdate> = Vec::new();
+                                for split in std::iter::once(divider.handle.split)
+                                    .chain(divider.locks.iter().map(|l| l.split))
+                                {
+                                    if !seen.insert(split) {
+                                        continue;
+                                    }
+                                    if let Some(DockNode::Split {
+                                        children,
+                                        fractions,
+                                        ..
+                                    }) = dock.graph.node(split)
+                                        && children.len() >= 2
+                                        && children.len() == fractions.len()
+                                    {
+                                        updates.push(fret_core::SplitFractionsUpdate {
+                                            split,
+                                            fractions: fractions.clone(),
+                                        });
+                                    }
+                                }
+
+                                if !updates.is_empty() {
+                                    pending_effects.push(Effect::Dock(
+                                        DockOp::SetSplitFractionsMany { updates },
+                                    ));
+                                }
+
+                                request_pointer_capture = Some(None);
+                                invalidate_layout = true;
+                                invalidate_paint = true;
+                                pending_redraws.push(self.window);
+                                handled = true;
+                            }
+                            if *button == fret_core::MouseButton::Left
+                                && let Some((tabs_node, tab_index, panel_key)) =
+                                    self.pressed_tab_close.take()
+                            {
+                                request_pointer_capture = Some(None);
+
+                                let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
+                                let mut layout = compute_layout_map(&dock.graph, root, dock_bounds);
+                                if !layout.contains_key(&tabs_node) {
+                                    for floating in dock.graph.floating_windows(self.window) {
+                                        let chrome = Self::floating_chrome(floating.rect);
+                                        let l = compute_layout_map(
+                                            &dock.graph,
+                                            floating.floating,
+                                            chrome.inner,
+                                        );
+                                        if l.contains_key(&tabs_node) {
+                                            layout = l;
+                                            break;
+                                        }
+                                    }
+                                }
+                                let clicked = hit_test_tab(
                                     &dock.graph,
                                     &layout,
                                     &self.tab_scroll,
@@ -1146,441 +1492,37 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     theme,
                                     *position,
                                 )
-                                .map(|(node, idx, _panel, close)| (node, idx, close))
-                            } else {
-                                None
-                            };
-                            let next_tab = hovered.map(|(node, idx, _close)| (node, idx));
-                            let next_close =
-                                hovered.map(|(_node, _idx, close)| close).unwrap_or(false);
-                            if next_tab != self.hovered_tab || next_close != self.hovered_tab_close
-                            {
-                                self.hovered_tab = next_tab;
-                                self.hovered_tab_close = next_close;
-                                invalidate_paint = true;
-                                pending_redraws.push(self.window);
-                            }
-
-                            if let Some(divider) = self.divider_drag.as_ref() {
-                                cx.requested_cursor = Some(match divider.handle.axis {
-                                    fret_core::Axis::Horizontal => fret_core::CursorIcon::ColResize,
-                                    fret_core::Axis::Vertical => fret_core::CursorIcon::RowResize,
+                                .is_some_and(|(n, i, p, close)| {
+                                    close && n == tabs_node && i == tab_index && p == panel_key
                                 });
-                                let Some((children_len, fractions_now)) =
-                                    dock.graph.node(divider.handle.split).and_then(|n| match n {
-                                        DockNode::Split {
-                                            children,
-                                            fractions,
-                                            ..
-                                        } => Some((children.len(), fractions.clone())),
-                                        _ => None,
-                                    })
-                                else {
-                                    return;
-                                };
-                                if let Some(next) = resizable::drag_update_fractions(
-                                    divider.handle.axis,
-                                    divider.handle.bounds,
-                                    children_len,
-                                    &fractions_now,
-                                    divider.handle.handle_ix,
-                                    DOCK_SPLIT_HANDLE_GAP,
-                                    DOCK_SPLIT_HANDLE_HIT_THICKNESS,
-                                    &[],
-                                    divider.handle.grab_offset,
-                                    *position,
-                                ) {
-                                    dock.graph
-                                        .update_split_fractions(divider.handle.split, next);
-                                    apply_same_axis_locks(
-                                        &mut dock.graph,
-                                        divider.layout_root,
-                                        divider.layout_bounds,
-                                        divider.handle.axis,
-                                        &divider.locks,
-                                    );
-                                    cx.invalidate(cx.node, Invalidation::Layout);
-                                    cx.invalidate(cx.node, Invalidation::Paint);
-                                }
-                                return;
-                            }
 
-                            if let Some(capture) = self.viewport_capture.as_mut() {
-                                let hit = capture.hit.clone();
-                                let e = viewport_input_from_hit_clamped(
-                                    self.window,
-                                    hit,
-                                    pixels_per_point,
-                                    *position,
-                                    ViewportInputKind::PointerMove {
-                                        buttons: *buttons,
-                                        modifiers: *modifiers,
-                                    },
-                                );
-                                pending_effects.push(Effect::ViewportInput(e));
+                                if clicked {
+                                    pending_effects.push(Effect::Dock(DockOp::ClosePanel {
+                                        window: self.window,
+                                        panel: panel_key,
+                                    }));
+                                    invalidate_layout = true;
+                                }
+                                invalidate_paint = true;
                                 pending_redraws.push(self.window);
-                            } else {
-                                let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
-                                let (layout_root, layout_bounds) = layout_context_for_position(
-                                    &dock.graph,
-                                    self.window,
-                                    root,
-                                    dock_bounds,
-                                    *position,
-                                );
-                                if allow_viewport_hover && layout_bounds.contains(*position) {
-                                    let layout =
-                                        compute_layout_map(&dock.graph, layout_root, layout_bounds);
-                                    let hit = hit_test_active_viewport_panel(
-                                        &dock.graph,
-                                        &dock.panels,
-                                        &layout,
-                                        *position,
-                                    );
-
-                                    if let Some(hit) = hit
-                                        && let Some(e) = viewport_input_from_hit(
-                                            self.window,
-                                            hit,
-                                            pixels_per_point,
-                                            *position,
-                                            ViewportInputKind::PointerMove {
-                                                buttons: *buttons,
-                                                modifiers: *modifiers,
-                                            },
-                                        )
-                                    {
-                                        pending_effects.push(Effect::ViewportInput(e));
-                                        pending_redraws.push(self.window);
-                                    }
-                                }
-                            }
-                        }
-
-                        // Dock/tab dragging uses `Event::InternalDrag` so it can work across
-                        // windows without relying on pointer-event broadcasting. Drag session
-                        // creation is delayed until activation crosses the drag threshold.
-                    }
-                    fret_core::PointerEvent::Wheel {
-                        position,
-                        delta,
-                        modifiers,
-                        ..
-                    } => {
-                        let bounds = self.last_bounds;
-                        if !bounds.contains(*position) {
-                            return;
-                        }
-                        if dock_drag.is_some() || has_pending_dock_drag {
-                            return;
-                        }
-                        let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
-                        let (layout_root, layout_bounds) = layout_context_for_position(
-                            &dock.graph,
-                            self.window,
-                            root,
-                            dock_bounds,
-                            *position,
-                        );
-                        let layout = compute_layout_map(&dock.graph, layout_root, layout_bounds);
-                        let mut scrolled_tabs = false;
-                        for (&node_id, &rect) in &layout {
-                            let Some(DockNode::Tabs { tabs, active }) = dock.graph.node(node_id)
-                            else {
-                                continue;
-                            };
-                            if tabs.is_empty() {
-                                continue;
-                            }
-                            let (tab_bar, _content) = split_tab_bar(rect);
-                            if !tab_bar.contains(*position) {
-                                continue;
+                                handled = true;
                             }
 
-                            self.clamp_and_ensure_active_visible(
-                                node_id,
-                                tab_bar,
-                                tabs.len(),
-                                *active,
-                            );
-
-                            let max_scroll = self.max_tab_scroll(node_id, tab_bar, tabs.len());
-                            if max_scroll.0 <= 0.0 {
-                                scrolled_tabs = true;
-                                break;
-                            }
-
-                            let wheel = delta.x.0 + delta.y.0;
-                            let scroll = self.tab_scroll_for(node_id);
-                            let next = Px((scroll.0 - wheel).clamp(0.0, max_scroll.0));
-                            self.set_tab_scroll_for(node_id, next);
-                            invalidate_paint = true;
-                            pending_redraws.push(self.window);
-                            scrolled_tabs = true;
-                            break;
-                        }
-
-                        if !scrolled_tabs
-                            && let Some(hit) = hit_test_active_viewport_panel(
-                                &dock.graph,
-                                &dock.panels,
-                                &layout,
-                                *position,
-                            )
-                            && let Some(e) = viewport_input_from_hit(
-                                self.window,
-                                hit,
-                                pixels_per_point,
-                                *position,
-                                ViewportInputKind::Wheel {
-                                    delta: *delta,
-                                    modifiers: *modifiers,
-                                },
-                            )
-                        {
-                            pending_effects.push(Effect::ViewportInput(e));
-                            pending_redraws.push(self.window);
-                        }
-                    }
-                    fret_core::PointerEvent::PinchGesture { .. } => {}
-                    fret_core::PointerEvent::Up {
-                        position,
-                        button,
-                        modifiers,
-                        click_count,
-                        ..
-                    } => {
-                        let mut handled = false;
-                        if *button == fret_core::MouseButton::Left && has_pending_dock_drag {
-                            self.pending_dock_drags.remove(&pointer_id);
-                            request_pointer_capture = Some(None);
-                            dock.hover = None;
-                            invalidate_paint = true;
-                            pending_redraws.push(self.window);
-                            handled = true;
-                        }
-                        if *button == fret_core::MouseButton::Left
-                            && self.floating_drag.take().is_some()
-                        {
-                            request_pointer_capture = Some(None);
-                            invalidate_paint = true;
-                            pending_redraws.push(self.window);
-                            handled = true;
-                        }
-
-                        if *button == fret_core::MouseButton::Left
-                            && let Some(floating) = self.pressed_floating_close.take()
-                        {
-                            request_pointer_capture = Some(None);
-                            self.hovered_floating_close = None;
-
-                            let clicked = hit_test_floating(&dock.graph, self.window, *position)
-                                .is_some_and(|(f, _chrome, kind)| {
-                                    f == floating && kind == FloatingHitKind::Close
-                                });
-                            if clicked
-                                && let Some(target_tabs) =
-                                    dock.graph.first_tabs_in_window(self.window)
-                            {
-                                pending_effects.push(Effect::Dock(DockOp::MergeFloatingInto {
-                                    window: self.window,
-                                    floating,
-                                    target_tabs,
-                                }));
-                                invalidate_layout = true;
-                            }
-
-                            invalidate_paint = true;
-                            pending_redraws.push(self.window);
-                            handled = true;
-                        }
-
-                        if *button == fret_core::MouseButton::Left
-                            && let Some(divider) = self.divider_drag.take()
-                        {
-                            let mut seen: std::collections::HashSet<DockNodeId> =
-                                std::collections::HashSet::new();
-                            let mut updates: Vec<fret_core::SplitFractionsUpdate> = Vec::new();
-                            for split in std::iter::once(divider.handle.split)
-                                .chain(divider.locks.iter().map(|l| l.split))
-                            {
-                                if !seen.insert(split) {
-                                    continue;
-                                }
-                                if let Some(DockNode::Split {
-                                    children,
-                                    fractions,
-                                    ..
-                                }) = dock.graph.node(split)
-                                    && children.len() >= 2
-                                    && children.len() == fractions.len()
-                                {
-                                    updates.push(fret_core::SplitFractionsUpdate {
-                                        split,
-                                        fractions: fractions.clone(),
-                                    });
-                                }
-                            }
-
-                            if !updates.is_empty() {
-                                pending_effects
-                                    .push(Effect::Dock(DockOp::SetSplitFractionsMany { updates }));
-                            }
-
-                            request_pointer_capture = Some(None);
-                            invalidate_layout = true;
-                            invalidate_paint = true;
-                            pending_redraws.push(self.window);
-                            handled = true;
-                        }
-                        if *button == fret_core::MouseButton::Left
-                            && let Some((tabs_node, tab_index, panel_key)) =
-                                self.pressed_tab_close.take()
-                        {
-                            request_pointer_capture = Some(None);
-
-                            let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
-                            let mut layout = compute_layout_map(&dock.graph, root, dock_bounds);
-                            if !layout.contains_key(&tabs_node) {
-                                for floating in dock.graph.floating_windows(self.window) {
-                                    let chrome = Self::floating_chrome(floating.rect);
-                                    let l = compute_layout_map(
-                                        &dock.graph,
-                                        floating.floating,
-                                        chrome.inner,
-                                    );
-                                    if l.contains_key(&tabs_node) {
-                                        layout = l;
-                                        break;
-                                    }
-                                }
-                            }
-                            let clicked = hit_test_tab(
-                                &dock.graph,
-                                &layout,
-                                &self.tab_scroll,
-                                &self.tab_widths,
-                                theme,
-                                *position,
-                            )
-                            .is_some_and(|(n, i, p, close)| {
-                                close && n == tabs_node && i == tab_index && p == panel_key
-                            });
-
-                            if clicked {
-                                pending_effects.push(Effect::Dock(DockOp::ClosePanel {
-                                    window: self.window,
-                                    panel: panel_key,
-                                }));
-                                invalidate_layout = true;
-                            }
-                            invalidate_paint = true;
-                            pending_redraws.push(self.window);
-                            handled = true;
-                        }
-
-                        if handled {
-                            dock.hover = None;
-                            invalidate_paint = true;
-                        }
-
-                        if !handled {
-                            let released_capture = self
-                                .viewport_capture
-                                .as_ref()
-                                .is_some_and(|c| c.button == *button);
-                            if released_capture {
-                                let capture = self.viewport_capture.take().unwrap();
-                                let e = viewport_input_from_hit_clamped(
-                                    self.window,
-                                    capture.hit.clone(),
-                                    pixels_per_point,
-                                    *position,
-                                    ViewportInputKind::PointerUp {
-                                        button: *button,
-                                        modifiers: *modifiers,
-                                        click_count: *click_count,
-                                    },
-                                );
-                                pending_effects.push(Effect::ViewportInput(e));
-                                pending_redraws.push(self.window);
-
+                            if handled {
                                 dock.hover = None;
-                                request_pointer_capture = Some(None);
                                 invalidate_paint = true;
                             }
 
-                            if !released_capture
-                                && *button == fret_core::MouseButton::Left
-                                && let Some(drag) = dock_drag.as_ref()
-                            {
-                                let allow_tear_off = cx.input_ctx.caps.ui.window_tear_off
-                                    && cx.input_ctx.caps.ui.multi_window;
-
-                                if drag.dragging {
-                                    match dock.hover.clone() {
-                                        Some(DockDropTarget::Dock(target)) => {
-                                            pending_effects.push(Effect::Dock(DockOp::MovePanel {
-                                                source_window: drag.source_window,
-                                                panel: drag.panel.clone(),
-                                                target_window: self.window,
-                                                target_tabs: target.tabs,
-                                                zone: target.zone,
-                                                insert_index: target.insert_index,
-                                            }));
-                                            invalidate_layout = true;
-                                        }
-                                        Some(DockDropTarget::Float { .. }) => {
-                                            if allow_tear_off {
-                                                pending_effects.push(Effect::Dock(
-                                                    DockOp::RequestFloatPanelToNewWindow {
-                                                        source_window: drag.source_window,
-                                                        panel: drag.panel.clone(),
-                                                        anchor: Some(fret_core::WindowAnchor {
-                                                            window: self.window,
-                                                            position: drag.grab_offset,
-                                                        }),
-                                                    },
-                                                ));
-                                                invalidate_layout = true;
-                                            }
-                                        }
-                                        None => {
-                                            if allow_tear_off && {
-                                                !window_bounds.contains(*position)
-                                                    || float_zone(dock_bounds).contains(*position)
-                                            } {
-                                                pending_effects.push(Effect::Dock(
-                                                    DockOp::RequestFloatPanelToNewWindow {
-                                                        source_window: drag.source_window,
-                                                        panel: drag.panel.clone(),
-                                                        anchor: Some(fret_core::WindowAnchor {
-                                                            window: self.window,
-                                                            position: drag.grab_offset,
-                                                        }),
-                                                    },
-                                                ));
-                                                invalidate_layout = true;
-                                            }
-                                        }
-                                    }
-                                }
-
-                                dock.hover = None;
-                                end_dock_drag = true;
-                                invalidate_paint = true;
-                            } else if !released_capture {
-                                let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
-                                if dock_bounds.contains(*position) {
-                                    let layout = compute_layout_map(&dock.graph, root, dock_bounds);
-                                    if let Some(hit) = hit_test_active_viewport_panel(
-                                        &dock.graph,
-                                        &dock.panels,
-                                        &layout,
-                                        *position,
-                                    ) && let Some(e) = viewport_input_from_hit(
+                            if !handled {
+                                let released_capture = self
+                                    .viewport_capture
+                                    .as_ref()
+                                    .is_some_and(|c| c.button == *button);
+                                if released_capture {
+                                    let capture = self.viewport_capture.take().unwrap();
+                                    let e = viewport_input_from_hit_clamped(
                                         self.window,
-                                        hit,
+                                        capture.hit.clone(),
                                         pixels_per_point,
                                         *position,
                                         ViewportInputKind::PointerUp {
@@ -1588,87 +1530,238 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             modifiers: *modifiers,
                                             click_count: *click_count,
                                         },
-                                    ) {
-                                        pending_effects.push(Effect::ViewportInput(e));
-                                        pending_redraws.push(self.window);
-                                    }
+                                    );
+                                    pending_effects.push(Effect::ViewportInput(e));
+                                    pending_redraws.push(self.window);
+
+                                    dock.hover = None;
+                                    request_pointer_capture = Some(None);
+                                    invalidate_paint = true;
                                 }
-                                dock.hover = None;
-                                invalidate_paint = true;
+
+                                if !released_capture
+                                    && *button == fret_core::MouseButton::Left
+                                    && let Some(drag) = dock_drag.as_ref()
+                                {
+                                    if drag.dragging {
+                                        match dock.hover.clone() {
+                                            Some(DockDropTarget::Dock(target)) => {
+                                                pending_effects.push(Effect::Dock(
+                                                    DockOp::MovePanel {
+                                                        source_window: drag.source_window,
+                                                        panel: drag.panel.clone(),
+                                                        target_window: self.window,
+                                                        target_tabs: target.tabs,
+                                                        zone: target.zone,
+                                                        insert_index: target.insert_index,
+                                                    },
+                                                ));
+                                                invalidate_layout = true;
+                                            }
+                                            Some(DockDropTarget::Float { .. }) => {
+                                                if allow_tear_off {
+                                                    pending_effects.push(Effect::Dock(
+                                                        DockOp::RequestFloatPanelToNewWindow {
+                                                            source_window: drag.source_window,
+                                                            panel: drag.panel.clone(),
+                                                            anchor: Some(fret_core::WindowAnchor {
+                                                                window: self.window,
+                                                                position: drag.grab_offset,
+                                                            }),
+                                                        },
+                                                    ));
+                                                    invalidate_layout = true;
+                                                }
+                                            }
+                                            None => {
+                                                if allow_tear_off && {
+                                                    !window_bounds.contains(*position)
+                                                        || float_zone(dock_bounds)
+                                                            .contains(*position)
+                                                } {
+                                                    pending_effects.push(Effect::Dock(
+                                                        DockOp::RequestFloatPanelToNewWindow {
+                                                            source_window: drag.source_window,
+                                                            panel: drag.panel.clone(),
+                                                            anchor: Some(fret_core::WindowAnchor {
+                                                                window: self.window,
+                                                                position: drag.grab_offset,
+                                                            }),
+                                                        },
+                                                    ));
+                                                    invalidate_layout = true;
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    dock.hover = None;
+                                    end_dock_drag = true;
+                                    invalidate_paint = true;
+                                } else if !released_capture {
+                                    let (_chrome, dock_bounds) =
+                                        dock_space_regions(self.last_bounds);
+                                    if dock_bounds.contains(*position) {
+                                        let layout =
+                                            compute_layout_map(&dock.graph, root, dock_bounds);
+                                        if let Some(hit) = hit_test_active_viewport_panel(
+                                            &dock.graph,
+                                            &dock.panels,
+                                            &layout,
+                                            *position,
+                                        ) && let Some(e) = viewport_input_from_hit(
+                                            self.window,
+                                            hit,
+                                            pixels_per_point,
+                                            *position,
+                                            ViewportInputKind::PointerUp {
+                                                button: *button,
+                                                modifiers: *modifiers,
+                                                click_count: *click_count,
+                                            },
+                                        ) {
+                                            pending_effects.push(Effect::ViewportInput(e));
+                                            pending_redraws.push(self.window);
+                                        }
+                                    }
+                                    dock.hover = None;
+                                    invalidate_paint = true;
+                                }
                             }
                         }
-                    }
-                },
-                fret_core::Event::InternalDrag(e) => {
-                    let position = e.position;
-                    let wants_dock_previews = docking_interaction_settings
-                        .drag_inversion
-                        .wants_dock_previews(e.modifiers);
-                    let invert_docking = !wants_dock_previews;
-                    match e.kind {
-                        fret_core::InternalDragKind::Enter | fret_core::InternalDragKind::Over => {
-                            if let Some(drag) = dock_drag.as_ref() {
-                                let prev_hover = dock.hover.clone();
-                                let mut dragging = drag.dragging;
-                                if drag.source_window == self.window {
-                                    // Match ImGui's default drag threshold (~6 logical px).
-                                    let activation = fret_dnd::ActivationConstraint::Distance {
-                                        px: docking_interaction_settings.tab_drag_threshold.0,
-                                    };
-                                    if !dragging
-                                        && activation.is_satisfied(
-                                            drag.start_tick.0,
-                                            now_tick.0,
-                                            drag.start,
-                                            position,
-                                        )
-                                    {
+                    },
+                    fret_core::Event::InternalDrag(e) => {
+                        let position = e.position;
+                        let wants_dock_previews = docking_interaction_settings
+                            .drag_inversion
+                            .wants_dock_previews(e.modifiers);
+                        let invert_docking = !wants_dock_previews;
+                        match e.kind {
+                            fret_core::InternalDragKind::Enter
+                            | fret_core::InternalDragKind::Over => {
+                                if let Some(drag) = dock_drag.as_ref() {
+                                    let prev_hover = dock.hover.clone();
+                                    let mut dragging = drag.dragging;
+                                    if drag.source_window == self.window {
+                                        // Match ImGui's default drag threshold (~6 logical px).
+                                        let activation = fret_dnd::ActivationConstraint::Distance {
+                                            px: docking_interaction_settings.tab_drag_threshold.0,
+                                        };
+                                        if !dragging
+                                            && activation.is_satisfied(
+                                                drag.start_tick.0,
+                                                now_tick.0,
+                                                drag.start,
+                                                position,
+                                            )
+                                        {
+                                            dragging = true;
+                                        }
+                                    } else if !dragging {
                                         dragging = true;
                                     }
-                                } else if !dragging {
-                                    dragging = true;
-                                }
 
-                                update_drag = Some((position, dragging));
+                                    update_drag = Some((position, dragging));
 
-                                if dragging {
-                                    let allow_tear_off = cx.input_ctx.caps.ui.window_tear_off
-                                        && cx.input_ctx.caps.ui.multi_window;
-                                    let margin = Px(10.0);
-                                    let requested_tear_off = allow_tear_off
-                                        && drag.source_window == self.window
-                                        && is_outside_bounds_with_margin(
-                                            window_bounds,
-                                            position,
-                                            margin,
-                                        )
-                                        && !drag.tear_off_requested
-                                        && !mark_drag_tear_off_requested;
+                                    if dragging {
+                                        let margin = Px(10.0);
+                                        let requested_tear_off = allow_tear_off
+                                            && drag.source_window == self.window
+                                            && is_outside_bounds_with_margin(
+                                                window_bounds,
+                                                position,
+                                                margin,
+                                            )
+                                            && !drag.tear_off_requested
+                                            && !mark_drag_tear_off_requested;
 
-                                    if requested_tear_off {
-                                        mark_drag_tear_off_requested = true;
-                                        pending_effects.push(Effect::Dock(
-                                            DockOp::RequestFloatPanelToNewWindow {
-                                                source_window: drag.source_window,
-                                                panel: drag.panel.clone(),
-                                                anchor: Some(fret_core::WindowAnchor {
+                                        if requested_tear_off {
+                                            mark_drag_tear_off_requested = true;
+                                            pending_effects.push(Effect::Dock(
+                                                DockOp::RequestFloatPanelToNewWindow {
+                                                    source_window: drag.source_window,
+                                                    panel: drag.panel.clone(),
+                                                    anchor: Some(fret_core::WindowAnchor {
+                                                        window: self.window,
+                                                        position: drag.grab_offset,
+                                                    }),
+                                                },
+                                            ));
+                                            invalidate_layout = true;
+                                            dock.hover = None;
+                                            pending_redraws.push(self.window);
+                                            invalidate_paint = true;
+                                        }
+
+                                        if !requested_tear_off {
+                                            let wants_float = invert_docking
+                                                || !window_bounds.contains(position)
+                                                || float_zone(dock_bounds).contains(position);
+
+                                            if wants_float {
+                                                dock.hover = Some(DockDropTarget::Float {
                                                     window: self.window,
-                                                    position: drag.grab_offset,
-                                                }),
-                                            },
-                                        ));
-                                        invalidate_layout = true;
+                                                });
+                                            } else {
+                                                let (layout_root, layout_bounds) =
+                                                    layout_context_for_position(
+                                                        &dock.graph,
+                                                        self.window,
+                                                        root,
+                                                        dock_bounds,
+                                                        position,
+                                                    );
+                                                if layout_bounds.contains(position) {
+                                                    let layout = compute_layout_map(
+                                                        &dock.graph,
+                                                        layout_root,
+                                                        layout_bounds,
+                                                    );
+                                                    dock.hover = dock_drop_target_via_dnd(
+                                                        &dock.graph,
+                                                        &layout,
+                                                        &self.tab_scroll,
+                                                        &self.tab_widths,
+                                                        position,
+                                                    )
+                                                    .map(DockDropTarget::Dock);
+                                                } else {
+                                                    dock.hover = None;
+                                                }
+                                            }
+                                        }
+                                    } else {
                                         dock.hover = None;
+                                    }
+
+                                    if dock.hover != prev_hover {
                                         pending_redraws.push(self.window);
                                         invalidate_paint = true;
                                     }
+                                } else {
+                                    dock.hover = None;
+                                }
+                            }
+                            fret_core::InternalDragKind::Leave
+                            | fret_core::InternalDragKind::Cancel => {
+                                if dock.hover.take().is_some() {
+                                    pending_redraws.push(self.window);
+                                    invalidate_paint = true;
+                                }
+                                dock.hover = None;
+                            }
+                            fret_core::InternalDragKind::Drop => {
+                                let prev_hover = dock.hover.clone();
+                                if let Some(drag) = dock_drag.as_ref() {
+                                    let mut dragging = drag.dragging;
+                                    if !dragging && drag.source_window != self.window {
+                                        dragging = true;
+                                    }
 
-                                    if !requested_tear_off {
-                                        let wants_float = invert_docking
-                                            || !window_bounds.contains(position)
-                                            || float_zone(dock_bounds).contains(position);
-
-                                        if wants_float {
+                                    if dragging {
+                                        if !window_bounds.contains(position)
+                                            || float_zone(dock_bounds).contains(position)
+                                        {
                                             dock.hover = Some(DockDropTarget::Float {
                                                 window: self.window,
                                             });
@@ -1699,138 +1792,38 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 dock.hover = None;
                                             }
                                         }
-                                    }
-                                } else {
-                                    dock.hover = None;
-                                }
 
-                                if dock.hover != prev_hover {
-                                    pending_redraws.push(self.window);
-                                    invalidate_paint = true;
-                                }
-                            } else {
-                                dock.hover = None;
-                            }
-                        }
-                        fret_core::InternalDragKind::Leave
-                        | fret_core::InternalDragKind::Cancel => {
-                            if dock.hover.take().is_some() {
-                                pending_redraws.push(self.window);
-                                invalidate_paint = true;
-                            }
-                            dock.hover = None;
-                        }
-                        fret_core::InternalDragKind::Drop => {
-                            let prev_hover = dock.hover.clone();
-                            if let Some(drag) = dock_drag.as_ref() {
-                                let mut dragging = drag.dragging;
-                                if !dragging && drag.source_window != self.window {
-                                    dragging = true;
-                                }
-
-                                if dragging {
-                                    let allow_tear_off = cx.input_ctx.caps.ui.window_tear_off
-                                        && cx.input_ctx.caps.ui.multi_window;
-                                    if !window_bounds.contains(position)
-                                        || float_zone(dock_bounds).contains(position)
-                                    {
-                                        dock.hover = Some(DockDropTarget::Float {
-                                            window: self.window,
-                                        });
-                                    } else {
-                                        let (layout_root, layout_bounds) =
-                                            layout_context_for_position(
-                                                &dock.graph,
-                                                self.window,
-                                                root,
-                                                dock_bounds,
-                                                position,
-                                            );
-                                        if layout_bounds.contains(position) {
-                                            let layout = compute_layout_map(
-                                                &dock.graph,
-                                                layout_root,
-                                                layout_bounds,
-                                            );
-                                            dock.hover = dock_drop_target_via_dnd(
-                                                &dock.graph,
-                                                &layout,
-                                                &self.tab_scroll,
-                                                &self.tab_widths,
-                                                position,
-                                            )
-                                            .map(DockDropTarget::Dock);
-                                        } else {
-                                            dock.hover = None;
+                                        if invert_docking {
+                                            dock.hover = Some(DockDropTarget::Float {
+                                                window: self.window,
+                                            });
                                         }
-                                    }
 
-                                    if invert_docking {
-                                        dock.hover = Some(DockDropTarget::Float {
-                                            window: self.window,
-                                        });
-                                    }
-
-                                    match dock.hover.clone() {
-                                        Some(DockDropTarget::Dock(target)) => {
-                                            pending_effects.push(Effect::Dock(DockOp::MovePanel {
-                                                source_window: drag.source_window,
-                                                panel: drag.panel.clone(),
-                                                target_window: self.window,
-                                                target_tabs: target.tabs,
-                                                zone: target.zone,
-                                                insert_index: target.insert_index,
-                                            }));
-                                            invalidate_layout = true;
-                                        }
-                                        Some(DockDropTarget::Float { .. }) => {
-                                            let wants_tear_off = allow_tear_off
-                                                && (!window_bounds.contains(position)
-                                                    || float_zone(dock_bounds).contains(position));
-                                            if wants_tear_off {
-                                                // Avoid requesting the same tear-off twice for a
-                                                // single dock drag session. The runner may deliver
-                                                // `Drop` via multiple routes (e.g. device events
-                                                // outside windows), but the window creation request
-                                                // should remain idempotent at the UI layer.
-                                                if !drag.tear_off_requested
-                                                    && !mark_drag_tear_off_requested
-                                                {
-                                                    mark_drag_tear_off_requested = true;
-                                                    pending_effects.push(Effect::Dock(
-                                                        DockOp::RequestFloatPanelToNewWindow {
-                                                            source_window: drag.source_window,
-                                                            panel: drag.panel.clone(),
-                                                            anchor: Some(fret_core::WindowAnchor {
-                                                                window: self.window,
-                                                                position: drag.grab_offset,
-                                                            }),
-                                                        },
-                                                    ));
-                                                }
-                                            } else {
-                                                let rect = self.default_floating_rect_for_panel(
-                                                    &drag.panel,
-                                                    position,
-                                                    drag.grab_offset,
-                                                    window_bounds,
-                                                );
+                                        match dock.hover.clone() {
+                                            Some(DockDropTarget::Dock(target)) => {
                                                 pending_effects.push(Effect::Dock(
-                                                    DockOp::FloatPanelInWindow {
+                                                    DockOp::MovePanel {
                                                         source_window: drag.source_window,
                                                         panel: drag.panel.clone(),
                                                         target_window: self.window,
-                                                        rect,
+                                                        target_tabs: target.tabs,
+                                                        zone: target.zone,
+                                                        insert_index: target.insert_index,
                                                     },
                                                 ));
+                                                invalidate_layout = true;
                                             }
-                                            invalidate_layout = true;
-                                        }
-                                        None => {
-                                            if !window_bounds.contains(position)
-                                                || float_zone(dock_bounds).contains(position)
-                                            {
-                                                if allow_tear_off {
+                                            Some(DockDropTarget::Float { .. }) => {
+                                                let wants_tear_off = allow_tear_off
+                                                    && (!window_bounds.contains(position)
+                                                        || float_zone(dock_bounds)
+                                                            .contains(position));
+                                                if wants_tear_off {
+                                                    // Avoid requesting the same tear-off twice for a
+                                                    // single dock drag session. The runner may deliver
+                                                    // `Drop` via multiple routes (e.g. device events
+                                                    // outside windows), but the window creation request
+                                                    // should remain idempotent at the UI layer.
                                                     if !drag.tear_off_requested
                                                         && !mark_drag_tear_off_requested
                                                     {
@@ -1867,44 +1860,85 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 }
                                                 invalidate_layout = true;
                                             }
+                                            None => {
+                                                if !window_bounds.contains(position)
+                                                    || float_zone(dock_bounds).contains(position)
+                                                {
+                                                    if allow_tear_off {
+                                                        if !drag.tear_off_requested
+                                                            && !mark_drag_tear_off_requested
+                                                        {
+                                                            mark_drag_tear_off_requested = true;
+                                                            pending_effects.push(Effect::Dock(
+                                                            DockOp::RequestFloatPanelToNewWindow {
+                                                                source_window: drag.source_window,
+                                                                panel: drag.panel.clone(),
+                                                                anchor: Some(
+                                                                    fret_core::WindowAnchor {
+                                                                        window: self.window,
+                                                                        position: drag.grab_offset,
+                                                                    },
+                                                                ),
+                                                            },
+                                                        ));
+                                                        }
+                                                    } else {
+                                                        let rect = self
+                                                            .default_floating_rect_for_panel(
+                                                                &drag.panel,
+                                                                position,
+                                                                drag.grab_offset,
+                                                                window_bounds,
+                                                            );
+                                                        pending_effects.push(Effect::Dock(
+                                                            DockOp::FloatPanelInWindow {
+                                                                source_window: drag.source_window,
+                                                                panel: drag.panel.clone(),
+                                                                target_window: self.window,
+                                                                rect,
+                                                            },
+                                                        ));
+                                                    }
+                                                    invalidate_layout = true;
+                                                }
+                                            }
                                         }
                                     }
-                                }
 
-                                dock.hover = None;
-                                end_dock_drag = true;
-                                invalidate_paint = true;
-                                pending_redraws.push(self.window);
-                            } else {
-                                // Drop can be delivered after the drag session is already cleared
-                                // by the runner/driver. Always clear stale hover so the UI doesn't
-                                // get stuck in a highlighted state.
-                                dock.hover = None;
-                                if prev_hover.is_some() {
+                                    dock.hover = None;
+                                    end_dock_drag = true;
                                     invalidate_paint = true;
                                     pending_redraws.push(self.window);
+                                } else {
+                                    // Drop can be delivered after the drag session is already cleared
+                                    // by the runner/driver. Always clear stale hover so the UI doesn't
+                                    // get stuck in a highlighted state.
+                                    dock.hover = None;
+                                    if prev_hover.is_some() {
+                                        invalidate_paint = true;
+                                        pending_redraws.push(self.window);
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                fret_core::Event::PointerCancel(e) => {
-                    if self.pending_dock_drags.remove(&e.pointer_id).is_some() {
-                        request_pointer_capture = Some(None);
-                        dock.hover = None;
-                        invalidate_paint = true;
-                        pending_redraws.push(self.window);
+                    fret_core::Event::PointerCancel(e) => {
+                        if self.pending_dock_drags.remove(&e.pointer_id).is_some() {
+                            request_pointer_capture = Some(None);
+                            dock.hover = None;
+                            invalidate_paint = true;
+                            pending_redraws.push(self.window);
+                        }
+                        if dock_drag.is_some() {
+                            dock.hover = None;
+                            end_dock_drag = true;
+                            invalidate_paint = true;
+                            pending_redraws.push(self.window);
+                        }
                     }
-                    if dock_drag.is_some() {
-                        dock.hover = None;
-                        end_dock_drag = true;
-                        invalidate_paint = true;
-                        pending_redraws.push(self.window);
-                    }
+                    _ => {}
                 }
-                _ => {}
-            }
-        }
+            });
 
         if request_focus.is_none()
             && let Some(panel) = request_focus_panel
@@ -1976,6 +2010,9 @@ impl<H: UiHost> Widget<H> for DockSpace {
         for effect in pending_effects {
             cx.app.push_effect(effect);
         }
+        if stop_propagation {
+            cx.stop_propagation();
+        }
     }
 
     fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &CommandId) -> bool {
@@ -2015,8 +2052,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
             fret_runtime::DRAG_KIND_DOCK_PANEL,
             cx.node,
         );
-        if let Some(dock) = cx.app.global_mut::<DockManager>() {
-            dock.register_dock_space_node(self.window, cx.node);
+        if cx.app.global::<DockManager>().is_some() {
+            cx.app
+                .with_global_mut_untracked(DockManager::default, |dock, _app| {
+                    dock.register_dock_space_node(self.window, cx.node);
+                });
         }
 
         let Some((active_bounds, layout)) = (|| {
@@ -2119,15 +2159,22 @@ impl<H: UiHost> Widget<H> for DockSpace {
             cx.app.push_effect(Effect::RequestAnimationFrame(window));
         }
 
-        let paint_panels = {
-            let Some(dock) = cx.app.global_mut::<DockManager>() else {
-                self.paint_empty_state(cx);
-                return;
-            };
-            dock.register_dock_space_node(self.window, cx.node);
+        if cx.app.global::<DockManager>().is_none() {
+            self.paint_empty_state(cx);
+            return;
+        }
+
+        let dock_space_node = cx.node;
+        let scale_factor = cx.scale_factor;
+        let bounds = cx.bounds;
+        let app = &mut *cx.app;
+        let services = &mut *cx.services;
+        let scene = &mut *cx.scene;
+
+        let paint_panels = app.with_global_mut_untracked(DockManager::default, |dock, _app| {
+            dock.register_dock_space_node(self.window, dock_space_node);
             let Some(root) = dock.graph.window_root(self.window) else {
-                self.paint_empty_state(cx);
-                return;
+                return None;
             };
 
             let root_layout = compute_layout_map(&dock.graph, root, dock_bounds);
@@ -2149,7 +2196,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
             let hover = dock.hover.clone();
 
-            self.rebuild_tab_titles(cx.services, theme, cx.scale_factor, &*dock, &layout_all);
+            self.rebuild_tab_titles(services, theme, scale_factor, &*dock, &layout_all);
             self.tab_widths.clear();
             for (&node_id, &_rect) in layout_all.iter() {
                 let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(node_id) else {
@@ -2217,7 +2264,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     tab_close_glyph: self.tab_close_glyph,
                 },
                 overlay_hooks.as_deref(),
-                cx.scene,
+                scene,
             );
 
             let mut paint_panels: Vec<(PanelKey, Rect)> =
@@ -2235,7 +2282,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 let radius_sm = theme.metric_required("metric.radius.sm");
 
                 let border_color = Color { a: 0.85, ..border };
-                cx.scene.push(SceneOp::Quad {
+                scene.push(SceneOp::Quad {
                     order: fret_core::DrawOrder(0),
                     rect: chrome.outer,
                     background: surface,
@@ -2243,7 +2290,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     border_color,
                     corner_radii: fret_core::Corners::all(Px(radius_md.0.max(6.0))),
                 });
-                cx.scene.push(SceneOp::Quad {
+                scene.push(SceneOp::Quad {
                     order: fret_core::DrawOrder(1),
                     rect: chrome.title_bar,
                     background: surface,
@@ -2255,7 +2302,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 let close_hovered = self.hovered_floating_close == Some(floating.floating);
                 let close_pressed = self.pressed_floating_close == Some(floating.floating);
                 if close_hovered || close_pressed {
-                    cx.scene.push(SceneOp::Quad {
+                    scene.push(SceneOp::Quad {
                         order: fret_core::DrawOrder(2),
                         rect: chrome.close_button,
                         background: hover_bg,
@@ -2276,7 +2323,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     } else {
                         fg_muted
                     };
-                    cx.scene.push(SceneOp::Text {
+                    scene.push(SceneOp::Text {
                         order: fret_core::DrawOrder(3),
                         origin: Point::new(text_x, text_y),
                         text: glyph.blob,
@@ -2302,7 +2349,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         tab_close_glyph: self.tab_close_glyph,
                     },
                     overlay_hooks.as_deref(),
-                    cx.scene,
+                    scene,
                 );
 
                 paint_panels.extend(active_panel_content_bounds(&dock.graph, layout));
@@ -2313,8 +2360,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 &dock.graph,
                 &layout_all,
                 self.divider_drag.as_ref().map(|d| d.handle.split),
-                cx.scale_factor,
-                cx.scene,
+                scale_factor,
+                scene,
             );
 
             if is_dock_dragging {
@@ -2322,24 +2369,29 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     theme,
                     hover.clone(),
                     self.window,
-                    cx.bounds,
+                    bounds,
                     &layout_all,
-                    cx.scene,
+                    scene,
                 );
             }
             paint_drop_overlay(
                 theme,
                 hover,
                 self.window,
-                cx.bounds,
+                bounds,
                 &dock.graph,
                 &layout_all,
                 &self.tab_scroll,
                 &self.tab_widths,
-                cx.scene,
+                scene,
             );
 
-            paint_panels
+            Some(paint_panels)
+        });
+
+        let Some(paint_panels) = paint_panels else {
+            self.paint_empty_state(cx);
+            return;
         };
 
         let panel_nodes = self.panel_nodes(cx.app);

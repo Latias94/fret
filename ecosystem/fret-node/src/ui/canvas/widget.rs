@@ -8874,7 +8874,6 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
             let tile_budget_limit =
                 Self::GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME.select(view_interacting);
             let mut tile_budget = WorkBudget::new(tile_budget_limit);
-            let mut skipped_tiles: u32 = 0;
             let base_key = {
                 let mut b = TileCacheKeyBuilder::new("fret-node.grid.tile.v1");
                 b.add_f32_bits(zoom);
@@ -8902,7 +8901,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                 |tile| tile.origin(tile_size_canvas),
                 tile_ops_for_key,
             );
-            skipped_tiles = warmup.skipped_tiles;
+            let skipped_tiles = warmup.skipped_tiles;
 
             if skipped_tiles > 0 {
                 // Continue warming tiles incrementally to avoid a single frame spike.

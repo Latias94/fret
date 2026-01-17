@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use fret_core::{FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
-use fret_ui::element::{AnyElement, TextProps};
+use fret_core::{FontId, FontWeight, SemanticsRole, TextOverflow, TextStyle, TextWrap};
+use fret_ui::element::{AnyElement, SemanticsProps, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
@@ -97,7 +97,14 @@ fn alert_with_patch<H: UiHost>(
         LayoutRefinement::default().merge(layout_override),
     );
 
-    shadcn_layout::container_vstack_gap(cx, props, Space::N1p5, children)
+    let container = shadcn_layout::container_vstack_gap(cx, props, Space::N1p5, children);
+    cx.semantics(
+        SemanticsProps {
+            role: SemanticsRole::Alert,
+            ..Default::default()
+        },
+        move |_cx| vec![container],
+    )
 }
 
 #[derive(Debug, Clone)]

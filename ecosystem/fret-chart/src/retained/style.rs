@@ -476,15 +476,14 @@ mod tests {
     #[test]
     fn series_palette_prefers_chart_palette_tokens_over_shadcn_aliases() {
         let mut app = App::new();
-        let theme = Theme::global_mut(&mut app);
-
         let mut cfg = ThemeConfig::default();
         cfg.colors
             .insert("chart.palette.0".to_string(), "#FF0000".to_string());
         cfg.colors
             .insert("chart-1".to_string(), "#00FF00".to_string());
-        theme.apply_config(&cfg);
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
 
+        let theme = Theme::global(&app);
         let style = ChartStyle::from_theme(theme);
         assert_eq!(
             style.series_palette[0],

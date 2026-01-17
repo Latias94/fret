@@ -9,24 +9,34 @@ use fret_runtime::{
 use crate::App;
 
 impl GlobalsHost for App {
+    #[track_caller]
     fn set_global<T: Any>(&mut self, value: T) {
-        App::set_global(self, value);
+        let at = std::panic::Location::caller();
+        App::set_global_at(self, value, at);
     }
 
     fn global<T: Any>(&self) -> Option<&T> {
         App::global(self)
     }
 
-    fn global_mut<T: Any>(&mut self) -> Option<&mut T> {
-        App::global_mut(self)
-    }
-
+    #[track_caller]
     fn with_global_mut<T: Any, R>(
         &mut self,
         init: impl FnOnce() -> T,
         f: impl FnOnce(&mut T, &mut Self) -> R,
     ) -> R {
-        App::with_global_mut(self, init, f)
+        let at = std::panic::Location::caller();
+        App::with_global_mut_impl(self, init, f, at, true)
+    }
+
+    #[track_caller]
+    fn with_global_mut_untracked<T: Any, R>(
+        &mut self,
+        init: impl FnOnce() -> T,
+        f: impl FnOnce(&mut T, &mut Self) -> R,
+    ) -> R {
+        let at = std::panic::Location::caller();
+        App::with_global_mut_impl(self, init, f, at, false)
     }
 }
 

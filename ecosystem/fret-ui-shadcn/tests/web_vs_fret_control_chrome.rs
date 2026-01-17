@@ -109,6 +109,16 @@ fn web_corner_radius_effective_px(node: &WebNode) -> Option<f32> {
     Some(raw.min(max))
 }
 
+fn web_corner_radius_effective_px_for(node: &WebNode, key: &str) -> Option<f32> {
+    let raw = node
+        .computed_style
+        .get(key)
+        .map(String::as_str)
+        .and_then(parse_px)?;
+    let max = node.rect.w.min(node.rect.h) * 0.5;
+    Some(raw.min(max))
+}
+
 #[derive(Debug, Clone, Copy)]
 struct PaintedQuad {
     #[allow(dead_code)]

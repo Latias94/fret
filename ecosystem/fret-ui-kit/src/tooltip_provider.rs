@@ -86,7 +86,7 @@ pub fn with_tooltip_provider<H: UiHost, R>(
         let provider_id = cx.root_id();
 
         cx.app
-            .with_global_mut(TooltipProviderService::default, |svc, app| {
+            .with_global_mut_untracked(TooltipProviderService::default, |svc, app| {
                 svc.begin_frame(app.frame_id());
                 let entry = svc.providers.entry(provider_id).or_default();
                 entry.config = config;
@@ -96,7 +96,7 @@ pub fn with_tooltip_provider<H: UiHost, R>(
         let out = f(cx);
 
         cx.app
-            .with_global_mut(TooltipProviderService::default, |svc, app| {
+            .with_global_mut_untracked(TooltipProviderService::default, |svc, app| {
                 svc.begin_frame(app.frame_id());
                 let _ = svc.active_stack.pop();
             });
@@ -107,7 +107,7 @@ pub fn with_tooltip_provider<H: UiHost, R>(
 
 pub fn current_config<H: UiHost>(cx: &mut ElementContext<'_, H>) -> TooltipProviderConfig {
     cx.app
-        .with_global_mut(TooltipProviderService::default, |svc, app| {
+        .with_global_mut_untracked(TooltipProviderService::default, |svc, app| {
             svc.begin_frame(app.frame_id());
             svc.current_state().config
         })
@@ -115,7 +115,7 @@ pub fn current_config<H: UiHost>(cx: &mut ElementContext<'_, H>) -> TooltipProvi
 
 pub fn open_delay_ticks<H: UiHost>(cx: &mut ElementContext<'_, H>, now: u64) -> u64 {
     cx.app
-        .with_global_mut(TooltipProviderService::default, |svc, app| {
+        .with_global_mut_untracked(TooltipProviderService::default, |svc, app| {
             svc.begin_frame(app.frame_id());
             let st = svc.current_state();
             st.delay_group.open_delay_ticks(
@@ -134,7 +134,7 @@ pub fn open_delay_ticks_with_base<H: UiHost>(
     base_delay_ticks: u64,
 ) -> u64 {
     cx.app
-        .with_global_mut(TooltipProviderService::default, |svc, app| {
+        .with_global_mut_untracked(TooltipProviderService::default, |svc, app| {
             svc.begin_frame(app.frame_id());
             let st = svc.current_state();
             st.delay_group.open_delay_ticks(
@@ -146,7 +146,7 @@ pub fn open_delay_ticks_with_base<H: UiHost>(
 
 pub fn note_closed<H: UiHost>(cx: &mut ElementContext<'_, H>, now: u64) {
     cx.app
-        .with_global_mut(TooltipProviderService::default, |svc, app| {
+        .with_global_mut_untracked(TooltipProviderService::default, |svc, app| {
             svc.begin_frame(app.frame_id());
             svc.current_state_mut().delay_group.note_closed(now);
         });
@@ -156,7 +156,7 @@ pub fn last_opened_tooltip<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> Option<(GlobalElementId, u64)> {
     cx.app
-        .with_global_mut(TooltipProviderService::default, |svc, app| {
+        .with_global_mut_untracked(TooltipProviderService::default, |svc, app| {
             svc.begin_frame(app.frame_id());
             let st = svc.current_state();
             st.last_opened_tooltip.map(|id| (id, st.last_opened_token))
@@ -168,7 +168,7 @@ pub fn note_opened_tooltip<H: UiHost>(
     tooltip: GlobalElementId,
 ) -> u64 {
     cx.app
-        .with_global_mut(TooltipProviderService::default, |svc, app| {
+        .with_global_mut_untracked(TooltipProviderService::default, |svc, app| {
             svc.begin_frame(app.frame_id());
             let st = svc.current_state_mut();
             st.last_opened_token = st.last_opened_token.saturating_add(1);
@@ -189,7 +189,7 @@ pub fn note_opened_tooltip<H: UiHost>(
 
 pub fn pointer_in_transit_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
     cx.app
-        .with_global_mut(TooltipProviderService::default, |svc, app| {
+        .with_global_mut_untracked(TooltipProviderService::default, |svc, app| {
             svc.begin_frame(app.frame_id());
             let st = svc.current_state_mut();
             let existing = st.pointer_in_transit_model.clone();
@@ -207,7 +207,7 @@ pub fn pointer_transit_geometry_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> Model<Option<(Rect, Rect)>> {
     cx.app
-        .with_global_mut(TooltipProviderService::default, |svc, app| {
+        .with_global_mut_untracked(TooltipProviderService::default, |svc, app| {
             svc.begin_frame(app.frame_id());
             let st = svc.current_state_mut();
             let existing = st.pointer_transit_geometry_model.clone();
@@ -226,7 +226,7 @@ pub fn set_pointer_transit_geometry<H: UiHost>(
     geometry: Option<(Rect, Rect)>,
 ) {
     cx.app
-        .with_global_mut(TooltipProviderService::default, |svc, app| {
+        .with_global_mut_untracked(TooltipProviderService::default, |svc, app| {
             svc.begin_frame(app.frame_id());
             let st = svc.current_state_mut();
             let model = st
@@ -244,7 +244,7 @@ pub fn set_pointer_transit_geometry<H: UiHost>(
 
 pub fn is_pointer_in_transit<H: UiHost>(cx: &mut ElementContext<'_, H>) -> bool {
     cx.app
-        .with_global_mut(TooltipProviderService::default, |svc, app| {
+        .with_global_mut_untracked(TooltipProviderService::default, |svc, app| {
             svc.begin_frame(app.frame_id());
             svc.current_state().pointer_in_transit
         })
@@ -252,7 +252,7 @@ pub fn is_pointer_in_transit<H: UiHost>(cx: &mut ElementContext<'_, H>) -> bool 
 
 pub fn set_pointer_in_transit<H: UiHost>(cx: &mut ElementContext<'_, H>, in_transit: bool) {
     cx.app
-        .with_global_mut(TooltipProviderService::default, |svc, app| {
+        .with_global_mut_untracked(TooltipProviderService::default, |svc, app| {
             svc.begin_frame(app.frame_id());
             let st = svc.current_state_mut();
             if st.pointer_in_transit == in_transit {

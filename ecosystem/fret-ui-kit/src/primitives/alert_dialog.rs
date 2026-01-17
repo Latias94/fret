@@ -141,7 +141,7 @@ pub fn register_cancel_for_open_model<H: UiHost>(
     element: GlobalElementId,
 ) {
     cx.app
-        .with_global_mut(AlertDialogCancelRegistry::default, |reg, _app| {
+        .with_global_mut_untracked(AlertDialogCancelRegistry::default, |reg, _app| {
             reg.by_open.entry(open_id).or_insert(element);
         });
 }
@@ -149,7 +149,7 @@ pub fn register_cancel_for_open_model<H: UiHost>(
 /// Clears the stored cancel element for the given open model id.
 pub fn clear_cancel_for_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>, open_id: ModelId) {
     cx.app
-        .with_global_mut(AlertDialogCancelRegistry::default, |reg, _app| {
+        .with_global_mut_untracked(AlertDialogCancelRegistry::default, |reg, _app| {
             reg.by_open.remove(&open_id);
         });
 }
@@ -161,7 +161,7 @@ pub fn cancel_element_for_open_model<H: UiHost>(
     open_id: ModelId,
 ) -> Option<GlobalElementId> {
     cx.app
-        .with_global_mut(AlertDialogCancelRegistry::default, |reg, _app| {
+        .with_global_mut_untracked(AlertDialogCancelRegistry::default, |reg, _app| {
             reg.by_open.get(&open_id).copied()
         })
 }

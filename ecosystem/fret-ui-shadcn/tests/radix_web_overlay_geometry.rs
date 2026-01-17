@@ -744,7 +744,7 @@ fn radix_web_popover_open_geometry_matches_fret() {
         // Keep this test aligned to the upstream snapshots without coupling the recipe default.
         cfg.metrics
             .insert("component.select.min_width".to_string(), 144.0);
-        fret_ui::Theme::global_mut(&mut app).apply_config(&cfg);
+        fret_ui::Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
     }
     assert_close(
         "select theme min width metric",
@@ -1218,7 +1218,7 @@ fn radix_web_select_item_aligned_geometry_matches_fret() {
         // shadcn recipe defaults.
         cfg.metrics
             .insert("component.select.min_width".to_string(), 144.0);
-        fret_ui::Theme::global_mut(&mut app).apply_config(&cfg);
+        fret_ui::Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
     }
     let value: Model<Option<Arc<str>>> = app.models_mut().insert(None);
     let open: Model<bool> = app.models_mut().insert(false);

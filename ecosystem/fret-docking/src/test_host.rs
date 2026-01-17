@@ -41,10 +41,6 @@ impl TestHost {
         GlobalsHost::global(self)
     }
 
-    pub(crate) fn global_mut<T: Any>(&mut self) -> Option<&mut T> {
-        GlobalsHost::global_mut(self)
-    }
-
     pub(crate) fn with_global_mut<T: Any, R>(
         &mut self,
         init: impl FnOnce() -> T,
@@ -149,12 +145,6 @@ impl GlobalsHost for TestHost {
         self.globals
             .get(&TypeId::of::<T>())
             .and_then(|v| v.downcast_ref::<T>())
-    }
-
-    fn global_mut<T: Any>(&mut self) -> Option<&mut T> {
-        self.globals
-            .get_mut(&TypeId::of::<T>())
-            .and_then(|v| v.downcast_mut::<T>())
     }
 
     fn with_global_mut<T: Any, R>(

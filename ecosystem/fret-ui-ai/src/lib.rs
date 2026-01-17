@@ -5,4 +5,3 @@
 pub mod elements;
 
 pub use elements::{Conversation, Message, MessageRole};
-

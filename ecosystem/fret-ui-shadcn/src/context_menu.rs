@@ -2075,7 +2075,7 @@ impl ContextMenu {
             let open = self.open;
             let on_dismiss_request = self.on_dismiss_request.clone();
             let open_model_id = open.id();
-            let anchor_store_model: Model<HashMap<ModelId, Point>> = cx.app.with_global_mut(
+            let anchor_store_model: Model<HashMap<ModelId, Point>> = cx.app.with_global_mut_untracked(
                 ContextMenuAnchorStore::default,
                 |st, app| {
                     if let Some(model) = st.by_open_model.clone() {

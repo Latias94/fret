@@ -21,6 +21,9 @@ struct GlobalLeaseMarker {
 
 pub struct App {
     globals: HashMap<TypeId, Box<dyn Any>>,
+    global_type_names: HashMap<TypeId, &'static str>,
+    #[cfg(debug_assertions)]
+    global_last_changed_at: HashMap<TypeId, &'static std::panic::Location<'static>>,
     changed_globals: Vec<TypeId>,
     changed_globals_dedup: HashSet<TypeId>,
     models: ModelStore,
@@ -46,6 +49,9 @@ impl App {
     pub fn new() -> Self {
         let mut app = Self {
             globals: HashMap::new(),
+            global_type_names: HashMap::new(),
+            #[cfg(debug_assertions)]
+            global_last_changed_at: HashMap::new(),
             changed_globals: Vec::new(),
             changed_globals_dedup: HashSet::new(),
             models: ModelStore::default(),
@@ -79,9 +85,39 @@ impl App {
         }
     }
 
+    pub(crate) fn mark_global_changed_at(
+        &mut self,
+        id: TypeId,
+        at: &'static std::panic::Location<'static>,
+    ) {
+        #[cfg(debug_assertions)]
+        {
+            self.global_last_changed_at.insert(id, at);
+        }
+        let _ = at;
+        self.mark_global_changed(id);
+    }
+
     pub fn take_changed_globals(&mut self) -> Vec<TypeId> {
         self.changed_globals_dedup.clear();
         std::mem::take(&mut self.changed_globals)
+    }
+
+    pub fn global_type_name(&self, id: TypeId) -> Option<&'static str> {
+        self.global_type_names.get(&id).copied()
+    }
+
+    pub fn global_changed_at(&self, id: TypeId) -> Option<&'static std::panic::Location<'static>> {
+        #[cfg(debug_assertions)]
+        {
+            return self.global_last_changed_at.get(&id).copied();
+        }
+
+        #[cfg(not(debug_assertions))]
+        {
+            let _ = id;
+            None
+        }
     }
 
     #[track_caller]
@@ -99,12 +135,24 @@ impl App {
 
     #[track_caller]
     pub fn set_global<T: Any>(&mut self, value: T) {
+        let changed_at = std::panic::Location::caller();
+        self.set_global_at(value, changed_at);
+    }
+
+    pub(crate) fn set_global_at<T: Any>(
+        &mut self,
+        value: T,
+        changed_at: &'static std::panic::Location<'static>,
+    ) {
         let type_id = TypeId::of::<T>();
         if let Some(existing) = self.globals.get(&type_id) {
             Self::assert_global_not_leased::<T>(existing.as_ref());
         }
         self.globals.insert(type_id, Box::new(value));
-        self.mark_global_changed(type_id);
+        self.global_type_names
+            .entry(type_id)
+            .or_insert(std::any::type_name::<T>());
+        self.mark_global_changed_at(type_id, changed_at);
     }
 
     #[track_caller]
@@ -115,22 +163,39 @@ impl App {
     }
 
     #[track_caller]
-    pub fn global_mut<T: Any>(&mut self) -> Option<&mut T> {
-        let value = self.globals.get_mut(&TypeId::of::<T>())?;
-        Self::assert_global_not_leased::<T>(value.as_ref());
-        value.downcast_mut::<T>()
-    }
-
-    #[track_caller]
     pub fn with_global_mut<T: Any, R>(
         &mut self,
         init: impl FnOnce() -> T,
         f: impl FnOnce(&mut T, &mut App) -> R,
     ) -> R {
+        let leased_at = std::panic::Location::caller();
+        self.with_global_mut_impl(init, f, leased_at, true)
+    }
+
+    #[track_caller]
+    pub fn with_global_mut_untracked<T: Any, R>(
+        &mut self,
+        init: impl FnOnce() -> T,
+        f: impl FnOnce(&mut T, &mut App) -> R,
+    ) -> R {
+        let leased_at = std::panic::Location::caller();
+        self.with_global_mut_impl(init, f, leased_at, false)
+    }
+
+    pub(crate) fn with_global_mut_impl<T: Any, R>(
+        &mut self,
+        init: impl FnOnce() -> T,
+        f: impl FnOnce(&mut T, &mut App) -> R,
+        leased_at: &'static std::panic::Location<'static>,
+        mark_changed: bool,
+    ) -> R {
         let type_id = TypeId::of::<T>();
+        self.global_type_names
+            .entry(type_id)
+            .or_insert(std::any::type_name::<T>());
         let marker = GlobalLeaseMarker {
             type_name: std::any::type_name::<T>(),
-            leased_at: std::panic::Location::caller(),
+            leased_at,
         };
         let existing = self.globals.insert(type_id, Box::new(marker));
 
@@ -140,9 +205,7 @@ impl App {
                 if let Some(marker) = v.downcast_ref::<GlobalLeaseMarker>() {
                     panic!(
                         "global already leased: {} (type_id={type_id:?}); leased at {}; accessed at {}",
-                        marker.type_name,
-                        marker.leased_at,
-                        std::panic::Location::caller()
+                        marker.type_name, marker.leased_at, leased_at
                     );
                 }
                 *v.downcast::<T>().expect("global type id must match")
@@ -163,7 +226,9 @@ impl App {
             panic!("global lease marker was replaced unexpectedly: type_id={type_id:?}");
         }
 
-        self.mark_global_changed(type_id);
+        if mark_changed {
+            self.mark_global_changed_at(type_id, leased_at);
+        }
 
         match result {
             Ok(value) => value,

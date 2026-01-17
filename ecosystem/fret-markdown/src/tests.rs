@@ -39,12 +39,6 @@ impl GlobalsHost for ThemeTestHost {
             .and_then(|v| v.downcast_ref::<T>())
     }
 
-    fn global_mut<T: Any>(&mut self) -> Option<&mut T> {
-        self.globals
-            .get_mut(&TypeId::of::<T>())
-            .and_then(|v| v.downcast_mut::<T>())
-    }
-
     fn with_global_mut<T: Any, R>(
         &mut self,
         init: impl FnOnce() -> T,
@@ -213,21 +207,21 @@ impl DragHost for ThemeTestHost {
 
 fn theme_with_metrics(metrics: &[(&str, f32)]) -> Theme {
     let mut host = ThemeTestHost::default();
-    let theme = Theme::global_mut(&mut host);
+    Theme::with_global_mut(&mut host, |theme| {
+        let mut cfg = ThemeConfig {
+            name: theme.name.clone(),
+            author: theme.author.clone(),
+            url: theme.url.clone(),
+            colors: HashMap::new(),
+            metrics: HashMap::new(),
+        };
+        for (k, v) in metrics {
+            cfg.metrics.insert((*k).to_string(), *v);
+        }
+        theme.apply_config(&cfg);
+    });
 
-    let mut cfg = ThemeConfig {
-        name: theme.name.clone(),
-        author: theme.author.clone(),
-        url: theme.url.clone(),
-        colors: HashMap::new(),
-        metrics: HashMap::new(),
-    };
-    for (k, v) in metrics {
-        cfg.metrics.insert((*k).to_string(), *v);
-    }
-
-    theme.apply_config(&cfg);
-    theme.clone()
+    Theme::global(&host).clone()
 }
 
 fn count_top_level_list_items(events: &[pulldown_cmark::Event<'static>]) -> usize {
