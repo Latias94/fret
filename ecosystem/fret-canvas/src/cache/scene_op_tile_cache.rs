@@ -1,7 +1,9 @@
 use fret_core::{Point, Px, Rect, Scene, SceneOp};
 use std::cmp::Reverse;
 use std::collections::HashMap;
+use std::collections::hash_map::DefaultHasher;
 use std::hash::Hash;
+use std::hash::Hasher;
 
 /// 2D tile coordinate for canvas-space tiling.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -21,6 +23,69 @@ impl TileCoord {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TileGrid2D {
     tile_size_canvas: f32,
+}
+
+/// Helper for building deterministic tile cache keys without accidentally mixing in translation.
+///
+/// Callers should only hash *content-stable* parameters (model revision, zoom bits, style knobs,
+/// mip level, tile size, etc.) and then combine with `TileCoord` via `tile_cache_key`.
+#[derive(Debug, Default)]
+pub struct TileCacheKeyBuilder {
+    hasher: DefaultHasher,
+}
+
+impl TileCacheKeyBuilder {
+    pub fn new(tag: &'static str) -> Self {
+        let mut hasher = DefaultHasher::new();
+        tag.hash(&mut hasher);
+        Self { hasher }
+    }
+
+    pub fn add_u64(&mut self, v: u64) -> &mut Self {
+        v.hash(&mut self.hasher);
+        self
+    }
+
+    pub fn add_u32(&mut self, v: u32) -> &mut Self {
+        v.hash(&mut self.hasher);
+        self
+    }
+
+    pub fn add_i64(&mut self, v: i64) -> &mut Self {
+        v.hash(&mut self.hasher);
+        self
+    }
+
+    pub fn add_i32(&mut self, v: i32) -> &mut Self {
+        v.hash(&mut self.hasher);
+        self
+    }
+
+    pub fn add_f32_bits(&mut self, v: f32) -> &mut Self {
+        v.to_bits().hash(&mut self.hasher);
+        self
+    }
+
+    pub fn add_f64_bits(&mut self, v: f64) -> &mut Self {
+        v.to_bits().hash(&mut self.hasher);
+        self
+    }
+
+    pub fn add_str(&mut self, v: &'static str) -> &mut Self {
+        v.hash(&mut self.hasher);
+        self
+    }
+
+    pub fn finish(self) -> u64 {
+        self.hasher.finish()
+    }
+}
+
+pub fn tile_cache_key(base_key: u64, tile: TileCoord) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    base_key.hash(&mut hasher);
+    tile.hash(&mut hasher);
+    hasher.finish()
 }
 
 impl TileGrid2D {

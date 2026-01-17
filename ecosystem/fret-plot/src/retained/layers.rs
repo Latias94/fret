@@ -6,7 +6,9 @@
 //! - convenience `*PlotCanvas` aliases for `PlotCanvas<L>`.
 
 use fret_canvas::budget::WorkBudget;
-use fret_canvas::cache::{PathCache, SceneOpTileCache, TileCoord, TileGrid2D};
+use fret_canvas::cache::{
+    PathCache, SceneOpTileCache, TileCacheKeyBuilder, TileCoord, TileGrid2D, tile_cache_key,
+};
 use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_core::geometry::{Corners, Edges, Point, Px, Rect, Size};
 use fret_core::scene::{Color, DrawOrder, SceneOp};
@@ -4793,26 +4795,23 @@ impl PlotLayer for HeatmapPlotLayer {
             }
         }
 
-        use std::collections::hash_map::DefaultHasher;
-
         let base_key = {
-            let mut hasher = DefaultHasher::new();
-            "fret-plot.heatmap.tile.v1".hash(&mut hasher);
-            model_revision.hash(&mut hasher);
-            model.cols.hash(&mut hasher);
-            model.rows.hash(&mut hasher);
-            x_scale.key().hash(&mut hasher);
-            y_scale.key().hash(&mut hasher);
-            u64::from(style.heatmap_colormap.key()).hash(&mut hasher);
-            (plot.size.width.0 as f64).to_bits().hash(&mut hasher);
-            (plot.size.height.0 as f64).to_bits().hash(&mut hasher);
-            (scale_x).to_bits().hash(&mut hasher);
-            (scale_y).to_bits().hash(&mut hasher);
-            model.value_min.to_bits().hash(&mut hasher);
-            model.value_max.to_bits().hash(&mut hasher);
-            (level as u64).hash(&mut hasher);
-            TILE_SIZE_CANVAS.to_bits().hash(&mut hasher);
-            hasher.finish()
+            let mut b = TileCacheKeyBuilder::new("fret-plot.heatmap.tile.v1");
+            b.add_u64(model_revision);
+            b.add_u64(model.cols as u64);
+            b.add_u64(model.rows as u64);
+            b.add_u64(x_scale.key());
+            b.add_u64(y_scale.key());
+            b.add_u64(u64::from(style.heatmap_colormap.key()));
+            b.add_f64_bits(f64::from(plot.size.width.0));
+            b.add_f64_bits(f64::from(plot.size.height.0));
+            b.add_f64_bits(scale_x);
+            b.add_f64_bits(scale_y);
+            b.add_u32(model.value_min.to_bits());
+            b.add_u32(model.value_max.to_bits());
+            b.add_u64(level as u64);
+            b.add_u32(TILE_SIZE_CANVAS.to_bits());
+            b.finish()
         };
 
         let plot_origin_x = plot_origin.x.0;
@@ -4829,12 +4828,7 @@ impl PlotLayer for HeatmapPlotLayer {
                 Size::new(Px(TILE_SIZE_CANVAS), Px(TILE_SIZE_CANVAS)),
             );
 
-            let key = {
-                let mut hasher = DefaultHasher::new();
-                base_key.hash(&mut hasher);
-                tile.hash(&mut hasher);
-                hasher.finish()
-            };
+            let key = tile_cache_key(base_key, tile);
 
             let screen_tile_origin = Point::new(
                 Px(tile_origin_world.x.0 - translation_x),
@@ -5345,26 +5339,23 @@ impl PlotLayer for Histogram2DPlotLayer {
             }
         }
 
-        use std::collections::hash_map::DefaultHasher;
-
         let base_key = {
-            let mut hasher = DefaultHasher::new();
-            "fret-plot.histogram2d.tile.v1".hash(&mut hasher);
-            model_revision.hash(&mut hasher);
-            model.cols.hash(&mut hasher);
-            model.rows.hash(&mut hasher);
-            x_scale.key().hash(&mut hasher);
-            y_scale.key().hash(&mut hasher);
-            u64::from(style.heatmap_colormap.key()).hash(&mut hasher);
-            (plot.size.width.0 as f64).to_bits().hash(&mut hasher);
-            (plot.size.height.0 as f64).to_bits().hash(&mut hasher);
-            (scale_x).to_bits().hash(&mut hasher);
-            (scale_y).to_bits().hash(&mut hasher);
-            model.value_min.to_bits().hash(&mut hasher);
-            model.value_max.to_bits().hash(&mut hasher);
-            (level as u64).hash(&mut hasher);
-            TILE_SIZE_CANVAS.to_bits().hash(&mut hasher);
-            hasher.finish()
+            let mut b = TileCacheKeyBuilder::new("fret-plot.histogram2d.tile.v1");
+            b.add_u64(model_revision);
+            b.add_u64(model.cols as u64);
+            b.add_u64(model.rows as u64);
+            b.add_u64(x_scale.key());
+            b.add_u64(y_scale.key());
+            b.add_u64(u64::from(style.heatmap_colormap.key()));
+            b.add_f64_bits(f64::from(plot.size.width.0));
+            b.add_f64_bits(f64::from(plot.size.height.0));
+            b.add_f64_bits(scale_x);
+            b.add_f64_bits(scale_y);
+            b.add_u32(model.value_min.to_bits());
+            b.add_u32(model.value_max.to_bits());
+            b.add_u64(level as u64);
+            b.add_u32(TILE_SIZE_CANVAS.to_bits());
+            b.finish()
         };
 
         let plot_origin_x = plot_origin.x.0;
@@ -5381,12 +5372,7 @@ impl PlotLayer for Histogram2DPlotLayer {
                 Size::new(Px(TILE_SIZE_CANVAS), Px(TILE_SIZE_CANVAS)),
             );
 
-            let key = {
-                let mut hasher = DefaultHasher::new();
-                base_key.hash(&mut hasher);
-                tile.hash(&mut hasher);
-                hasher.finish()
-            };
+            let key = tile_cache_key(base_key, tile);
 
             let screen_tile_origin = Point::new(
                 Px(tile_origin_world.x.0 - translation_x),

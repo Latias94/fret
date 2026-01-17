@@ -4,7 +4,9 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use fret_canvas::budget::WorkBudget;
-use fret_canvas::cache::{SceneOpTileCache, TileCoord, TileGrid2D};
+use fret_canvas::cache::{
+    SceneOpTileCache, TileCacheKeyBuilder, TileCoord, TileGrid2D, tile_cache_key,
+};
 use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_canvas::scale::{canvas_units_from_screen_px, effective_scale_factor};
 use fret_canvas::view::{CanvasViewport2D, PanZoom2D};
@@ -8810,7 +8812,6 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
             let minor_color = self.style.grid_minor_color;
             let spacing_bits = spacing.to_bits();
             let thickness_bits = thickness.0.to_bits();
-            let zoom_bits = zoom.to_bits();
 
             let tile_ops_for_key = |tile: TileCoord| -> Vec<SceneOp> {
                 let tile_origin = tile.origin(tile_size_canvas);
@@ -8873,26 +8874,27 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
 
             let mut tile_budget = WorkBudget::new(Self::GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME);
             let mut skipped_tiles: u32 = 0;
+            let base_key = {
+                let mut b = TileCacheKeyBuilder::new("fret-node.grid.tile.v1");
+                b.add_f32_bits(zoom);
+                b.add_f32_bits(tile_size_canvas);
+                b.add_u32(spacing_bits);
+                b.add_u32(thickness_bits);
+                b.add_i64(major_every);
+                b.add_u32(major_color.r.to_bits());
+                b.add_u32(major_color.g.to_bits());
+                b.add_u32(major_color.b.to_bits());
+                b.add_u32(major_color.a.to_bits());
+                b.add_u32(minor_color.r.to_bits());
+                b.add_u32(minor_color.g.to_bits());
+                b.add_u32(minor_color.b.to_bits());
+                b.add_u32(minor_color.a.to_bits());
+                b.finish()
+            };
             for tile in self.grid_tiles_scratch.iter().copied() {
                 let tile_origin = tile.origin(tile_size_canvas);
 
-                let mut hasher = std::collections::hash_map::DefaultHasher::new();
-                "fret-node.grid.tile.v1".hash(&mut hasher);
-                zoom_bits.hash(&mut hasher);
-                spacing_bits.hash(&mut hasher);
-                thickness_bits.hash(&mut hasher);
-                major_every.hash(&mut hasher);
-                tile.x.hash(&mut hasher);
-                tile.y.hash(&mut hasher);
-                major_color.r.to_bits().hash(&mut hasher);
-                major_color.g.to_bits().hash(&mut hasher);
-                major_color.b.to_bits().hash(&mut hasher);
-                major_color.a.to_bits().hash(&mut hasher);
-                minor_color.r.to_bits().hash(&mut hasher);
-                minor_color.g.to_bits().hash(&mut hasher);
-                minor_color.b.to_bits().hash(&mut hasher);
-                minor_color.a.to_bits().hash(&mut hasher);
-                let key = hasher.finish();
+                let key = tile_cache_key(base_key, tile);
 
                 if self.grid_scene_cache.try_replay(key, cx.scene, tile_origin) {
                     continue;
