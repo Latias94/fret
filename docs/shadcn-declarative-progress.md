@@ -218,7 +218,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | label | `label` | Present | Unreviewed |  |
 | menubar | `menubar` | Present | In review | Click-to-open; hover switching; audit: `docs/audits/shadcn-menubar.md`; gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` |
 | native-select | `native_select` | Defer | Unreviewed | Can map to `select` + platform-native later |
-| navigation-menu | `navigation_menu` | Defer | Unreviewed | Complex; not editor-critical |
+| navigation-menu | `navigation_menu` | Present | In review | Mobile `viewport` mode + anchored placement; gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (navigation-menu-demo.* open variants) |
 | pagination | `pagination` | Present | Unreviewed |  |
 | popover | `popover` | Present | Pass | Anchored placement + click-through outside press dismissal (ADR 0069); non-modal (no focus trap); audit: `docs/audits/shadcn-popover.md` |
 | progress | `progress` | Present | Unreviewed |  |
