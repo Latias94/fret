@@ -595,3 +595,51 @@ fn web_vs_fret_radio_group_demo_control_chrome_matches() {
         assert_close(&format!("radio radius[{idx}]"), *corner, web_radius, 1.0);
     }
 }
+
+#[test]
+fn web_vs_fret_progress_demo_control_chrome_matches() {
+    let web = read_web_golden("progress-demo");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_track = find_first(&theme.root, &|n| {
+        n.attrs.get("role").is_some_and(|v| v == "progressbar")
+    })
+    .expect("web progressbar node");
+
+    let web_border = web_border_width_px(web_track).expect("web border width px");
+    let web_radius = web_corner_radius_effective_px(web_track).expect("web radius px");
+    let web_w = web_track.rect.w;
+    let web_h = web_track.rect.h;
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let model: fret_runtime::Model<f32> = cx.app.models_mut().insert(42.0);
+        vec![
+            fret_ui_shadcn::Progress::new(model)
+                .refine_layout(
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_w))),
+                )
+                .into_element(cx),
+        ]
+    });
+    drop(snap);
+
+    let target = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(web_w), Px(web_h)),
+    );
+    let quad = find_best_quad(&scene, target).expect("painted quad for progress track");
+
+    assert_close("progress width", quad.rect.size.width.0, web_w, 1.0);
+    assert_close("progress height", quad.rect.size.height.0, web_h, 1.0);
+    for (idx, edge) in quad.border.iter().enumerate() {
+        assert_close(&format!("progress border[{idx}]"), *edge, web_border, 0.6);
+    }
+    for (idx, corner) in quad.corners.iter().enumerate() {
+        assert_close(&format!("progress radius[{idx}]"), *corner, web_radius, 1.0);
+    }
+}

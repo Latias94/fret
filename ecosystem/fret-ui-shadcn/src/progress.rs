@@ -77,18 +77,14 @@ impl Progress {
             let theme = Theme::global(&*cx.app).clone();
             let height = theme
                 .metric_by_key("component.progress.height")
-                .unwrap_or(Px(16.0));
+                .unwrap_or(Px(8.0));
             let radius = theme
                 .metric_by_key("component.progress.radius")
                 .unwrap_or_else(|| MetricRef::radius(Radius::Full).resolve(&theme));
+            let radius = Px(radius.0.min(height.0 * 0.5));
 
             let track_bg = theme.color_required("secondary");
             let fill = theme.color_required("primary");
-
-            let track_border = theme
-                .color_by_key("border")
-                .or_else(|| theme.color_by_key("input"))
-                .expect("missing theme token: border/input");
 
             let v = self.value(cx);
             let t = v
@@ -105,8 +101,6 @@ impl Progress {
                 &theme,
                 ChromeRefinement::default()
                     .bg(ColorRef::Color(track_bg))
-                    .border_1()
-                    .border_color(ColorRef::Color(track_border))
                     .rounded(Radius::Full)
                     .merge(self.chrome),
                 base_layout,
