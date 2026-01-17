@@ -8801,24 +8801,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
 
             let grid_tiles = TileGrid2D::new(tile_size_canvas);
             grid_tiles.tiles_in_rect(grid_rect, &mut self.grid_tiles_scratch);
-
-            // Prefer building tiles near the viewport center first so partial work degrades
-            // gracefully under budget pressure.
-            if !self.grid_tiles_scratch.is_empty() && tile_size_canvas.is_finite() {
-                let cx_tile = (viewport_rect.origin.x.0 + 0.5 * viewport_rect.size.width.0)
-                    / tile_size_canvas;
-                let cy_tile = (viewport_rect.origin.y.0 + 0.5 * viewport_rect.size.height.0)
-                    / tile_size_canvas;
-                let center_tile = TileCoord {
-                    x: cx_tile.floor() as i32,
-                    y: cy_tile.floor() as i32,
-                };
-                self.grid_tiles_scratch.sort_unstable_by_key(|t| {
-                    let dx = (t.x - center_tile.x).abs() as u32;
-                    let dy = (t.y - center_tile.y).abs() as u32;
-                    dx.saturating_add(dy)
-                });
-            }
+            grid_tiles.sort_tiles_center_first(viewport_rect, &mut self.grid_tiles_scratch);
 
             let major_color = self.style.grid_major_color;
             let minor_color = self.style.grid_minor_color;

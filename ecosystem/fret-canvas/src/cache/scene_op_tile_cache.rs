@@ -121,6 +121,38 @@ impl TileGrid2D {
             }
         }
     }
+
+    /// Sort tiles so those nearest the rect center come first.
+    ///
+    /// This is useful for incremental warmup under a per-frame budget: partial work tends to
+    /// prioritize the visible center area and degrades more gracefully.
+    pub fn sort_tiles_center_first(&self, rect: Rect, tiles: &mut [TileCoord]) {
+        if tiles.len() <= 1 {
+            return;
+        }
+
+        let s = self.tile_size_canvas;
+        if !s.is_finite() || s <= 0.0 {
+            return;
+        }
+
+        let center_x = rect.origin.x.0 + 0.5 * rect.size.width.0;
+        let center_y = rect.origin.y.0 + 0.5 * rect.size.height.0;
+        if !center_x.is_finite() || !center_y.is_finite() {
+            return;
+        }
+
+        let center_tile = TileCoord {
+            x: (center_x / s).floor() as i32,
+            y: (center_y / s).floor() as i32,
+        };
+
+        tiles.sort_unstable_by_key(|t| {
+            let dx = (i64::from(t.x) - i64::from(center_tile.x)).unsigned_abs();
+            let dy = (i64::from(t.y) - i64::from(center_tile.y)).unsigned_abs();
+            dx.saturating_add(dy).min(u64::from(u32::MAX)) as u32
+        });
+    }
 }
 
 /// Cache for recorded `SceneOp`s split into fixed-size tiles (retained-canvas replay caching).

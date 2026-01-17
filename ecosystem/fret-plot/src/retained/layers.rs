@@ -4790,23 +4790,7 @@ impl PlotLayer for HeatmapPlotLayer {
 
         let tile_grid = TileGrid2D::new(TILE_SIZE_CANVAS);
         tile_grid.tiles_in_rect(view_rect_world, &mut self.tile_scratch);
-
-        // Prefer building tiles near the viewport center first so partial work degrades gracefully.
-        if !self.tile_scratch.is_empty() && TILE_SIZE_CANVAS.is_finite() && TILE_SIZE_CANVAS > 0.0 {
-            let center_world_x = view_rect_world.origin.x.0 + 0.5 * view_rect_world.size.width.0;
-            let center_world_y = view_rect_world.origin.y.0 + 0.5 * view_rect_world.size.height.0;
-            if center_world_x.is_finite() && center_world_y.is_finite() {
-                let center_tile = TileCoord {
-                    x: (center_world_x / TILE_SIZE_CANVAS).floor() as i32,
-                    y: (center_world_y / TILE_SIZE_CANVAS).floor() as i32,
-                };
-                self.tile_scratch.sort_unstable_by_key(|t| {
-                    let dx = (t.x - center_tile.x).abs() as u32;
-                    let dy = (t.y - center_tile.y).abs() as u32;
-                    dx.saturating_add(dy)
-                });
-            }
-        }
+        tile_grid.sort_tiles_center_first(view_rect_world, &mut self.tile_scratch);
 
         let base_key = {
             let mut b = TileCacheKeyBuilder::new("fret-plot.heatmap.tile.v1");
@@ -5342,23 +5326,7 @@ impl PlotLayer for Histogram2DPlotLayer {
 
         let tile_grid = TileGrid2D::new(TILE_SIZE_CANVAS);
         tile_grid.tiles_in_rect(view_rect_world, &mut self.tile_scratch);
-
-        // Prefer building tiles near the viewport center first so partial work degrades gracefully.
-        if !self.tile_scratch.is_empty() && TILE_SIZE_CANVAS.is_finite() && TILE_SIZE_CANVAS > 0.0 {
-            let center_world_x = view_rect_world.origin.x.0 + 0.5 * view_rect_world.size.width.0;
-            let center_world_y = view_rect_world.origin.y.0 + 0.5 * view_rect_world.size.height.0;
-            if center_world_x.is_finite() && center_world_y.is_finite() {
-                let center_tile = TileCoord {
-                    x: (center_world_x / TILE_SIZE_CANVAS).floor() as i32,
-                    y: (center_world_y / TILE_SIZE_CANVAS).floor() as i32,
-                };
-                self.tile_scratch.sort_unstable_by_key(|t| {
-                    let dx = (t.x - center_tile.x).abs() as u32;
-                    let dy = (t.y - center_tile.y).abs() as u32;
-                    dx.saturating_add(dy)
-                });
-            }
-        }
+        tile_grid.sort_tiles_center_first(view_rect_world, &mut self.tile_scratch);
 
         let base_key = {
             let mut b = TileCacheKeyBuilder::new("fret-plot.histogram2d.tile.v1");
