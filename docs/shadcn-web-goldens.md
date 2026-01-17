@@ -141,6 +141,12 @@ Mobile (viewport enabled, 375x812):
 
 `node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 navigation-menu-demo --modes=open --update --viewportW=375 --viewportH=812 --openAction=click --openVariants="home-mobile=[data-fret-golden-target] li:nth-of-type(1) [data-slot='navigation-menu-trigger']"`
 
+Constrained viewport (useful for clamping/placement regressions):
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 navigation-menu-demo --modes=open --update --viewportW=1440 --viewportH=320 --openAction=click --openVariants="components-vp1440x320=[data-fret-golden-target] li:nth-of-type(2) [data-slot='navigation-menu-trigger'];list-vp1440x320=[data-fret-golden-target] li:nth-of-type(4) [data-slot='navigation-menu-trigger'];simple-vp1440x320=[data-fret-golden-target] li:nth-of-type(5) [data-slot='navigation-menu-trigger'];with-icon-vp1440x320=[data-fret-golden-target] li:nth-of-type(6) [data-slot='navigation-menu-trigger']"`
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 navigation-menu-demo --modes=open --update --viewportW=375 --viewportH=320 --openAction=click --openVariants="home-mobile-vp375x320=[data-fret-golden-target] li:nth-of-type(1) [data-slot='navigation-menu-trigger']"`
+
 
 Output directory (default):
 
