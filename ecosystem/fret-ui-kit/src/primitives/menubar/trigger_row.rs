@@ -89,6 +89,20 @@ pub fn register_trigger_in_registry<H: UiHost>(
     open: Model<bool>,
     enabled: bool,
 ) {
+    let needs_update = cx
+        .app
+        .models()
+        .read(&registry, |v| {
+            match v.iter().find(|e| e.trigger == trigger) {
+                Some(existing) => existing.open != open || existing.enabled != enabled,
+                None => true,
+            }
+        })
+        .unwrap_or(true);
+    if !needs_update {
+        return;
+    }
+
     let _ = cx.app.models_mut().update(&registry, move |v| {
         if let Some(existing) = v.iter_mut().find(|e| e.trigger == trigger) {
             existing.open = open;
