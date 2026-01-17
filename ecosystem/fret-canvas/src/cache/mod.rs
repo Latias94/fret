@@ -9,6 +9,7 @@
 //! must release resources deterministically via `Widget::cleanup_resources`.
 
 mod path_cache;
+mod scene_op_cache;
 mod svg_cache;
 
 /// Lightweight counters for cache observability.
@@ -34,4 +35,5 @@ pub struct CacheStats {
 }
 
 pub use path_cache::*;
+pub use scene_op_cache::*;
 pub use svg_cache::*;
