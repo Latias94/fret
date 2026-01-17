@@ -119,6 +119,7 @@ pub fn render_root<H: UiHost>(
 ) -> NodeId {
     let frame_id = app.frame_id();
     let focused = ui.focus();
+    ui.begin_debug_frame_if_needed(frame_id);
 
     let ui_ref: &UiTree<H> = &*ui;
     let children = app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, app| {
@@ -277,6 +278,7 @@ fn render_dismissible_root_impl<
 ) -> NodeId {
     let frame_id = app.frame_id();
     let focused = ui.focus();
+    ui.begin_debug_frame_if_needed(frame_id);
 
     let ui_ref: &UiTree<H> = &*ui;
     let children = app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, app| {
@@ -445,6 +447,7 @@ fn mount_element<H: UiHost>(
     match &element.kind {
         ElementKind::ViewCache(props) => {
             ui.set_node_view_cache_flags(node, true, props.contained_layout);
+            ui.debug_record_view_cache_root(node, reuse_view_cache, props.contained_layout);
         }
         _ => {
             ui.set_node_view_cache_flags(node, false, false);

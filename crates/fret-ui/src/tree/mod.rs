@@ -13,7 +13,7 @@ use fret_runtime::{
     CommandId, Effect, FrameId, InputContext, InputDispatchPhase, KeyChord, KeymapService, ModelId,
     Platform, PlatformCapabilities,
 };
-use slotmap::SlotMap;
+use slotmap::{Key, SlotMap};
 use std::any::TypeId;
 use std::collections::{HashMap, HashSet};
 use std::mem::MaybeUninit;
@@ -139,12 +139,40 @@ pub struct UiDebugFrameStats {
     pub layout_engine_widget_fallback_solves: u64,
     /// Unique nodes observed as invalidation roots for model changes during the current frame.
     pub model_change_invalidation_roots: u32,
+    /// Count of changed models consumed for propagation during the current frame.
+    pub model_change_models: u32,
+    /// Total (model -> node) observation edges scanned during propagation.
+    pub model_change_observation_edges: u32,
     /// Unique nodes observed as invalidation roots for global changes during the current frame.
     pub global_change_invalidation_roots: u32,
+    /// Count of changed globals consumed for propagation during the current frame.
+    pub global_change_globals: u32,
+    /// Total (global -> node) observation edges scanned during propagation.
+    pub global_change_observation_edges: u32,
     /// Total nodes visited across invalidation walks during the current frame.
     pub invalidation_walk_nodes: u32,
     /// Total invalidation walks performed during the current frame.
     pub invalidation_walk_calls: u32,
+    /// Nodes visited across invalidation walks attributed to model changes.
+    pub invalidation_walk_nodes_model_change: u32,
+    /// Invalidation walks attributed to model changes.
+    pub invalidation_walk_calls_model_change: u32,
+    /// Nodes visited across invalidation walks attributed to global changes.
+    pub invalidation_walk_nodes_global_change: u32,
+    /// Invalidation walks attributed to global changes.
+    pub invalidation_walk_calls_global_change: u32,
+    /// Nodes visited across invalidation walks attributed to hover state changes.
+    pub invalidation_walk_nodes_hover: u32,
+    /// Invalidation walks attributed to hover state changes.
+    pub invalidation_walk_calls_hover: u32,
+    /// Nodes visited across invalidation walks attributed to focus changes.
+    pub invalidation_walk_nodes_focus: u32,
+    /// Invalidation walks attributed to focus changes.
+    pub invalidation_walk_calls_focus: u32,
+    /// Nodes visited across invalidation walks attributed to all other sources.
+    pub invalidation_walk_nodes_other: u32,
+    /// Invalidation walks attributed to all other sources.
+    pub invalidation_walk_calls_other: u32,
     /// Whether view-cache mode is active for this frame.
     pub view_cache_active: bool,
     /// How many invalidation walks were truncated by a view-cache boundary.
@@ -153,6 +181,25 @@ pub struct UiDebugFrameStats {
     pub view_cache_contained_relayouts: u32,
     pub focus: Option<NodeId>,
     pub captured: Option<NodeId>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiDebugInvalidationSource {
+    ModelChange,
+    GlobalChange,
+    Hover,
+    Focus,
+    Other,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugInvalidationWalk {
+    pub root: NodeId,
+    pub root_element: Option<GlobalElementId>,
+    pub inv: Invalidation,
+    pub source: UiDebugInvalidationSource,
+    pub walked_nodes: u32,
+    pub truncated_at: Option<NodeId>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -172,6 +219,22 @@ pub struct UiDebugHitTest {
     pub hit: Option<NodeId>,
     pub active_layer_roots: Vec<NodeId>,
     pub barrier_root: Option<NodeId>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugCacheRootStats {
+    pub root: NodeId,
+    pub element: Option<GlobalElementId>,
+    pub reused: bool,
+    pub contained_layout: bool,
+    pub paint_replayed_ops: u32,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct DebugViewCacheRootRecord {
+    root: NodeId,
+    reused: bool,
+    contained_layout: bool,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -441,6 +504,9 @@ pub struct UiTree<H: UiHost> {
 
     debug_enabled: bool,
     debug_stats: UiDebugFrameStats,
+    debug_view_cache_roots: Vec<DebugViewCacheRootRecord>,
+    debug_paint_cache_replays: HashMap<NodeId, u32>,
+    debug_invalidation_walks: Vec<UiDebugInvalidationWalk>,
 
     view_cache_enabled: bool,
     paint_cache_policy: PaintCachePolicy,
@@ -480,6 +546,9 @@ impl<H: UiHost> Default for UiTree<H> {
             viewport_roots: Vec::new(),
             debug_enabled: false,
             debug_stats: UiDebugFrameStats::default(),
+            debug_view_cache_roots: Vec::new(),
+            debug_paint_cache_replays: HashMap::new(),
+            debug_invalidation_walks: Vec::new(),
             view_cache_enabled: false,
             paint_cache_policy: PaintCachePolicy::Auto,
             inspection_active: false,
@@ -529,7 +598,7 @@ struct MeasureStackKey {
 }
 
 impl<H: UiHost> UiTree<H> {
-    fn begin_debug_frame_if_needed(&mut self, frame_id: FrameId) {
+    pub(crate) fn begin_debug_frame_if_needed(&mut self, frame_id: FrameId) {
         if !self.debug_enabled {
             return;
         }
@@ -539,12 +608,78 @@ impl<H: UiHost> UiTree<H> {
 
         self.debug_stats.frame_id = frame_id;
         self.debug_stats.model_change_invalidation_roots = 0;
+        self.debug_stats.model_change_models = 0;
+        self.debug_stats.model_change_observation_edges = 0;
         self.debug_stats.global_change_invalidation_roots = 0;
+        self.debug_stats.global_change_globals = 0;
+        self.debug_stats.global_change_observation_edges = 0;
         self.debug_stats.invalidation_walk_nodes = 0;
         self.debug_stats.invalidation_walk_calls = 0;
+        self.debug_stats.invalidation_walk_nodes_model_change = 0;
+        self.debug_stats.invalidation_walk_calls_model_change = 0;
+        self.debug_stats.invalidation_walk_nodes_global_change = 0;
+        self.debug_stats.invalidation_walk_calls_global_change = 0;
+        self.debug_stats.invalidation_walk_nodes_hover = 0;
+        self.debug_stats.invalidation_walk_calls_hover = 0;
+        self.debug_stats.invalidation_walk_nodes_focus = 0;
+        self.debug_stats.invalidation_walk_calls_focus = 0;
+        self.debug_stats.invalidation_walk_nodes_other = 0;
+        self.debug_stats.invalidation_walk_calls_other = 0;
         self.debug_stats.view_cache_active = self.view_cache_active();
         self.debug_stats.view_cache_invalidation_truncations = 0;
         self.debug_stats.view_cache_contained_relayouts = 0;
+
+        self.debug_view_cache_roots.clear();
+        self.debug_paint_cache_replays.clear();
+        self.debug_invalidation_walks.clear();
+    }
+
+    pub(crate) fn debug_record_view_cache_root(
+        &mut self,
+        root: NodeId,
+        reused: bool,
+        contained_layout: bool,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_view_cache_roots.push(DebugViewCacheRootRecord {
+            root,
+            reused,
+            contained_layout,
+        });
+    }
+
+    pub(crate) fn debug_record_paint_cache_replay(&mut self, node: NodeId, replayed_ops: u32) {
+        if !self.debug_enabled {
+            return;
+        }
+        *self.debug_paint_cache_replays.entry(node).or_default() += replayed_ops;
+    }
+
+    pub fn debug_cache_root_stats(&self) -> Vec<UiDebugCacheRootStats> {
+        if !self.debug_enabled {
+            return Vec::new();
+        }
+
+        let mut out: Vec<UiDebugCacheRootStats> = self
+            .debug_view_cache_roots
+            .iter()
+            .map(|r| UiDebugCacheRootStats {
+                root: r.root,
+                element: self.nodes.get(r.root).and_then(|n| n.element),
+                reused: r.reused,
+                contained_layout: r.contained_layout,
+                paint_replayed_ops: self
+                    .debug_paint_cache_replays
+                    .get(&r.root)
+                    .copied()
+                    .unwrap_or(0),
+            })
+            .collect();
+
+        out.sort_by_key(|s| std::cmp::Reverse(s.paint_replayed_ops));
+        out
     }
 
     pub(crate) fn node_bounds(&self, node: NodeId) -> Option<Rect> {
@@ -571,7 +706,9 @@ impl<H: UiHost> UiTree<H> {
         if !n.view_cache.enabled {
             return false;
         }
-        !(n.invalidation.layout || n.invalidation.paint)
+        // View-cache reuse is an authoring-level "skip re-render" decision, not a "skip repaint"
+        // decision: paint invalidations (e.g. hover/focus) should not force a child render pass.
+        !n.invalidation.layout
     }
 
     pub(crate) fn set_node_view_cache_flags(
@@ -653,6 +790,13 @@ impl<H: UiHost> UiTree<H> {
 
     pub fn debug_stats(&self) -> UiDebugFrameStats {
         self.debug_stats
+    }
+
+    pub fn debug_invalidation_walks(&self) -> &[UiDebugInvalidationWalk] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_invalidation_walks.as_slice()
     }
 
     pub fn captured_for(&self, pointer_id: PointerId) -> Option<NodeId> {
@@ -1176,11 +1320,69 @@ impl<H: UiHost> UiTree<H> {
         None
     }
 
+    /// Like `first_focusable_descendant_including_declarative`, but treats `InteractivityGate`
+    /// as a *pointer/activation* gate, not a traversal boundary for initial focus.
+    ///
+    /// This is useful for overlay autofocus policies where content may be temporarily
+    /// non-interactive (e.g. during motion) but still present and should be eligible for focus.
+    pub fn first_focusable_descendant_including_declarative_present_only(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        root: NodeId,
+    ) -> Option<NodeId> {
+        let mut stack = vec![root];
+        while let Some(id) = stack.pop() {
+            let (focusable, traverse_children) = if let Some(record) =
+                crate::declarative::element_record_for_node(app, window, id)
+            {
+                let focusable = match &record.instance {
+                    crate::declarative::ElementInstance::TextInput(_) => true,
+                    crate::declarative::ElementInstance::TextArea(_) => true,
+                    crate::declarative::ElementInstance::Pressable(p) => p.enabled && p.focusable,
+                    _ => false,
+                };
+                let traverse_children = match &record.instance {
+                    crate::declarative::ElementInstance::Pressable(p) => p.enabled,
+                    crate::declarative::ElementInstance::InteractivityGate(p) => p.present,
+                    crate::declarative::ElementInstance::Spinner(_) => false,
+                    _ => true,
+                };
+                (focusable, traverse_children)
+            } else {
+                let traverse_children = self
+                    .nodes
+                    .get(id)
+                    .and_then(|n| n.widget.as_ref())
+                    .map(|w| w.focus_traversal_children())
+                    .unwrap_or(true);
+                let focusable = self
+                    .nodes
+                    .get(id)
+                    .and_then(|n| n.widget.as_ref())
+                    .is_some_and(|w| w.is_focusable());
+                (focusable, traverse_children)
+            };
+
+            if focusable {
+                return Some(id);
+            }
+
+            if traverse_children && let Some(node) = self.nodes.get(id) {
+                for &child in node.children.iter().rev() {
+                    stack.push(child);
+                }
+            }
+        }
+        None
+    }
+
     fn dispatch_pointer_down_outside(
         &mut self,
         app: &mut H,
         services: &mut dyn UiServices,
         params: PointerDownOutsideParams<'_>,
+        invalidation_visited: &mut HashMap<NodeId, u8>,
     ) -> PointerDownOutsideOutcome {
         let hit = params.hit;
         let hit_root = hit.and_then(|n| self.node_root(n));
@@ -1236,6 +1438,7 @@ impl<H: UiHost> UiTree<H> {
                 params.input_ctx,
                 root,
                 params.event,
+                invalidation_visited,
             );
             return PointerDownOutsideOutcome {
                 dispatched: true,
@@ -1464,19 +1667,107 @@ impl<H: UiHost> UiTree<H> {
     }
 
     fn mark_invalidation(&mut self, node: NodeId, inv: Invalidation) {
-        let stop_at_view_cache = self.view_cache_active();
-        if self.debug_enabled {
-            self.debug_stats.invalidation_walk_calls =
-                self.debug_stats.invalidation_walk_calls.saturating_add(1);
+        self.mark_invalidation_with_source(node, inv, UiDebugInvalidationSource::Other);
+    }
+
+    fn record_invalidation_walk_call(&mut self, source: UiDebugInvalidationSource) {
+        if !self.debug_enabled {
+            return;
         }
+        self.debug_stats.invalidation_walk_calls =
+            self.debug_stats.invalidation_walk_calls.saturating_add(1);
+        match source {
+            UiDebugInvalidationSource::ModelChange => {
+                self.debug_stats.invalidation_walk_calls_model_change = self
+                    .debug_stats
+                    .invalidation_walk_calls_model_change
+                    .saturating_add(1);
+            }
+            UiDebugInvalidationSource::GlobalChange => {
+                self.debug_stats.invalidation_walk_calls_global_change = self
+                    .debug_stats
+                    .invalidation_walk_calls_global_change
+                    .saturating_add(1);
+            }
+            UiDebugInvalidationSource::Hover => {
+                self.debug_stats.invalidation_walk_calls_hover = self
+                    .debug_stats
+                    .invalidation_walk_calls_hover
+                    .saturating_add(1);
+            }
+            UiDebugInvalidationSource::Focus => {
+                self.debug_stats.invalidation_walk_calls_focus = self
+                    .debug_stats
+                    .invalidation_walk_calls_focus
+                    .saturating_add(1);
+            }
+            UiDebugInvalidationSource::Other => {
+                self.debug_stats.invalidation_walk_calls_other = self
+                    .debug_stats
+                    .invalidation_walk_calls_other
+                    .saturating_add(1);
+            }
+        }
+    }
+
+    fn record_invalidation_walk_node(&mut self, source: UiDebugInvalidationSource) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.invalidation_walk_nodes =
+            self.debug_stats.invalidation_walk_nodes.saturating_add(1);
+        match source {
+            UiDebugInvalidationSource::ModelChange => {
+                self.debug_stats.invalidation_walk_nodes_model_change = self
+                    .debug_stats
+                    .invalidation_walk_nodes_model_change
+                    .saturating_add(1);
+            }
+            UiDebugInvalidationSource::GlobalChange => {
+                self.debug_stats.invalidation_walk_nodes_global_change = self
+                    .debug_stats
+                    .invalidation_walk_nodes_global_change
+                    .saturating_add(1);
+            }
+            UiDebugInvalidationSource::Hover => {
+                self.debug_stats.invalidation_walk_nodes_hover = self
+                    .debug_stats
+                    .invalidation_walk_nodes_hover
+                    .saturating_add(1);
+            }
+            UiDebugInvalidationSource::Focus => {
+                self.debug_stats.invalidation_walk_nodes_focus = self
+                    .debug_stats
+                    .invalidation_walk_nodes_focus
+                    .saturating_add(1);
+            }
+            UiDebugInvalidationSource::Other => {
+                self.debug_stats.invalidation_walk_nodes_other = self
+                    .debug_stats
+                    .invalidation_walk_nodes_other
+                    .saturating_add(1);
+            }
+        }
+    }
+
+    fn mark_invalidation_with_source(
+        &mut self,
+        node: NodeId,
+        inv: Invalidation,
+        source: UiDebugInvalidationSource,
+    ) {
+        let stop_at_view_cache = self.view_cache_active();
+        self.record_invalidation_walk_call(source);
         let mut current = Some(node);
         let mut hit_cache_root: Option<NodeId> = None;
+        let root_element = self.nodes.get(node).and_then(|n| n.element);
+        let mut walked_nodes: u32 = 0;
         while let Some(id) = current {
+            if self.nodes.contains_key(id) {
+                self.record_invalidation_walk_node(source);
+                walked_nodes = walked_nodes.saturating_add(1);
+            }
             if let Some(n) = self.nodes.get_mut(id) {
-                if self.debug_enabled {
-                    self.debug_stats.invalidation_walk_nodes =
-                        self.debug_stats.invalidation_walk_nodes.saturating_add(1);
-                }
                 n.invalidation.mark(inv);
                 if stop_at_view_cache && n.view_cache.enabled {
                     if self.debug_enabled {
@@ -1492,6 +1783,17 @@ impl<H: UiHost> UiTree<H> {
             } else {
                 break;
             }
+        }
+
+        if self.debug_enabled {
+            self.debug_invalidation_walks.push(UiDebugInvalidationWalk {
+                root: node,
+                root_element,
+                inv,
+                source,
+                walked_nodes,
+                truncated_at: hit_cache_root,
+            });
         }
 
         // Nested cache-root correctness: if a descendant cache root is invalidated, any ancestor
@@ -1522,33 +1824,38 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn mark_invalidation_dedup(
+    fn mark_invalidation_dedup_with_source(
         &mut self,
         node: NodeId,
         inv: Invalidation,
         visited: &mut HashMap<NodeId, u8>,
+        source: UiDebugInvalidationSource,
     ) {
         let stop_at_view_cache = self.view_cache_active();
         let needed = Self::invalidation_mask(inv);
-        if self.debug_enabled {
-            self.debug_stats.invalidation_walk_calls =
-                self.debug_stats.invalidation_walk_calls.saturating_add(1);
+        if visited
+            .get(&node)
+            .is_some_and(|already| (*already & needed) == needed)
+        {
+            return;
         }
+        self.record_invalidation_walk_call(source);
 
         let mut current = Some(node);
         let mut hit_cache_root: Option<NodeId> = None;
+        let root_element = self.nodes.get(node).and_then(|n| n.element);
+        let mut walked_nodes: u32 = 0;
         while let Some(id) = current {
             let already = visited.get(&id).copied().unwrap_or_default();
             if (already & needed) == needed {
                 break;
             }
 
+            if self.nodes.contains_key(id) {
+                self.record_invalidation_walk_node(source);
+                walked_nodes = walked_nodes.saturating_add(1);
+            }
             if let Some(n) = self.nodes.get_mut(id) {
-                if self.debug_enabled {
-                    self.debug_stats.invalidation_walk_nodes =
-                        self.debug_stats.invalidation_walk_nodes.saturating_add(1);
-                }
-
                 n.invalidation.mark(inv);
                 visited.insert(id, already | needed);
 
@@ -1569,6 +1876,17 @@ impl<H: UiHost> UiTree<H> {
             } else {
                 break;
             }
+        }
+
+        if self.debug_enabled {
+            self.debug_invalidation_walks.push(UiDebugInvalidationWalk {
+                root: node,
+                root_element,
+                inv,
+                source,
+                walked_nodes,
+                truncated_at: hit_cache_root,
+            });
         }
 
         // Nested cache-root correctness: if a descendant cache root is invalidated, any ancestor
@@ -1596,15 +1914,125 @@ impl<H: UiHost> UiTree<H> {
         self.mark_invalidation(node, inv);
     }
 
+    fn propagate_observation_masks(
+        &mut self,
+        app: &mut H,
+        masks: impl IntoIterator<Item = (NodeId, ObservationMask)>,
+        source: UiDebugInvalidationSource,
+    ) -> bool {
+        let mut depth_cache: HashMap<NodeId, u32> = HashMap::new();
+        let mut depth_for = |start: NodeId| -> u32 {
+            if let Some(depth) = depth_cache.get(&start) {
+                return *depth;
+            }
+
+            let mut chain: Vec<NodeId> = Vec::new();
+            let mut current = Some(start);
+            while let Some(node) = current {
+                if let Some(depth) = depth_cache.get(&node) {
+                    let mut d = *depth;
+                    for id in chain.into_iter().rev() {
+                        d = d.saturating_add(1);
+                        depth_cache.insert(id, d);
+                    }
+                    return depth_cache.get(&start).copied().unwrap_or_default();
+                }
+
+                chain.push(node);
+                current = self.nodes.get(node).and_then(|n| n.parent);
+            }
+
+            let mut d = 0u32;
+            for id in chain.into_iter().rev() {
+                depth_cache.insert(id, d);
+                d = d.saturating_add(1);
+            }
+            depth_cache.get(&start).copied().unwrap_or_default()
+        };
+
+        let mut entries: Vec<(u8, u32, u64, NodeId, Invalidation)> = Vec::new();
+        for (node, mask) in masks {
+            if mask.is_empty() || !self.nodes.contains_key(node) {
+                continue;
+            }
+
+            let (strength, inv) = if mask.hit_test {
+                (3, Invalidation::HitTest)
+            } else if mask.layout {
+                (2, Invalidation::Layout)
+            } else if mask.paint {
+                (1, Invalidation::Paint)
+            } else {
+                continue;
+            };
+
+            let depth = depth_for(node);
+            let key = node.data().as_ffi();
+            entries.push((strength, depth, key, node, inv));
+        }
+
+        if entries.is_empty() {
+            return false;
+        }
+
+        entries.sort_by(|a, b| {
+            // Higher-strength invalidations first to maximize reuse via `visited`.
+            b.0.cmp(&a.0)
+                // Within the same strength, prefer ancestors first to reduce redundant walks.
+                .then(a.1.cmp(&b.1))
+                // Stabilize order for determinism in stats/perf.
+                .then(a.2.cmp(&b.2))
+        });
+
+        let mut visited = HashMap::<NodeId, u8>::new();
+        let mut did_invalidate = false;
+        for (_, _, _, node, inv) in entries {
+            self.mark_invalidation_dedup_with_source(node, inv, &mut visited, source);
+            did_invalidate = true;
+        }
+
+        if did_invalidate && let Some(window) = self.window {
+            app.request_redraw(window);
+        }
+
+        did_invalidate
+    }
+
     pub fn propagate_model_changes(&mut self, app: &mut H, changed: &[ModelId]) -> bool {
         if changed.is_empty() {
             return false;
         }
         self.begin_debug_frame_if_needed(app.frame_id());
 
-        let mut combined: HashMap<NodeId, ObservationMask> = HashMap::new();
+        if changed.len() == 1 {
+            let model = changed[0];
+            let layout_nodes = self.observed_in_layout.by_model.get(&model);
+            let paint_nodes = self.observed_in_paint.by_model.get(&model);
+            if let (Some(nodes), None) | (None, Some(nodes)) = (layout_nodes, paint_nodes) {
+                // Copy out the observations so we don't hold a borrow across the invalidation walk.
+                let masks: Vec<(NodeId, ObservationMask)> =
+                    nodes.iter().map(|(&n, &m)| (n, m)).collect();
+                if self.debug_enabled {
+                    self.debug_stats.model_change_invalidation_roots =
+                        masks.len().min(u32::MAX as usize) as u32;
+                    self.debug_stats.model_change_models = 1;
+                    self.debug_stats.model_change_observation_edges =
+                        masks.len().min(u32::MAX as usize) as u32;
+                }
+                return self.propagate_observation_masks(
+                    app,
+                    masks,
+                    UiDebugInvalidationSource::ModelChange,
+                );
+            }
+        }
+
+        let mut combined: HashMap<NodeId, ObservationMask> =
+            HashMap::with_capacity(changed.len().saturating_mul(8));
+        let mut observation_edges_scanned = 0usize;
         for &model in changed {
             if let Some(nodes) = self.observed_in_layout.by_model.get(&model) {
+                observation_edges_scanned = observation_edges_scanned.saturating_add(nodes.len());
                 for (&node, &mask) in nodes {
                     combined
                         .entry(node)
@@ -1613,6 +2041,7 @@ impl<H: UiHost> UiTree<H> {
                 }
             }
             if let Some(nodes) = self.observed_in_paint.by_model.get(&model) {
+                observation_edges_scanned = observation_edges_scanned.saturating_add(nodes.len());
                 for (&node, &mask) in nodes {
                     combined
                         .entry(node)
@@ -1625,30 +2054,15 @@ impl<H: UiHost> UiTree<H> {
         if self.debug_enabled {
             self.debug_stats.model_change_invalidation_roots =
                 combined.len().min(u32::MAX as usize) as u32;
+            self.debug_stats.model_change_models = changed.len().min(u32::MAX as usize) as u32;
+            self.debug_stats.model_change_observation_edges =
+                observation_edges_scanned.min(u32::MAX as usize) as u32;
         }
-
-        let mut visited = HashMap::<NodeId, u8>::new();
-        let mut did_invalidate = false;
-        for (node, mask) in combined {
-            if mask.is_empty() || !self.nodes.contains_key(node) {
-                continue;
-            }
-            // Only walk once per node: stronger invalidations already imply weaker ones.
-            if mask.hit_test {
-                self.mark_invalidation_dedup(node, Invalidation::HitTest, &mut visited);
-            } else if mask.layout {
-                self.mark_invalidation_dedup(node, Invalidation::Layout, &mut visited);
-            } else if mask.paint {
-                self.mark_invalidation_dedup(node, Invalidation::Paint, &mut visited);
-            }
-            did_invalidate = true;
-        }
-
-        if did_invalidate && let Some(window) = self.window {
-            app.request_redraw(window);
-        }
-
-        did_invalidate
+        self.propagate_observation_masks(
+            app,
+            combined.into_iter(),
+            UiDebugInvalidationSource::ModelChange,
+        )
     }
 
     pub fn propagate_global_changes(&mut self, app: &mut H, changed: &[TypeId]) -> bool {
@@ -1657,9 +2071,35 @@ impl<H: UiHost> UiTree<H> {
         }
         self.begin_debug_frame_if_needed(app.frame_id());
 
-        let mut combined: HashMap<NodeId, ObservationMask> = HashMap::new();
+        if changed.len() == 1 {
+            let global = changed[0];
+            let layout_nodes = self.observed_globals_in_layout.by_global.get(&global);
+            let paint_nodes = self.observed_globals_in_paint.by_global.get(&global);
+            if let (Some(nodes), None) | (None, Some(nodes)) = (layout_nodes, paint_nodes) {
+                // Copy out the observations so we don't hold a borrow across the invalidation walk.
+                let masks: Vec<(NodeId, ObservationMask)> =
+                    nodes.iter().map(|(&n, &m)| (n, m)).collect();
+                if self.debug_enabled {
+                    self.debug_stats.global_change_invalidation_roots =
+                        masks.len().min(u32::MAX as usize) as u32;
+                    self.debug_stats.global_change_globals = 1;
+                    self.debug_stats.global_change_observation_edges =
+                        masks.len().min(u32::MAX as usize) as u32;
+                }
+                return self.propagate_observation_masks(
+                    app,
+                    masks,
+                    UiDebugInvalidationSource::GlobalChange,
+                );
+            }
+        }
+
+        let mut combined: HashMap<NodeId, ObservationMask> =
+            HashMap::with_capacity(changed.len().saturating_mul(8));
+        let mut observation_edges_scanned = 0usize;
         for &global in changed {
             if let Some(nodes) = self.observed_globals_in_layout.by_global.get(&global) {
+                observation_edges_scanned = observation_edges_scanned.saturating_add(nodes.len());
                 for (&node, &mask) in nodes {
                     combined
                         .entry(node)
@@ -1668,6 +2108,7 @@ impl<H: UiHost> UiTree<H> {
                 }
             }
             if let Some(nodes) = self.observed_globals_in_paint.by_global.get(&global) {
+                observation_edges_scanned = observation_edges_scanned.saturating_add(nodes.len());
                 for (&node, &mask) in nodes {
                     combined
                         .entry(node)
@@ -1680,30 +2121,15 @@ impl<H: UiHost> UiTree<H> {
         if self.debug_enabled {
             self.debug_stats.global_change_invalidation_roots =
                 combined.len().min(u32::MAX as usize) as u32;
+            self.debug_stats.global_change_globals = changed.len().min(u32::MAX as usize) as u32;
+            self.debug_stats.global_change_observation_edges =
+                observation_edges_scanned.min(u32::MAX as usize) as u32;
         }
-
-        let mut visited = HashMap::<NodeId, u8>::new();
-        let mut did_invalidate = false;
-        for (node, mask) in combined {
-            if mask.is_empty() || !self.nodes.contains_key(node) {
-                continue;
-            }
-            // Only walk once per node: stronger invalidations already imply weaker ones.
-            if mask.hit_test {
-                self.mark_invalidation_dedup(node, Invalidation::HitTest, &mut visited);
-            } else if mask.layout {
-                self.mark_invalidation_dedup(node, Invalidation::Layout, &mut visited);
-            } else if mask.paint {
-                self.mark_invalidation_dedup(node, Invalidation::Paint, &mut visited);
-            }
-            did_invalidate = true;
-        }
-
-        if did_invalidate && let Some(window) = self.window {
-            app.request_redraw(window);
-        }
-
-        did_invalidate
+        self.propagate_observation_masks(
+            app,
+            combined.into_iter(),
+            UiDebugInvalidationSource::GlobalChange,
+        )
     }
 
     fn refresh_semantics_snapshot(&mut self, app: &mut H) {
