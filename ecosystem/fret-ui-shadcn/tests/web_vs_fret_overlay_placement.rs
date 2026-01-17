@@ -4772,6 +4772,244 @@ fn web_vs_fret_navigation_menu_demo_with_icon_overlay_placement_matches() {
 }
 
 #[test]
+fn web_vs_fret_navigation_menu_demo_home_mobile_viewport_height_matches() {
+    let web = read_web_golden_open("navigation-menu-demo.home-mobile");
+    let theme = web_theme(&web);
+
+    let web_trigger =
+        web_find_by_data_slot_and_state(&theme.root, "navigation-menu-trigger", "open")
+            .expect("web trigger slot=navigation-menu-trigger state=open");
+    let web_viewport =
+        web_find_by_data_slot_and_state(&theme.root, "navigation-menu-viewport", "open")
+            .expect("web viewport slot=navigation-menu-viewport state=open");
+
+    let placeholder_w = (web_viewport.rect.w - 18.0).max(0.0);
+    let placeholder_h = (web_viewport.rect.h - 16.0).max(0.0);
+
+    let web_side = infer_side(web_trigger.rect, web_viewport.rect);
+    let web_align = infer_align(web_side, web_trigger.rect, web_viewport.rect);
+    let expected_gap = rect_main_gap(web_side, web_trigger.rect, web_viewport.rect);
+    let expected_cross = rect_cross_delta(web_side, web_align, web_trigger.rect, web_viewport.rect);
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+
+    let model: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+    let root_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| {
+            let placeholder = cx.container(
+                ContainerProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Px(Px(placeholder_w));
+                        layout.size.height = Length::Px(Px(placeholder_h));
+                        layout
+                    },
+                    padding: Edges::all(Px(0.0)),
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            );
+            let items = vec![
+                fret_ui_shadcn::NavigationMenuItem::new("home", "Home", vec![placeholder]),
+                fret_ui_shadcn::NavigationMenuItem::new(
+                    "components",
+                    "Components",
+                    vec![cx.text("Components")],
+                ),
+                fret_ui_shadcn::NavigationMenuItem::new(
+                    "with-icon",
+                    "With Icon",
+                    vec![cx.text("With Icon")],
+                ),
+            ];
+
+            let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+                .viewport(true)
+                .indicator(false)
+                .items(items)
+                .into_element(cx);
+            root_id_out.set(Some(el.id));
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Home"))
+        .expect("fret trigger semantics (Home)");
+    let click_point = Point::new(
+        Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+        Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| {
+                let placeholder = cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(placeholder_w));
+                            layout.size.height = Length::Px(Px(placeholder_h));
+                            layout
+                        },
+                        padding: Edges::all(Px(0.0)),
+                        ..Default::default()
+                    },
+                    |_cx| Vec::new(),
+                );
+                let items = vec![
+                    fret_ui_shadcn::NavigationMenuItem::new("home", "Home", vec![placeholder]),
+                    fret_ui_shadcn::NavigationMenuItem::new(
+                        "components",
+                        "Components",
+                        vec![cx.text("Components")],
+                    ),
+                    fret_ui_shadcn::NavigationMenuItem::new(
+                        "with-icon",
+                        "With Icon",
+                        vec![cx.text("With Icon")],
+                    ),
+                ];
+
+                let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+                    .viewport(true)
+                    .indicator(false)
+                    .items(items)
+                    .into_element(cx);
+                root_id_out.set(Some(el.id));
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let root_id = root_id_out.get().expect("navigation menu root id");
+    let viewport_id = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "web-vs-fret-nav-menu-viewport-query",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_viewport_panel_id(cx, root_id)
+        },
+    )
+    .expect("fret nav menu viewport panel id");
+    let viewport_bounds =
+        bounds_for_element(&mut app, window, viewport_id).expect("fret nav menu viewport bounds");
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Home"))
+        .expect("fret trigger semantics (Home)");
+
+    let fret_trigger = WebRect {
+        x: trigger.bounds.origin.x.0,
+        y: trigger.bounds.origin.y.0,
+        w: trigger.bounds.size.width.0,
+        h: trigger.bounds.size.height.0,
+    };
+    let fret_viewport = WebRect {
+        x: viewport_bounds.origin.x.0,
+        y: viewport_bounds.origin.y.0,
+        w: viewport_bounds.size.width.0,
+        h: viewport_bounds.size.height.0,
+    };
+
+    let actual_gap = rect_main_gap(web_side, fret_trigger, fret_viewport);
+    let actual_cross = rect_cross_delta(web_side, web_align, fret_trigger, fret_viewport);
+
+    assert_close(
+        "navigation-menu-demo.home-mobile main_gap",
+        actual_gap,
+        expected_gap,
+        1.0,
+    );
+    assert_close(
+        "navigation-menu-demo.home-mobile cross_delta",
+        actual_cross,
+        expected_cross,
+        1.5,
+    );
+    assert_close(
+        "navigation-menu-demo.home-mobile viewport_height",
+        fret_viewport.h,
+        web_viewport.rect.h,
+        1.5,
+    );
+    assert_close(
+        "navigation-menu-demo.home-mobile trigger_height",
+        fret_trigger.h,
+        web_trigger.rect.h,
+        1.0,
+    );
+}
+
+#[test]
 fn web_vs_fret_menubar_demo_overlay_placement_matches() {
     let web = read_web_golden_open("menubar-demo");
     let theme = web_theme(&web);

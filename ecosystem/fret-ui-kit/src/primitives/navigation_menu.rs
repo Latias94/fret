@@ -112,6 +112,11 @@ struct ViewportContentIdRegistry {
     ids: HashMap<Arc<str>, GlobalElementId>,
 }
 
+#[derive(Default)]
+struct ViewportPanelIdRegistry {
+    id: Option<GlobalElementId>,
+}
+
 /// Registers the viewport content element id for a given value.
 ///
 /// This mirrors Radix's internal "viewport content map" concept: each content instance is keyed by
@@ -137,6 +142,28 @@ pub fn navigation_menu_viewport_content_id<H: UiHost>(
     cx.with_state_for(root_id, ViewportContentIdRegistry::default, |st| {
         st.ids.get(value).copied()
     })
+}
+
+/// Registers the viewport panel element id for the root.
+///
+/// This mirrors the Radix `NavigationMenuViewport` element: a single panel that hosts the active
+/// content and animates its size while opening/closing.
+pub fn navigation_menu_register_viewport_panel_id<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    root_id: GlobalElementId,
+    viewport_panel_id: GlobalElementId,
+) {
+    cx.with_state_for(root_id, ViewportPanelIdRegistry::default, |st| {
+        st.id = Some(viewport_panel_id);
+    });
+}
+
+/// Returns the last registered viewport panel element id for the root.
+pub fn navigation_menu_viewport_panel_id<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    root_id: GlobalElementId,
+) -> Option<GlobalElementId> {
+    cx.with_state_for(root_id, ViewportPanelIdRegistry::default, |st| st.id)
 }
 
 fn navigation_menu_viewport_content_semantics_id_in_scope<H: UiHost>(
