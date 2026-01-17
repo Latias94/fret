@@ -43,6 +43,23 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
+fn select_list_desired_height(
+    item_height: Px,
+    item_count: usize,
+    max_height: Px,
+    outer_height: Px,
+) -> Px {
+    let outer_height = Px(outer_height.0.max(0.0));
+    let max_height = Px(max_height.0.max(0.0).min(outer_height.0));
+
+    // Radix/shadcn: keep the list at least one row tall when possible, but never exceed the
+    // computed max height (derived from available space) since the content scrolls internally.
+    let min_height = Px(item_height.0.max(0.0).min(max_height.0));
+    let content_height = Px(item_height.0.max(0.0) * item_count as f32);
+
+    Px(content_height.0.min(max_height.0).max(min_height.0))
+}
+
 fn select_scroll_with_buttons<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: Theme,
@@ -1185,12 +1202,8 @@ fn select_impl<H: UiHost>(
                         .metric_by_key("component.select.max_list_height")
                         .map(|h| Px(h.0.min(available_h.0)))
                         .unwrap_or(available_h);
-                    let desired_h = Px(
-                        (item_h.0 * item_len as f32)
-                            .min(max_h.0)
-                            .max(item_h.0)
-                            .min(outer.size.height.0),
-                    );
+                    let desired_h =
+                        select_list_desired_height(item_h, item_len, max_h, outer.size.height);
                     let desired = fret_core::Size::new(desired_w, desired_h);
 
                     let (item_aligned_inputs, did_scroll) = match item_aligned {
@@ -3549,5 +3562,15 @@ mod tests {
             last_bottom > list_top + 0.01 && last_top < list_bottom - 0.01,
             "expected last item to remain visible after wheel scrolling; list={list_bounds:?} last={last_bounds:?}"
         );
+    }
+
+    #[test]
+    fn select_list_desired_height_clamps_to_tight_max_height() {
+        let item_h = Px(32.0);
+        let outer_h = Px(600.0);
+        let max_h = Px(12.0);
+
+        let desired = super::select_list_desired_height(item_h, 20, max_h, outer_h);
+        assert_eq!(desired, max_h);
     }
 }
