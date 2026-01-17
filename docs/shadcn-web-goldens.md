@@ -175,6 +175,14 @@ To emit a JSON comparison report:
 
 `$env:WRITE_WEB_REPORT='1'; cargo nextest run -p fret-ui-shadcn --test web_vs_fret_button`
 
+Overlay placement + menu sizing conformance:
+
+`cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
+
+This suite asserts portal wrapper placement (side/align/gap) and also includes explicit checks for
+menu sizing signals such as per-item heights and content insets (including constrained-viewport
+variants that force max-height/scroll behavior).
+
 ## Layout conformance (geometry-first)
 
 For layout-engine refactors, prefer geometry-first assertions (rects + spacing invariants) over
