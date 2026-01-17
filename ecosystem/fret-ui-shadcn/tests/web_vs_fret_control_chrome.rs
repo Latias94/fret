@@ -301,6 +301,57 @@ fn web_vs_fret_input_demo_control_chrome_matches() {
 }
 
 #[test]
+fn web_vs_fret_button_demo_control_chrome_matches() {
+    let web = read_web_golden("button-demo");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_button = find_first(&theme.root, &|n| {
+        n.tag == "button" && !n.attrs.contains_key("aria-label")
+    })
+    .expect("web button node");
+
+    let web_border = web_border_width_px(web_button).expect("web borderTopWidth px");
+    let web_radius = web_corner_radius_effective_px(web_button).expect("web radius px");
+    let web_w = web_button.rect.w;
+    let web_h = web_button.rect.h;
+
+    let (snap, scene) = render_and_paint(|cx| {
+        vec![
+            fret_ui_shadcn::Button::new("Button")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .refine_layout(
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_w)))
+                        .h_px(fret_ui_kit::MetricRef::Px(Px(web_h))),
+                )
+                .into_element(cx),
+        ]
+    });
+
+    let button = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Button"))
+        .or_else(|| snap.nodes.iter().find(|n| n.role == SemanticsRole::Button))
+        .expect("fret button semantics node");
+
+    let quad = find_best_quad(&scene, button.bounds).expect("painted quad for button");
+
+    assert_close("button width", quad.rect.size.width.0, web_w, 1.0);
+    assert_close("button height", quad.rect.size.height.0, web_h, 1.0);
+    for (idx, edge) in quad.border.iter().enumerate() {
+        assert_close(&format!("button border[{idx}]"), *edge, web_border, 0.6);
+    }
+    for (idx, corner) in quad.corners.iter().enumerate() {
+        assert_close(&format!("button radius[{idx}]"), *corner, web_radius, 1.0);
+    }
+}
+
+#[test]
 fn web_vs_fret_textarea_demo_control_chrome_matches() {
     let web = read_web_golden("textarea-demo");
     let theme = web
