@@ -590,6 +590,12 @@ impl UiGalleryDriver {
         let inspector_enabled = state.inspector_enabled.clone();
         let inspector_last_pointer = state.inspector_last_pointer.clone();
 
+        let inspector_on = app.models().get_copied(&inspector_enabled).unwrap_or(false);
+        let debug_on = inspector_on
+            || std::env::var_os("FRET_UI_DEBUG_STATS").is_some_and(|v| !v.is_empty())
+            || std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty());
+        state.ui.set_debug_enabled(debug_on);
+
         Self::sync_shadcn_theme(app, state);
 
         let last_debug_stats = state.ui.debug_stats();
