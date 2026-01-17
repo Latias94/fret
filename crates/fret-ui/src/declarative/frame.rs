@@ -108,11 +108,11 @@ pub(crate) fn element_record_for_node<H: UiHost>(
     })
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub(crate) struct ScrollHandleBinding {
     pub handle_key: usize,
     pub element: GlobalElementId,
-    pub revision: u64,
+    pub handle: crate::scroll::ScrollHandle,
 }
 
 #[derive(Default)]
@@ -123,7 +123,7 @@ pub(crate) struct ScrollHandleRegistry {
 pub(crate) struct WindowScrollHandleRegistry {
     pub(super) frame_id: FrameId,
     pub(super) by_handle: HashMap<usize, Vec<GlobalElementId>>,
-    pub(super) current_revision: HashMap<usize, u64>,
+    pub(super) handles: HashMap<usize, crate::scroll::ScrollHandle>,
     pub(super) last_revision: HashMap<usize, u64>,
 }
 
@@ -132,7 +132,7 @@ impl Default for WindowScrollHandleRegistry {
         Self {
             frame_id: FrameId(0),
             by_handle: HashMap::new(),
-            current_revision: HashMap::new(),
+            handles: HashMap::new(),
             last_revision: HashMap::new(),
         }
     }
@@ -145,7 +145,7 @@ fn prepare_window_scroll_registry_for_frame(
     if registry.frame_id != frame_id {
         registry.frame_id = frame_id;
         registry.by_handle.clear();
-        registry.current_revision.clear();
+        registry.handles.clear();
     }
 }
 
@@ -162,15 +162,13 @@ pub(crate) fn register_scroll_handle_bindings_batch<H: UiHost>(
         for binding in bindings {
             let handle_key = binding.handle_key;
             let element = binding.element;
+            let handle = binding.handle;
             window_registry
                 .by_handle
                 .entry(handle_key)
                 .or_default()
                 .push(element);
-            window_registry
-                .current_revision
-                .entry(handle_key)
-                .or_insert(binding.revision);
+            window_registry.handles.entry(handle_key).or_insert(handle);
         }
     });
 }
@@ -200,7 +198,8 @@ pub(crate) fn take_changed_scroll_handle_keys<H: UiHost>(
         };
 
         let mut changed: Vec<usize> = Vec::new();
-        for (&handle_key, &revision) in window_registry.current_revision.iter() {
+        for (&handle_key, handle) in window_registry.handles.iter() {
+            let revision = handle.revision();
             let prev = window_registry.last_revision.get(&handle_key).copied();
             if prev != Some(revision) {
                 changed.push(handle_key);

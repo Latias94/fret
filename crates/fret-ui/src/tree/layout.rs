@@ -49,108 +49,6 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn invalidate_virtual_lists_with_deferred_scroll_requests(
-        &mut self,
-        app: &mut H,
-        roots: &[NodeId],
-        pass_kind: LayoutPassKind,
-    ) {
-        if pass_kind != LayoutPassKind::Final {
-            return;
-        }
-        let Some(window) = self.window else {
-            return;
-        };
-
-        let mut visited: HashSet<NodeId> = HashSet::new();
-        let mut stack: Vec<NodeId> = roots.to_vec();
-        let mut invalidated: HashMap<NodeId, u8> = HashMap::new();
-
-        while let Some(node) = stack.pop() {
-            if !visited.insert(node) {
-                continue;
-            }
-
-            if let Some(record) =
-                crate::declarative::frame::element_record_for_node(app, window, node)
-                && let crate::declarative::ElementInstance::VirtualList(props) = &record.instance
-                && props.scroll_handle.deferred_scroll_to_item().is_some()
-            {
-                self.mark_invalidation_dedup_with_source(
-                    node,
-                    Invalidation::Layout,
-                    &mut invalidated,
-                    UiDebugInvalidationSource::Other,
-                );
-            }
-
-            if let Some(children) = self.nodes.get(node).map(|n| n.children.as_slice()) {
-                stack.extend_from_slice(children);
-            }
-        }
-    }
-
-    fn invalidate_virtual_lists_with_scroll_handle_offset_changes(
-        &mut self,
-        app: &mut H,
-        roots: &[NodeId],
-        pass_kind: LayoutPassKind,
-    ) {
-        if pass_kind != LayoutPassKind::Final {
-            return;
-        }
-        let Some(window) = self.window else {
-            return;
-        };
-
-        let mut visited: HashSet<NodeId> = HashSet::new();
-        let mut stack: Vec<NodeId> = roots.to_vec();
-        let mut invalidated: HashMap<NodeId, u8> = HashMap::new();
-
-        while let Some(node) = stack.pop() {
-            if !visited.insert(node) {
-                continue;
-            }
-
-            if let Some(record) =
-                crate::declarative::frame::element_record_for_node(app, window, node)
-                && let crate::declarative::ElementInstance::VirtualList(props) = &record.instance
-            {
-                let element = record.element;
-                let axis = props.axis;
-                let handle_offset = props.scroll_handle.offset();
-                let handle_offset_axis = match axis {
-                    fret_core::Axis::Vertical => handle_offset.y,
-                    fret_core::Axis::Horizontal => handle_offset.x,
-                };
-
-                let state_offset_axis = crate::elements::with_element_state(
-                    app,
-                    window,
-                    element,
-                    crate::element::VirtualListState::default,
-                    |state| match axis {
-                        fret_core::Axis::Vertical => state.offset_y,
-                        fret_core::Axis::Horizontal => state.offset_x,
-                    },
-                );
-
-                if (state_offset_axis.0 - handle_offset_axis.0).abs() > 0.01 {
-                    self.mark_invalidation_dedup_with_source(
-                        node,
-                        Invalidation::Layout,
-                        &mut invalidated,
-                        UiDebugInvalidationSource::Other,
-                    );
-                }
-            }
-
-            if let Some(children) = self.nodes.get(node).map(|n| n.children.as_slice()) {
-                stack.extend_from_slice(children);
-            }
-        }
-    }
-
     pub fn layout_all(
         &mut self,
         app: &mut H,
@@ -204,9 +102,6 @@ impl<H: UiHost> UiTree<H> {
         };
 
         let mut viewport_cursor: usize = 0;
-
-        self.invalidate_virtual_lists_with_deferred_scroll_requests(app, &roots, pass_kind);
-        self.invalidate_virtual_lists_with_scroll_handle_offset_changes(app, &roots, pass_kind);
 
         if pass_kind == LayoutPassKind::Final {
             self.expand_view_cache_layout_invalidations_if_needed();

@@ -32,6 +32,11 @@ impl ScrollHandle {
         Rc::as_ptr(&self.state) as usize
     }
 
+    pub(crate) fn bump_revision(&self) {
+        let mut state = self.state.borrow_mut();
+        state.revision = state.revision.saturating_add(1);
+    }
+
     pub fn offset(&self) -> Point {
         self.state.borrow().offset
     }
@@ -152,7 +157,7 @@ impl ScrollHandle {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct DeferredScrollToItem {
     index: usize,
     strategy: ScrollStrategy,
@@ -190,7 +195,11 @@ impl VirtualListScrollHandle {
 
     pub fn scroll_to_item(&self, index: usize, strategy: ScrollStrategy) {
         let mut state = self.state.borrow_mut();
-        state.deferred = Some(DeferredScrollToItem { index, strategy });
+        let next = DeferredScrollToItem { index, strategy };
+        if state.deferred != Some(next) {
+            state.deferred = Some(next);
+            self.base_handle.bump_revision();
+        }
     }
 
     pub fn scroll_to_index(&self, index: usize, strategy: ScrollStrategy) {

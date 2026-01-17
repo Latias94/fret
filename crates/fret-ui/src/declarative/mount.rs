@@ -709,7 +709,7 @@ fn collect_scroll_handle_bindings(
             out.push(crate::declarative::frame::ScrollHandleBinding {
                 handle_key: handle.binding_key(),
                 element,
-                revision: handle.revision(),
+                handle: handle.clone(),
             });
         }
         ElementInstance::Scroll(props) => {
@@ -717,7 +717,7 @@ fn collect_scroll_handle_bindings(
                 out.push(crate::declarative::frame::ScrollHandleBinding {
                     handle_key: handle.binding_key(),
                     element,
-                    revision: handle.revision(),
+                    handle: handle.clone(),
                 });
             }
         }
@@ -725,14 +725,14 @@ fn collect_scroll_handle_bindings(
             out.push(crate::declarative::frame::ScrollHandleBinding {
                 handle_key: props.scroll_handle.binding_key(),
                 element,
-                revision: props.scroll_handle.revision(),
+                handle: props.scroll_handle.clone(),
             });
         }
         ElementInstance::Scrollbar(props) => {
             out.push(crate::declarative::frame::ScrollHandleBinding {
                 handle_key: props.scroll_handle.binding_key(),
                 element,
-                revision: props.scroll_handle.revision(),
+                handle: props.scroll_handle.clone(),
             });
         }
         _ => {}
