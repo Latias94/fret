@@ -1,4 +1,4 @@
-use fret_core::{Point, Scene, SceneOp, Px, Rect};
+use fret_core::{Point, Px, Rect, Scene, SceneOp};
 use std::cmp::Reverse;
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -184,8 +184,7 @@ impl<K: Eq + Hash + Copy> SceneOpTileCache<K> {
             for (_, k) in items.into_iter().take(to_evict) {
                 if self.entries.remove(&k).is_some() {
                     self.stats.evict_calls = self.stats.evict_calls.saturating_add(1);
-                    self.stats.evict_prune_budget =
-                        self.stats.evict_prune_budget.saturating_add(1);
+                    self.stats.evict_prune_budget = self.stats.evict_prune_budget.saturating_add(1);
                 }
             }
         }
@@ -201,7 +200,10 @@ mod tests {
     #[test]
     fn tile_grid_rect_maps_to_expected_tiles() {
         let grid = TileGrid2D::new(10.0);
-        let rect = Rect::new(Point::new(Px(-1.0), Px(-1.0)), Size::new(Px(12.0), Px(12.0)));
+        let rect = Rect::new(
+            Point::new(Px(-1.0), Px(-1.0)),
+            Size::new(Px(12.0), Px(12.0)),
+        );
         let mut tiles = Vec::new();
         grid.tiles_in_rect(rect, &mut tiles);
         assert!(tiles.contains(&TileCoord { x: -1, y: -1 }));
@@ -256,4 +258,3 @@ mod tests {
         assert_eq!(cache.entries_len(), 1);
     }
 }
-
