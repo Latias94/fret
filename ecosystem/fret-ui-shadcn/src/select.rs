@@ -1042,12 +1042,12 @@ fn select_impl<H: UiHost>(
                     );
                     eprintln!(
                         "select trigger theme metrics: metric.padding.sm={:?} metric.padding.md={:?} component.input.padding_x={:?} component.input.padding_y={:?} component.size.md.input.px={:?} component.size.md.input.py={:?}",
-                        theme.metric_by_key(\"metric.padding.sm\").map(|v| v.0),
-                        theme.metric_by_key(\"metric.padding.md\").map(|v| v.0),
-                        theme.metric_by_key(\"component.input.padding_x\").map(|v| v.0),
-                        theme.metric_by_key(\"component.input.padding_y\").map(|v| v.0),
-                        theme.metric_by_key(\"component.size.md.input.px\").map(|v| v.0),
-                        theme.metric_by_key(\"component.size.md.input.py\").map(|v| v.0),
+                        theme.metric_by_key("metric.padding.sm").map(|v| v.0),
+                        theme.metric_by_key("metric.padding.md").map(|v| v.0),
+                        theme.metric_by_key("component.input.padding_x").map(|v| v.0),
+                        theme.metric_by_key("component.input.padding_y").map(|v| v.0),
+                        theme.metric_by_key("component.size.md.input.px").map(|v| v.0),
+                        theme.metric_by_key("component.size.md.input.py").map(|v| v.0),
                     );
                 }
 
