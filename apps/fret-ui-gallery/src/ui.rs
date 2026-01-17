@@ -471,7 +471,7 @@ fn preview_intro(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElem
                 .into_element(cx),
             shadcn::CardContent::new(vec![cx.text(desc)]).into_element(cx),
         ])
-        .refine_layout(LayoutRefinement::default().w_full())
+        .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
         .into_element(cx)
     };
 
