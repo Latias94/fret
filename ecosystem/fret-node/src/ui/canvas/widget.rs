@@ -3,7 +3,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use fret_canvas::budget::WorkBudget;
+use fret_canvas::budget::{InteractionBudget, WorkBudget};
 use fret_canvas::cache::{
     SceneOpTileCache, TileCacheKeyBuilder, TileCoord, TileGrid2D, tile_cache_key,
 };
@@ -210,12 +210,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     const EDGE_FOCUS_ANCHOR_BORDER_SCREEN: f32 = 2.0;
     const EDGE_FOCUS_ANCHOR_OFFSET_SCREEN: f32 = 18.0;
     const GRID_TILE_SIZE_SCREEN_PX: f32 = 2048.0;
-    const GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME_IDLE: u32 = 32;
-    const GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME_INTERACTIVE: u32 = 8;
-    const EDGE_MARKER_BUILD_BUDGET_PER_FRAME_IDLE: u32 = 96;
-    const EDGE_MARKER_BUILD_BUDGET_PER_FRAME_INTERACTIVE: u32 = 24;
-    const EDGE_LABEL_BUILD_BUDGET_PER_FRAME_IDLE: u32 = 16;
-    const EDGE_LABEL_BUILD_BUDGET_PER_FRAME_INTERACTIVE: u32 = 4;
+    const GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME: InteractionBudget = InteractionBudget::new(32, 8);
+    const EDGE_MARKER_BUILD_BUDGET_PER_FRAME: InteractionBudget = InteractionBudget::new(96, 24);
+    const EDGE_LABEL_BUILD_BUDGET_PER_FRAME: InteractionBudget = InteractionBudget::new(16, 4);
 
     fn show_toast<H: UiHost>(
         &mut self,
@@ -8887,11 +8884,8 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                 ops
             };
 
-            let tile_budget_limit = if view_interacting {
-                Self::GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME_INTERACTIVE
-            } else {
-                Self::GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME_IDLE
-            };
+            let tile_budget_limit =
+                Self::GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME.select(view_interacting);
             let mut tile_budget = WorkBudget::new(tile_budget_limit);
             let mut skipped_tiles: u32 = 0;
             let base_key = {
@@ -9439,11 +9433,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
             }
         }
 
-        let marker_budget_limit = if view_interacting {
-            Self::EDGE_MARKER_BUILD_BUDGET_PER_FRAME_INTERACTIVE
-        } else {
-            Self::EDGE_MARKER_BUILD_BUDGET_PER_FRAME_IDLE
-        };
+        let marker_budget_limit = Self::EDGE_MARKER_BUILD_BUDGET_PER_FRAME.select(view_interacting);
         let mut marker_budget = WorkBudget::new(marker_budget_limit);
         let mut marker_budget_skipped: u32 = 0;
 
@@ -9598,11 +9588,8 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                 lh.0 /= zoom;
             }
 
-            let label_budget_limit = if view_interacting {
-                Self::EDGE_LABEL_BUILD_BUDGET_PER_FRAME_INTERACTIVE
-            } else {
-                Self::EDGE_LABEL_BUILD_BUDGET_PER_FRAME_IDLE
-            };
+            let label_budget_limit =
+                Self::EDGE_LABEL_BUILD_BUDGET_PER_FRAME.select(view_interacting);
             let mut label_budget = WorkBudget::new(label_budget_limit);
             let mut label_budget_skipped: u32 = 0;
             for (from, to, route, label, _selected, _hovered) in edge_labels {
