@@ -191,7 +191,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | alert-dialog | `alert_dialog` | Present | In review | Audit: `docs/audits/shadcn-alert-dialog.md`; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` |
 | aspect-ratio | `aspect_ratio` | Present | Unreviewed |  |
 | avatar | `avatar` | Present | Unreviewed |  |
-| badge | `badge` | Present | Unreviewed |  |
+| badge | `badge` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`badge-demo`) |
 | breadcrumb | `breadcrumb` | Present | Unreviewed |  |
 | button | `button` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`button-demo`) |
 | button-group | `button_group` | Present | Unreviewed | Thin wrapper over `toggle_group` styling |
@@ -214,7 +214,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | input-group | `input_group` | Present | Unreviewed | Composition over `input` + slots/icons |
 | input-otp | `input_otp` | Present | Unreviewed | Slots rendered over transparent `TextInput`; digits-only clamping; a11y TBD |
 | item | `item` | Present | Unreviewed | Repo-specific list/item recipes aligned with shadcn style |
-| kbd | `kbd` | Present | Unreviewed |  |
+| kbd | `kbd` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`kbd-demo`) |
 | label | `label` | Present | Unreviewed |  |
 | menubar | `menubar` | Present | In review | Click-to-open; hover switching; audit: `docs/audits/shadcn-menubar.md`; gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` |
 | native-select | `native_select` | Defer | Unreviewed | Can map to `select` + platform-native later |
@@ -226,7 +226,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | resizable | `resizable` | Present | Unreviewed | Runtime-owned drag + layout; multi-panel group; a11y TBD |
 | scroll-area | `scroll_area` | Present | Unreviewed | Declarative wrapper over `Scroll` + styling |
 | select | `select` | Present | In review | Anchored placement supports `side`/`align` + offsets; roving navigation supports `loop` default; audit: `docs/audits/shadcn-select.md` |
-| separator | `separator` | Present | Unreviewed | Simple primitive; declarative-only |
+| separator | `separator` | Present | In review | shadcn-web gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`separator-demo`) |
 | sheet | `sheet` | Present | In review | Audit: `docs/audits/shadcn-sheet.md`; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` |
 | sidebar | `sidebar` | Present | Unreviewed |  |
 | skeleton | `skeleton` | Present | Unreviewed |  |
