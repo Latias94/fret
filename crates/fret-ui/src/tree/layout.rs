@@ -26,7 +26,14 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let mut visited = HashMap::<NodeId, u8>::new();
-        for handle_key in changed {
+        for change in changed {
+            let inv = match change.kind {
+                crate::declarative::frame::ScrollHandleChangeKind::Layout => Invalidation::Layout,
+                crate::declarative::frame::ScrollHandleChangeKind::HitTestOnly => {
+                    Invalidation::HitTestOnly
+                }
+            };
+            let handle_key = change.handle_key;
             let bound = crate::declarative::frame::bound_elements_for_scroll_handle(
                 &mut *app, window, handle_key,
             );
@@ -41,7 +48,7 @@ impl<H: UiHost> UiTree<H> {
                 };
                 self.mark_invalidation_dedup_with_detail(
                     node,
-                    Invalidation::Layout,
+                    inv,
                     &mut visited,
                     UiDebugInvalidationSource::Other,
                     UiDebugInvalidationDetail::ScrollHandle,

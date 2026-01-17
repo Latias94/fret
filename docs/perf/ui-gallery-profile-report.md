@@ -17,6 +17,12 @@ and `measure_time_us` accounts for ~99% of solve time.
 
 This report focuses on what to optimize next (and what not to spend time on).
 
+### Update (post-scroll refactor)
+
+After introducing a children-only scroll translation path and fine-grained scroll-handle invalidation (ADR 1156),
+scroll offset changes no longer force layout-engine solves. The remaining worst frames in the scripted harness are
+still dominated by initial-mount layout/measure work (not by translation-only scrolling).
+
 ## Repro (repeatable)
 
 Use the scripted harness to find and pin the worst frames:

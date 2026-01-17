@@ -144,8 +144,12 @@ fn focus_traversal_scrolls_focused_descendant_into_view() {
 
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
-    let scroll_bounds = ui.nodes.get(scroll_node).unwrap().bounds;
-    let second_bounds = ui.nodes.get(second_node).unwrap().bounds;
+    let scroll_bounds = ui
+        .debug_node_visual_bounds(scroll_node)
+        .expect("scroll visual bounds");
+    let second_bounds = ui
+        .debug_node_visual_bounds(second_node)
+        .expect("second visual bounds");
 
     assert!(
         UiTree::<crate::test_host::TestHost>::rects_intersect(scroll_bounds, second_bounds),

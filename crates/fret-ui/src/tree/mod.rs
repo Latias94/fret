@@ -66,6 +66,10 @@ impl InvalidationFlags {
                 self.layout = true;
                 self.paint = true;
             }
+            Invalidation::HitTestOnly => {
+                self.hit_test = true;
+                self.paint = true;
+            }
         }
     }
 
@@ -383,6 +387,10 @@ impl ObservationMask {
             Invalidation::HitTest => {
                 self.hit_test = true;
                 self.layout = true;
+                self.paint = true;
+            }
+            Invalidation::HitTestOnly => {
+                self.hit_test = true;
                 self.paint = true;
             }
         }
@@ -1285,10 +1293,23 @@ impl<H: UiHost> UiTree<H> {
     pub fn debug_node_visual_bounds(&self, node: NodeId) -> Option<Rect> {
         let bounds = self.nodes.get(node).map(|n| n.bounds)?;
         let path = self.debug_node_path(node);
+        let mut before = Transform2D::IDENTITY;
         let mut transform = Transform2D::IDENTITY;
-        for id in path {
-            if let Some(local) = self.node_render_transform(id) {
-                transform = transform.compose(local);
+        for (idx, id) in path.iter().copied().enumerate() {
+            let node_transform = self.node_render_transform(id).unwrap_or(Transform2D::IDENTITY);
+            let at_node = before.compose(node_transform);
+            if id == node {
+                transform = at_node;
+                break;
+            }
+            let child_transform = self
+                .node_children_render_transform(id)
+                .unwrap_or(Transform2D::IDENTITY);
+            before = at_node.compose(child_transform);
+
+            // Defensive: if the node wasn't found in `path`, keep identity.
+            if idx == path.len().saturating_sub(1) {
+                transform = at_node;
             }
         }
 
@@ -1873,6 +1894,13 @@ impl<H: UiHost> UiTree<H> {
         t.inverse().is_some().then_some(t)
     }
 
+    pub(crate) fn node_children_render_transform(&self, node: NodeId) -> Option<Transform2D> {
+        let n = self.nodes.get(node)?;
+        let w = n.widget.as_ref()?;
+        let t = w.children_render_transform(n.bounds)?;
+        t.inverse().is_some().then_some(t)
+    }
+
     fn point_in_rounded_rect(bounds: Rect, radii: Corners, position: Point) -> bool {
         if !bounds.contains(position) {
             return false;
@@ -2101,6 +2129,7 @@ impl<H: UiHost> UiTree<H> {
             Invalidation::Paint => PAINT,
             Invalidation::Layout => PAINT | LAYOUT,
             Invalidation::HitTest => PAINT | LAYOUT | HIT_TEST,
+            Invalidation::HitTestOnly => PAINT | HIT_TEST,
         }
     }
 
@@ -2595,8 +2624,10 @@ impl<H: UiHost> UiTree<H> {
 
         for root in roots.iter().map(|r| r.root) {
             let mut visited: HashSet<NodeId> = HashSet::new();
-            let mut stack: Vec<NodeId> = vec![root];
-            while let Some(id) = stack.pop() {
+            // Stack entries carry the transform that maps this node's local bounds into
+            // screen-space (excluding this node's own `render_transform`).
+            let mut stack: Vec<(NodeId, Transform2D)> = vec![(root, Transform2D::IDENTITY)];
+            while let Some((id, before)) = stack.pop() {
                 if !visited.insert(id) {
                     if cfg!(debug_assertions) {
                         panic!("cycle detected while building semantics snapshot: node={id:?}");
@@ -2605,17 +2636,49 @@ impl<H: UiHost> UiTree<H> {
                         continue;
                     }
                 }
-                let Some(node) = self.nodes.get_mut(id) else {
-                    continue;
+                let (
+                    parent,
+                    bounds,
+                    children,
+                    is_text_input,
+                    is_focusable,
+                    traverse_children,
+                    before_child,
+                ) = {
+                    let Some(node) = self.nodes.get(id) else {
+                        continue;
+                    };
+                    let widget = node.widget.as_ref();
+                    if widget.is_some_and(|w| !w.semantics_present()) {
+                        continue;
+                    }
+
+                    let node_transform = widget
+                        .and_then(|w| w.render_transform(node.bounds))
+                        .filter(|t| t.inverse().is_some())
+                        .unwrap_or(Transform2D::IDENTITY);
+                    let at_node = before.compose(node_transform);
+                    let bounds = rect_aabb_transformed(node.bounds, at_node);
+                    let children = node.children.clone();
+                    let is_text_input = widget.is_some_and(|w| w.is_text_input());
+                    let is_focusable = widget.is_some_and(|w| w.is_focusable());
+                    let traverse_children = widget.map(|w| w.semantics_children()).unwrap_or(true);
+                    let child_transform = widget
+                        .and_then(|w| w.children_render_transform(node.bounds))
+                        .filter(|t| t.inverse().is_some())
+                        .unwrap_or(Transform2D::IDENTITY);
+                    let before_child = at_node.compose(child_transform);
+
+                    (
+                        node.parent,
+                        bounds,
+                        children,
+                        is_text_input,
+                        is_focusable,
+                        traverse_children,
+                        before_child,
+                    )
                 };
-                if node.widget.as_ref().is_some_and(|w| !w.semantics_present()) {
-                    continue;
-                }
-                let parent = node.parent;
-                let bounds = node.bounds;
-                let children = node.children.as_slice();
-                let is_text_input = node.widget.as_ref().is_some_and(|w| w.is_text_input());
-                let is_focusable = node.widget.as_ref().is_some_and(|w| w.is_focusable());
 
                 let mut role = if Some(id) == base_root {
                     SemanticsRole::Window
@@ -2653,14 +2716,18 @@ impl<H: UiHost> UiTree<H> {
                 };
 
                 // Allow widgets to override semantics metadata.
-                if let Some(widget) = node.widget.as_mut() {
+                if let Some(widget) = self
+                    .nodes
+                    .get_mut(id)
+                    .and_then(|node| node.widget.as_mut())
+                {
                     let mut cx = SemanticsCx {
                         app,
                         node: id,
                         window: Some(window),
                         element_id_map: Some(&element_id_map),
                         bounds,
-                        children,
+                        children: children.as_slice(),
                         focus,
                         captured,
                         role: &mut role,
@@ -2714,15 +2781,10 @@ impl<H: UiHost> UiTree<H> {
                     controls,
                 });
 
-                let traverse_children = node
-                    .widget
-                    .as_ref()
-                    .map(|w| w.semantics_children())
-                    .unwrap_or(true);
                 if traverse_children {
                     // Preserve a stable-ish order: visit children in declared order.
                     for &child in children.iter().rev() {
-                        stack.push(child);
+                        stack.push((child, before_child));
                     }
                 }
             }

@@ -2,6 +2,8 @@
 
 Status: Accepted
 
+Note: Superseded by ADR 1156 (offset-only invalidation + children-only scroll transforms).
+
 ## Context
 
 Fret uses a declarative, per-frame element tree (ADR 0028) with a retained `UiTree` substrate (ADR

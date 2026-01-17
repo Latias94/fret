@@ -12,8 +12,9 @@ impl<H: UiHost> UiTree<H> {
     fn invalidation_rank(inv: Invalidation) -> u8 {
         match inv {
             Invalidation::Paint => 1,
-            Invalidation::Layout => 2,
-            Invalidation::HitTest => 3,
+            Invalidation::HitTestOnly => 2,
+            Invalidation::Layout => 3,
+            Invalidation::HitTest => 4,
         }
     }
 
@@ -1829,6 +1830,16 @@ impl<H: UiHost> UiTree<H> {
                 node,
                 Self::event_with_mapped_position(event, mapped_pos, mapped_delta),
             ));
+
+            // Map into the child's coordinate space for the next node in the chain.
+            if let Some(t) = self.node_children_render_transform(node)
+                && let Some(inv) = t.inverse()
+            {
+                mapped_pos = inv.apply_point(mapped_pos);
+                if let Some(d) = mapped_delta {
+                    mapped_delta = Some(Self::apply_vector(inv, d));
+                }
+            }
         }
 
         out.reverse();

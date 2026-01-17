@@ -42,6 +42,7 @@ impl ElementHostWidget {
         };
 
         self.render_transform = None;
+        self.scroll_child_transform = None;
 
         self.hit_testable = match &instance {
             ElementInstance::Pressable(p) => p.enabled,

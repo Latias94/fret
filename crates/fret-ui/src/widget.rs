@@ -15,6 +15,11 @@ pub enum Invalidation {
     Layout,
     Paint,
     HitTest,
+    /// Recompute hit-testing and repaint, without forcing a layout pass.
+    ///
+    /// This is intended for state changes that affect coordinate mapping (e.g. scrolling) but do
+    /// not change layout geometry.
+    HitTestOnly,
 }
 
 pub struct EventCx<'a, H: UiHost> {
@@ -459,6 +464,16 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
     }
 
     pub fn paint(&mut self, child: NodeId, bounds: Rect) {
+        let child_transform = self.tree.node_children_render_transform(self.node);
+        if let Some(transform) = child_transform {
+            self.scene
+                .push(fret_core::SceneOp::PushTransform { transform });
+        }
+
+        let accumulated = child_transform
+            .map(|t| self.accumulated_transform.compose(t))
+            .unwrap_or(self.accumulated_transform);
+
         self.tree.paint_node(
             self.app,
             self.services,
@@ -466,8 +481,12 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
             bounds,
             self.scene,
             self.scale_factor,
-            self.accumulated_transform,
-        )
+            accumulated,
+        );
+
+        if child_transform.is_some() {
+            self.scene.push(fret_core::SceneOp::PopTransform);
+        }
     }
 
     /// Paint all child nodes using their last computed layout bounds.
@@ -656,6 +675,16 @@ pub trait Widget<H: UiHost> {
     ///   untransformed behavior.
     /// - Paint caching may be disabled for nodes that return a transform, depending on runtime policy.
     fn render_transform(&self, _bounds: Rect) -> Option<Transform2D> {
+        None
+    }
+    /// Optional affine transform applied to children only (not to this node's own bounds).
+    ///
+    /// This is intended for behaviors like scrolling where the viewport bounds are fixed, but the
+    /// content subtree is translated.
+    ///
+    /// The transform is expressed in the same coordinate space as `bounds` (logical px,
+    /// window-local).
+    fn children_render_transform(&self, _bounds: Rect) -> Option<Transform2D> {
         None
     }
     /// Whether hit-testing should be clipped to `bounds`.

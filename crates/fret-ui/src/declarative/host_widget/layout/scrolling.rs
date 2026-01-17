@@ -364,49 +364,41 @@ impl ElementHostWidget {
         // prematurely.
         let is_probe_layout = cx.pass_kind == crate::layout_pass::LayoutPassKind::Probe;
         let external_handle = props.scroll_handle.clone();
-        let offset = crate::elements::with_element_state(
+        let handle = crate::elements::with_element_state(
             &mut *cx.app,
             window,
             self.element,
             crate::element::ScrollState::default,
             |state| {
-                let handle = external_handle.as_ref().unwrap_or(&state.scroll_handle);
+                let handle = external_handle.as_ref().unwrap_or(&state.scroll_handle).clone();
                 if !is_probe_layout {
                     handle.set_viewport_size(desired);
                     handle.set_content_size(Size::new(content_w, content_h));
                     let prev = handle.offset();
                     handle.set_offset(prev);
                 }
-                handle.offset()
+                handle
             },
         );
 
-        let offset_x = if props.axis.scroll_x() {
-            offset.x
-        } else {
-            Px(0.0)
-        };
-        let offset_y = if props.axis.scroll_y() {
-            offset.y
-        } else {
-            Px(0.0)
-        };
+        self.scroll_child_transform = Some(super::super::ScrollChildTransform {
+            handle: handle.clone(),
+            axis: props.axis,
+        });
 
-        let shifted = Rect::new(
-            fret_core::Point::new(
-                Px(cx.bounds.origin.x.0 - offset_x.0),
-                Px(cx.bounds.origin.y.0 - offset_y.0),
-            ),
-            Size::new(content_w, content_h),
-        );
+        let content_bounds = Rect::new(cx.bounds.origin, Size::new(content_w, content_h));
 
         if !is_probe_layout {
-            let roots: Vec<(NodeId, Rect)> = cx.children.iter().map(|&c| (c, shifted)).collect();
+            let roots: Vec<(NodeId, Rect)> = cx
+                .children
+                .iter()
+                .map(|&c| (c, content_bounds))
+                .collect();
             cx.solve_barrier_child_roots_if_needed(&roots);
         }
 
         for &child in cx.children {
-            let _ = cx.layout_in(child, shifted);
+            let _ = cx.layout_in(child, content_bounds);
         }
 
         desired

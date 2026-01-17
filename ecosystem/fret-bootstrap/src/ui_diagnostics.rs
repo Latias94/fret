@@ -2491,6 +2491,7 @@ pub enum UiInvalidationKindV1 {
     Paint,
     Layout,
     HitTest,
+    HitTestOnly,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -2523,6 +2524,7 @@ impl UiInvalidationWalkV1 {
             Invalidation::Paint => UiInvalidationKindV1::Paint,
             Invalidation::Layout => UiInvalidationKindV1::Layout,
             Invalidation::HitTest => UiInvalidationKindV1::HitTest,
+            Invalidation::HitTestOnly => UiInvalidationKindV1::HitTestOnly,
         };
         let source = match walk.source {
             fret_ui::tree::UiDebugInvalidationSource::ModelChange => {
@@ -3016,6 +3018,7 @@ fn invalidation_label(inv: Invalidation) -> &'static str {
         Invalidation::Paint => "paint",
         Invalidation::Layout => "layout",
         Invalidation::HitTest => "hit_test",
+        Invalidation::HitTestOnly => "hit_test_only",
     }
 }
 
