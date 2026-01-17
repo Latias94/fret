@@ -201,12 +201,19 @@ pub(crate) fn content_view(
         |cx| {
             let left = stack::vstack(
                 cx,
-                stack::VStackProps::default().gap(Space::N1).items_start(),
+                stack::VStackProps::default()
+                    .layout(LayoutRefinement::default().flex_1().min_w_0())
+                    .gap(Space::N1)
+                    .items_start(),
                 |cx| {
                     vec![
                         cx.text(title),
                         cx.text_props(TextProps {
-                            layout: Default::default(),
+                            layout: {
+                                let mut layout = fret_ui::element::LayoutStyle::default();
+                                layout.size.width = fret_ui::element::Length::Fill;
+                                layout
+                            },
                             text: Arc::from(origin),
                             style: None,
                             color: Some(theme.color_required("muted-foreground")),
