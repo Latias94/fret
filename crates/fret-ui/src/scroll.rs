@@ -75,8 +75,8 @@ impl ScrollHandle {
     }
 
     pub fn set_offset(&self, offset: Point) {
-        let mut state = self.state.borrow_mut();
         let clamped = self.clamp_offset(offset);
+        let mut state = self.state.borrow_mut();
         if (state.offset.x.0 - clamped.x.0).abs() <= 0.01
             && (state.offset.y.0 - clamped.y.0).abs() <= 0.01
         {

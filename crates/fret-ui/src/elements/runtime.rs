@@ -114,7 +114,6 @@ pub struct WindowElementState {
     pub(super) observed_globals_rendered: HashMap<GlobalElementId, Vec<(TypeId, Invalidation)>>,
     pub(super) observed_globals_next: HashMap<GlobalElementId, Vec<(TypeId, Invalidation)>>,
     pub(super) timer_targets: HashMap<TimerToken, GlobalElementId>,
-    scroll_handle_revisions: HashMap<usize, u64>,
     nodes: HashMap<GlobalElementId, NodeEntry>,
     root_bounds: HashMap<GlobalElementId, Rect>,
     prev_bounds: HashMap<GlobalElementId, Rect>,
@@ -196,14 +195,6 @@ impl WindowElementState {
                 .entries
                 .retain(|_, v| v.last_seen_frame.0 >= cutoff);
         }
-    }
-
-    pub(crate) fn last_scroll_handle_revision(&self, handle_key: usize) -> Option<u64> {
-        self.scroll_handle_revisions.get(&handle_key).copied()
-    }
-
-    pub(crate) fn record_scroll_handle_revision(&mut self, handle_key: usize, revision: u64) {
-        self.scroll_handle_revisions.insert(handle_key, revision);
     }
 
     fn advance_element_state_buffers(&mut self, lag_frames: u64) {
