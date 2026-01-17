@@ -895,6 +895,13 @@ fn web_select_listbox<'a>(theme: &'a WebGoldenTheme) -> &'a WebNode {
         .unwrap_or_else(|| panic!("missing web select listbox portal"))
 }
 
+fn web_select_combobox<'a>(theme: &'a WebGoldenTheme) -> &'a WebNode {
+    find_first(&theme.root, &|n| {
+        n.attrs.get("role").is_some_and(|v| v == "combobox")
+    })
+    .unwrap_or_else(|| panic!("missing web select combobox"))
+}
+
 fn web_select_content_option_inset(listbox: &WebNode) -> InsetQuad {
     let mut option_stack = vec![listbox];
     let mut min_x = None::<f32>;
@@ -3125,6 +3132,160 @@ fn web_vs_fret_select_scrollable_listbox_option_insets_match() {
 #[test]
 fn web_vs_fret_select_scrollable_small_viewport_listbox_option_insets_match() {
     assert_select_scrollable_listbox_option_insets_match("select-scrollable.vp1440x450");
+}
+
+fn assert_select_scrollable_listbox_width_matches(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let web_listbox = web_select_listbox(theme);
+    let expected_w = web_listbox.rect.w;
+    let expected_trigger_w = web_select_combobox(theme).rect.w;
+    assert!(expected_w + 0.01 >= expected_trigger_w);
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(theme);
+
+    let value: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    let render = |cx: &mut ElementContext<'_, App>| {
+        use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
+
+        let entries: Vec<SelectEntry> = vec![
+            SelectGroup::new(vec![
+                SelectLabel::new("North America").into(),
+                SelectItem::new("est", "Eastern Standard Time (EST)").into(),
+                SelectItem::new("cst", "Central Standard Time (CST)").into(),
+                SelectItem::new("mst", "Mountain Standard Time (MST)").into(),
+                SelectItem::new("pst", "Pacific Standard Time (PST)").into(),
+                SelectItem::new("akst", "Alaska Standard Time (AKST)").into(),
+                SelectItem::new("hst", "Hawaii Standard Time (HST)").into(),
+            ])
+            .into(),
+            SelectGroup::new(vec![
+                SelectLabel::new("Europe & Africa").into(),
+                SelectItem::new("gmt", "Greenwich Mean Time (GMT)").into(),
+                SelectItem::new("cet", "Central European Time (CET)").into(),
+                SelectItem::new("eet", "Eastern European Time (EET)").into(),
+                SelectItem::new("west", "Western European Summer Time (WEST)").into(),
+                SelectItem::new("cat", "Central Africa Time (CAT)").into(),
+                SelectItem::new("eat", "East Africa Time (EAT)").into(),
+            ])
+            .into(),
+            SelectGroup::new(vec![
+                SelectLabel::new("Asia").into(),
+                SelectItem::new("msk", "Moscow Time (MSK)").into(),
+                SelectItem::new("ist", "India Standard Time (IST)").into(),
+                SelectItem::new("cst_china", "China Standard Time (CST)").into(),
+                SelectItem::new("jst", "Japan Standard Time (JST)").into(),
+                SelectItem::new("kst", "Korea Standard Time (KST)").into(),
+                SelectItem::new("ist_indonesia", "Indonesia Central Standard Time (WITA)").into(),
+            ])
+            .into(),
+            SelectGroup::new(vec![
+                SelectLabel::new("Australia & Pacific").into(),
+                SelectItem::new("awst", "Australian Western Standard Time (AWST)").into(),
+                SelectItem::new("acst", "Australian Central Standard Time (ACST)").into(),
+                SelectItem::new("aest", "Australian Eastern Standard Time (AEST)").into(),
+                SelectItem::new("nzst", "New Zealand Standard Time (NZST)").into(),
+                SelectItem::new("fjt", "Fiji Time (FJT)").into(),
+            ])
+            .into(),
+            SelectGroup::new(vec![
+                SelectLabel::new("South America").into(),
+                SelectItem::new("art", "Argentina Time (ART)").into(),
+                SelectItem::new("bot", "Bolivia Time (BOT)").into(),
+                SelectItem::new("brt", "Brasilia Time (BRT)").into(),
+                SelectItem::new("clt", "Chile Standard Time (CLT)").into(),
+            ])
+            .into(),
+        ];
+
+        fret_ui_shadcn::Select::new(value.clone(), open.clone())
+            .a11y_label("Select")
+            .placeholder("Select a timezone")
+            .refine_layout(
+                fret_ui_kit::LayoutRefinement::default()
+                    .w_px(fret_ui_kit::MetricRef::Px(Px(280.0))),
+            )
+            .entries(entries)
+            .into_element(cx)
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = render(cx);
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let combobox = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::ComboBox)
+        .unwrap_or_else(|| panic!("missing fret combobox for {web_name}"));
+    let listbox = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::ListBox)
+        .unwrap_or_else(|| panic!("missing fret listbox for {web_name}"));
+
+    assert!(
+        listbox.bounds.size.width.0 + 0.01 >= combobox.bounds.size.width.0,
+        "{web_name} expected listbox width >= trigger width ({} >= {})",
+        listbox.bounds.size.width.0,
+        combobox.bounds.size.width.0
+    );
+    assert_close(
+        &format!("{web_name} listbox_w"),
+        listbox.bounds.size.width.0,
+        expected_w,
+        2.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_select_scrollable_listbox_width_matches() {
+    assert_select_scrollable_listbox_width_matches("select-scrollable");
+}
+
+#[test]
+fn web_vs_fret_select_scrollable_small_viewport_listbox_width_matches() {
+    assert_select_scrollable_listbox_width_matches("select-scrollable.vp1440x450");
 }
 
 fn assert_point_anchored_overlay_placement_matches(
