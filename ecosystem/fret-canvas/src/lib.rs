@@ -9,6 +9,7 @@
 #![forbid(unsafe_code)]
 
 pub mod cache;
+pub mod budget;
 pub mod diagnostics;
 pub mod drag;
 pub mod scale;
