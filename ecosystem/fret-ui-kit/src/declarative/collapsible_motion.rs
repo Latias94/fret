@@ -218,6 +218,7 @@ pub fn measured_height_motion_for_root<H: UiHost>(
     );
 
     if wants_measurement {
+        cx.request_frame();
         return MeasuredHeightMotionOutput {
             state_id,
             open,
@@ -527,13 +528,26 @@ mod tests {
         );
         let wrapper_id = wrapper_id.expect("wrapper id");
 
-        // Advance enough frames for the open transition to settle.
+        // Advance frames until the wrapper reaches its final height.
+        //
+        // Note: `bounds_for_element` intentionally returns the *previous* frame's bounds. If we
+        // keep producing frames after the animation settles (without any invalidations), the
+        // runtime may stop recording bounds and this query can return `None`. Real apps typically
+        // stop producing frames once the transition settles, so this test stops as soon as it
+        // observes the final height.
+        let mut settled = false;
         for _ in 0..16 {
             render(&mut ui, &mut app, &mut services);
+            let Some(wrapper_bounds) =
+                fret_ui::elements::bounds_for_element(&mut app, window, wrapper_id)
+            else {
+                continue;
+            };
+            if (wrapper_bounds.size.height.0 - 80.0).abs() <= 0.5 {
+                settled = true;
+                break;
+            }
         }
-
-        let wrapper_bounds = fret_ui::elements::bounds_for_element(&mut app, window, wrapper_id)
-            .expect("wrapper bounds");
-        assert!((wrapper_bounds.size.height.0 - 80.0).abs() <= 0.5);
+        assert!(settled, "expected wrapper to reach its final height");
     }
 }
