@@ -650,9 +650,8 @@ fn estimated_menu_panel_height_for_entries(
     let mut height = panel_padding_y.0 + panel_border_y.0;
     add_entries(&mut height, entries, row_height.0);
 
-    let min_h = height.max(0.0);
-    let max_h = max_height.0.max(min_h);
-    Px(height.clamp(min_h, max_h))
+    let height = height.max(0.0);
+    Px(height.min(max_height.0.max(0.0)))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -903,6 +902,7 @@ pub struct DropdownMenu {
     open: Model<bool>,
     modal: bool,
     align: DropdownMenuAlign,
+    align_offset: Px,
     side: DropdownMenuSide,
     side_offset: Px,
     window_margin: Px,
@@ -936,6 +936,7 @@ impl DropdownMenu {
             open,
             modal: true,
             align: DropdownMenuAlign::default(),
+            align_offset: Px(0.0),
             side: DropdownMenuSide::default(),
             side_offset: Px(4.0),
             window_margin: Px(0.0),
@@ -952,6 +953,11 @@ impl DropdownMenu {
 
     pub fn align(mut self, align: DropdownMenuAlign) -> Self {
         self.align = align;
+        self
+    }
+
+    pub fn align_offset(mut self, offset: Px) -> Self {
+        self.align_offset = offset;
         self
     }
 
@@ -1078,6 +1084,7 @@ impl DropdownMenu {
 
             if overlay_presence.present {
                 let align = self.align;
+                let align_offset = self.align_offset;
                 let side = self.side;
                 let side_offset = self.side_offset;
                 let window_margin = self.window_margin;
@@ -1133,6 +1140,7 @@ impl DropdownMenu {
 
                     let popper_placement =
                         popper::PopperContentPlacement::new(direction, side, align, side_offset)
+                            .with_align_offset(align_offset)
                             .with_arrow(arrow_options, arrow_protrusion);
 
                     // shadcn: content width tracks trigger width (with a minimum), and height
@@ -2934,6 +2942,39 @@ mod tests {
     use fret_ui::element::PressableA11y;
     use fret_ui_kit::primitives::direction as direction_prim;
     use fret_ui_kit::primitives::direction::LayoutDirection;
+
+    #[test]
+    fn estimated_menu_panel_height_clamps_to_max_height() {
+        let entries: Vec<DropdownMenuEntry> = (0..100)
+            .map(|i| {
+                DropdownMenuEntry::Item(
+                    DropdownMenuItem::new(format!("Item {i}")).on_select(CommandId::new("noop")),
+                )
+            })
+            .collect();
+
+        let row_height = Px(20.0);
+        let max_height = Px(120.0);
+        let height = estimated_menu_panel_height_for_entries(&entries, row_height, max_height);
+        assert_eq!(height, max_height);
+    }
+
+    #[test]
+    fn estimated_menu_panel_height_shrinks_for_short_menus() {
+        let entries = vec![
+            DropdownMenuEntry::Item(
+                DropdownMenuItem::new("Apple").on_select(CommandId::new("noop")),
+            ),
+            DropdownMenuEntry::Item(
+                DropdownMenuItem::new("Orange").on_select(CommandId::new("noop")),
+            ),
+        ];
+
+        let row_height = Px(20.0);
+        let max_height = Px(120.0);
+        let height = estimated_menu_panel_height_for_entries(&entries, row_height, max_height);
+        assert_eq!(height, Px(50.0));
+    }
 
     #[derive(Default)]
     struct FakeServices;

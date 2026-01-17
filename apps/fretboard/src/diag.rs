@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::process::{Child, Command};
 use std::time::{Duration, Instant};
 
 pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
@@ -21,6 +22,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut poll_ms: u64 = 50;
     let mut stats_top: usize = 5;
     let mut stats_json: bool = false;
+    let mut launch: Option<Vec<String>> = None;
 
     // Parse global `diag` flags regardless of their position, leaving positional args intact.
     // This keeps the behavior aligned with the help text in `apps/fretboard/src/cli.rs`.
@@ -185,6 +187,23 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 stats_json = true;
                 i += 1;
             }
+            "--launch" => {
+                i += 1;
+                let launch_args = args.get(i..).unwrap_or_default();
+                if launch_args.is_empty() {
+                    return Err("missing command after --launch (try: --launch -- cargo run -p fret-demo --bin todo_demo)".to_string());
+                }
+                let launch_args: Vec<String> = if launch_args.first().is_some_and(|v| v == "--") {
+                    launch_args.iter().skip(1).cloned().collect()
+                } else {
+                    launch_args.to_vec()
+                };
+                if launch_args.is_empty() {
+                    return Err("missing command after --launch --".to_string());
+                }
+                launch = Some(launch_args);
+                break;
+            }
             other if other.starts_with('-') => return Err(format!("unknown diag flag: {other}")),
             _ => {
                 positionals.push(arg.clone());
@@ -219,6 +238,14 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     .map(PathBuf::from)
             })
             .unwrap_or_else(|| resolved_out_dir.join("trigger.touch"));
+        resolve_path(&workspace_root, raw)
+    };
+
+    let resolved_ready_path = {
+        let raw = std::env::var_os("FRET_DIAG_READY_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| resolved_out_dir.join("ready.touch"));
         resolve_path(&workspace_root, raw)
     };
 
@@ -384,7 +411,15 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
 
             let src = resolve_path(&workspace_root, PathBuf::from(src));
-            let result = run_script_and_wait(
+            let mut child = maybe_launch_demo(
+                &launch,
+                &workspace_root,
+                &resolved_out_dir,
+                &resolved_ready_path,
+                timeout_ms,
+                poll_ms,
+            )?;
+            let mut result = run_script_and_wait(
                 &src,
                 &resolved_script_path,
                 &resolved_script_trigger_path,
@@ -392,7 +427,22 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 &resolved_script_result_trigger_path,
                 timeout_ms,
                 poll_ms,
-            )?;
+            );
+            if let Ok(summary) = &result
+                && summary.stage.as_deref() == Some("failed")
+            {
+                if let Some(dir) =
+                    wait_for_failure_dump_bundle(&resolved_out_dir, summary, timeout_ms, poll_ms)
+                {
+                    if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
+                        if let Ok(summary) = result.as_mut() {
+                            summary.last_bundle_dir = Some(name.to_string());
+                        }
+                    }
+                }
+            }
+            kill_launched_demo(&mut child);
+            let result = result?;
             report_result_and_exit(&result);
         }
         "suite" => {
@@ -405,10 +455,12 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
             let scripts: Vec<PathBuf> = if rest.len() == 1 && rest[0] == "ui-gallery" {
                 [
+                    "tools/diag-scripts/ui-gallery-overlay-torture.json",
                     "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
                     "tools/diag-scripts/ui-gallery-context-menu-right-click.json",
                     "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
                     "tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json",
+                    "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
                 ]
                 .into_iter()
                 .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
@@ -419,8 +471,31 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     .collect()
             };
 
+            let reuse_process = launch.is_none();
+            let mut child = if reuse_process {
+                maybe_launch_demo(
+                    &launch,
+                    &workspace_root,
+                    &resolved_out_dir,
+                    &resolved_ready_path,
+                    timeout_ms,
+                    poll_ms,
+                )?
+            } else {
+                None
+            };
             for src in scripts {
-                let result = run_script_and_wait(
+                if !reuse_process {
+                    child = maybe_launch_demo(
+                        &launch,
+                        &workspace_root,
+                        &resolved_out_dir,
+                        &resolved_ready_path,
+                        timeout_ms,
+                        poll_ms,
+                    )?;
+                }
+                let mut result = run_script_and_wait(
                     &src,
                     &resolved_script_path,
                     &resolved_script_trigger_path,
@@ -428,17 +503,45 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     &resolved_script_result_trigger_path,
                     timeout_ms,
                     poll_ms,
-                )?;
+                );
+                if let Ok(summary) = &result
+                    && summary.stage.as_deref() == Some("failed")
+                {
+                    if let Some(dir) = wait_for_failure_dump_bundle(
+                        &resolved_out_dir,
+                        summary,
+                        timeout_ms,
+                        poll_ms,
+                    ) {
+                        if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
+                            if let Ok(summary) = result.as_mut() {
+                                summary.last_bundle_dir = Some(name.to_string());
+                            }
+                        }
+                    }
+                }
+
+                let result = match result {
+                    Ok(v) => v,
+                    Err(e) => {
+                        kill_launched_demo(&mut child);
+                        return Err(e);
+                    }
+                };
                 match result.stage.as_deref() {
-                    Some("passed") => println!("PASS {} (run_id={})", src.display(), result.run_id),
+                    Some("passed") => {
+                        println!("PASS {} (run_id={})", src.display(), result.run_id)
+                    }
                     Some("failed") => {
                         eprintln!(
-                            "FAIL {} (run_id={}) reason={} last_bundle_dir={}",
+                            "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
                             src.display(),
                             result.run_id,
+                            result.step_index.unwrap_or(0),
                             result.reason.as_deref().unwrap_or("unknown"),
                             result.last_bundle_dir.as_deref().unwrap_or("")
                         );
+                        kill_launched_demo(&mut child);
                         std::process::exit(1);
                     }
                     _ => {
@@ -447,11 +550,17 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             src.display(),
                             result
                         );
+                        kill_launched_demo(&mut child);
                         std::process::exit(1);
                     }
                 }
+
+                if !reuse_process {
+                    kill_launched_demo(&mut child);
+                }
             }
 
+            kill_launched_demo(&mut child);
             std::process::exit(0);
         }
         "stats" => {
@@ -714,6 +823,81 @@ fn find_latest_export_dir(out_dir: &Path) -> Option<PathBuf> {
     best.map(|(_, p)| p)
 }
 
+fn maybe_launch_demo(
+    launch: &Option<Vec<String>>,
+    workspace_root: &Path,
+    out_dir: &Path,
+    ready_path: &Path,
+    timeout_ms: u64,
+    poll_ms: u64,
+) -> Result<Option<Child>, String> {
+    let Some(launch) = launch else {
+        return Ok(None);
+    };
+
+    let prev_ready_mtime = std::fs::metadata(ready_path)
+        .and_then(|m| m.modified())
+        .ok();
+
+    let exe = launch
+        .first()
+        .ok_or_else(|| "missing launch command".to_string())?;
+
+    let mut cmd = Command::new(exe);
+    cmd.args(launch.iter().skip(1));
+    cmd.current_dir(workspace_root);
+    cmd.env("FRET_DIAG", "1");
+    cmd.env("FRET_DIAG_DIR", out_dir);
+    cmd.env("FRET_DIAG_READY_PATH", ready_path);
+    if let Some(target_dir) = std::env::var_os("CARGO_TARGET_DIR").filter(|v| !v.is_empty()) {
+        cmd.env("CARGO_TARGET_DIR", target_dir);
+    }
+
+    let child = cmd
+        .spawn()
+        .map_err(|e| format!("failed to spawn `{}`: {e}", launch.join(" ")))?;
+
+    // Avoid racing cold-start compilation by waiting for the app to signal readiness.
+    let deadline = Instant::now() + Duration::from_millis(timeout_ms.max(180_000));
+    while Instant::now() < deadline {
+        let ready_mtime = std::fs::metadata(ready_path)
+            .and_then(|m| m.modified())
+            .ok();
+        let ready = match (prev_ready_mtime, ready_mtime) {
+            (Some(prev), Some(now)) => now > prev,
+            (None, Some(_)) => true,
+            _ => false,
+        };
+        if ready {
+            return Ok(Some(child));
+        }
+        std::thread::sleep(Duration::from_millis(poll_ms.max(10)));
+    }
+
+    Ok(Some(child))
+}
+
+fn kill_launched_demo(child: &mut Option<Child>) {
+    let Some(c) = child.as_mut() else {
+        return;
+    };
+
+    #[cfg(windows)]
+    {
+        let _ = Command::new("taskkill")
+            .args(["/PID", &c.id().to_string(), "/T", "/F"])
+            .status();
+    }
+
+    #[cfg(not(windows))]
+    {
+        let _ = c.kill();
+    }
+
+    let _ = c.wait();
+    *child = None;
+}
+
 fn touch(path: &Path) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
@@ -788,6 +972,29 @@ struct BundleStatsSnapshotRow {
     invalidation_walk_nodes: u32,
     model_change_invalidation_roots: u32,
     global_change_invalidation_roots: u32,
+    invalidation_walk_calls_model_change: u32,
+    invalidation_walk_nodes_model_change: u32,
+    invalidation_walk_calls_global_change: u32,
+    invalidation_walk_nodes_global_change: u32,
+    invalidation_walk_calls_hover: u32,
+    invalidation_walk_nodes_hover: u32,
+    invalidation_walk_calls_focus: u32,
+    invalidation_walk_nodes_focus: u32,
+    invalidation_walk_calls_other: u32,
+    invalidation_walk_nodes_other: u32,
+    top_invalidation_walks: Vec<BundleStatsInvalidationWalk>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct BundleStatsInvalidationWalk {
+    root_node: u64,
+    root_element: Option<u64>,
+    kind: Option<String>,
+    source: Option<String>,
+    walked_nodes: u32,
+    truncated_at: Option<u64>,
+    root_role: Option<String>,
+    root_test_id: Option<String>,
 }
 
 impl BundleStatsReport {
@@ -828,18 +1035,58 @@ impl BundleStatsReport {
                 .map(|v| v.to_string())
                 .unwrap_or_else(|| "-".to_string());
             println!(
-                "  window={} tick={} frame={} ts={} inv.calls={} inv.nodes={} roots.model={} roots.global={} changed.models={} changed.globals={}",
+                "  window={} tick={} frame={} ts={} inv.calls={} inv.nodes={} by_src.calls(hover/focus/other)={}/{}/{} by_src.nodes(hover/focus/other)={}/{}/{} roots.model={} roots.global={} changed.models={} changed.globals={}",
                 row.window,
                 row.tick_id,
                 row.frame_id,
                 ts,
                 row.invalidation_walk_calls,
                 row.invalidation_walk_nodes,
+                row.invalidation_walk_calls_hover,
+                row.invalidation_walk_calls_focus,
+                row.invalidation_walk_calls_other,
+                row.invalidation_walk_nodes_hover,
+                row.invalidation_walk_nodes_focus,
+                row.invalidation_walk_nodes_other,
                 row.model_change_invalidation_roots,
                 row.global_change_invalidation_roots,
                 row.changed_models,
                 row.changed_globals
             );
+            if !row.top_invalidation_walks.is_empty() {
+                let items: Vec<String> = row
+                    .top_invalidation_walks
+                    .iter()
+                    .take(3)
+                    .map(|w| {
+                        let mut s = format!(
+                            "nodes={} src={} kind={} root={}",
+                            w.walked_nodes,
+                            w.source.as_deref().unwrap_or("?"),
+                            w.kind.as_deref().unwrap_or("?"),
+                            w.root_node
+                        );
+                        if let Some(test_id) = w.root_test_id.as_deref()
+                            && !test_id.is_empty()
+                        {
+                            s.push_str(&format!(" test_id={}", test_id));
+                        }
+                        if let Some(role) = w.root_role.as_deref()
+                            && !role.is_empty()
+                        {
+                            s.push_str(&format!(" role={}", role));
+                        }
+                        if let Some(el) = w.root_element {
+                            s.push_str(&format!(" element={}", el));
+                        }
+                        if let Some(trunc) = w.truncated_at {
+                            s.push_str(&format!(" trunc_at={}", trunc));
+                        }
+                        s
+                    })
+                    .collect();
+                println!("    top_walks: {}", items.join(" | "));
+            }
         }
     }
 
@@ -873,6 +1120,26 @@ impl BundleStatsReport {
                 "invalidation_walk_nodes": row.invalidation_walk_nodes,
                 "model_change_invalidation_roots": row.model_change_invalidation_roots,
                 "global_change_invalidation_roots": row.global_change_invalidation_roots,
+                "invalidation_walk_calls_model_change": row.invalidation_walk_calls_model_change,
+                "invalidation_walk_nodes_model_change": row.invalidation_walk_nodes_model_change,
+                "invalidation_walk_calls_global_change": row.invalidation_walk_calls_global_change,
+                "invalidation_walk_nodes_global_change": row.invalidation_walk_nodes_global_change,
+                "invalidation_walk_calls_hover": row.invalidation_walk_calls_hover,
+                "invalidation_walk_nodes_hover": row.invalidation_walk_nodes_hover,
+                "invalidation_walk_calls_focus": row.invalidation_walk_calls_focus,
+                "invalidation_walk_nodes_focus": row.invalidation_walk_nodes_focus,
+                "invalidation_walk_calls_other": row.invalidation_walk_calls_other,
+                "invalidation_walk_nodes_other": row.invalidation_walk_nodes_other,
+                "top_invalidation_walks": row.top_invalidation_walks.iter().map(|w| serde_json::json!({
+                    "root_node": w.root_node,
+                    "root_element": w.root_element,
+                    "kind": w.kind,
+                    "source": w.source,
+                    "walked_nodes": w.walked_nodes,
+                    "truncated_at": w.truncated_at,
+                    "root_role": w.root_role,
+                    "root_test_id": w.root_test_id,
+                })).collect::<Vec<_>>(),
             })).collect::<Vec<_>>(),
         })
     }
@@ -953,6 +1220,60 @@ fn bundle_stats_from_json(
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0)
                 .min(u32::MAX as u64) as u32;
+            let invalidation_walk_calls_model_change = stats
+                .and_then(|m| m.get("invalidation_walk_calls_model_change"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let invalidation_walk_nodes_model_change = stats
+                .and_then(|m| m.get("invalidation_walk_nodes_model_change"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let invalidation_walk_calls_global_change = stats
+                .and_then(|m| m.get("invalidation_walk_calls_global_change"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let invalidation_walk_nodes_global_change = stats
+                .and_then(|m| m.get("invalidation_walk_nodes_global_change"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let invalidation_walk_calls_hover = stats
+                .and_then(|m| m.get("invalidation_walk_calls_hover"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let invalidation_walk_nodes_hover = stats
+                .and_then(|m| m.get("invalidation_walk_nodes_hover"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let invalidation_walk_calls_focus = stats
+                .and_then(|m| m.get("invalidation_walk_calls_focus"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let invalidation_walk_nodes_focus = stats
+                .and_then(|m| m.get("invalidation_walk_nodes_focus"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let invalidation_walk_calls_other = stats
+                .and_then(|m| m.get("invalidation_walk_calls_other"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let invalidation_walk_nodes_other = stats
+                .and_then(|m| m.get("invalidation_walk_nodes_other"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+
+            let top_invalidation_walks = snapshot_top_invalidation_walks(s, 3);
 
             out.sum_invalidation_walk_calls = out
                 .sum_invalidation_walk_calls
@@ -989,6 +1310,17 @@ fn bundle_stats_from_json(
                 invalidation_walk_nodes,
                 model_change_invalidation_roots,
                 global_change_invalidation_roots,
+                invalidation_walk_calls_model_change,
+                invalidation_walk_nodes_model_change,
+                invalidation_walk_calls_global_change,
+                invalidation_walk_nodes_global_change,
+                invalidation_walk_calls_hover,
+                invalidation_walk_nodes_hover,
+                invalidation_walk_calls_focus,
+                invalidation_walk_nodes_focus,
+                invalidation_walk_calls_other,
+                invalidation_walk_nodes_other,
+                top_invalidation_walks,
             });
         }
     }
@@ -1010,10 +1342,89 @@ fn bundle_stats_from_json(
     Ok(out)
 }
 
+fn snapshot_top_invalidation_walks(
+    snapshot: &serde_json::Value,
+    max: usize,
+) -> Vec<BundleStatsInvalidationWalk> {
+    let walks = snapshot
+        .get("debug")
+        .and_then(|v| v.get("invalidation_walks"))
+        .and_then(|v| v.as_array())
+        .map(|v| v.as_slice())
+        .unwrap_or(&[]);
+    if walks.is_empty() {
+        return Vec::new();
+    }
+
+    let mut out: Vec<BundleStatsInvalidationWalk> = walks
+        .iter()
+        .map(|w| BundleStatsInvalidationWalk {
+            root_node: w.get("root_node").and_then(|v| v.as_u64()).unwrap_or(0),
+            root_element: w.get("root_element").and_then(|v| v.as_u64()),
+            kind: w
+                .get("kind")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            source: w
+                .get("source")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            walked_nodes: w
+                .get("walked_nodes")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32,
+            truncated_at: w.get("truncated_at").and_then(|v| v.as_u64()),
+            root_role: None,
+            root_test_id: None,
+        })
+        .collect();
+
+    out.sort_by(|a, b| b.walked_nodes.cmp(&a.walked_nodes));
+    out.truncate(max);
+
+    for walk in &mut out {
+        let (role, test_id) = snapshot_lookup_semantics(snapshot, walk.root_node);
+        walk.root_role = role;
+        walk.root_test_id = test_id;
+    }
+
+    out
+}
+
+fn snapshot_lookup_semantics(
+    snapshot: &serde_json::Value,
+    node_id: u64,
+) -> (Option<String>, Option<String>) {
+    let nodes = snapshot
+        .get("debug")
+        .and_then(|v| v.get("semantics"))
+        .and_then(|v| v.get("nodes"))
+        .and_then(|v| v.as_array())
+        .map(|v| v.as_slice())
+        .unwrap_or(&[]);
+
+    for n in nodes {
+        if n.get("id").and_then(|v| v.as_u64()) == Some(node_id) {
+            let role = n
+                .get("role")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let test_id = n
+                .get("test_id")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            return (role, test_id);
+        }
+    }
+    (None, None)
+}
+
 #[derive(Debug, Clone)]
 struct ScriptResultSummary {
     run_id: u64,
     stage: Option<String>,
+    step_index: Option<u64>,
     reason: Option<String>,
     last_bundle_dir: Option<String>,
 }
@@ -1065,6 +1476,7 @@ fn run_script_and_wait(
                     .map(|s| s.to_string());
 
                 if matches!(stage.as_deref(), Some("passed") | Some("failed")) {
+                    let step_index = result.get("step_index").and_then(|v| v.as_u64());
                     let reason = result
                         .get("reason")
                         .and_then(|v| v.as_str())
@@ -1076,6 +1488,7 @@ fn run_script_and_wait(
                     return Ok(ScriptResultSummary {
                         run_id,
                         stage,
+                        step_index,
                         reason,
                         last_bundle_dir,
                     });
@@ -1097,12 +1510,26 @@ fn report_result_and_exit(result: &ScriptResultSummary) -> ! {
             let reason = result.reason.as_deref().unwrap_or("unknown");
             let last_bundle_dir = result.last_bundle_dir.as_deref().unwrap_or("");
             if last_bundle_dir.is_empty() {
-                eprintln!("FAIL (run_id={}) reason={reason}", result.run_id);
+                if let Some(step) = result.step_index {
+                    eprintln!(
+                        "FAIL (run_id={}) step={} reason={reason}",
+                        result.run_id, step
+                    );
+                } else {
+                    eprintln!("FAIL (run_id={}) reason={reason}", result.run_id);
+                }
             } else {
-                eprintln!(
-                    "FAIL (run_id={}) reason={reason} last_bundle_dir={last_bundle_dir}",
-                    result.run_id
-                );
+                if let Some(step) = result.step_index {
+                    eprintln!(
+                        "FAIL (run_id={}) step={} reason={reason} last_bundle_dir={last_bundle_dir}",
+                        result.run_id, step
+                    );
+                } else {
+                    eprintln!(
+                        "FAIL (run_id={}) reason={reason} last_bundle_dir={last_bundle_dir}",
+                        result.run_id
+                    );
+                }
             }
             std::process::exit(1);
         }
@@ -1111,6 +1538,76 @@ fn report_result_and_exit(result: &ScriptResultSummary) -> ! {
             std::process::exit(1);
         }
     }
+}
+
+fn expected_failure_dump_suffixes(result: &ScriptResultSummary) -> Vec<String> {
+    let Some(step_index) = result.step_index else {
+        return Vec::new();
+    };
+    let Some(reason) = result.reason.as_deref() else {
+        return Vec::new();
+    };
+
+    match reason {
+        "wait_until_timeout" => vec![format!("script-step-{step_index:04}-wait_until-timeout")],
+        "assert_failed" => vec![format!("script-step-{step_index:04}-assert-failed")],
+        "no_semantics_snapshot" => vec![
+            format!("script-step-{step_index:04}-wait_until-no-semantics"),
+            format!("script-step-{step_index:04}-assert-no-semantics"),
+        ],
+        _ => Vec::new(),
+    }
+}
+
+fn wait_for_failure_dump_bundle(
+    out_dir: &Path,
+    result: &ScriptResultSummary,
+    timeout_ms: u64,
+    poll_ms: u64,
+) -> Option<PathBuf> {
+    let suffixes = expected_failure_dump_suffixes(result);
+    if suffixes.is_empty() {
+        return None;
+    }
+
+    let deadline = Instant::now() + Duration::from_millis(timeout_ms.min(5_000).max(250));
+    while Instant::now() < deadline {
+        for suffix in &suffixes {
+            if let Some(dir) = find_latest_export_dir_with_suffix(out_dir, suffix)
+                && dir.join("bundle.json").is_file()
+            {
+                return Some(dir);
+            }
+        }
+        std::thread::sleep(Duration::from_millis(poll_ms.max(10)));
+    }
+    None
+}
+
+fn find_latest_export_dir_with_suffix(out_dir: &Path, suffix: &str) -> Option<PathBuf> {
+    let mut best: Option<(u64, PathBuf)> = None;
+    let entries = std::fs::read_dir(out_dir).ok()?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        let name = entry.file_name().to_string_lossy().to_string();
+        if !name.ends_with(suffix) {
+            continue;
+        }
+        let Some((ts_str, _)) = name.split_once('-') else {
+            continue;
+        };
+        let Ok(ts) = ts_str.parse::<u64>() else {
+            continue;
+        };
+        match &best {
+            Some((prev, _)) if *prev >= ts => {}
+            _ => best = Some((ts, path)),
+        }
+    }
+    best.map(|(_, p)| p)
 }
 
 fn run_pick_and_wait(
@@ -1353,6 +1850,113 @@ fn unescape_json_pointer_token(raw: &str) -> String {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn bundle_stats_sums_and_sorts_top_by_invalidation_nodes() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "changed_models": [],
+                            "changed_globals": [],
+                            "debug": { "stats": {
+                                "invalidation_walk_calls": 2,
+                                "invalidation_walk_nodes": 10,
+                                "model_change_invalidation_roots": 1,
+                                "global_change_invalidation_roots": 0
+                            } }
+                        },
+                        {
+                            "tick_id": 2,
+                            "frame_id": 2,
+                            "changed_models": [123],
+                            "changed_globals": ["TypeId(0x0)"],
+                            "debug": { "stats": {
+                                "invalidation_walk_calls": 5,
+                                "invalidation_walk_nodes": 7,
+                                "model_change_invalidation_roots": 2,
+                                "global_change_invalidation_roots": 1
+                            } }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let report = bundle_stats_from_json(&bundle, 1).unwrap();
+        assert_eq!(report.windows, 1);
+        assert_eq!(report.snapshots, 2);
+        assert_eq!(report.snapshots_with_model_changes, 1);
+        assert_eq!(report.snapshots_with_global_changes, 1);
+        assert_eq!(report.sum_invalidation_walk_calls, 7);
+        assert_eq!(report.sum_invalidation_walk_nodes, 17);
+        assert_eq!(report.max_invalidation_walk_calls, 5);
+        assert_eq!(report.max_invalidation_walk_nodes, 10);
+        assert_eq!(report.top.len(), 1);
+        assert_eq!(report.top[0].invalidation_walk_nodes, 10);
+        assert_eq!(report.top[0].tick_id, 1);
+    }
+
+    #[test]
+    fn bundle_stats_extracts_top_invalidation_walks_with_semantics() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "changed_models": [],
+                            "changed_globals": [],
+                            "debug": {
+                                "stats": {
+                                    "invalidation_walk_calls": 1,
+                                    "invalidation_walk_nodes": 42,
+                                    "model_change_invalidation_roots": 0,
+                                    "global_change_invalidation_roots": 0
+                                },
+                                "invalidation_walks": [
+                                    { "root_node": 42, "kind": "paint", "source": "other", "walked_nodes": 10 },
+                                    { "root_node": 43, "kind": "layout", "source": "other", "walked_nodes": 20, "root_element": 9 }
+                                ],
+                                "semantics": {
+                                    "nodes": [
+                                        { "id": 43, "role": "button", "test_id": "todo-add" }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let report = bundle_stats_from_json(&bundle, 1).unwrap();
+        assert_eq!(report.top.len(), 1);
+        assert_eq!(report.top[0].top_invalidation_walks.len(), 2);
+        assert_eq!(report.top[0].top_invalidation_walks[0].root_node, 43);
+        assert_eq!(
+            report.top[0].top_invalidation_walks[0]
+                .root_test_id
+                .as_deref(),
+            Some("todo-add")
+        );
+        assert_eq!(
+            report.top[0].top_invalidation_walks[0].root_role.as_deref(),
+            Some("button")
+        );
+        assert_eq!(
+            report.top[0].top_invalidation_walks[0].root_element,
+            Some(9)
+        );
+    }
 
     #[test]
     fn json_pointer_set_updates_object_field() {

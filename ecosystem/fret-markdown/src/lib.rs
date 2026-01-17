@@ -41,10 +41,12 @@ impl Markdown {
         }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         markdown(cx, &self.source)
     }
 
+    #[track_caller]
     pub fn into_element_with<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -54,10 +56,57 @@ impl Markdown {
     }
 }
 
+#[track_caller]
 pub fn markdown<H: UiHost>(cx: &mut ElementContext<'_, H>, source: &str) -> AnyElement {
     markdown_with(cx, source, &MarkdownComponents::default())
 }
 
+#[derive(Debug)]
+struct MarkdownSnapshot {
+    doc: mdstream::DocumentState,
+    adapter: mdstream::adapters::pulldown::PulldownAdapter,
+}
+
+#[derive(Debug)]
+struct MarkdownCachedState {
+    source: Arc<str>,
+    snapshot: Option<Arc<MarkdownSnapshot>>,
+}
+
+impl MarkdownCachedState {
+    fn new() -> Self {
+        Self {
+            source: Arc::from(""),
+            snapshot: None,
+        }
+    }
+
+    fn snapshot_for_source(&mut self, source: &str) -> Arc<MarkdownSnapshot> {
+        if self.source.as_ref() == source {
+            if let Some(snapshot) = self.snapshot.as_ref() {
+                return snapshot.clone();
+            }
+        }
+
+        self.source = Arc::from(source);
+
+        let mut stream = mdstream::MdStream::new(mdstream_options_for_markdown());
+        let update = stream.append(self.source.as_ref());
+
+        let mut state = MarkdownPulldownState::new();
+        state.apply_update(update);
+        state.apply_update(stream.finalize());
+
+        let snapshot = Arc::new(MarkdownSnapshot {
+            doc: state.doc,
+            adapter: state.adapter,
+        });
+        self.snapshot = Some(snapshot.clone());
+        snapshot
+    }
+}
+
+#[track_caller]
 pub fn markdown_with<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     source: &str,
@@ -66,19 +115,18 @@ pub fn markdown_with<H: UiHost>(
     let theme = Theme::global(&*cx.app).clone();
     let markdown_theme = MarkdownTheme::resolve(&theme);
 
-    let mut stream = mdstream::MdStream::new(mdstream_options_for_markdown());
-    let update = stream.append(source);
-
-    let mut state = MarkdownPulldownState::new();
-    state.apply_update(update);
-    state.apply_update(stream.finalize());
+    let snapshot = cx.named("markdown", |cx| {
+        cx.with_state(MarkdownCachedState::new, |state| {
+            state.snapshot_for_source(source)
+        })
+    });
 
     markdown_mdstream_pulldown_with(
         cx,
         &theme,
         markdown_theme,
-        state.doc(),
-        &state.adapter,
+        &snapshot.doc,
+        &snapshot.adapter,
         components,
     )
 }

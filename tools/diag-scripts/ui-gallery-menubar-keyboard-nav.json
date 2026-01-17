@@ -13,8 +13,8 @@
       },
       "timeout_frames": 60
     },
-    { "type": "press_key", "key": "arrow_down" },
-    { "type": "press_key", "key": "enter" },
-    { "type": "capture_bundle", "label": "ui-gallery-menubar-file-enter" }
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+    { "type": "capture_bundle", "label": "ui-gallery-menubar-file-escape" }
   ]
 }

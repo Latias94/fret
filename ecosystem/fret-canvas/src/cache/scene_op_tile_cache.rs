@@ -1,0 +1,260 @@
+use fret_core::{Point, Px, Rect, Scene, SceneOp};
+use std::cmp::Reverse;
+use std::collections::HashMap;
+use std::hash::Hash;
+
+/// 2D tile coordinate for canvas-space tiling.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct TileCoord {
+    pub x: i32,
+    pub y: i32,
+}
+
+impl TileCoord {
+    pub fn origin(self, tile_size_canvas: f32) -> Point {
+        let s = tile_size_canvas;
+        Point::new(Px(self.x as f32 * s), Px(self.y as f32 * s))
+    }
+}
+
+/// Helper for mapping canvas-space rects into tile ranges.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TileGrid2D {
+    tile_size_canvas: f32,
+}
+
+impl TileGrid2D {
+    pub fn new(tile_size_canvas: f32) -> Self {
+        Self { tile_size_canvas }
+    }
+
+    pub fn tile_size_canvas(&self) -> f32 {
+        self.tile_size_canvas
+    }
+
+    pub fn tiles_in_rect(&self, rect: Rect, out: &mut Vec<TileCoord>) {
+        out.clear();
+
+        let s = self.tile_size_canvas;
+        if !s.is_finite() || s <= 0.0 {
+            return;
+        }
+
+        let min_x = rect.origin.x.0;
+        let min_y = rect.origin.y.0;
+        let max_x = min_x + rect.size.width.0;
+        let max_y = min_y + rect.size.height.0;
+
+        let x0 = (min_x / s).floor() as i32;
+        let y0 = (min_y / s).floor() as i32;
+        let x1 = (max_x / s).floor() as i32;
+        let y1 = (max_y / s).floor() as i32;
+
+        for y in y0..=y1 {
+            for x in x0..=x1 {
+                out.push(TileCoord { x, y });
+            }
+        }
+    }
+}
+
+/// Cache for recorded `SceneOp`s split into fixed-size tiles (retained-canvas replay caching).
+///
+/// This is intended for large canvases where:
+/// - the scene is spatially local (only a fraction is visible),
+/// - pan/scroll changes the visible set, but most tiles remain reusable,
+/// - a single monolithic "static layer" cache would miss too often.
+///
+/// Like `SceneOpCache`, this cache does **not** manage renderer-owned resources referenced by ops.
+/// Callers must ensure referenced resources remain valid for as long as cached ops are used.
+#[derive(Debug, Default)]
+pub struct SceneOpTileCache<K> {
+    entries: HashMap<K, SceneOpTileEntry>,
+    frame: u64,
+    stats: SceneOpTileCacheStats,
+}
+
+#[derive(Debug, Default)]
+struct SceneOpTileEntry {
+    ops: Vec<SceneOp>,
+    last_used_frame: u64,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct SceneOpTileCacheStats {
+    pub calls: u64,
+    pub hits: u64,
+    pub misses: u64,
+    pub stored_tiles: u64,
+    pub recorded_ops: u64,
+    pub replayed_ops: u64,
+    pub clear_calls: u64,
+    pub prune_calls: u64,
+    pub evict_calls: u64,
+    pub evict_prune_age: u64,
+    pub evict_prune_budget: u64,
+}
+
+impl<K: Eq + Hash + Copy> SceneOpTileCache<K> {
+    pub fn begin_frame(&mut self) {
+        self.frame = self.frame.saturating_add(1);
+    }
+
+    pub fn stats(&self) -> SceneOpTileCacheStats {
+        self.stats
+    }
+
+    pub fn reset_stats(&mut self) {
+        self.stats = SceneOpTileCacheStats::default();
+    }
+
+    pub fn entries_len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn clear(&mut self) {
+        self.entries.clear();
+        self.stats.clear_calls = self.stats.clear_calls.saturating_add(1);
+    }
+
+    /// Replay cached ops for `key` when present.
+    ///
+    /// `replay_delta` is applied via `Scene::replay_ops_translated()`.
+    /// Returns `true` when the cache was hit.
+    pub fn try_replay(&mut self, key: K, scene: &mut Scene, replay_delta: Point) -> bool {
+        self.stats.calls = self.stats.calls.saturating_add(1);
+
+        let Some(entry) = self.entries.get_mut(&key) else {
+            self.stats.misses = self.stats.misses.saturating_add(1);
+            return false;
+        };
+
+        entry.last_used_frame = self.frame;
+        self.stats.hits = self.stats.hits.saturating_add(1);
+        self.stats.replayed_ops = self
+            .stats
+            .replayed_ops
+            .saturating_add(entry.ops.len().min(u64::MAX as usize) as u64);
+        scene.replay_ops_translated(&entry.ops, replay_delta);
+        true
+    }
+
+    /// Replace cached ops for `key`.
+    pub fn store_ops(&mut self, key: K, ops: Vec<SceneOp>) {
+        self.stats.stored_tiles = self.stats.stored_tiles.saturating_add(1);
+        self.stats.recorded_ops = self
+            .stats
+            .recorded_ops
+            .saturating_add(ops.len().min(u64::MAX as usize) as u64);
+
+        let entry = self.entries.entry(key).or_default();
+        entry.ops = ops;
+        entry.last_used_frame = self.frame;
+    }
+
+    /// Evict unused entries by age and budget.
+    ///
+    /// - `max_age_frames`: entries unused for longer than this are removed.
+    /// - `max_entries`: hard cap; extra entries are evicted by LRU (oldest `last_used_frame`).
+    pub fn prune(&mut self, max_age_frames: u64, max_entries: usize) {
+        self.stats.prune_calls = self.stats.prune_calls.saturating_add(1);
+
+        if max_age_frames > 0 {
+            let cutoff = self.frame.saturating_sub(max_age_frames);
+            let before = self.entries.len();
+            self.entries.retain(|_, v| v.last_used_frame >= cutoff);
+            let evicted = before.saturating_sub(self.entries.len());
+            if evicted > 0 {
+                self.stats.evict_calls = self.stats.evict_calls.saturating_add(1);
+                self.stats.evict_prune_age = self
+                    .stats
+                    .evict_prune_age
+                    .saturating_add(evicted.min(u64::MAX as usize) as u64);
+            }
+        }
+
+        if max_entries > 0 && self.entries.len() > max_entries {
+            let mut items: Vec<(Reverse<u64>, K)> = Vec::with_capacity(self.entries.len());
+            for (&k, v) in &self.entries {
+                items.push((Reverse(v.last_used_frame), k));
+            }
+            items.sort_unstable_by_key(|(frame, _)| *frame);
+
+            let to_evict = self.entries.len() - max_entries;
+            for (_, k) in items.into_iter().take(to_evict) {
+                if self.entries.remove(&k).is_some() {
+                    self.stats.evict_calls = self.stats.evict_calls.saturating_add(1);
+                    self.stats.evict_prune_budget = self.stats.evict_prune_budget.saturating_add(1);
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use fret_core::{Color, DrawOrder, Size};
+
+    use super::*;
+
+    #[test]
+    fn tile_grid_rect_maps_to_expected_tiles() {
+        let grid = TileGrid2D::new(10.0);
+        let rect = Rect::new(
+            Point::new(Px(-1.0), Px(-1.0)),
+            Size::new(Px(12.0), Px(12.0)),
+        );
+        let mut tiles = Vec::new();
+        grid.tiles_in_rect(rect, &mut tiles);
+        assert!(tiles.contains(&TileCoord { x: -1, y: -1 }));
+        assert!(tiles.contains(&TileCoord { x: 0, y: 0 }));
+        assert!(tiles.contains(&TileCoord { x: 1, y: 1 }));
+    }
+
+    #[test]
+    fn try_replay_hits_and_updates_last_used() {
+        let mut cache: SceneOpTileCache<u64> = SceneOpTileCache::default();
+        cache.begin_frame();
+        cache.store_ops(
+            1,
+            vec![SceneOp::Quad {
+                order: DrawOrder(0),
+                rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(1.0), Px(1.0))),
+                background: Color {
+                    r: 1.0,
+                    g: 1.0,
+                    b: 1.0,
+                    a: 1.0,
+                },
+                border: fret_core::Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: fret_core::Corners::all(Px(0.0)),
+            }],
+        );
+
+        cache.begin_frame();
+        let mut scene = Scene::default();
+        assert!(cache.try_replay(1, &mut scene, Point::new(Px(0.0), Px(0.0))));
+        assert_eq!(scene.ops_len(), 1);
+    }
+
+    #[test]
+    fn prune_evicts_by_age_then_budget() {
+        let mut cache: SceneOpTileCache<u64> = SceneOpTileCache::default();
+
+        cache.begin_frame();
+        cache.store_ops(1, Vec::new());
+
+        cache.begin_frame();
+        cache.store_ops(2, Vec::new());
+
+        cache.begin_frame();
+        cache.prune(1, 999);
+        assert!(!cache.entries.contains_key(&1));
+        assert!(cache.entries.contains_key(&2));
+
+        cache.store_ops(3, Vec::new());
+        cache.prune(999, 1);
+        assert_eq!(cache.entries_len(), 1);
+    }
+}

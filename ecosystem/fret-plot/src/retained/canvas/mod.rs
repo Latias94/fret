@@ -12,13 +12,14 @@ use self::readout::apply_readout_policy;
 pub(super) use self::util::contains_point;
 use self::util::{dim_color, offset_rect, overlay_rect_in_plot};
 
+use fret_canvas::cache::SceneOpCache;
 use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_canvas::text::{PreparedText, TextCache};
 use fret_core::geometry::{Point, Px, Rect, Size};
 use fret_core::scene::{Color, DrawOrder, SceneOp};
 use fret_core::{
     Event, FontId, FontWeight, KeyCode, MouseButton, PathId, PointerEvent, SemanticsRole,
-    TextConstraints, TextOverflow, TextSlant, TextStyle, TextWrap, UiServices,
+    TextConstraints, TextOverflow, TextSlant, TextStyle, TextWrap, Transform2D, UiServices,
 };
 use fret_runtime::{Model, TextFontStackKey};
 use fret_ui::Theme;
@@ -34,7 +35,7 @@ use super::YAxis;
 use super::layers::resolve_series_color;
 use super::layers::{
     PlotCursorReadoutArgs, PlotCursorReadoutRow, PlotHitTestArgs, PlotHover, PlotLayer,
-    PlotPaintArgs, PlotQuad, SeriesMeta,
+    PlotPaintArgs, PlotQuad, PlotQuadsSceneCachePolicy, SeriesMeta,
 };
 use super::layout::{PlotLayout, PlotRegion};
 use super::state::{
@@ -44,7 +45,7 @@ use super::state::{
 use super::style::{LinePlotStyle, MouseReadoutMode, SeriesTooltipMode};
 use super::{AreaPlotModel, LinePlotModel};
 
-use crate::cartesian::{AxisScale, DataPoint, DataRect, PlotTransform};
+use crate::cartesian::{AxisScale, DataPoint, DataRect, PlotTransform, PreparedPlotTransform};
 use crate::input_map::{ModifierKey, ModifiersMask, PlotInputMap};
 use crate::plot::axis::{AxisLabelFormat, AxisLabelFormatter, AxisTicks, axis_ticks_scaled};
 use crate::plot::colormap::ColorMapId;
@@ -427,6 +428,13 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     drag_capture: Option<DragCapture>,
     drag_output: Option<PlotDragOutput>,
     axis_text_cache: TextCache,
+    indicator_text_cache: TextCache,
+    tooltip_text_cache: TextCache,
+    readout_text_cache: TextCache,
+    overlay_text_cache: TextCache,
+    heatmap_text_cache: TextCache,
+    debug_text_cache: TextCache,
+    text_env_key: Option<u64>,
     axis_label_key: Option<u64>,
     axis_ticks_x: Vec<f64>,
     axis_ticks_y: Vec<f64>,
@@ -454,6 +462,8 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
 
     heatmap_colorbar_text_key: Option<u64>,
     heatmap_colorbar_text: Vec<PreparedText>,
+    heatmap_colorbar_gradient_cache: SceneOpCache<u64>,
+    quads_scene_cache: SceneOpCache<u64>,
 
     #[cfg(debug_assertions)]
     debug_overlay: bool,
@@ -954,6 +964,13 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             drag_capture: None,
             drag_output: None,
             axis_text_cache: TextCache::default(),
+            indicator_text_cache: TextCache::default(),
+            tooltip_text_cache: TextCache::default(),
+            readout_text_cache: TextCache::default(),
+            overlay_text_cache: TextCache::default(),
+            heatmap_text_cache: TextCache::default(),
+            debug_text_cache: TextCache::default(),
+            text_env_key: None,
             axis_label_key: None,
             axis_ticks_x: Vec::new(),
             axis_ticks_y: Vec::new(),
@@ -981,6 +998,8 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
 
             heatmap_colorbar_text_key: None,
             heatmap_colorbar_text: Vec::new(),
+            heatmap_colorbar_gradient_cache: SceneOpCache::default(),
+            quads_scene_cache: SceneOpCache::default(),
 
             #[cfg(debug_assertions)]
             debug_overlay: false,
@@ -4459,9 +4478,6 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         cx.observe_global::<TextFontStackKey>(Invalidation::Paint);
         self.last_scale_factor = cx.scale_factor;
 
-        self.axis_text_cache.begin_frame();
-        self.legend_text_cache.begin_frame();
-
         self.ensure_required_axes_enabled(cx.app);
         self.sync_axis_locks(cx.app);
 
@@ -4669,6 +4685,70 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             )
         };
 
+        let mut text_env_key = 0u64;
+        text_env_key = Self::hash_u64(text_env_key, theme_revision);
+        text_env_key = Self::hash_u64(text_env_key, font_stack_key);
+        text_env_key = Self::hash_u64(text_env_key, u64::from(cx.scale_factor.to_bits()));
+        if self.text_env_key != Some(text_env_key) {
+            self.text_env_key = Some(text_env_key);
+
+            self.axis_text_cache.clear(cx.services);
+            self.legend_text_cache.clear(cx.services);
+            self.indicator_text_cache.clear(cx.services);
+            self.tooltip_text_cache.clear(cx.services);
+            self.readout_text_cache.clear(cx.services);
+            self.overlay_text_cache.clear(cx.services);
+            self.heatmap_text_cache.clear(cx.services);
+            self.debug_text_cache.clear(cx.services);
+
+            self.axis_label_key = None;
+            self.axis_labels_x.clear();
+            self.axis_labels_y.clear();
+            self.axis_labels_y2.clear();
+            self.axis_labels_y3.clear();
+            self.axis_labels_y4.clear();
+            self.axis_lock_indicator_x = None;
+            self.axis_lock_indicator_y = None;
+            self.axis_lock_indicator_y2 = None;
+            self.axis_lock_indicator_y3 = None;
+            self.axis_lock_indicator_y4 = None;
+
+            self.legend_key = None;
+            self.legend_entries.clear();
+
+            self.tooltip_text = None;
+            self.mouse_readout_text = None;
+            self.linked_cursor_readout_text = None;
+            self.overlays_text_key = None;
+            self.overlays_text.clear();
+
+            self.heatmap_colorbar_text_key = None;
+            self.heatmap_colorbar_text.clear();
+            self.heatmap_colorbar_gradient_cache.clear();
+            self.quads_scene_cache.clear();
+
+            #[cfg(debug_assertions)]
+            {
+                self.debug_overlay_text = None;
+            }
+        }
+
+        self.axis_text_cache.begin_frame();
+        self.legend_text_cache.begin_frame();
+        self.indicator_text_cache.begin_frame();
+        self.tooltip_text_cache.begin_frame();
+        self.readout_text_cache.begin_frame();
+        self.overlay_text_cache.begin_frame();
+        self.heatmap_text_cache.begin_frame();
+        self.debug_text_cache.begin_frame();
+
+        self.indicator_text_cache.prune(cx.services, 60, 64);
+        self.tooltip_text_cache.prune(cx.services, 60, 256);
+        self.readout_text_cache.prune(cx.services, 60, 256);
+        self.overlay_text_cache.prune(cx.services, 60, 512);
+        self.heatmap_text_cache.prune(cx.services, 60, 64);
+        self.debug_text_cache.prune(cx.services, 4, 16);
+
         let resolved_style = LinePlotStyle {
             series_palette: resolved_series_palette,
             stroke_color: resolved_stroke_color,
@@ -4789,33 +4869,6 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             view_bounds_y4,
         );
         self.rebuild_legend_if_needed(cx, theme_revision, font_stack_key);
-
-        if let Some(window) = cx.window {
-            let frame_id = cx.app.frame_id().0;
-            let node = cx.node.data().as_ffi();
-            let window = window.data().as_ffi();
-            let axis_key = CanvasCacheKey {
-                window,
-                node,
-                name: "fret-plot.canvas.text.axis",
-            };
-            let legend_key = CanvasCacheKey {
-                window,
-                node,
-                name: "fret-plot.canvas.text.legend",
-            };
-
-            let axis_entries = self.axis_text_cache.len();
-            let axis_stats = self.axis_text_cache.stats();
-            let legend_entries = self.legend_text_cache.len();
-            let legend_stats = self.legend_text_cache.stats();
-
-            cx.app
-                .with_global_mut(CanvasCacheStatsRegistry::default, |registry, _app| {
-                    registry.record_text_cache(axis_key, frame_id, axis_entries, axis_stats);
-                    registry.record_text_cache(legend_key, frame_id, legend_entries, legend_stats);
-                });
-        }
 
         // Grid + series + hover are clipped to the plot area.
         cx.scene.push(SceneOp::PushClipRect { rect: layout.plot });
@@ -4953,24 +5006,108 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 .or(self.legend_hover);
 
             let mut emphasized_path: Option<(PathId, Color)> = None;
-            for quad in self.rebuild_quads_if_needed(
-                cx,
-                layout.plot,
-                view_bounds,
-                view_bounds_y2,
-                view_bounds_y3,
-                view_bounds_y4,
-                hidden,
-                resolved_style,
-            ) {
-                cx.scene.push(SceneOp::Quad {
-                    order: quad.order,
-                    rect: offset_rect(quad.rect_local, layout.plot.origin),
-                    background: quad.background,
-                    border: fret_core::Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
-                    corner_radii: fret_core::Corners::all(Px(0.0)),
+
+            let quads_emitted_by_layer = self
+                .model
+                .read(cx.app, |_app, m| m.clone())
+                .ok()
+                .is_some_and(|model| {
+                    let model_revision = self.model.revision(cx.app).unwrap_or(0);
+                    let plot_local = Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size);
+
+                    self.layer.paint_quads_scene_ops_tiled(
+                        cx,
+                        &model,
+                        PlotPaintArgs {
+                            model_revision,
+                            plot: plot_local,
+                            view_bounds,
+                            view_bounds_y2,
+                            view_bounds_y3,
+                            view_bounds_y4,
+                            x_scale: self.x_scale,
+                            y_scale: self.y_scale,
+                            y2_scale: self.y2_scale,
+                            y3_scale: self.y3_scale,
+                            y4_scale: self.y4_scale,
+                            style: resolved_style,
+                            hidden,
+                        },
+                        layout.plot.origin,
+                    )
                 });
+
+            if !quads_emitted_by_layer {
+                match self.layer.quads_scene_cache_policy() {
+                    PlotQuadsSceneCachePolicy::Disabled => {
+                        for quad in self.rebuild_quads_if_needed(
+                            cx,
+                            layout.plot,
+                            view_bounds,
+                            view_bounds_y2,
+                            view_bounds_y3,
+                            view_bounds_y4,
+                            hidden,
+                            resolved_style,
+                        ) {
+                            cx.scene.push(SceneOp::Quad {
+                                order: quad.order,
+                                rect: offset_rect(quad.rect_local, layout.plot.origin),
+                                background: quad.background,
+                                border: fret_core::Edges::all(Px(0.0)),
+                                border_color: Color::TRANSPARENT,
+                                corner_radii: fret_core::Corners::all(Px(0.0)),
+                            });
+                        }
+                    }
+                    PlotQuadsSceneCachePolicy::Enabled => {
+                        let mut key = 0u64;
+                        key = Self::hash_u64(key, theme_revision);
+                        key = Self::hash_u64(key, self.model.revision(cx.app).unwrap_or(0));
+                        key = Self::hash_u64(key, u64::from(resolved_style.heatmap_colormap.key()));
+                        key = Self::hash_f32_bits(key, layout.plot.size.width.0);
+                        key = Self::hash_f32_bits(key, layout.plot.size.height.0);
+                        key = Self::hash_f64_bits(key, view_bounds.x_min);
+                        key = Self::hash_f64_bits(key, view_bounds.x_max);
+                        key = Self::hash_f64_bits(key, view_bounds.y_min);
+                        key = Self::hash_f64_bits(key, view_bounds.y_max);
+                        key = Self::hash_u64(key, self.x_scale.key());
+                        key = Self::hash_u64(key, self.y_scale.key());
+
+                        if self
+                            .quads_scene_cache
+                            .try_replay(key, cx.scene, layout.plot.origin)
+                        {
+                            // Cache hit.
+                        } else {
+                            let quads = self.rebuild_quads_if_needed(
+                                cx,
+                                layout.plot,
+                                view_bounds,
+                                view_bounds_y2,
+                                view_bounds_y3,
+                                view_bounds_y4,
+                                hidden,
+                                resolved_style,
+                            );
+
+                            let mut ops: Vec<SceneOp> = Vec::with_capacity(quads.len());
+                            for quad in quads {
+                                ops.push(SceneOp::Quad {
+                                    order: quad.order,
+                                    rect: quad.rect_local,
+                                    background: quad.background,
+                                    border: fret_core::Edges::all(Px(0.0)),
+                                    border_color: Color::TRANSPARENT,
+                                    corner_radii: fret_core::Corners::all(Px(0.0)),
+                                });
+                            }
+
+                            cx.scene.replay_ops_translated(&ops, layout.plot.origin);
+                            self.quads_scene_cache.store_ops(key, ops);
+                        }
+                    }
+                }
             }
 
             let mut debug_paths_pushed: u32 = 0;
@@ -5065,23 +5202,23 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     key = Self::hash_u64(key, u64::from(bar_w.to_bits()));
                     key = Self::hash_u64(key, Self::text_style_key(&text_style));
 
-                    let needs_text = self.heatmap_colorbar_text_key != Some(key);
-                    if needs_text {
-                        for t in self.heatmap_colorbar_text.drain(..) {
-                            cx.services.text().release(t.blob);
-                        }
-                        self.heatmap_colorbar_text_key = Some(key);
-
-                        for s in [&max_label, &min_label] {
-                            let (blob, metrics) = cx.services.text().prepare_str(
-                                s.as_str(),
-                                &text_style,
-                                text_constraints,
-                            );
-                            self.heatmap_colorbar_text
-                                .push(PreparedText { blob, metrics, key });
-                        }
-                    }
+                    self.heatmap_colorbar_text_key = Some(key);
+                    self.heatmap_colorbar_text.clear();
+                    self.heatmap_colorbar_text.reserve(2);
+                    self.heatmap_colorbar_text
+                        .push(self.heatmap_text_cache.prepare(
+                            cx.services,
+                            max_label.as_str(),
+                            &text_style,
+                            text_constraints,
+                        ));
+                    self.heatmap_colorbar_text
+                        .push(self.heatmap_text_cache.prepare(
+                            cx.services,
+                            min_label.as_str(),
+                            &text_style,
+                            text_constraints,
+                        ));
 
                     let max_text = self.heatmap_colorbar_text.get(0).copied();
                     let min_text = self.heatmap_colorbar_text.get(1).copied();
@@ -5121,44 +5258,58 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     });
 
                     let colormap = resolved_style.heatmap_colormap;
-                    for i in 0..steps {
-                        let t0 = (i as f32) / (steps as f32);
-                        let t1 = ((i + 1) as f32) / (steps as f32);
-                        let t = (t0 + t1) * 0.5;
-                        let color = crate::plot::colormap::sample(colormap, t);
+                    cx.scene.with_transform(
+                        Transform2D::translation(layout.plot.origin),
+                        |scene| {
+                            let mut gradient_key = 0u64;
+                            gradient_key = Self::hash_u64(gradient_key, u64::from(colormap.key()));
+                            gradient_key = Self::hash_u64(gradient_key, u64::from(steps as u32));
+                            gradient_key = Self::hash_f32_bits(gradient_key, bar_left);
+                            gradient_key = Self::hash_f32_bits(gradient_key, bar_top);
+                            gradient_key = Self::hash_f32_bits(gradient_key, bar_w);
+                            gradient_key = Self::hash_f32_bits(gradient_key, bar_h);
 
-                        let y0 = bar_top + (1.0 - t1) * bar_h;
-                        let h = (t1 - t0) * bar_h;
-                        cx.scene.push(SceneOp::Quad {
-                            order: DrawOrder(4),
-                            rect: Rect::new(
-                                Point::new(
-                                    Px(layout.plot.origin.x.0 + bar_left),
-                                    Px(layout.plot.origin.y.0 + y0),
+                            self.heatmap_colorbar_gradient_cache.replay_or_record(
+                                gradient_key,
+                                scene,
+                                Point::new(Px(0.0), Px(0.0)),
+                                |scene| {
+                                    for i in 0..steps {
+                                        let t0 = (i as f32) / (steps as f32);
+                                        let t1 = ((i + 1) as f32) / (steps as f32);
+                                        let t = (t0 + t1) * 0.5;
+                                        let color = crate::plot::colormap::sample(colormap, t);
+
+                                        let y0 = bar_top + (1.0 - t1) * bar_h;
+                                        let h = (t1 - t0) * bar_h;
+                                        scene.push(SceneOp::Quad {
+                                            order: DrawOrder(4),
+                                            rect: Rect::new(
+                                                Point::new(Px(bar_left), Px(y0)),
+                                                Size::new(Px(bar_w), Px(h.max(1.0))),
+                                            ),
+                                            background: color,
+                                            border: fret_core::Edges::all(Px(0.0)),
+                                            border_color: Color::TRANSPARENT,
+                                            corner_radii: fret_core::Corners::all(Px(0.0)),
+                                        });
+                                    }
+                                },
+                            );
+
+                            scene.push(SceneOp::Quad {
+                                order: DrawOrder(5),
+                                rect: Rect::new(
+                                    Point::new(Px(bar_left), Px(bar_top)),
+                                    Size::new(Px(bar_w), Px(bar_h)),
                                 ),
-                                Size::new(Px(bar_w), Px(h.max(1.0))),
-                            ),
-                            background: color,
-                            border: fret_core::Edges::all(Px(0.0)),
-                            border_color: Color::TRANSPARENT,
-                            corner_radii: fret_core::Corners::all(Px(0.0)),
-                        });
-                    }
-
-                    cx.scene.push(SceneOp::Quad {
-                        order: DrawOrder(5),
-                        rect: Rect::new(
-                            Point::new(
-                                Px(layout.plot.origin.x.0 + bar_left),
-                                Px(layout.plot.origin.y.0 + bar_top),
-                            ),
-                            Size::new(Px(bar_w), Px(bar_h)),
-                        ),
-                        background: Color::TRANSPARENT,
-                        border: fret_core::Edges::all(Px(1.0)),
-                        border_color: tooltip_border,
-                        corner_radii: fret_core::Corners::all(Px(0.0)),
-                    });
+                                background: Color::TRANSPARENT,
+                                border: fret_core::Edges::all(Px(1.0)),
+                                border_color: tooltip_border,
+                                corner_radii: fret_core::Corners::all(Px(0.0)),
+                            });
+                        },
+                    );
 
                     let text_color = tooltip_text_color;
                     let text_margin = 2.0_f32;
@@ -5252,50 +5403,57 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 let marker_len = Px(8.0);
 
                 let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size);
-                let transform_x = PlotTransform {
+                let transform_x: Option<PreparedPlotTransform> = PlotTransform {
                     viewport: local_viewport,
                     data: view_bounds,
                     x_scale: self.x_scale,
                     y_scale: self.y_scale,
-                };
+                }
+                .prepare();
 
-                let transform_for_y_axis = |axis: YAxis| -> Option<PlotTransform> {
+                let transform_for_y_axis = |axis: YAxis| -> Option<PreparedPlotTransform> {
                     match axis {
-                        YAxis::Left => Some(PlotTransform {
+                        YAxis::Left => PlotTransform {
                             viewport: local_viewport,
                             data: view_bounds,
                             x_scale: self.x_scale,
                             y_scale: self.y_scale,
-                        }),
-                        YAxis::Right if self.show_y2_axis => {
-                            view_bounds_y2.map(|b| PlotTransform {
+                        }
+                        .prepare(),
+                        YAxis::Right if self.show_y2_axis => view_bounds_y2.and_then(|b| {
+                            PlotTransform {
                                 viewport: local_viewport,
                                 data: b,
                                 x_scale: self.x_scale,
                                 y_scale: self.y2_scale,
-                            })
-                        }
-                        YAxis::Right2 if self.show_y3_axis => {
-                            view_bounds_y3.map(|b| PlotTransform {
+                            }
+                            .prepare()
+                        }),
+                        YAxis::Right2 if self.show_y3_axis => view_bounds_y3.and_then(|b| {
+                            PlotTransform {
                                 viewport: local_viewport,
                                 data: b,
                                 x_scale: self.x_scale,
                                 y_scale: self.y3_scale,
-                            })
-                        }
-                        YAxis::Right3 if self.show_y4_axis => {
-                            view_bounds_y4.map(|b| PlotTransform {
+                            }
+                            .prepare()
+                        }),
+                        YAxis::Right3 if self.show_y4_axis => view_bounds_y4.and_then(|b| {
+                            PlotTransform {
                                 viewport: local_viewport,
                                 data: b,
                                 x_scale: self.x_scale,
                                 y_scale: self.y4_scale,
-                            })
-                        }
+                            }
+                            .prepare()
+                        }),
                         _ => None,
                     }
                 };
 
-                if !overlays.inf_lines_x.is_empty() {
+                if !overlays.inf_lines_x.is_empty()
+                    && let Some(transform_x) = transform_x
+                {
                     for line in &overlays.inf_lines_x {
                         if !line.x.is_finite() {
                             continue;
@@ -5431,7 +5589,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     }
                 }
 
-                if !overlays.drag_lines_x.is_empty() {
+                if !overlays.drag_lines_x.is_empty()
+                    && let Some(transform_x) = transform_x
+                {
                     for line in &overlays.drag_lines_x {
                         let mut x = line.x;
                         if let Some(DragCapture::LineX { id, current_x, .. }) = self.drag_capture
@@ -5601,6 +5761,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     let mut drafts: Vec<OverlayDraft> = Vec::new();
 
                     for line in &overlays.drag_lines_x {
+                        let Some(transform_x) = transform_x else {
+                            break;
+                        };
                         let mut x = line.x;
                         if let Some(DragCapture::LineX { id, current_x, .. }) = self.drag_capture
                             && id == line.id
@@ -5734,6 +5897,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
 
                         let x_value = current.x;
                         let y_value = current.y;
+                        let Some(transform_x) = transform_x else {
+                            continue;
+                        };
                         let Some(x_px) = transform_x.data_x_to_px(x_value) else {
                             continue;
                         };
@@ -5794,36 +5960,38 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         });
                     }
 
-                    for tag in &overlays.tags_x {
-                        if !tag.x.is_finite() {
-                            continue;
-                        }
-                        let Some(x_px) = transform_x.data_x_to_px(tag.x) else {
-                            continue;
-                        };
-                        let x = Px((layout.plot.origin.x.0 + x_px.0).round());
+                    if let Some(transform_x) = transform_x {
+                        for tag in &overlays.tags_x {
+                            if !tag.x.is_finite() {
+                                continue;
+                            }
+                            let Some(x_px) = transform_x.data_x_to_px(tag.x) else {
+                                continue;
+                            };
+                            let x = Px((layout.plot.origin.x.0 + x_px.0).round());
 
-                        let value = tag
-                            .show_value
-                            .then(|| self.tooltip_x_labels.format(tag.x, x_span))
-                            .unwrap_or_default();
-                        let text = match (&tag.label, tag.show_value) {
-                            (Some(label), true) => format!("{label}: {value}"),
-                            (Some(label), false) => label.clone(),
-                            (None, true) => value,
-                            (None, false) => String::new(),
-                        };
-                        if text.is_empty() {
-                            continue;
-                        }
+                            let value = tag
+                                .show_value
+                                .then(|| self.tooltip_x_labels.format(tag.x, x_span))
+                                .unwrap_or_default();
+                            let text = match (&tag.label, tag.show_value) {
+                                (Some(label), true) => format!("{label}: {value}"),
+                                (Some(label), false) => label.clone(),
+                                (None, true) => value,
+                                (None, false) => String::new(),
+                            };
+                            if text.is_empty() {
+                                continue;
+                            }
 
-                        drafts.push(OverlayDraft {
-                            text,
-                            placement: OverlayPlacement::TagX {
-                                x,
-                                color: tag.color.unwrap_or(annotation_stroke),
-                            },
-                        });
+                            drafts.push(OverlayDraft {
+                                text,
+                                placement: OverlayPlacement::TagX {
+                                    x,
+                                    color: tag.color.unwrap_or(annotation_stroke),
+                                },
+                            });
+                        }
                     }
 
                     for tag in &overlays.tags_y {
@@ -5954,26 +6122,16 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         }
                     }
 
-                    if self.overlays_text_key != Some(overlay_key) {
-                        for prev in self.overlays_text.drain(..) {
-                            cx.services.text().release(prev.blob);
-                        }
-                        self.overlays_text_key = Some(overlay_key);
-
-                        self.overlays_text.reserve(drafts.len());
-                        for d in &drafts {
-                            let prepared = self.prepare_text(
-                                cx.services,
-                                &d.text,
-                                &overlay_style,
-                                overlay_constraints,
-                            );
-                            self.overlays_text.push(PreparedText {
-                                blob: prepared.blob,
-                                metrics: prepared.metrics,
-                                key: prepared.key,
-                            });
-                        }
+                    self.overlays_text_key = Some(overlay_key);
+                    self.overlays_text.clear();
+                    self.overlays_text.reserve(drafts.len());
+                    for d in &drafts {
+                        self.overlays_text.push(self.overlay_text_cache.prepare(
+                            cx.services,
+                            &d.text,
+                            &overlay_style,
+                            overlay_constraints,
+                        ));
                     }
 
                     for (i, d) in drafts.iter().enumerate() {
@@ -6618,17 +6776,6 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     }
                 }
 
-                let mut key = 0u64;
-                key = Self::hash_u64(key, u64::from(cx.scale_factor.to_bits()));
-                key = Self::hash_u64(key, u64::from(debug_paths_prepared));
-                key = Self::hash_u64(key, u64::from(debug_paths_pushed));
-                key = Self::hash_u64(key, u64::from(debug_sample_points));
-                key = Self::hash_u64(key, u64::from(debug_model_kind));
-                key = Self::hash_u64(key, u64::from(view_bounds.x_min.to_bits()));
-                key = Self::hash_u64(key, u64::from(view_bounds.x_max.to_bits()));
-                key = Self::hash_u64(key, u64::from(view_bounds.y_min.to_bits()));
-                key = Self::hash_u64(key, u64::from(view_bounds.y_max.to_bits()));
-
                 let text_style = TextStyle {
                     font: FontId::default(),
                     size: Px(11.0),
@@ -6655,21 +6802,12 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     view_bounds.y_min,
                     view_bounds.y_max
                 );
-
-                let needs_rebuild = self
-                    .debug_overlay_text
-                    .as_ref()
-                    .is_none_or(|t| t.key != key);
-                if needs_rebuild {
-                    if let Some(t) = self.debug_overlay_text.take() {
-                        cx.services.text().release(t.blob);
-                    }
-                    let (blob, metrics) =
-                        cx.services
-                            .text()
-                            .prepare_str(&label, &text_style, constraints);
-                    self.debug_overlay_text = Some(PreparedText { blob, metrics, key });
-                }
+                self.debug_overlay_text = Some(self.debug_text_cache.prepare(
+                    cx.services,
+                    &label,
+                    &text_style,
+                    constraints,
+                ));
 
                 if let Some(t) = self.debug_overlay_text {
                     let pad = 6.0f32;
@@ -6880,84 +7018,96 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         let y3_ticks = &self.axis_ticks_y3;
         let y4_ticks = &self.axis_ticks_y4;
 
-        let transform_y1 = PlotTransform {
+        let transform_y1: Option<PreparedPlotTransform> = PlotTransform {
             viewport: layout.plot,
             data: view_bounds,
             x_scale: self.x_scale,
             y_scale: self.y_scale,
-        };
-        let transform_y2 = view_bounds_y2.map(|b| PlotTransform {
-            viewport: layout.plot,
-            data: b,
-            x_scale: self.x_scale,
-            y_scale: self.y2_scale,
-        });
-        let transform_y3 = view_bounds_y3.map(|b| PlotTransform {
-            viewport: layout.plot,
-            data: b,
-            x_scale: self.x_scale,
-            y_scale: self.y3_scale,
-        });
-        let transform_y4 = view_bounds_y4.map(|b| PlotTransform {
-            viewport: layout.plot,
-            data: b,
-            x_scale: self.x_scale,
-            y_scale: self.y4_scale,
-        });
-
-        for (i, label) in self.axis_labels_x.iter().enumerate() {
-            if label.metrics.size.width.0 <= 0.0 {
-                continue;
-            }
-            let Some(v) = x_ticks.get(i).copied() else {
-                continue;
-            };
-            let Some(x) = transform_y1.data_x_to_px(v) else {
-                continue;
-            };
-            let x = Px(x.0.round());
-
-            let top = layout.x_axis.origin.y.0 + 2.0;
-            let origin = Point::new(
-                Px(x.0 - (label.metrics.size.width.0 * 0.5)),
-                Px(top + label.metrics.baseline.0),
-            );
-
-            cx.scene.push(SceneOp::Text {
-                order: DrawOrder(11),
-                origin,
-                text: label.blob,
-                color: label_color,
-            });
         }
-
-        for (i, label) in self.axis_labels_y.iter().enumerate() {
-            if label.metrics.size.width.0 <= 0.0 {
-                continue;
+        .prepare();
+        let transform_y2: Option<PreparedPlotTransform> = view_bounds_y2.and_then(|b| {
+            PlotTransform {
+                viewport: layout.plot,
+                data: b,
+                x_scale: self.x_scale,
+                y_scale: self.y2_scale,
             }
-            let Some(v) = y_ticks.get(i).copied() else {
-                continue;
-            };
-            let Some(y) = transform_y1.data_y_to_px(v) else {
-                continue;
-            };
-            let y = Px(y.0.round());
+            .prepare()
+        });
+        let transform_y3: Option<PreparedPlotTransform> = view_bounds_y3.and_then(|b| {
+            PlotTransform {
+                viewport: layout.plot,
+                data: b,
+                x_scale: self.x_scale,
+                y_scale: self.y3_scale,
+            }
+            .prepare()
+        });
+        let transform_y4: Option<PreparedPlotTransform> = view_bounds_y4.and_then(|b| {
+            PlotTransform {
+                viewport: layout.plot,
+                data: b,
+                x_scale: self.x_scale,
+                y_scale: self.y4_scale,
+            }
+            .prepare()
+        });
 
-            let origin_x = layout.y_axis_left.origin.x.0 + layout.y_axis_left.size.width.0
-                - label.metrics.size.width.0
-                - 4.0;
-            let top = y.0 - (label.metrics.size.height.0 * 0.5);
-            let origin = Point::new(
-                Px(origin_x.max(layout.y_axis_left.origin.x.0)),
-                Px(top + label.metrics.baseline.0),
-            );
+        if let Some(transform_y1) = transform_y1 {
+            for (i, label) in self.axis_labels_x.iter().enumerate() {
+                if label.metrics.size.width.0 <= 0.0 {
+                    continue;
+                }
+                let Some(v) = x_ticks.get(i).copied() else {
+                    continue;
+                };
+                let Some(x) = transform_y1.data_x_to_px(v) else {
+                    continue;
+                };
+                let x = Px(x.0.round());
 
-            cx.scene.push(SceneOp::Text {
-                order: DrawOrder(11),
-                origin,
-                text: label.blob,
-                color: label_color,
-            });
+                let top = layout.x_axis.origin.y.0 + 2.0;
+                let origin = Point::new(
+                    Px(x.0 - (label.metrics.size.width.0 * 0.5)),
+                    Px(top + label.metrics.baseline.0),
+                );
+
+                cx.scene.push(SceneOp::Text {
+                    order: DrawOrder(11),
+                    origin,
+                    text: label.blob,
+                    color: label_color,
+                });
+            }
+
+            for (i, label) in self.axis_labels_y.iter().enumerate() {
+                if label.metrics.size.width.0 <= 0.0 {
+                    continue;
+                }
+                let Some(v) = y_ticks.get(i).copied() else {
+                    continue;
+                };
+                let Some(y) = transform_y1.data_y_to_px(v) else {
+                    continue;
+                };
+                let y = Px(y.0.round());
+
+                let origin_x = layout.y_axis_left.origin.x.0 + layout.y_axis_left.size.width.0
+                    - label.metrics.size.width.0
+                    - 4.0;
+                let top = y.0 - (label.metrics.size.height.0 * 0.5);
+                let origin = Point::new(
+                    Px(origin_x.max(layout.y_axis_left.origin.x.0)),
+                    Px(top + label.metrics.baseline.0),
+                );
+
+                cx.scene.push(SceneOp::Text {
+                    order: DrawOrder(11),
+                    origin,
+                    text: label.blob,
+                    color: label_color,
+                });
+            }
         }
 
         if self.show_y2_axis {
@@ -7071,58 +7221,58 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             scale_factor: cx.scale_factor,
         };
 
-        let mut update_indicator =
-            |cache: &mut Option<PreparedText>, token: Option<&'static str>| {
-                let Some(token) = token else {
-                    if let Some(prev) = cache.take() {
-                        cx.services.text().release(prev.blob);
-                    }
-                    return;
-                };
-
-                let mut key = 0u64;
-                key = Self::hash_u64(key, theme_revision);
-                key = Self::hash_u64(key, font_stack_key);
-                key = Self::hash_u64(key, u64::from(cx.scale_factor.to_bits()));
-                for b in token.as_bytes() {
-                    key = Self::hash_u64(key, u64::from(*b));
-                }
-                key = Self::hash_u64(key, Self::text_style_key(&indicator_style));
-
-                let needs = cache.as_ref().is_none_or(|t| t.key != key);
-                if needs {
-                    if let Some(prev) = cache.take() {
-                        cx.services.text().release(prev.blob);
-                    }
-                    let (blob, metrics) = cx.services.text().prepare_str(
-                        token,
-                        &indicator_style,
-                        indicator_constraints,
-                    );
-                    *cache = Some(PreparedText { blob, metrics, key });
-                }
-            };
-
-        update_indicator(&mut self.axis_lock_indicator_x, lock_indicator(self.lock_x));
-        update_indicator(&mut self.axis_lock_indicator_y, lock_indicator(self.lock_y));
-        update_indicator(
-            &mut self.axis_lock_indicator_y2,
-            self.show_y2_axis
-                .then_some(self.lock_y2)
-                .and_then(lock_indicator),
-        );
-        update_indicator(
-            &mut self.axis_lock_indicator_y3,
-            self.show_y3_axis
-                .then_some(self.lock_y3)
-                .and_then(lock_indicator),
-        );
-        update_indicator(
-            &mut self.axis_lock_indicator_y4,
-            self.show_y4_axis
-                .then_some(self.lock_y4)
-                .and_then(lock_indicator),
-        );
+        self.axis_lock_indicator_x = lock_indicator(self.lock_x).map(|token| {
+            self.indicator_text_cache.prepare(
+                cx.services,
+                token,
+                &indicator_style,
+                indicator_constraints,
+            )
+        });
+        self.axis_lock_indicator_y = lock_indicator(self.lock_y).map(|token| {
+            self.indicator_text_cache.prepare(
+                cx.services,
+                token,
+                &indicator_style,
+                indicator_constraints,
+            )
+        });
+        self.axis_lock_indicator_y2 = self
+            .show_y2_axis
+            .then_some(self.lock_y2)
+            .and_then(lock_indicator)
+            .map(|token| {
+                self.indicator_text_cache.prepare(
+                    cx.services,
+                    token,
+                    &indicator_style,
+                    indicator_constraints,
+                )
+            });
+        self.axis_lock_indicator_y3 = self
+            .show_y3_axis
+            .then_some(self.lock_y3)
+            .and_then(lock_indicator)
+            .map(|token| {
+                self.indicator_text_cache.prepare(
+                    cx.services,
+                    token,
+                    &indicator_style,
+                    indicator_constraints,
+                )
+            });
+        self.axis_lock_indicator_y4 = self
+            .show_y4_axis
+            .then_some(self.lock_y4)
+            .and_then(lock_indicator)
+            .map(|token| {
+                self.indicator_text_cache.prepare(
+                    cx.services,
+                    token,
+                    &indicator_style,
+                    indicator_constraints,
+                )
+            });
 
         let indicator_margin = Px(3.0);
         if let Some(t) = self.axis_lock_indicator_x {
@@ -7368,30 +7518,11 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 scale_factor: cx.scale_factor,
             };
 
-            let mut key = 0u64;
-            key = Self::hash_u64(key, theme_revision);
-            key = Self::hash_u64(key, font_stack_key);
-            key = Self::hash_u64(key, u64::from(cx.scale_factor.to_bits()));
-            for b in text.as_bytes() {
-                key = Self::hash_u64(key, u64::from(*b));
-            }
-            key = Self::hash_u64(key, Self::text_style_key(&style));
-
-            let needs = self
-                .linked_cursor_readout_text
-                .as_ref()
-                .is_none_or(|t| t.key != key);
-            if needs {
-                if let Some(prev) = self.linked_cursor_readout_text.take() {
-                    cx.services.text().release(prev.blob);
-                }
-                let prepared = self.prepare_text(cx.services, &text, &style, constraints);
-                self.linked_cursor_readout_text = Some(PreparedText {
-                    blob: prepared.blob,
-                    metrics: prepared.metrics,
-                    key,
-                });
-            }
+            self.linked_cursor_readout_text =
+                Some(
+                    self.readout_text_cache
+                        .prepare(cx.services, &text, &style, constraints),
+                );
 
             if let Some(tt) = self.linked_cursor_readout_text {
                 let pad = Px(6.0);
@@ -7453,30 +7584,11 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     scale_factor: cx.scale_factor,
                 };
 
-                let mut key = 0u64;
-                key = Self::hash_u64(key, theme_revision);
-                key = Self::hash_u64(key, font_stack_key);
-                key = Self::hash_u64(key, u64::from(cx.scale_factor.to_bits()));
-                for b in text.as_bytes() {
-                    key = Self::hash_u64(key, u64::from(*b));
-                }
-                key = Self::hash_u64(key, Self::text_style_key(&style));
-
-                let needs = self
-                    .mouse_readout_text
-                    .as_ref()
-                    .is_none_or(|t| t.key != key);
-                if needs {
-                    if let Some(prev) = self.mouse_readout_text.take() {
-                        cx.services.text().release(prev.blob);
-                    }
-                    let prepared = self.prepare_text(cx.services, &text, &style, constraints);
-                    self.mouse_readout_text = Some(PreparedText {
-                        blob: prepared.blob,
-                        metrics: prepared.metrics,
-                        key,
-                    });
-                }
+                self.mouse_readout_text =
+                    Some(
+                        self.readout_text_cache
+                            .prepare(cx.services, &text, &style, constraints),
+                    );
 
                 if let Some(tt) = self.mouse_readout_text {
                     let pad = Px(6.0);
@@ -7845,27 +7957,11 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 scale_factor: cx.scale_factor,
             };
 
-            let mut key = 0u64;
-            key = Self::hash_u64(key, theme_revision);
-            key = Self::hash_u64(key, font_stack_key);
-            key = Self::hash_u64(key, u64::from(cx.scale_factor.to_bits()));
-            for b in text.as_bytes() {
-                key = Self::hash_u64(key, u64::from(*b));
-            }
-            key = Self::hash_u64(key, Self::text_style_key(&style));
-
-            let needs = self.tooltip_text.as_ref().is_none_or(|t| t.key != key);
-            if needs {
-                if let Some(prev) = self.tooltip_text.take() {
-                    cx.services.text().release(prev.blob);
-                }
-                let prepared = self.prepare_text(cx.services, &text, &style, constraints);
-                self.tooltip_text = Some(PreparedText {
-                    blob: prepared.blob,
-                    metrics: prepared.metrics,
-                    key,
-                });
-            }
+            self.tooltip_text =
+                Some(
+                    self.tooltip_text_cache
+                        .prepare(cx.services, &text, &style, constraints),
+                );
 
             if let Some(tt) = self.tooltip_text {
                 let anchor = Point::new(
@@ -7930,6 +8026,105 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 });
             }
         }
+
+        if let Some(window) = cx.window {
+            let frame_id = cx.app.frame_id().0;
+            let node = cx.node.data().as_ffi();
+            let window = window.data().as_ffi();
+
+            let axis_key = CanvasCacheKey {
+                window,
+                node,
+                name: "fret-plot.canvas.text.axis",
+            };
+            let legend_key = CanvasCacheKey {
+                window,
+                node,
+                name: "fret-plot.canvas.text.legend",
+            };
+            let indicator_key = CanvasCacheKey {
+                window,
+                node,
+                name: "fret-plot.canvas.text.indicator",
+            };
+            let tooltip_key = CanvasCacheKey {
+                window,
+                node,
+                name: "fret-plot.canvas.text.tooltip",
+            };
+            let readout_key = CanvasCacheKey {
+                window,
+                node,
+                name: "fret-plot.canvas.text.readout",
+            };
+            let overlay_key = CanvasCacheKey {
+                window,
+                node,
+                name: "fret-plot.canvas.text.overlay",
+            };
+            let heatmap_key = CanvasCacheKey {
+                window,
+                node,
+                name: "fret-plot.canvas.text.heatmap",
+            };
+            let debug_key = CanvasCacheKey {
+                window,
+                node,
+                name: "fret-plot.canvas.text.debug",
+            };
+
+            cx.app
+                .with_global_mut(CanvasCacheStatsRegistry::default, |registry, _app| {
+                    registry.record_text_cache(
+                        axis_key,
+                        frame_id,
+                        self.axis_text_cache.len(),
+                        self.axis_text_cache.stats(),
+                    );
+                    registry.record_text_cache(
+                        legend_key,
+                        frame_id,
+                        self.legend_text_cache.len(),
+                        self.legend_text_cache.stats(),
+                    );
+                    registry.record_text_cache(
+                        indicator_key,
+                        frame_id,
+                        self.indicator_text_cache.len(),
+                        self.indicator_text_cache.stats(),
+                    );
+                    registry.record_text_cache(
+                        tooltip_key,
+                        frame_id,
+                        self.tooltip_text_cache.len(),
+                        self.tooltip_text_cache.stats(),
+                    );
+                    registry.record_text_cache(
+                        readout_key,
+                        frame_id,
+                        self.readout_text_cache.len(),
+                        self.readout_text_cache.stats(),
+                    );
+                    registry.record_text_cache(
+                        overlay_key,
+                        frame_id,
+                        self.overlay_text_cache.len(),
+                        self.overlay_text_cache.stats(),
+                    );
+                    registry.record_text_cache(
+                        heatmap_key,
+                        frame_id,
+                        self.heatmap_text_cache.len(),
+                        self.heatmap_text_cache.stats(),
+                    );
+                    registry.record_text_cache(
+                        debug_key,
+                        frame_id,
+                        self.debug_text_cache.len(),
+                        self.debug_text_cache.stats(),
+                    );
+                });
+        }
     }
 
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
@@ -7941,43 +8136,32 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         self.layer.cleanup_resources(services);
         self.clear_axis_label_cache(services);
         self.clear_legend_cache(services);
-        if let Some(t) = self.axis_lock_indicator_x.take() {
-            services.text().release(t.blob);
-        }
-        if let Some(t) = self.axis_lock_indicator_y.take() {
-            services.text().release(t.blob);
-        }
-        if let Some(t) = self.axis_lock_indicator_y2.take() {
-            services.text().release(t.blob);
-        }
-        if let Some(t) = self.axis_lock_indicator_y3.take() {
-            services.text().release(t.blob);
-        }
-        if let Some(t) = self.axis_lock_indicator_y4.take() {
-            services.text().release(t.blob);
-        }
-        if let Some(t) = self.tooltip_text.take() {
-            services.text().release(t.blob);
-        }
-        if let Some(t) = self.mouse_readout_text.take() {
-            services.text().release(t.blob);
-        }
-        if let Some(t) = self.linked_cursor_readout_text.take() {
-            services.text().release(t.blob);
-        }
-        for t in self.overlays_text.drain(..) {
-            services.text().release(t.blob);
-        }
-        self.overlays_text_key = None;
 
-        for t in self.heatmap_colorbar_text.drain(..) {
-            services.text().release(t.blob);
-        }
+        self.indicator_text_cache.clear(services);
+        self.tooltip_text_cache.clear(services);
+        self.readout_text_cache.clear(services);
+        self.overlay_text_cache.clear(services);
+        self.heatmap_text_cache.clear(services);
+        self.debug_text_cache.clear(services);
+
+        self.axis_lock_indicator_x = None;
+        self.axis_lock_indicator_y = None;
+        self.axis_lock_indicator_y2 = None;
+        self.axis_lock_indicator_y3 = None;
+        self.axis_lock_indicator_y4 = None;
+        self.tooltip_text = None;
+        self.mouse_readout_text = None;
+        self.linked_cursor_readout_text = None;
+        self.overlays_text_key = None;
+        self.overlays_text.clear();
         self.heatmap_colorbar_text_key = None;
+        self.heatmap_colorbar_text.clear();
+        self.heatmap_colorbar_gradient_cache.clear();
+        self.quads_scene_cache.clear();
 
         #[cfg(debug_assertions)]
-        if let Some(t) = self.debug_overlay_text.take() {
-            services.text().release(t.blob);
+        {
+            self.debug_overlay_text = None;
         }
     }
 }

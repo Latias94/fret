@@ -58,8 +58,8 @@ Usage:
   fretboard diag poke [--trigger-path <path>] [--dir <dir>]
   fretboard diag latest [--dir <dir>]
   fretboard diag script <script.json> [--dir <dir>] [--script-path <path>] [--script-trigger-path <path>]
-  fretboard diag run <script.json> [--dir <dir>] [--timeout-ms <ms>] [--poll-ms <ms>] [--script-path <path>] [--script-trigger-path <path>] [--script-result-path <path>] [--script-result-trigger-path <path>]
-  fretboard diag suite <ui-gallery|script.json...> [--dir <dir>] [--timeout-ms <ms>] [--poll-ms <ms>] [--script-path <path>] [--script-trigger-path <path>] [--script-result-path <path>] [--script-result-trigger-path <path>]
+  fretboard diag run <script.json> [--dir <dir>] [--timeout-ms <ms>] [--poll-ms <ms>] [--script-path <path>] [--script-trigger-path <path>] [--script-result-path <path>] [--script-result-trigger-path <path>] [--launch -- <cmd...>]
+  fretboard diag suite <ui-gallery|script.json...> [--dir <dir>] [--timeout-ms <ms>] [--poll-ms <ms>] [--script-path <path>] [--script-trigger-path <path>] [--script-result-path <path>] [--script-result-trigger-path <path>] [--launch -- <cmd...>]
   fretboard diag stats <bundle_dir|bundle.json> [--top <n>] [--json]
   fretboard list native-demos
   fretboard list web-demos
@@ -87,6 +87,7 @@ Examples:
   fretboard diag latest                    # prints the most recent diagnostics bundle path
   fretboard diag script ./script.json      # writes `target/fret-diag/script.json` and touches `target/fret-diag/script.touch`
   fretboard diag run ./script.json         # pushes script and waits for `script.result.json` (exit 0 on pass, 1 on fail/timeout)
+  fretboard diag run tools/diag-scripts/todo-baseline.json --dir target/fret-diag-todo-auto --launch -- cargo run -p fret-demo --bin todo_demo
   fretboard diag suite ui-gallery          # runs `tools/diag-scripts/ui-gallery-*.json` sequentially (app must be running)
   fretboard diag stats ./target/fret-diag/1234  # summarizes invalidation + other frame stats from a `bundle.json`
   fretboard dev native --hotpatch-devserver ws://127.0.0.1:8080/_dioxus

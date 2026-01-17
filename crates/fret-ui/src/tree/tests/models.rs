@@ -41,6 +41,45 @@ fn model_change_invalidates_observers() {
 }
 
 #[test]
+fn debug_invalidation_walks_record_model_change_root() {
+    let mut app = crate::test_host::TestHost::new();
+    let model = app.models_mut().insert(0u32);
+
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_debug_enabled(true);
+
+    let node = ui.create_node(ObservingWidget {
+        model: model.clone(),
+    });
+    ui.set_root(node);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(100.0), fret_core::Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let _ = model.update(&mut app, |v, _cx| *v += 1);
+    let changed = app.take_changed_models();
+    ui.propagate_model_changes(&mut app, &changed);
+
+    let walks = ui.debug_invalidation_walks();
+    assert!(
+        walks.iter().any(|w| {
+            w.root == node
+                && w.source == UiDebugInvalidationSource::ModelChange
+                && w.inv == Invalidation::Layout
+                && w.walked_nodes > 0
+        }),
+        "expected a model-change layout invalidation walk rooted at the observing node; walks={walks:?}"
+    );
+}
+
+#[test]
 fn model_change_invalidates_observers_across_windows() {
     let mut app = crate::test_host::TestHost::new();
     let model = app.models_mut().insert(0u32);

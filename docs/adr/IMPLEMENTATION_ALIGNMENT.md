@@ -14,11 +14,11 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 
 ## Summary
 
-- Last updated: 2026-01-16
-- ADR count (numbered): 183
+- Last updated: 2026-01-17
+- ADR count (numbered): 184
 
 - Aligned: 80
-- Aligned (with known gaps): 56
+- Aligned (with known gaps): 57
 - N/A (superseded): 1
 - Not audited: 18
 - Not implemented: 5
@@ -28,6 +28,7 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 
 | ADR | ADR Status | Implementation Alignment | Notes |
 | --- | --- | --- | --- |
+| [`0178-canvas-viewport-transform-hit-testing-and-spatial-index-v1.md`](0178-canvas-viewport-transform-hit-testing-and-spatial-index-v1.md) | Proposed | Aligned (with known gaps) | Toolkit building blocks exist in `ecosystem/fret-canvas/src/spatial.rs` (grid + backrefs + backend wrapper with optional `rstar`) and `ecosystem/fret-canvas/src/view/*` (`PanZoom2D` and mapping helpers), and are used by `ecosystem/fret-node/src/ui/canvas/spatial.rs`. Gaps: the ADR’s proposed `CanvasViewport2D` naming and a dedicated budget helper surface are not standardized yet; there is no shared instrumentation surface for candidate/refine counts (beyond ad-hoc widget diagnostics). |
 | [`0177-fret-canvas-modules-and-feature-strategy.md`](0177-fret-canvas-modules-and-feature-strategy.md) | Proposed | Aligned (with known gaps) | `fret-canvas` is organized as a portable substrate with feature-gated integration surfaces: module layout in `ecosystem/fret-canvas/src/lib.rs`, feature gates in `ecosystem/fret-canvas/Cargo.toml` (notably `ui`, `kurbo`, `rstar`, placeholder `declarative`). Gaps: cache observability counters are not implemented; call-site key hygiene is not standardized via a shared key builder helper. |
 | [`0176-canvas-cache-policy-and-hosted-resource-caches.md`](0176-canvas-cache-policy-and-hosted-resource-caches.md) | Proposed | Aligned (with known gaps) | Declarative `Canvas` now has numeric cache policy knobs (`CanvasProps.cache_policy`) and hosted caches evict by keep-frames + LRU budgets: `crates/fret-ui/src/element.rs`, `crates/fret-ui/src/canvas.rs`, wired in `crates/fret-ui/src/declarative/host_widget/paint.rs`. Retained caches exist in `ecosystem/fret-canvas/src/cache/{path_cache,svg_cache}.rs` (`PathCache`/`SvgCache`) and retained call sites now reuse `PathCache` in `ecosystem/fret-node/src/ui/canvas/paint.rs`, `ecosystem/fret-plot/src/retained/layers.rs`, `ecosystem/fret-chart/src/retained/canvas.rs`. Cache observability counters are available via `CacheStats` (`ecosystem/fret-canvas/src/cache/mod.rs`) but are not wired into diagnostics bundles yet. Gaps: `SvgCache` call-site migration is only partial (e.g. `ecosystem/fret-bootstrap` and `ecosystem/fret-asset-cache` are migrated; other sites may remain). |
 | [`0175-unified-authoring-builder-surface-v1.md`](0175-unified-authoring-builder-surface-v1.md) | Proposed | Not implemented | Building blocks exist (typed tokens + `ChromeRefinement`/`LayoutRefinement`, and per-component `refine_style/refine_layout` patterns in `ecosystem/fret-ui-shadcn`), but there is not yet a single “golden path” builder surface that composes chrome + layout + cross-cutting authoring fields consistently across shadcn components and non-shadcn primitives. `StyledExt` exists in `ecosystem/fret-ui-kit/src/styled.rs` and is re-exported, but shadcn components do not uniformly implement the trait integration needed for `.styled()` to be usable across the surface. |

@@ -2,6 +2,7 @@ use fret_app::{App, CommandId, Model};
 use fret_markdown as markdown;
 use fret_ui::Theme;
 use fret_ui::elements::ContinuousFrames;
+use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 use time::Date;
@@ -32,6 +33,8 @@ pub(crate) fn sidebar_view(
     selected: &str,
     query: &str,
     nav_query: Model<String>,
+    selected_page: Model<Arc<str>>,
+    workspace_tabs: Model<Vec<Arc<str>>>,
 ) -> AnyElement {
     let bisect = ui_gallery_bisect_flags();
 
@@ -73,11 +76,38 @@ pub(crate) fn sidebar_view(
                 };
 
                 group_items.push(cx.keyed(item.id, |cx| {
-                    shadcn::Button::new(item.label)
+                    let selected_page_for_activate = selected_page.clone();
+                    let workspace_tabs_for_activate = workspace_tabs.clone();
+                    let page_id_for_activate: Arc<str> = Arc::from(item.id);
+
+                    let mut button = shadcn::Button::new(item.label)
                         .variant(variant)
                         .on_click(item.command)
-                        .refine_layout(LayoutRefinement::default().w_full())
-                        .into_element(cx)
+                        .refine_layout(LayoutRefinement::default().w_full());
+
+                    if item.id == PAGE_VIRTUAL_LIST_TORTURE {
+                        let on_activate: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                let _ =
+                                    host.models_mut().update(&selected_page_for_activate, |v| {
+                                        *v = page_id_for_activate.clone();
+                                    });
+                                let _ =
+                                    host.models_mut().update(&workspace_tabs_for_activate, |t| {
+                                        if !t
+                                            .iter()
+                                            .any(|id| id.as_ref() == page_id_for_activate.as_ref())
+                                        {
+                                            t.push(page_id_for_activate.clone());
+                                        }
+                                    });
+                                host.request_redraw(action_cx.window);
+                            });
+                        button = button.on_activate(on_activate);
+                        button = button.test_id("ui-gallery-nav-virtual-list-torture");
+                    }
+
+                    button.into_element(cx)
                 }));
             }
 
@@ -187,6 +217,10 @@ pub(crate) fn content_view(
     cmdk_open: Model<bool>,
     cmdk_query: Model<String>,
     last_action: Model<Arc<str>>,
+    virtual_list_torture_jump: Model<String>,
+    virtual_list_torture_edit_row: Model<Option<u64>>,
+    virtual_list_torture_edit_text: Model<String>,
+    virtual_list_torture_scroll: VirtualListScrollHandle,
 ) -> AnyElement {
     let bisect = ui_gallery_bisect_flags();
 
@@ -201,12 +235,19 @@ pub(crate) fn content_view(
         |cx| {
             let left = stack::vstack(
                 cx,
-                stack::VStackProps::default().gap(Space::N1).items_start(),
+                stack::VStackProps::default()
+                    .layout(LayoutRefinement::default().flex_1().min_w_0())
+                    .gap(Space::N1)
+                    .items_start(),
                 |cx| {
                     vec![
                         cx.text(title),
                         cx.text_props(TextProps {
-                            layout: Default::default(),
+                            layout: {
+                                let mut layout = fret_ui::element::LayoutStyle::default();
+                                layout.size.width = fret_ui::element::Length::Fill;
+                                layout
+                            },
                             text: Arc::from(origin),
                             style: None,
                             color: Some(theme.color_required("muted-foreground")),
@@ -302,6 +343,10 @@ pub(crate) fn content_view(
         cmdk_open,
         cmdk_query,
         last_action,
+        virtual_list_torture_jump,
+        virtual_list_torture_edit_row,
+        virtual_list_torture_edit_text,
+        virtual_list_torture_scroll,
     );
     let docs_panel = if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
         cx.text(docs_md)
@@ -399,6 +444,10 @@ fn page_preview(
     cmdk_open: Model<bool>,
     cmdk_query: Model<String>,
     last_action: Model<Arc<str>>,
+    virtual_list_torture_jump: Model<String>,
+    virtual_list_torture_edit_row: Model<Option<u64>>,
+    virtual_list_torture_edit_text: Model<String>,
+    virtual_list_torture_scroll: VirtualListScrollHandle,
 ) -> AnyElement {
     let body: Vec<AnyElement> = match selected {
         PAGE_LAYOUT => preview_layout(cx, theme),
@@ -414,6 +463,14 @@ fn page_preview(
             text_input,
             text_area,
         ),
+        PAGE_VIRTUAL_LIST_TORTURE => preview_virtual_list_torture(
+            cx,
+            theme,
+            virtual_list_torture_jump,
+            virtual_list_torture_edit_row,
+            virtual_list_torture_edit_text,
+            virtual_list_torture_scroll,
+        ),
         PAGE_BUTTON => preview_button(cx),
         PAGE_CARD => preview_card(cx),
         PAGE_BADGE => preview_badge(cx),
@@ -424,9 +481,16 @@ fn page_preview(
         PAGE_SLIDER => preview_slider(cx),
         PAGE_ICONS => preview_icons(cx),
         PAGE_FIELD => preview_field(cx),
-        PAGE_OVERLAY => {
-            preview_overlay(cx, popover_open, dialog_open, alert_dialog_open, sheet_open)
-        }
+        PAGE_OVERLAY => preview_overlay(
+            cx,
+            popover_open,
+            dialog_open,
+            alert_dialog_open,
+            sheet_open,
+            dropdown_open,
+            context_menu_open,
+            last_action.clone(),
+        ),
         PAGE_FORMS => preview_forms(cx, text_input, text_area, checkbox, switch),
         PAGE_SELECT => preview_select(cx, select_value, select_open),
         PAGE_COMBOBOX => preview_combobox(cx, combobox_value, combobox_open, combobox_query),
@@ -471,7 +535,7 @@ fn preview_intro(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElem
                 .into_element(cx),
             shadcn::CardContent::new(vec![cx.text(desc)]).into_element(cx),
         ])
-        .refine_layout(LayoutRefinement::default().w_full())
+        .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
         .into_element(cx)
     };
 
@@ -824,6 +888,248 @@ fn preview_layout(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyEle
         cx.text("Layout mental model: LayoutRefinement (constraints) + stack (composition) + Theme tokens (color/spacing)."),
         row,
     ]
+}
+
+fn preview_virtual_list_torture(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+    virtual_list_torture_jump: Model<String>,
+    virtual_list_torture_edit_row: Model<Option<u64>>,
+    virtual_list_torture_edit_text: Model<String>,
+    virtual_list_torture_scroll: VirtualListScrollHandle,
+) -> Vec<AnyElement> {
+    let len: usize = 10_000;
+
+    let editing_row = cx
+        .get_model_copied(&virtual_list_torture_edit_row, Invalidation::Layout)
+        .flatten();
+
+    let jump_input = {
+        let mut props = fret_ui::element::TextInputProps::new(virtual_list_torture_jump.clone());
+        props.a11y_label = Some(Arc::<str>::from("Jump to row"));
+        props.test_id = Some(Arc::<str>::from("ui-gallery-virtual-list-jump-input"));
+        props.placeholder = Some(Arc::<str>::from("Row index (e.g. 9000)"));
+        props.layout.size.width = fret_ui::element::Length::Fill;
+        cx.text_input(props)
+    };
+
+    let controls = stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2)
+            .items_center(),
+        |cx| {
+            let jump_model = virtual_list_torture_jump.clone();
+            let scroll_for_jump = virtual_list_torture_scroll.clone();
+            let on_jump: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+                let raw = host
+                    .models_mut()
+                    .get_cloned(&jump_model)
+                    .unwrap_or_default();
+                let index = raw.trim().parse::<usize>().unwrap_or(0);
+                scroll_for_jump.scroll_to_item(index, fret_ui::scroll::ScrollStrategy::Start);
+                host.request_redraw(action_cx.window);
+            });
+
+            let scroll_for_bottom = virtual_list_torture_scroll.clone();
+            let on_bottom: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, _reason| {
+                    scroll_for_bottom.scroll_to_bottom();
+                    host.request_redraw(action_cx.window);
+                });
+
+            let edit_row_for_clear = virtual_list_torture_edit_row.clone();
+            let edit_text_for_clear = virtual_list_torture_edit_text.clone();
+            let on_clear_edit: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, _reason| {
+                    let _ = host.models_mut().update(&edit_row_for_clear, |v| *v = None);
+                    let _ = host
+                        .models_mut()
+                        .update(&edit_text_for_clear, |v| v.clear());
+                    host.request_redraw(action_cx.window);
+                });
+
+            vec![
+                jump_input,
+                shadcn::Button::new("Jump")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .test_id("ui-gallery-virtual-list-jump-button")
+                    .on_activate(on_jump)
+                    .into_element(cx),
+                shadcn::Button::new("Bottom")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .test_id("ui-gallery-virtual-list-bottom-button")
+                    .on_activate(on_bottom)
+                    .into_element(cx),
+                shadcn::Button::new("Clear edit")
+                    .variant(shadcn::ButtonVariant::Ghost)
+                    .size(shadcn::ButtonSize::Sm)
+                    .test_id("ui-gallery-virtual-list-clear-edit-button")
+                    .on_activate(on_clear_edit)
+                    .into_element(cx),
+            ]
+        },
+    );
+
+    let editing_indicator = {
+        let label = if let Some(row) = editing_row {
+            Arc::<str>::from(format!("editing_row={row}"))
+        } else {
+            Arc::<str>::from("editing_row=<none>")
+        };
+
+        cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: fret_core::SemanticsRole::Text,
+                label: Some(label),
+                test_id: Some(Arc::<str>::from("ui-gallery-virtual-list-editing")),
+                ..Default::default()
+            },
+            |cx| {
+                if let Some(row) = editing_row {
+                    vec![cx.text(format!("Editing row: {row}"))]
+                } else {
+                    vec![cx.text("Editing row: <none>")]
+                }
+            },
+        )
+    };
+
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text("Goal: deterministic virtualization torture surface (10k rows + scroll-to-item + inline edit)."),
+                controls,
+                editing_indicator,
+            ]
+        },
+    );
+
+    let list_layout = fret_ui::element::LayoutStyle {
+        size: fret_ui::element::SizeStyle {
+            width: fret_ui::element::Length::Fill,
+            height: fret_ui::element::Length::Px(Px(420.0)),
+            ..Default::default()
+        },
+        overflow: fret_ui::element::Overflow::Clip,
+        ..Default::default()
+    };
+
+    let options = fret_ui::element::VirtualListOptions::new(Px(28.0), 10);
+
+    let list = cx.virtual_list_keyed_with_layout(
+        list_layout,
+        len,
+        options,
+        &virtual_list_torture_scroll,
+        |i| i as fret_ui::ItemKey,
+        |cx, index| {
+            let index_u64 = index as u64;
+            let is_editing = editing_row == Some(index_u64);
+
+            let zebra = (index % 2) == 0;
+            let background = if is_editing {
+                theme.color_required("accent")
+            } else if zebra {
+                theme.color_required("muted")
+            } else {
+                theme.color_required("background")
+            };
+
+            let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
+
+            let edit_row_for_activate = virtual_list_torture_edit_row.clone();
+            let edit_text_for_activate = virtual_list_torture_edit_text.clone();
+            let on_select_row: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, _reason| {
+                    let _ = host
+                        .models_mut()
+                        .update(&edit_row_for_activate, |v| *v = Some(index_u64));
+                    let _ = host.models_mut().update(&edit_text_for_activate, |v| {
+                        *v = format!("Row {index_u64}");
+                    });
+                    host.request_redraw(action_cx.window);
+                });
+            let row_label = shadcn::Button::new(format!("Row {index}"))
+                .variant(shadcn::ButtonVariant::Ghost)
+                .size(shadcn::ButtonSize::Sm)
+                .test_id(format!("ui-gallery-virtual-list-row-{index}-label"))
+                .on_activate(on_select_row.clone())
+                .refine_layout(LayoutRefinement::default().flex_1())
+                .into_element(cx);
+
+            let right = if is_editing {
+                let mut props =
+                    fret_ui::element::TextInputProps::new(virtual_list_torture_edit_text.clone());
+                props.a11y_label = Some(Arc::<str>::from("Inline edit"));
+                props.test_id = Some(Arc::<str>::from("ui-gallery-virtual-list-edit-input"));
+                props.placeholder = Some(Arc::<str>::from("Type to edit…"));
+                props.layout.size.width = fret_ui::element::Length::Fill;
+
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .layout(LayoutRefinement::default().w_full())
+                        .gap(Space::N2)
+                        .items_center(),
+                    |cx| vec![cx.text_input(props)],
+                )
+            } else {
+                let edit_button = shadcn::Button::new("Edit")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .test_id(format!("ui-gallery-virtual-list-row-{index}-edit"))
+                    .on_activate(on_select_row)
+                    .into_element(cx);
+
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    |_cx| vec![edit_button],
+                )
+            };
+
+            let mut container_props = decl_style::container_props(
+                theme,
+                ChromeRefinement::default()
+                    .bg(ColorRef::Color(background))
+                    .p(Space::N2),
+                LayoutRefinement::default()
+                    .w_full()
+                    .h_px(MetricRef::Px(height_hint)),
+            );
+            container_props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+            cx.container(container_props, |cx| {
+                vec![stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .layout(LayoutRefinement::default().w_full().h_full())
+                        .gap(Space::N2)
+                        .items_center(),
+                    |_cx| vec![row_label, right],
+                )]
+            })
+        },
+    );
+
+    let list = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: fret_core::SemanticsRole::List,
+            test_id: Some(Arc::<str>::from("ui-gallery-virtual-list-root")),
+            ..Default::default()
+        },
+        |_cx| vec![list],
+    );
+
+    vec![header, list]
 }
 
 fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
@@ -1834,7 +2140,7 @@ fn preview_menus(
         |cx| {
             shadcn::Button::new("DropdownMenu")
                 .variant(shadcn::ButtonVariant::Outline)
-                .test_id("ui-gallery-dropdown-trigger")
+                .test_id("ui-gallery-menus-dropdown-trigger")
                 .toggle_model(dropdown_open.clone())
                 .into_element(cx)
         },
@@ -1842,7 +2148,7 @@ fn preview_menus(
             vec![
                 shadcn::DropdownMenuEntry::Item(
                     shadcn::DropdownMenuItem::new("Apple")
-                        .test_id("ui-gallery-dropdown-item-apple")
+                        .test_id("ui-gallery-menus-dropdown-item-apple")
                         .on_select(CMD_MENU_DROPDOWN_APPLE),
                 ),
                 shadcn::DropdownMenuEntry::Item(
@@ -1861,14 +2167,14 @@ fn preview_menus(
         |cx| {
             shadcn::Button::new("ContextMenu (right click)")
                 .variant(shadcn::ButtonVariant::Outline)
-                .test_id("ui-gallery-context-trigger")
+                .test_id("ui-gallery-menus-context-trigger")
                 .into_element(cx)
         },
         |_cx| {
             vec![
                 shadcn::ContextMenuEntry::Item(
                     shadcn::ContextMenuItem::new("Action")
-                        .test_id("ui-gallery-context-item-action")
+                        .test_id("ui-gallery-menus-context-item-action")
                         .on_select(CMD_MENU_CONTEXT_ACTION),
                 ),
                 shadcn::ContextMenuEntry::Separator,
@@ -1966,16 +2272,133 @@ fn preview_overlay(
     dialog_open: Model<bool>,
     alert_dialog_open: Model<bool>,
     sheet_open: Model<bool>,
+    dropdown_open: Model<bool>,
+    context_menu_open: Model<bool>,
+    last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
+    use fret_ui::action::OnDismissRequest;
+
+    let overlay_reset = {
+        use fret_ui::action::OnActivate;
+
+        let dropdown_open = dropdown_open.clone();
+        let context_menu_open = context_menu_open.clone();
+        let popover_open = popover_open.clone();
+        let dialog_open = dialog_open.clone();
+        let alert_dialog_open = alert_dialog_open.clone();
+        let sheet_open = sheet_open.clone();
+        let last_action = last_action.clone();
+
+        let on_activate: OnActivate = Arc::new(move |host, _cx, _reason| {
+            let _ = host.models_mut().update(&dropdown_open, |v| *v = false);
+            let _ = host.models_mut().update(&context_menu_open, |v| *v = false);
+            let _ = host.models_mut().update(&popover_open, |v| *v = false);
+            let _ = host.models_mut().update(&dialog_open, |v| *v = false);
+            let _ = host.models_mut().update(&alert_dialog_open, |v| *v = false);
+            let _ = host.models_mut().update(&sheet_open, |v| *v = false);
+            let _ = host.models_mut().update(&last_action, |v| {
+                *v = Arc::<str>::from("overlay:reset");
+            });
+        });
+
+        shadcn::Button::new("Reset overlays")
+            .variant(shadcn::ButtonVariant::Secondary)
+            .test_id("ui-gallery-overlay-reset")
+            .on_activate(on_activate)
+            .into_element(cx)
+    };
+
+    let dropdown = shadcn::DropdownMenu::new(dropdown_open.clone()).into_element(
+        cx,
+        |cx| {
+            shadcn::Button::new("DropdownMenu")
+                .variant(shadcn::ButtonVariant::Outline)
+                .test_id("ui-gallery-dropdown-trigger")
+                .toggle_model(dropdown_open.clone())
+                .into_element(cx)
+        },
+        |_cx| {
+            vec![
+                shadcn::DropdownMenuEntry::Item(
+                    shadcn::DropdownMenuItem::new("Apple")
+                        .test_id("ui-gallery-dropdown-item-apple")
+                        .on_select(CMD_MENU_DROPDOWN_APPLE),
+                ),
+                shadcn::DropdownMenuEntry::Item(
+                    shadcn::DropdownMenuItem::new("Orange").on_select(CMD_MENU_DROPDOWN_ORANGE),
+                ),
+                shadcn::DropdownMenuEntry::Separator,
+                shadcn::DropdownMenuEntry::Item(
+                    shadcn::DropdownMenuItem::new("Disabled").disabled(true),
+                ),
+            ]
+        },
+    );
+
+    let context_menu = shadcn::ContextMenu::new(context_menu_open.clone()).into_element(
+        cx,
+        |cx| {
+            shadcn::Button::new("ContextMenu (right click)")
+                .variant(shadcn::ButtonVariant::Outline)
+                .test_id("ui-gallery-context-trigger")
+                .into_element(cx)
+        },
+        |_cx| {
+            vec![
+                shadcn::ContextMenuEntry::Item(
+                    shadcn::ContextMenuItem::new("Action")
+                        .test_id("ui-gallery-context-item-action")
+                        .on_select(CMD_MENU_CONTEXT_ACTION),
+                ),
+                shadcn::ContextMenuEntry::Separator,
+                shadcn::ContextMenuEntry::Item(
+                    shadcn::ContextMenuItem::new("Disabled").disabled(true),
+                ),
+            ]
+        },
+    );
+
+    let last_action_status = {
+        let last = cx
+            .app
+            .models()
+            .get_cloned(&last_action)
+            .unwrap_or_else(|| Arc::<str>::from("<none>"));
+        let text = format!("last action: {last}");
+        cx.semantics(
+            fret_ui::element::SemanticsProps {
+                test_id: Some(Arc::from("ui-gallery-overlay-last-action")),
+                ..Default::default()
+            },
+            |cx| vec![cx.text(text)],
+        )
+    };
+
+    let underlay = shadcn::Button::new("Underlay (outside-press target)")
+        .variant(shadcn::ButtonVariant::Secondary)
+        .test_id("ui-gallery-overlay-underlay")
+        .into_element(cx);
+
     let tooltip = shadcn::Tooltip::new(
         shadcn::Button::new("Tooltip (hover)")
             .variant(shadcn::ButtonVariant::Outline)
+            .test_id("ui-gallery-tooltip-trigger")
             .into_element(cx),
-        shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
-            cx,
-            "Tooltip: hover intent + placement",
-        )])
-        .into_element(cx),
+        cx.semantics(
+            fret_ui::element::SemanticsProps {
+                test_id: Some(Arc::from("ui-gallery-tooltip-content")),
+                ..Default::default()
+            },
+            |cx| {
+                vec![
+                    shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
+                        cx,
+                        "Tooltip: hover intent + placement",
+                    )])
+                    .into_element(cx),
+                ]
+            },
+        ),
     )
     .arrow(true)
     .open_delay_frames(10)
@@ -1986,35 +2409,60 @@ fn preview_overlay(
     let hover_card = shadcn::HoverCard::new(
         shadcn::Button::new("HoverCard (hover)")
             .variant(shadcn::ButtonVariant::Outline)
+            .test_id("ui-gallery-hovercard-trigger")
             .into_element(cx),
-        shadcn::HoverCardContent::new(vec![
-            cx.text("HoverCard content (overlay-root)"),
-            cx.text("Move pointer from trigger to content."),
-        ])
-        .into_element(cx),
+        cx.semantics(
+            fret_ui::element::SemanticsProps {
+                test_id: Some(Arc::from("ui-gallery-hovercard-content")),
+                ..Default::default()
+            },
+            |cx| {
+                vec![
+                    shadcn::HoverCardContent::new(vec![
+                        cx.text("HoverCard content (overlay-root)"),
+                        cx.text("Move pointer from trigger to content."),
+                    ])
+                    .into_element(cx),
+                ]
+            },
+        ),
     )
+    .open_delay_frames(10)
     .close_delay_frames(10)
     .into_element(cx);
 
+    let popover_open_for_dismiss = popover_open.clone();
+    let last_action_for_dismiss = last_action.clone();
+    let popover_on_dismiss: OnDismissRequest = Arc::new(move |host, _cx, _reason| {
+        let _ = host
+            .models_mut()
+            .update(&popover_open_for_dismiss, |open| *open = false);
+        let _ = host.models_mut().update(&last_action_for_dismiss, |cur| {
+            *cur = Arc::<str>::from("popover:dismissed");
+        });
+    });
+
     let popover = shadcn::Popover::new(popover_open.clone())
         .auto_focus(true)
+        .on_dismiss_request(Some(popover_on_dismiss))
         .into_element(
             cx,
             |cx| {
                 shadcn::Button::new("Popover")
                     .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-popover-trigger")
                     .toggle_model(popover_open.clone())
                     .into_element(cx)
             },
             |cx| {
-                shadcn::PopoverContent::new(vec![
-                    cx.text("Popover content"),
-                    shadcn::Button::new("Close")
-                        .variant(shadcn::ButtonVariant::Secondary)
-                        .toggle_model(popover_open.clone())
-                        .into_element(cx),
-                ])
-                .into_element(cx)
+                let close = shadcn::Button::new("Close")
+                    .variant(shadcn::ButtonVariant::Secondary)
+                    .test_id("ui-gallery-popover-close")
+                    .toggle_model(popover_open.clone())
+                    .into_element(cx);
+
+                shadcn::PopoverContent::new(vec![cx.text("Popover content"), close])
+                    .into_element(cx)
             },
         );
 
@@ -2041,12 +2489,31 @@ fn preview_overlay(
                         .test_id("ui-gallery-dialog-close")
                         .toggle_model(dialog_open.clone())
                         .into_element(cx),
+                    shadcn::Button::new("Confirm")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .test_id("ui-gallery-dialog-confirm")
+                        .into_element(cx),
                 ])
                 .into_element(cx),
             ])
             .into_element(cx)
         },
     );
+
+    let dialog_open_flag = {
+        let open = cx.app.models().get_copied(&dialog_open).unwrap_or(false);
+        if open {
+            Some(cx.semantics(
+                fret_ui::element::SemanticsProps {
+                    test_id: Some(Arc::from("ui-gallery-dialog-open")),
+                    ..Default::default()
+                },
+                |cx| vec![cx.text("Dialog open")],
+            ))
+        } else {
+            None
+        }
+    };
 
     let alert_dialog = shadcn::AlertDialog::new(alert_dialog_open.clone()).into_element(
         cx,
@@ -2106,21 +2573,50 @@ fn preview_overlay(
             },
         );
 
-    vec![
+    let popover_dismissed_flag = {
+        let last = cx
+            .app
+            .models()
+            .get_cloned(&last_action)
+            .unwrap_or_else(|| Arc::<str>::from("<none>"));
+        if last.as_ref() == "popover:dismissed" {
+            Some(cx.semantics(
+                fret_ui::element::SemanticsProps {
+                    test_id: Some(Arc::from("ui-gallery-popover-dismissed")),
+                    ..Default::default()
+                },
+                |cx| vec![cx.text("Popover dismissed")],
+            ))
+        } else {
+            None
+        }
+    };
+
+    let mut out: Vec<AnyElement> = vec![
         stack::hstack(
             cx,
             stack::HStackProps::default().gap(Space::N2).items_center(),
-            |_cx| vec![tooltip, hover_card],
+            |_cx| vec![dropdown, context_menu, overlay_reset],
         ),
         stack::hstack(
             cx,
             stack::HStackProps::default().gap(Space::N2).items_center(),
-            |_cx| vec![popover, dialog],
+            |_cx| vec![tooltip, hover_card, popover, underlay, dialog],
         ),
         stack::hstack(
             cx,
             stack::HStackProps::default().gap(Space::N2).items_center(),
             |_cx| vec![alert_dialog, sheet],
         ),
-    ]
+        last_action_status,
+    ];
+
+    if let Some(flag) = popover_dismissed_flag {
+        out.push(flag);
+    }
+    if let Some(flag) = dialog_open_flag {
+        out.push(flag);
+    }
+
+    out
 }

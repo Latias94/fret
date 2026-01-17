@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Color, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::CommandId;
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, FlexProps, MainAlign, PressableProps,
@@ -43,21 +43,6 @@ fn alpha(color: Color, a: f32) -> Color {
 
 fn item_radius(theme: &Theme) -> Px {
     MetricRef::radius(Radius::Md).resolve(theme)
-}
-
-fn item_padding(theme: &Theme, size: ItemSize) -> Edges {
-    match size {
-        ItemSize::Default => {
-            let p = MetricRef::space(Space::N4).resolve(theme);
-            Edges::all(p)
-        }
-        ItemSize::Sm => Edges {
-            top: MetricRef::space(Space::N3).resolve(theme),
-            right: MetricRef::space(Space::N4).resolve(theme),
-            bottom: MetricRef::space(Space::N3).resolve(theme),
-            left: MetricRef::space(Space::N4).resolve(theme),
-        },
-    }
 }
 
 fn item_gap(theme: &Theme, size: ItemSize) -> Px {
@@ -431,6 +416,7 @@ pub struct Item {
     on_click: Option<CommandId>,
     enabled: bool,
     children: Vec<AnyElement>,
+    chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
 
@@ -442,6 +428,7 @@ impl Item {
             on_click: None,
             enabled: true,
             children,
+            chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default().w_full(),
         }
     }
@@ -466,6 +453,11 @@ impl Item {
         self
     }
 
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
         self
@@ -473,12 +465,9 @@ impl Item {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let theme_for_content = theme.clone();
 
         let variant = self.variant;
         let size = self.size;
-        let radius = item_radius(&theme);
-        let padding = item_padding(&theme, size);
         let gap = item_gap(&theme, size);
 
         let border_color = base_item_border_color(&theme, variant).unwrap_or(Color::TRANSPARENT);
@@ -490,101 +479,119 @@ impl Item {
         let hover_bg = alpha(accent, 0.5);
         let pressed_bg = alpha(accent, 0.7);
 
-        let layout = decl_style::layout_style(&theme, self.layout);
+        let layout = self.layout;
+        let pressable_layout = decl_style::layout_style(&theme, layout.clone());
 
+        let radius = item_radius(&theme);
         let focus_ring = decl_style::focus_ring(&theme, radius);
 
         let children = std::rc::Rc::new(self.children);
-        let children_for_content = children.clone();
-        let enabled = self.enabled && self.on_click.is_some();
+        let enabled = self.enabled;
         let on_click = self.on_click;
-
-        let content = move |cx: &mut ElementContext<'_, H>, hovered: bool, pressed: bool| {
-            let bg = if !enabled {
-                base_bg
-            } else if pressed {
-                Some(pressed_bg)
-            } else if hovered {
-                Some(hover_bg)
-            } else {
-                base_bg
-            };
-
-            let inner_layout = decl_style::layout_style(
-                &theme_for_content,
-                LayoutRefinement::default().size_full(),
-            );
-            let children = children_for_content.clone();
-
-            vec![cx.container(
-                ContainerProps {
-                    layout,
-                    padding,
-                    background: bg,
-                    border: Edges::all(Px(1.0)),
-                    border_color: Some(border_color),
-                    corner_radii: Corners::all(radius),
-                    ..Default::default()
-                },
-                move |cx| {
-                    let children = children.clone();
-                    vec![cx.flex(
-                        FlexProps {
-                            layout: inner_layout,
-                            direction: fret_core::Axis::Horizontal,
-                            gap,
-                            padding: Edges::all(Px(0.0)),
-                            justify: MainAlign::Start,
-                            align: CrossAlign::Center,
-                            wrap: false,
-                        },
-                        move |_cx| (*children).clone(),
-                    )]
-                },
-            )]
+        let user_chrome = self.chrome;
+        let user_bg_override = user_chrome.background.is_some();
+        let user_border_override = user_chrome.border_color.is_some();
+        let padding = match size {
+            ItemSize::Default => ChromeRefinement::default().px(Space::N4).py(Space::N4),
+            ItemSize::Sm => ChromeRefinement::default().px(Space::N4).py(Space::N3),
         };
 
         if on_click.is_some() {
             cx.pressable(
                 PressableProps {
-                    layout,
+                    layout: pressable_layout,
                     enabled,
                     focus_ring: Some(focus_ring),
                     ..Default::default()
                 },
                 move |cx, st| {
                     cx.pressable_dispatch_command_opt(on_click);
-                    content(cx, st.hovered, st.pressed)
+
+                    let hovered = st.hovered && enabled;
+                    let pressed = st.pressed && enabled;
+
+                    let bg = if !enabled {
+                        base_bg
+                    } else if pressed {
+                        Some(pressed_bg)
+                    } else if hovered {
+                        Some(hover_bg)
+                    } else {
+                        base_bg
+                    };
+
+                    let mut chrome = padding.clone().merge(ChromeRefinement {
+                        radius: Some(MetricRef::Px(radius)),
+                        border_width: Some(MetricRef::Px(Px(1.0))),
+                        ..Default::default()
+                    });
+
+                    if !user_bg_override {
+                        chrome.background = bg.map(ColorRef::Color);
+                    }
+                    if !user_border_override {
+                        chrome.border_color = Some(ColorRef::Color(border_color));
+                    }
+                    chrome = chrome.merge(user_chrome.clone());
+
+                    let mut props =
+                        decl_style::container_props(&theme, chrome, LayoutRefinement::default());
+                    props.layout.size = pressable_layout.size;
+
+                    let inner_layout =
+                        decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
+
+                    let children = children.clone();
+                    vec![cx.container(props, move |cx| {
+                        let children = children.clone();
+                        vec![cx.flex(
+                            FlexProps {
+                                layout: inner_layout,
+                                direction: fret_core::Axis::Horizontal,
+                                gap,
+                                padding: Edges::all(Px(0.0)),
+                                justify: MainAlign::Start,
+                                align: CrossAlign::Center,
+                                wrap: false,
+                            },
+                            move |_cx| (*children).clone(),
+                        )]
+                    })]
                 },
             )
         } else {
-            cx.container(
-                ContainerProps {
-                    layout,
-                    padding,
-                    background: base_bg,
-                    border: Edges::all(Px(1.0)),
-                    border_color: Some(border_color),
-                    corner_radii: Corners::all(radius),
-                    ..Default::default()
-                },
-                move |cx| {
-                    let inner_layout =
-                        decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
-                    vec![cx.flex(
-                        FlexProps {
-                            layout: inner_layout,
-                            direction: fret_core::Axis::Horizontal,
-                            gap,
-                            padding: Edges::all(Px(0.0)),
-                            justify: MainAlign::Start,
-                            align: CrossAlign::Center,
-                            wrap: false,
-                        },
-                        move |_cx| (*children).clone(),
-                    )]
-                },
-            )
+            let mut chrome = padding.merge(ChromeRefinement {
+                radius: Some(MetricRef::Px(radius)),
+                border_width: Some(MetricRef::Px(Px(1.0))),
+                ..Default::default()
+            });
+
+            if !user_bg_override {
+                chrome.background = base_bg.map(ColorRef::Color);
+            }
+            if !user_border_override {
+                chrome.border_color = Some(ColorRef::Color(border_color));
+            }
+            chrome = chrome.merge(user_chrome);
+
+            let props = decl_style::container_props(&theme, chrome, layout);
+
+            cx.container(props, move |cx| {
+                let inner_layout =
+                    decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
+                vec![cx.flex(
+                    FlexProps {
+                        layout: inner_layout,
+                        direction: fret_core::Axis::Horizontal,
+                        gap,
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Center,
+                        wrap: false,
+                    },
+                    move |_cx| (*children).clone(),
+                )]
+            })
         }
     }
 }

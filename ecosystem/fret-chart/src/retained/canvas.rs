@@ -10,7 +10,7 @@ use delinea::engine::window::{DataWindow, WindowSpanAnchor};
 use delinea::marks::{MarkKind, MarkPayloadRef};
 use delinea::text::{TextMeasurer, TextMetrics};
 use delinea::{Action, BrushSelection2D, ChartEngine, WorkBudget};
-use fret_canvas::cache::PathCache;
+use fret_canvas::cache::{PathCache, SceneOpCache};
 use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_canvas::scale::effective_scale_factor;
 use fret_core::{
@@ -181,6 +181,8 @@ pub struct ChartCanvas {
     cached_paths: BTreeMap<delinea::ids::MarkId, CachedPath>,
     cached_rects: Vec<CachedRect>,
     cached_points: Vec<CachedPoint>,
+    cached_rect_scene_ops: SceneOpCache<u64>,
+    cached_point_scene_ops: SceneOpCache<u64>,
     series_rank_by_id: BTreeMap<delinea::SeriesId, usize>,
     axis_text: TextCacheGroup,
     tooltip_text: TextCacheGroup,
@@ -266,6 +268,8 @@ impl ChartCanvas {
             cached_paths: BTreeMap::default(),
             cached_rects: Vec::default(),
             cached_points: Vec::default(),
+            cached_rect_scene_ops: SceneOpCache::default(),
+            cached_point_scene_ops: SceneOpCache::default(),
             series_rank_by_id: BTreeMap::default(),
             axis_text: TextCacheGroup::default(),
             tooltip_text: TextCacheGroup::default(),
@@ -2249,6 +2253,8 @@ impl ChartCanvas {
         self.cached_paths.clear();
         self.cached_rects.clear();
         self.cached_points.clear();
+        self.cached_rect_scene_ops.clear();
+        self.cached_point_scene_ops.clear();
 
         let plot_h = self.last_layout.plot.size.height.0;
         let area_series: Vec<(delinea::SeriesId, delinea::AxisId, delinea::AreaBaseline)> = self
@@ -4015,59 +4021,92 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         };
         let model = self.engine.model();
 
-        for cached in &self.cached_rects {
-            let base_order = self
-                .style
-                .draw_order
-                .0
-                .saturating_add(cached.order.saturating_mul(4));
+        let mut style_sig = KeyBuilder::new();
+        style_sig.mix_f32_bits(self.style.stroke_color.r);
+        style_sig.mix_f32_bits(self.style.stroke_color.g);
+        style_sig.mix_f32_bits(self.style.stroke_color.b);
+        style_sig.mix_f32_bits(self.style.stroke_color.a);
+        style_sig.mix_f32_bits(self.style.bar_fill_alpha);
+        style_sig.mix_f32_bits(self.style.scatter_fill_alpha);
+        style_sig.mix_f32_bits(self.style.scatter_point_radius.0);
+        for c in &self.style.series_palette {
+            style_sig.mix_f32_bits(c.r);
+            style_sig.mix_f32_bits(c.g);
+            style_sig.mix_f32_bits(c.b);
+            style_sig.mix_f32_bits(c.a);
+        }
+        let style_sig = style_sig.finish();
 
-            let mut fill_color = self.style.stroke_color;
-            if let Some(paint) = cached.fill {
-                fill_color = self.paint_color(paint);
-                fill_color.a *= self.style.stroke_color.a;
-            } else if let Some(series) = cached.source_series {
-                fill_color = self.series_color(series);
-                fill_color.a *= self.style.stroke_color.a;
-            }
-            fill_color.a *= cached.opacity_mul;
-            if let Some(series_id) = cached.source_series {
-                let brush_dim = if let Some(brush) = brush
-                    && let Some(series) = model.series.get(&series_id)
-                {
-                    if series.x_axis == brush.x_axis && series.y_axis == brush.y_axis {
+        let mut rect_key = KeyBuilder::new();
+        rect_key.mix_u64(self.last_marks_rev.0);
+        rect_key.mix_u64(u64::from(self.last_scale_factor_bits));
+        rect_key.mix_u64(style_sig);
+        rect_key.mix_u64(self.legend_hover.map(|v| v.0).unwrap_or(0));
+        if let Some(brush) = brush {
+            rect_key.mix_u64(1);
+            rect_key.mix_u64(brush.x_axis.0);
+            rect_key.mix_u64(brush.y_axis.0);
+        } else {
+            rect_key.mix_u64(0);
+        }
+        let rect_key = rect_key.finish();
+
+        if !self
+            .cached_rect_scene_ops
+            .try_replay(rect_key, cx.scene, Point::new(Px(0.0), Px(0.0)))
+        {
+            let mut ops: Vec<SceneOp> = Vec::with_capacity(self.cached_rects.len());
+            for cached in &self.cached_rects {
+                let base_order = self
+                    .style
+                    .draw_order
+                    .0
+                    .saturating_add(cached.order.saturating_mul(4));
+
+                let mut fill_color = self.style.stroke_color;
+                if let Some(paint) = cached.fill {
+                    fill_color = self.paint_color(paint);
+                    fill_color.a *= self.style.stroke_color.a;
+                } else if let Some(series) = cached.source_series {
+                    fill_color = self.series_color(series);
+                    fill_color.a *= self.style.stroke_color.a;
+                }
+                fill_color.a *= cached.opacity_mul;
+                if let Some(series_id) = cached.source_series {
+                    let brush_dim = if brush.is_some() && model.series.get(&series_id).is_some() {
                         0.25
                     } else {
-                        0.25
+                        1.0
+                    };
+                    fill_color.a *= brush_dim;
+                    if let Some(hover) = self.legend_hover
+                        && cached.source_series.is_some()
+                        && cached.source_series != Some(hover)
+                    {
+                        fill_color.a *= 0.25;
                     }
-                } else {
-                    1.0
-                };
-                fill_color.a *= brush_dim;
-                if let Some(hover) = self.legend_hover
-                    && cached.source_series.is_some()
-                    && cached.source_series != Some(hover)
-                {
-                    fill_color.a *= 0.25;
                 }
+                fill_color.a *= self.style.bar_fill_alpha;
+
+                let stroke_width = cached.stroke_width.unwrap_or(Px(0.0));
+                let border_color = if stroke_width.0 > 0.0 {
+                    fill_color
+                } else {
+                    Color::TRANSPARENT
+                };
+
+                ops.push(SceneOp::Quad {
+                    order: DrawOrder(base_order),
+                    rect: cached.rect,
+                    background: fill_color,
+                    border: Edges::all(stroke_width),
+                    border_color,
+                    corner_radii: Corners::all(Px(0.0)),
+                });
             }
-            fill_color.a *= self.style.bar_fill_alpha;
 
-            let stroke_width = cached.stroke_width.unwrap_or(Px(0.0));
-            let border_color = if stroke_width.0 > 0.0 {
-                fill_color
-            } else {
-                Color::TRANSPARENT
-            };
-
-            cx.scene.push(SceneOp::Quad {
-                order: DrawOrder(base_order),
-                rect: cached.rect,
-                background: fill_color,
-                border: Edges::all(stroke_width),
-                border_color: border_color,
-                corner_radii: Corners::all(Px(0.0)),
-            });
+            cx.scene.replay_ops(&ops);
+            self.cached_rect_scene_ops.store_ops(rect_key, ops);
         }
 
         let path_constraints = PathConstraints {
@@ -4145,68 +4184,86 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             }
         }
 
-        let base_point_r = self.style.scatter_point_radius.0.max(1.0);
-        let point_order_bias = 2u32;
-        for cached in &self.cached_points {
-            let point_r = (base_point_r * cached.radius_mul).max(1.0);
-            let base_order = self
-                .style
-                .draw_order
-                .0
-                .saturating_add(cached.order.saturating_mul(4))
-                .saturating_add(point_order_bias);
+        let mut point_key = KeyBuilder::new();
+        point_key.mix_u64(self.last_marks_rev.0);
+        point_key.mix_u64(u64::from(self.last_scale_factor_bits));
+        point_key.mix_u64(style_sig);
+        point_key.mix_u64(self.legend_hover.map(|v| v.0).unwrap_or(0));
+        if let Some(brush) = brush {
+            point_key.mix_u64(1);
+            point_key.mix_u64(brush.x_axis.0);
+            point_key.mix_u64(brush.y_axis.0);
+        } else {
+            point_key.mix_u64(0);
+        }
+        let point_key = point_key.finish();
 
-            let mut fill_color = self.style.stroke_color;
-            if let Some(paint) = cached.fill {
-                fill_color = self.paint_color(paint);
-                fill_color.a *= self.style.scatter_fill_alpha;
-            } else if let Some(series) = cached.source_series {
-                fill_color = self.series_color(series);
-                fill_color.a *= self.style.scatter_fill_alpha;
-            }
-            fill_color.a *= cached.opacity_mul;
-            if let Some(series_id) = cached.source_series {
-                let brush_dim = if let Some(brush) = brush
-                    && let Some(series) = model.series.get(&series_id)
-                {
-                    if series.x_axis == brush.x_axis && series.y_axis == brush.y_axis {
+        if !self.cached_point_scene_ops.try_replay(
+            point_key,
+            cx.scene,
+            Point::new(Px(0.0), Px(0.0)),
+        ) {
+            let base_point_r = self.style.scatter_point_radius.0.max(1.0);
+            let point_order_bias = 2u32;
+            let mut ops: Vec<SceneOp> = Vec::with_capacity(self.cached_points.len());
+            for cached in &self.cached_points {
+                let point_r = (base_point_r * cached.radius_mul).max(1.0);
+                let base_order = self
+                    .style
+                    .draw_order
+                    .0
+                    .saturating_add(cached.order.saturating_mul(4))
+                    .saturating_add(point_order_bias);
+
+                let mut fill_color = self.style.stroke_color;
+                if let Some(paint) = cached.fill {
+                    fill_color = self.paint_color(paint);
+                    fill_color.a *= self.style.scatter_fill_alpha;
+                } else if let Some(series) = cached.source_series {
+                    fill_color = self.series_color(series);
+                    fill_color.a *= self.style.scatter_fill_alpha;
+                }
+                fill_color.a *= cached.opacity_mul;
+                if let Some(series_id) = cached.source_series {
+                    let brush_dim = if brush.is_some() && model.series.get(&series_id).is_some() {
                         0.25
                     } else {
-                        0.25
+                        1.0
+                    };
+                    fill_color.a *= brush_dim;
+                    if let Some(hover) = self.legend_hover
+                        && cached.source_series.is_some()
+                        && cached.source_series != Some(hover)
+                    {
+                        fill_color.a *= 0.25;
                     }
-                } else {
-                    1.0
-                };
-                fill_color.a *= brush_dim;
-                if let Some(hover) = self.legend_hover
-                    && cached.source_series.is_some()
-                    && cached.source_series != Some(hover)
-                {
-                    fill_color.a *= 0.25;
                 }
+
+                let stroke_width = cached.stroke_width.unwrap_or(Px(0.0));
+                let border_color = if stroke_width.0 > 0.0 {
+                    fill_color
+                } else {
+                    Color::TRANSPARENT
+                };
+
+                ops.push(SceneOp::Quad {
+                    order: DrawOrder(base_order),
+                    rect: Rect::new(
+                        Point::new(
+                            Px(cached.point.x.0 - point_r),
+                            Px(cached.point.y.0 - point_r),
+                        ),
+                        Size::new(Px(2.0 * point_r), Px(2.0 * point_r)),
+                    ),
+                    background: fill_color,
+                    border: Edges::all(stroke_width),
+                    border_color,
+                    corner_radii: Corners::all(Px(point_r)),
+                });
             }
 
-            let stroke_width = cached.stroke_width.unwrap_or(Px(0.0));
-            let border_color = if stroke_width.0 > 0.0 {
-                fill_color
-            } else {
-                Color::TRANSPARENT
-            };
-
-            cx.scene.push(SceneOp::Quad {
-                order: DrawOrder(base_order),
-                rect: Rect::new(
-                    Point::new(
-                        Px(cached.point.x.0 - point_r),
-                        Px(cached.point.y.0 - point_r),
-                    ),
-                    Size::new(Px(2.0 * point_r), Px(2.0 * point_r)),
-                ),
-                background: fill_color,
-                border: Edges::all(stroke_width),
-                border_color: border_color,
-                corner_radii: Corners::all(Px(point_r)),
-            });
+            cx.scene.replay_ops(&ops);
+            self.cached_point_scene_ops.store_ops(point_key, ops);
         }
 
         if let Some(brush) = brush

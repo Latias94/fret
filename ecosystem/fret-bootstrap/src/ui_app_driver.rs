@@ -15,6 +15,7 @@ use fret_ui_kit::primitives::direction as direction_prim;
 use std::cell::Cell;
 #[cfg(feature = "ui-app-command-palette")]
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::OnceLock;
 
 use fret_core::time::Instant;
@@ -232,6 +233,46 @@ pub struct UiAppWindowState<S> {
     pub ui: UiTree<App>,
     pub root: Option<NodeId>,
     pub state: S,
+    pending_invalidation: PendingInvalidationBatch,
+}
+
+#[derive(Debug, Default)]
+struct PendingInvalidationBatch {
+    models: Vec<fret_app::ModelId>,
+    models_seen: HashSet<fret_app::ModelId>,
+    globals: Vec<std::any::TypeId>,
+    globals_seen: HashSet<std::any::TypeId>,
+}
+
+impl PendingInvalidationBatch {
+    fn push_models(&mut self, changed: &[fret_app::ModelId]) {
+        for &id in changed {
+            if self.models_seen.insert(id) {
+                self.models.push(id);
+            }
+        }
+    }
+
+    fn push_globals(&mut self, changed: &[std::any::TypeId]) {
+        for &id in changed {
+            if self.globals_seen.insert(id) {
+                self.globals.push(id);
+            }
+        }
+    }
+
+    fn flush(&mut self, app: &mut App, ui: &mut UiTree<App>) {
+        if !self.models.is_empty() {
+            ui.propagate_model_changes(app, &self.models);
+            self.models.clear();
+            self.models_seen.clear();
+        }
+        if !self.globals.is_empty() {
+            ui.propagate_global_changes(app, &self.globals);
+            self.globals.clear();
+            self.globals_seen.clear();
+        }
+    }
 }
 
 #[cfg(feature = "ui-app-command-palette")]
@@ -461,6 +502,7 @@ fn ui_app_create_window_state<S>(
         ui,
         root: None,
         state,
+        pending_invalidation: PendingInvalidationBatch::default(),
     }
 }
 
@@ -655,7 +697,10 @@ fn ui_app_handle_model_changes<S>(
         svc.record_model_changes(window, changed);
     });
 
-    state.ui.propagate_model_changes(app, changed);
+    state.pending_invalidation.push_models(changed);
+    if !changed.is_empty() {
+        app.request_redraw(window);
+    }
     if let Some(f) = driver.on_model_changes {
         #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
         {
@@ -684,7 +729,10 @@ fn ui_app_handle_global_changes<S>(
         svc.record_global_changes(window, changed);
     });
 
-    state.ui.propagate_global_changes(app, changed);
+    state.pending_invalidation.push_globals(changed);
+    if !changed.is_empty() {
+        app.request_redraw(window);
+    }
     if let Some(f) = driver.on_global_changes {
         #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
         {
@@ -938,7 +986,7 @@ fn ui_app_render<S>(
             #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
             {
                 let out = direction_prim::with_direction_provider(cx, dir, |cx| {
-                    let mut out = (driver.view)(cx, &mut state.state);
+                    let out = (driver.view)(cx, &mut state.state);
 
                     #[cfg(feature = "ui-app-command-palette")]
                     if driver.command_palette_enabled
@@ -993,6 +1041,8 @@ fn ui_app_render<S>(
     hotpatch_trace_log(&format!(
         "ui_app_render: after overlay render window={window:?}"
     ));
+
+    state.pending_invalidation.flush(app, &mut state.ui);
 
     #[cfg(feature = "diagnostics")]
     {
@@ -1095,6 +1145,9 @@ fn ui_app_render<S>(
             if let Some(dir) = svc.maybe_dump_if_triggered() {
                 #[cfg(feature = "tracing")]
                 tracing::info!(window = ?window, out_dir = %dir.display(), "ui diagnostics dumped");
+            }
+            if svc.is_enabled() {
+                app.push_effect(Effect::RequestAnimationFrame(window));
             }
         });
     }

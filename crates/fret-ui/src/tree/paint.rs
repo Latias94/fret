@@ -112,6 +112,24 @@ impl<H: UiHost> UiTree<H> {
             None => return,
         };
 
+        let view_cache = self
+            .nodes
+            .get(node)
+            .map(|n| n.view_cache)
+            .unwrap_or_default();
+        let span = if view_cache.enabled && tracing::enabled!(tracing::Level::TRACE) {
+            tracing::trace_span!(
+                "ui.cache_root.paint",
+                node = ?node,
+                view_cache_active = self.view_cache_active(),
+                contained_layout = view_cache.contained_layout,
+                invalidated = invalidated,
+            )
+        } else {
+            tracing::Span::none()
+        };
+        let _span_guard = span.enter();
+
         if let Some(window) = self.window
             && let Some(element) = self.nodes.get(node).and_then(|n| n.element)
         {
@@ -140,6 +158,7 @@ impl<H: UiHost> UiTree<H> {
                     );
                     scene.replay_ops_translated(&self.paint_cache.prev_ops[range.clone()], delta);
                     let end = scene.ops_len();
+                    self.debug_record_paint_cache_replay(node, (end - start) as u32);
 
                     if let Some(n) = self.nodes.get_mut(node) {
                         n.paint_cache = Some(PaintCacheEntry {

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::cache::CacheStats;
+use crate::cache::{CacheStats, SceneOpTileCacheStats};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CanvasCacheKey {
@@ -16,12 +16,19 @@ pub struct CacheKindSnapshot {
     pub stats: CacheStats,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SceneOpTileCacheSnapshot {
+    pub entries: usize,
+    pub stats: SceneOpTileCacheStats,
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct CanvasCacheSnapshot {
     pub last_frame_id: u64,
     pub path: Option<CacheKindSnapshot>,
     pub svg: Option<CacheKindSnapshot>,
     pub text: Option<CacheKindSnapshot>,
+    pub scene_op_tiles: Option<SceneOpTileCacheSnapshot>,
 }
 
 #[derive(Debug, Default)]
@@ -81,5 +88,17 @@ impl CanvasCacheStatsRegistry {
             bytes_ready: 0,
             stats,
         });
+    }
+
+    pub fn record_scene_op_tile_cache(
+        &mut self,
+        key: CanvasCacheKey,
+        frame_id: u64,
+        entries: usize,
+        stats: SceneOpTileCacheStats,
+    ) {
+        let snap = self.entries.entry(key).or_default();
+        snap.last_frame_id = frame_id;
+        snap.scene_op_tiles = Some(SceneOpTileCacheSnapshot { entries, stats });
     }
 }

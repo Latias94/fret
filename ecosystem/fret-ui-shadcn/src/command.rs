@@ -2341,6 +2341,17 @@ impl CommandDialog {
         let empty_text = self.empty_text;
 
         Dialog::new(open).into_element(cx, trigger, move |cx| {
+            let theme = Theme::global(&*cx.app).clone();
+            // shadcn/ui: list panels default to `max-h-[300px]` but should still fit into the
+            // current viewport. Clamp the scroll area height to the dialog's available height
+            // budget (accounting for the dialog window padding and the command input row).
+            let window_padding_px = MetricRef::space(Space::N4).resolve(&theme);
+            let available_h = Px((cx.bounds.size.height.0 - window_padding_px.0 * 2.0).max(0.0));
+            let input_h = theme
+                .metric_by_key("component.command.input.wrapper_height")
+                .unwrap_or(Px(36.0));
+            let max_list_h = Px((available_h.0 - input_h.0).max(0.0).min(300.0));
+
             let entries = if close_on_select {
                 let close_action: fret_ui::action::OnActivate = Arc::new({
                     let open_model = open_model.clone();
@@ -2401,6 +2412,7 @@ impl CommandDialog {
                 .disabled(disabled)
                 .wrap(wrap)
                 .empty_text(empty_text)
+                .refine_scroll_layout(LayoutRefinement::default().max_h(MetricRef::Px(max_list_h)))
                 .into_element(cx);
 
             DialogContent::new(vec![palette])
@@ -2753,6 +2765,77 @@ mod tests {
             "al"
         );
         assert!(selected.read_ref(&app, |v| *v).expect("read selected"));
+    }
+
+    #[test]
+    fn command_dialog_list_clamps_to_viewport_in_tight_heights() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let query = app.models_mut().insert(String::new());
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(360.0), Px(140.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items: Vec<CommandItem> = (0..80)
+            .map(|i| CommandItem::new(format!("Item {i}")))
+            .collect();
+
+        // First frame: mount overlay/content.
+        let _ = render_dialog_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            query.clone(),
+            items.clone(),
+            true,
+        );
+        // Second/third frame: settle overlay layout and list metrics.
+        let _ = render_dialog_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            query.clone(),
+            items.clone(),
+            true,
+        );
+        let _ = render_dialog_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            query,
+            items,
+            true,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let list = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBox)
+            .expect("listbox node");
+        let list_bounds = ui.debug_node_bounds(list.id).expect("listbox bounds");
+        let list_bottom = list_bounds.origin.y.0 + list_bounds.size.height.0;
+
+        assert!(
+            list_bottom <= bounds.size.height.0 + 0.01,
+            "expected listbox to fit within viewport; list={list_bounds:?} viewport={bounds:?}"
+        );
     }
 
     fn render_frame(

@@ -3,9 +3,11 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use fret_canvas::budget::WorkBudget;
+use fret_canvas::cache::{SceneOpTileCache, TileCoord, TileGrid2D};
 use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_canvas::scale::{canvas_units_from_screen_px, effective_scale_factor};
-use fret_canvas::view::PanZoom2D;
+use fret_canvas::view::{CanvasViewport2D, PanZoom2D};
 use fret_core::{
     AppWindowId, Color, Corners, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp,
     Size, TextBlobId, TextConstraints, TextOverflow, TextWrap, Transform2D,
@@ -179,6 +181,8 @@ pub struct NodeGraphCanvasWith<M> {
     geometry: GeometryCache,
 
     paint_cache: CanvasPaintCache,
+    grid_scene_cache: SceneOpTileCache<u64>,
+    grid_tiles_scratch: Vec<TileCoord>,
     text_blobs: Vec<TextBlobId>,
     interaction: InteractionState,
 }
@@ -203,6 +207,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     const EDGE_FOCUS_ANCHOR_PAD_SCREEN: f32 = 1.0;
     const EDGE_FOCUS_ANCHOR_BORDER_SCREEN: f32 = 2.0;
     const EDGE_FOCUS_ANCHOR_OFFSET_SCREEN: f32 = 18.0;
+    const GRID_TILE_SIZE_SCREEN_PX: f32 = 2048.0;
+    const GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME: u32 = 32;
 
     fn show_toast<H: UiHost>(
         &mut self,
@@ -1195,6 +1201,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             history: GraphHistory::default(),
             geometry: GeometryCache::default(),
             paint_cache: CanvasPaintCache::default(),
+            grid_scene_cache: SceneOpTileCache::default(),
+            grid_tiles_scratch: Vec::new(),
             text_blobs: Vec::new(),
             interaction: InteractionState::default(),
         }
@@ -1252,6 +1260,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             history: self.history,
             geometry: self.geometry,
             paint_cache: self.paint_cache,
+            grid_scene_cache: self.grid_scene_cache,
+            grid_tiles_scratch: self.grid_tiles_scratch,
             text_blobs: self.text_blobs,
             interaction: self.interaction,
         }
@@ -2338,11 +2348,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     }
 
     fn screen_to_canvas(bounds: Rect, screen: Point, pan: CanvasPoint, zoom: f32) -> CanvasPoint {
-        let view = PanZoom2D {
-            pan: Point::new(Px(pan.x), Px(pan.y)),
-            zoom,
-        };
-        let p = view.screen_to_canvas(bounds, screen);
+        let viewport = CanvasViewport2D::new(
+            bounds,
+            PanZoom2D {
+                pan: Point::new(Px(pan.x), Px(pan.y)),
+                zoom,
+            },
+        );
+        let p = viewport.screen_to_canvas(screen);
         CanvasPoint { x: p.x.0, y: p.y.0 }
     }
 
@@ -8693,6 +8706,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
         let snapshot = self.sync_view_state(cx.app);
 
         self.paint_cache.begin_frame();
+        self.grid_scene_cache.begin_frame();
         if let Some(window) = cx.window {
             let (entries, stats) = self.paint_cache.diagnostics_path_cache_snapshot();
             let frame_id = cx.app.frame_id().0;
@@ -8704,6 +8718,20 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
             cx.app
                 .with_global_mut(CanvasCacheStatsRegistry::default, |registry, _app| {
                     registry.record_path_cache(key, frame_id, entries, stats);
+
+                    let tile_entries = self.grid_scene_cache.entries_len();
+                    let tile_stats = self.grid_scene_cache.stats();
+                    let tile_key = CanvasCacheKey {
+                        window: window.data().as_ffi(),
+                        node: cx.node.data().as_ffi(),
+                        name: "fret-node.canvas.grid_tiles",
+                    };
+                    registry.record_scene_op_tile_cache(
+                        tile_key,
+                        frame_id,
+                        tile_entries,
+                        tile_stats,
+                    );
                 });
         }
         for id in self.text_blobs.drain(..) {
@@ -8717,6 +8745,10 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
         let viewport_h = cx.bounds.size.height.0 / zoom;
         let viewport_origin_x = -pan.x;
         let viewport_origin_y = -pan.y;
+        let viewport_rect = Rect::new(
+            Point::new(Px(viewport_origin_x), Px(viewport_origin_y)),
+            Size::new(Px(viewport_w), Px(viewport_h)),
+        );
         let render_cull_rect = {
             let margin_screen = self.style.render_cull_margin_px;
             if !margin_screen.is_finite()
@@ -8729,29 +8761,17 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                 None
             } else {
                 let margin = margin_screen / zoom;
-                Some(inflate_rect(
-                    Rect::new(
-                        Point::new(Px(viewport_origin_x), Px(viewport_origin_y)),
-                        Size::new(Px(viewport_w), Px(viewport_h)),
-                    ),
-                    margin,
-                ))
+                Some(inflate_rect(viewport_rect, margin))
             }
         };
 
         cx.scene.push(SceneOp::PushClipRect {
-            rect: Rect::new(
-                Point::new(Px(viewport_origin_x), Px(viewport_origin_y)),
-                Size::new(Px(viewport_w), Px(viewport_h)),
-            ),
+            rect: viewport_rect,
         });
 
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
-            rect: Rect::new(
-                Point::new(Px(viewport_origin_x), Px(viewport_origin_y)),
-                Size::new(Px(viewport_w), Px(viewport_h)),
-            ),
+            rect: viewport_rect,
             background: self.style.background,
             border: Edges::all(Px(0.0)),
             border_color: Color::TRANSPARENT,
@@ -8762,49 +8782,135 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
         if spacing.is_finite() && spacing > 1.0e-3 {
             let major_every = self.style.grid_major_every.max(1) as i64;
             let thickness = Px((1.0 / zoom).max(0.25 / zoom));
+            let tile_size_canvas = (Self::GRID_TILE_SIZE_SCREEN_PX / zoom.max(1.0e-6)).max(1.0);
+            let grid_rect = render_cull_rect.unwrap_or(viewport_rect);
 
-            let x0 = (viewport_origin_x / spacing).floor() as i64;
-            let x1 = ((viewport_origin_x + viewport_w) / spacing).ceil() as i64;
-            for ix in x0..=x1 {
-                let x = ix as f32 * spacing;
-                let color = if ix.rem_euclid(major_every) == 0 {
-                    self.style.grid_major_color
-                } else {
-                    self.style.grid_minor_color
+            let grid_tiles = TileGrid2D::new(tile_size_canvas);
+            grid_tiles.tiles_in_rect(grid_rect, &mut self.grid_tiles_scratch);
+
+            // Prefer building tiles near the viewport center first so partial work degrades
+            // gracefully under budget pressure.
+            if !self.grid_tiles_scratch.is_empty() && tile_size_canvas.is_finite() {
+                let cx_tile = (viewport_rect.origin.x.0 + 0.5 * viewport_rect.size.width.0)
+                    / tile_size_canvas;
+                let cy_tile = (viewport_rect.origin.y.0 + 0.5 * viewport_rect.size.height.0)
+                    / tile_size_canvas;
+                let center_tile = TileCoord {
+                    x: cx_tile.floor() as i32,
+                    y: cy_tile.floor() as i32,
                 };
-                cx.scene.push(SceneOp::Quad {
-                    order: DrawOrder(1),
-                    rect: Rect::new(
-                        Point::new(Px(x - 0.5 * thickness.0), Px(viewport_origin_y)),
-                        Size::new(thickness, Px(viewport_h)),
-                    ),
-                    background: color,
-                    border: Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
-                    corner_radii: Corners::all(Px(0.0)),
+                self.grid_tiles_scratch.sort_unstable_by_key(|t| {
+                    let dx = (t.x - center_tile.x).abs() as u32;
+                    let dy = (t.y - center_tile.y).abs() as u32;
+                    dx.saturating_add(dy)
                 });
             }
 
-            let y0 = (viewport_origin_y / spacing).floor() as i64;
-            let y1 = ((viewport_origin_y + viewport_h) / spacing).ceil() as i64;
-            for iy in y0..=y1 {
-                let y = iy as f32 * spacing;
-                let color = if iy.rem_euclid(major_every) == 0 {
-                    self.style.grid_major_color
-                } else {
-                    self.style.grid_minor_color
-                };
-                cx.scene.push(SceneOp::Quad {
-                    order: DrawOrder(1),
-                    rect: Rect::new(
-                        Point::new(Px(viewport_origin_x), Px(y - 0.5 * thickness.0)),
-                        Size::new(Px(viewport_w), thickness),
-                    ),
-                    background: color,
-                    border: Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
-                    corner_radii: Corners::all(Px(0.0)),
-                });
+            let major_color = self.style.grid_major_color;
+            let minor_color = self.style.grid_minor_color;
+            let spacing_bits = spacing.to_bits();
+            let thickness_bits = thickness.0.to_bits();
+            let zoom_bits = zoom.to_bits();
+
+            let tile_ops_for_key = |tile: TileCoord| -> Vec<SceneOp> {
+                let tile_origin = tile.origin(tile_size_canvas);
+                let tile_min_x = tile_origin.x.0;
+                let tile_min_y = tile_origin.y.0;
+                let tile_max_x = tile_min_x + tile_size_canvas;
+                let tile_max_y = tile_min_y + tile_size_canvas;
+
+                let x0 = (tile_min_x / spacing).floor() as i64;
+                let x1 = (tile_max_x / spacing).ceil() as i64;
+                let y0 = (tile_min_y / spacing).floor() as i64;
+                let y1 = (tile_max_y / spacing).ceil() as i64;
+
+                let approx_v = (x1 - x0 + 1).max(0) as usize;
+                let approx_h = (y1 - y0 + 1).max(0) as usize;
+                let mut ops: Vec<SceneOp> = Vec::with_capacity(approx_v + approx_h);
+
+                for ix in x0..=x1 {
+                    let x = ix as f32 * spacing;
+                    let color = if ix.rem_euclid(major_every) == 0 {
+                        major_color
+                    } else {
+                        minor_color
+                    };
+                    ops.push(SceneOp::Quad {
+                        order: DrawOrder(1),
+                        rect: Rect::new(
+                            Point::new(Px(x - tile_origin.x.0 - 0.5 * thickness.0), Px(0.0)),
+                            Size::new(thickness, Px(tile_size_canvas)),
+                        ),
+                        background: color,
+                        border: Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: Corners::all(Px(0.0)),
+                    });
+                }
+
+                for iy in y0..=y1 {
+                    let y = iy as f32 * spacing;
+                    let color = if iy.rem_euclid(major_every) == 0 {
+                        major_color
+                    } else {
+                        minor_color
+                    };
+                    ops.push(SceneOp::Quad {
+                        order: DrawOrder(1),
+                        rect: Rect::new(
+                            Point::new(Px(0.0), Px(y - tile_origin.y.0 - 0.5 * thickness.0)),
+                            Size::new(Px(tile_size_canvas), thickness),
+                        ),
+                        background: color,
+                        border: Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: Corners::all(Px(0.0)),
+                    });
+                }
+
+                ops
+            };
+
+            let mut tile_budget = WorkBudget::new(Self::GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME);
+            let mut skipped_tiles: u32 = 0;
+            for tile in self.grid_tiles_scratch.iter().copied() {
+                let tile_origin = tile.origin(tile_size_canvas);
+
+                let mut hasher = std::collections::hash_map::DefaultHasher::new();
+                "fret-node.grid.tile.v1".hash(&mut hasher);
+                zoom_bits.hash(&mut hasher);
+                spacing_bits.hash(&mut hasher);
+                thickness_bits.hash(&mut hasher);
+                major_every.hash(&mut hasher);
+                tile.x.hash(&mut hasher);
+                tile.y.hash(&mut hasher);
+                major_color.r.to_bits().hash(&mut hasher);
+                major_color.g.to_bits().hash(&mut hasher);
+                major_color.b.to_bits().hash(&mut hasher);
+                major_color.a.to_bits().hash(&mut hasher);
+                minor_color.r.to_bits().hash(&mut hasher);
+                minor_color.g.to_bits().hash(&mut hasher);
+                minor_color.b.to_bits().hash(&mut hasher);
+                minor_color.a.to_bits().hash(&mut hasher);
+                let key = hasher.finish();
+
+                if self.grid_scene_cache.try_replay(key, cx.scene, tile_origin) {
+                    continue;
+                }
+
+                if !tile_budget.try_consume(1) {
+                    skipped_tiles = skipped_tiles.saturating_add(1);
+                    continue;
+                }
+
+                let ops = tile_ops_for_key(tile);
+                cx.scene.replay_ops_translated(&ops, tile_origin);
+                self.grid_scene_cache.store_ops(key, ops);
+            }
+
+            if skipped_tiles > 0 {
+                // Continue warming tiles incrementally to avoid a single frame spike.
+                cx.request_redraw();
             }
         }
 
@@ -8931,65 +9037,112 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                         ));
                     }
 
-                    let mut visible_nodes: HashSet<GraphNodeId> = HashSet::new();
                     if let Some(c) = cull {
                         let mut candidates: Vec<GraphNodeId> = Vec::new();
                         index.query_nodes_in_rect(c, &mut candidates);
+
+                        let mut visible: Vec<GraphNodeId> = Vec::with_capacity(candidates.len());
                         for node in candidates {
                             let Some(node_geom) = geom.nodes.get(&node) else {
                                 continue;
                             };
                             if rects_intersect(node_geom.rect, c) {
-                                visible_nodes.insert(node);
+                                visible.push(node);
                             }
                         }
-                    }
 
-                    for node in geom.order.iter().copied() {
-                        let Some(node_geom) = geom.nodes.get(&node) else {
-                            continue;
-                        };
-                        if cull.is_some() && !visible_nodes.contains(&node) {
-                            continue;
-                        }
-                        let is_selected = selected.contains(&node);
-                        let title = presenter.node_title(graph, node);
-                        let (inputs, outputs) = node_ports(graph, node);
-                        let pin_rows = inputs.len().max(outputs.len());
-                        let body = presenter.node_body_label(graph, node);
-                        let resize_handles =
-                            presenter.node_resize_handles(graph, node, &this.style);
-                        out.nodes.push((
-                            node,
-                            node_geom.rect,
-                            is_selected,
-                            title,
-                            body,
-                            pin_rows,
-                            resize_handles,
-                        ));
+                        visible.sort_unstable_by_key(|node| {
+                            geom.node_rank.get(node).copied().unwrap_or(u32::MAX)
+                        });
 
-                        // Only build port labels/pins for visible nodes (but keep edge endpoints
-                        // available via `CanvasGeometry` lookups).
-                        let screen_w = node_geom.rect.size.width.0 * zoom;
-                        let screen_max = (screen_w - label_overhead).max(0.0);
-                        let max_w = Px(screen_max / zoom);
-
-                        for port_id in inputs.iter().chain(outputs.iter()).copied() {
-                            let Some(handle) = geom.ports.get(&port_id) else {
+                        for node in visible {
+                            let Some(node_geom) = geom.nodes.get(&node) else {
                                 continue;
                             };
-                            out.port_centers.insert(port_id, handle.center);
-                            out.port_labels.insert(
-                                port_id,
-                                PortLabelRender {
-                                    label: presenter.port_label(graph, port_id),
-                                    dir: handle.dir,
-                                    max_width: max_w,
-                                },
-                            );
-                            let color = presenter.port_color(graph, port_id, &this.style);
-                            out.pins.push((port_id, handle.bounds, color));
+                            let is_selected = selected.contains(&node);
+                            let title = presenter.node_title(graph, node);
+                            let (inputs, outputs) = node_ports(graph, node);
+                            let pin_rows = inputs.len().max(outputs.len());
+                            let body = presenter.node_body_label(graph, node);
+                            let resize_handles =
+                                presenter.node_resize_handles(graph, node, &this.style);
+                            out.nodes.push((
+                                node,
+                                node_geom.rect,
+                                is_selected,
+                                title,
+                                body,
+                                pin_rows,
+                                resize_handles,
+                            ));
+
+                            // Only build port labels/pins for visible nodes (but keep edge endpoints
+                            // available via `CanvasGeometry` lookups).
+                            let screen_w = node_geom.rect.size.width.0 * zoom;
+                            let screen_max = (screen_w - label_overhead).max(0.0);
+                            let max_w = Px(screen_max / zoom);
+
+                            for port_id in inputs.iter().chain(outputs.iter()).copied() {
+                                let Some(handle) = geom.ports.get(&port_id) else {
+                                    continue;
+                                };
+                                out.port_centers.insert(port_id, handle.center);
+                                out.port_labels.insert(
+                                    port_id,
+                                    PortLabelRender {
+                                        label: presenter.port_label(graph, port_id),
+                                        dir: handle.dir,
+                                        max_width: max_w,
+                                    },
+                                );
+                                let color = presenter.port_color(graph, port_id, &this.style);
+                                out.pins.push((port_id, handle.bounds, color));
+                            }
+                        }
+                    } else {
+                        for node in geom.order.iter().copied() {
+                            let Some(node_geom) = geom.nodes.get(&node) else {
+                                continue;
+                            };
+                            let is_selected = selected.contains(&node);
+                            let title = presenter.node_title(graph, node);
+                            let (inputs, outputs) = node_ports(graph, node);
+                            let pin_rows = inputs.len().max(outputs.len());
+                            let body = presenter.node_body_label(graph, node);
+                            let resize_handles =
+                                presenter.node_resize_handles(graph, node, &this.style);
+                            out.nodes.push((
+                                node,
+                                node_geom.rect,
+                                is_selected,
+                                title,
+                                body,
+                                pin_rows,
+                                resize_handles,
+                            ));
+
+                            // Only build port labels/pins for visible nodes (but keep edge endpoints
+                            // available via `CanvasGeometry` lookups).
+                            let screen_w = node_geom.rect.size.width.0 * zoom;
+                            let screen_max = (screen_w - label_overhead).max(0.0);
+                            let max_w = Px(screen_max / zoom);
+
+                            for port_id in inputs.iter().chain(outputs.iter()).copied() {
+                                let Some(handle) = geom.ports.get(&port_id) else {
+                                    continue;
+                                };
+                                out.port_centers.insert(port_id, handle.center);
+                                out.port_labels.insert(
+                                    port_id,
+                                    PortLabelRender {
+                                        label: presenter.port_label(graph, port_id),
+                                        dir: handle.dir,
+                                        max_width: max_w,
+                                    },
+                                );
+                                let color = presenter.port_color(graph, port_id, &this.style);
+                                out.pins.push((port_id, handle.bounds, color));
+                            }
                         }
                     }
 
@@ -9308,6 +9461,9 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
         if prune.max_entries > 0 && prune.max_age_frames > 0 {
             self.paint_cache
                 .prune(cx.services, prune.max_age_frames, prune.max_entries);
+            let tile_budget = (prune.max_entries / 10).clamp(64, 2048);
+            self.grid_scene_cache
+                .prune(prune.max_age_frames, tile_budget);
         }
 
         let mut draw_drop_marker = |pos: Point, color: Color| {

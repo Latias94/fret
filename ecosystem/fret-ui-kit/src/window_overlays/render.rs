@@ -153,6 +153,8 @@ pub fn render<H: UiHost>(
         let restore_focus = ui.focus();
 
         let mut should_focus_initial = false;
+        let mut pending_initial_focus = false;
+        let mut layer: Option<UiLayerId> = None;
         app.with_global_mut(WindowOverlays::default, |overlays, app| {
             let mut created = false;
             let entry = overlays.modals.entry(key).or_insert_with(|| {
@@ -164,11 +166,13 @@ pub fn render<H: UiHost>(
                     initial_focus,
                     open: false,
                     restore_focus: None,
+                    pending_initial_focus: false,
                 }
             });
             entry.root_name = root_name.clone();
             entry.trigger = trigger;
             entry.initial_focus = initial_focus;
+            layer = Some(entry.layer);
 
             // For modal overlays, `present` is the authority for whether the barrier is active.
             OverlayLayer::modal(true, open_now).apply(ui, entry.layer);
@@ -202,17 +206,38 @@ pub fn render<H: UiHost>(
             if opening {
                 should_focus_initial = true;
                 entry.restore_focus = restore_focus;
+                entry.pending_initial_focus = true;
             }
             entry.open = open_now;
+            pending_initial_focus = entry.pending_initial_focus;
         });
 
-        if should_focus_initial {
+        let focus_in_layer = layer.is_some_and(|layer| {
+            ui.focus()
+                .is_some_and(|n| ui.node_layer(n).is_some_and(|lid| lid == layer))
+        });
+        let enforce_focus_containment = open_now && !focus_in_layer;
+
+        if should_focus_initial || pending_initial_focus || enforce_focus_containment {
             let focus = app.with_global_mut(WindowOverlays::default, |overlays, _app| {
                 overlays.modals.get(&key).and_then(|p| p.initial_focus)
             });
-            focus_scope_prim::apply_initial_focus_for_overlay(ui, app, window, root, focus);
+            let applied =
+                focus_scope_prim::apply_initial_focus_for_overlay(ui, app, window, root, focus);
+            if !applied && enforce_focus_containment {
+                ui.set_focus(Some(root));
+            }
+            if applied {
+                app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+                    if let Some(entry) = overlays.modals.get_mut(&key) {
+                        entry.pending_initial_focus = false;
+                    }
+                });
+            }
         }
     }
+
+    let modal_barrier_active = !seen_modals.is_empty();
 
     for req in popover_requests {
         if dock_drag_affects_window {
@@ -402,7 +427,8 @@ pub fn render<H: UiHost>(
             {
                 let focus_in_layer =
                     focus_now.is_some_and(|n| ui.node_layer(n) == Some(entry.layer));
-                if focus_now.is_none() || focus_in_layer {
+                let focus_cleared_by_modal_scope = modal_barrier_active && focus_now.is_none();
+                if (!focus_cleared_by_modal_scope && focus_now.is_none()) || focus_in_layer {
                     if let Some(node) = focus_scope_prim::resolve_restore_focus_node(
                         ui,
                         app,
@@ -478,11 +504,17 @@ pub fn render<H: UiHost>(
     for (layer, pointer_barrier_layer, trigger, consume_outside_pointer_events, restore_focus) in
         to_hide_popovers
     {
+        let focus_now = ui.focus();
+        let focus_in_layer = focus_now.is_some_and(|n| ui.node_layer(n) == Some(layer));
+        let focus_cleared_by_modal_scope = modal_barrier_active && focus_now.is_none();
+
         // Radix-aligned outcome for menu-like overlays (ADR 0069):
         // when the overlay consumes outside pointer-down events (non-click-through), it's safe to
         // always restore focus to the trigger on unmount (like modals).
         if consume_outside_pointer_events
-            || focus_scope_prim::should_restore_focus_for_non_modal_overlay(ui, layer)
+            || (focus_in_layer
+                || (!focus_cleared_by_modal_scope
+                    && focus_scope_prim::should_restore_focus_for_non_modal_overlay(ui, layer)))
         {
             OverlayLayer::hide_non_modal_dismissible().apply(ui, layer);
             ui.set_layer_pointer_down_outside_branches(layer, Vec::new());

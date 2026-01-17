@@ -24,7 +24,7 @@ fret-icons = { path = "../../ecosystem/fret-icons" }
 fret-markdown = { path = "../../ecosystem/fret-markdown" }
 fret-workspace = { path = "../../ecosystem/fret-workspace" }
 fret-ui-headless = { path = "../../ecosystem/fret-ui-headless" }
-fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["preload-icon-svgs", "icons-lucide", "diagnostics"] }
+fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["preload-icon-svgs", "icons-lucide", "diagnostics", "ui-app-driver"] }
 time.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true

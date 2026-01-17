@@ -499,9 +499,8 @@ fn estimated_menu_panel_height_for_entries(
         }
     }
 
-    let min_h = height.0.max(0.0);
-    let max_h = max_height.0.max(min_h);
-    Px(height.0.clamp(min_h, max_h))
+    let height = height.0.max(0.0);
+    Px(height.min(max_height.0.max(0.0)))
 }
 
 fn find_submenu_entries_by_value(
@@ -3090,6 +3089,41 @@ mod tests {
     use fret_core::{TextStyle, UiServices};
     use fret_runtime::FrameId;
     use fret_ui::tree::UiTree;
+
+    #[test]
+    fn estimated_menu_panel_height_clamps_to_max_height() {
+        let entries: Vec<ContextMenuEntry> = (0..100)
+            .map(|i| {
+                ContextMenuEntry::Item(
+                    ContextMenuItem::new(format!("Item {i}")).on_select(CommandId::new("noop")),
+                )
+            })
+            .collect();
+        let entries = entries.as_slice();
+
+        let row_height = Px(20.0);
+        let max_height = Px(120.0);
+        let height =
+            super::estimated_menu_panel_height_for_entries(entries, row_height, max_height);
+        assert_eq!(height, max_height);
+    }
+
+    #[test]
+    fn estimated_menu_panel_height_shrinks_for_short_menus() {
+        let entries = vec![
+            ContextMenuEntry::Item(ContextMenuItem::new("Apple").on_select(CommandId::new("noop"))),
+            ContextMenuEntry::Item(
+                ContextMenuItem::new("Orange").on_select(CommandId::new("noop")),
+            ),
+        ];
+        let entries = entries.as_slice();
+
+        let row_height = Px(20.0);
+        let max_height = Px(120.0);
+        let height =
+            super::estimated_menu_panel_height_for_entries(entries, row_height, max_height);
+        assert_eq!(height, Px(50.0));
+    }
 
     #[derive(Default)]
     struct FakeServices;

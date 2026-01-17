@@ -191,3 +191,56 @@ pub fn sample(id: ColorMapId, t: f32) -> Color {
         }
     }
 }
+
+#[derive(Debug, Default, Clone)]
+pub struct ColorMapLut {
+    id: Option<ColorMapId>,
+    colors: Vec<Color>,
+}
+
+impl ColorMapLut {
+    pub fn ensure(&mut self, id: ColorMapId, size: usize) {
+        let size = size.max(2);
+        if self.id == Some(id) && self.colors.len() == size {
+            return;
+        }
+
+        self.id = Some(id);
+        self.colors.clear();
+        self.colors.reserve(size);
+        let denom = (size.saturating_sub(1)).max(1) as f32;
+        for i in 0..size {
+            let t = (i as f32) / denom;
+            self.colors.push(sample(id, t));
+        }
+    }
+
+    pub fn sample(&self, t: f32) -> Color {
+        let Some(_id) = self.id else {
+            return Color::TRANSPARENT;
+        };
+        let n = self.colors.len();
+        if n == 0 {
+            return Color::TRANSPARENT;
+        }
+        if n == 1 {
+            return self.colors[0];
+        }
+
+        let t = t.clamp(0.0, 1.0);
+        let max_i = (n - 1) as f32;
+        let x = t * max_i;
+        let i0 = (x.floor() as usize).min(n - 1);
+        let i1 = (i0 + 1).min(n - 1);
+        let u = (x - (i0 as f32)).clamp(0.0, 1.0);
+
+        let a = self.colors[i0];
+        let b = self.colors[i1];
+        Color {
+            r: a.r + (b.r - a.r) * u,
+            g: a.g + (b.g - a.g) * u,
+            b: a.b + (b.b - a.b) * u,
+            a: a.a + (b.a - a.a) * u,
+        }
+    }
+}

@@ -111,6 +111,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub fn set_layer_visible(&mut self, layer: UiLayerId, visible: bool) {
+        let prev_visible = self.layers.get(layer).map(|l| l.visible);
         let Some(l) = self.layers.get_mut(layer) else {
             return;
         };
@@ -134,9 +135,24 @@ impl<H: UiHost> UiTree<H> {
                 self.focus = None;
             }
         }
+
+        // When visibility changes, the active modal barrier can appear/disappear or move. Ensure
+        // focus/capture do not remain in layers that are now under the barrier (or otherwise
+        // inactive).
+        //
+        // This is especially important for overlay managers that reuse layer roots and toggle
+        // visibility instead of creating/removing roots each time (fearless refactors should keep
+        // the behavior consistent).
+        if prev_visible != Some(visible) {
+            let (active_roots, barrier_root) = self.active_input_layers();
+            if barrier_root.is_some() {
+                self.enforce_modal_barrier_scope(&active_roots);
+            }
+        }
     }
 
     pub fn set_layer_hit_testable(&mut self, layer: UiLayerId, hit_testable: bool) {
+        let prev_hit_testable = self.layers.get(layer).map(|l| l.hit_testable);
         let Some(l) = self.layers.get_mut(layer) else {
             return;
         };
@@ -158,6 +174,13 @@ impl<H: UiHost> UiTree<H> {
                 .is_some_and(|n| self.node_layer(n).is_some_and(|lid| lid == layer))
             {
                 self.focus = None;
+            }
+        }
+
+        if prev_hit_testable != Some(hit_testable) {
+            let (active_roots, barrier_root) = self.active_input_layers();
+            if barrier_root.is_some() {
+                self.enforce_modal_barrier_scope(&active_roots);
             }
         }
     }
@@ -249,7 +272,10 @@ impl<H: UiHost> UiTree<H> {
 
         let mut barrier_index: Option<usize> = None;
         for (idx, layer) in visible.iter().enumerate() {
-            if self.layers[*layer].blocks_underlay_input {
+            let l = &self.layers[*layer];
+            // Modal/pointer barriers can be hit-test-inert (e.g. close transitions, pointer-only
+            // underlay blocking). A barrier must still gate input even when it isn't hit-testable.
+            if l.blocks_underlay_input {
                 barrier_index = Some(idx);
             }
         }

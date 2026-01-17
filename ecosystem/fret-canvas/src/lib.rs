@@ -8,6 +8,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod budget;
 pub mod cache;
 pub mod diagnostics;
 pub mod drag;

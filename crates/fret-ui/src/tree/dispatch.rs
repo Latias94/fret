@@ -1,6 +1,96 @@
 use super::*;
+use std::collections::HashMap;
+
+#[derive(Clone, Copy)]
+struct PendingInvalidation {
+    inv: Invalidation,
+    source: UiDebugInvalidationSource,
+}
 
 impl<H: UiHost> UiTree<H> {
+    fn invalidation_rank(inv: Invalidation) -> u8 {
+        match inv {
+            Invalidation::Paint => 1,
+            Invalidation::Layout => 2,
+            Invalidation::HitTest => 3,
+        }
+    }
+
+    fn stronger_invalidation(a: Invalidation, b: Invalidation) -> Invalidation {
+        if Self::invalidation_rank(a) >= Self::invalidation_rank(b) {
+            a
+        } else {
+            b
+        }
+    }
+
+    fn invalidation_source_rank(source: UiDebugInvalidationSource) -> u8 {
+        match source {
+            UiDebugInvalidationSource::ModelChange => 5,
+            UiDebugInvalidationSource::GlobalChange => 4,
+            UiDebugInvalidationSource::Hover => 3,
+            UiDebugInvalidationSource::Focus => 2,
+            UiDebugInvalidationSource::Other => 1,
+        }
+    }
+
+    fn stronger_invalidation_source(
+        a: UiDebugInvalidationSource,
+        b: UiDebugInvalidationSource,
+    ) -> UiDebugInvalidationSource {
+        if Self::invalidation_source_rank(a) >= Self::invalidation_source_rank(b) {
+            a
+        } else {
+            b
+        }
+    }
+
+    fn pending_invalidation_merge(
+        pending: &mut HashMap<NodeId, PendingInvalidation>,
+        node: NodeId,
+        inv: Invalidation,
+        source: UiDebugInvalidationSource,
+    ) {
+        pending
+            .entry(node)
+            .and_modify(|cur| {
+                cur.inv = Self::stronger_invalidation(cur.inv, inv);
+                cur.source = Self::stronger_invalidation_source(cur.source, source);
+            })
+            .or_insert(PendingInvalidation { inv, source });
+    }
+
+    fn node_depth_for_invalidation_order(&self, node: NodeId) -> u32 {
+        let mut depth: u32 = 0;
+        let mut current: Option<NodeId> = Some(node);
+        while let Some(id) = current {
+            let Some(n) = self.nodes.get(id) else {
+                break;
+            };
+            depth = depth.saturating_add(1);
+            current = n.parent;
+        }
+        depth
+    }
+
+    fn apply_pending_invalidations(
+        &mut self,
+        pending: HashMap<NodeId, PendingInvalidation>,
+        visited: &mut HashMap<NodeId, u8>,
+    ) {
+        if pending.is_empty() {
+            return;
+        }
+
+        let mut entries: Vec<(NodeId, PendingInvalidation)> = pending.into_iter().collect();
+        entries.sort_by_key(|(node, _)| {
+            std::cmp::Reverse(self.node_depth_for_invalidation_order(*node))
+        });
+        for (node, pending) in entries {
+            self.mark_invalidation_dedup_with_source(node, pending.inv, visited, pending.source);
+        }
+    }
+
     fn dismiss_topmost_overlay_on_escape(
         &mut self,
         app: &mut H,
@@ -164,6 +254,7 @@ impl<H: UiHost> UiTree<H> {
         input_ctx: &InputContext,
         start: NodeId,
         event: &Event,
+        invalidation_visited: &mut HashMap<NodeId, u8>,
     ) -> bool {
         let pointer_id_for_capture: Option<fret_core::PointerId> = match event {
             Event::Pointer(PointerEvent::Move { pointer_id, .. })
@@ -174,6 +265,8 @@ impl<H: UiHost> UiTree<H> {
             Event::PointerCancel(e) => Some(e.pointer_id),
             _ => None,
         };
+
+        let mut pending_invalidations = HashMap::<NodeId, PendingInvalidation>::new();
 
         let (active_roots, _barrier_root) = self.active_input_layers();
         if event_position(event).is_some() {
@@ -214,17 +307,32 @@ impl<H: UiHost> UiTree<H> {
                     });
 
                 for (id, inv) in invalidations {
-                    self.mark_invalidation(id, inv);
+                    Self::pending_invalidation_merge(
+                        &mut pending_invalidations,
+                        id,
+                        inv,
+                        UiDebugInvalidationSource::Other,
+                    );
                 }
 
                 if let Some(focus) = requested_focus
                     && self.focus_request_is_allowed(app, self.window, &active_roots, focus)
                 {
                     if let Some(prev) = self.focus {
-                        self.mark_invalidation(prev, Invalidation::Paint);
+                        Self::pending_invalidation_merge(
+                            &mut pending_invalidations,
+                            prev,
+                            Invalidation::Paint,
+                            UiDebugInvalidationSource::Focus,
+                        );
                     }
                     self.focus = Some(focus);
-                    self.mark_invalidation(focus, Invalidation::Paint);
+                    Self::pending_invalidation_merge(
+                        &mut pending_invalidations,
+                        focus,
+                        Invalidation::Paint,
+                        UiDebugInvalidationSource::Focus,
+                    );
                     self.scroll_node_into_view(app, focus);
                 }
 
@@ -246,9 +354,17 @@ impl<H: UiHost> UiTree<H> {
                 let captured_now =
                     pointer_id_for_capture.and_then(|p| self.captured.get(&p).copied());
                 if captured_now.is_some() || stop_propagation {
+                    self.apply_pending_invalidations(
+                        std::mem::take(&mut pending_invalidations),
+                        invalidation_visited,
+                    );
                     return true;
                 }
             }
+            self.apply_pending_invalidations(
+                std::mem::take(&mut pending_invalidations),
+                invalidation_visited,
+            );
             return false;
         }
 
@@ -291,17 +407,32 @@ impl<H: UiHost> UiTree<H> {
                 });
 
             for (id, inv) in invalidations {
-                self.mark_invalidation(id, inv);
+                Self::pending_invalidation_merge(
+                    &mut pending_invalidations,
+                    id,
+                    inv,
+                    UiDebugInvalidationSource::Other,
+                );
             }
 
             if let Some(focus) = requested_focus
                 && self.focus_request_is_allowed(app, self.window, &active_roots, focus)
             {
                 if let Some(prev) = self.focus {
-                    self.mark_invalidation(prev, Invalidation::Paint);
+                    Self::pending_invalidation_merge(
+                        &mut pending_invalidations,
+                        prev,
+                        Invalidation::Paint,
+                        UiDebugInvalidationSource::Focus,
+                    );
                 }
                 self.focus = Some(focus);
-                self.mark_invalidation(focus, Invalidation::Paint);
+                Self::pending_invalidation_merge(
+                    &mut pending_invalidations,
+                    focus,
+                    Invalidation::Paint,
+                    UiDebugInvalidationSource::Focus,
+                );
                 self.scroll_node_into_view(app, focus);
             }
 
@@ -322,6 +453,10 @@ impl<H: UiHost> UiTree<H> {
 
             let captured_now = pointer_id_for_capture.and_then(|p| self.captured.get(&p).copied());
             if captured_now.is_some() || stop_propagation {
+                self.apply_pending_invalidations(
+                    std::mem::take(&mut pending_invalidations),
+                    invalidation_visited,
+                );
                 return true;
             }
 
@@ -331,6 +466,10 @@ impl<H: UiHost> UiTree<H> {
             };
         }
 
+        self.apply_pending_invalidations(
+            std::mem::take(&mut pending_invalidations),
+            invalidation_visited,
+        );
         false
     }
 
@@ -341,6 +480,8 @@ impl<H: UiHost> UiTree<H> {
         else {
             return;
         };
+
+        self.begin_debug_frame_if_needed(app.frame_id());
 
         let (active_layers, barrier_root) = self.active_input_layers();
         self.enforce_modal_barrier_scope(&active_layers);
@@ -375,6 +516,8 @@ impl<H: UiHost> UiTree<H> {
             focus_is_text_input,
             dispatch_phase: InputDispatchPhase::Normal,
         };
+
+        let mut invalidation_visited = HashMap::<NodeId, u8>::new();
 
         // ADR 0012: when a text input is focused, reserve common IME/navigation keys for the
         // text/IME path first, and only fall back to shortcut matching if the widget doesn't
@@ -447,8 +590,14 @@ impl<H: UiHost> UiTree<H> {
                 && let Some(window) = self.window
                 && let Some(node) = crate::elements::timer_target_node(app, window, *token)
             {
-                let stopped =
-                    self.dispatch_event_to_node_chain(app, services, &input_ctx, node, event);
+                let stopped = self.dispatch_event_to_node_chain(
+                    app,
+                    services,
+                    &input_ctx,
+                    node,
+                    event,
+                    &mut invalidation_visited,
+                );
                 if stopped {
                     return;
                 }
@@ -462,8 +611,14 @@ impl<H: UiHost> UiTree<H> {
                 if !layer.wants_timer_events || !layer.visible {
                     continue;
                 }
-                let stopped =
-                    self.dispatch_event_to_node_chain(app, services, &input_ctx, layer.root, event);
+                let stopped = self.dispatch_event_to_node_chain(
+                    app,
+                    services,
+                    &input_ctx,
+                    layer.root,
+                    event,
+                    &mut invalidation_visited,
+                );
                 if stopped {
                     return;
                 }
@@ -590,6 +745,7 @@ impl<H: UiHost> UiTree<H> {
                         hit,
                         event,
                     },
+                    &mut invalidation_visited,
                 );
                 if pointer_down_outside.dispatched {
                     needs_redraw = true;
@@ -615,10 +771,20 @@ impl<H: UiHost> UiTree<H> {
             if prev_node.is_some() || next_node.is_some() {
                 needs_redraw = true;
                 if let Some(node) = prev_node {
-                    self.mark_invalidation(node, Invalidation::Paint);
+                    self.mark_invalidation_dedup_with_source(
+                        node,
+                        Invalidation::Paint,
+                        &mut invalidation_visited,
+                        UiDebugInvalidationSource::Hover,
+                    );
                 }
                 if let Some(node) = next_node {
-                    self.mark_invalidation(node, Invalidation::Paint);
+                    self.mark_invalidation_dedup_with_source(
+                        node,
+                        Invalidation::Paint,
+                        &mut invalidation_visited,
+                        UiDebugInvalidationSource::Hover,
+                    );
                 }
             }
 
@@ -793,12 +959,20 @@ impl<H: UiHost> UiTree<H> {
             if prev_node.is_some() || next_node.is_some() {
                 needs_redraw = true;
                 if let Some(node) = prev_node {
-                    self.mark_invalidation(node, Invalidation::Layout);
-                    self.mark_invalidation(node, Invalidation::Paint);
+                    self.mark_invalidation_dedup_with_source(
+                        node,
+                        Invalidation::Layout,
+                        &mut invalidation_visited,
+                        UiDebugInvalidationSource::Hover,
+                    );
                 }
                 if let Some(node) = next_node {
-                    self.mark_invalidation(node, Invalidation::Layout);
-                    self.mark_invalidation(node, Invalidation::Paint);
+                    self.mark_invalidation_dedup_with_source(
+                        node,
+                        Invalidation::Layout,
+                        &mut invalidation_visited,
+                        UiDebugInvalidationSource::Hover,
+                    );
                 }
             }
         }
@@ -839,10 +1013,22 @@ impl<H: UiHost> UiTree<H> {
                 && !buttons.left
                 && !buttons.right
                 && !buttons.middle
-                && hit != self.last_pointer_move_hit
             {
-                synth_pointer_move_prev_target = self.last_pointer_move_hit;
-                self.last_pointer_move_hit = hit;
+                // When a modal barrier becomes active, the previous pointer-move hit may belong to
+                // an underlay layer that is now inactive. Do not synthesize hover-move events into
+                // the underlay in that case (e.g. Radix `disableOutsidePointerEvents`).
+                if barrier_root.is_some()
+                    && self
+                        .last_pointer_move_hit
+                        .is_some_and(|n| !self.node_in_any_layer(n, &active_layers))
+                {
+                    self.last_pointer_move_hit = None;
+                }
+
+                if hit != self.last_pointer_move_hit {
+                    synth_pointer_move_prev_target = self.last_pointer_move_hit;
+                    self.last_pointer_move_hit = hit;
+                }
             }
 
             if matches!(event, Event::InternalDrag(_)) {
@@ -1266,7 +1452,14 @@ impl<H: UiHost> UiTree<H> {
             //
             // We intentionally use observer dispatch to avoid allowing the previous target to
             // mutate focus/capture/cursor routing on the transition frame.
-            self.dispatch_event_to_node_chain_observer(app, services, &input_ctx, prev, event);
+            self.dispatch_event_to_node_chain_observer(
+                app,
+                services,
+                &input_ctx,
+                prev,
+                event,
+                &mut invalidation_visited,
+            );
             needs_redraw = true;
         }
 
@@ -1283,15 +1476,38 @@ impl<H: UiHost> UiTree<H> {
         }
         if let Event::Pointer(PointerEvent::Move { .. }) = event {
             let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
+            let mut hit_barrier = false;
             for layer_id in layers.into_iter().rev() {
-                let Some(layer) = self.layers.get(layer_id) else {
+                let Some((layer_root, visible, wants_pointer_move_events)) = self
+                    .layers
+                    .get(layer_id)
+                    .map(|layer| (layer.root, layer.visible, layer.wants_pointer_move_events))
+                else {
                     continue;
                 };
-                if !layer.wants_pointer_move_events || !layer.visible {
+                if !visible {
                     continue;
                 }
-                let _ =
-                    self.dispatch_event_to_node_chain(app, services, &input_ctx, layer.root, event);
+                if barrier_root.is_some() && hit_barrier {
+                    break;
+                }
+                if !wants_pointer_move_events {
+                    if barrier_root == Some(layer_root) {
+                        hit_barrier = true;
+                    }
+                    continue;
+                }
+                let _ = self.dispatch_event_to_node_chain(
+                    app,
+                    services,
+                    &input_ctx,
+                    layer_root,
+                    event,
+                    &mut invalidation_visited,
+                );
+                if barrier_root == Some(layer_root) {
+                    hit_barrier = true;
+                }
             }
         }
 
@@ -1307,6 +1523,7 @@ impl<H: UiHost> UiTree<H> {
         input_ctx: &InputContext,
         start: NodeId,
         event: &Event,
+        invalidation_visited: &mut HashMap<NodeId, u8>,
     ) {
         let pointer_id_for_capture: Option<fret_core::PointerId> = match event {
             Event::Pointer(PointerEvent::Move { pointer_id, .. })
@@ -1317,6 +1534,8 @@ impl<H: UiHost> UiTree<H> {
             Event::PointerCancel(e) => Some(e.pointer_id),
             _ => None,
         };
+
+        let mut pending_invalidations = HashMap::<NodeId, PendingInvalidation>::new();
 
         if event_position(event).is_some() {
             let chain = self.build_mapped_event_chain(start, event);
@@ -1356,9 +1575,18 @@ impl<H: UiHost> UiTree<H> {
                 });
 
                 for (id, inv) in invalidations {
-                    self.mark_invalidation(id, inv);
+                    Self::pending_invalidation_merge(
+                        &mut pending_invalidations,
+                        id,
+                        inv,
+                        UiDebugInvalidationSource::Other,
+                    );
                 }
             }
+            self.apply_pending_invalidations(
+                std::mem::take(&mut pending_invalidations),
+                invalidation_visited,
+            );
             return;
         }
 
@@ -1398,7 +1626,12 @@ impl<H: UiHost> UiTree<H> {
             });
 
             for (id, inv) in invalidations {
-                self.mark_invalidation(id, inv);
+                Self::pending_invalidation_merge(
+                    &mut pending_invalidations,
+                    id,
+                    inv,
+                    UiDebugInvalidationSource::Other,
+                );
             }
 
             node_id = match parent {
@@ -1406,6 +1639,11 @@ impl<H: UiHost> UiTree<H> {
                 None => break,
             };
         }
+
+        self.apply_pending_invalidations(
+            std::mem::take(&mut pending_invalidations),
+            invalidation_visited,
+        );
     }
 
     fn apply_vector(t: Transform2D, v: Point) -> Point {

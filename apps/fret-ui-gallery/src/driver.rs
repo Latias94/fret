@@ -8,6 +8,7 @@ use fret_runtime::PlatformCapabilities;
 use fret_ui::action::{UiActionHost, UiActionHostAdapter};
 use fret_ui::declarative;
 use fret_ui::element::SemanticsProps;
+use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{Invalidation, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -21,6 +22,9 @@ use fret_workspace::{
 use std::sync::Arc;
 use std::time::Duration;
 use time::Date;
+
+#[cfg(not(target_arch = "wasm32"))]
+use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 
 use crate::spec::*;
 use crate::ui;
@@ -71,6 +75,10 @@ struct UiGalleryWindowState {
     cmdk_open: Model<bool>,
     cmdk_query: Model<String>,
     last_action: Model<Arc<str>>,
+    virtual_list_torture_jump: Model<String>,
+    virtual_list_torture_edit_row: Model<Option<u64>>,
+    virtual_list_torture_edit_text: Model<String>,
+    virtual_list_torture_scroll: VirtualListScrollHandle,
 }
 
 #[derive(Default)]
@@ -155,7 +163,15 @@ impl UiGalleryDriver {
     }
 
     fn build_ui(app: &mut App, window: AppWindowId) -> UiGalleryWindowState {
-        let start_page = ui_gallery_start_page().unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+        let start_page = ui_gallery_start_page().unwrap_or_else(|| {
+            if std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
+                || std::env::var_os("FRET_DIAG_DIR").is_some_and(|v| !v.is_empty())
+            {
+                Arc::<str>::from(PAGE_OVERLAY)
+            } else {
+                Arc::<str>::from(PAGE_INTRO)
+            }
+        });
         let selected_page = app.models_mut().insert(start_page.clone());
 
         let mut workspace_tabs_init = vec![
@@ -229,6 +245,10 @@ impl UiGalleryDriver {
         let cmdk_open = app.models_mut().insert(false);
         let cmdk_query = app.models_mut().insert(String::new());
         let last_action = app.models_mut().insert(Arc::<str>::from("<none>"));
+        let virtual_list_torture_jump = app.models_mut().insert(String::from("9000"));
+        let virtual_list_torture_edit_row = app.models_mut().insert(None::<u64>);
+        let virtual_list_torture_edit_text = app.models_mut().insert(String::new());
+        let virtual_list_torture_scroll = VirtualListScrollHandle::new();
 
         let view_cache_enabled = app
             .models_mut()
@@ -303,6 +323,10 @@ impl UiGalleryDriver {
             cmdk_open,
             cmdk_query,
             last_action,
+            virtual_list_torture_jump,
+            virtual_list_torture_edit_row,
+            virtual_list_torture_edit_text,
+            virtual_list_torture_scroll,
         }
     }
 
@@ -425,7 +449,11 @@ impl UiGalleryDriver {
         }
     }
 
-    fn handle_gallery_command(app: &mut App, state: &UiGalleryWindowState, command: &CommandId) {
+    fn handle_gallery_command(
+        app: &mut App,
+        state: &UiGalleryWindowState,
+        command: &CommandId,
+    ) -> bool {
         match command.as_str() {
             CMD_PROGRESS_INC => {
                 let _ = app
@@ -450,8 +478,9 @@ impl UiGalleryDriver {
                     .models_mut()
                     .update(&state.view_cache_counter, |v| *v = 0);
             }
-            _ => {}
+            _ => return false,
         }
+        true
     }
 
     fn sync_shadcn_theme(app: &mut App, state: &mut UiGalleryWindowState) {
@@ -554,12 +583,64 @@ impl UiGalleryDriver {
         let cmdk_open = state.cmdk_open.clone();
         let cmdk_query = state.cmdk_query.clone();
         let last_action = state.last_action.clone();
+        let virtual_list_torture_jump = state.virtual_list_torture_jump.clone();
+        let virtual_list_torture_edit_row = state.virtual_list_torture_edit_row.clone();
+        let virtual_list_torture_edit_text = state.virtual_list_torture_edit_text.clone();
+        let virtual_list_torture_scroll = state.virtual_list_torture_scroll.clone();
         let inspector_enabled = state.inspector_enabled.clone();
         let inspector_last_pointer = state.inspector_last_pointer.clone();
 
         Self::sync_shadcn_theme(app, state);
 
         let last_debug_stats = state.ui.debug_stats();
+        let last_cache_roots = state.ui.debug_cache_root_stats();
+        let cache_root_breakdown: Option<Vec<Arc<str>>> = if !last_cache_roots.is_empty() {
+            let total = last_cache_roots.len();
+            let hits = last_cache_roots.iter().filter(|r| r.reused).count();
+            let replayed_ops: u32 = last_cache_roots.iter().map(|r| r.paint_replayed_ops).sum();
+
+            let mut lines: Vec<Arc<str>> = vec![Arc::from(format!(
+                "cache_roots total={total} hits={hits} replayed_ops={replayed_ops}"
+            ))];
+
+            let max_items = 3usize;
+            for (index, root) in last_cache_roots.iter().take(max_items).enumerate() {
+                let element_path = root.element.and_then(|element| {
+                    app.with_global_mut(fret_ui::ElementRuntime::new, |runtime, _| {
+                        runtime.debug_path_for_element(window, element)
+                    })
+                });
+
+                lines.push(Arc::from(format!(
+                    "cache_root[{index}] node={:?} reused={} contained_layout={} replayed_ops={} el={} {}",
+                    root.root,
+                    root.reused as u8,
+                    root.contained_layout as u8,
+                    root.paint_replayed_ops,
+                    root.element
+                        .map(|id| format!("{:#x}", id.0))
+                        .unwrap_or_else(|| "<none>".to_string()),
+                    element_path.as_deref().unwrap_or(""),
+                )));
+            }
+
+            Some(lines)
+        } else {
+            None
+        };
+        let hot_model_breakdown: Option<Arc<str>> = {
+            let hotspots = state.ui.debug_model_change_hotspots();
+            if hotspots.is_empty() {
+                None
+            } else {
+                let mut line = String::from("hot_models");
+                for hs in hotspots.iter().take(3) {
+                    line.push(' ');
+                    line.push_str(&format!("{:?}={}", hs.model, hs.observation_edges));
+                }
+                Some(Arc::from(line))
+            }
+        };
         let inspector_status = if app.models().get_copied(&inspector_enabled).unwrap_or(false) {
             let pointer = app
                 .models()
@@ -620,6 +701,8 @@ impl UiGalleryDriver {
                                         selected.as_ref(),
                                         query.as_str(),
                                         nav_query.clone(),
+                                        selected_page.clone(),
+                                        state.workspace_tabs.clone(),
                                     )
                                 }]
                             },
@@ -653,6 +736,8 @@ impl UiGalleryDriver {
                                     selected.as_ref(),
                                     query.as_str(),
                                     nav_query.clone(),
+                                    selected_page.clone(),
+                                    state.workspace_tabs.clone(),
                                 )
                             }
                         })
@@ -731,6 +816,10 @@ impl UiGalleryDriver {
                                             cmdk_open.clone(),
                                             cmdk_query.clone(),
                                             last_action.clone(),
+                                            virtual_list_torture_jump.clone(),
+                                            virtual_list_torture_edit_row.clone(),
+                                            virtual_list_torture_edit_text.clone(),
+                                            virtual_list_torture_scroll.clone(),
                                         )
                                     }
                                 })]
@@ -798,6 +887,10 @@ impl UiGalleryDriver {
                                         cmdk_open.clone(),
                                         cmdk_query.clone(),
                                         last_action.clone(),
+                                        virtual_list_torture_jump.clone(),
+                                        virtual_list_torture_edit_row.clone(),
+                                        virtual_list_torture_edit_text.clone(),
+                                        virtual_list_torture_scroll.clone(),
                                     )
                                 }
                             })
@@ -917,11 +1010,35 @@ impl UiGalleryDriver {
                                 last_debug_stats.view_cache_invalidation_truncations,
                                 last_debug_stats.view_cache_contained_relayouts
                             )),
+                            cx.text(format!(
+                                "changes: models={} edges={} roots={} walks={} nodes={}",
+                                last_debug_stats.model_change_models,
+                                last_debug_stats.model_change_observation_edges,
+                                last_debug_stats.model_change_invalidation_roots,
+                                last_debug_stats.invalidation_walk_calls_model_change,
+                                last_debug_stats.invalidation_walk_nodes_model_change
+                            )),
+                            cx.text(format!(
+                                "globals: count={} edges={} roots={} walks={} nodes={}",
+                                last_debug_stats.global_change_globals,
+                                last_debug_stats.global_change_observation_edges,
+                                last_debug_stats.global_change_invalidation_roots,
+                                last_debug_stats.invalidation_walk_calls_global_change,
+                                last_debug_stats.invalidation_walk_nodes_global_change
+                            )),
                         ];
                         if let Some((cursor, hit, focus)) = inspector_status.as_ref() {
                             right_items.push(cx.text(format!("inspect: {}", cursor.as_ref())));
                             right_items.push(cx.text(format!("inspect: {}", hit.as_ref())));
                             right_items.push(cx.text(format!("inspect: {}", focus.as_ref())));
+                        }
+                        if let Some(lines) = cache_root_breakdown.as_ref() {
+                            for line in lines {
+                                right_items.push(cx.text(format!("hud: {}", line.as_ref())));
+                            }
+                        }
+                        if let Some(line) = hot_model_breakdown.as_ref() {
+                            right_items.push(cx.text(format!("hud: {}", line.as_ref())));
                         }
 
                         WorkspaceStatusBar::new()
@@ -1200,8 +1317,59 @@ impl WinitAppDriver for UiGalleryDriver {
             return;
         }
 
-        let _ = Self::handle_nav_command(app, state, &command);
-        Self::handle_gallery_command(app, state, &command);
+        let did_nav = Self::handle_nav_command(app, state, &command);
+        let did_gallery = Self::handle_gallery_command(app, state, &command);
+        if did_nav || did_gallery {
+            app.request_redraw(window);
+        }
+
+        if command.as_str() == CMD_VIRTUAL_LIST_TORTURE_JUMP {
+            let raw = app
+                .models()
+                .get_cloned(&state.virtual_list_torture_jump)
+                .unwrap_or_default();
+            let index = raw.trim().parse::<usize>().unwrap_or(0);
+            state
+                .virtual_list_torture_scroll
+                .scroll_to_item(index, fret_ui::scroll::ScrollStrategy::Start);
+            app.request_redraw(window);
+            return;
+        }
+
+        if command.as_str() == CMD_VIRTUAL_LIST_TORTURE_SCROLL_BOTTOM {
+            state.virtual_list_torture_scroll.scroll_to_bottom();
+            app.request_redraw(window);
+            return;
+        }
+
+        if command.as_str() == CMD_VIRTUAL_LIST_TORTURE_CLEAR_EDIT {
+            let _ = app
+                .models_mut()
+                .update(&state.virtual_list_torture_edit_row, |v| *v = None);
+            let _ = app
+                .models_mut()
+                .update(&state.virtual_list_torture_edit_text, |v| v.clear());
+            app.request_redraw(window);
+            return;
+        }
+
+        if let Some(suffix) = command
+            .as_str()
+            .strip_prefix(CMD_VIRTUAL_LIST_TORTURE_ROW_EDIT_PREFIX)
+        {
+            if let Ok(row) = suffix.parse::<u64>() {
+                let _ = app
+                    .models_mut()
+                    .update(&state.virtual_list_torture_edit_row, |v| *v = Some(row));
+                let _ = app
+                    .models_mut()
+                    .update(&state.virtual_list_torture_edit_text, |v| {
+                        *v = format!("Row {row}");
+                    });
+                app.request_redraw(window);
+                return;
+            }
+        }
 
         if let Some(suffix) = command.as_str().strip_prefix(CMD_DATA_GRID_ROW_PREFIX) {
             if let Ok(row) = suffix.parse::<u64>() {
@@ -1359,6 +1527,22 @@ impl WinitAppDriver for UiGalleryDriver {
             ..
         } = context;
 
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let consumed = app.with_global_mut(UiDiagnosticsService::default, |svc, app| {
+                if !svc.is_enabled() {
+                    return false;
+                }
+                if svc.maybe_intercept_event_for_inspect_shortcuts(app, window, event) {
+                    return true;
+                }
+                svc.maybe_intercept_event_for_picking(app, window, event)
+            });
+            if consumed {
+                return;
+            }
+        }
+
         match event {
             Event::WindowCloseRequested => {
                 app.push_effect(Effect::Window(WindowRequest::Close(window)));
@@ -1384,11 +1568,109 @@ impl WinitAppDriver for UiGalleryDriver {
         state.ui.request_semantics_snapshot();
         state.ui.ingest_paint_cache_source(scene);
 
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let inspection_active = app
+                .with_global_mut(UiDiagnosticsService::default, |svc, _app| {
+                    svc.wants_inspection_active(window)
+                });
+            state.ui.set_inspection_active(inspection_active);
+        }
+
         scene.clear();
         let mut frame =
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.layout_all();
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let semantics_snapshot = state.ui.semantics_snapshot();
+            let drive = app.with_global_mut(UiDiagnosticsService::default, |svc, app| {
+                let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+                svc.drive_script_for_window(window, semantics_snapshot, element_runtime)
+            });
+
+            if drive.request_redraw {
+                app.request_redraw(window);
+            }
+
+            let mut injected_any = false;
+            for event in drive.events {
+                injected_any = true;
+                state.ui.dispatch_event(app, services, &event);
+            }
+
+            if injected_any {
+                // Script-driven events bypass the winit event loop, so we must apply any generated
+                // command effects (e.g. Tab => focus traversal) before we record snapshots.
+                //
+                // Keep non-command effects queued for the runner to handle after `render` returns.
+                let mut deferred_effects: Vec<Effect> = Vec::new();
+                loop {
+                    let effects = app.flush_effects();
+                    if effects.is_empty() {
+                        break;
+                    }
+
+                    let mut applied_any_command = false;
+                    for effect in effects {
+                        match effect {
+                            Effect::Command { window: w, command } => {
+                                if w.is_none() || w == Some(window) {
+                                    let _ = state.ui.dispatch_command(app, services, &command);
+                                    applied_any_command = true;
+                                } else {
+                                    deferred_effects.push(Effect::Command { window: w, command });
+                                }
+                            }
+                            other => deferred_effects.push(other),
+                        }
+                    }
+
+                    if !applied_any_command {
+                        break;
+                    }
+                }
+                for effect in deferred_effects {
+                    app.push_effect(effect);
+                }
+
+                state.ui.request_semantics_snapshot();
+                let mut frame = fret_ui::UiFrameCx::new(
+                    &mut state.ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    scale_factor,
+                );
+                frame.layout_all();
+            }
+        }
+
+        let mut frame =
+            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.paint_all(scene);
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            app.with_global_mut(UiDiagnosticsService::default, |svc, app| {
+                let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+                svc.record_snapshot(
+                    app,
+                    window,
+                    bounds,
+                    scale_factor,
+                    &state.ui,
+                    element_runtime,
+                    scene,
+                );
+                let _ = svc.maybe_dump_if_triggered();
+                if svc.is_enabled() {
+                    app.push_effect(Effect::RequestAnimationFrame(window));
+                }
+            });
+        }
     }
 
     fn window_create_spec(

@@ -146,7 +146,99 @@ pub struct PlotTransform {
     pub y_scale: AxisScale,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PreparedPlotTransform {
+    viewport_origin_x: f64,
+    viewport_origin_y: f64,
+    viewport_w: f64,
+    viewport_h: f64,
+    x0: f64,
+    inv_w: f64,
+    y0: f64,
+    inv_h: f64,
+    x_scale: AxisScale,
+    y_scale: AxisScale,
+}
+
+impl PreparedPlotTransform {
+    pub fn data_x_to_px(self, x: f64) -> Option<Px> {
+        let vx = self.x_scale.to_axis(x)?;
+        let nx = (vx - self.x0) * self.inv_w;
+        if !nx.is_finite() {
+            return None;
+        }
+        let px = self.viewport_origin_x + (nx * self.viewport_w);
+        px.is_finite().then_some(Px(px as f32))
+    }
+
+    pub fn data_y_to_px(self, y: f64) -> Option<Px> {
+        let vy = self.y_scale.to_axis(y)?;
+        let ny = 1.0 - (vy - self.y0) * self.inv_h;
+        if !ny.is_finite() {
+            return None;
+        }
+        let px = self.viewport_origin_y + (ny * self.viewport_h);
+        px.is_finite().then_some(Px(px as f32))
+    }
+
+    pub fn data_to_px(self, p: DataPoint) -> Point {
+        let vx = self.x_scale.to_axis(p.x).unwrap_or(f64::NAN);
+        let vy = self.y_scale.to_axis(p.y).unwrap_or(f64::NAN);
+
+        let nx = (vx - self.x0) * self.inv_w;
+        let ny = 1.0 - (vy - self.y0) * self.inv_h;
+
+        let x = self.viewport_origin_x + (nx * self.viewport_w);
+        let y = self.viewport_origin_y + (ny * self.viewport_h);
+        Point::new(Px(x as f32), Px(y as f32))
+    }
+}
+
 impl PlotTransform {
+    pub fn prepare(self) -> Option<PreparedPlotTransform> {
+        let (x_min, x_max) = self
+            .x_scale
+            .sanitize_bounds(self.data.x_min, self.data.x_max);
+        let x0 = self.x_scale.to_axis(x_min)?;
+        let x1 = self.x_scale.to_axis(x_max)?;
+        let w = x1 - x0;
+        if !w.is_finite() || w == 0.0 {
+            return None;
+        }
+
+        let (y_min, y_max) = self
+            .y_scale
+            .sanitize_bounds(self.data.y_min, self.data.y_max);
+        let y0 = self.y_scale.to_axis(y_min)?;
+        let y1 = self.y_scale.to_axis(y_max)?;
+        let h = y1 - y0;
+        if !h.is_finite() || h == 0.0 {
+            return None;
+        }
+
+        let viewport_w = f64::from(self.viewport.size.width.0);
+        let viewport_h = f64::from(self.viewport.size.height.0);
+        if !viewport_w.is_finite() || viewport_w <= 0.0 {
+            return None;
+        }
+        if !viewport_h.is_finite() || viewport_h <= 0.0 {
+            return None;
+        }
+
+        Some(PreparedPlotTransform {
+            viewport_origin_x: f64::from(self.viewport.origin.x.0),
+            viewport_origin_y: f64::from(self.viewport.origin.y.0),
+            viewport_w,
+            viewport_h,
+            x0,
+            inv_w: 1.0 / w,
+            y0,
+            inv_h: 1.0 / h,
+            x_scale: self.x_scale,
+            y_scale: self.y_scale,
+        })
+    }
+
     pub fn data_x_to_px(self, x: f64) -> Option<Px> {
         let (x_min, x_max) = self
             .x_scale

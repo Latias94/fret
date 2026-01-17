@@ -147,10 +147,10 @@ Legend:
 | `data_table` | `DataTable` | Chrome+Layout (Patch-only) | `ui().into_element(cx, data, data_revision, state, columns, ...)` (extra args) |
 | `data_grid` | `DataGridElement` | Chrome+Layout (Patch-only) | Exported as `experimental::DataGridElement`; `ui().into_element(cx, rows_revision, cols_revision, ...)` (extra args) |
 | `data_grid_canvas` | `DataGridCanvas` | Chrome+Layout (Patch-only) | `ui().into_element(cx, cell_text_at)` (extra args) |
-| `collapsible` | `Collapsible` | Layout-only (Patch-only) | `ui().into_element(cx, trigger, content)` (extra args) |
-| `collapsible` | `CollapsibleContent` | Layout-only |  |
-| `field` | `Field` | Layout-only |  |
-| `item` | `Item` | Layout-only |  |
+| `collapsible` | `Collapsible` | Chrome+Layout (Patch-only) | `ui().into_element(cx, trigger, content)` (extra args) |
+| `collapsible` | `CollapsibleContent` | Chrome+Layout |  |
+| `field` | `Field` | Chrome+Layout |  |
+| `item` | `Item` | Chrome+Layout |  |
 | `pagination` | `Pagination` | Layout-only |  |
 | `navigation_menu` | `NavigationMenu` | Layout-only |  |
 | `scroll_area` | `ScrollArea` | Layout-only |  |
