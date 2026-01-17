@@ -23,6 +23,7 @@ use super::models::*;
 use super::style::*;
 
 use crate::cartesian::{AxisScale, DataPoint, DataRect, PlotTransform};
+use crate::plot::colormap::ColorMapLut;
 use crate::plot::decimate::{
     SamplePoint, decimate_points, decimate_polyline, decimate_samples, decimate_shaded_band,
     device_point_budget, view_x_range, visible_sorted_slice,
@@ -1105,6 +1106,7 @@ pub struct HeatmapPlotLayer {
     cached_quads: Vec<PlotQuad>,
     mip_key: Option<HeatmapMipKey>,
     mips: Vec<GridMipLevel>,
+    colormap_lut: ColorMapLut,
 }
 
 fn ceil_div_usize(a: usize, b: usize) -> usize {
@@ -1437,6 +1439,7 @@ pub struct Histogram2DPlotLayer {
     cached_quads: Vec<PlotQuad>,
     mip_key: Option<Histogram2DMipKey>,
     mips: Vec<GridMipLevel>,
+    colormap_lut: ColorMapLut,
 }
 
 pub type Histogram2DPlotCanvas = PlotCanvas<Histogram2DPlotLayer>;
@@ -4505,8 +4508,8 @@ impl PlotLayer for HeatmapPlotLayer {
 
         self.rebuild_mips_if_needed(model_revision, model);
 
-        let heatmap_colormap = style.heatmap_colormap;
-        let heatmap_color = |t: f32| crate::plot::colormap::sample(heatmap_colormap, t);
+        self.colormap_lut.ensure(style.heatmap_colormap, 256);
+        let heatmap_color = |t: f32| self.colormap_lut.sample(t);
 
         let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
         let transform = PlotTransform {
@@ -4514,6 +4517,11 @@ impl PlotLayer for HeatmapPlotLayer {
             data: view_bounds,
             x_scale,
             y_scale,
+        };
+        let Some(transform) = transform.prepare() else {
+            self.cache_key = Some(cache_key);
+            self.cached_quads.clear();
+            return Vec::new();
         };
 
         let dx = (model.data_bounds.x_max - model.data_bounds.x_min) / (model.cols as f64);
@@ -4815,8 +4823,8 @@ impl PlotLayer for Histogram2DPlotLayer {
 
         self.rebuild_mips_if_needed(model_revision, model);
 
-        let heatmap_colormap = style.heatmap_colormap;
-        let heatmap_color = |t: f32| crate::plot::colormap::sample(heatmap_colormap, t);
+        self.colormap_lut.ensure(style.heatmap_colormap, 256);
+        let heatmap_color = |t: f32| self.colormap_lut.sample(t);
 
         let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
         let transform = PlotTransform {
@@ -4824,6 +4832,11 @@ impl PlotLayer for Histogram2DPlotLayer {
             data: view_bounds,
             x_scale,
             y_scale,
+        };
+        let Some(transform) = transform.prepare() else {
+            self.cache_key = Some(cache_key);
+            self.cached_quads.clear();
+            return Vec::new();
         };
 
         let dx = (model.data_bounds.x_max - model.data_bounds.x_min) / (model.cols as f64);
