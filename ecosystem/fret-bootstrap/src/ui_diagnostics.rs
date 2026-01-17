@@ -2093,6 +2093,8 @@ pub struct UiTreeDebugSnapshotV1 {
     pub stats: UiFrameStatsV1,
     #[serde(default)]
     pub invalidation_walks: Vec<UiInvalidationWalkV1>,
+    #[serde(default)]
+    pub model_change_hotspots: Vec<UiModelChangeHotspotV1>,
     pub layers_in_paint_order: Vec<UiLayerInfoV1>,
     pub hit_test: Option<UiHitTestSnapshotV1>,
     pub element_runtime: Option<ElementDiagnosticsSnapshotV1>,
@@ -2113,6 +2115,11 @@ impl UiTreeDebugSnapshotV1 {
                 .iter()
                 .map(UiInvalidationWalkV1::from_walk)
                 .collect(),
+            model_change_hotspots: ui
+                .debug_model_change_hotspots()
+                .iter()
+                .map(UiModelChangeHotspotV1::from_hotspot)
+                .collect(),
             layers_in_paint_order: ui
                 .debug_layers_in_paint_order()
                 .into_iter()
@@ -2121,6 +2128,21 @@ impl UiTreeDebugSnapshotV1 {
             hit_test,
             element_runtime,
             semantics,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiModelChangeHotspotV1 {
+    pub model: u64,
+    pub observation_edges: u32,
+}
+
+impl UiModelChangeHotspotV1 {
+    fn from_hotspot(hotspot: &fret_ui::tree::UiDebugModelChangeHotspot) -> Self {
+        Self {
+            model: hotspot.model.data().as_ffi(),
+            observation_edges: hotspot.observation_edges,
         }
     }
 }
