@@ -135,7 +135,7 @@ panel content and can surface layout/placement regressions.
 
 Desktop (viewport disabled):
 
-`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 navigation-menu-demo --modes=open --update --openAction=click --openVariants="components=[data-fret-golden-target] li:nth-of-type(2) [data-slot='navigation-menu-trigger'];with-icon=[data-fret-golden-target] li:nth-of-type(6) [data-slot='navigation-menu-trigger']"`
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 navigation-menu-demo --modes=open --update --openAction=click --openVariants="components=[data-fret-golden-target] li:nth-of-type(2) [data-slot='navigation-menu-trigger'];list=[data-fret-golden-target] li:nth-of-type(4) [data-slot='navigation-menu-trigger'];simple=[data-fret-golden-target] li:nth-of-type(5) [data-slot='navigation-menu-trigger'];with-icon=[data-fret-golden-target] li:nth-of-type(6) [data-slot='navigation-menu-trigger']"`
 
 Mobile (viewport enabled, 375x812):
 
