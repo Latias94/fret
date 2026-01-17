@@ -222,7 +222,7 @@ fn render_and_paint(
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(320.0), Px(200.0)),
+        CoreSize::new(Px(1024.0), Px(768.0)),
     );
 
     let root = fret_ui::declarative::render_root(
@@ -641,5 +641,104 @@ fn web_vs_fret_progress_demo_control_chrome_matches() {
     }
     for (idx, corner) in quad.corners.iter().enumerate() {
         assert_close(&format!("progress radius[{idx}]"), *corner, web_radius, 1.0);
+    }
+}
+
+#[test]
+fn web_vs_fret_toggle_demo_control_chrome_matches() {
+    let web = read_web_golden("toggle-demo");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_toggle = find_first(&theme.root, &|n| n.tag == "button").expect("web toggle node");
+    let web_border = web_border_width_px(web_toggle).expect("web borderTopWidth px");
+    let web_radius = web_corner_radius_effective_px(web_toggle).expect("web radius px");
+    let web_w = web_toggle.rect.w;
+    let web_h = web_toggle.rect.h;
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let model: fret_runtime::Model<bool> = cx.app.models_mut().insert(false);
+        vec![
+            fret_ui_shadcn::Toggle::new(model)
+                // Web `toggle-demo` is `size="sm" variant="outline"` (shadcn v4 registry example).
+                .variant(fret_ui_shadcn::ToggleVariant::Outline)
+                .size(fret_ui_shadcn::ToggleSize::Sm)
+                .a11y_label("Toggle bookmark")
+                .label("Bookmark")
+                .refine_layout(
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_w)))
+                        .h_px(fret_ui_kit::MetricRef::Px(Px(web_h))),
+                )
+                .into_element(cx),
+        ]
+    });
+
+    let toggle = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Toggle bookmark"))
+        .or_else(|| snap.nodes.iter().find(|n| n.role == SemanticsRole::Button))
+        .expect("fret toggle semantics node");
+
+    let quad = find_best_quad(&scene, toggle.bounds).expect("painted quad for toggle");
+
+    assert_close("toggle width", quad.rect.size.width.0, web_w, 1.0);
+    assert_close("toggle height", quad.rect.size.height.0, web_h, 1.0);
+    for (idx, edge) in quad.border.iter().enumerate() {
+        assert_close(&format!("toggle border[{idx}]"), *edge, web_border, 0.6);
+    }
+    for (idx, corner) in quad.corners.iter().enumerate() {
+        assert_close(&format!("toggle radius[{idx}]"), *corner, web_radius, 1.0);
+    }
+}
+
+#[test]
+fn web_vs_fret_alert_demo_chrome_matches() {
+    let web = read_web_golden("alert-demo");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_alert = find_first(&theme.root, &|n| {
+        n.attrs.get("role").is_some_and(|v| v == "alert")
+    })
+    .expect("web alert node");
+    let web_border = web_border_width_px(web_alert).expect("web borderTopWidth px");
+    let web_radius = web_corner_radius_effective_px(web_alert).expect("web radius px");
+    let web_w = web_alert.rect.w;
+
+    let (snap, scene) = render_and_paint(|cx| {
+        vec![
+            fret_ui_shadcn::Alert::new(vec![
+                fret_ui_shadcn::AlertTitle::new("Heads up!").into_element(cx),
+                fret_ui_shadcn::AlertDescription::new("You can add components to your app.")
+                    .into_element(cx),
+            ])
+            .refine_layout(
+                fret_ui_kit::LayoutRefinement::default()
+                    .w_px(fret_ui_kit::MetricRef::Px(Px(web_w))),
+            )
+            .into_element(cx),
+        ]
+    });
+
+    let alert = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Alert)
+        .expect("fret alert semantics node");
+    let quad = find_best_quad(&scene, alert.bounds).expect("painted quad for alert");
+
+    for (idx, edge) in quad.border.iter().enumerate() {
+        assert_close(&format!("alert border[{idx}]"), *edge, web_border, 0.6);
+    }
+    for (idx, corner) in quad.corners.iter().enumerate() {
+        assert_close(&format!("alert radius[{idx}]"), *corner, web_radius, 1.0);
     }
 }
