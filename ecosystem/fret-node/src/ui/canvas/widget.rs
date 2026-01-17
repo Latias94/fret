@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 
 use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_canvas::scale::{canvas_units_from_screen_px, effective_scale_factor};
-use fret_canvas::view::PanZoom2D;
+use fret_canvas::view::{CanvasViewport2D, PanZoom2D};
 use fret_core::{
     AppWindowId, Color, Corners, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp,
     Size, TextBlobId, TextConstraints, TextOverflow, TextWrap, Transform2D,
@@ -2338,11 +2338,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     }
 
     fn screen_to_canvas(bounds: Rect, screen: Point, pan: CanvasPoint, zoom: f32) -> CanvasPoint {
-        let view = PanZoom2D {
-            pan: Point::new(Px(pan.x), Px(pan.y)),
-            zoom,
-        };
-        let p = view.screen_to_canvas(bounds, screen);
+        let viewport = CanvasViewport2D::new(
+            bounds,
+            PanZoom2D {
+                pan: Point::new(Px(pan.x), Px(pan.y)),
+                zoom,
+            },
+        );
+        let p = viewport.screen_to_canvas(screen);
         CanvasPoint { x: p.x.0, y: p.y.0 }
     }
 
