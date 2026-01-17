@@ -3,8 +3,10 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use fret_canvas::budget::WorkBudget;
-use fret_canvas::cache::{SceneOpTileCache, TileCoord, TileGrid2D};
+use fret_canvas::budget::{InteractionBudget, WorkBudget};
+use fret_canvas::cache::{
+    SceneOpTileCache, TileCacheKeyBuilder, TileCoord, TileGrid2D, tile_cache_key,
+};
 use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_canvas::scale::{canvas_units_from_screen_px, effective_scale_factor};
 use fret_canvas::view::{CanvasViewport2D, PanZoom2D};
@@ -208,7 +210,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     const EDGE_FOCUS_ANCHOR_BORDER_SCREEN: f32 = 2.0;
     const EDGE_FOCUS_ANCHOR_OFFSET_SCREEN: f32 = 18.0;
     const GRID_TILE_SIZE_SCREEN_PX: f32 = 2048.0;
-    const GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME: u32 = 32;
+    const GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME: InteractionBudget = InteractionBudget::new(32, 8);
+    const EDGE_MARKER_BUILD_BUDGET_PER_FRAME: InteractionBudget = InteractionBudget::new(96, 24);
+    const EDGE_LABEL_BUILD_BUDGET_PER_FRAME: InteractionBudget = InteractionBudget::new(16, 4);
 
     fn show_toast<H: UiHost>(
         &mut self,
@@ -8705,6 +8709,30 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
         cx.observe_model(&self.view_state, Invalidation::Paint);
         let snapshot = self.sync_view_state(cx.app);
 
+        let view_interacting = self.interaction.viewport_move_debounce.is_some()
+            || self.interaction.panning
+            || self.interaction.pan_inertia.is_some()
+            || self.interaction.pending_marquee.is_some()
+            || self.interaction.marquee.is_some()
+            || self.interaction.pending_node_drag.is_some()
+            || self.interaction.node_drag.is_some()
+            || self.interaction.pending_group_drag.is_some()
+            || self.interaction.group_drag.is_some()
+            || self.interaction.pending_group_resize.is_some()
+            || self.interaction.group_resize.is_some()
+            || self.interaction.pending_node_resize.is_some()
+            || self.interaction.node_resize.is_some()
+            || self.interaction.pending_wire_drag.is_some()
+            || self.interaction.wire_drag.is_some()
+            || self.interaction.suspended_wire_drag.is_some()
+            || self.interaction.pending_edge_insert_drag.is_some()
+            || self.interaction.edge_insert_drag.is_some()
+            || self.interaction.edge_drag.is_some()
+            || self.interaction.pending_insert_node_drag.is_some()
+            || self.interaction.insert_node_drag_preview.is_some()
+            || self.interaction.context_menu.is_some()
+            || self.interaction.searcher.is_some();
+
         self.paint_cache.begin_frame();
         self.grid_scene_cache.begin_frame();
         if let Some(window) = cx.window {
@@ -8718,20 +8746,6 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
             cx.app
                 .with_global_mut(CanvasCacheStatsRegistry::default, |registry, _app| {
                     registry.record_path_cache(key, frame_id, entries, stats);
-
-                    let tile_entries = self.grid_scene_cache.entries_len();
-                    let tile_stats = self.grid_scene_cache.stats();
-                    let tile_key = CanvasCacheKey {
-                        window: window.data().as_ffi(),
-                        node: cx.node.data().as_ffi(),
-                        name: "fret-node.canvas.grid_tiles",
-                    };
-                    registry.record_scene_op_tile_cache(
-                        tile_key,
-                        frame_id,
-                        tile_entries,
-                        tile_stats,
-                    );
                 });
         }
         for id in self.text_blobs.drain(..) {
@@ -8810,7 +8824,6 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
             let minor_color = self.style.grid_minor_color;
             let spacing_bits = spacing.to_bits();
             let thickness_bits = thickness.0.to_bits();
-            let zoom_bits = zoom.to_bits();
 
             let tile_ops_for_key = |tile: TileCoord| -> Vec<SceneOp> {
                 let tile_origin = tile.origin(tile_size_canvas);
@@ -8871,28 +8884,31 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                 ops
             };
 
-            let mut tile_budget = WorkBudget::new(Self::GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME);
+            let tile_budget_limit =
+                Self::GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME.select(view_interacting);
+            let mut tile_budget = WorkBudget::new(tile_budget_limit);
             let mut skipped_tiles: u32 = 0;
+            let base_key = {
+                let mut b = TileCacheKeyBuilder::new("fret-node.grid.tile.v1");
+                b.add_f32_bits(zoom);
+                b.add_f32_bits(tile_size_canvas);
+                b.add_u32(spacing_bits);
+                b.add_u32(thickness_bits);
+                b.add_i64(major_every);
+                b.add_u32(major_color.r.to_bits());
+                b.add_u32(major_color.g.to_bits());
+                b.add_u32(major_color.b.to_bits());
+                b.add_u32(major_color.a.to_bits());
+                b.add_u32(minor_color.r.to_bits());
+                b.add_u32(minor_color.g.to_bits());
+                b.add_u32(minor_color.b.to_bits());
+                b.add_u32(minor_color.a.to_bits());
+                b.finish()
+            };
             for tile in self.grid_tiles_scratch.iter().copied() {
                 let tile_origin = tile.origin(tile_size_canvas);
 
-                let mut hasher = std::collections::hash_map::DefaultHasher::new();
-                "fret-node.grid.tile.v1".hash(&mut hasher);
-                zoom_bits.hash(&mut hasher);
-                spacing_bits.hash(&mut hasher);
-                thickness_bits.hash(&mut hasher);
-                major_every.hash(&mut hasher);
-                tile.x.hash(&mut hasher);
-                tile.y.hash(&mut hasher);
-                major_color.r.to_bits().hash(&mut hasher);
-                major_color.g.to_bits().hash(&mut hasher);
-                major_color.b.to_bits().hash(&mut hasher);
-                major_color.a.to_bits().hash(&mut hasher);
-                minor_color.r.to_bits().hash(&mut hasher);
-                minor_color.g.to_bits().hash(&mut hasher);
-                minor_color.b.to_bits().hash(&mut hasher);
-                minor_color.a.to_bits().hash(&mut hasher);
-                let key = hasher.finish();
+                let key = tile_cache_key(base_key, tile);
 
                 if self.grid_scene_cache.try_replay(key, cx.scene, tile_origin) {
                     continue;
@@ -8911,6 +8927,31 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
             if skipped_tiles > 0 {
                 // Continue warming tiles incrementally to avoid a single frame spike.
                 cx.request_redraw();
+            }
+
+            if let Some(window) = cx.window {
+                let frame_id = cx.app.frame_id().0;
+                let tile_entries = self.grid_scene_cache.entries_len();
+                let tile_stats = self.grid_scene_cache.stats();
+                let requested_tiles = self.grid_tiles_scratch.len();
+                let tile_key = CanvasCacheKey {
+                    window: window.data().as_ffi(),
+                    node: cx.node.data().as_ffi(),
+                    name: "fret-node.canvas.grid_tiles",
+                };
+                cx.app
+                    .with_global_mut(CanvasCacheStatsRegistry::default, |registry, _app| {
+                        registry.record_scene_op_tile_cache_with_budget(
+                            tile_key,
+                            frame_id,
+                            tile_entries,
+                            requested_tiles,
+                            tile_budget_limit,
+                            tile_budget.used(),
+                            skipped_tiles,
+                            tile_stats,
+                        );
+                    });
             }
         }
 
@@ -9392,6 +9433,10 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
             }
         }
 
+        let marker_budget_limit = Self::EDGE_MARKER_BUILD_BUDGET_PER_FRAME.select(view_interacting);
+        let mut marker_budget = WorkBudget::new(marker_budget_limit);
+        let mut marker_budget_skipped: u32 = 0;
+
         for edge in edges_normal
             .into_iter()
             .chain(edges_selected)
@@ -9417,7 +9462,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
             }
 
             if let Some(marker) = edge.end_marker.as_ref() {
-                if let Some(path) = self.paint_cache.edge_end_marker_path(
+                let (path, skipped_by_budget) = self.paint_cache.edge_end_marker_path_budgeted(
                     cx.services,
                     edge.route,
                     edge.from,
@@ -9426,7 +9471,12 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                     cx.scale_factor,
                     marker,
                     self.style.pin_radius,
-                ) {
+                    &mut marker_budget,
+                );
+                if skipped_by_budget {
+                    marker_budget_skipped = marker_budget_skipped.saturating_add(1);
+                }
+                if let Some(path) = path {
                     cx.scene.push(SceneOp::Path {
                         order: DrawOrder(2),
                         origin: Point::new(Px(0.0), Px(0.0)),
@@ -9437,7 +9487,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
             }
 
             if let Some(marker) = edge.start_marker.as_ref() {
-                if let Some(path) = self.paint_cache.edge_start_marker_path(
+                let (path, skipped_by_budget) = self.paint_cache.edge_start_marker_path_budgeted(
                     cx.services,
                     edge.route,
                     edge.from,
@@ -9446,7 +9496,12 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                     cx.scale_factor,
                     marker,
                     self.style.pin_radius,
-                ) {
+                    &mut marker_budget,
+                );
+                if skipped_by_budget {
+                    marker_budget_skipped = marker_budget_skipped.saturating_add(1);
+                }
+                if let Some(path) = path {
                     cx.scene.push(SceneOp::Path {
                         order: DrawOrder(2),
                         origin: Point::new(Px(0.0), Px(0.0)),
@@ -9455,6 +9510,10 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                     });
                 }
             }
+        }
+
+        if marker_budget_skipped > 0 {
+            cx.request_redraw();
         }
 
         let prune = snapshot.interaction.paint_cache_prune;
@@ -9529,6 +9588,10 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                 lh.0 /= zoom;
             }
 
+            let label_budget_limit =
+                Self::EDGE_LABEL_BUILD_BUDGET_PER_FRAME.select(view_interacting);
+            let mut label_budget = WorkBudget::new(label_budget_limit);
+            let mut label_budget_skipped: u32 = 0;
             for (from, to, route, label, _selected, _hovered) in edge_labels {
                 let (pos, normal) = match route {
                     EdgeRouteKind::Bezier => {
@@ -9566,12 +9629,22 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                     overflow: TextOverflow::Ellipsis,
                     scale_factor: cx.scale_factor * zoom,
                 };
-                let (blob, metrics) = self.paint_cache.text_blob(
+
+                let (prepared, skipped_by_budget) = self.paint_cache.text_blob_budgeted(
                     cx.services,
                     label.clone(),
                     &edge_text_style,
                     constraints,
+                    &mut label_budget,
                 );
+                if skipped_by_budget {
+                    label_budget_skipped = label_budget_skipped.saturating_add(1);
+                    cx.request_redraw();
+                    break;
+                }
+                let Some((blob, metrics)) = prepared else {
+                    continue;
+                };
 
                 let pad = pad_screen / z;
                 let w = metrics.size.width.0.max(0.0);
@@ -9602,6 +9675,45 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                     color: self.style.context_menu_text,
                 });
             }
+
+            if let Some(window) = cx.window {
+                let frame_id = cx.app.frame_id().0;
+                let key = CanvasCacheKey {
+                    window: window.data().as_ffi(),
+                    node: cx.node.data().as_ffi(),
+                    name: "fret-node.canvas.edge_labels_budget",
+                };
+                cx.app
+                    .with_global_mut(CanvasCacheStatsRegistry::default, |registry, _app| {
+                        registry.record_work_budget(
+                            key,
+                            frame_id,
+                            label_budget.used().saturating_add(label_budget_skipped),
+                            label_budget_limit,
+                            label_budget.used(),
+                            label_budget_skipped,
+                        );
+                    });
+            }
+        }
+        if let Some(window) = cx.window {
+            let frame_id = cx.app.frame_id().0;
+            let key = CanvasCacheKey {
+                window: window.data().as_ffi(),
+                node: cx.node.data().as_ffi(),
+                name: "fret-node.canvas.edge_markers_budget",
+            };
+            cx.app
+                .with_global_mut(CanvasCacheStatsRegistry::default, |registry, _app| {
+                    registry.record_work_budget(
+                        key,
+                        frame_id,
+                        marker_budget.used().saturating_add(marker_budget_skipped),
+                        marker_budget_limit,
+                        marker_budget.used(),
+                        marker_budget_skipped,
+                    );
+                });
         }
 
         if let Some(w) = &self.interaction.wire_drag {

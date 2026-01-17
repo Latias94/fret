@@ -55,10 +55,42 @@ concepts and Fret building blocks they depend on.
 | `DropdownMenu` | Menu | `OverlayRequest::dismissible_menu` + `primitives::menu`-style policy helpers | Outside press closes; non-click-through; modality-gated initial focus | `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` |
 | `ContextMenu` | Menu | `OverlayRequest::dismissible_menu` + `primitives::menu`-style policy helpers | Outside press closes; non-click-through; pointer-anchored open | `ecosystem/fret-ui-shadcn/src/context_menu.rs` |
 | `Menubar` | Menubar + Menu | `OverlayRequest::dismissible_menu` + roving + pointer grace corridor | Outside press closes; non-click-through; submenu safe-hover corridor | `ecosystem/fret-ui-shadcn/src/menubar.rs` |
+| `Accordion` | Accordion + Collapsible + RovingFocus | `primitives::accordion` + `primitives::collapsible` (+ measured-height motion helpers) | `single` default non-collapsible; `multiple` toggles per item; arrow/Home/End roving | `ecosystem/fret-ui-shadcn/src/accordion.rs` |
 | `Dialog` / `Sheet` | Dialog = Portal + FocusScope + modal barrier | Modal overlay roots + focus trap/restore policy | Underlay inert while present | `ecosystem/fret-ui-shadcn/src/dialog.rs`, `ecosystem/fret-ui-shadcn/src/sheet.rs` |
 | `Tooltip` | TooltipProvider + Tooltip | Hover/pointer-move overlays + delay group | Click-through; delay/skip-delay policy | `ecosystem/fret-ui-shadcn/src/tooltip.rs` |
 | `HoverCard` | Hover overlay | Hover intent + anchored overlay | Click-through; hover intent policy | `ecosystem/fret-ui-shadcn/src/hover_card.rs` |
 | `Sonner` (toasts) | (Not a Radix primitive) | Per-window toast layer orchestration | Click-through; dismissal timers | `ecosystem/fret-ui-shadcn/src/sonner.rs` |
+
+## Accordion (parity notes)
+
+Upstream reference:
+
+- Radix: `repo-ref/primitives/packages/react/accordion/src/accordion.tsx`
+- shadcn (new-york-v4): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/accordion.tsx`
+- ai-elements (shadcn wrapper): `repo-ref/ai-elements/packages/shadcn-ui/components/ui/accordion.tsx`
+
+Aligned outcomes (what we match):
+
+- `type="single"` vs `type="multiple"` state models, including Radix-style controllable vs uncontrolled behavior.
+- `collapsible` in single mode: when `false` (default), clicking the open item does not close it.
+- Trigger semantics expose `expanded`, and trigger→content relationship is modeled via `controls`.
+- Roving focus uses APG navigation (Arrow keys + Home/End) with a “tab stop” derived from open item(s) + enabled fallback.
+- `loop` behavior is supported via `loop_navigation` (default `true`), matching Radix’s wrap-at-ends default.
+- `orientation` and `dir` are supported at the policy boundary:
+  - `AccordionOrientation` selects the navigation axis (vertical vs horizontal).
+  - `dir` overrides RTL/LTR resolution for horizontal navigation (Left/Right arrow semantics flip in RTL).
+
+Known gaps / deliberate non-1:1 mapping:
+
+- DOM-only composition nodes are not modeled 1:1 (e.g. Radix `AccordionHeader` as `h3` wrapper).
+- Radix `AccordionContent` sets `role="region"` and `aria-labelledby={triggerId}`; Fret currently has no dedicated `Region` semantics role and no “labelled-by” wiring for this surface, so we approximate via `SemanticsRole::List` (root) and pressable semantics on triggers.
+- Radix sets `aria-disabled` on the trigger when the open item is not collapsible; Fret does not currently distinguish this from “disabled” at the accessibility contract level (we keep the trigger enabled but ignore the “close” action when not collapsible).
+
+Evidence anchors:
+
+- Policy/headless primitive: `ecosystem/fret-ui-kit/src/primitives/accordion.rs`
+- shadcn skin + measured-height motion wiring: `ecosystem/fret-ui-shadcn/src/accordion.rs`
+- Direction provider primitive: `ecosystem/fret-ui-kit/src/primitives/direction.rs`
 
 ## Code entry points (practical)
 
@@ -77,6 +109,13 @@ concepts and Fret building blocks they depend on.
 - If it is a **state machine** or **interaction policy composition**, it belongs in
   `fret-ui-kit` (ADR 0074 / ADR 0090).
 - If it is **shadcn naming or default styling**, it belongs in `fret-ui-shadcn`.
+
+## Related: ai-elements port (ecosystem)
+
+The `ai-elements` component taxonomy is policy-heavy and sits above shadcn primitives. In Fret, that
+maps naturally to a new ecosystem crate built on top of `fret-ui-shadcn`:
+
+- `ecosystem/fret-ui-ai` (inspired by `repo-ref/ai-elements/packages/elements`)
 
 ## Current gaps worth tracking (from audits)
 

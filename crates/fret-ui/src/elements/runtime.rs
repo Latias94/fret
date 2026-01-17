@@ -109,8 +109,10 @@ pub struct WindowElementState {
     prepared_frame: FrameId,
     pub(super) prev_unkeyed_fingerprints: HashMap<u64, Vec<u64>>,
     pub(super) cur_unkeyed_fingerprints: HashMap<u64, Vec<u64>>,
-    pub(super) observed_models: HashMap<GlobalElementId, Vec<(ModelId, Invalidation)>>,
-    pub(super) observed_globals: HashMap<GlobalElementId, Vec<(TypeId, Invalidation)>>,
+    pub(super) observed_models_rendered: HashMap<GlobalElementId, Vec<(ModelId, Invalidation)>>,
+    pub(super) observed_models_next: HashMap<GlobalElementId, Vec<(ModelId, Invalidation)>>,
+    pub(super) observed_globals_rendered: HashMap<GlobalElementId, Vec<(TypeId, Invalidation)>>,
+    pub(super) observed_globals_next: HashMap<GlobalElementId, Vec<(TypeId, Invalidation)>>,
     pub(super) timer_targets: HashMap<TimerToken, GlobalElementId>,
     scroll_handle_revisions: HashMap<usize, u64>,
     nodes: HashMap<GlobalElementId, NodeEntry>,
@@ -164,8 +166,17 @@ impl WindowElementState {
             &mut self.cur_unkeyed_fingerprints,
         );
         self.cur_unkeyed_fingerprints.clear();
-        self.observed_models.clear();
-        self.observed_globals.clear();
+
+        std::mem::swap(
+            &mut self.observed_models_rendered,
+            &mut self.observed_models_next,
+        );
+        self.observed_models_next.clear();
+        std::mem::swap(
+            &mut self.observed_globals_rendered,
+            &mut self.observed_globals_next,
+        );
+        self.observed_globals_next.clear();
 
         // Keep cross-frame geometry queries stable even when layout/paint skips subtrees due to
         // caching: seed the current-frame maps from the previous-frame maps, and overwrite entries
@@ -271,6 +282,32 @@ impl WindowElementState {
             let mut seen: HashSet<(GlobalElementId, TypeId)> = HashSet::with_capacity(keys.len());
             keys.retain(|&key| seen.insert(key));
         }
+    }
+
+    pub(crate) fn touch_observed_models_for_element_if_recorded(
+        &mut self,
+        element: GlobalElementId,
+    ) {
+        if self.observed_models_next.contains_key(&element) {
+            return;
+        }
+        let Some(list) = self.observed_models_rendered.get(&element) else {
+            return;
+        };
+        self.observed_models_next.insert(element, list.clone());
+    }
+
+    pub(crate) fn touch_observed_globals_for_element_if_recorded(
+        &mut self,
+        element: GlobalElementId,
+    ) {
+        if self.observed_globals_next.contains_key(&element) {
+            return;
+        }
+        let Some(list) = self.observed_globals_rendered.get(&element) else {
+            return;
+        };
+        self.observed_globals_next.insert(element, list.clone());
     }
 
     pub(crate) fn mark_view_cache_reuse_root(&mut self, root: GlobalElementId) {
@@ -384,7 +421,7 @@ impl WindowElementState {
             hovered_hover_region: self.hovered_hover_region,
             wants_continuous_frames: self.wants_continuous_frames(),
             observed_models: self
-                .observed_models
+                .observed_models_next
                 .iter()
                 .map(|(element, list)| {
                     (
@@ -396,7 +433,7 @@ impl WindowElementState {
                 })
                 .collect(),
             observed_globals: self
-                .observed_globals
+                .observed_globals_next
                 .iter()
                 .map(|(element, list)| {
                     (

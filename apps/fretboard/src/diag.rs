@@ -2,6 +2,32 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Command};
 use std::time::{Duration, Instant};
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+enum BundleStatsSort {
+    #[default]
+    Invalidation,
+    Time,
+}
+
+impl BundleStatsSort {
+    fn parse(s: &str) -> Result<Self, String> {
+        match s.trim() {
+            "invalidation" => Ok(Self::Invalidation),
+            "time" => Ok(Self::Time),
+            other => Err(format!(
+                "invalid --sort value: {other} (expected: invalidation|time)"
+            )),
+        }
+    }
+
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Invalidation => "invalidation",
+            Self::Time => "time",
+        }
+    }
+}
+
 pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut out_dir: Option<PathBuf> = None;
     let mut trigger_path: Option<PathBuf> = None;
@@ -21,6 +47,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut timeout_ms: u64 = 30_000;
     let mut poll_ms: u64 = 50;
     let mut stats_top: usize = 5;
+    let mut sort_override: Option<BundleStatsSort> = None;
     let mut stats_json: bool = false;
     let mut launch: Option<Vec<String>> = None;
 
@@ -171,6 +198,14 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 poll_ms = v
                     .parse::<u64>()
                     .map_err(|_| "invalid value for --poll-ms".to_string())?;
+                i += 1;
+            }
+            "--sort" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --sort".to_string());
+                };
+                sort_override = Some(BundleStatsSort::parse(&v)?);
                 i += 1;
             }
             "--top" => {
@@ -563,6 +598,177 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             kill_launched_demo(&mut child);
             std::process::exit(0);
         }
+        "perf" => {
+            if rest.is_empty() {
+                return Err(
+                    "missing suite name or script paths (try: fretboard diag perf ui-gallery)"
+                        .to_string(),
+                );
+            }
+
+            let scripts: Vec<PathBuf> = if rest.len() == 1 && rest[0] == "ui-gallery" {
+                [
+                    "tools/diag-scripts/ui-gallery-overlay-torture.json",
+                    "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
+                    "tools/diag-scripts/ui-gallery-context-menu-right-click.json",
+                    "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
+                    "tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json",
+                    "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
+                ]
+                .into_iter()
+                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                .collect()
+            } else {
+                rest.into_iter()
+                    .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                    .collect()
+            };
+
+            let sort = sort_override.unwrap_or(BundleStatsSort::Time);
+            let reuse_process = launch.is_none();
+            let mut child = if reuse_process {
+                maybe_launch_demo(
+                    &launch,
+                    &workspace_root,
+                    &resolved_out_dir,
+                    &resolved_ready_path,
+                    timeout_ms,
+                    poll_ms,
+                )?
+            } else {
+                None
+            };
+
+            let mut overall_worst: Option<(u64, PathBuf, PathBuf)> = None;
+
+            for src in scripts {
+                if !reuse_process {
+                    child = maybe_launch_demo(
+                        &launch,
+                        &workspace_root,
+                        &resolved_out_dir,
+                        &resolved_ready_path,
+                        timeout_ms,
+                        poll_ms,
+                    )?;
+                }
+
+                let mut result = run_script_and_wait(
+                    &src,
+                    &resolved_script_path,
+                    &resolved_script_trigger_path,
+                    &resolved_script_result_path,
+                    &resolved_script_result_trigger_path,
+                    timeout_ms,
+                    poll_ms,
+                );
+                if let Ok(summary) = &result
+                    && summary.stage.as_deref() == Some("failed")
+                {
+                    if let Some(dir) = wait_for_failure_dump_bundle(
+                        &resolved_out_dir,
+                        summary,
+                        timeout_ms,
+                        poll_ms,
+                    ) {
+                        if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
+                            if let Ok(summary) = result.as_mut() {
+                                summary.last_bundle_dir = Some(name.to_string());
+                            }
+                        }
+                    }
+                }
+                let result = match result {
+                    Ok(v) => v,
+                    Err(e) => {
+                        kill_launched_demo(&mut child);
+                        return Err(e);
+                    }
+                };
+
+                match result.stage.as_deref() {
+                    Some("passed") => {}
+                    Some("failed") => {
+                        eprintln!(
+                            "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
+                            src.display(),
+                            result.run_id,
+                            result.step_index.unwrap_or(0),
+                            result.reason.as_deref().unwrap_or("unknown"),
+                            result.last_bundle_dir.as_deref().unwrap_or("")
+                        );
+                        kill_launched_demo(&mut child);
+                        std::process::exit(1);
+                    }
+                    _ => {
+                        eprintln!(
+                            "unexpected script stage for {}: {:?}",
+                            src.display(),
+                            result
+                        );
+                        kill_launched_demo(&mut child);
+                        std::process::exit(1);
+                    }
+                }
+
+                let bundle_dir = result
+                    .last_bundle_dir
+                    .as_deref()
+                    .filter(|s| !s.trim().is_empty())
+                    .map(PathBuf::from);
+
+                if let Some(bundle_dir) = bundle_dir {
+                    let bundle_path = resolve_bundle_json_path(&resolved_out_dir.join(bundle_dir));
+                    let report = bundle_stats_from_path(&bundle_path, stats_top.max(1), sort)?;
+                    let top = report.top.first();
+                    let top_total = top.map(|r| r.total_time_us).unwrap_or(0);
+                    let top_layout = top.map(|r| r.layout_time_us).unwrap_or(0);
+                    let top_paint = top.map(|r| r.paint_time_us).unwrap_or(0);
+                    let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
+                    let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
+
+                    println!(
+                        "PERF {} sort={} top.us(total/layout/paint)={}/{}/{} top.tick={} top.frame={} bundle={}",
+                        src.display(),
+                        sort.as_str(),
+                        top_total,
+                        top_layout,
+                        top_paint,
+                        top_tick,
+                        top_frame,
+                        bundle_path.display(),
+                    );
+
+                    match &overall_worst {
+                        Some((prev_us, _, _)) if *prev_us >= top_total => {}
+                        _ => overall_worst = Some((top_total, src.clone(), bundle_path)),
+                    }
+                } else {
+                    println!(
+                        "PERF {} sort={} (no last_bundle_dir recorded)",
+                        src.display(),
+                        sort.as_str()
+                    );
+                }
+
+                if !reuse_process {
+                    kill_launched_demo(&mut child);
+                }
+            }
+
+            kill_launched_demo(&mut child);
+
+            if let Some((us, src, bundle)) = overall_worst {
+                println!(
+                    "PERF worst overall: {} us={} bundle={}",
+                    src.display(),
+                    us,
+                    bundle.display()
+                );
+            }
+
+            std::process::exit(0);
+        }
         "stats" => {
             let Some(src) = rest.first().cloned() else {
                 return Err(
@@ -575,7 +781,11 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
             let src = resolve_path(&workspace_root, PathBuf::from(src));
             let bundle_path = resolve_bundle_json_path(&src);
-            let report = bundle_stats_from_path(&bundle_path, stats_top)?;
+            let report = bundle_stats_from_path(
+                &bundle_path,
+                stats_top,
+                sort_override.unwrap_or(BundleStatsSort::Invalidation),
+            )?;
 
             if stats_json {
                 println!(
@@ -945,14 +1155,23 @@ fn read_pick_result_run_id(path: &Path) -> Option<u64> {
 
 #[derive(Debug, Default, Clone)]
 struct BundleStatsReport {
+    sort: BundleStatsSort,
     windows: u32,
     snapshots: u32,
     snapshots_with_model_changes: u32,
     snapshots_with_global_changes: u32,
+    snapshots_with_propagated_model_changes: u32,
+    snapshots_with_propagated_global_changes: u32,
+    sum_layout_time_us: u64,
+    sum_paint_time_us: u64,
+    sum_total_time_us: u64,
     sum_invalidation_walk_calls: u64,
     sum_invalidation_walk_nodes: u64,
     sum_model_change_invalidation_roots: u64,
     sum_global_change_invalidation_roots: u64,
+    max_layout_time_us: u64,
+    max_paint_time_us: u64,
+    max_total_time_us: u64,
     max_invalidation_walk_calls: u32,
     max_invalidation_walk_nodes: u32,
     max_model_change_invalidation_roots: u32,
@@ -966,8 +1185,22 @@ struct BundleStatsSnapshotRow {
     tick_id: u64,
     frame_id: u64,
     timestamp_unix_ms: Option<u64>,
+    layout_time_us: u64,
+    paint_time_us: u64,
+    total_time_us: u64,
+    layout_nodes_performed: u32,
+    paint_nodes_performed: u32,
+    paint_cache_misses: u32,
+    layout_engine_solves: u64,
+    layout_engine_solve_time_us: u64,
     changed_models: u32,
     changed_globals: u32,
+    propagated_model_change_models: u32,
+    propagated_model_change_observation_edges: u32,
+    propagated_model_change_unobserved_models: u32,
+    propagated_global_change_globals: u32,
+    propagated_global_change_observation_edges: u32,
+    propagated_global_change_unobserved_globals: u32,
     invalidation_walk_calls: u32,
     invalidation_walk_nodes: u32,
     model_change_invalidation_roots: u32,
@@ -983,6 +1216,8 @@ struct BundleStatsSnapshotRow {
     invalidation_walk_calls_other: u32,
     invalidation_walk_nodes_other: u32,
     top_invalidation_walks: Vec<BundleStatsInvalidationWalk>,
+    model_change_hotspots: Vec<BundleStatsModelChangeHotspot>,
+    model_change_unobserved: Vec<BundleStatsModelChangeUnobserved>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -997,15 +1232,39 @@ struct BundleStatsInvalidationWalk {
     root_test_id: Option<String>,
 }
 
+#[derive(Debug, Default, Clone)]
+struct BundleStatsModelChangeHotspot {
+    model: u64,
+    observation_edges: u32,
+}
+
+#[derive(Debug, Default, Clone)]
+struct BundleStatsModelChangeUnobserved {
+    model: u64,
+    created_type: Option<String>,
+    created_at: Option<String>,
+}
+
 impl BundleStatsReport {
     fn print_human(&self, bundle_path: &Path) {
         println!("bundle: {}", bundle_path.display());
         println!(
-            "windows={} snapshots={} model_changes={} global_changes={}",
+            "windows={} snapshots={} model_changes={} global_changes={} propagated_model_changes={} propagated_global_changes={}",
             self.windows,
             self.snapshots,
             self.snapshots_with_model_changes,
-            self.snapshots_with_global_changes
+            self.snapshots_with_global_changes,
+            self.snapshots_with_propagated_model_changes,
+            self.snapshots_with_propagated_global_changes
+        );
+        println!("sort={}", self.sort.as_str());
+        println!(
+            "time sum (us): total={} layout={} paint={}",
+            self.sum_total_time_us, self.sum_layout_time_us, self.sum_paint_time_us
+        );
+        println!(
+            "time max (us): total={} layout={} paint={}",
+            self.max_total_time_us, self.max_layout_time_us, self.max_paint_time_us
         );
         println!(
             "invalidation sum: calls={} nodes={}",
@@ -1028,18 +1287,25 @@ impl BundleStatsReport {
             return;
         }
 
-        println!("top:");
+        println!("top (sort={}):", self.sort.as_str());
         for row in &self.top {
             let ts = row
                 .timestamp_unix_ms
                 .map(|v| v.to_string())
                 .unwrap_or_else(|| "-".to_string());
             println!(
-                "  window={} tick={} frame={} ts={} inv.calls={} inv.nodes={} by_src.calls(hover/focus/other)={}/{}/{} by_src.nodes(hover/focus/other)={}/{}/{} roots.model={} roots.global={} changed.models={} changed.globals={}",
+                "  window={} tick={} frame={} ts={} time.us(total/layout/paint)={}/{}/{} layout.solve_us={} paint.cache_misses={} layout.nodes={} paint.nodes={} inv.calls={} inv.nodes={} by_src.calls(hover/focus/other)={}/{}/{} by_src.nodes(hover/focus/other)={}/{}/{} roots.model={} roots.global={} changed.models={} changed.globals={} propagated.models={} propagated.edges={} unobs.models={} propagated.globals={} propagated.global_edges={} unobs.globals={}",
                 row.window,
                 row.tick_id,
                 row.frame_id,
                 ts,
+                row.total_time_us,
+                row.layout_time_us,
+                row.paint_time_us,
+                row.layout_engine_solve_time_us,
+                row.paint_cache_misses,
+                row.layout_nodes_performed,
+                row.paint_nodes_performed,
                 row.invalidation_walk_calls,
                 row.invalidation_walk_nodes,
                 row.invalidation_walk_calls_hover,
@@ -1051,7 +1317,13 @@ impl BundleStatsReport {
                 row.model_change_invalidation_roots,
                 row.global_change_invalidation_roots,
                 row.changed_models,
-                row.changed_globals
+                row.changed_globals,
+                row.propagated_model_change_models,
+                row.propagated_model_change_observation_edges,
+                row.propagated_model_change_unobserved_models,
+                row.propagated_global_change_globals,
+                row.propagated_global_change_observation_edges,
+                row.propagated_global_change_unobserved_globals
             );
             if !row.top_invalidation_walks.is_empty() {
                 let items: Vec<String> = row
@@ -1087,73 +1359,360 @@ impl BundleStatsReport {
                     .collect();
                 println!("    top_walks: {}", items.join(" | "));
             }
+            if !row.model_change_hotspots.is_empty() {
+                let items: Vec<String> = row
+                    .model_change_hotspots
+                    .iter()
+                    .take(3)
+                    .map(|h| format!("{}={}", h.model, h.observation_edges))
+                    .collect();
+                println!("    hot_models: {}", items.join(" | "));
+            }
+            if !row.model_change_unobserved.is_empty() {
+                let items: Vec<String> = row
+                    .model_change_unobserved
+                    .iter()
+                    .take(3)
+                    .map(|u| {
+                        let mut s = format!("{}", u.model);
+                        if let Some(ty) = u.created_type.as_deref() {
+                            s.push_str(&format!("={}", ty));
+                        }
+                        if let Some(at) = u.created_at.as_deref() {
+                            s.push_str(&format!("@{}", at));
+                        }
+                        s
+                    })
+                    .collect();
+                println!("    unobs_models: {}", items.join(" | "));
+            }
         }
     }
 
     fn to_json(&self) -> serde_json::Value {
-        serde_json::json!({
-            "schema_version": 1,
-            "windows": self.windows,
-            "snapshots": self.snapshots,
-            "snapshots_with_model_changes": self.snapshots_with_model_changes,
-            "snapshots_with_global_changes": self.snapshots_with_global_changes,
-            "sum": {
-                "invalidation_walk_calls": self.sum_invalidation_walk_calls,
-                "invalidation_walk_nodes": self.sum_invalidation_walk_nodes,
-                "model_change_invalidation_roots": self.sum_model_change_invalidation_roots,
-                "global_change_invalidation_roots": self.sum_global_change_invalidation_roots,
-            },
-            "max": {
-                "invalidation_walk_calls": self.max_invalidation_walk_calls,
-                "invalidation_walk_nodes": self.max_invalidation_walk_nodes,
-                "model_change_invalidation_roots": self.max_model_change_invalidation_roots,
-                "global_change_invalidation_roots": self.max_global_change_invalidation_roots,
-            },
-            "top": self.top.iter().map(|row| serde_json::json!({
-                "window": row.window,
-                "tick_id": row.tick_id,
-                "frame_id": row.frame_id,
-                "timestamp_unix_ms": row.timestamp_unix_ms,
-                "changed_models": row.changed_models,
-                "changed_globals": row.changed_globals,
-                "invalidation_walk_calls": row.invalidation_walk_calls,
-                "invalidation_walk_nodes": row.invalidation_walk_nodes,
-                "model_change_invalidation_roots": row.model_change_invalidation_roots,
-                "global_change_invalidation_roots": row.global_change_invalidation_roots,
-                "invalidation_walk_calls_model_change": row.invalidation_walk_calls_model_change,
-                "invalidation_walk_nodes_model_change": row.invalidation_walk_nodes_model_change,
-                "invalidation_walk_calls_global_change": row.invalidation_walk_calls_global_change,
-                "invalidation_walk_nodes_global_change": row.invalidation_walk_nodes_global_change,
-                "invalidation_walk_calls_hover": row.invalidation_walk_calls_hover,
-                "invalidation_walk_nodes_hover": row.invalidation_walk_nodes_hover,
-                "invalidation_walk_calls_focus": row.invalidation_walk_calls_focus,
-                "invalidation_walk_nodes_focus": row.invalidation_walk_nodes_focus,
-                "invalidation_walk_calls_other": row.invalidation_walk_calls_other,
-                "invalidation_walk_nodes_other": row.invalidation_walk_nodes_other,
-                "top_invalidation_walks": row.top_invalidation_walks.iter().map(|w| serde_json::json!({
-                    "root_node": w.root_node,
-                    "root_element": w.root_element,
-                    "kind": w.kind,
-                    "source": w.source,
-                    "walked_nodes": w.walked_nodes,
-                    "truncated_at": w.truncated_at,
-                    "root_role": w.root_role,
-                    "root_test_id": w.root_test_id,
-                })).collect::<Vec<_>>(),
-            })).collect::<Vec<_>>(),
-        })
+        use serde_json::{Map, Value};
+
+        let mut root = Map::new();
+        root.insert("schema_version".to_string(), Value::from(1));
+        root.insert("sort".to_string(), Value::from(self.sort.as_str()));
+        root.insert("windows".to_string(), Value::from(self.windows));
+        root.insert("snapshots".to_string(), Value::from(self.snapshots));
+        root.insert(
+            "snapshots_with_model_changes".to_string(),
+            Value::from(self.snapshots_with_model_changes),
+        );
+        root.insert(
+            "snapshots_with_global_changes".to_string(),
+            Value::from(self.snapshots_with_global_changes),
+        );
+        root.insert(
+            "snapshots_with_propagated_model_changes".to_string(),
+            Value::from(self.snapshots_with_propagated_model_changes),
+        );
+        root.insert(
+            "snapshots_with_propagated_global_changes".to_string(),
+            Value::from(self.snapshots_with_propagated_global_changes),
+        );
+
+        let mut sum = Map::new();
+        sum.insert(
+            "layout_time_us".to_string(),
+            Value::from(self.sum_layout_time_us),
+        );
+        sum.insert(
+            "paint_time_us".to_string(),
+            Value::from(self.sum_paint_time_us),
+        );
+        sum.insert(
+            "total_time_us".to_string(),
+            Value::from(self.sum_total_time_us),
+        );
+        sum.insert(
+            "invalidation_walk_calls".to_string(),
+            Value::from(self.sum_invalidation_walk_calls),
+        );
+        sum.insert(
+            "invalidation_walk_nodes".to_string(),
+            Value::from(self.sum_invalidation_walk_nodes),
+        );
+        sum.insert(
+            "model_change_invalidation_roots".to_string(),
+            Value::from(self.sum_model_change_invalidation_roots),
+        );
+        sum.insert(
+            "global_change_invalidation_roots".to_string(),
+            Value::from(self.sum_global_change_invalidation_roots),
+        );
+        root.insert("sum".to_string(), Value::Object(sum));
+
+        let mut max = Map::new();
+        max.insert(
+            "layout_time_us".to_string(),
+            Value::from(self.max_layout_time_us),
+        );
+        max.insert(
+            "paint_time_us".to_string(),
+            Value::from(self.max_paint_time_us),
+        );
+        max.insert(
+            "total_time_us".to_string(),
+            Value::from(self.max_total_time_us),
+        );
+        max.insert(
+            "invalidation_walk_calls".to_string(),
+            Value::from(self.max_invalidation_walk_calls),
+        );
+        max.insert(
+            "invalidation_walk_nodes".to_string(),
+            Value::from(self.max_invalidation_walk_nodes),
+        );
+        max.insert(
+            "model_change_invalidation_roots".to_string(),
+            Value::from(self.max_model_change_invalidation_roots),
+        );
+        max.insert(
+            "global_change_invalidation_roots".to_string(),
+            Value::from(self.max_global_change_invalidation_roots),
+        );
+        root.insert("max".to_string(), Value::Object(max));
+
+        let top = self
+            .top
+            .iter()
+            .map(|row| {
+                let mut obj = Map::new();
+                obj.insert("window".to_string(), Value::from(row.window));
+                obj.insert("tick_id".to_string(), Value::from(row.tick_id));
+                obj.insert("frame_id".to_string(), Value::from(row.frame_id));
+                obj.insert(
+                    "timestamp_unix_ms".to_string(),
+                    row.timestamp_unix_ms
+                        .map(Value::from)
+                        .unwrap_or(Value::Null),
+                );
+                obj.insert(
+                    "layout_time_us".to_string(),
+                    Value::from(row.layout_time_us),
+                );
+                obj.insert("paint_time_us".to_string(), Value::from(row.paint_time_us));
+                obj.insert("total_time_us".to_string(), Value::from(row.total_time_us));
+                obj.insert(
+                    "layout_nodes_performed".to_string(),
+                    Value::from(row.layout_nodes_performed),
+                );
+                obj.insert(
+                    "paint_nodes_performed".to_string(),
+                    Value::from(row.paint_nodes_performed),
+                );
+                obj.insert(
+                    "paint_cache_misses".to_string(),
+                    Value::from(row.paint_cache_misses),
+                );
+                obj.insert(
+                    "layout_engine_solves".to_string(),
+                    Value::from(row.layout_engine_solves),
+                );
+                obj.insert(
+                    "layout_engine_solve_time_us".to_string(),
+                    Value::from(row.layout_engine_solve_time_us),
+                );
+                obj.insert(
+                    "changed_models".to_string(),
+                    Value::from(row.changed_models),
+                );
+                obj.insert(
+                    "changed_globals".to_string(),
+                    Value::from(row.changed_globals),
+                );
+                obj.insert(
+                    "propagated_model_change_models".to_string(),
+                    Value::from(row.propagated_model_change_models),
+                );
+                obj.insert(
+                    "propagated_model_change_observation_edges".to_string(),
+                    Value::from(row.propagated_model_change_observation_edges),
+                );
+                obj.insert(
+                    "propagated_model_change_unobserved_models".to_string(),
+                    Value::from(row.propagated_model_change_unobserved_models),
+                );
+                obj.insert(
+                    "propagated_global_change_globals".to_string(),
+                    Value::from(row.propagated_global_change_globals),
+                );
+                obj.insert(
+                    "propagated_global_change_observation_edges".to_string(),
+                    Value::from(row.propagated_global_change_observation_edges),
+                );
+                obj.insert(
+                    "propagated_global_change_unobserved_globals".to_string(),
+                    Value::from(row.propagated_global_change_unobserved_globals),
+                );
+                obj.insert(
+                    "invalidation_walk_calls".to_string(),
+                    Value::from(row.invalidation_walk_calls),
+                );
+                obj.insert(
+                    "invalidation_walk_nodes".to_string(),
+                    Value::from(row.invalidation_walk_nodes),
+                );
+                obj.insert(
+                    "model_change_invalidation_roots".to_string(),
+                    Value::from(row.model_change_invalidation_roots),
+                );
+                obj.insert(
+                    "global_change_invalidation_roots".to_string(),
+                    Value::from(row.global_change_invalidation_roots),
+                );
+                obj.insert(
+                    "invalidation_walk_calls_model_change".to_string(),
+                    Value::from(row.invalidation_walk_calls_model_change),
+                );
+                obj.insert(
+                    "invalidation_walk_nodes_model_change".to_string(),
+                    Value::from(row.invalidation_walk_nodes_model_change),
+                );
+                obj.insert(
+                    "invalidation_walk_calls_global_change".to_string(),
+                    Value::from(row.invalidation_walk_calls_global_change),
+                );
+                obj.insert(
+                    "invalidation_walk_nodes_global_change".to_string(),
+                    Value::from(row.invalidation_walk_nodes_global_change),
+                );
+                obj.insert(
+                    "invalidation_walk_calls_hover".to_string(),
+                    Value::from(row.invalidation_walk_calls_hover),
+                );
+                obj.insert(
+                    "invalidation_walk_nodes_hover".to_string(),
+                    Value::from(row.invalidation_walk_nodes_hover),
+                );
+                obj.insert(
+                    "invalidation_walk_calls_focus".to_string(),
+                    Value::from(row.invalidation_walk_calls_focus),
+                );
+                obj.insert(
+                    "invalidation_walk_nodes_focus".to_string(),
+                    Value::from(row.invalidation_walk_nodes_focus),
+                );
+                obj.insert(
+                    "invalidation_walk_calls_other".to_string(),
+                    Value::from(row.invalidation_walk_calls_other),
+                );
+                obj.insert(
+                    "invalidation_walk_nodes_other".to_string(),
+                    Value::from(row.invalidation_walk_nodes_other),
+                );
+
+                let top_invalidation_walks = row
+                    .top_invalidation_walks
+                    .iter()
+                    .map(|w| {
+                        let mut w_obj = Map::new();
+                        w_obj.insert("root_node".to_string(), Value::from(w.root_node));
+                        w_obj.insert(
+                            "root_element".to_string(),
+                            w.root_element.map(Value::from).unwrap_or(Value::Null),
+                        );
+                        w_obj.insert(
+                            "kind".to_string(),
+                            w.kind.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        w_obj.insert(
+                            "source".to_string(),
+                            w.source.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        w_obj.insert("walked_nodes".to_string(), Value::from(w.walked_nodes));
+                        w_obj.insert(
+                            "truncated_at".to_string(),
+                            w.truncated_at.map(Value::from).unwrap_or(Value::Null),
+                        );
+                        w_obj.insert(
+                            "root_role".to_string(),
+                            w.root_role.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        w_obj.insert(
+                            "root_test_id".to_string(),
+                            w.root_test_id
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        Value::Object(w_obj)
+                    })
+                    .collect::<Vec<_>>();
+                obj.insert(
+                    "top_invalidation_walks".to_string(),
+                    Value::Array(top_invalidation_walks),
+                );
+
+                let model_change_hotspots = row
+                    .model_change_hotspots
+                    .iter()
+                    .map(|h| {
+                        let mut h_obj = Map::new();
+                        h_obj.insert("model".to_string(), Value::from(h.model));
+                        h_obj.insert(
+                            "observation_edges".to_string(),
+                            Value::from(h.observation_edges),
+                        );
+                        Value::Object(h_obj)
+                    })
+                    .collect::<Vec<_>>();
+                obj.insert(
+                    "model_change_hotspots".to_string(),
+                    Value::Array(model_change_hotspots),
+                );
+
+                let model_change_unobserved = row
+                    .model_change_unobserved
+                    .iter()
+                    .map(|u| {
+                        let mut u_obj = Map::new();
+                        u_obj.insert("model".to_string(), Value::from(u.model));
+                        u_obj.insert(
+                            "created_type".to_string(),
+                            u.created_type
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        u_obj.insert(
+                            "created_at".to_string(),
+                            u.created_at.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        Value::Object(u_obj)
+                    })
+                    .collect::<Vec<_>>();
+                obj.insert(
+                    "model_change_unobserved".to_string(),
+                    Value::Array(model_change_unobserved),
+                );
+
+                Value::Object(obj)
+            })
+            .collect::<Vec<_>>();
+
+        root.insert("top".to_string(), Value::Array(top));
+        Value::Object(root)
     }
 }
 
-fn bundle_stats_from_path(bundle_path: &Path, top: usize) -> Result<BundleStatsReport, String> {
+fn bundle_stats_from_path(
+    bundle_path: &Path,
+    top: usize,
+    sort: BundleStatsSort,
+) -> Result<BundleStatsReport, String> {
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    bundle_stats_from_json(&bundle, top)
+    bundle_stats_from_json(&bundle, top, sort)
 }
 
 fn bundle_stats_from_json(
     bundle: &serde_json::Value,
     top: usize,
+    sort: BundleStatsSort,
 ) -> Result<BundleStatsReport, String> {
     let windows = bundle
         .get("windows")
@@ -1161,6 +1720,7 @@ fn bundle_stats_from_json(
         .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
 
     let mut out = BundleStatsReport::default();
+    out.sort = sort;
     out.windows = windows.len().min(u32::MAX as usize) as u32;
 
     let mut rows: Vec<BundleStatsSnapshotRow> = Vec::new();
@@ -1199,6 +1759,85 @@ fn bundle_stats_from_json(
                 .get("debug")
                 .and_then(|v| v.get("stats"))
                 .and_then(|v| v.as_object());
+
+            let layout_time_us = stats
+                .and_then(|m| m.get("layout_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let paint_time_us = stats
+                .and_then(|m| m.get("paint_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let total_time_us = layout_time_us.saturating_add(paint_time_us);
+            let layout_nodes_performed = stats
+                .and_then(|m| m.get("layout_nodes_performed"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let paint_nodes_performed = stats
+                .and_then(|m| m.get("paint_nodes_performed"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let paint_cache_misses = stats
+                .and_then(|m| m.get("paint_cache_misses"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let layout_engine_solves = stats
+                .and_then(|m| m.get("layout_engine_solves"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_engine_solve_time_us = stats
+                .and_then(|m| m.get("layout_engine_solve_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+
+            let propagated_model_change_models = stats
+                .and_then(|m| m.get("model_change_models"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let propagated_model_change_observation_edges = stats
+                .and_then(|m| m.get("model_change_observation_edges"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let propagated_model_change_unobserved_models = stats
+                .and_then(|m| m.get("model_change_unobserved_models"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let propagated_global_change_globals = stats
+                .and_then(|m| m.get("global_change_globals"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let propagated_global_change_observation_edges = stats
+                .and_then(|m| m.get("global_change_observation_edges"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let propagated_global_change_unobserved_globals = stats
+                .and_then(|m| m.get("global_change_unobserved_globals"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+
+            if propagated_model_change_models > 0 {
+                out.snapshots_with_propagated_model_changes = out
+                    .snapshots_with_propagated_model_changes
+                    .saturating_add(1);
+            }
+            if propagated_global_change_globals > 0 {
+                out.snapshots_with_propagated_global_changes = out
+                    .snapshots_with_propagated_global_changes
+                    .saturating_add(1);
+            }
 
             let invalidation_walk_calls = stats
                 .and_then(|m| m.get("invalidation_walk_calls"))
@@ -1274,7 +1913,12 @@ fn bundle_stats_from_json(
                 .min(u32::MAX as u64) as u32;
 
             let top_invalidation_walks = snapshot_top_invalidation_walks(s, 3);
+            let model_change_hotspots = snapshot_model_change_hotspots(s, 3);
+            let model_change_unobserved = snapshot_model_change_unobserved(s, 3);
 
+            out.sum_layout_time_us = out.sum_layout_time_us.saturating_add(layout_time_us);
+            out.sum_paint_time_us = out.sum_paint_time_us.saturating_add(paint_time_us);
+            out.sum_total_time_us = out.sum_total_time_us.saturating_add(total_time_us);
             out.sum_invalidation_walk_calls = out
                 .sum_invalidation_walk_calls
                 .saturating_add(invalidation_walk_calls as u64);
@@ -1298,14 +1942,31 @@ fn bundle_stats_from_json(
             out.max_global_change_invalidation_roots = out
                 .max_global_change_invalidation_roots
                 .max(global_change_invalidation_roots);
+            out.max_layout_time_us = out.max_layout_time_us.max(layout_time_us);
+            out.max_paint_time_us = out.max_paint_time_us.max(paint_time_us);
+            out.max_total_time_us = out.max_total_time_us.max(total_time_us);
 
             rows.push(BundleStatsSnapshotRow {
                 window: window_id,
                 tick_id: s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0),
                 frame_id: s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0),
                 timestamp_unix_ms: s.get("timestamp_unix_ms").and_then(|v| v.as_u64()),
+                layout_time_us,
+                paint_time_us,
+                total_time_us,
+                layout_nodes_performed,
+                paint_nodes_performed,
+                paint_cache_misses,
+                layout_engine_solves,
+                layout_engine_solve_time_us,
                 changed_models,
                 changed_globals,
+                propagated_model_change_models,
+                propagated_model_change_observation_edges,
+                propagated_model_change_unobserved_models,
+                propagated_global_change_globals,
+                propagated_global_change_observation_edges,
+                propagated_global_change_unobserved_globals,
                 invalidation_walk_calls,
                 invalidation_walk_nodes,
                 model_change_invalidation_roots,
@@ -1321,23 +1982,39 @@ fn bundle_stats_from_json(
                 invalidation_walk_calls_other,
                 invalidation_walk_nodes_other,
                 top_invalidation_walks,
+                model_change_hotspots,
+                model_change_unobserved,
             });
         }
     }
 
-    rows.sort_by(|a, b| {
-        b.invalidation_walk_nodes
-            .cmp(&a.invalidation_walk_nodes)
-            .then_with(|| b.invalidation_walk_calls.cmp(&a.invalidation_walk_calls))
-            .then_with(|| {
-                b.model_change_invalidation_roots
-                    .cmp(&a.model_change_invalidation_roots)
-            })
-            .then_with(|| {
-                b.global_change_invalidation_roots
-                    .cmp(&a.global_change_invalidation_roots)
-            })
-    });
+    match sort {
+        BundleStatsSort::Invalidation => {
+            rows.sort_by(|a, b| {
+                b.invalidation_walk_nodes
+                    .cmp(&a.invalidation_walk_nodes)
+                    .then_with(|| b.invalidation_walk_calls.cmp(&a.invalidation_walk_calls))
+                    .then_with(|| {
+                        b.model_change_invalidation_roots
+                            .cmp(&a.model_change_invalidation_roots)
+                    })
+                    .then_with(|| {
+                        b.global_change_invalidation_roots
+                            .cmp(&a.global_change_invalidation_roots)
+                    })
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::Time => {
+            rows.sort_by(|a, b| {
+                b.total_time_us
+                    .cmp(&a.total_time_us)
+                    .then_with(|| b.layout_time_us.cmp(&a.layout_time_us))
+                    .then_with(|| b.paint_time_us.cmp(&a.paint_time_us))
+                    .then_with(|| b.invalidation_walk_nodes.cmp(&a.invalidation_walk_nodes))
+            });
+        }
+    }
     out.top = rows.into_iter().take(top).collect();
     Ok(out)
 }
@@ -1390,6 +2067,62 @@ fn snapshot_top_invalidation_walks(
     }
 
     out
+}
+
+fn snapshot_model_change_hotspots(
+    snapshot: &serde_json::Value,
+    max: usize,
+) -> Vec<BundleStatsModelChangeHotspot> {
+    let hotspots = snapshot
+        .get("debug")
+        .and_then(|v| v.get("model_change_hotspots"))
+        .and_then(|v| v.as_array())
+        .map_or(&[][..], |v| v);
+
+    hotspots
+        .iter()
+        .take(max)
+        .map(|h| BundleStatsModelChangeHotspot {
+            model: h.get("model").and_then(|v| v.as_u64()).unwrap_or(0),
+            observation_edges: h
+                .get("observation_edges")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32,
+        })
+        .collect()
+}
+
+fn snapshot_model_change_unobserved(
+    snapshot: &serde_json::Value,
+    max: usize,
+) -> Vec<BundleStatsModelChangeUnobserved> {
+    let unobserved = snapshot
+        .get("debug")
+        .and_then(|v| v.get("model_change_unobserved"))
+        .and_then(|v| v.as_array())
+        .map_or(&[][..], |v| v);
+
+    unobserved
+        .iter()
+        .take(max)
+        .map(|u| BundleStatsModelChangeUnobserved {
+            model: u.get("model").and_then(|v| v.as_u64()).unwrap_or(0),
+            created_type: u
+                .get("created_type")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            created_at: u
+                .get("created_at")
+                .and_then(|v| v.as_object())
+                .and_then(|m| {
+                    let file = m.get("file").and_then(|v| v.as_str())?;
+                    let line = m.get("line").and_then(|v| v.as_u64())?;
+                    let column = m.get("column").and_then(|v| v.as_u64())?;
+                    Some(format!("{}:{}:{}", file, line, column))
+                }),
+        })
+        .collect()
 }
 
 fn snapshot_lookup_semantics(
@@ -1888,7 +2621,7 @@ mod tests {
             ]
         });
 
-        let report = bundle_stats_from_json(&bundle, 1).unwrap();
+        let report = bundle_stats_from_json(&bundle, 1, BundleStatsSort::Invalidation).unwrap();
         assert_eq!(report.windows, 1);
         assert_eq!(report.snapshots, 2);
         assert_eq!(report.snapshots_with_model_changes, 1);
@@ -1938,7 +2671,7 @@ mod tests {
             ]
         });
 
-        let report = bundle_stats_from_json(&bundle, 1).unwrap();
+        let report = bundle_stats_from_json(&bundle, 1, BundleStatsSort::Invalidation).unwrap();
         assert_eq!(report.top.len(), 1);
         assert_eq!(report.top[0].top_invalidation_walks.len(), 2);
         assert_eq!(report.top[0].top_invalidation_walks[0].root_node, 43);

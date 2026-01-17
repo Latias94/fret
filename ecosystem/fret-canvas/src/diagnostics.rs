@@ -19,7 +19,19 @@ pub struct CacheKindSnapshot {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SceneOpTileCacheSnapshot {
     pub entries: usize,
+    pub requested_tiles: usize,
+    pub budget_limit: u32,
+    pub budget_used: u32,
+    pub skipped_tiles: u32,
     pub stats: SceneOpTileCacheStats,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct WorkBudgetSnapshot {
+    pub requested_units: u32,
+    pub limit: u32,
+    pub used: u32,
+    pub skipped_units: u32,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -29,6 +41,7 @@ pub struct CanvasCacheSnapshot {
     pub svg: Option<CacheKindSnapshot>,
     pub text: Option<CacheKindSnapshot>,
     pub scene_op_tiles: Option<SceneOpTileCacheSnapshot>,
+    pub work_budget: Option<WorkBudgetSnapshot>,
 }
 
 #[derive(Debug, Default)]
@@ -99,6 +112,55 @@ impl CanvasCacheStatsRegistry {
     ) {
         let snap = self.entries.entry(key).or_default();
         snap.last_frame_id = frame_id;
-        snap.scene_op_tiles = Some(SceneOpTileCacheSnapshot { entries, stats });
+        snap.scene_op_tiles = Some(SceneOpTileCacheSnapshot {
+            entries,
+            requested_tiles: 0,
+            budget_limit: 0,
+            budget_used: 0,
+            skipped_tiles: 0,
+            stats,
+        });
+    }
+
+    pub fn record_scene_op_tile_cache_with_budget(
+        &mut self,
+        key: CanvasCacheKey,
+        frame_id: u64,
+        entries: usize,
+        requested_tiles: usize,
+        budget_limit: u32,
+        budget_used: u32,
+        skipped_tiles: u32,
+        stats: SceneOpTileCacheStats,
+    ) {
+        let snap = self.entries.entry(key).or_default();
+        snap.last_frame_id = frame_id;
+        snap.scene_op_tiles = Some(SceneOpTileCacheSnapshot {
+            entries,
+            requested_tiles,
+            budget_limit,
+            budget_used,
+            skipped_tiles,
+            stats,
+        });
+    }
+
+    pub fn record_work_budget(
+        &mut self,
+        key: CanvasCacheKey,
+        frame_id: u64,
+        requested_units: u32,
+        limit: u32,
+        used: u32,
+        skipped_units: u32,
+    ) {
+        let snap = self.entries.entry(key).or_default();
+        snap.last_frame_id = frame_id;
+        snap.work_budget = Some(WorkBudgetSnapshot {
+            requested_units,
+            limit,
+            used,
+            skipped_units,
+        });
     }
 }

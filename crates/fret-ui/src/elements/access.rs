@@ -49,7 +49,7 @@ pub(crate) fn observed_models_for_element<H: UiHost>(
         runtime.prepare_window_for_frame(window, frame_id);
         runtime
             .for_window_mut(window)
-            .observed_models
+            .observed_models_next
             .get(&element)
             .cloned()
             .unwrap_or_default()
@@ -63,7 +63,7 @@ pub(crate) fn observed_globals_for_element<H: UiHost>(
 ) -> Vec<(TypeId, Invalidation)> {
     with_window_state(app, window, |window_state| {
         window_state
-            .observed_globals
+            .observed_globals_next
             .get(&element)
             .cloned()
             .unwrap_or_default()

@@ -5,7 +5,10 @@
 //! - concrete 2D plot layers (line/scatter/bars/area/shaded/heatmap/etc),
 //! - convenience `*PlotCanvas` aliases for `PlotCanvas<L>`.
 
-use fret_canvas::cache::{PathCache, SceneOpTileCache, TileCoord, TileGrid2D};
+use fret_canvas::budget::WorkBudget;
+use fret_canvas::cache::{
+    PathCache, SceneOpTileCache, TileCacheKeyBuilder, TileCoord, TileGrid2D, tile_cache_key,
+};
 use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_core::geometry::{Corners, Edges, Point, Px, Rect, Size};
 use fret_core::scene::{Color, DrawOrder, SceneOp};
@@ -58,6 +61,10 @@ fn report_layer_tile_cache_stats<H: UiHost>(
     cx: &mut PaintCx<'_, H>,
     layer_name: &'static str,
     cache: &SceneOpTileCache<u64>,
+    requested_tiles: usize,
+    budget_limit: u32,
+    budget_used: u32,
+    skipped_tiles: u32,
 ) {
     let Some(window) = cx.window else {
         return;
@@ -72,7 +79,16 @@ fn report_layer_tile_cache_stats<H: UiHost>(
 
     cx.app
         .with_global_mut(CanvasCacheStatsRegistry::default, |registry, _app| {
-            registry.record_scene_op_tile_cache(key, frame_id, cache.entries_len(), cache.stats());
+            registry.record_scene_op_tile_cache_with_budget(
+                key,
+                frame_id,
+                cache.entries_len(),
+                requested_tiles,
+                budget_limit,
+                budget_used,
+                skipped_tiles,
+                cache.stats(),
+            );
         });
 }
 
@@ -4660,6 +4676,7 @@ impl PlotLayer for HeatmapPlotLayer {
         plot_origin: Point,
     ) -> bool {
         const TILE_SIZE_CANVAS: f32 = 512.0;
+        const TILE_BUILD_BUDGET_TILES_PER_FRAME: u32 = 8;
         const TILE_MAX_AGE_FRAMES: u64 = 240;
         const TILE_MAX_ENTRIES: usize = 512;
 
@@ -4774,26 +4791,40 @@ impl PlotLayer for HeatmapPlotLayer {
         let tile_grid = TileGrid2D::new(TILE_SIZE_CANVAS);
         tile_grid.tiles_in_rect(view_rect_world, &mut self.tile_scratch);
 
-        use std::collections::hash_map::DefaultHasher;
+        // Prefer building tiles near the viewport center first so partial work degrades gracefully.
+        if !self.tile_scratch.is_empty() && TILE_SIZE_CANVAS.is_finite() && TILE_SIZE_CANVAS > 0.0 {
+            let center_world_x = view_rect_world.origin.x.0 + 0.5 * view_rect_world.size.width.0;
+            let center_world_y = view_rect_world.origin.y.0 + 0.5 * view_rect_world.size.height.0;
+            if center_world_x.is_finite() && center_world_y.is_finite() {
+                let center_tile = TileCoord {
+                    x: (center_world_x / TILE_SIZE_CANVAS).floor() as i32,
+                    y: (center_world_y / TILE_SIZE_CANVAS).floor() as i32,
+                };
+                self.tile_scratch.sort_unstable_by_key(|t| {
+                    let dx = (t.x - center_tile.x).abs() as u32;
+                    let dy = (t.y - center_tile.y).abs() as u32;
+                    dx.saturating_add(dy)
+                });
+            }
+        }
 
         let base_key = {
-            let mut hasher = DefaultHasher::new();
-            "fret-plot.heatmap.tile.v1".hash(&mut hasher);
-            model_revision.hash(&mut hasher);
-            model.cols.hash(&mut hasher);
-            model.rows.hash(&mut hasher);
-            x_scale.key().hash(&mut hasher);
-            y_scale.key().hash(&mut hasher);
-            u64::from(style.heatmap_colormap.key()).hash(&mut hasher);
-            (plot.size.width.0 as f64).to_bits().hash(&mut hasher);
-            (plot.size.height.0 as f64).to_bits().hash(&mut hasher);
-            (scale_x).to_bits().hash(&mut hasher);
-            (scale_y).to_bits().hash(&mut hasher);
-            model.value_min.to_bits().hash(&mut hasher);
-            model.value_max.to_bits().hash(&mut hasher);
-            (level as u64).hash(&mut hasher);
-            TILE_SIZE_CANVAS.to_bits().hash(&mut hasher);
-            hasher.finish()
+            let mut b = TileCacheKeyBuilder::new("fret-plot.heatmap.tile.v1");
+            b.add_u64(model_revision);
+            b.add_u64(model.cols as u64);
+            b.add_u64(model.rows as u64);
+            b.add_u64(x_scale.key());
+            b.add_u64(y_scale.key());
+            b.add_u64(u64::from(style.heatmap_colormap.key()));
+            b.add_f64_bits(f64::from(plot.size.width.0));
+            b.add_f64_bits(f64::from(plot.size.height.0));
+            b.add_f64_bits(scale_x);
+            b.add_f64_bits(scale_y);
+            b.add_u32(model.value_min.to_bits());
+            b.add_u32(model.value_max.to_bits());
+            b.add_u64(level as u64);
+            b.add_u32(TILE_SIZE_CANVAS.to_bits());
+            b.finish()
         };
 
         let plot_origin_x = plot_origin.x.0;
@@ -4801,6 +4832,8 @@ impl PlotLayer for HeatmapPlotLayer {
         let translation_x = translation.x.0;
         let translation_y = translation.y.0;
 
+        let mut tile_budget = WorkBudget::new(TILE_BUILD_BUDGET_TILES_PER_FRAME);
+        let mut skipped_tiles: u32 = 0;
         for tile in self.tile_scratch.iter().copied() {
             let tile_origin_world = tile.origin(TILE_SIZE_CANVAS);
             let tile_rect_world = Rect::new(
@@ -4808,12 +4841,7 @@ impl PlotLayer for HeatmapPlotLayer {
                 Size::new(Px(TILE_SIZE_CANVAS), Px(TILE_SIZE_CANVAS)),
             );
 
-            let key = {
-                let mut hasher = DefaultHasher::new();
-                base_key.hash(&mut hasher);
-                tile.hash(&mut hasher);
-                hasher.finish()
-            };
+            let key = tile_cache_key(base_key, tile);
 
             let screen_tile_origin = Point::new(
                 Px(tile_origin_world.x.0 - translation_x),
@@ -4825,6 +4853,11 @@ impl PlotLayer for HeatmapPlotLayer {
             );
 
             if self.tile_ops_cache.try_replay(key, cx.scene, replay_delta) {
+                continue;
+            }
+
+            if !tile_budget.try_consume(1) {
+                skipped_tiles = skipped_tiles.saturating_add(1);
                 continue;
             }
 
@@ -4853,7 +4886,19 @@ impl PlotLayer for HeatmapPlotLayer {
             self.tile_ops_cache.store_ops(key, ops);
         }
 
-        report_layer_tile_cache_stats(cx, "fret-plot.heatmap.tiles", &self.tile_ops_cache);
+        report_layer_tile_cache_stats(
+            cx,
+            "fret-plot.heatmap.tiles",
+            &self.tile_ops_cache,
+            self.tile_scratch.len(),
+            TILE_BUILD_BUDGET_TILES_PER_FRAME,
+            tile_budget.used(),
+            skipped_tiles,
+        );
+        if skipped_tiles > 0 {
+            // Continue warming tiles incrementally to avoid a single frame spike.
+            cx.request_redraw();
+        }
         true
     }
 
@@ -5182,6 +5227,7 @@ impl PlotLayer for Histogram2DPlotLayer {
         plot_origin: Point,
     ) -> bool {
         const TILE_SIZE_CANVAS: f32 = 512.0;
+        const TILE_BUILD_BUDGET_TILES_PER_FRAME: u32 = 8;
         const TILE_MAX_AGE_FRAMES: u64 = 240;
         const TILE_MAX_ENTRIES: usize = 512;
 
@@ -5297,26 +5343,40 @@ impl PlotLayer for Histogram2DPlotLayer {
         let tile_grid = TileGrid2D::new(TILE_SIZE_CANVAS);
         tile_grid.tiles_in_rect(view_rect_world, &mut self.tile_scratch);
 
-        use std::collections::hash_map::DefaultHasher;
+        // Prefer building tiles near the viewport center first so partial work degrades gracefully.
+        if !self.tile_scratch.is_empty() && TILE_SIZE_CANVAS.is_finite() && TILE_SIZE_CANVAS > 0.0 {
+            let center_world_x = view_rect_world.origin.x.0 + 0.5 * view_rect_world.size.width.0;
+            let center_world_y = view_rect_world.origin.y.0 + 0.5 * view_rect_world.size.height.0;
+            if center_world_x.is_finite() && center_world_y.is_finite() {
+                let center_tile = TileCoord {
+                    x: (center_world_x / TILE_SIZE_CANVAS).floor() as i32,
+                    y: (center_world_y / TILE_SIZE_CANVAS).floor() as i32,
+                };
+                self.tile_scratch.sort_unstable_by_key(|t| {
+                    let dx = (t.x - center_tile.x).abs() as u32;
+                    let dy = (t.y - center_tile.y).abs() as u32;
+                    dx.saturating_add(dy)
+                });
+            }
+        }
 
         let base_key = {
-            let mut hasher = DefaultHasher::new();
-            "fret-plot.histogram2d.tile.v1".hash(&mut hasher);
-            model_revision.hash(&mut hasher);
-            model.cols.hash(&mut hasher);
-            model.rows.hash(&mut hasher);
-            x_scale.key().hash(&mut hasher);
-            y_scale.key().hash(&mut hasher);
-            u64::from(style.heatmap_colormap.key()).hash(&mut hasher);
-            (plot.size.width.0 as f64).to_bits().hash(&mut hasher);
-            (plot.size.height.0 as f64).to_bits().hash(&mut hasher);
-            (scale_x).to_bits().hash(&mut hasher);
-            (scale_y).to_bits().hash(&mut hasher);
-            model.value_min.to_bits().hash(&mut hasher);
-            model.value_max.to_bits().hash(&mut hasher);
-            (level as u64).hash(&mut hasher);
-            TILE_SIZE_CANVAS.to_bits().hash(&mut hasher);
-            hasher.finish()
+            let mut b = TileCacheKeyBuilder::new("fret-plot.histogram2d.tile.v1");
+            b.add_u64(model_revision);
+            b.add_u64(model.cols as u64);
+            b.add_u64(model.rows as u64);
+            b.add_u64(x_scale.key());
+            b.add_u64(y_scale.key());
+            b.add_u64(u64::from(style.heatmap_colormap.key()));
+            b.add_f64_bits(f64::from(plot.size.width.0));
+            b.add_f64_bits(f64::from(plot.size.height.0));
+            b.add_f64_bits(scale_x);
+            b.add_f64_bits(scale_y);
+            b.add_u32(model.value_min.to_bits());
+            b.add_u32(model.value_max.to_bits());
+            b.add_u64(level as u64);
+            b.add_u32(TILE_SIZE_CANVAS.to_bits());
+            b.finish()
         };
 
         let plot_origin_x = plot_origin.x.0;
@@ -5324,6 +5384,8 @@ impl PlotLayer for Histogram2DPlotLayer {
         let translation_x = translation.x.0;
         let translation_y = translation.y.0;
 
+        let mut tile_budget = WorkBudget::new(TILE_BUILD_BUDGET_TILES_PER_FRAME);
+        let mut skipped_tiles: u32 = 0;
         for tile in self.tile_scratch.iter().copied() {
             let tile_origin_world = tile.origin(TILE_SIZE_CANVAS);
             let tile_rect_world = Rect::new(
@@ -5331,12 +5393,7 @@ impl PlotLayer for Histogram2DPlotLayer {
                 Size::new(Px(TILE_SIZE_CANVAS), Px(TILE_SIZE_CANVAS)),
             );
 
-            let key = {
-                let mut hasher = DefaultHasher::new();
-                base_key.hash(&mut hasher);
-                tile.hash(&mut hasher);
-                hasher.finish()
-            };
+            let key = tile_cache_key(base_key, tile);
 
             let screen_tile_origin = Point::new(
                 Px(tile_origin_world.x.0 - translation_x),
@@ -5348,6 +5405,11 @@ impl PlotLayer for Histogram2DPlotLayer {
             );
 
             if self.tile_ops_cache.try_replay(key, cx.scene, replay_delta) {
+                continue;
+            }
+
+            if !tile_budget.try_consume(1) {
+                skipped_tiles = skipped_tiles.saturating_add(1);
                 continue;
             }
 
@@ -5376,7 +5438,19 @@ impl PlotLayer for Histogram2DPlotLayer {
             self.tile_ops_cache.store_ops(key, ops);
         }
 
-        report_layer_tile_cache_stats(cx, "fret-plot.histogram2d.tiles", &self.tile_ops_cache);
+        report_layer_tile_cache_stats(
+            cx,
+            "fret-plot.histogram2d.tiles",
+            &self.tile_ops_cache,
+            self.tile_scratch.len(),
+            TILE_BUILD_BUDGET_TILES_PER_FRAME,
+            tile_budget.used(),
+            skipped_tiles,
+        );
+        if skipped_tiles > 0 {
+            // Continue warming tiles incrementally to avoid a single frame spike.
+            cx.request_redraw();
+        }
         true
     }
 

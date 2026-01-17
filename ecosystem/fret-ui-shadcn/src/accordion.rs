@@ -15,6 +15,7 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::accordion as radix_accordion;
 use fret_ui_kit::primitives::collapsible as radix_collapsible;
+use fret_ui_kit::primitives::direction::LayoutDirection;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
 use crate::overlay_motion;
@@ -51,7 +52,7 @@ fn trigger_gap(theme: &Theme) -> Px {
         .unwrap_or_else(|| MetricRef::space(Space::N4).resolve(theme))
 }
 
-pub use fret_ui_kit::primitives::accordion::AccordionKind;
+pub use fret_ui_kit::primitives::accordion::{AccordionKind, AccordionOrientation};
 
 /// A Radix-shaped, shadcn-skinned accordion surface (`AccordionRoot` / `AccordionItem` /
 /// `AccordionTrigger` / `AccordionContent`).
@@ -403,6 +404,8 @@ pub mod composable {
         disabled: bool,
         layout: LayoutRefinement,
         loop_navigation: bool,
+        orientation: AccordionOrientation,
+        dir: Option<LayoutDirection>,
     }
 
     impl std::fmt::Debug for AccordionRoot {
@@ -433,6 +436,8 @@ pub mod composable {
                 disabled: false,
                 layout: LayoutRefinement::default(),
                 loop_navigation: true,
+                orientation: AccordionOrientation::default(),
+                dir: None,
             }
         }
 
@@ -448,6 +453,8 @@ pub mod composable {
                 disabled: false,
                 layout: LayoutRefinement::default(),
                 loop_navigation: true,
+                orientation: AccordionOrientation::default(),
+                dir: None,
             }
         }
 
@@ -461,6 +468,8 @@ pub mod composable {
                 disabled: false,
                 layout: LayoutRefinement::default(),
                 loop_navigation: true,
+                orientation: AccordionOrientation::default(),
+                dir: None,
             }
         }
 
@@ -475,6 +484,8 @@ pub mod composable {
                 disabled: false,
                 layout: LayoutRefinement::default(),
                 loop_navigation: true,
+                orientation: AccordionOrientation::default(),
+                dir: None,
             }
         }
 
@@ -505,6 +516,18 @@ pub mod composable {
             self
         }
 
+        /// Controls the keyboard navigation axis for the accordion triggers.
+        pub fn orientation(mut self, orientation: AccordionOrientation) -> Self {
+            self.orientation = orientation;
+            self
+        }
+
+        /// Overrides the local direction for horizontal keyboard navigation.
+        pub fn dir(mut self, dir: Option<LayoutDirection>) -> Self {
+            self.dir = dir;
+            self
+        }
+
         pub fn item(mut self, item: AccordionItem) -> Self {
             self.items.push(item);
             self
@@ -529,6 +552,8 @@ pub mod composable {
                 let group_disabled = self.disabled;
                 let layout = self.layout;
                 let loop_navigation = self.loop_navigation;
+                let orientation = self.orientation;
+                let dir = self.dir;
 
                 let root = match &model {
                     AccordionModel::Single {
@@ -551,7 +576,9 @@ pub mod composable {
                     ),
                 }
                 .disabled(group_disabled)
-                .loop_navigation(loop_navigation);
+                .loop_navigation(loop_navigation)
+                .orientation(orientation)
+                .dir(dir);
 
                 let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();
                 let disabled_flags: Vec<bool> =
@@ -1057,6 +1084,9 @@ pub struct Accordion {
     items: Vec<AccordionItem>,
     disabled: bool,
     layout: LayoutRefinement,
+    loop_navigation: bool,
+    orientation: AccordionOrientation,
+    dir: Option<LayoutDirection>,
 }
 
 impl std::fmt::Debug for Accordion {
@@ -1070,6 +1100,9 @@ impl std::fmt::Debug for Accordion {
             .field("items_len", &self.items.len())
             .field("disabled", &self.disabled)
             .field("layout", &self.layout)
+            .field("loop_navigation", &self.loop_navigation)
+            .field("orientation", &self.orientation)
+            .field("dir", &self.dir)
             .finish()
     }
 }
@@ -1085,6 +1118,9 @@ impl Accordion {
             items: Vec::new(),
             disabled: false,
             layout: LayoutRefinement::default(),
+            loop_navigation: true,
+            orientation: AccordionOrientation::default(),
+            dir: None,
         }
     }
 
@@ -1099,6 +1135,9 @@ impl Accordion {
             items: Vec::new(),
             disabled: false,
             layout: LayoutRefinement::default(),
+            loop_navigation: true,
+            orientation: AccordionOrientation::default(),
+            dir: None,
         }
     }
 
@@ -1111,6 +1150,9 @@ impl Accordion {
             items: Vec::new(),
             disabled: false,
             layout: LayoutRefinement::default(),
+            loop_navigation: true,
+            orientation: AccordionOrientation::default(),
+            dir: None,
         }
     }
 
@@ -1124,6 +1166,9 @@ impl Accordion {
             items: Vec::new(),
             disabled: false,
             layout: LayoutRefinement::default(),
+            loop_navigation: true,
+            orientation: AccordionOrientation::default(),
+            dir: None,
         }
     }
 
@@ -1145,6 +1190,24 @@ impl Accordion {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// When `true` (default), arrow key navigation loops at the ends (Radix `loop` behavior).
+    pub fn loop_navigation(mut self, loop_navigation: bool) -> Self {
+        self.loop_navigation = loop_navigation;
+        self
+    }
+
+    /// Controls the keyboard navigation axis for the accordion triggers.
+    pub fn orientation(mut self, orientation: AccordionOrientation) -> Self {
+        self.orientation = orientation;
+        self
+    }
+
+    /// Overrides the local direction for horizontal keyboard navigation.
+    pub fn dir(mut self, dir: Option<LayoutDirection>) -> Self {
+        self.dir = dir;
         self
     }
 
@@ -1171,6 +1234,9 @@ impl Accordion {
             let items = self.items;
             let group_disabled = self.disabled;
             let layout = self.layout;
+            let loop_navigation = self.loop_navigation;
+            let orientation = self.orientation;
+            let dir = self.dir;
 
             let root = match &model {
                 AccordionModel::Single {
@@ -1191,7 +1257,9 @@ impl Accordion {
                 }
             }
             .disabled(group_disabled)
-            .loop_navigation(true);
+            .loop_navigation(loop_navigation)
+            .orientation(orientation)
+            .dir(dir);
 
             let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();
             let disabled_flags: Vec<bool> =
@@ -1206,7 +1274,7 @@ impl Accordion {
 
             let roving = RovingFocusProps {
                 enabled: !group_disabled,
-                wrap: true,
+                wrap: loop_navigation,
                 disabled: disabled_arc.clone(),
                 ..Default::default()
             };

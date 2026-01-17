@@ -1731,7 +1731,23 @@ pub struct UiSceneOpTileCacheStatsV1 {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UiSceneOpTileCacheSnapshotV1 {
     pub entries: usize,
+    #[serde(default)]
+    pub requested_tiles: usize,
+    #[serde(default)]
+    pub budget_limit: u32,
+    #[serde(default)]
+    pub budget_used: u32,
+    #[serde(default)]
+    pub skipped_tiles: u32,
     pub stats: UiSceneOpTileCacheStatsV1,
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+pub struct UiWorkBudgetSnapshotV1 {
+    pub requested_units: u32,
+    pub limit: u32,
+    pub used: u32,
+    pub skipped_units: u32,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -1746,6 +1762,8 @@ pub struct UiCanvasCacheEntryV1 {
     pub text: Option<UiCacheKindSnapshotV1>,
     #[serde(default)]
     pub scene_op_tiles: Option<UiSceneOpTileCacheSnapshotV1>,
+    #[serde(default)]
+    pub work_budget: Option<UiWorkBudgetSnapshotV1>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -1861,6 +1879,10 @@ fn canvas_cache_stats_for_window(app: &App, window: u64) -> Vec<UiCanvasCacheEnt
             }),
             scene_op_tiles: snap.scene_op_tiles.map(|s| UiSceneOpTileCacheSnapshotV1 {
                 entries: s.entries,
+                requested_tiles: s.requested_tiles,
+                budget_limit: s.budget_limit,
+                budget_used: s.budget_used,
+                skipped_tiles: s.skipped_tiles,
                 stats: UiSceneOpTileCacheStatsV1 {
                     calls: s.stats.calls,
                     hits: s.stats.hits,
@@ -1874,6 +1896,12 @@ fn canvas_cache_stats_for_window(app: &App, window: u64) -> Vec<UiCanvasCacheEnt
                     evict_prune_age: s.stats.evict_prune_age,
                     evict_prune_budget: s.stats.evict_prune_budget,
                 },
+            }),
+            work_budget: snap.work_budget.map(|b| UiWorkBudgetSnapshotV1 {
+                requested_units: b.requested_units,
+                limit: b.limit,
+                used: b.used,
+                skipped_units: b.skipped_units,
             }),
         })
         .collect()
@@ -2095,6 +2123,8 @@ pub struct UiTreeDebugSnapshotV1 {
     pub invalidation_walks: Vec<UiInvalidationWalkV1>,
     #[serde(default)]
     pub model_change_hotspots: Vec<UiModelChangeHotspotV1>,
+    #[serde(default)]
+    pub model_change_unobserved: Vec<UiModelChangeUnobservedV1>,
     pub layers_in_paint_order: Vec<UiLayerInfoV1>,
     pub hit_test: Option<UiHitTestSnapshotV1>,
     pub element_runtime: Option<ElementDiagnosticsSnapshotV1>,
@@ -2120,6 +2150,11 @@ impl UiTreeDebugSnapshotV1 {
                 .iter()
                 .map(UiModelChangeHotspotV1::from_hotspot)
                 .collect(),
+            model_change_unobserved: ui
+                .debug_model_change_unobserved()
+                .iter()
+                .map(UiModelChangeUnobservedV1::from_unobserved)
+                .collect(),
             layers_in_paint_order: ui
                 .debug_layers_in_paint_order()
                 .into_iter()
@@ -2143,6 +2178,37 @@ impl UiModelChangeHotspotV1 {
         Self {
             model: hotspot.model.data().as_ffi(),
             observation_edges: hotspot.observation_edges,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiSourceLocationV1 {
+    pub file: String,
+    pub line: u32,
+    pub column: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiModelChangeUnobservedV1 {
+    pub model: u64,
+    pub created_type: Option<String>,
+    pub created_at: Option<UiSourceLocationV1>,
+}
+
+impl UiModelChangeUnobservedV1 {
+    fn from_unobserved(unobserved: &fret_ui::tree::UiDebugModelChangeUnobserved) -> Self {
+        let created_type = unobserved.created.map(|c| c.type_name.to_string());
+        let created_at = unobserved.created.map(|c| UiSourceLocationV1 {
+            file: c.file.to_string(),
+            line: c.line,
+            column: c.column,
+        });
+
+        Self {
+            model: unobserved.model.data().as_ffi(),
+            created_type,
+            created_at,
         }
     }
 }
@@ -2376,11 +2442,15 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub model_change_observation_edges: u32,
     #[serde(default)]
+    pub model_change_unobserved_models: u32,
+    #[serde(default)]
     pub global_change_invalidation_roots: u32,
     #[serde(default)]
     pub global_change_globals: u32,
     #[serde(default)]
     pub global_change_observation_edges: u32,
+    #[serde(default)]
+    pub global_change_unobserved_globals: u32,
     #[serde(default)]
     pub invalidation_walk_nodes: u32,
     #[serde(default)]
@@ -2433,9 +2503,11 @@ impl UiFrameStatsV1 {
             model_change_invalidation_roots: stats.model_change_invalidation_roots,
             model_change_models: stats.model_change_models,
             model_change_observation_edges: stats.model_change_observation_edges,
+            model_change_unobserved_models: stats.model_change_unobserved_models,
             global_change_invalidation_roots: stats.global_change_invalidation_roots,
             global_change_globals: stats.global_change_globals,
             global_change_observation_edges: stats.global_change_observation_edges,
+            global_change_unobserved_globals: stats.global_change_unobserved_globals,
             invalidation_walk_nodes: stats.invalidation_walk_nodes,
             invalidation_walk_calls: stats.invalidation_walk_calls,
             invalidation_walk_nodes_model_change: stats.invalidation_walk_nodes_model_change,

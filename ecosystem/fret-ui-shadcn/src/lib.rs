@@ -81,8 +81,8 @@ mod ui_builder_ext;
 mod ui_ext;
 
 pub use accordion::{
-    Accordion, AccordionContent, AccordionItem, AccordionKind, AccordionTrigger,
-    accordion_multiple, accordion_multiple_uncontrolled, accordion_single,
+    Accordion, AccordionContent, AccordionItem, AccordionKind, AccordionOrientation,
+    AccordionTrigger, accordion_multiple, accordion_multiple_uncontrolled, accordion_single,
     accordion_single_uncontrolled,
 };
 pub use alert::{Alert, AlertDescription, AlertTitle, AlertVariant};
@@ -271,4 +271,5 @@ pub mod prelude {
     pub use fret_runtime::Model;
     pub use fret_ui::element::{AnyElement, TextProps};
     pub use fret_ui::{ElementContext, Invalidation, Theme, UiHost, UiTree};
+    pub use fret_ui_kit::declarative::{CachedSubtreeExt, CachedSubtreeProps};
 }

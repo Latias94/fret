@@ -1,5 +1,6 @@
 pub mod action_hooks;
 pub mod active_descendant;
+pub mod cached_subtree;
 #[cfg(feature = "recipes")]
 pub mod canvas_surface;
 pub mod chrome;
@@ -32,6 +33,7 @@ pub mod tree;
 pub mod viewport_surface;
 pub mod visually_hidden;
 
+pub use cached_subtree::{CachedSubtreeExt, CachedSubtreeProps};
 pub use model_watch::ModelWatchExt;
 
 #[cfg(test)]

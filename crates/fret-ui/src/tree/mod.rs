@@ -10,8 +10,8 @@ use fret_core::{
     UiServices,
 };
 use fret_runtime::{
-    CommandId, Effect, FrameId, InputContext, InputDispatchPhase, KeyChord, KeymapService, ModelId,
-    Platform, PlatformCapabilities,
+    CommandId, Effect, FrameId, InputContext, InputDispatchPhase, KeyChord, KeymapService,
+    ModelCreatedDebugInfo, ModelId, Platform, PlatformCapabilities,
 };
 use slotmap::{Key, SlotMap};
 use std::any::TypeId;
@@ -143,12 +143,16 @@ pub struct UiDebugFrameStats {
     pub model_change_models: u32,
     /// Total (model -> node) observation edges scanned during propagation.
     pub model_change_observation_edges: u32,
+    /// Count of changed models with no observation edges.
+    pub model_change_unobserved_models: u32,
     /// Unique nodes observed as invalidation roots for global changes during the current frame.
     pub global_change_invalidation_roots: u32,
     /// Count of changed globals consumed for propagation during the current frame.
     pub global_change_globals: u32,
     /// Total (global -> node) observation edges scanned during propagation.
     pub global_change_observation_edges: u32,
+    /// Count of changed globals with no observation edges.
+    pub global_change_unobserved_globals: u32,
     /// Total nodes visited across invalidation walks during the current frame.
     pub invalidation_walk_nodes: u32,
     /// Total invalidation walks performed during the current frame.
@@ -189,6 +193,11 @@ pub struct UiDebugModelChangeHotspot {
     pub observation_edges: u32,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugModelChangeUnobserved {
+    pub model: ModelId,
+    pub created: Option<ModelCreatedDebugInfo>,
+}
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UiDebugInvalidationSource {
     ModelChange,
@@ -514,11 +523,17 @@ pub struct UiTree<H: UiHost> {
     debug_paint_cache_replays: HashMap<NodeId, u32>,
     debug_invalidation_walks: Vec<UiDebugInvalidationWalk>,
     debug_model_change_hotspots: Vec<UiDebugModelChangeHotspot>,
+    debug_model_change_unobserved: Vec<UiDebugModelChangeUnobserved>,
 
     view_cache_enabled: bool,
     paint_cache_policy: PaintCachePolicy,
     inspection_active: bool,
     paint_cache: PaintCacheState,
+
+    propagation_depth_cache: HashMap<NodeId, u32>,
+    propagation_chain: Vec<NodeId>,
+    propagation_entries: Vec<(u8, u32, u64, NodeId, Invalidation)>,
+    propagation_visited: HashMap<NodeId, u8>,
 
     semantics: Option<Arc<SemanticsSnapshot>>,
     semantics_requested: bool,
@@ -557,10 +572,15 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_paint_cache_replays: HashMap::new(),
             debug_invalidation_walks: Vec::new(),
             debug_model_change_hotspots: Vec::new(),
+            debug_model_change_unobserved: Vec::new(),
             view_cache_enabled: false,
             paint_cache_policy: PaintCachePolicy::Auto,
             inspection_active: false,
             paint_cache: PaintCacheState::default(),
+            propagation_depth_cache: HashMap::new(),
+            propagation_chain: Vec::new(),
+            propagation_entries: Vec::new(),
+            propagation_visited: HashMap::new(),
             semantics: None,
             semantics_requested: false,
             deferred_cleanup: Vec::new(),
@@ -618,9 +638,11 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.model_change_invalidation_roots = 0;
         self.debug_stats.model_change_models = 0;
         self.debug_stats.model_change_observation_edges = 0;
+        self.debug_stats.model_change_unobserved_models = 0;
         self.debug_stats.global_change_invalidation_roots = 0;
         self.debug_stats.global_change_globals = 0;
         self.debug_stats.global_change_observation_edges = 0;
+        self.debug_stats.global_change_unobserved_globals = 0;
         self.debug_stats.invalidation_walk_nodes = 0;
         self.debug_stats.invalidation_walk_calls = 0;
         self.debug_stats.invalidation_walk_nodes_model_change = 0;
@@ -641,6 +663,7 @@ impl<H: UiHost> UiTree<H> {
         self.debug_paint_cache_replays.clear();
         self.debug_invalidation_walks.clear();
         self.debug_model_change_hotspots.clear();
+        self.debug_model_change_unobserved.clear();
     }
 
     pub(crate) fn debug_record_view_cache_root(
@@ -815,6 +838,12 @@ impl<H: UiHost> UiTree<H> {
         self.debug_model_change_hotspots.as_slice()
     }
 
+    pub fn debug_model_change_unobserved(&self) -> &[UiDebugModelChangeUnobserved] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_model_change_unobserved.as_slice()
+    }
     pub fn captured_for(&self, pointer_id: PointerId) -> Option<NodeId> {
         self.captured.get(&pointer_id).copied()
     }
@@ -1937,43 +1966,54 @@ impl<H: UiHost> UiTree<H> {
         self.mark_invalidation(node, inv);
     }
 
+    fn propagation_depth_for(&mut self, start: NodeId) -> u32 {
+        if let Some(depth) = self.propagation_depth_cache.get(&start) {
+            return *depth;
+        }
+
+        self.propagation_chain.clear();
+
+        let mut current = Some(start);
+        while let Some(node) = current {
+            if let Some(depth) = self.propagation_depth_cache.get(&node) {
+                let mut d = *depth;
+                for id in self.propagation_chain.drain(..).rev() {
+                    d = d.saturating_add(1);
+                    self.propagation_depth_cache.insert(id, d);
+                }
+                return self
+                    .propagation_depth_cache
+                    .get(&start)
+                    .copied()
+                    .unwrap_or_default();
+            }
+
+            self.propagation_chain.push(node);
+            current = self.nodes.get(node).and_then(|n| n.parent);
+        }
+
+        let mut d = 0u32;
+        for id in self.propagation_chain.drain(..).rev() {
+            self.propagation_depth_cache.insert(id, d);
+            d = d.saturating_add(1);
+        }
+
+        self.propagation_depth_cache
+            .get(&start)
+            .copied()
+            .unwrap_or_default()
+    }
+
     fn propagate_observation_masks(
         &mut self,
         app: &mut H,
         masks: impl IntoIterator<Item = (NodeId, ObservationMask)>,
         source: UiDebugInvalidationSource,
     ) -> bool {
-        let mut depth_cache: HashMap<NodeId, u32> = HashMap::new();
-        let mut depth_for = |start: NodeId| -> u32 {
-            if let Some(depth) = depth_cache.get(&start) {
-                return *depth;
-            }
+        self.propagation_depth_cache.clear();
+        self.propagation_chain.clear();
+        self.propagation_entries.clear();
 
-            let mut chain: Vec<NodeId> = Vec::new();
-            let mut current = Some(start);
-            while let Some(node) = current {
-                if let Some(depth) = depth_cache.get(&node) {
-                    let mut d = *depth;
-                    for id in chain.into_iter().rev() {
-                        d = d.saturating_add(1);
-                        depth_cache.insert(id, d);
-                    }
-                    return depth_cache.get(&start).copied().unwrap_or_default();
-                }
-
-                chain.push(node);
-                current = self.nodes.get(node).and_then(|n| n.parent);
-            }
-
-            let mut d = 0u32;
-            for id in chain.into_iter().rev() {
-                depth_cache.insert(id, d);
-                d = d.saturating_add(1);
-            }
-            depth_cache.get(&start).copied().unwrap_or_default()
-        };
-
-        let mut entries: Vec<(u8, u32, u64, NodeId, Invalidation)> = Vec::new();
         for (node, mask) in masks {
             if mask.is_empty() || !self.nodes.contains_key(node) {
                 continue;
@@ -1989,16 +2029,17 @@ impl<H: UiHost> UiTree<H> {
                 continue;
             };
 
-            let depth = depth_for(node);
+            let depth = self.propagation_depth_for(node);
             let key = node.data().as_ffi();
-            entries.push((strength, depth, key, node, inv));
+            self.propagation_entries
+                .push((strength, depth, key, node, inv));
         }
 
-        if entries.is_empty() {
+        if self.propagation_entries.is_empty() {
             return false;
         }
 
-        entries.sort_by(|a, b| {
+        self.propagation_entries.sort_by(|a, b| {
             // Higher-strength invalidations first to maximize reuse via `visited`.
             b.0.cmp(&a.0)
                 // Within the same strength, prefer ancestors first to reduce redundant walks.
@@ -2007,12 +2048,16 @@ impl<H: UiHost> UiTree<H> {
                 .then(a.2.cmp(&b.2))
         });
 
-        let mut visited = HashMap::<NodeId, u8>::new();
+        self.propagation_visited.clear();
         let mut did_invalidate = false;
-        for (_, _, _, node, inv) in entries {
+        let mut visited = std::mem::take(&mut self.propagation_visited);
+        let mut entries = std::mem::take(&mut self.propagation_entries);
+        for (_, _, _, node, inv) in entries.drain(..) {
             self.mark_invalidation_dedup_with_source(node, inv, &mut visited, source);
             did_invalidate = true;
         }
+        self.propagation_visited = visited;
+        self.propagation_entries = entries;
 
         if did_invalidate && let Some(window) = self.window {
             app.request_redraw(window);
@@ -2028,6 +2073,7 @@ impl<H: UiHost> UiTree<H> {
         self.begin_debug_frame_if_needed(app.frame_id());
         if self.debug_enabled {
             self.debug_model_change_hotspots.clear();
+            self.debug_model_change_unobserved.clear();
         }
 
         if changed.len() == 1 {
@@ -2044,6 +2090,7 @@ impl<H: UiHost> UiTree<H> {
                     self.debug_stats.model_change_models = 1;
                     self.debug_stats.model_change_observation_edges =
                         masks.len().min(u32::MAX as usize) as u32;
+                    self.debug_stats.model_change_unobserved_models = 0;
                     self.debug_model_change_hotspots = vec![UiDebugModelChangeHotspot {
                         model,
                         observation_edges: masks.len().min(u32::MAX as usize) as u32,
@@ -2060,6 +2107,7 @@ impl<H: UiHost> UiTree<H> {
         let mut combined: HashMap<NodeId, ObservationMask> =
             HashMap::with_capacity(changed.len().saturating_mul(8));
         let mut observation_edges_scanned = 0usize;
+        let mut unobserved_models = 0usize;
         for &model in changed {
             let mut edges = 0usize;
             if let Some(nodes) = self.observed_in_layout.by_model.get(&model) {
@@ -2089,6 +2137,16 @@ impl<H: UiHost> UiTree<H> {
                         observation_edges: edges.min(u32::MAX as usize) as u32,
                     });
             }
+            if edges == 0 {
+                unobserved_models = unobserved_models.saturating_add(1);
+                if self.debug_enabled {
+                    self.debug_model_change_unobserved
+                        .push(UiDebugModelChangeUnobserved {
+                            model,
+                            created: app.models().debug_created_info_for_id(model),
+                        });
+                }
+            }
         }
 
         if self.debug_enabled {
@@ -2097,10 +2155,16 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.model_change_models = changed.len().min(u32::MAX as usize) as u32;
             self.debug_stats.model_change_observation_edges =
                 observation_edges_scanned.min(u32::MAX as usize) as u32;
+            self.debug_stats.model_change_unobserved_models =
+                unobserved_models.min(u32::MAX as usize) as u32;
 
             self.debug_model_change_hotspots
                 .sort_by(|a, b| b.observation_edges.cmp(&a.observation_edges));
             self.debug_model_change_hotspots.truncate(5);
+
+            self.debug_model_change_unobserved
+                .sort_by(|a, b| a.model.data().as_ffi().cmp(&b.model.data().as_ffi()));
+            self.debug_model_change_unobserved.truncate(5);
         }
         self.propagate_observation_masks(
             app,
@@ -2129,6 +2193,7 @@ impl<H: UiHost> UiTree<H> {
                     self.debug_stats.global_change_globals = 1;
                     self.debug_stats.global_change_observation_edges =
                         masks.len().min(u32::MAX as usize) as u32;
+                    self.debug_stats.global_change_unobserved_globals = 0;
                 }
                 return self.propagate_observation_masks(
                     app,
@@ -2141,9 +2206,12 @@ impl<H: UiHost> UiTree<H> {
         let mut combined: HashMap<NodeId, ObservationMask> =
             HashMap::with_capacity(changed.len().saturating_mul(8));
         let mut observation_edges_scanned = 0usize;
+        let mut unobserved_globals = 0usize;
         for &global in changed {
+            let mut edges = 0usize;
             if let Some(nodes) = self.observed_globals_in_layout.by_global.get(&global) {
                 observation_edges_scanned = observation_edges_scanned.saturating_add(nodes.len());
+                edges = edges.saturating_add(nodes.len());
                 for (&node, &mask) in nodes {
                     combined
                         .entry(node)
@@ -2153,12 +2221,16 @@ impl<H: UiHost> UiTree<H> {
             }
             if let Some(nodes) = self.observed_globals_in_paint.by_global.get(&global) {
                 observation_edges_scanned = observation_edges_scanned.saturating_add(nodes.len());
+                edges = edges.saturating_add(nodes.len());
                 for (&node, &mask) in nodes {
                     combined
                         .entry(node)
                         .and_modify(|m| *m = m.union(mask))
                         .or_insert(mask);
                 }
+            }
+            if edges == 0 {
+                unobserved_globals = unobserved_globals.saturating_add(1);
             }
         }
 
@@ -2168,6 +2240,8 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.global_change_globals = changed.len().min(u32::MAX as usize) as u32;
             self.debug_stats.global_change_observation_edges =
                 observation_edges_scanned.min(u32::MAX as usize) as u32;
+            self.debug_stats.global_change_unobserved_globals =
+                unobserved_globals.min(u32::MAX as usize) as u32;
         }
         self.propagate_observation_masks(
             app,

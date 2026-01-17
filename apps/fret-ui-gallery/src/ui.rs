@@ -3,6 +3,7 @@ use fret_markdown as markdown;
 use fret_ui::Theme;
 use fret_ui::elements::ContinuousFrames;
 use fret_ui::scroll::VirtualListScrollHandle;
+use fret_ui_kit::declarative::CachedSubtreeExt as _;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 use time::Date;
@@ -813,7 +814,7 @@ fn preview_view_cache(
     };
 
     let subtree = if cache_inner {
-        cx.view_cache(fret_ui::element::ViewCacheProps::default(), subtree_body)
+        cx.cached_subtree(subtree_body)
     } else {
         shadcn::Card::new(vec![
             shadcn::CardHeader::new(vec![
@@ -900,7 +901,7 @@ fn preview_virtual_list_torture(
 ) -> Vec<AnyElement> {
     let len: usize = 10_000;
 
-    let editing_row = cx
+    let header_editing_row = cx
         .get_model_copied(&virtual_list_torture_edit_row, Invalidation::Layout)
         .flatten();
 
@@ -975,7 +976,7 @@ fn preview_virtual_list_torture(
     );
 
     let editing_indicator = {
-        let label = if let Some(row) = editing_row {
+        let label = if let Some(row) = header_editing_row {
             Arc::<str>::from(format!("editing_row={row}"))
         } else {
             Arc::<str>::from("editing_row=<none>")
@@ -989,7 +990,7 @@ fn preview_virtual_list_torture(
                 ..Default::default()
             },
             |cx| {
-                if let Some(row) = editing_row {
+                if let Some(row) = header_editing_row {
                     vec![cx.text(format!("Editing row: {row}"))]
                 } else {
                     vec![cx.text("Editing row: <none>")]
@@ -1024,110 +1025,119 @@ fn preview_virtual_list_torture(
 
     let options = fret_ui::element::VirtualListOptions::new(Px(28.0), 10);
 
-    let list = cx.virtual_list_keyed_with_layout(
-        list_layout,
-        len,
-        options,
-        &virtual_list_torture_scroll,
-        |i| i as fret_ui::ItemKey,
-        |cx, index| {
-            let index_u64 = index as u64;
-            let is_editing = editing_row == Some(index_u64);
+    let list = cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+        let editing_row = cx
+            .get_model_copied(&virtual_list_torture_edit_row, Invalidation::Layout)
+            .flatten();
 
-            let zebra = (index % 2) == 0;
-            let background = if is_editing {
-                theme.color_required("accent")
-            } else if zebra {
-                theme.color_required("muted")
-            } else {
-                theme.color_required("background")
-            };
+        let list = cx.virtual_list_keyed_with_layout(
+            list_layout,
+            len,
+            options,
+            &virtual_list_torture_scroll,
+            |i| i as fret_ui::ItemKey,
+            |cx, index| {
+                let index_u64 = index as u64;
+                let is_editing = editing_row == Some(index_u64);
 
-            let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
+                let zebra = (index % 2) == 0;
+                let background = if is_editing {
+                    theme.color_required("accent")
+                } else if zebra {
+                    theme.color_required("muted")
+                } else {
+                    theme.color_required("background")
+                };
 
-            let edit_row_for_activate = virtual_list_torture_edit_row.clone();
-            let edit_text_for_activate = virtual_list_torture_edit_text.clone();
-            let on_select_row: fret_ui::action::OnActivate =
-                Arc::new(move |host, action_cx, _reason| {
-                    let _ = host
-                        .models_mut()
-                        .update(&edit_row_for_activate, |v| *v = Some(index_u64));
-                    let _ = host.models_mut().update(&edit_text_for_activate, |v| {
-                        *v = format!("Row {index_u64}");
+                let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
+
+                let edit_row_for_activate = virtual_list_torture_edit_row.clone();
+                let edit_text_for_activate = virtual_list_torture_edit_text.clone();
+                let on_select_row: fret_ui::action::OnActivate =
+                    Arc::new(move |host, action_cx, _reason| {
+                        let _ = host
+                            .models_mut()
+                            .update(&edit_row_for_activate, |v| *v = Some(index_u64));
+                        let _ = host.models_mut().update(&edit_text_for_activate, |v| {
+                            *v = format!("Row {index_u64}");
+                        });
+                        host.request_redraw(action_cx.window);
                     });
-                    host.request_redraw(action_cx.window);
-                });
-            let row_label = shadcn::Button::new(format!("Row {index}"))
-                .variant(shadcn::ButtonVariant::Ghost)
-                .size(shadcn::ButtonSize::Sm)
-                .test_id(format!("ui-gallery-virtual-list-row-{index}-label"))
-                .on_activate(on_select_row.clone())
-                .refine_layout(LayoutRefinement::default().flex_1())
-                .into_element(cx);
-
-            let right = if is_editing {
-                let mut props =
-                    fret_ui::element::TextInputProps::new(virtual_list_torture_edit_text.clone());
-                props.a11y_label = Some(Arc::<str>::from("Inline edit"));
-                props.test_id = Some(Arc::<str>::from("ui-gallery-virtual-list-edit-input"));
-                props.placeholder = Some(Arc::<str>::from("Type to edit…"));
-                props.layout.size.width = fret_ui::element::Length::Fill;
-
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .layout(LayoutRefinement::default().w_full())
-                        .gap(Space::N2)
-                        .items_center(),
-                    |cx| vec![cx.text_input(props)],
-                )
-            } else {
-                let edit_button = shadcn::Button::new("Edit")
-                    .variant(shadcn::ButtonVariant::Outline)
+                let row_label = shadcn::Button::new(format!("Row {index}"))
+                    .variant(shadcn::ButtonVariant::Ghost)
                     .size(shadcn::ButtonSize::Sm)
-                    .test_id(format!("ui-gallery-virtual-list-row-{index}-edit"))
-                    .on_activate(on_select_row)
+                    .test_id(format!("ui-gallery-virtual-list-row-{index}-label"))
+                    .on_activate(on_select_row.clone())
+                    .refine_layout(LayoutRefinement::default().flex_1())
                     .into_element(cx);
 
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    |_cx| vec![edit_button],
-                )
-            };
+                let right = if is_editing {
+                    let mut props = fret_ui::element::TextInputProps::new(
+                        virtual_list_torture_edit_text.clone(),
+                    );
+                    props.a11y_label = Some(Arc::<str>::from("Inline edit"));
+                    props.test_id = Some(Arc::<str>::from("ui-gallery-virtual-list-edit-input"));
+                    props.placeholder = Some(Arc::<str>::from("Type to edit…"));
+                    props.layout.size.width = fret_ui::element::Length::Fill;
 
-            let mut container_props = decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .bg(ColorRef::Color(background))
-                    .p(Space::N2),
-                LayoutRefinement::default()
-                    .w_full()
-                    .h_px(MetricRef::Px(height_hint)),
-            );
-            container_props.layout.overflow = fret_ui::element::Overflow::Clip;
+                    stack::hstack(
+                        cx,
+                        stack::HStackProps::default()
+                            .layout(LayoutRefinement::default().w_full())
+                            .gap(Space::N2)
+                            .items_center(),
+                        |cx| vec![cx.text_input(props)],
+                    )
+                } else {
+                    let edit_button = shadcn::Button::new("Edit")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .test_id(format!("ui-gallery-virtual-list-row-{index}-edit"))
+                        .on_activate(on_select_row)
+                        .into_element(cx);
 
-            cx.container(container_props, |cx| {
-                vec![stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .layout(LayoutRefinement::default().w_full().h_full())
-                        .gap(Space::N2)
-                        .items_center(),
-                    |_cx| vec![row_label, right],
-                )]
-            })
-        },
-    );
+                    stack::hstack(
+                        cx,
+                        stack::HStackProps::default().gap(Space::N2).items_center(),
+                        |_cx| vec![edit_button],
+                    )
+                };
 
-    let list = cx.semantics(
-        fret_ui::element::SemanticsProps {
-            role: fret_core::SemanticsRole::List,
-            test_id: Some(Arc::<str>::from("ui-gallery-virtual-list-root")),
-            ..Default::default()
-        },
-        |_cx| vec![list],
-    );
+                let mut container_props = decl_style::container_props(
+                    theme,
+                    ChromeRefinement::default()
+                        .bg(ColorRef::Color(background))
+                        .p(Space::N2),
+                    LayoutRefinement::default()
+                        .w_full()
+                        .h_px(MetricRef::Px(height_hint)),
+                );
+                container_props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+                cx.container(container_props, |cx| {
+                    vec![stack::hstack(
+                        cx,
+                        stack::HStackProps::default()
+                            .layout(LayoutRefinement::default().w_full().h_full())
+                            .gap(Space::N2)
+                            .items_center(),
+                        |_cx| vec![row_label, right],
+                    )]
+                })
+            },
+        );
+
+        let list = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: fret_core::SemanticsRole::List,
+                test_id: Some(Arc::<str>::from("ui-gallery-virtual-list-root")),
+                ..Default::default()
+            },
+            |_cx| vec![list],
+        );
+
+        vec![list]
+    });
 
     vec![header, list]
 }

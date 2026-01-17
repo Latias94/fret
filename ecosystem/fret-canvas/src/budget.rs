@@ -7,6 +7,30 @@
 //!
 //! Motivation and guidance: `docs/adr/0178-canvas-viewport-transform-hit-testing-and-spatial-index-v1.md`.
 
+/// A pair of work budget limits, usually used to degrade background work while the user is
+/// interacting with the view.
+///
+/// This type remains policy-light: it does not define what "interactive" means for a widget.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct InteractionBudget {
+    pub idle: u32,
+    pub interactive: u32,
+}
+
+impl InteractionBudget {
+    pub const fn new(idle: u32, interactive: u32) -> Self {
+        Self { idle, interactive }
+    }
+
+    pub const fn select(&self, interacting: bool) -> u32 {
+        if interacting {
+            self.interactive
+        } else {
+            self.idle
+        }
+    }
+}
+
 /// A per-frame work budget expressed as "units".
 ///
 /// Callers choose the meaning of a unit:
@@ -68,6 +92,13 @@ impl Default for WorkBudget {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn interaction_budget_selects_profile() {
+        let b = InteractionBudget::new(10, 2);
+        assert_eq!(b.select(false), 10);
+        assert_eq!(b.select(true), 2);
+    }
 
     #[test]
     fn try_consume_respects_limit() {

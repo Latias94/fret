@@ -13,6 +13,14 @@ slotmap::new_key_type! {
     pub struct ModelId;
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct ModelCreatedDebugInfo {
+    pub type_name: &'static str,
+    pub file: &'static str,
+    pub line: u32,
+    pub column: u32,
+}
+
 /// A reference-counted handle to a typed model stored in a [`ModelStore`].
 ///
 /// This is intentionally gpui-like (`Entity<T>`):
@@ -380,6 +388,25 @@ impl ModelStore {
         let state = self.state();
         let entry = state.storage.get(id)?;
         Some((entry.created_type, entry.created_at))
+    }
+
+    pub fn debug_created_info_for_id(&self, id: ModelId) -> Option<ModelCreatedDebugInfo> {
+        #[cfg(debug_assertions)]
+        {
+            let (type_name, at) = self.debug_created_info(id)?;
+            return Some(ModelCreatedDebugInfo {
+                type_name,
+                file: at.file(),
+                line: at.line(),
+                column: at.column(),
+            });
+        }
+
+        #[cfg(not(debug_assertions))]
+        {
+            let _ = id;
+            None
+        }
     }
 
     fn inc_strong(&self, id: ModelId) {

@@ -152,47 +152,30 @@ async function startNextServer(
   const hostname = url.hostname || "localhost"
   const port = url.port ? Number(url.port) : url.protocol === "https:" ? 443 : 80
 
-  const prevCwd = process.cwd()
-  process.chdir(nextDir)
-
   process.env.NODE_ENV = "production"
   process.env.NEXT_PUBLIC_APP_URL = baseUrl
   process.env.PORT = String(port)
 
   const next = await loadNext(nextDir)
-  let app: any
-  let server: http.Server | null = null
+  const app = next({ dev: false, dir: nextDir, hostname, port })
+  const handle = app.getRequestHandler()
+  await app.prepare()
 
-  try {
-    app = next({ dev: false, dir: nextDir, hostname, port })
-    const handle = app.getRequestHandler()
-    await app.prepare()
+  const server = http.createServer((req, res) => handle(req, res))
 
-    server = http.createServer((req, res) => handle(req, res))
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject)
+    server.listen(port, hostname, () => resolve())
+  })
 
-    await new Promise<void>((resolve, reject) => {
-      server!.once("error", reject)
-      server!.listen(port, hostname, () => resolve())
-    })
-
-    return {
-      baseUrl,
-      close: async () => {
-        try {
-          if (server) {
-            await new Promise<void>((resolve) => server.close(() => resolve()))
-          }
-          if (typeof app?.close === "function") {
-            await app.close()
-          }
-        } finally {
-          process.chdir(prevCwd)
-        }
-      },
-    }
-  } catch (err) {
-    process.chdir(prevCwd)
-    throw err
+  return {
+    baseUrl,
+    close: async () => {
+      await new Promise<void>((resolve) => server.close(() => resolve()))
+      if (typeof app?.close === "function") {
+        await app.close()
+      }
+    },
   }
 }
 

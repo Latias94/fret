@@ -330,7 +330,11 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
 
     pub fn observe_model_id(&mut self, model: ModelId, invalidation: Invalidation) {
         let id = self.root_id();
-        let list = self.window_state.observed_models.entry(id).or_default();
+        let list = self
+            .window_state
+            .observed_models_next
+            .entry(id)
+            .or_default();
         if list
             .iter()
             .any(|(m, inv)| *m == model && *inv == invalidation)
@@ -346,7 +350,11 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
 
     pub fn observe_global_id(&mut self, global: TypeId, invalidation: Invalidation) {
         let id = self.root_id();
-        let list = self.window_state.observed_globals.entry(id).or_default();
+        let list = self
+            .window_state
+            .observed_globals_next
+            .entry(id)
+            .or_default();
         if list
             .iter()
             .any(|(g, inv)| *g == global && *inv == invalidation)
