@@ -124,6 +124,7 @@ impl<H: UiHost> UiTree<H> {
                 view_cache_active = self.view_cache_active(),
                 contained_layout = view_cache.contained_layout,
                 invalidated = invalidated,
+                frame_id = app.frame_id().0,
             )
         } else {
             tracing::Span::none()
@@ -156,8 +157,20 @@ impl<H: UiHost> UiTree<H> {
                         bounds.origin.x - prev.origin.x,
                         bounds.origin.y - prev.origin.y,
                     );
+                    let replay_span = if tracing::enabled!(tracing::Level::TRACE) {
+                        tracing::trace_span!(
+                            "fret.ui.paint_cache.replay",
+                            node = ?node,
+                            ops = tracing::field::Empty,
+                            scale_factor = sf,
+                        )
+                    } else {
+                        tracing::Span::none()
+                    };
+                    let _replay_guard = replay_span.enter();
                     scene.replay_ops_translated(&self.paint_cache.prev_ops[range.clone()], delta);
                     let end = scene.ops_len();
+                    replay_span.record("ops", (end - start) as u64);
                     self.debug_record_paint_cache_replay(node, (end - start) as u32);
 
                     if let Some(n) = self.nodes.get_mut(node) {

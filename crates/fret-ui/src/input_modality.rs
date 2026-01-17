@@ -22,13 +22,14 @@ pub fn modality<H: UiHost>(app: &mut H, window: Option<AppWindowId>) -> InputMod
     let Some(window) = window else {
         return InputModality::Pointer;
     };
-    app.with_global_mut(InputModalityState::default, |state, _app| {
-        state
-            .per_window
-            .get(&window)
-            .copied()
-            .unwrap_or(InputModality::Pointer)
-    })
+    let Some(state) = app.global::<InputModalityState>() else {
+        return InputModality::Pointer;
+    };
+    state
+        .per_window
+        .get(&window)
+        .copied()
+        .unwrap_or(InputModality::Pointer)
 }
 
 pub fn is_keyboard<H: UiHost>(app: &mut H, window: Option<AppWindowId>) -> bool {
@@ -40,7 +41,7 @@ fn set_modality_if_changed<H: UiHost>(
     window: AppWindowId,
     modality: InputModality,
 ) -> bool {
-    app.with_global_mut(InputModalityState::default, |state, _app| {
+    app.with_global_mut_untracked(InputModalityState::default, |state, _app| {
         let prev = state
             .per_window
             .get(&window)

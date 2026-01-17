@@ -6,7 +6,7 @@ use fret_core::{
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
 use serde::{Deserialize, Serialize};
-use slotmap::Key as _;
+use slotmap::{Key as _, KeyData};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 
@@ -1093,12 +1093,24 @@ impl UiDiagnosticsService {
         ring.last_changed_models = changed.iter().map(|id| id.data().as_ffi()).collect();
     }
 
-    pub fn record_global_changes(&mut self, window: AppWindowId, changed: &[std::any::TypeId]) {
+    pub fn record_global_changes(
+        &mut self,
+        app: &App,
+        window: AppWindowId,
+        changed: &[std::any::TypeId],
+    ) {
         if !self.is_enabled() {
             return;
         }
         let ring = self.per_window.entry(window).or_default();
-        ring.last_changed_globals = changed.iter().map(|t| format!("{t:?}")).collect();
+        ring.last_changed_globals = changed
+            .iter()
+            .map(|&t| {
+                app.global_type_name(t)
+                    .map(|name| name.to_string())
+                    .unwrap_or_else(|| format!("{t:?}"))
+            })
+            .collect();
     }
 
     pub fn record_event(&mut self, app: &App, window: AppWindowId, event: &Event) {
@@ -1172,6 +1184,43 @@ impl UiDiagnosticsService {
 
         let ring = self.per_window.entry(window).or_default();
 
+        let changed_models = std::mem::take(&mut ring.last_changed_models);
+        let changed_model_sources_top = if cfg!(debug_assertions) && !changed_models.is_empty() {
+            let mut counts: HashMap<(String, String, u32, u32), u32> = HashMap::new();
+            for &model in &changed_models {
+                let id = ModelId::from(KeyData::from_ffi(model));
+                let Some(info) = app.models().debug_last_changed_info_for_id(id) else {
+                    continue;
+                };
+                let ty = info.type_name.to_string();
+                *counts
+                    .entry((ty, info.file.to_string(), info.line, info.column))
+                    .or_insert(0) += 1;
+            }
+            let mut out: Vec<UiChangedModelSourceHotspotV1> = counts
+                .into_iter()
+                .map(
+                    |((type_name, file, line, column), count)| UiChangedModelSourceHotspotV1 {
+                        type_name,
+                        changed_at: UiSourceLocationV1 { file, line, column },
+                        count,
+                    },
+                )
+                .collect();
+            out.sort_by(|a, b| {
+                b.count
+                    .cmp(&a.count)
+                    .then_with(|| a.type_name.cmp(&b.type_name))
+                    .then_with(|| a.changed_at.file.cmp(&b.changed_at.file))
+                    .then_with(|| a.changed_at.line.cmp(&b.changed_at.line))
+                    .then_with(|| a.changed_at.column.cmp(&b.changed_at.column))
+            });
+            out.truncate(8);
+            out
+        } else {
+            Vec::new()
+        };
+
         let resource_caches = {
             let icon_svg_cache = icon_svg_cache_stats(app);
             let canvas = canvas_cache_stats_for_window(app, window.data().as_ffi());
@@ -1190,9 +1239,10 @@ impl UiDiagnosticsService {
             scale_factor,
             window_bounds: RectV1::from(bounds),
             scene_ops: scene.ops_len() as u64,
-            debug: UiTreeDebugSnapshotV1::from_tree(ui, hit_test, element_diag, semantics),
-            changed_models: std::mem::take(&mut ring.last_changed_models),
+            debug: UiTreeDebugSnapshotV1::from_tree(app, ui, hit_test, element_diag, semantics),
+            changed_models,
             changed_globals: std::mem::take(&mut ring.last_changed_globals),
+            changed_model_sources_top,
             resource_caches,
         };
 
@@ -1674,10 +1724,23 @@ pub struct UiDiagnosticsSnapshotV1 {
     pub changed_models: Vec<u64>,
     pub changed_globals: Vec<String>,
 
+    /// Aggregated writers for `changed_models`, derived from `ModelStore` debug info.
+    ///
+    /// This is best-effort and only populated in debug builds.
+    #[serde(default)]
+    pub changed_model_sources_top: Vec<UiChangedModelSourceHotspotV1>,
+
     #[serde(default)]
     pub resource_caches: Option<UiResourceCachesV1>,
 
     pub debug: UiTreeDebugSnapshotV1,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiChangedModelSourceHotspotV1 {
+    pub type_name: String,
+    pub changed_at: UiSourceLocationV1,
+    pub count: u32,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -2125,6 +2188,14 @@ pub struct UiTreeDebugSnapshotV1 {
     pub model_change_hotspots: Vec<UiModelChangeHotspotV1>,
     #[serde(default)]
     pub model_change_unobserved: Vec<UiModelChangeUnobservedV1>,
+    #[serde(default)]
+    pub global_change_hotspots: Vec<UiGlobalChangeHotspotV1>,
+    #[serde(default)]
+    pub global_change_unobserved: Vec<UiGlobalChangeUnobservedV1>,
+    #[serde(default)]
+    pub cache_roots: Vec<UiCacheRootStatsV1>,
+    #[serde(default)]
+    pub layout_engine_solves: Vec<UiLayoutEngineSolveV1>,
     pub layers_in_paint_order: Vec<UiLayerInfoV1>,
     pub hit_test: Option<UiHitTestSnapshotV1>,
     pub element_runtime: Option<ElementDiagnosticsSnapshotV1>,
@@ -2133,6 +2204,7 @@ pub struct UiTreeDebugSnapshotV1 {
 
 impl UiTreeDebugSnapshotV1 {
     fn from_tree(
+        app: &App,
         ui: &UiTree<App>,
         hit_test: Option<UiHitTestSnapshotV1>,
         element_runtime: Option<ElementDiagnosticsSnapshotV1>,
@@ -2155,6 +2227,26 @@ impl UiTreeDebugSnapshotV1 {
                 .iter()
                 .map(UiModelChangeUnobservedV1::from_unobserved)
                 .collect(),
+            global_change_hotspots: ui
+                .debug_global_change_hotspots()
+                .iter()
+                .map(|h| UiGlobalChangeHotspotV1::from_hotspot(app, h))
+                .collect(),
+            global_change_unobserved: ui
+                .debug_global_change_unobserved()
+                .iter()
+                .map(|u| UiGlobalChangeUnobservedV1::from_unobserved(app, u))
+                .collect(),
+            cache_roots: ui
+                .debug_cache_root_stats()
+                .iter()
+                .map(UiCacheRootStatsV1::from_stats)
+                .collect(),
+            layout_engine_solves: ui
+                .debug_layout_engine_solves()
+                .iter()
+                .map(UiLayoutEngineSolveV1::from_solve)
+                .collect(),
             layers_in_paint_order: ui
                 .debug_layers_in_paint_order()
                 .into_iter()
@@ -2168,16 +2260,125 @@ impl UiTreeDebugSnapshotV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiCacheRootStatsV1 {
+    pub root: u64,
+    pub element: Option<u64>,
+    pub reused: bool,
+    pub contained_layout: bool,
+    pub paint_replayed_ops: u32,
+    #[serde(default)]
+    pub reuse_reason: Option<String>,
+}
+
+impl UiCacheRootStatsV1 {
+    fn from_stats(stats: &fret_ui::tree::UiDebugCacheRootStats) -> Self {
+        Self {
+            root: stats.root.data().as_ffi(),
+            element: stats.element.map(|id| id.0),
+            reused: stats.reused,
+            contained_layout: stats.contained_layout,
+            paint_replayed_ops: stats.paint_replayed_ops,
+            reuse_reason: Some(stats.reuse_reason.as_str().to_string()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiLayoutEngineSolveV1 {
+    pub root_node: u64,
+    pub solve_time_us: u64,
+    pub measure_calls: u64,
+    pub measure_cache_hits: u64,
+    #[serde(default)]
+    pub measure_time_us: u64,
+    #[serde(default)]
+    pub top_measures: Vec<UiLayoutEngineMeasureHotspotV1>,
+}
+
+impl UiLayoutEngineSolveV1 {
+    fn from_solve(s: &fret_ui::tree::UiDebugLayoutEngineSolve) -> Self {
+        Self {
+            root_node: s.root.data().as_ffi(),
+            solve_time_us: s.solve_time.as_micros().min(u64::MAX as u128) as u64,
+            measure_calls: s.measure_calls,
+            measure_cache_hits: s.measure_cache_hits,
+            measure_time_us: s.measure_time.as_micros().min(u64::MAX as u128) as u64,
+            top_measures: s
+                .top_measures
+                .iter()
+                .map(|m| UiLayoutEngineMeasureHotspotV1 {
+                    node: m.node.data().as_ffi(),
+                    measure_time_us: m.measure_time.as_micros().min(u64::MAX as u128) as u64,
+                    calls: m.calls,
+                    cache_hits: m.cache_hits,
+                    element: m.element.map(|id| id.0),
+                    element_kind: m.element_kind.map(|s| s.to_string()),
+                    top_children: m
+                        .top_children
+                        .iter()
+                        .map(|c| UiLayoutEngineMeasureChildHotspotV1 {
+                            child: c.child.data().as_ffi(),
+                            measure_time_us: c.measure_time.as_micros().min(u64::MAX as u128)
+                                as u64,
+                            calls: c.calls,
+                            element: c.element.map(|id| id.0),
+                            element_kind: c.element_kind.map(|s| s.to_string()),
+                        })
+                        .collect(),
+                })
+                .collect(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiLayoutEngineMeasureHotspotV1 {
+    pub node: u64,
+    pub measure_time_us: u64,
+    pub calls: u64,
+    pub cache_hits: u64,
+    #[serde(default)]
+    pub element: Option<u64>,
+    #[serde(default)]
+    pub element_kind: Option<String>,
+    #[serde(default)]
+    pub top_children: Vec<UiLayoutEngineMeasureChildHotspotV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiLayoutEngineMeasureChildHotspotV1 {
+    pub child: u64,
+    pub measure_time_us: u64,
+    pub calls: u64,
+    #[serde(default)]
+    pub element: Option<u64>,
+    #[serde(default)]
+    pub element_kind: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiModelChangeHotspotV1 {
     pub model: u64,
     pub observation_edges: u32,
+    #[serde(default)]
+    pub changed_type: Option<String>,
+    #[serde(default)]
+    pub changed_at: Option<UiSourceLocationV1>,
 }
 
 impl UiModelChangeHotspotV1 {
     fn from_hotspot(hotspot: &fret_ui::tree::UiDebugModelChangeHotspot) -> Self {
+        let changed_type = hotspot.changed.map(|c| c.type_name.to_string());
+        let changed_at = hotspot.changed.map(|c| UiSourceLocationV1 {
+            file: c.file.to_string(),
+            line: c.line,
+            column: c.column,
+        });
         Self {
             model: hotspot.model.data().as_ffi(),
             observation_edges: hotspot.observation_edges,
+            changed_type,
+            changed_at,
         }
     }
 }
@@ -2194,6 +2395,10 @@ pub struct UiModelChangeUnobservedV1 {
     pub model: u64,
     pub created_type: Option<String>,
     pub created_at: Option<UiSourceLocationV1>,
+    #[serde(default)]
+    pub changed_type: Option<String>,
+    #[serde(default)]
+    pub changed_at: Option<UiSourceLocationV1>,
 }
 
 impl UiModelChangeUnobservedV1 {
@@ -2204,11 +2409,78 @@ impl UiModelChangeUnobservedV1 {
             line: c.line,
             column: c.column,
         });
+        let changed_type = unobserved.changed.map(|c| c.type_name.to_string());
+        let changed_at = unobserved.changed.map(|c| UiSourceLocationV1 {
+            file: c.file.to_string(),
+            line: c.line,
+            column: c.column,
+        });
 
         Self {
             model: unobserved.model.data().as_ffi(),
             created_type,
             created_at,
+            changed_type,
+            changed_at,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiGlobalChangeHotspotV1 {
+    pub type_name: String,
+    pub observation_edges: u32,
+    pub changed_at: Option<UiSourceLocationV1>,
+}
+
+impl UiGlobalChangeHotspotV1 {
+    fn from_hotspot(app: &App, hotspot: &fret_ui::tree::UiDebugGlobalChangeHotspot) -> Self {
+        let type_name = app
+            .global_type_name(hotspot.global)
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| format!("{:?}", hotspot.global));
+        let changed_at = app
+            .global_changed_at(hotspot.global)
+            .map(|at| UiSourceLocationV1 {
+                file: at.file().to_string(),
+                line: at.line(),
+                column: at.column(),
+            });
+
+        Self {
+            type_name,
+            observation_edges: hotspot.observation_edges,
+            changed_at,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiGlobalChangeUnobservedV1 {
+    pub type_name: String,
+    pub changed_at: Option<UiSourceLocationV1>,
+}
+
+impl UiGlobalChangeUnobservedV1 {
+    fn from_unobserved(
+        app: &App,
+        unobserved: &fret_ui::tree::UiDebugGlobalChangeUnobserved,
+    ) -> Self {
+        let type_name = app
+            .global_type_name(unobserved.global)
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| format!("{:?}", unobserved.global));
+        let changed_at = app
+            .global_changed_at(unobserved.global)
+            .map(|at| UiSourceLocationV1 {
+                file: at.file().to_string(),
+                line: at.line(),
+                column: at.column(),
+            });
+
+        Self {
+            type_name,
+            changed_at,
         }
     }
 }
@@ -2238,6 +2510,8 @@ pub struct UiInvalidationWalkV1 {
     pub root_element: Option<u64>,
     pub kind: UiInvalidationKindV1,
     pub source: UiInvalidationSourceV1,
+    #[serde(default)]
+    pub detail: Option<String>,
     pub walked_nodes: u32,
     #[serde(default)]
     pub truncated_at: Option<u64>,
@@ -2266,6 +2540,7 @@ impl UiInvalidationWalkV1 {
             root_element: walk.root_element.map(|e| e.0),
             kind,
             source,
+            detail: walk.detail.as_str().map(|s| s.to_string()),
             walked_nodes: walk.walked_nodes,
             truncated_at: walk.truncated_at.map(key_to_u64),
         }

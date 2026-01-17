@@ -197,7 +197,11 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
     /// cannot short-circuit the widget `paint()` pass on the next frame.
     pub fn request_animation_frame(&mut self) {
         // Ensure animation-frame requests trigger a paint pass even when paint caching is enabled.
-        self.tree.invalidate(self.node, Invalidation::Paint);
+        self.tree.invalidate_with_detail(
+            self.node,
+            Invalidation::Paint,
+            crate::tree::UiDebugInvalidationDetail::AnimationFrameRequest,
+        );
         let Some(window) = self.window else {
             return;
         };
@@ -347,7 +351,11 @@ impl<'a, H: UiHost> MeasureCx<'a, H> {
     /// widget `paint()` on the next frame.
     pub fn request_animation_frame(&mut self) {
         // Ensure animation-frame requests trigger a paint pass even when paint caching is enabled.
-        self.tree.invalidate(self.node, Invalidation::Paint);
+        self.tree.invalidate_with_detail(
+            self.node,
+            Invalidation::Paint,
+            crate::tree::UiDebugInvalidationDetail::AnimationFrameRequest,
+        );
         let Some(window) = self.window else {
             return;
         };
@@ -363,13 +371,28 @@ impl<'a, H: UiHost> MeasureCx<'a, H> {
     }
 
     pub fn measure_in(&mut self, child: NodeId, constraints: LayoutConstraints) -> Size {
-        self.tree.measure_in(
+        if !self.tree.debug_enabled() {
+            return self.tree.measure_in(
+                self.app,
+                self.services,
+                child,
+                constraints,
+                self.scale_factor,
+            );
+        }
+
+        let started = fret_core::time::Instant::now();
+        let size = self.tree.measure_in(
             self.app,
             self.services,
             child,
             constraints,
             self.scale_factor,
-        )
+        );
+        let elapsed = started.elapsed();
+        self.tree
+            .debug_record_measure_child(self.node, child, elapsed);
+        size
     }
 }
 
@@ -416,7 +439,11 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
     /// while it remains active.
     pub fn request_animation_frame(&mut self) {
         // Ensure animation-frame requests trigger a paint pass even when paint caching is enabled.
-        self.tree.invalidate(self.node, Invalidation::Paint);
+        self.tree.invalidate_with_detail(
+            self.node,
+            Invalidation::Paint,
+            crate::tree::UiDebugInvalidationDetail::AnimationFrameRequest,
+        );
         let Some(window) = self.window else {
             return;
         };

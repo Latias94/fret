@@ -158,12 +158,6 @@ mod tests {
                 .and_then(|v| v.downcast_ref::<T>())
         }
 
-        fn global_mut<T: 'static>(&mut self) -> Option<&mut T> {
-            self.globals
-                .get_mut(&TypeId::of::<T>())
-                .and_then(|v| v.downcast_mut::<T>())
-        }
-
         fn set_global<T: 'static>(&mut self, value: T) {
             self.globals.insert(TypeId::of::<T>(), Box::new(value));
         }

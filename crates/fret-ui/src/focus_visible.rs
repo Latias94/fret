@@ -26,9 +26,10 @@ pub fn is_focus_visible<H: UiHost>(app: &mut H, window: Option<AppWindowId>) -> 
     let Some(window) = window else {
         return false;
     };
-    app.with_global_mut(FocusVisibleState::default, |state, _app| {
-        state.per_window.get(&window).copied().unwrap_or(false)
-    })
+    let Some(state) = app.global::<FocusVisibleState>() else {
+        return false;
+    };
+    state.per_window.get(&window).copied().unwrap_or(false)
 }
 
 fn set_focus_visible_if_changed<H: UiHost>(
@@ -36,7 +37,7 @@ fn set_focus_visible_if_changed<H: UiHost>(
     window: AppWindowId,
     visible: bool,
 ) -> bool {
-    app.with_global_mut(FocusVisibleState::default, |state, _app| {
+    app.with_global_mut_untracked(FocusVisibleState::default, |state, _app| {
         let prev = state.per_window.get(&window).copied().unwrap_or(false);
         if prev != visible {
             state.per_window.insert(window, visible);

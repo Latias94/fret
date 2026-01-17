@@ -31,6 +31,10 @@ Scope note:
 
    - `cargo run -p fretboard -- diag suite ui-gallery`
 
+5. (Perf triage) run the perf harness and print the slowest frames:
+
+   - `cargo run -p fretboard -- diag perf ui-gallery --sort time`
+
 ## Inspect workflow (GPUI/Zed-style)
 
 Inspect mode is designed to answer “what is this?” and “why did that happen?” quickly.

@@ -38,6 +38,14 @@ use shortcuts::{
     KeydownShortcutParams, PendingShortcut, PointerDownOutsideOutcome, PointerDownOutsideParams,
 };
 
+fn type_id_sort_key(id: TypeId) -> u64 {
+    use std::hash::{Hash, Hasher};
+
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    id.hash(&mut hasher);
+    hasher.finish()
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct InvalidationFlags {
     pub layout: bool,
@@ -191,12 +199,25 @@ pub struct UiDebugFrameStats {
 pub struct UiDebugModelChangeHotspot {
     pub model: ModelId,
     pub observation_edges: u32,
+    pub changed: Option<fret_runtime::model::ModelChangedDebugInfo>,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct UiDebugModelChangeUnobserved {
     pub model: ModelId,
     pub created: Option<ModelCreatedDebugInfo>,
+    pub changed: Option<fret_runtime::model::ModelChangedDebugInfo>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugGlobalChangeHotspot {
+    pub global: TypeId,
+    pub observation_edges: u32,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugGlobalChangeUnobserved {
+    pub global: TypeId,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -208,12 +229,52 @@ pub enum UiDebugInvalidationSource {
     Other,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiDebugInvalidationDetail {
+    Unknown,
+    ModelObservation,
+    GlobalObservation,
+    HoverEvent,
+    FocusEvent,
+    ScrollHandle,
+    FocusVisiblePolicy,
+    InputModalityPolicy,
+    AnimationFrameRequest,
+}
+
+impl UiDebugInvalidationDetail {
+    pub fn from_source(source: UiDebugInvalidationSource) -> Self {
+        match source {
+            UiDebugInvalidationSource::ModelChange => Self::ModelObservation,
+            UiDebugInvalidationSource::GlobalChange => Self::GlobalObservation,
+            UiDebugInvalidationSource::Hover => Self::HoverEvent,
+            UiDebugInvalidationSource::Focus => Self::FocusEvent,
+            UiDebugInvalidationSource::Other => Self::Unknown,
+        }
+    }
+
+    pub fn as_str(self) -> Option<&'static str> {
+        match self {
+            Self::Unknown => None,
+            Self::ModelObservation => Some("model_observation"),
+            Self::GlobalObservation => Some("global_observation"),
+            Self::HoverEvent => Some("hover_event"),
+            Self::FocusEvent => Some("focus_event"),
+            Self::ScrollHandle => Some("scroll_handle"),
+            Self::FocusVisiblePolicy => Some("focus_visible_policy"),
+            Self::InputModalityPolicy => Some("input_modality_policy"),
+            Self::AnimationFrameRequest => Some("animation_frame_request"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct UiDebugInvalidationWalk {
     pub root: NodeId,
     pub root_element: Option<GlobalElementId>,
     pub inv: Invalidation,
     pub source: UiDebugInvalidationSource,
+    pub detail: UiDebugInvalidationDetail,
     pub walked_nodes: u32,
     pub truncated_at: Option<NodeId>,
 }
@@ -244,6 +305,56 @@ pub struct UiDebugCacheRootStats {
     pub reused: bool,
     pub contained_layout: bool,
     pub paint_replayed_ops: u32,
+    pub reuse_reason: UiDebugCacheRootReuseReason,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct UiDebugLayoutEngineMeasureHotspot {
+    pub node: NodeId,
+    pub measure_time: Duration,
+    pub calls: u64,
+    pub cache_hits: u64,
+    pub element: Option<GlobalElementId>,
+    pub element_kind: Option<&'static str>,
+    pub top_children: Vec<UiDebugLayoutEngineMeasureChildHotspot>,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct UiDebugLayoutEngineMeasureChildHotspot {
+    pub child: NodeId,
+    pub measure_time: Duration,
+    pub calls: u64,
+    pub element: Option<GlobalElementId>,
+    pub element_kind: Option<&'static str>,
+}
+
+#[derive(Debug, Clone)]
+pub struct UiDebugLayoutEngineSolve {
+    pub root: NodeId,
+    pub solve_time: Duration,
+    pub measure_calls: u64,
+    pub measure_cache_hits: u64,
+    pub measure_time: Duration,
+    pub top_measures: Vec<UiDebugLayoutEngineMeasureHotspot>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiDebugCacheRootReuseReason {
+    FirstMount,
+    NodeRecreated,
+    MarkedReuseRoot,
+    NotMarkedReuseRoot,
+}
+
+impl UiDebugCacheRootReuseReason {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::FirstMount => "first_mount",
+            Self::NodeRecreated => "node_recreated",
+            Self::MarkedReuseRoot => "marked_reuse_root",
+            Self::NotMarkedReuseRoot => "not_marked_reuse_root",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -251,6 +362,7 @@ struct DebugViewCacheRootRecord {
     root: NodeId,
     reused: bool,
     contained_layout: bool,
+    reuse_reason: UiDebugCacheRootReuseReason,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -522,9 +634,13 @@ pub struct UiTree<H: UiHost> {
     debug_stats: UiDebugFrameStats,
     debug_view_cache_roots: Vec<DebugViewCacheRootRecord>,
     debug_paint_cache_replays: HashMap<NodeId, u32>,
+    debug_layout_engine_solves: Vec<UiDebugLayoutEngineSolve>,
+    debug_measure_children: HashMap<NodeId, HashMap<NodeId, DebugMeasureChildRecord>>,
     debug_invalidation_walks: Vec<UiDebugInvalidationWalk>,
     debug_model_change_hotspots: Vec<UiDebugModelChangeHotspot>,
     debug_model_change_unobserved: Vec<UiDebugModelChangeUnobserved>,
+    debug_global_change_hotspots: Vec<UiDebugGlobalChangeHotspot>,
+    debug_global_change_unobserved: Vec<UiDebugGlobalChangeUnobserved>,
 
     view_cache_enabled: bool,
     paint_cache_policy: PaintCachePolicy,
@@ -571,9 +687,13 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_stats: UiDebugFrameStats::default(),
             debug_view_cache_roots: Vec::new(),
             debug_paint_cache_replays: HashMap::new(),
+            debug_layout_engine_solves: Vec::new(),
+            debug_measure_children: HashMap::new(),
             debug_invalidation_walks: Vec::new(),
             debug_model_change_hotspots: Vec::new(),
             debug_model_change_unobserved: Vec::new(),
+            debug_global_change_hotspots: Vec::new(),
+            debug_global_change_unobserved: Vec::new(),
             view_cache_enabled: false,
             paint_cache_policy: PaintCachePolicy::Auto,
             inspection_active: false,
@@ -595,6 +715,12 @@ struct MeasureReentrancyDiagnostics {
     last_log_frame: Option<FrameId>,
     /// Number of suppressed re-entrancy events since the last emitted warning.
     suppressed_since_last_log: u64,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub(crate) struct DebugMeasureChildRecord {
+    total_time: Duration,
+    calls: u64,
 }
 
 impl MeasureReentrancyDiagnostics {
@@ -662,9 +788,46 @@ impl<H: UiHost> UiTree<H> {
 
         self.debug_view_cache_roots.clear();
         self.debug_paint_cache_replays.clear();
+        self.debug_layout_engine_solves.clear();
+        self.debug_measure_children.clear();
         self.debug_invalidation_walks.clear();
         self.debug_model_change_hotspots.clear();
         self.debug_model_change_unobserved.clear();
+        self.debug_global_change_hotspots.clear();
+        self.debug_global_change_unobserved.clear();
+    }
+
+    pub(crate) fn debug_record_measure_child(
+        &mut self,
+        parent: NodeId,
+        child: NodeId,
+        elapsed: Duration,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        let entry = self
+            .debug_measure_children
+            .entry(parent)
+            .or_default()
+            .entry(child)
+            .or_default();
+        entry.total_time += elapsed;
+        entry.calls = entry.calls.saturating_add(1);
+    }
+
+    fn debug_take_top_measure_children(
+        &mut self,
+        parent: NodeId,
+        max: usize,
+    ) -> Vec<(NodeId, DebugMeasureChildRecord)> {
+        let Some(children) = self.debug_measure_children.remove(&parent) else {
+            return Vec::new();
+        };
+        let mut items: Vec<(NodeId, DebugMeasureChildRecord)> = children.into_iter().collect();
+        items.sort_by_key(|(_, r)| std::cmp::Reverse(r.total_time));
+        items.truncate(max);
+        items
     }
 
     pub(crate) fn debug_record_view_cache_root(
@@ -672,6 +835,7 @@ impl<H: UiHost> UiTree<H> {
         root: NodeId,
         reused: bool,
         contained_layout: bool,
+        reuse_reason: UiDebugCacheRootReuseReason,
     ) {
         if !self.debug_enabled {
             return;
@@ -680,6 +844,7 @@ impl<H: UiHost> UiTree<H> {
             root,
             reused,
             contained_layout,
+            reuse_reason,
         });
     }
 
@@ -688,6 +853,29 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
         *self.debug_paint_cache_replays.entry(node).or_default() += replayed_ops;
+    }
+
+    pub(crate) fn debug_record_layout_engine_solve(
+        &mut self,
+        root: NodeId,
+        solve_time: Duration,
+        measure_calls: u64,
+        measure_cache_hits: u64,
+        measure_time: Duration,
+        top_measures: Vec<UiDebugLayoutEngineMeasureHotspot>,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_layout_engine_solves
+            .push(UiDebugLayoutEngineSolve {
+                root,
+                solve_time,
+                measure_calls,
+                measure_cache_hits,
+                measure_time,
+                top_measures,
+            });
     }
 
     pub fn debug_cache_root_stats(&self) -> Vec<UiDebugCacheRootStats> {
@@ -708,11 +896,19 @@ impl<H: UiHost> UiTree<H> {
                     .get(&r.root)
                     .copied()
                     .unwrap_or(0),
+                reuse_reason: r.reuse_reason,
             })
             .collect();
 
         out.sort_by_key(|s| std::cmp::Reverse(s.paint_replayed_ops));
         out
+    }
+
+    pub fn debug_layout_engine_solves(&self) -> &[UiDebugLayoutEngineSolve] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_layout_engine_solves.as_slice()
     }
 
     pub(crate) fn node_bounds(&self, node: NodeId) -> Option<Rect> {
@@ -821,6 +1017,10 @@ impl<H: UiHost> UiTree<H> {
         self.debug_enabled = enabled;
     }
 
+    pub(crate) fn debug_enabled(&self) -> bool {
+        self.debug_enabled
+    }
+
     pub fn debug_stats(&self) -> UiDebugFrameStats {
         self.debug_stats
     }
@@ -844,6 +1044,20 @@ impl<H: UiHost> UiTree<H> {
             return &[];
         }
         self.debug_model_change_unobserved.as_slice()
+    }
+
+    pub fn debug_global_change_hotspots(&self) -> &[UiDebugGlobalChangeHotspot] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_global_change_hotspots.as_slice()
+    }
+
+    pub fn debug_global_change_unobserved(&self) -> &[UiDebugGlobalChangeUnobserved] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_global_change_unobserved.as_slice()
     }
 
     pub fn captured_for(&self, pointer_id: PointerId) -> Option<NodeId> {
@@ -1810,6 +2024,17 @@ impl<H: UiHost> UiTree<H> {
         inv: Invalidation,
         source: UiDebugInvalidationSource,
     ) {
+        let detail = UiDebugInvalidationDetail::from_source(source);
+        self.mark_invalidation_with_detail(node, inv, source, detail);
+    }
+
+    fn mark_invalidation_with_detail(
+        &mut self,
+        node: NodeId,
+        inv: Invalidation,
+        source: UiDebugInvalidationSource,
+        detail: UiDebugInvalidationDetail,
+    ) {
         let stop_at_view_cache = self.view_cache_active();
         self.record_invalidation_walk_call(source);
         let mut current = Some(node);
@@ -1845,6 +2070,7 @@ impl<H: UiHost> UiTree<H> {
                 root_element,
                 inv,
                 source,
+                detail,
                 walked_nodes,
                 truncated_at: hit_cache_root,
             });
@@ -1884,6 +2110,18 @@ impl<H: UiHost> UiTree<H> {
         inv: Invalidation,
         visited: &mut HashMap<NodeId, u8>,
         source: UiDebugInvalidationSource,
+    ) {
+        let detail = UiDebugInvalidationDetail::from_source(source);
+        self.mark_invalidation_dedup_with_detail(node, inv, visited, source, detail);
+    }
+
+    fn mark_invalidation_dedup_with_detail(
+        &mut self,
+        node: NodeId,
+        inv: Invalidation,
+        visited: &mut HashMap<NodeId, u8>,
+        source: UiDebugInvalidationSource,
+        detail: UiDebugInvalidationDetail,
     ) {
         let stop_at_view_cache = self.view_cache_active();
         let needed = Self::invalidation_mask(inv);
@@ -1938,6 +2176,7 @@ impl<H: UiHost> UiTree<H> {
                 root_element,
                 inv,
                 source,
+                detail,
                 walked_nodes,
                 truncated_at: hit_cache_root,
             });
@@ -1966,6 +2205,35 @@ impl<H: UiHost> UiTree<H> {
 
     pub fn invalidate(&mut self, node: NodeId, inv: Invalidation) {
         self.mark_invalidation(node, inv);
+    }
+
+    pub fn invalidate_with_source(
+        &mut self,
+        node: NodeId,
+        inv: Invalidation,
+        source: UiDebugInvalidationSource,
+    ) {
+        let detail = UiDebugInvalidationDetail::from_source(source);
+        self.mark_invalidation_with_detail(node, inv, source, detail);
+    }
+
+    pub fn invalidate_with_detail(
+        &mut self,
+        node: NodeId,
+        inv: Invalidation,
+        detail: UiDebugInvalidationDetail,
+    ) {
+        self.mark_invalidation_with_detail(node, inv, UiDebugInvalidationSource::Other, detail);
+    }
+
+    pub fn invalidate_with_source_and_detail(
+        &mut self,
+        node: NodeId,
+        inv: Invalidation,
+        source: UiDebugInvalidationSource,
+        detail: UiDebugInvalidationDetail,
+    ) {
+        self.mark_invalidation_with_detail(node, inv, source, detail);
     }
 
     fn propagation_depth_for(&mut self, start: NodeId) -> u32 {
@@ -2096,6 +2364,7 @@ impl<H: UiHost> UiTree<H> {
                     self.debug_model_change_hotspots = vec![UiDebugModelChangeHotspot {
                         model,
                         observation_edges: masks.len().min(u32::MAX as usize) as u32,
+                        changed: app.models().debug_last_changed_info_for_id(model),
                     }];
                 }
                 return self.propagate_observation_masks(
@@ -2137,6 +2406,7 @@ impl<H: UiHost> UiTree<H> {
                     .push(UiDebugModelChangeHotspot {
                         model,
                         observation_edges: edges.min(u32::MAX as usize) as u32,
+                        changed: app.models().debug_last_changed_info_for_id(model),
                     });
             }
             if edges == 0 {
@@ -2146,6 +2416,7 @@ impl<H: UiHost> UiTree<H> {
                         .push(UiDebugModelChangeUnobserved {
                             model,
                             created: app.models().debug_created_info_for_id(model),
+                            changed: app.models().debug_last_changed_info_for_id(model),
                         });
                 }
             }
@@ -2180,6 +2451,10 @@ impl<H: UiHost> UiTree<H> {
             return false;
         }
         self.begin_debug_frame_if_needed(app.frame_id());
+        if self.debug_enabled {
+            self.debug_global_change_hotspots.clear();
+            self.debug_global_change_unobserved.clear();
+        }
 
         if changed.len() == 1 {
             let global = changed[0];
@@ -2231,8 +2506,19 @@ impl<H: UiHost> UiTree<H> {
                         .or_insert(mask);
                 }
             }
+            if self.debug_enabled && edges > 0 {
+                self.debug_global_change_hotspots
+                    .push(UiDebugGlobalChangeHotspot {
+                        global,
+                        observation_edges: edges.min(u32::MAX as usize) as u32,
+                    });
+            }
             if edges == 0 {
                 unobserved_globals = unobserved_globals.saturating_add(1);
+                if self.debug_enabled {
+                    self.debug_global_change_unobserved
+                        .push(UiDebugGlobalChangeUnobserved { global });
+                }
             }
         }
 
@@ -2244,6 +2530,14 @@ impl<H: UiHost> UiTree<H> {
                 observation_edges_scanned.min(u32::MAX as usize) as u32;
             self.debug_stats.global_change_unobserved_globals =
                 unobserved_globals.min(u32::MAX as usize) as u32;
+
+            self.debug_global_change_hotspots
+                .sort_by(|a, b| b.observation_edges.cmp(&a.observation_edges));
+            self.debug_global_change_hotspots.truncate(5);
+
+            self.debug_global_change_unobserved
+                .sort_by_key(|u| type_id_sort_key(u.global));
+            self.debug_global_change_unobserved.truncate(5);
         }
         self.propagate_observation_masks(
             app,

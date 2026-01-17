@@ -541,19 +541,19 @@ fn ui_app_handle_event<S>(
     }
 
     #[cfg(feature = "diagnostics")]
-    app.with_global_mut(UiDiagnosticsService::default, |svc, app| {
+    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
         svc.record_event(app, window, event);
     });
 
     #[cfg(feature = "diagnostics")]
-    if app.with_global_mut(UiDiagnosticsService::default, |svc, app| {
+    if app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
         svc.maybe_intercept_event_for_picking(app, window, event)
     }) {
         return;
     }
 
     #[cfg(feature = "diagnostics")]
-    if app.with_global_mut(UiDiagnosticsService::default, |svc, app| {
+    if app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
         svc.maybe_intercept_event_for_inspect_shortcuts(app, window, event)
     }) {
         return;
@@ -693,7 +693,7 @@ fn ui_app_handle_model_changes<S>(
     } = context;
 
     #[cfg(feature = "diagnostics")]
-    app.with_global_mut(UiDiagnosticsService::default, |svc, _app| {
+    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
         svc.record_model_changes(window, changed);
     });
 
@@ -725,8 +725,8 @@ fn ui_app_handle_global_changes<S>(
     } = context;
 
     #[cfg(feature = "diagnostics")]
-    app.with_global_mut(UiDiagnosticsService::default, |svc, _app| {
-        svc.record_global_changes(window, changed);
+    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+        svc.record_global_changes(app, window, changed);
     });
 
     state.pending_invalidation.push_globals(changed);
@@ -824,6 +824,18 @@ fn ui_app_render<S>(
         scene,
     } = context;
 
+    #[cfg(feature = "tracing")]
+    let frame_span = tracing::info_span!(
+        "fret.frame",
+        window = ?window,
+        tick_id = app.tick_id().0,
+        frame_id = app.frame_id().0,
+        bounds = ?bounds,
+        scale_factor = scale_factor,
+    );
+    #[cfg(feature = "tracing")]
+    let _frame_guard = frame_span.enter();
+
     let hitch_config = frame_hitch_config();
     let hitch_total_started = hitch_config.map(|_| Instant::now());
     let mut hitch_view_ms: Option<u64> = None;
@@ -847,6 +859,10 @@ fn ui_app_render<S>(
     ));
 
     let view_started = hitch_config.map(|_| Instant::now());
+    #[cfg(feature = "tracing")]
+    let view_span = tracing::info_span!("fret.ui.view");
+    #[cfg(feature = "tracing")]
+    let _view_guard = view_span.enter();
     let root = RenderRootContext::new(&mut state.ui, app, services, window, bounds).render_root(
         driver.root_name,
         |cx| {
@@ -1034,6 +1050,10 @@ fn ui_app_render<S>(
     hotpatch_trace_log(&format!("ui_app_render: after set_root window={window:?}"));
 
     let overlay_started = hitch_config.map(|_| Instant::now());
+    #[cfg(feature = "tracing")]
+    let overlay_span = tracing::info_span!("fret.ui.overlay");
+    #[cfg(feature = "tracing")]
+    let _overlay_guard = overlay_span.enter();
     OverlayController::render(&mut state.ui, app, services, window, bounds);
     if let Some(started) = overlay_started {
         hitch_overlay_ms = Some(started.elapsed().as_millis() as u64);
@@ -1047,7 +1067,7 @@ fn ui_app_render<S>(
     #[cfg(feature = "diagnostics")]
     {
         let diag_inspection_active = app
-            .with_global_mut(UiDiagnosticsService::default, |svc, _app| {
+            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
                 svc.wants_inspection_active(window)
             });
         state.ui.set_inspection_active(diag_inspection_active);
@@ -1067,6 +1087,10 @@ fn ui_app_render<S>(
     scene.clear();
     let layout_started = hitch_config.map(|_| Instant::now());
     {
+        #[cfg(feature = "tracing")]
+        let layout_span = tracing::info_span!("fret.ui.layout");
+        #[cfg(feature = "tracing")]
+        let _layout_guard = layout_span.enter();
         let mut frame = UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.layout_all();
     }
@@ -1078,7 +1102,11 @@ fn ui_app_render<S>(
     #[cfg(feature = "diagnostics")]
     {
         let semantics_snapshot = state.ui.semantics_snapshot();
-        let drive = app.with_global_mut(UiDiagnosticsService::default, |svc, app| {
+        #[cfg(feature = "tracing")]
+        let diag_span = tracing::info_span!("fret.ui.diagnostics.drive_script");
+        #[cfg(feature = "tracing")]
+        let _diag_guard = diag_span.enter();
+        let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
             let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
             svc.drive_script_for_window(window, semantics_snapshot, element_runtime)
         });
@@ -1106,6 +1134,10 @@ fn ui_app_render<S>(
 
             let relayout_started = hitch_config.map(|_| Instant::now());
             {
+                #[cfg(feature = "tracing")]
+                let relayout_span = tracing::info_span!("fret.ui.layout.relayout_after_script");
+                #[cfg(feature = "tracing")]
+                let _relayout_guard = relayout_span.enter();
                 let mut frame =
                     UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
                 frame.layout_all();
@@ -1121,6 +1153,10 @@ fn ui_app_render<S>(
 
     let paint_started = hitch_config.map(|_| Instant::now());
     {
+        #[cfg(feature = "tracing")]
+        let paint_span = tracing::info_span!("fret.ui.paint");
+        #[cfg(feature = "tracing")]
+        let _paint_guard = paint_span.enter();
         let mut frame = UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.paint_all(scene);
     }
@@ -1131,7 +1167,7 @@ fn ui_app_render<S>(
 
     #[cfg(feature = "diagnostics")]
     {
-        app.with_global_mut(UiDiagnosticsService::default, |svc, app| {
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
             let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
             svc.record_snapshot(
                 app,
@@ -1213,7 +1249,7 @@ fn render_diag_inspect_overlay(
         inspect_enabled,
         consume_clicks,
         locked,
-    ) = app.with_global_mut(UiDiagnosticsService::default, |svc, _app| {
+    ) = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
         (
             svc.last_pointer_position(window),
             svc.last_picked_node_id(window),
@@ -1274,16 +1310,17 @@ fn render_diag_inspect_overlay(
 
     let hovered = if locked { None } else { hovered };
 
-    let (toast, best_selector) = app.with_global_mut(UiDiagnosticsService::default, |svc, _app| {
-        (
-            svc.inspect_toast_message(window).map(|s| s.to_string()),
-            svc.inspect_best_selector_json(window)
-                .map(|s| s.to_string()),
-        )
-    });
+    let (toast, best_selector) =
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            (
+                svc.inspect_toast_message(window).map(|s| s.to_string()),
+                svc.inspect_best_selector_json(window)
+                    .map(|s| s.to_string()),
+            )
+        });
 
     let (focus_summary, focus_path) =
-        app.with_global_mut(UiDiagnosticsService::default, |svc, _app| {
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
             (
                 svc.inspect_focus_summary_line(window)
                     .map(|s| s.to_string()),
@@ -1516,7 +1553,7 @@ fn ui_app_hot_reload_window<S>(
     state.root = None;
 
     #[cfg(feature = "diagnostics")]
-    app.with_global_mut(UiDiagnosticsService::default, |svc, _app| {
+    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
         svc.clear_window(window);
     });
 

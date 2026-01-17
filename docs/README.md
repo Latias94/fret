@@ -13,6 +13,8 @@ contracts early to avoid large rewrites later.
 - Renderer refactor: `docs/renderer-refactor-roadmap.md`
 - GPU debugging (RenderDoc): `docs/renderdoc-inspection.md`
 - Debugging playbook: `docs/debugging-playbook.md`
+- CPU timeline profiling (Tracy): `docs/tracy.md`
+- UI gallery profiling report (native): `docs/perf/ui-gallery-profile-report.md`
 - UI diagnostics + scripted repros: `docs/ui-diagnostics-and-scripted-tests.md`
 - Inspect workflow (picker + scripts): `docs/debugging-ui-with-inspector-and-scripts.md`
 - Viewport panels (engine/video): `docs/viewport-panels.md`

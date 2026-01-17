@@ -374,3 +374,34 @@ Recommended approach:
 
 1. Turn on tracing for the smallest set of crates relevant to the bug.
 2. Correlate the frame reason (input/timer/animation) with renderer passes (RenderDoc markers).
+
+### 4.1 Tracy (timeline view via `tracing`)
+
+Fret can stream `tracing` spans/events into the Tracy profiler for a **timeline view** (frame phases,
+threads, and nested spans).
+
+See also: `docs/tracy.md`.
+
+Notes:
+
+- This is currently a **native-only** workflow (not `wasm32`).
+- Tracy complements (not replaces) diagnostics bundles:
+  - use `fretboard diag perf` / `diag stats --sort time` to find the slowest frames,
+  - use Tracy to inspect **what ran** during those frames.
+
+#### 4.1.1 Enable Tracy
+
+1. Start Tracy Profiler (the UI) and wait for a client connection.
+2. Run your app with the `fret-bootstrap/tracy` feature and the `FRET_TRACY=1` env var:
+
+```powershell
+$env:FRET_TRACY=1
+
+# Optional: include cache-root spans inside `fret-ui` (these are `TRACE` level).
+$env:RUST_LOG="info,fret_ui=trace"
+
+cargo run -p fret-ui-gallery --release --features fret-bootstrap/tracy
+```
+
+If you don't enable `fret_ui=trace`, you'll still see the higher-level frame spans, but not the
+per-cache-root spans.

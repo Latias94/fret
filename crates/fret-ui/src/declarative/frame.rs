@@ -61,6 +61,49 @@ pub(crate) enum ElementInstance {
     Scrollbar(crate::element::ScrollbarProps),
 }
 
+impl ElementInstance {
+    pub fn kind_name(&self) -> &'static str {
+        match self {
+            Self::Container(_) => "Container",
+            Self::Semantics(_) => "Semantics",
+            Self::SemanticFlex(_) => "SemanticFlex",
+            Self::FocusScope(_) => "FocusScope",
+            Self::InteractivityGate(_) => "InteractivityGate",
+            Self::Opacity(_) => "Opacity",
+            Self::EffectLayer(_) => "EffectLayer",
+            Self::ViewCache(_) => "ViewCache",
+            Self::VisualTransform(_) => "VisualTransform",
+            Self::RenderTransform(_) => "RenderTransform",
+            Self::Anchored(_) => "Anchored",
+            Self::Pressable(_) => "Pressable",
+            Self::PointerRegion(_) => "PointerRegion",
+            Self::InternalDragRegion(_) => "InternalDragRegion",
+            Self::DismissibleLayer(_) => "DismissibleLayer",
+            Self::RovingFlex(_) => "RovingFlex",
+            Self::Stack(_) => "Stack",
+            Self::Spacer(_) => "Spacer",
+            Self::Text(_) => "Text",
+            Self::StyledText(_) => "StyledText",
+            Self::SelectableText(_) => "SelectableText",
+            Self::TextInput(_) => "TextInput",
+            Self::TextArea(_) => "TextArea",
+            Self::ResizablePanelGroup(_) => "ResizablePanelGroup",
+            Self::VirtualList(_) => "VirtualList",
+            Self::Flex(_) => "Flex",
+            Self::Grid(_) => "Grid",
+            Self::Image(_) => "Image",
+            Self::Canvas(_) => "Canvas",
+            Self::ViewportSurface(_) => "ViewportSurface",
+            Self::SvgIcon(_) => "SvgIcon",
+            Self::Spinner(_) => "Spinner",
+            Self::HoverRegion(_) => "HoverRegion",
+            Self::WheelRegion(_) => "WheelRegion",
+            Self::Scroll(_) => "Scroll",
+            Self::Scrollbar(_) => "Scrollbar",
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct ElementRecord {
     pub element: GlobalElementId,
@@ -99,7 +142,7 @@ pub(crate) fn element_record_for_node<H: UiHost>(
     window: AppWindowId,
     node: NodeId,
 ) -> Option<ElementRecord> {
-    app.with_global_mut(ElementFrame::default, |frame, _app| {
+    app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
         frame
             .windows
             .get(&window)
@@ -155,7 +198,7 @@ pub(crate) fn register_scroll_handle_bindings_batch<H: UiHost>(
     frame_id: FrameId,
     bindings: impl IntoIterator<Item = ScrollHandleBinding>,
 ) {
-    app.with_global_mut(ScrollHandleRegistry::default, |registry, _app| {
+    app.with_global_mut_untracked(ScrollHandleRegistry::default, |registry, _app| {
         let window_registry = registry.windows.entry(window).or_default();
         prepare_window_scroll_registry_for_frame(window_registry, frame_id);
 
@@ -178,7 +221,7 @@ pub(crate) fn bound_elements_for_scroll_handle<H: UiHost>(
     window: AppWindowId,
     handle_key: usize,
 ) -> Vec<GlobalElementId> {
-    app.with_global_mut(ScrollHandleRegistry::default, |registry, _app| {
+    app.with_global_mut_untracked(ScrollHandleRegistry::default, |registry, _app| {
         registry
             .windows
             .get(&window)
@@ -192,7 +235,7 @@ pub(crate) fn take_changed_scroll_handle_keys<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
 ) -> Vec<usize> {
-    app.with_global_mut(ScrollHandleRegistry::default, |registry, _app| {
+    app.with_global_mut_untracked(ScrollHandleRegistry::default, |registry, _app| {
         let Some(window_registry) = registry.windows.get_mut(&window) else {
             return Vec::new();
         };
@@ -214,7 +257,7 @@ pub(crate) fn element_id_map_for_window<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
 ) -> HashMap<u64, NodeId> {
-    app.with_global_mut(ElementFrame::default, |frame, _app| {
+    app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
         frame
             .windows
             .get(&window)

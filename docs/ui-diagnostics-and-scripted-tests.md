@@ -88,6 +88,38 @@ By default bundles go under `target/fret-diag/<timestamp>/` and `target/fret-dia
 5. The app executes **one step per frame** (deterministic), and (by default) auto-dumps after actions.
    Use `cargo run -p fretboard -- diag latest` to grab the newest bundle.
 
+## Quick Start (scripted perf triage)
+
+Use this when the UI "feels slow" and you need a repeatable way to find the worst frames.
+
+1. Run the app with diagnostics enabled:
+
+   - `FRET_DIAG=1`
+
+2. Run a predefined suite and report the slowest frames:
+
+   - Reuse an already-running app:
+
+     - `cargo run -p fretboard -- diag perf ui-gallery --sort time`
+
+     - Machine-readable JSON:
+
+       - `cargo run -p fretboard -- diag perf ui-gallery --sort time --json`
+
+   - Or launch a fresh process per script (clean state, slower):
+
+     - `cargo run -p fretboard -- diag perf ui-gallery --sort time --launch -- cargo run -p fret-ui-gallery --release`
+
+3. Inspect the slowest snapshots in the resulting bundle:
+
+   - `cargo run -p fretboard -- diag stats <bundle_dir> --sort time --top 20`
+
+Notes:
+
+- When view caching is active, bundles include cache-root stats (replay ops, reuse reasons) to help
+  identify "cache misses" vs "we are repainting anyway".
+- For a CPU timeline view of these same frames, see: `docs/tracy.md`.
+
 ## Quick Start (picking / "inspect target")
 
 This is the fastest way to author stable selectors (GPUI/Zed-style inspect):
@@ -172,12 +204,23 @@ At a high level:
 - `windows[].events[]`: recent normalized `fret-core::Event` (with redaction controls)
 - `windows[].snapshots[]`: recent `UiDiagnosticsSnapshotV1`
   - `debug.stats`: layout/paint timings and counters
+  - `debug.layout_engine_solves`: per-frame layout engine solves (roots + solve/measure time + top measure hotspots)
+  - `debug.invalidation_walks`: top invalidation walks (roots, sources, and optional `detail` taxonomy)
+  - `debug.cache_roots`: view-cache root stats (reuse + paint replay ops, with optional `reuse_reason`)
   - `debug.layers_in_paint_order`: overlay roots / barrier behavior / hit-test intent
   - `debug.hit_test`: last pointer position + hit summary
   - `debug.element_runtime`: `ElementRuntime` window-level state (focus/selection/observed models/globals; includes optional `*_path` strings for key elements)
   - `debug.semantics`: the exported semantics snapshot (ADR 0033) when enabled
 
 For AI triage, the bundle is intentionally self-contained: it is the unit you attach to a bug report.
+
+Common `debug.invalidation_walks[].detail` values (best-effort, may evolve):
+
+- `model_observation`, `global_observation`
+- `hover_event`, `focus_event`
+- `scroll_handle`
+- `focus_visible_policy`, `input_modality_policy`
+- `animation_frame_request`
 
 ## Environment variables (current)
 

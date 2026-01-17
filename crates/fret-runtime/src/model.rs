@@ -21,6 +21,14 @@ pub struct ModelCreatedDebugInfo {
     pub column: u32,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct ModelChangedDebugInfo {
+    pub type_name: &'static str,
+    pub file: &'static str,
+    pub line: u32,
+    pub column: u32,
+}
+
 /// A reference-counted handle to a typed model stored in a [`ModelStore`].
 ///
 /// This is intentionally gpui-like (`Entity<T>`):
@@ -57,6 +65,7 @@ impl<T> Model<T> {
         host.read(self, f)
     }
 
+    #[track_caller]
     pub fn update<H: ModelHost, R>(
         &self,
         host: &mut H,
@@ -65,7 +74,33 @@ impl<T> Model<T> {
     where
         T: Any,
     {
-        host.update_model(self, f)
+        let changed_at = Location::caller();
+
+        let mut lease = host.models_mut().lease(self)?;
+        let result = if cfg!(panic = "unwind") {
+            catch_unwind(AssertUnwindSafe(|| {
+                let mut cx = ModelCx { host };
+                f(lease.value_mut(), &mut cx)
+            }))
+        } else {
+            Ok({
+                let mut cx = ModelCx { host };
+                f(lease.value_mut(), &mut cx)
+            })
+        };
+
+        match result {
+            Ok(value) => {
+                lease.mark_dirty();
+                host.models_mut()
+                    .end_lease_with_changed_at(&mut lease, changed_at);
+                Ok(value)
+            }
+            Err(panic) => {
+                host.models_mut().end_lease(&mut lease);
+                resume_unwind(panic)
+            }
+        }
     }
 
     pub fn revision<H: ModelHost>(&self, host: &H) -> Option<u64>
@@ -73,6 +108,15 @@ impl<T> Model<T> {
         T: Any,
     {
         host.model_revision(self)
+    }
+
+    #[track_caller]
+    pub fn notify<H: ModelHost>(&self, host: &mut H) -> Result<(), ModelUpdateError>
+    where
+        T: Any,
+    {
+        host.models_mut()
+            .notify_with_changed_at(self, Location::caller())
     }
 
     pub fn read_ref<H: ModelHost, R>(
@@ -218,11 +262,14 @@ pub trait ModelHost {
         self.models().revision(model)
     }
 
+    #[track_caller]
     fn update_model<T: Any, R>(
         &mut self,
         model: &Model<T>,
         f: impl FnOnce(&mut T, &mut ModelCx<'_, Self>) -> R,
     ) -> Result<R, ModelUpdateError> {
+        let changed_at = Location::caller();
+
         let mut lease = self.models_mut().lease(model)?;
         let result = if cfg!(panic = "unwind") {
             catch_unwind(AssertUnwindSafe(|| {
@@ -239,7 +286,8 @@ pub trait ModelHost {
         match result {
             Ok(value) => {
                 lease.mark_dirty();
-                self.models_mut().end_lease(&mut lease);
+                self.models_mut()
+                    .end_lease_with_changed_at(&mut lease, changed_at);
                 Ok(value)
             }
             Err(panic) => {
@@ -282,6 +330,10 @@ struct ModelEntry {
     leased_at: Option<&'static Location<'static>>,
     #[cfg(debug_assertions)]
     leased_type: Option<&'static str>,
+    #[cfg(debug_assertions)]
+    last_changed_at: Option<&'static Location<'static>>,
+    #[cfg(debug_assertions)]
+    last_changed_type: Option<&'static str>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -409,6 +461,28 @@ impl ModelStore {
         }
     }
 
+    pub fn debug_last_changed_info_for_id(&self, id: ModelId) -> Option<ModelChangedDebugInfo> {
+        #[cfg(debug_assertions)]
+        {
+            let state = self.state();
+            let entry = state.storage.get(id)?;
+            let at = entry.last_changed_at?;
+            let type_name = entry.last_changed_type.unwrap_or("<unknown>");
+            return Some(ModelChangedDebugInfo {
+                type_name,
+                file: at.file(),
+                line: at.line(),
+                column: at.column(),
+            });
+        }
+
+        #[cfg(not(debug_assertions))]
+        {
+            let _ = id;
+            None
+        }
+    }
+
     fn inc_strong(&self, id: ModelId) {
         let mut state = self.state_mut();
         let Some(entry) = state.storage.get_mut(id) else {
@@ -462,11 +536,21 @@ impl ModelStore {
     pub fn take_changed_models(&mut self) -> Vec<ModelId> {
         let mut state = self.state_mut();
         state.changed_dedup.clear();
-        std::mem::take(&mut state.changed)
+        let changed = std::mem::take(&mut state.changed);
+        changed
+            .into_iter()
+            .filter(|&id| {
+                state
+                    .storage
+                    .get(id)
+                    .is_some_and(|entry| entry.strong > 0 && entry.value.is_some())
+            })
+            .collect()
     }
 
     #[track_caller]
     pub fn insert<T: Any>(&mut self, value: T) -> Model<T> {
+        #[cfg(debug_assertions)]
         let caller = Location::caller();
         let mut state = self.state_mut();
         let id = state.storage.insert(ModelEntry {
@@ -482,6 +566,10 @@ impl ModelStore {
             leased_at: None,
             #[cfg(debug_assertions)]
             leased_type: None,
+            #[cfg(debug_assertions)]
+            last_changed_at: None,
+            #[cfg(debug_assertions)]
+            last_changed_type: None,
         });
         Model {
             store: self.clone(),
@@ -507,7 +595,7 @@ impl ModelStore {
             Ok(f(lease.value_ref()))
         };
 
-        self.end_lease_shared(&mut lease);
+        self.end_lease_shared(&mut lease, None);
 
         match result {
             Ok(value) => Ok(value),
@@ -592,11 +680,14 @@ impl ModelStore {
         state.storage.get(model.id).map(|e| e.revision)
     }
 
+    #[track_caller]
     pub fn update<T: Any, R>(
         &mut self,
         model: &Model<T>,
         f: impl FnOnce(&mut T) -> R,
     ) -> Result<R, ModelUpdateError> {
+        let changed_at = Location::caller();
+
         let mut lease = self.lease(model)?;
         let result = if cfg!(panic = "unwind") {
             catch_unwind(AssertUnwindSafe(|| f(lease.value_mut())))
@@ -607,7 +698,7 @@ impl ModelStore {
         match result {
             Ok(value) => {
                 lease.mark_dirty();
-                self.end_lease(&mut lease);
+                self.end_lease_with_changed_at(&mut lease, changed_at);
                 Ok(value)
             }
             Err(panic) => {
@@ -619,6 +710,7 @@ impl ModelStore {
 
     #[track_caller]
     fn lease_shared<T: Any>(&self, model: &Model<T>) -> Result<ModelLease<T>, ModelUpdateError> {
+        #[cfg(debug_assertions)]
         let caller = Location::caller();
         let boxed = {
             let mut state = self.state_mut();
@@ -717,7 +809,11 @@ impl ModelStore {
         self.lease_shared(model)
     }
 
-    fn end_lease_shared<T: Any>(&self, lease: &mut ModelLease<T>) {
+    fn end_lease_shared<T: Any>(
+        &self,
+        lease: &mut ModelLease<T>,
+        changed_at: Option<&'static Location<'static>>,
+    ) {
         let Some(value) = lease.value.take() else {
             return;
         };
@@ -736,6 +832,11 @@ impl ModelStore {
                 }
                 if lease.dirty {
                     entry.revision = entry.revision.saturating_add(1);
+                    #[cfg(debug_assertions)]
+                    {
+                        entry.last_changed_at = changed_at;
+                        entry.last_changed_type = Some(std::any::type_name::<T>());
+                    }
                     // NOTE: `entry` holds a mutable borrow of `state`, so defer the `mark_changed` call.
                 }
                 let should_remove = entry.pending_drop && entry.strong == 0;
@@ -756,7 +857,54 @@ impl ModelStore {
     }
 
     pub fn end_lease<T: Any>(&mut self, lease: &mut ModelLease<T>) {
-        self.end_lease_shared(lease);
+        self.end_lease_shared(lease, None);
+    }
+
+    pub fn end_lease_with_changed_at<T: Any>(
+        &mut self,
+        lease: &mut ModelLease<T>,
+        changed_at: &'static Location<'static>,
+    ) {
+        self.end_lease_shared(lease, Some(changed_at));
+    }
+
+    pub fn notify_with_changed_at<T: Any>(
+        &mut self,
+        model: &Model<T>,
+        changed_at: &'static Location<'static>,
+    ) -> Result<(), ModelUpdateError> {
+        let id = model.id;
+
+        let mut state = self.state_mut();
+        {
+            let Some(entry) = state.storage.get_mut(id) else {
+                return Err(ModelUpdateError::NotFound);
+            };
+            if entry.strong == 0 {
+                return Err(ModelUpdateError::NotFound);
+            }
+            let Some(value) = entry.value.as_ref() else {
+                return Err(ModelUpdateError::AlreadyLeased);
+            };
+            if !value.is::<T>() {
+                return Err(ModelUpdateError::TypeMismatch);
+            }
+
+            entry.revision = entry.revision.saturating_add(1);
+            #[cfg(debug_assertions)]
+            {
+                entry.last_changed_at = Some(changed_at);
+                entry.last_changed_type = Some(std::any::type_name::<T>());
+            }
+        }
+
+        Self::mark_changed_locked(&mut state, id);
+        Ok(())
+    }
+
+    #[track_caller]
+    pub fn notify<T: Any>(&mut self, model: &Model<T>) -> Result<(), ModelUpdateError> {
+        self.notify_with_changed_at(model, Location::caller())
     }
 }
 
@@ -908,6 +1056,18 @@ mod tests {
         assert!(!store.state().storage.contains_key(id));
     }
 
+    #[test]
+    fn take_changed_models_filters_dropped_entries() {
+        let mut store = ModelStore::default();
+        let model = store.insert(123_u32);
+
+        let _ = store.update(&model, |v| *v = 456_u32);
+        drop(model);
+
+        let changed = store.take_changed_models();
+        assert_eq!(changed.len(), 0);
+    }
+
     #[allow(clippy::mutable_key_type)]
     #[test]
     fn model_equality_and_hash_are_scoped_to_the_store() {
@@ -927,5 +1087,30 @@ mod tests {
         let weak_a = a.downgrade();
         let weak_b = b.downgrade();
         assert_ne!(weak_a, weak_b);
+    }
+
+    #[test]
+    fn notify_marks_changed_and_bumps_revision() {
+        let mut store = ModelStore::default();
+        let model = store.insert(123_u32);
+
+        assert_eq!(store.revision(&model), Some(0));
+        store.notify(&model).expect("notify should succeed");
+        assert_eq!(store.revision(&model), Some(1));
+
+        let changed = store.take_changed_models();
+        assert_eq!(changed, vec![model.id()]);
+    }
+
+    #[test]
+    fn notify_errors_while_leased() {
+        let mut store = ModelStore::default();
+        let model = store.insert(123_u32);
+
+        let mut lease = store.lease(&model).expect("lease should succeed");
+        let err = store.notify(&model).expect_err("notify should fail");
+        assert!(matches!(err, ModelUpdateError::AlreadyLeased));
+
+        store.end_lease(&mut lease);
     }
 }

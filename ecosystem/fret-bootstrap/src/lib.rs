@@ -476,6 +476,7 @@ pub fn init_diagnostics() {
 #[cfg(all(not(target_arch = "wasm32"), feature = "tracing"))]
 pub fn init_tracing() {
     use tracing_subscriber::EnvFilter;
+    use tracing_subscriber::prelude::*;
 
     const DEFAULT: &str = "info,fret=info,fret_launch=info,fret_render=info";
 
@@ -485,10 +486,88 @@ pub fn init_tracing() {
         .and_then(|v| EnvFilter::try_new(v).ok())
         .unwrap_or_else(|| EnvFilter::try_new(DEFAULT).expect("default tracing filter is valid"));
 
-    let _ = tracing_subscriber::fmt()
-        .with_env_filter(filter)
-        .with_target(false)
-        .compact()
+    #[cfg(feature = "tracy")]
+    {
+        let tracy_enabled = std::env::var_os("FRET_TRACY").is_some_and(|v| !v.is_empty());
+        if tracy_enabled {
+            use tracing_subscriber::fmt::format::DefaultFields;
+
+            #[derive(Default)]
+            struct FretTracyConfig {
+                fmt: DefaultFields,
+                callstack_depth: u16,
+            }
+
+            impl tracing_tracy::Config for FretTracyConfig {
+                type Formatter = DefaultFields;
+
+                fn formatter(&self) -> &Self::Formatter {
+                    &self.fmt
+                }
+
+                fn stack_depth(&self, metadata: &tracing::Metadata<'_>) -> u16 {
+                    if self.callstack_depth == 0 {
+                        return 0;
+                    }
+
+                    match metadata.name() {
+                        "fret.ui.layout"
+                        | "fret.ui.paint"
+                        | "fret_ui.layout_all"
+                        | "fret_ui.paint_all"
+                        | "fret.ui.layout_engine.solve"
+                        | "fret.ui.paint_cache.replay"
+                        | "fret.runner.redraw"
+                        | "fret.runner.prepare"
+                        | "fret.runner.render"
+                        | "fret.runner.record"
+                        | "fret.runner.present"
+                        | "fret.runner.render_scene"
+                        | "ui.cache_root.mount"
+                        | "ui.cache_root.reuse"
+                        | "ui.cache_root.layout"
+                        | "ui.cache_root.paint" => self.callstack_depth,
+                        _ => 0,
+                    }
+                }
+            }
+
+            let callstack_depth = std::env::var("FRET_TRACY_CALLSTACK_DEPTH")
+                .ok()
+                .and_then(|v| v.parse::<u16>().ok())
+                .unwrap_or(16);
+            let callstack_enabled =
+                std::env::var_os("FRET_TRACY_CALLSTACK").is_some_and(|v| !v.is_empty());
+
+            let config = FretTracyConfig {
+                fmt: DefaultFields::default(),
+                callstack_depth: if callstack_enabled {
+                    callstack_depth
+                } else {
+                    0
+                },
+            };
+
+            let _ = tracing_subscriber::registry()
+                .with(filter.clone())
+                .with(
+                    tracing_subscriber::fmt::layer()
+                        .with_target(false)
+                        .compact(),
+                )
+                .with(tracing_tracy::TracyLayer::new(config))
+                .try_init();
+            return;
+        }
+    }
+
+    let _ = tracing_subscriber::registry()
+        .with(filter)
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_target(false)
+                .compact(),
+        )
         .try_init();
 }
 
