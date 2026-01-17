@@ -1257,6 +1257,8 @@ impl UiGalleryDriver {
                         .get_model_copied(&inspector_enabled, Invalidation::Layout)
                         .unwrap_or(false)
                     {
+                        cx.observe_model(&inspector_last_pointer, Invalidation::Paint);
+
                         let mut props = fret_ui::element::PointerRegionProps::default();
                         props.layout.size.width = fret_ui::element::Length::Fill;
                         props.layout.size.height = fret_ui::element::Length::Fill;

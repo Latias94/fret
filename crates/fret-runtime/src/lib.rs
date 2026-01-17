@@ -47,7 +47,10 @@ pub use input::{
 pub use keymap::{BindingV1, KeySpecV1, KeymapError, KeymapFileV1};
 pub use keymap::{DefaultKeybinding, Keymap, KeymapContinuation, KeymapService, PlatformFilter};
 pub use menu::{Menu, MenuBar, MenuItem};
-pub use model::{Model, ModelCx, ModelHost, ModelId, ModelStore, ModelUpdateError, WeakModel};
+pub use model::{
+    Model, ModelCreatedDebugInfo, ModelCx, ModelHost, ModelId, ModelStore, ModelUpdateError,
+    WeakModel,
+};
 pub use platform_completion::PlatformCompletion;
 pub use time::TickId;
 pub use ui_host::{CommandsHost, DragHost, EffectSink, GlobalsHost, ModelsHost, TimeHost, UiHost};
