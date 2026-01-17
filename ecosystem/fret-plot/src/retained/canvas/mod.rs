@@ -12,13 +12,14 @@ use self::readout::apply_readout_policy;
 pub(super) use self::util::contains_point;
 use self::util::{dim_color, offset_rect, overlay_rect_in_plot};
 
+use fret_canvas::cache::SceneOpCache;
 use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_canvas::text::{PreparedText, TextCache};
 use fret_core::geometry::{Point, Px, Rect, Size};
 use fret_core::scene::{Color, DrawOrder, SceneOp};
 use fret_core::{
     Event, FontId, FontWeight, KeyCode, MouseButton, PathId, PointerEvent, SemanticsRole,
-    TextConstraints, TextOverflow, TextSlant, TextStyle, TextWrap, UiServices,
+    TextConstraints, TextOverflow, TextSlant, TextStyle, TextWrap, Transform2D, UiServices,
 };
 use fret_runtime::{Model, TextFontStackKey};
 use fret_ui::Theme;
@@ -461,6 +462,7 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
 
     heatmap_colorbar_text_key: Option<u64>,
     heatmap_colorbar_text: Vec<PreparedText>,
+    heatmap_colorbar_gradient_cache: SceneOpCache<u64>,
 
     #[cfg(debug_assertions)]
     debug_overlay: bool,
@@ -995,6 +997,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
 
             heatmap_colorbar_text_key: None,
             heatmap_colorbar_text: Vec::new(),
+            heatmap_colorbar_gradient_cache: SceneOpCache::default(),
 
             #[cfg(debug_assertions)]
             debug_overlay: false,
@@ -4719,6 +4722,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
 
             self.heatmap_colorbar_text_key = None;
             self.heatmap_colorbar_text.clear();
+            self.heatmap_colorbar_gradient_cache.clear();
 
             #[cfg(debug_assertions)]
             {
@@ -5167,44 +5171,58 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     });
 
                     let colormap = resolved_style.heatmap_colormap;
-                    for i in 0..steps {
-                        let t0 = (i as f32) / (steps as f32);
-                        let t1 = ((i + 1) as f32) / (steps as f32);
-                        let t = (t0 + t1) * 0.5;
-                        let color = crate::plot::colormap::sample(colormap, t);
+                    cx.scene.with_transform(
+                        Transform2D::translation(layout.plot.origin),
+                        |scene| {
+                            let mut gradient_key = 0u64;
+                            gradient_key = Self::hash_u64(gradient_key, u64::from(colormap.key()));
+                            gradient_key = Self::hash_u64(gradient_key, u64::from(steps as u32));
+                            gradient_key = Self::hash_f32_bits(gradient_key, bar_left);
+                            gradient_key = Self::hash_f32_bits(gradient_key, bar_top);
+                            gradient_key = Self::hash_f32_bits(gradient_key, bar_w);
+                            gradient_key = Self::hash_f32_bits(gradient_key, bar_h);
 
-                        let y0 = bar_top + (1.0 - t1) * bar_h;
-                        let h = (t1 - t0) * bar_h;
-                        cx.scene.push(SceneOp::Quad {
-                            order: DrawOrder(4),
-                            rect: Rect::new(
-                                Point::new(
-                                    Px(layout.plot.origin.x.0 + bar_left),
-                                    Px(layout.plot.origin.y.0 + y0),
+                            self.heatmap_colorbar_gradient_cache.replay_or_record(
+                                gradient_key,
+                                scene,
+                                Point::new(Px(0.0), Px(0.0)),
+                                |scene| {
+                                    for i in 0..steps {
+                                        let t0 = (i as f32) / (steps as f32);
+                                        let t1 = ((i + 1) as f32) / (steps as f32);
+                                        let t = (t0 + t1) * 0.5;
+                                        let color = crate::plot::colormap::sample(colormap, t);
+
+                                        let y0 = bar_top + (1.0 - t1) * bar_h;
+                                        let h = (t1 - t0) * bar_h;
+                                        scene.push(SceneOp::Quad {
+                                            order: DrawOrder(4),
+                                            rect: Rect::new(
+                                                Point::new(Px(bar_left), Px(y0)),
+                                                Size::new(Px(bar_w), Px(h.max(1.0))),
+                                            ),
+                                            background: color,
+                                            border: fret_core::Edges::all(Px(0.0)),
+                                            border_color: Color::TRANSPARENT,
+                                            corner_radii: fret_core::Corners::all(Px(0.0)),
+                                        });
+                                    }
+                                },
+                            );
+
+                            scene.push(SceneOp::Quad {
+                                order: DrawOrder(5),
+                                rect: Rect::new(
+                                    Point::new(Px(bar_left), Px(bar_top)),
+                                    Size::new(Px(bar_w), Px(bar_h)),
                                 ),
-                                Size::new(Px(bar_w), Px(h.max(1.0))),
-                            ),
-                            background: color,
-                            border: fret_core::Edges::all(Px(0.0)),
-                            border_color: Color::TRANSPARENT,
-                            corner_radii: fret_core::Corners::all(Px(0.0)),
-                        });
-                    }
-
-                    cx.scene.push(SceneOp::Quad {
-                        order: DrawOrder(5),
-                        rect: Rect::new(
-                            Point::new(
-                                Px(layout.plot.origin.x.0 + bar_left),
-                                Px(layout.plot.origin.y.0 + bar_top),
-                            ),
-                            Size::new(Px(bar_w), Px(bar_h)),
-                        ),
-                        background: Color::TRANSPARENT,
-                        border: fret_core::Edges::all(Px(1.0)),
-                        border_color: tooltip_border,
-                        corner_radii: fret_core::Corners::all(Px(0.0)),
-                    });
+                                background: Color::TRANSPARENT,
+                                border: fret_core::Edges::all(Px(1.0)),
+                                border_color: tooltip_border,
+                                corner_radii: fret_core::Corners::all(Px(0.0)),
+                            });
+                        },
+                    );
 
                     let text_color = tooltip_text_color;
                     let text_margin = 2.0_f32;
@@ -8022,6 +8040,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         self.overlays_text.clear();
         self.heatmap_colorbar_text_key = None;
         self.heatmap_colorbar_text.clear();
+        self.heatmap_colorbar_gradient_cache.clear();
 
         #[cfg(debug_assertions)]
         {
