@@ -35,7 +35,7 @@ use super::YAxis;
 use super::layers::resolve_series_color;
 use super::layers::{
     PlotCursorReadoutArgs, PlotCursorReadoutRow, PlotHitTestArgs, PlotHover, PlotLayer,
-    PlotPaintArgs, PlotQuad, SeriesMeta,
+    PlotPaintArgs, PlotQuad, PlotQuadsSceneCachePolicy, SeriesMeta,
 };
 use super::layout::{PlotLayout, PlotRegion};
 use super::state::{
@@ -463,6 +463,7 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     heatmap_colorbar_text_key: Option<u64>,
     heatmap_colorbar_text: Vec<PreparedText>,
     heatmap_colorbar_gradient_cache: SceneOpCache<u64>,
+    quads_scene_cache: SceneOpCache<u64>,
 
     #[cfg(debug_assertions)]
     debug_overlay: bool,
@@ -998,6 +999,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             heatmap_colorbar_text_key: None,
             heatmap_colorbar_text: Vec::new(),
             heatmap_colorbar_gradient_cache: SceneOpCache::default(),
+            quads_scene_cache: SceneOpCache::default(),
 
             #[cfg(debug_assertions)]
             debug_overlay: false,
@@ -4723,6 +4725,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             self.heatmap_colorbar_text_key = None;
             self.heatmap_colorbar_text.clear();
             self.heatmap_colorbar_gradient_cache.clear();
+            self.quads_scene_cache.clear();
 
             #[cfg(debug_assertions)]
             {
@@ -5003,24 +5006,75 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 .or(self.legend_hover);
 
             let mut emphasized_path: Option<(PathId, Color)> = None;
-            for quad in self.rebuild_quads_if_needed(
-                cx,
-                layout.plot,
-                view_bounds,
-                view_bounds_y2,
-                view_bounds_y3,
-                view_bounds_y4,
-                hidden,
-                resolved_style,
-            ) {
-                cx.scene.push(SceneOp::Quad {
-                    order: quad.order,
-                    rect: offset_rect(quad.rect_local, layout.plot.origin),
-                    background: quad.background,
-                    border: fret_core::Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
-                    corner_radii: fret_core::Corners::all(Px(0.0)),
-                });
+            match self.layer.quads_scene_cache_policy() {
+                PlotQuadsSceneCachePolicy::Disabled => {
+                    for quad in self.rebuild_quads_if_needed(
+                        cx,
+                        layout.plot,
+                        view_bounds,
+                        view_bounds_y2,
+                        view_bounds_y3,
+                        view_bounds_y4,
+                        hidden,
+                        resolved_style,
+                    ) {
+                        cx.scene.push(SceneOp::Quad {
+                            order: quad.order,
+                            rect: offset_rect(quad.rect_local, layout.plot.origin),
+                            background: quad.background,
+                            border: fret_core::Edges::all(Px(0.0)),
+                            border_color: Color::TRANSPARENT,
+                            corner_radii: fret_core::Corners::all(Px(0.0)),
+                        });
+                    }
+                }
+                PlotQuadsSceneCachePolicy::Enabled => {
+                    let mut key = 0u64;
+                    key = Self::hash_u64(key, theme_revision);
+                    key = Self::hash_u64(key, self.model.revision(cx.app).unwrap_or(0));
+                    key = Self::hash_u64(key, u64::from(resolved_style.heatmap_colormap.key()));
+                    key = Self::hash_f32_bits(key, layout.plot.size.width.0);
+                    key = Self::hash_f32_bits(key, layout.plot.size.height.0);
+                    key = Self::hash_f64_bits(key, view_bounds.x_min);
+                    key = Self::hash_f64_bits(key, view_bounds.x_max);
+                    key = Self::hash_f64_bits(key, view_bounds.y_min);
+                    key = Self::hash_f64_bits(key, view_bounds.y_max);
+                    key = Self::hash_u64(key, self.x_scale.key());
+                    key = Self::hash_u64(key, self.y_scale.key());
+
+                    if self
+                        .quads_scene_cache
+                        .try_replay(key, cx.scene, layout.plot.origin)
+                    {
+                        // Cache hit.
+                    } else {
+                        let quads = self.rebuild_quads_if_needed(
+                            cx,
+                            layout.plot,
+                            view_bounds,
+                            view_bounds_y2,
+                            view_bounds_y3,
+                            view_bounds_y4,
+                            hidden,
+                            resolved_style,
+                        );
+
+                        let mut ops: Vec<SceneOp> = Vec::with_capacity(quads.len());
+                        for quad in quads {
+                            ops.push(SceneOp::Quad {
+                                order: quad.order,
+                                rect: quad.rect_local,
+                                background: quad.background,
+                                border: fret_core::Edges::all(Px(0.0)),
+                                border_color: Color::TRANSPARENT,
+                                corner_radii: fret_core::Corners::all(Px(0.0)),
+                            });
+                        }
+
+                        cx.scene.replay_ops_translated(&ops, layout.plot.origin);
+                        self.quads_scene_cache.store_ops(key, ops);
+                    }
+                }
             }
 
             let mut debug_paths_pushed: u32 = 0;
@@ -8041,6 +8095,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         self.heatmap_colorbar_text_key = None;
         self.heatmap_colorbar_text.clear();
         self.heatmap_colorbar_gradient_cache.clear();
+        self.quads_scene_cache.clear();
 
         #[cfg(debug_assertions)]
         {

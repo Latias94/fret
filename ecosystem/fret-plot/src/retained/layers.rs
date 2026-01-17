@@ -862,6 +862,10 @@ pub struct PlotCursorReadoutArgs<'a> {
 pub trait PlotLayer {
     type Model: Clone + 'static;
 
+    fn quads_scene_cache_policy(&self) -> PlotQuadsSceneCachePolicy {
+        PlotQuadsSceneCachePolicy::Disabled
+    }
+
     fn data_bounds(model: &Self::Model) -> DataRect;
     fn data_bounds_y2(_model: &Self::Model) -> Option<DataRect> {
         None
@@ -915,6 +919,12 @@ pub trait PlotLayer {
     fn hit_test(&mut self, model: &Self::Model, args: PlotHitTestArgs<'_>) -> Option<PlotHover>;
 
     fn cleanup_resources(&mut self, services: &mut dyn UiServices);
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PlotQuadsSceneCachePolicy {
+    Disabled,
+    Enabled,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -4425,6 +4435,10 @@ impl PlotLayer for BarsPlotLayer {
 impl PlotLayer for HeatmapPlotLayer {
     type Model = HeatmapPlotModel;
 
+    fn quads_scene_cache_policy(&self) -> PlotQuadsSceneCachePolicy {
+        PlotQuadsSceneCachePolicy::Enabled
+    }
+
     fn data_bounds(model: &Self::Model) -> DataRect {
         model.data_bounds
     }
@@ -4730,6 +4744,10 @@ impl Histogram2DPlotLayer {
 
 impl PlotLayer for Histogram2DPlotLayer {
     type Model = Histogram2DPlotModel;
+
+    fn quads_scene_cache_policy(&self) -> PlotQuadsSceneCachePolicy {
+        PlotQuadsSceneCachePolicy::Enabled
+    }
 
     fn data_bounds(model: &Self::Model) -> DataRect {
         model.data_bounds
