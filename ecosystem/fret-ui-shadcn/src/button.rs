@@ -329,7 +329,7 @@ impl Button {
                         .unwrap_or_else(|| theme.color_required("ring"));
                 }
 
-                let padding = if variant == ButtonVariant::Link || is_icon {
+                let padding = if is_icon {
                     ChromeRefinement::default()
                 } else {
                     // shadcn/ui: `has-[>svg]:px-*` uses tighter horizontal padding when an icon is present.
