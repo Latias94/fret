@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Color, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::CommandId;
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, FlexProps, MainAlign, PressableProps,
@@ -43,21 +43,6 @@ fn alpha(color: Color, a: f32) -> Color {
 
 fn item_radius(theme: &Theme) -> Px {
     MetricRef::radius(Radius::Md).resolve(theme)
-}
-
-fn item_padding(theme: &Theme, size: ItemSize) -> Edges {
-    match size {
-        ItemSize::Default => {
-            let p = MetricRef::space(Space::N4).resolve(theme);
-            Edges::all(p)
-        }
-        ItemSize::Sm => Edges {
-            top: MetricRef::space(Space::N3).resolve(theme),
-            right: MetricRef::space(Space::N4).resolve(theme),
-            bottom: MetricRef::space(Space::N3).resolve(theme),
-            left: MetricRef::space(Space::N4).resolve(theme),
-        },
-    }
 }
 
 fn item_gap(theme: &Theme, size: ItemSize) -> Px {
