@@ -650,9 +650,8 @@ fn estimated_menu_panel_height_for_entries(
     let mut height = panel_padding_y.0 + panel_border_y.0;
     add_entries(&mut height, entries, row_height.0);
 
-    let min_h = height.max(0.0);
-    let max_h = max_height.0.max(min_h);
-    Px(height.clamp(min_h, max_h))
+    let height = height.max(0.0);
+    Px(height.min(max_height.0.max(0.0)))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
