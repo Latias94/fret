@@ -7,10 +7,11 @@ use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, LayoutStyle, OpacityProps, PressableProps, StackProps,
 };
 use fret_ui::{ElementContext, UiHost};
-use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::collapsible as radix_collapsible;
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement};
 
 use crate::overlay_motion;
 
@@ -19,6 +20,7 @@ pub struct Collapsible {
     open: Option<Model<bool>>,
     default_open: bool,
     disabled: bool,
+    chrome: ChromeRefinement,
     layout: LayoutRefinement,
     force_mount_content: bool,
 }
@@ -40,6 +42,7 @@ impl Collapsible {
             open: Some(open),
             default_open: false,
             disabled: false,
+            chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             force_mount_content: false,
         }
@@ -51,6 +54,7 @@ impl Collapsible {
             open: None,
             default_open,
             disabled: false,
+            chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             force_mount_content: false,
         }
@@ -66,6 +70,11 @@ impl Collapsible {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
         self
     }
 
@@ -101,12 +110,15 @@ impl Collapsible {
             .open(self.open)
             .default_open(self.default_open);
         let disabled = self.disabled;
+        let chrome = self.chrome;
         let layout = self.layout;
         let force_mount_content = self.force_mount_content;
 
         cx.scope(move |cx| {
             let open = open_root.use_open_model(cx).model();
             let is_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
+
+            let theme = fret_ui::Theme::global(&*cx.app).clone();
 
             let trigger = trigger(cx, open.clone(), is_open);
 
@@ -124,10 +136,7 @@ impl Collapsible {
 
             let stack = cx.stack_props(
                 StackProps {
-                    layout: fret_ui_kit::declarative::style::layout_style(
-                        fret_ui::Theme::global(&*cx.app),
-                        layout,
-                    ),
+                    layout: decl_style::layout_style(&theme, layout),
                 },
                 move |cx| {
                     let mut children = Vec::new();
@@ -185,9 +194,12 @@ impl Collapsible {
                 },
             );
 
+            let wrapper = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
+            let root = cx.container(wrapper, move |_cx| vec![stack]);
+
             cx.semantics(
                 radix_collapsible::collapsible_root_semantics(disabled, is_open),
-                move |_cx| vec![stack],
+                move |_cx| vec![root],
             )
         })
     }
@@ -258,6 +270,7 @@ impl CollapsibleTrigger {
 
 #[derive(Clone)]
 pub struct CollapsibleContent {
+    chrome: ChromeRefinement,
     layout: LayoutRefinement,
     children: Vec<AnyElement>,
 }
@@ -274,9 +287,15 @@ impl std::fmt::Debug for CollapsibleContent {
 impl CollapsibleContent {
     pub fn new(children: Vec<AnyElement>) -> Self {
         Self {
+            chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             children,
         }
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
     }
 
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
@@ -285,18 +304,19 @@ impl CollapsibleContent {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = fret_ui::Theme::global(&*cx.app).clone();
+        let wrapper = decl_style::container_props(&theme, self.chrome, LayoutRefinement::default());
         let layout = self.layout;
         let children = self.children;
 
-        cx.stack_props(
-            StackProps {
-                layout: fret_ui_kit::declarative::style::layout_style(
-                    fret_ui::Theme::global(&*cx.app),
-                    layout,
-                ),
-            },
-            move |_cx| children,
-        )
+        cx.container(wrapper, move |cx| {
+            vec![cx.stack_props(
+                StackProps {
+                    layout: decl_style::layout_style(&theme, layout),
+                },
+                move |_cx| children,
+            )]
+        })
     }
 }
 

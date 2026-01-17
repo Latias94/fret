@@ -60,6 +60,7 @@ pub struct Checkbox {
     checked: CheckboxCheckedModel,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
     on_click: Option<CommandId>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -78,6 +79,7 @@ impl Checkbox {
             checked: CheckboxCheckedModel::Bool(model),
             disabled: false,
             a11y_label: None,
+            test_id: None,
             on_click: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -89,6 +91,7 @@ impl Checkbox {
             checked: CheckboxCheckedModel::TriState(model),
             disabled: false,
             a11y_label: None,
+            test_id: None,
             on_click: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -103,6 +106,7 @@ impl Checkbox {
             checked: CheckboxCheckedModel::OptionalBool(model),
             disabled: false,
             a11y_label: None,
+            test_id: None,
             on_click: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -161,6 +165,11 @@ impl Checkbox {
         self
     }
 
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
     pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
         self.on_click = Some(command.into());
         self
@@ -198,6 +207,7 @@ impl Checkbox {
             let pressable_layout = decl_style::layout_style(&theme, layout);
 
             let a11y_label = self.a11y_label.clone();
+            let test_id = self.test_id.clone();
             let disabled = self.disabled;
             let on_click = self.on_click.clone();
             let chrome = self.chrome.clone();
@@ -261,12 +271,14 @@ impl Checkbox {
                 chrome_props.shadow = Some(decl_style::shadow_xs(&theme, radius));
                 chrome_props.layout.size = pressable_layout.size;
 
+                let mut a11y = checkbox_a11y(a11y_label.clone(), state);
+                a11y.test_id = test_id.clone();
                 let pressable_props = PressableProps {
                     layout: pressable_layout,
                     enabled: !disabled,
                     focusable: true,
                     focus_ring: Some(ring),
-                    a11y: checkbox_a11y(a11y_label.clone(), state),
+                    a11y,
                     ..Default::default()
                 };
 

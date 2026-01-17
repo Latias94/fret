@@ -5,6 +5,8 @@ use fret_core::{
     TextWrap,
 };
 use fret_icons::ids;
+#[cfg(test)]
+use fret_runtime::Effect;
 use fret_runtime::{Model, ModelId};
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
@@ -162,9 +164,6 @@ impl Dialog {
                 let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
                 let overlay_closable = self.overlay_closable;
                 let window_padding_px = MetricRef::space(self.window_padding).resolve(&theme);
-                let dialog_options = radix_dialog::DialogOptions::default()
-                    .dismiss_on_overlay_press(overlay_closable)
-                    .initial_focus(None);
 
                 let opacity = motion.progress;
                 let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
@@ -195,12 +194,13 @@ impl Dialog {
 
                     crate::a11y_modal::begin_modal_a11y_scope(cx.app, open_id);
                     let content = content(cx);
-                    content_element_for_trigger.set(Some(content.id));
+                    let content_id = content.id;
+                    content_element_for_trigger.set(Some(content_id));
                     let max_w_hint =
                         crate::a11y_modal::modal_content_max_width_for_current_scope(cx.app)
                             .unwrap_or(Px(512.0));
                     crate::a11y_modal::end_modal_a11y_scope(cx.app, open_id);
-                    let last_size = cx.last_bounds_for_element(content.id).map(|r| r.size);
+                    let last_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
 
                     // Upstream uses `w-full` + `max-w-*`, so dialog width should not collapse to
                     // intrinsic content. We compute a width hint from the modal content and clamp
@@ -270,6 +270,9 @@ impl Dialog {
                         move |_cx| vec![barrier_fill],
                     );
                     let open_for_children = self.open.clone();
+                    let dialog_options = radix_dialog::DialogOptions::default()
+                        .dismiss_on_overlay_press(overlay_closable)
+                        .initial_focus(None);
                     radix_dialog::modal_dialog_layer_children_with_dismiss_handler(
                         cx,
                         open_for_children.clone(),
@@ -286,6 +289,9 @@ impl Dialog {
                     });
                 }
 
+                let dialog_options = radix_dialog::DialogOptions::default()
+                    .dismiss_on_overlay_press(overlay_closable)
+                    .initial_focus(None);
                 let request = radix_dialog::modal_dialog_request_with_options_and_dismiss_handler(
                     id,
                     id,
