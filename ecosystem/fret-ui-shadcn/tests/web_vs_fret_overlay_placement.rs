@@ -4808,6 +4808,12 @@ fn web_vs_fret_navigation_menu_demo_variant_overlay_placement_matches(
                     "Components",
                     vec![cx.text("Components")],
                 ),
+                fret_ui_shadcn::NavigationMenuItem::new("list", "List", vec![cx.text("List")]),
+                fret_ui_shadcn::NavigationMenuItem::new(
+                    "simple",
+                    "Simple",
+                    vec![cx.text("Simple")],
+                ),
                 fret_ui_shadcn::NavigationMenuItem::new(
                     "with-icon",
                     "With Icon",
@@ -4890,6 +4896,12 @@ fn web_vs_fret_navigation_menu_demo_variant_overlay_placement_matches(
                         "Components",
                         vec![cx.text("Components")],
                     ),
+                    fret_ui_shadcn::NavigationMenuItem::new("list", "List", vec![cx.text("List")]),
+                    fret_ui_shadcn::NavigationMenuItem::new(
+                        "simple",
+                        "Simple",
+                        vec![cx.text("Simple")],
+                    ),
                     fret_ui_shadcn::NavigationMenuItem::new(
                         "with-icon",
                         "With Icon",
@@ -4961,6 +4973,24 @@ fn web_vs_fret_navigation_menu_demo_components_overlay_placement_matches() {
         "navigation-menu-demo.components",
         "components",
         "Components",
+    );
+}
+
+#[test]
+fn web_vs_fret_navigation_menu_demo_list_overlay_placement_matches() {
+    web_vs_fret_navigation_menu_demo_variant_overlay_placement_matches(
+        "navigation-menu-demo.list",
+        "list",
+        "List",
+    );
+}
+
+#[test]
+fn web_vs_fret_navigation_menu_demo_simple_overlay_placement_matches() {
+    web_vs_fret_navigation_menu_demo_variant_overlay_placement_matches(
+        "navigation-menu-demo.simple",
+        "simple",
+        "Simple",
     );
 }
 
