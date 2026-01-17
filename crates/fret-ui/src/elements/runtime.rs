@@ -166,11 +166,14 @@ impl WindowElementState {
         self.observed_models.clear();
         self.observed_globals.clear();
 
+        // Keep cross-frame geometry queries stable even when layout/paint skips subtrees due to
+        // caching: seed the current-frame maps from the previous-frame maps, and overwrite entries
+        // opportunistically as bounds are recorded this frame.
         std::mem::swap(&mut self.prev_bounds, &mut self.cur_bounds);
-        self.cur_bounds.clear();
+        self.cur_bounds.clone_from(&self.prev_bounds);
 
         std::mem::swap(&mut self.prev_visual_bounds, &mut self.cur_visual_bounds);
-        self.cur_visual_bounds.clear();
+        self.cur_visual_bounds.clone_from(&self.prev_visual_bounds);
 
         self.focused_element = None;
 
