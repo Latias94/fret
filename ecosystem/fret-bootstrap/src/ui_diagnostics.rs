@@ -1742,6 +1742,14 @@ pub struct UiSceneOpTileCacheSnapshotV1 {
     pub stats: UiSceneOpTileCacheStatsV1,
 }
 
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+pub struct UiWorkBudgetSnapshotV1 {
+    pub requested_units: u32,
+    pub limit: u32,
+    pub used: u32,
+    pub skipped_units: u32,
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UiCanvasCacheEntryV1 {
     pub node: u64,
@@ -1754,6 +1762,8 @@ pub struct UiCanvasCacheEntryV1 {
     pub text: Option<UiCacheKindSnapshotV1>,
     #[serde(default)]
     pub scene_op_tiles: Option<UiSceneOpTileCacheSnapshotV1>,
+    #[serde(default)]
+    pub work_budget: Option<UiWorkBudgetSnapshotV1>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -1886,6 +1896,12 @@ fn canvas_cache_stats_for_window(app: &App, window: u64) -> Vec<UiCanvasCacheEnt
                     evict_prune_age: s.stats.evict_prune_age,
                     evict_prune_budget: s.stats.evict_prune_budget,
                 },
+            }),
+            work_budget: snap.work_budget.map(|b| UiWorkBudgetSnapshotV1 {
+                requested_units: b.requested_units,
+                limit: b.limit,
+                used: b.used,
+                skipped_units: b.skipped_units,
             }),
         })
         .collect()

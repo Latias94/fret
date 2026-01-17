@@ -9562,6 +9562,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
             }
 
             let mut label_budget = WorkBudget::new(Self::EDGE_LABEL_BUILD_BUDGET_PER_FRAME);
+            let mut label_budget_skipped: u32 = 0;
             for (from, to, route, label, _selected, _hovered) in edge_labels {
                 let (pos, normal) = match route {
                     EdgeRouteKind::Bezier => {
@@ -9608,6 +9609,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                     &mut label_budget,
                 );
                 if skipped_by_budget {
+                    label_budget_skipped = label_budget_skipped.saturating_add(1);
                     cx.request_redraw();
                     break;
                 }
@@ -9644,6 +9646,45 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                     color: self.style.context_menu_text,
                 });
             }
+
+            if let Some(window) = cx.window {
+                let frame_id = cx.app.frame_id().0;
+                let key = CanvasCacheKey {
+                    window: window.data().as_ffi(),
+                    node: cx.node.data().as_ffi(),
+                    name: "fret-node.canvas.edge_labels_budget",
+                };
+                cx.app
+                    .with_global_mut(CanvasCacheStatsRegistry::default, |registry, _app| {
+                        registry.record_work_budget(
+                            key,
+                            frame_id,
+                            label_budget.used().saturating_add(label_budget_skipped),
+                            Self::EDGE_LABEL_BUILD_BUDGET_PER_FRAME,
+                            label_budget.used(),
+                            label_budget_skipped,
+                        );
+                    });
+            }
+        }
+        if let Some(window) = cx.window {
+            let frame_id = cx.app.frame_id().0;
+            let key = CanvasCacheKey {
+                window: window.data().as_ffi(),
+                node: cx.node.data().as_ffi(),
+                name: "fret-node.canvas.edge_markers_budget",
+            };
+            cx.app
+                .with_global_mut(CanvasCacheStatsRegistry::default, |registry, _app| {
+                    registry.record_work_budget(
+                        key,
+                        frame_id,
+                        marker_budget.used().saturating_add(marker_budget_skipped),
+                        Self::EDGE_MARKER_BUILD_BUDGET_PER_FRAME,
+                        marker_budget.used(),
+                        marker_budget_skipped,
+                    );
+                });
         }
 
         if let Some(w) = &self.interaction.wire_drag {
