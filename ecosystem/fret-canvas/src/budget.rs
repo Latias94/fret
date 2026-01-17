@@ -96,4 +96,3 @@ mod tests {
         assert_eq!(b.remaining(), 3);
     }
 }
-
