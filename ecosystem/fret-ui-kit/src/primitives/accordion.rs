@@ -20,12 +20,21 @@ use fret_ui::{ElementContext, UiHost};
 use crate::declarative::ModelWatchExt;
 use crate::declarative::action_hooks::ActionHooksExt as _;
 use crate::primitives::trigger_a11y;
+use crate::primitives::{direction as direction_prim, direction::LayoutDirection};
 
 /// Matches Radix Accordion `type` outcome.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AccordionKind {
     Single,
     Multiple,
+}
+
+/// Matches Radix Accordion `orientation` outcome: vertical (default) vs horizontal layout.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum AccordionOrientation {
+    #[default]
+    Vertical,
+    Horizontal,
 }
 
 /// A11y metadata for an accordion trigger.
@@ -116,6 +125,8 @@ pub struct AccordionRoot {
     collapsible: bool,
     disabled: bool,
     loop_navigation: bool,
+    orientation: AccordionOrientation,
+    dir: Option<LayoutDirection>,
 }
 
 impl AccordionRoot {
@@ -127,6 +138,8 @@ impl AccordionRoot {
             collapsible: false,
             disabled: false,
             loop_navigation: true,
+            orientation: AccordionOrientation::default(),
+            dir: None,
         }
     }
 
@@ -153,6 +166,8 @@ impl AccordionRoot {
             collapsible: false,
             disabled: false,
             loop_navigation: true,
+            orientation: AccordionOrientation::default(),
+            dir: None,
         }
     }
 
@@ -188,6 +203,22 @@ impl AccordionRoot {
 
     pub fn loop_navigation(mut self, loop_navigation: bool) -> Self {
         self.loop_navigation = loop_navigation;
+        self
+    }
+
+    /// Controls the keyboard navigation axis for the accordion triggers.
+    ///
+    /// This mirrors Radix `orientation` and should match the visual layout direction.
+    pub fn orientation(mut self, orientation: AccordionOrientation) -> Self {
+        self.orientation = orientation;
+        self
+    }
+
+    /// Overrides the local direction for horizontal keyboard navigation.
+    ///
+    /// Mirrors Radix `dir` behavior: in RTL, Left/Right arrow semantics are flipped.
+    pub fn dir(mut self, dir: Option<LayoutDirection>) -> Self {
+        self.dir = dir;
         self
     }
 
@@ -318,6 +349,58 @@ mod tests {
             assert_eq!(a11y.controls_element, Some(content.0));
         });
     }
+
+    #[test]
+    fn accordion_list_orientation_vertical_sets_roving_axis_vertical() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        let open: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let root = AccordionRoot::single(open).orientation(AccordionOrientation::Vertical);
+            let values: Arc<[Arc<str>]> = Arc::from(vec![Arc::from("a")].into_boxed_slice());
+            let disabled: Arc<[bool]> = Arc::from(vec![false].into_boxed_slice());
+            let list = root.list(values, disabled);
+            let el = list.into_element(cx, RovingFlexProps::default(), |_cx| Vec::new());
+
+            let ElementKind::Semantics(_) = &el.kind else {
+                panic!("expected semantics wrapper");
+            };
+            let child = el.children.first().expect("semantics child");
+            let ElementKind::RovingFlex(props) = &child.kind else {
+                panic!("expected roving flex child");
+            };
+            assert_eq!(props.flex.direction, fret_core::Axis::Vertical);
+        });
+    }
+
+    #[test]
+    fn accordion_list_orientation_horizontal_sets_roving_axis_horizontal() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        let open: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let root = AccordionRoot::single(open).orientation(AccordionOrientation::Horizontal);
+            let values: Arc<[Arc<str>]> = Arc::from(vec![Arc::from("a")].into_boxed_slice());
+            let disabled: Arc<[bool]> = Arc::from(vec![false].into_boxed_slice());
+            let list = root.list(values, disabled);
+            let el = list.into_element(cx, RovingFlexProps::default(), |_cx| Vec::new());
+
+            let ElementKind::Semantics(_) = &el.kind else {
+                panic!("expected semantics wrapper");
+            };
+            let child = el.children.first().expect("semantics child");
+            let ElementKind::RovingFlex(props) = &child.kind else {
+                panic!("expected roving flex child");
+            };
+            assert_eq!(props.flex.direction, fret_core::Axis::Horizontal);
+        });
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -387,7 +470,10 @@ impl AccordionList {
         mut props: RovingFlexProps,
         f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
     ) -> AnyElement {
-        props.flex.direction = fret_core::Axis::Vertical;
+        props.flex.direction = match self.root.orientation {
+            AccordionOrientation::Vertical => fret_core::Axis::Vertical,
+            AccordionOrientation::Horizontal => fret_core::Axis::Horizontal,
+        };
         props.roving = RovingFocusProps {
             enabled: props.roving.enabled && !self.root.disabled,
             wrap: self.root.loop_navigation,
@@ -395,20 +481,42 @@ impl AccordionList {
         };
 
         let layout = self.layout;
-        cx.semantics(
-            SemanticsProps {
-                layout,
-                role: SemanticsRole::List,
-                disabled: self.root.disabled,
-                ..Default::default()
-            },
-            move |cx| {
-                vec![cx.roving_flex(props, move |cx| {
-                    cx.roving_nav_apg();
-                    f(cx)
-                })]
-            },
-        )
+        let dir = self.root.dir;
+        let root_disabled = self.root.disabled;
+
+        if let Some(dir) = dir {
+            direction_prim::with_direction_provider(cx, dir, move |cx| {
+                cx.semantics(
+                    SemanticsProps {
+                        layout,
+                        role: SemanticsRole::List,
+                        disabled: root_disabled,
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        vec![cx.roving_flex(props, move |cx| {
+                            cx.roving_nav_apg();
+                            f(cx)
+                        })]
+                    },
+                )
+            })
+        } else {
+            cx.semantics(
+                SemanticsProps {
+                    layout,
+                    role: SemanticsRole::List,
+                    disabled: root_disabled,
+                    ..Default::default()
+                },
+                move |cx| {
+                    vec![cx.roving_flex(props, move |cx| {
+                        cx.roving_nav_apg();
+                        f(cx)
+                    })]
+                },
+            )
+        }
     }
 }
 
