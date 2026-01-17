@@ -5,10 +5,10 @@
 //! - concrete 2D plot layers (line/scatter/bars/area/shaded/heatmap/etc),
 //! - convenience `*PlotCanvas` aliases for `PlotCanvas<L>`.
 
-use fret_canvas::cache::PathCache;
+use fret_canvas::cache::{PathCache, SceneOpTileCache, TileCoord, TileGrid2D};
 use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
-use fret_core::geometry::{Point, Px, Rect, Size};
-use fret_core::scene::{Color, DrawOrder};
+use fret_core::geometry::{Corners, Edges, Point, Px, Rect, Size};
+use fret_core::scene::{Color, DrawOrder, SceneOp};
 use fret_core::{PathConstraints, PathId, PathStyle, UiServices};
 use fret_runtime::Model;
 use fret_ui::UiHost;
@@ -867,6 +867,19 @@ pub trait PlotLayer {
         PlotQuadsSceneCachePolicy::Disabled
     }
 
+    /// Optional fast path for layers that can emit quad `SceneOp`s directly (e.g. tiled caches).
+    ///
+    /// When this returns `true`, the caller should skip the default `paint_quads` path.
+    fn paint_quads_scene_ops_tiled<H: UiHost>(
+        &mut self,
+        _cx: &mut PaintCx<'_, H>,
+        _model: &Self::Model,
+        _args: PlotPaintArgs<'_>,
+        _plot_origin: Point,
+    ) -> bool {
+        false
+    }
+
     fn data_bounds(model: &Self::Model) -> DataRect;
     fn data_bounds_y2(_model: &Self::Model) -> Option<DataRect> {
         None
@@ -1107,6 +1120,8 @@ pub struct HeatmapPlotLayer {
     mip_key: Option<HeatmapMipKey>,
     mips: Vec<GridMipLevel>,
     colormap_lut: ColorMapLut,
+    tile_ops_cache: SceneOpTileCache<u64>,
+    tile_scratch: Vec<TileCoord>,
 }
 
 fn ceil_div_usize(a: usize, b: usize) -> usize {
@@ -1233,6 +1248,152 @@ fn grid_mip_level_values<'a>(
         .get(level.saturating_sub(1))
         .expect("level > 0 implies mip exists");
     (mip.cols, mip.rows, &mip.values)
+}
+
+fn grid_heatmap_tile_ops(
+    clip_world: Rect,
+    tile_origin_world: Point,
+    scale_x: f64,
+    scale_y: f64,
+    x_scale: AxisScale,
+    y_scale: AxisScale,
+    data_bounds: DataRect,
+    cols: usize,
+    rows: usize,
+    dx: f64,
+    dy: f64,
+    value_min: f32,
+    denom: f32,
+    grid_cols: usize,
+    grid_rows: usize,
+    values: &[f32],
+    scale: usize,
+    heatmap_color: &impl Fn(f32) -> Color,
+) -> Vec<SceneOp> {
+    let clip_x0 = f64::from(clip_world.origin.x.0);
+    let clip_x1 = f64::from(clip_world.origin.x.0 + clip_world.size.width.0);
+    let clip_y0 = f64::from(clip_world.origin.y.0);
+    let clip_y1 = f64::from(clip_world.origin.y.0 + clip_world.size.height.0);
+
+    if !clip_x0.is_finite()
+        || !clip_x1.is_finite()
+        || !clip_y0.is_finite()
+        || !clip_y1.is_finite()
+        || clip_x1 <= clip_x0
+        || clip_y1 <= clip_y0
+    {
+        return Vec::new();
+    }
+
+    if !scale_x.is_finite() || !scale_y.is_finite() || scale_x <= 0.0 || scale_y <= 0.0 {
+        return Vec::new();
+    }
+
+    let vx0 = clip_x0 / scale_x;
+    let vx1 = clip_x1 / scale_x;
+    let vy0 = -clip_y0 / scale_y;
+    let vy1 = -clip_y1 / scale_y;
+
+    let Some(data_x0) = x_scale.from_axis(vx0.min(vx1)) else {
+        return Vec::new();
+    };
+    let Some(data_x1) = x_scale.from_axis(vx0.max(vx1)) else {
+        return Vec::new();
+    };
+    let Some(data_y0) = y_scale.from_axis(vy0.min(vy1)) else {
+        return Vec::new();
+    };
+    let Some(data_y1) = y_scale.from_axis(vy0.max(vy1)) else {
+        return Vec::new();
+    };
+
+    let col0 = (((data_x0 - data_bounds.x_min) / dx).floor() as isize)
+        .clamp(0, cols.saturating_sub(1) as isize) as usize;
+    let col1 =
+        (((data_x1 - data_bounds.x_min) / dx).ceil() as isize).clamp(0, cols as isize) as usize;
+
+    let row0 = (((data_y0 - data_bounds.y_min) / dy).floor() as isize)
+        .clamp(0, rows.saturating_sub(1) as isize) as usize;
+    let row1 =
+        (((data_y1 - data_bounds.y_min) / dy).ceil() as isize).clamp(0, rows as isize) as usize;
+
+    let col0_l = (col0 / scale).min(grid_cols);
+    let col1_l = ceil_div_usize(col1, scale).min(grid_cols);
+    let row0_l = (row0 / scale).min(grid_rows);
+    let row1_l = ceil_div_usize(row1, scale).min(grid_rows);
+
+    if col1_l <= col0_l || row1_l <= row0_l {
+        return Vec::new();
+    }
+
+    let tile_ox = tile_origin_world.x.0;
+    let tile_oy = tile_origin_world.y.0;
+
+    let quad_cols = col1_l.saturating_sub(col0_l);
+    let quad_rows = row1_l.saturating_sub(row0_l);
+    let mut ops: Vec<SceneOp> = Vec::with_capacity(quad_cols.saturating_mul(quad_rows));
+
+    for row_l in row0_l..row1_l {
+        let row_base0 = row_l.saturating_mul(scale);
+        let row_base1 = (row_l.saturating_add(1).saturating_mul(scale)).min(rows);
+
+        let y0_data = data_bounds.y_min + (row_base0 as f64) * dy;
+        let y1_data = data_bounds.y_min + (row_base1 as f64) * dy;
+        let (Some(vy0), Some(vy1)) = (y_scale.to_axis(y0_data), y_scale.to_axis(y1_data)) else {
+            continue;
+        };
+        let wy0 = -(vy0 * scale_y);
+        let wy1 = -(vy1 * scale_y);
+        let top = wy0.min(wy1);
+        let bottom = wy0.max(wy1);
+        if !top.is_finite() || !bottom.is_finite() || bottom <= top {
+            continue;
+        }
+
+        for col_l in col0_l..col1_l {
+            let idx = row_l.saturating_mul(grid_cols).saturating_add(col_l);
+            let Some(v) = values.get(idx).copied() else {
+                continue;
+            };
+            if !v.is_finite() {
+                continue;
+            }
+
+            let col_base0 = col_l.saturating_mul(scale);
+            let col_base1 = (col_l.saturating_add(1).saturating_mul(scale)).min(cols);
+
+            let x0_data = data_bounds.x_min + (col_base0 as f64) * dx;
+            let x1_data = data_bounds.x_min + (col_base1 as f64) * dx;
+            let (Some(vx0), Some(vx1)) = (x_scale.to_axis(x0_data), x_scale.to_axis(x1_data))
+            else {
+                continue;
+            };
+            let wx0 = vx0 * scale_x;
+            let wx1 = vx1 * scale_x;
+            let left = wx0.min(wx1);
+            let right = wx0.max(wx1);
+            if !left.is_finite() || !right.is_finite() || right <= left {
+                continue;
+            }
+
+            let t = ((v - value_min) / denom).clamp(0.0, 1.0);
+            let color = heatmap_color(t);
+
+            ops.push(SceneOp::Quad {
+                order: DrawOrder(2),
+                rect: Rect::new(
+                    Point::new(Px(left as f32 - tile_ox), Px(top as f32 - tile_oy)),
+                    Size::new(Px((right - left) as f32), Px((bottom - top) as f32)),
+                ),
+                background: color,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(0.0)),
+            });
+        }
+    }
+
+    ops
 }
 
 impl HeatmapPlotLayer {
@@ -1440,6 +1601,8 @@ pub struct Histogram2DPlotLayer {
     mip_key: Option<Histogram2DMipKey>,
     mips: Vec<GridMipLevel>,
     colormap_lut: ColorMapLut,
+    tile_ops_cache: SceneOpTileCache<u64>,
+    tile_scratch: Vec<TileCoord>,
 }
 
 pub type Histogram2DPlotCanvas = PlotCanvas<Histogram2DPlotLayer>;
@@ -4467,6 +4630,210 @@ impl PlotLayer for HeatmapPlotLayer {
         Vec::new()
     }
 
+    fn paint_quads_scene_ops_tiled<H: UiHost>(
+        &mut self,
+        cx: &mut PaintCx<'_, H>,
+        model: &Self::Model,
+        args: PlotPaintArgs<'_>,
+        plot_origin: Point,
+    ) -> bool {
+        const TILE_SIZE_CANVAS: f32 = 512.0;
+        const TILE_MAX_AGE_FRAMES: u64 = 240;
+        const TILE_MAX_ENTRIES: usize = 512;
+
+        let PlotPaintArgs {
+            model_revision,
+            plot,
+            view_bounds,
+            x_scale,
+            y_scale,
+            style,
+            ..
+        } = args;
+
+        if model.cols == 0 || model.rows == 0 {
+            self.tile_ops_cache.clear();
+            self.tile_scratch.clear();
+            return true;
+        }
+
+        self.rebuild_mips_if_needed(model_revision, model);
+
+        let dx = (model.data_bounds.x_max - model.data_bounds.x_min) / (model.cols as f64);
+        let dy = (model.data_bounds.y_max - model.data_bounds.y_min) / (model.rows as f64);
+        if !dx.is_finite() || !dy.is_finite() || dx <= 0.0 || dy <= 0.0 {
+            self.tile_ops_cache.clear();
+            self.tile_scratch.clear();
+            return true;
+        }
+
+        let denom = (model.value_max - model.value_min).max(1.0e-12);
+
+        let clip_min_x = view_bounds.x_min.max(model.data_bounds.x_min);
+        let clip_max_x = view_bounds.x_max.min(model.data_bounds.x_max);
+        let clip_min_y = view_bounds.y_min.max(model.data_bounds.y_min);
+        let clip_max_y = view_bounds.y_max.min(model.data_bounds.y_max);
+
+        if clip_max_x <= clip_min_x || clip_max_y <= clip_min_y {
+            return true;
+        }
+
+        let col0 = (((clip_min_x - model.data_bounds.x_min) / dx).floor() as isize)
+            .clamp(0, model.cols.saturating_sub(1) as isize) as usize;
+        let col1 = (((clip_max_x - model.data_bounds.x_min) / dx).ceil() as isize)
+            .clamp(0, model.cols as isize) as usize;
+
+        let row0 = (((clip_min_y - model.data_bounds.y_min) / dy).floor() as isize)
+            .clamp(0, model.rows.saturating_sub(1) as isize) as usize;
+        let row1 = (((clip_max_y - model.data_bounds.y_min) / dy).ceil() as isize)
+            .clamp(0, model.rows as isize) as usize;
+
+        let visible_cols = col1.saturating_sub(col0);
+        let visible_rows = row1.saturating_sub(row0);
+        if visible_cols == 0 || visible_rows == 0 {
+            return true;
+        }
+
+        const MAX_HEATMAP_QUADS: usize = 50_000;
+        let max_level = self.mips.len();
+        let level = select_grid_mip_level(
+            visible_cols,
+            visible_rows,
+            plot.size.width.0,
+            plot.size.height.0,
+            MAX_HEATMAP_QUADS,
+            max_level,
+        );
+        let scale = 1usize << level.min(usize::BITS as usize - 1);
+
+        let (grid_cols, grid_rows, values) =
+            grid_mip_level_values(level, model.cols, model.rows, &model.values, &self.mips);
+
+        self.colormap_lut.ensure(style.heatmap_colormap, 256);
+        let heatmap_color = |t: f32| self.colormap_lut.sample(t);
+
+        let Some(vx_min) = x_scale.to_axis(view_bounds.x_min) else {
+            return true;
+        };
+        let Some(vx_max) = x_scale.to_axis(view_bounds.x_max) else {
+            return true;
+        };
+        let Some(vy_min) = y_scale.to_axis(view_bounds.y_min) else {
+            return true;
+        };
+        let Some(vy_max) = y_scale.to_axis(view_bounds.y_max) else {
+            return true;
+        };
+
+        let view_w_axis = vx_max - vx_min;
+        let view_h_axis = vy_max - vy_min;
+        if !view_w_axis.is_finite()
+            || !view_h_axis.is_finite()
+            || view_w_axis <= 0.0
+            || view_h_axis <= 0.0
+        {
+            return true;
+        }
+
+        let scale_x = (plot.size.width.0 as f64) / view_w_axis;
+        let scale_y = (plot.size.height.0 as f64) / view_h_axis;
+
+        let translation = Point::new(
+            Px((vx_min * scale_x) as f32),
+            Px((-(vy_max) * scale_y) as f32),
+        );
+
+        let view_rect_world = Rect::new(translation, plot.size);
+
+        self.tile_ops_cache.begin_frame();
+        self.tile_ops_cache
+            .prune(TILE_MAX_AGE_FRAMES, TILE_MAX_ENTRIES);
+
+        let tile_grid = TileGrid2D::new(TILE_SIZE_CANVAS);
+        tile_grid.tiles_in_rect(view_rect_world, &mut self.tile_scratch);
+
+        use std::collections::hash_map::DefaultHasher;
+
+        let base_key = {
+            let mut hasher = DefaultHasher::new();
+            "fret-plot.heatmap.tile.v1".hash(&mut hasher);
+            model_revision.hash(&mut hasher);
+            model.cols.hash(&mut hasher);
+            model.rows.hash(&mut hasher);
+            x_scale.key().hash(&mut hasher);
+            y_scale.key().hash(&mut hasher);
+            u64::from(style.heatmap_colormap.key()).hash(&mut hasher);
+            (plot.size.width.0 as f64).to_bits().hash(&mut hasher);
+            (plot.size.height.0 as f64).to_bits().hash(&mut hasher);
+            (scale_x).to_bits().hash(&mut hasher);
+            (scale_y).to_bits().hash(&mut hasher);
+            model.value_min.to_bits().hash(&mut hasher);
+            model.value_max.to_bits().hash(&mut hasher);
+            (level as u64).hash(&mut hasher);
+            TILE_SIZE_CANVAS.to_bits().hash(&mut hasher);
+            hasher.finish()
+        };
+
+        let plot_origin_x = plot_origin.x.0;
+        let plot_origin_y = plot_origin.y.0;
+        let translation_x = translation.x.0;
+        let translation_y = translation.y.0;
+
+        for tile in self.tile_scratch.iter().copied() {
+            let tile_origin_world = tile.origin(TILE_SIZE_CANVAS);
+            let tile_rect_world = Rect::new(
+                tile_origin_world,
+                Size::new(Px(TILE_SIZE_CANVAS), Px(TILE_SIZE_CANVAS)),
+            );
+
+            let key = {
+                let mut hasher = DefaultHasher::new();
+                base_key.hash(&mut hasher);
+                tile.hash(&mut hasher);
+                hasher.finish()
+            };
+
+            let screen_tile_origin = Point::new(
+                Px(tile_origin_world.x.0 - translation_x),
+                Px(tile_origin_world.y.0 - translation_y),
+            );
+            let replay_delta = Point::new(
+                Px(plot_origin_x + screen_tile_origin.x.0),
+                Px(plot_origin_y + screen_tile_origin.y.0),
+            );
+
+            if self.tile_ops_cache.try_replay(key, cx.scene, replay_delta) {
+                continue;
+            }
+
+            let ops = grid_heatmap_tile_ops(
+                tile_rect_world,
+                tile_origin_world,
+                scale_x,
+                scale_y,
+                x_scale,
+                y_scale,
+                model.data_bounds,
+                model.cols,
+                model.rows,
+                dx,
+                dy,
+                model.value_min,
+                denom,
+                grid_cols,
+                grid_rows,
+                values,
+                scale,
+                &heatmap_color,
+            );
+
+            cx.scene.replay_ops_translated(&ops, replay_delta);
+            self.tile_ops_cache.store_ops(key, ops);
+        }
+
+        true
+    }
+
     fn paint_quads<H: UiHost>(
         &mut self,
         _cx: &mut PaintCx<'_, H>,
@@ -4729,6 +5096,8 @@ impl PlotLayer for HeatmapPlotLayer {
         self.cached_quads.clear();
         self.mip_key = None;
         self.mips.clear();
+        self.tile_ops_cache.clear();
+        self.tile_scratch.clear();
     }
 }
 
@@ -4780,6 +5149,211 @@ impl PlotLayer for Histogram2DPlotLayer {
         _args: PlotPaintArgs<'_>,
     ) -> Vec<(SeriesId, PathId, Color)> {
         Vec::new()
+    }
+
+    fn paint_quads_scene_ops_tiled<H: UiHost>(
+        &mut self,
+        cx: &mut PaintCx<'_, H>,
+        model: &Self::Model,
+        args: PlotPaintArgs<'_>,
+        plot_origin: Point,
+    ) -> bool {
+        const TILE_SIZE_CANVAS: f32 = 512.0;
+        const TILE_MAX_AGE_FRAMES: u64 = 240;
+        const TILE_MAX_ENTRIES: usize = 512;
+
+        let PlotPaintArgs {
+            model_revision,
+            plot,
+            view_bounds,
+            x_scale,
+            y_scale,
+            style,
+            ..
+        } = args;
+
+        if model.cols == 0 || model.rows == 0 {
+            self.tile_ops_cache.clear();
+            self.tile_scratch.clear();
+            return true;
+        }
+
+        self.rebuild_mips_if_needed(model_revision, model);
+
+        let dx = (model.data_bounds.x_max - model.data_bounds.x_min) / (model.cols as f64);
+        let dy = (model.data_bounds.y_max - model.data_bounds.y_min) / (model.rows as f64);
+        if !dx.is_finite() || !dy.is_finite() || dx <= 0.0 || dy <= 0.0 {
+            self.tile_ops_cache.clear();
+            self.tile_scratch.clear();
+            return true;
+        }
+
+        let denom = (model.value_max - model.value_min).max(1.0e-12);
+
+        let clip_min_x = view_bounds.x_min.max(model.data_bounds.x_min);
+        let clip_max_x = view_bounds.x_max.min(model.data_bounds.x_max);
+        let clip_min_y = view_bounds.y_min.max(model.data_bounds.y_min);
+        let clip_max_y = view_bounds.y_max.min(model.data_bounds.y_max);
+
+        if clip_max_x <= clip_min_x || clip_max_y <= clip_min_y {
+            return true;
+        }
+
+        let col0 = (((clip_min_x - model.data_bounds.x_min) / dx).floor() as isize)
+            .clamp(0, model.cols.saturating_sub(1) as isize) as usize;
+        let col1 = (((clip_max_x - model.data_bounds.x_min) / dx).ceil() as isize)
+            .clamp(0, model.cols as isize) as usize;
+
+        let row0 = (((clip_min_y - model.data_bounds.y_min) / dy).floor() as isize)
+            .clamp(0, model.rows.saturating_sub(1) as isize) as usize;
+        let row1 = (((clip_max_y - model.data_bounds.y_min) / dy).ceil() as isize)
+            .clamp(0, model.rows as isize) as usize;
+
+        let visible_cols = col1.saturating_sub(col0);
+        let visible_rows = row1.saturating_sub(row0);
+        if visible_cols == 0 || visible_rows == 0 {
+            return true;
+        }
+
+        const MAX_HISTOGRAM2D_QUADS: usize = 50_000;
+        const MAX_HISTOGRAM2D_MIP_LEVEL: usize = 16;
+
+        let level = select_grid_mip_level(
+            visible_cols,
+            visible_rows,
+            plot.size.width.0,
+            plot.size.height.0,
+            MAX_HISTOGRAM2D_QUADS,
+            MAX_HISTOGRAM2D_MIP_LEVEL.min(self.mips.len()),
+        );
+        let scale = 1usize << level.min(usize::BITS as usize - 1);
+
+        let (grid_cols, grid_rows, values) =
+            grid_mip_level_values(level, model.cols, model.rows, &model.values, &self.mips);
+
+        self.colormap_lut.ensure(style.heatmap_colormap, 256);
+        let heatmap_color = |t: f32| self.colormap_lut.sample(t);
+
+        let Some(vx_min) = x_scale.to_axis(view_bounds.x_min) else {
+            return true;
+        };
+        let Some(vx_max) = x_scale.to_axis(view_bounds.x_max) else {
+            return true;
+        };
+        let Some(vy_min) = y_scale.to_axis(view_bounds.y_min) else {
+            return true;
+        };
+        let Some(vy_max) = y_scale.to_axis(view_bounds.y_max) else {
+            return true;
+        };
+
+        let view_w_axis = vx_max - vx_min;
+        let view_h_axis = vy_max - vy_min;
+        if !view_w_axis.is_finite()
+            || !view_h_axis.is_finite()
+            || view_w_axis <= 0.0
+            || view_h_axis <= 0.0
+        {
+            return true;
+        }
+
+        let scale_x = (plot.size.width.0 as f64) / view_w_axis;
+        let scale_y = (plot.size.height.0 as f64) / view_h_axis;
+
+        let translation = Point::new(
+            Px((vx_min * scale_x) as f32),
+            Px((-(vy_max) * scale_y) as f32),
+        );
+
+        let view_rect_world = Rect::new(translation, plot.size);
+
+        self.tile_ops_cache.begin_frame();
+        self.tile_ops_cache
+            .prune(TILE_MAX_AGE_FRAMES, TILE_MAX_ENTRIES);
+
+        let tile_grid = TileGrid2D::new(TILE_SIZE_CANVAS);
+        tile_grid.tiles_in_rect(view_rect_world, &mut self.tile_scratch);
+
+        use std::collections::hash_map::DefaultHasher;
+
+        let base_key = {
+            let mut hasher = DefaultHasher::new();
+            "fret-plot.histogram2d.tile.v1".hash(&mut hasher);
+            model_revision.hash(&mut hasher);
+            model.cols.hash(&mut hasher);
+            model.rows.hash(&mut hasher);
+            x_scale.key().hash(&mut hasher);
+            y_scale.key().hash(&mut hasher);
+            u64::from(style.heatmap_colormap.key()).hash(&mut hasher);
+            (plot.size.width.0 as f64).to_bits().hash(&mut hasher);
+            (plot.size.height.0 as f64).to_bits().hash(&mut hasher);
+            (scale_x).to_bits().hash(&mut hasher);
+            (scale_y).to_bits().hash(&mut hasher);
+            model.value_min.to_bits().hash(&mut hasher);
+            model.value_max.to_bits().hash(&mut hasher);
+            (level as u64).hash(&mut hasher);
+            TILE_SIZE_CANVAS.to_bits().hash(&mut hasher);
+            hasher.finish()
+        };
+
+        let plot_origin_x = plot_origin.x.0;
+        let plot_origin_y = plot_origin.y.0;
+        let translation_x = translation.x.0;
+        let translation_y = translation.y.0;
+
+        for tile in self.tile_scratch.iter().copied() {
+            let tile_origin_world = tile.origin(TILE_SIZE_CANVAS);
+            let tile_rect_world = Rect::new(
+                tile_origin_world,
+                Size::new(Px(TILE_SIZE_CANVAS), Px(TILE_SIZE_CANVAS)),
+            );
+
+            let key = {
+                let mut hasher = DefaultHasher::new();
+                base_key.hash(&mut hasher);
+                tile.hash(&mut hasher);
+                hasher.finish()
+            };
+
+            let screen_tile_origin = Point::new(
+                Px(tile_origin_world.x.0 - translation_x),
+                Px(tile_origin_world.y.0 - translation_y),
+            );
+            let replay_delta = Point::new(
+                Px(plot_origin_x + screen_tile_origin.x.0),
+                Px(plot_origin_y + screen_tile_origin.y.0),
+            );
+
+            if self.tile_ops_cache.try_replay(key, cx.scene, replay_delta) {
+                continue;
+            }
+
+            let ops = grid_heatmap_tile_ops(
+                tile_rect_world,
+                tile_origin_world,
+                scale_x,
+                scale_y,
+                x_scale,
+                y_scale,
+                model.data_bounds,
+                model.cols,
+                model.rows,
+                dx,
+                dy,
+                model.value_min,
+                denom,
+                grid_cols,
+                grid_rows,
+                values,
+                scale,
+                &heatmap_color,
+            );
+
+            cx.scene.replay_ops_translated(&ops, replay_delta);
+            self.tile_ops_cache.store_ops(key, ops);
+        }
+
+        true
     }
 
     fn paint_quads<H: UiHost>(
@@ -5046,6 +5620,8 @@ impl PlotLayer for Histogram2DPlotLayer {
         self.cached_quads.clear();
         self.mip_key = None;
         self.mips.clear();
+        self.tile_ops_cache.clear();
+        self.tile_scratch.clear();
     }
 }
 

@@ -5006,49 +5006,41 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 .or(self.legend_hover);
 
             let mut emphasized_path: Option<(PathId, Color)> = None;
-            match self.layer.quads_scene_cache_policy() {
-                PlotQuadsSceneCachePolicy::Disabled => {
-                    for quad in self.rebuild_quads_if_needed(
-                        cx,
-                        layout.plot,
-                        view_bounds,
-                        view_bounds_y2,
-                        view_bounds_y3,
-                        view_bounds_y4,
-                        hidden,
-                        resolved_style,
-                    ) {
-                        cx.scene.push(SceneOp::Quad {
-                            order: quad.order,
-                            rect: offset_rect(quad.rect_local, layout.plot.origin),
-                            background: quad.background,
-                            border: fret_core::Edges::all(Px(0.0)),
-                            border_color: Color::TRANSPARENT,
-                            corner_radii: fret_core::Corners::all(Px(0.0)),
-                        });
-                    }
-                }
-                PlotQuadsSceneCachePolicy::Enabled => {
-                    let mut key = 0u64;
-                    key = Self::hash_u64(key, theme_revision);
-                    key = Self::hash_u64(key, self.model.revision(cx.app).unwrap_or(0));
-                    key = Self::hash_u64(key, u64::from(resolved_style.heatmap_colormap.key()));
-                    key = Self::hash_f32_bits(key, layout.plot.size.width.0);
-                    key = Self::hash_f32_bits(key, layout.plot.size.height.0);
-                    key = Self::hash_f64_bits(key, view_bounds.x_min);
-                    key = Self::hash_f64_bits(key, view_bounds.x_max);
-                    key = Self::hash_f64_bits(key, view_bounds.y_min);
-                    key = Self::hash_f64_bits(key, view_bounds.y_max);
-                    key = Self::hash_u64(key, self.x_scale.key());
-                    key = Self::hash_u64(key, self.y_scale.key());
 
-                    if self
-                        .quads_scene_cache
-                        .try_replay(key, cx.scene, layout.plot.origin)
-                    {
-                        // Cache hit.
-                    } else {
-                        let quads = self.rebuild_quads_if_needed(
+            let quads_emitted_by_layer = self
+                .model
+                .read(cx.app, |_app, m| m.clone())
+                .ok()
+                .is_some_and(|model| {
+                    let model_revision = self.model.revision(cx.app).unwrap_or(0);
+                    let plot_local = Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size);
+
+                    self.layer.paint_quads_scene_ops_tiled(
+                        cx,
+                        &model,
+                        PlotPaintArgs {
+                            model_revision,
+                            plot: plot_local,
+                            view_bounds,
+                            view_bounds_y2,
+                            view_bounds_y3,
+                            view_bounds_y4,
+                            x_scale: self.x_scale,
+                            y_scale: self.y_scale,
+                            y2_scale: self.y2_scale,
+                            y3_scale: self.y3_scale,
+                            y4_scale: self.y4_scale,
+                            style: resolved_style,
+                            hidden,
+                        },
+                        layout.plot.origin,
+                    )
+                });
+
+            if !quads_emitted_by_layer {
+                match self.layer.quads_scene_cache_policy() {
+                    PlotQuadsSceneCachePolicy::Disabled => {
+                        for quad in self.rebuild_quads_if_needed(
                             cx,
                             layout.plot,
                             view_bounds,
@@ -5057,22 +5049,63 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             view_bounds_y4,
                             hidden,
                             resolved_style,
-                        );
-
-                        let mut ops: Vec<SceneOp> = Vec::with_capacity(quads.len());
-                        for quad in quads {
-                            ops.push(SceneOp::Quad {
+                        ) {
+                            cx.scene.push(SceneOp::Quad {
                                 order: quad.order,
-                                rect: quad.rect_local,
+                                rect: offset_rect(quad.rect_local, layout.plot.origin),
                                 background: quad.background,
                                 border: fret_core::Edges::all(Px(0.0)),
                                 border_color: Color::TRANSPARENT,
                                 corner_radii: fret_core::Corners::all(Px(0.0)),
                             });
                         }
+                    }
+                    PlotQuadsSceneCachePolicy::Enabled => {
+                        let mut key = 0u64;
+                        key = Self::hash_u64(key, theme_revision);
+                        key = Self::hash_u64(key, self.model.revision(cx.app).unwrap_or(0));
+                        key = Self::hash_u64(key, u64::from(resolved_style.heatmap_colormap.key()));
+                        key = Self::hash_f32_bits(key, layout.plot.size.width.0);
+                        key = Self::hash_f32_bits(key, layout.plot.size.height.0);
+                        key = Self::hash_f64_bits(key, view_bounds.x_min);
+                        key = Self::hash_f64_bits(key, view_bounds.x_max);
+                        key = Self::hash_f64_bits(key, view_bounds.y_min);
+                        key = Self::hash_f64_bits(key, view_bounds.y_max);
+                        key = Self::hash_u64(key, self.x_scale.key());
+                        key = Self::hash_u64(key, self.y_scale.key());
 
-                        cx.scene.replay_ops_translated(&ops, layout.plot.origin);
-                        self.quads_scene_cache.store_ops(key, ops);
+                        if self
+                            .quads_scene_cache
+                            .try_replay(key, cx.scene, layout.plot.origin)
+                        {
+                            // Cache hit.
+                        } else {
+                            let quads = self.rebuild_quads_if_needed(
+                                cx,
+                                layout.plot,
+                                view_bounds,
+                                view_bounds_y2,
+                                view_bounds_y3,
+                                view_bounds_y4,
+                                hidden,
+                                resolved_style,
+                            );
+
+                            let mut ops: Vec<SceneOp> = Vec::with_capacity(quads.len());
+                            for quad in quads {
+                                ops.push(SceneOp::Quad {
+                                    order: quad.order,
+                                    rect: quad.rect_local,
+                                    background: quad.background,
+                                    border: fret_core::Edges::all(Px(0.0)),
+                                    border_color: Color::TRANSPARENT,
+                                    corner_radii: fret_core::Corners::all(Px(0.0)),
+                                });
+                            }
+
+                            cx.scene.replay_ops_translated(&ops, layout.plot.origin);
+                            self.quads_scene_cache.store_ops(key, ops);
+                        }
                     }
                 }
             }
