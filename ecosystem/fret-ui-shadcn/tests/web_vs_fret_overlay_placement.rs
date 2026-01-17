@@ -5002,6 +5002,12 @@ fn web_vs_fret_navigation_menu_demo_home_mobile_viewport_height_matches() {
         1.5,
     );
     assert_close(
+        "navigation-menu-demo.home-mobile viewport_width",
+        fret_viewport.w,
+        web_viewport.rect.w,
+        1.5,
+    );
+    assert_close(
         "navigation-menu-demo.home-mobile trigger_height",
         fret_trigger.h,
         web_trigger.rect.h,
