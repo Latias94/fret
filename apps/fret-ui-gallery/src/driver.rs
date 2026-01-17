@@ -595,6 +595,9 @@ impl UiGalleryDriver {
             || std::env::var_os("FRET_UI_DEBUG_STATS").is_some_and(|v| !v.is_empty())
             || std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty());
         state.ui.set_debug_enabled(debug_on);
+        if debug_on {
+            app.request_redraw(window);
+        }
 
         Self::sync_shadcn_theme(app, state);
 
