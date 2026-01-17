@@ -41,6 +41,37 @@ impl<K: Copy + PartialEq> SceneOpCache<K> {
         self.ops.len()
     }
 
+    /// Replay cached ops when `key` matches.
+    ///
+    /// `replay_delta` is applied via `Scene::replay_ops_translated()`.
+    /// Returns `true` when the cache was hit.
+    pub fn try_replay(&mut self, key: K, scene: &mut Scene, replay_delta: Point) -> bool {
+        self.stats.calls = self.stats.calls.saturating_add(1);
+
+        if self.key == Some(key) {
+            self.stats.hits = self.stats.hits.saturating_add(1);
+            self.stats.replayed_ops = self
+                .stats
+                .replayed_ops
+                .saturating_add(self.ops.len().min(u64::MAX as usize) as u64);
+            scene.replay_ops_translated(&self.ops, replay_delta);
+            true
+        } else {
+            self.stats.misses = self.stats.misses.saturating_add(1);
+            false
+        }
+    }
+
+    /// Replace cached ops for `key`.
+    pub fn store_ops(&mut self, key: K, ops: Vec<SceneOp>) {
+        self.key = Some(key);
+        self.stats.recorded_ops = self
+            .stats
+            .recorded_ops
+            .saturating_add(ops.len().min(u64::MAX as usize) as u64);
+        self.ops = ops;
+    }
+
     /// Replay cached ops when `key` matches; otherwise run `record` and replace the cache.
     ///
     /// `replay_delta` is applied via `Scene::replay_ops_translated()`.
@@ -52,19 +83,10 @@ impl<K: Copy + PartialEq> SceneOpCache<K> {
         replay_delta: Point,
         record: impl FnOnce(&mut Scene),
     ) -> bool {
-        self.stats.calls = self.stats.calls.saturating_add(1);
-
-        if self.key == Some(key) {
-            self.stats.hits = self.stats.hits.saturating_add(1);
-            self.stats.replayed_ops = self
-                .stats
-                .replayed_ops
-                .saturating_add(self.ops.len().min(u64::MAX as usize) as u64);
-            scene.replay_ops_translated(&self.ops, replay_delta);
+        if self.try_replay(key, scene, replay_delta) {
             return true;
         }
 
-        self.stats.misses = self.stats.misses.saturating_add(1);
         self.key = Some(key);
         self.ops.clear();
 
@@ -122,5 +144,30 @@ mod tests {
         assert!(hit1);
         // replay_ops_translated wraps ops in a transform stack when delta != 0.
         assert_eq!(scene2.ops_len(), 3);
+    }
+
+    #[test]
+    fn scene_op_cache_store_ops_then_try_replay() {
+        let mut cache: SceneOpCache<u64> = SceneOpCache::default();
+        cache.store_ops(
+            9,
+            vec![SceneOp::Quad {
+                order: DrawOrder(0),
+                rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0))),
+                background: Color {
+                    r: 1.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 1.0,
+                },
+                border: fret_core::Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: fret_core::Corners::all(Px(0.0)),
+            }],
+        );
+
+        let mut scene = Scene::default();
+        assert!(cache.try_replay(9, &mut scene, Point::new(Px(0.0), Px(0.0))));
+        assert_eq!(scene.ops_len(), 1);
     }
 }
