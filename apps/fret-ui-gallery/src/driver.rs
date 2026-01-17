@@ -28,9 +28,43 @@ use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 
 use crate::spec::*;
 use crate::ui;
+
+#[derive(Default)]
+struct DebugHudState {
+    last_tick: Option<fret_core::time::Instant>,
+    ema_frame_time_us: Option<f64>,
+}
+
+impl DebugHudState {
+    fn tick(&mut self, now: fret_core::time::Instant) -> Option<Duration> {
+        let dt = self.last_tick.map(|prev| now.duration_since(prev));
+        self.last_tick = Some(now);
+
+        if let Some(dt) = dt {
+            let sample = dt.as_micros() as f64;
+            let alpha = 0.1;
+            self.ema_frame_time_us = Some(match self.ema_frame_time_us {
+                Some(prev) => prev * (1.0 - alpha) + sample * alpha,
+                None => sample,
+            });
+        }
+
+        dt
+    }
+
+    fn ema_fps(&self) -> Option<f64> {
+        let us = self.ema_frame_time_us?;
+        if us <= 0.0 {
+            return None;
+        }
+        Some(1_000_000.0 / us)
+    }
+}
+
 struct UiGalleryWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
+    debug_hud: DebugHudState,
     selected_page: Model<Arc<str>>,
     workspace_tabs: Model<Vec<Arc<str>>>,
     workspace_dirty_tabs: Model<Vec<Arc<str>>>,
@@ -279,6 +313,7 @@ impl UiGalleryDriver {
         UiGalleryWindowState {
             ui,
             root: None,
+            debug_hud: DebugHudState::default(),
             selected_page,
             workspace_tabs,
             workspace_dirty_tabs,
@@ -602,6 +637,12 @@ impl UiGalleryDriver {
         Self::sync_shadcn_theme(app, state);
 
         let last_debug_stats = state.ui.debug_stats();
+        let frame_dt = if debug_on {
+            state.debug_hud.tick(fret_core::time::Instant::now())
+        } else {
+            None
+        };
+        let fps = state.debug_hud.ema_fps();
         let last_cache_roots = state.ui.debug_cache_root_stats();
         let cache_root_breakdown: Option<Vec<Arc<str>>> = if !last_cache_roots.is_empty() {
             let total = last_cache_roots.len();
@@ -673,6 +714,12 @@ impl UiGalleryDriver {
         let debug_hud_lines: Vec<Arc<str>> = if show_debug_hud {
             let mut lines: Vec<Arc<str>> = Vec::new();
 
+            lines.push(Arc::from(format!(
+                "fps={:.1} frame_dt_ms={:.2} solve_us={}",
+                fps.unwrap_or(0.0),
+                frame_dt.map(|dt| dt.as_secs_f64() * 1000.0).unwrap_or(0.0),
+                last_debug_stats.layout_engine_solve_time.as_micros()
+            )));
             lines.push(Arc::from(format!(
                 "frame={:?} layout_us={} paint_us={} layout_nodes={}/{} paint_nodes={}/{}",
                 last_debug_stats.frame_id,
