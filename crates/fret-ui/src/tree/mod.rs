@@ -520,6 +520,11 @@ pub struct UiTree<H: UiHost> {
     inspection_active: bool,
     paint_cache: PaintCacheState,
 
+    propagation_depth_cache: HashMap<NodeId, u32>,
+    propagation_chain: Vec<NodeId>,
+    propagation_entries: Vec<(u8, u32, u64, NodeId, Invalidation)>,
+    propagation_visited: HashMap<NodeId, u8>,
+
     semantics: Option<Arc<SemanticsSnapshot>>,
     semantics_requested: bool,
     deferred_cleanup: Vec<Box<dyn Widget<H>>>,
@@ -561,6 +566,10 @@ impl<H: UiHost> Default for UiTree<H> {
             paint_cache_policy: PaintCachePolicy::Auto,
             inspection_active: false,
             paint_cache: PaintCacheState::default(),
+            propagation_depth_cache: HashMap::new(),
+            propagation_chain: Vec::new(),
+            propagation_entries: Vec::new(),
+            propagation_visited: HashMap::new(),
             semantics: None,
             semantics_requested: false,
             deferred_cleanup: Vec::new(),
@@ -1937,43 +1946,54 @@ impl<H: UiHost> UiTree<H> {
         self.mark_invalidation(node, inv);
     }
 
+    fn propagation_depth_for(&mut self, start: NodeId) -> u32 {
+        if let Some(depth) = self.propagation_depth_cache.get(&start) {
+            return *depth;
+        }
+
+        self.propagation_chain.clear();
+
+        let mut current = Some(start);
+        while let Some(node) = current {
+            if let Some(depth) = self.propagation_depth_cache.get(&node) {
+                let mut d = *depth;
+                for id in self.propagation_chain.drain(..).rev() {
+                    d = d.saturating_add(1);
+                    self.propagation_depth_cache.insert(id, d);
+                }
+                return self
+                    .propagation_depth_cache
+                    .get(&start)
+                    .copied()
+                    .unwrap_or_default();
+            }
+
+            self.propagation_chain.push(node);
+            current = self.nodes.get(node).and_then(|n| n.parent);
+        }
+
+        let mut d = 0u32;
+        for id in self.propagation_chain.drain(..).rev() {
+            self.propagation_depth_cache.insert(id, d);
+            d = d.saturating_add(1);
+        }
+
+        self.propagation_depth_cache
+            .get(&start)
+            .copied()
+            .unwrap_or_default()
+    }
+
     fn propagate_observation_masks(
         &mut self,
         app: &mut H,
         masks: impl IntoIterator<Item = (NodeId, ObservationMask)>,
         source: UiDebugInvalidationSource,
     ) -> bool {
-        let mut depth_cache: HashMap<NodeId, u32> = HashMap::new();
-        let mut depth_for = |start: NodeId| -> u32 {
-            if let Some(depth) = depth_cache.get(&start) {
-                return *depth;
-            }
+        self.propagation_depth_cache.clear();
+        self.propagation_chain.clear();
+        self.propagation_entries.clear();
 
-            let mut chain: Vec<NodeId> = Vec::new();
-            let mut current = Some(start);
-            while let Some(node) = current {
-                if let Some(depth) = depth_cache.get(&node) {
-                    let mut d = *depth;
-                    for id in chain.into_iter().rev() {
-                        d = d.saturating_add(1);
-                        depth_cache.insert(id, d);
-                    }
-                    return depth_cache.get(&start).copied().unwrap_or_default();
-                }
-
-                chain.push(node);
-                current = self.nodes.get(node).and_then(|n| n.parent);
-            }
-
-            let mut d = 0u32;
-            for id in chain.into_iter().rev() {
-                depth_cache.insert(id, d);
-                d = d.saturating_add(1);
-            }
-            depth_cache.get(&start).copied().unwrap_or_default()
-        };
-
-        let mut entries: Vec<(u8, u32, u64, NodeId, Invalidation)> = Vec::new();
         for (node, mask) in masks {
             if mask.is_empty() || !self.nodes.contains_key(node) {
                 continue;
@@ -1989,16 +2009,17 @@ impl<H: UiHost> UiTree<H> {
                 continue;
             };
 
-            let depth = depth_for(node);
+            let depth = self.propagation_depth_for(node);
             let key = node.data().as_ffi();
-            entries.push((strength, depth, key, node, inv));
+            self.propagation_entries
+                .push((strength, depth, key, node, inv));
         }
 
-        if entries.is_empty() {
+        if self.propagation_entries.is_empty() {
             return false;
         }
 
-        entries.sort_by(|a, b| {
+        self.propagation_entries.sort_by(|a, b| {
             // Higher-strength invalidations first to maximize reuse via `visited`.
             b.0.cmp(&a.0)
                 // Within the same strength, prefer ancestors first to reduce redundant walks.
@@ -2007,12 +2028,16 @@ impl<H: UiHost> UiTree<H> {
                 .then(a.2.cmp(&b.2))
         });
 
-        let mut visited = HashMap::<NodeId, u8>::new();
+        self.propagation_visited.clear();
         let mut did_invalidate = false;
-        for (_, _, _, node, inv) in entries {
+        let mut visited = std::mem::take(&mut self.propagation_visited);
+        let mut entries = std::mem::take(&mut self.propagation_entries);
+        for (_, _, _, node, inv) in entries.drain(..) {
             self.mark_invalidation_dedup_with_source(node, inv, &mut visited, source);
             did_invalidate = true;
         }
+        self.propagation_visited = visited;
+        self.propagation_entries = entries;
 
         if did_invalidate && let Some(window) = self.window {
             app.request_redraw(window);
