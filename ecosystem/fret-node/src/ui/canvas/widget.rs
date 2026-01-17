@@ -210,7 +210,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     const EDGE_FOCUS_ANCHOR_BORDER_SCREEN: f32 = 2.0;
     const EDGE_FOCUS_ANCHOR_OFFSET_SCREEN: f32 = 18.0;
     const GRID_TILE_SIZE_SCREEN_PX: f32 = 2048.0;
-    const GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME: u32 = 32;
+    const GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME_IDLE: u32 = 32;
+    const GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME_INTERACTIVE: u32 = 8;
     const EDGE_MARKER_BUILD_BUDGET_PER_FRAME_IDLE: u32 = 96;
     const EDGE_MARKER_BUILD_BUDGET_PER_FRAME_INTERACTIVE: u32 = 24;
     const EDGE_LABEL_BUILD_BUDGET_PER_FRAME_IDLE: u32 = 16;
@@ -8711,6 +8712,30 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
         cx.observe_model(&self.view_state, Invalidation::Paint);
         let snapshot = self.sync_view_state(cx.app);
 
+        let view_interacting = self.interaction.viewport_move_debounce.is_some()
+            || self.interaction.panning
+            || self.interaction.pan_inertia.is_some()
+            || self.interaction.pending_marquee.is_some()
+            || self.interaction.marquee.is_some()
+            || self.interaction.pending_node_drag.is_some()
+            || self.interaction.node_drag.is_some()
+            || self.interaction.pending_group_drag.is_some()
+            || self.interaction.group_drag.is_some()
+            || self.interaction.pending_group_resize.is_some()
+            || self.interaction.group_resize.is_some()
+            || self.interaction.pending_node_resize.is_some()
+            || self.interaction.node_resize.is_some()
+            || self.interaction.pending_wire_drag.is_some()
+            || self.interaction.wire_drag.is_some()
+            || self.interaction.suspended_wire_drag.is_some()
+            || self.interaction.pending_edge_insert_drag.is_some()
+            || self.interaction.edge_insert_drag.is_some()
+            || self.interaction.edge_drag.is_some()
+            || self.interaction.pending_insert_node_drag.is_some()
+            || self.interaction.insert_node_drag_preview.is_some()
+            || self.interaction.context_menu.is_some()
+            || self.interaction.searcher.is_some();
+
         self.paint_cache.begin_frame();
         self.grid_scene_cache.begin_frame();
         if let Some(window) = cx.window {
@@ -8862,7 +8887,12 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                 ops
             };
 
-            let mut tile_budget = WorkBudget::new(Self::GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME);
+            let tile_budget_limit = if view_interacting {
+                Self::GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME_INTERACTIVE
+            } else {
+                Self::GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME_IDLE
+            };
+            let mut tile_budget = WorkBudget::new(tile_budget_limit);
             let mut skipped_tiles: u32 = 0;
             let base_key = {
                 let mut b = TileCacheKeyBuilder::new("fret-node.grid.tile.v1");
@@ -8922,7 +8952,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                             frame_id,
                             tile_entries,
                             requested_tiles,
-                            Self::GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME,
+                            tile_budget_limit,
                             tile_budget.used(),
                             skipped_tiles,
                             tile_stats,
@@ -9408,30 +9438,6 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                 edges_normal.push(paint);
             }
         }
-
-        let view_interacting = self.interaction.viewport_move_debounce.is_some()
-            || self.interaction.panning
-            || self.interaction.pan_inertia.is_some()
-            || self.interaction.pending_marquee.is_some()
-            || self.interaction.marquee.is_some()
-            || self.interaction.pending_node_drag.is_some()
-            || self.interaction.node_drag.is_some()
-            || self.interaction.pending_group_drag.is_some()
-            || self.interaction.group_drag.is_some()
-            || self.interaction.pending_group_resize.is_some()
-            || self.interaction.group_resize.is_some()
-            || self.interaction.pending_node_resize.is_some()
-            || self.interaction.node_resize.is_some()
-            || self.interaction.pending_wire_drag.is_some()
-            || self.interaction.wire_drag.is_some()
-            || self.interaction.suspended_wire_drag.is_some()
-            || self.interaction.pending_edge_insert_drag.is_some()
-            || self.interaction.edge_insert_drag.is_some()
-            || self.interaction.edge_drag.is_some()
-            || self.interaction.pending_insert_node_drag.is_some()
-            || self.interaction.insert_node_drag_preview.is_some()
-            || self.interaction.context_menu.is_some()
-            || self.interaction.searcher.is_some();
 
         let marker_budget_limit = if view_interacting {
             Self::EDGE_MARKER_BUILD_BUDGET_PER_FRAME_INTERACTIVE
