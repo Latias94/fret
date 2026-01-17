@@ -12,6 +12,8 @@ mod path_cache;
 mod scene_op_cache;
 mod svg_cache;
 
+pub use crate::text::TextCache;
+
 /// Lightweight counters for cache observability.
 ///
 /// These are intentionally backend-agnostic and may be wired into diagnostics tooling by
