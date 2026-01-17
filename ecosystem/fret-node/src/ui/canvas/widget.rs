@@ -206,7 +206,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     const EDGE_FOCUS_ANCHOR_PAD_SCREEN: f32 = 1.0;
     const EDGE_FOCUS_ANCHOR_BORDER_SCREEN: f32 = 2.0;
     const EDGE_FOCUS_ANCHOR_OFFSET_SCREEN: f32 = 18.0;
-    const GRID_TILE_SIZE_SCREEN_PX: f32 = 512.0;
+    const GRID_TILE_SIZE_SCREEN_PX: f32 = 2048.0;
 
     fn show_toast<H: UiHost>(
         &mut self,
