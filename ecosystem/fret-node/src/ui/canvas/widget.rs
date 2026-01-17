@@ -211,8 +211,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     const EDGE_FOCUS_ANCHOR_OFFSET_SCREEN: f32 = 18.0;
     const GRID_TILE_SIZE_SCREEN_PX: f32 = 2048.0;
     const GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME: u32 = 32;
-    const EDGE_MARKER_BUILD_BUDGET_PER_FRAME: u32 = 96;
-    const EDGE_LABEL_BUILD_BUDGET_PER_FRAME: u32 = 16;
+    const EDGE_MARKER_BUILD_BUDGET_PER_FRAME_IDLE: u32 = 96;
+    const EDGE_MARKER_BUILD_BUDGET_PER_FRAME_INTERACTIVE: u32 = 24;
+    const EDGE_LABEL_BUILD_BUDGET_PER_FRAME_IDLE: u32 = 16;
+    const EDGE_LABEL_BUILD_BUDGET_PER_FRAME_INTERACTIVE: u32 = 4;
 
     fn show_toast<H: UiHost>(
         &mut self,
@@ -9407,7 +9409,36 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
             }
         }
 
-        let mut marker_budget = WorkBudget::new(Self::EDGE_MARKER_BUILD_BUDGET_PER_FRAME);
+        let view_interacting = self.interaction.viewport_move_debounce.is_some()
+            || self.interaction.panning
+            || self.interaction.pan_inertia.is_some()
+            || self.interaction.pending_marquee.is_some()
+            || self.interaction.marquee.is_some()
+            || self.interaction.pending_node_drag.is_some()
+            || self.interaction.node_drag.is_some()
+            || self.interaction.pending_group_drag.is_some()
+            || self.interaction.group_drag.is_some()
+            || self.interaction.pending_group_resize.is_some()
+            || self.interaction.group_resize.is_some()
+            || self.interaction.pending_node_resize.is_some()
+            || self.interaction.node_resize.is_some()
+            || self.interaction.pending_wire_drag.is_some()
+            || self.interaction.wire_drag.is_some()
+            || self.interaction.suspended_wire_drag.is_some()
+            || self.interaction.pending_edge_insert_drag.is_some()
+            || self.interaction.edge_insert_drag.is_some()
+            || self.interaction.edge_drag.is_some()
+            || self.interaction.pending_insert_node_drag.is_some()
+            || self.interaction.insert_node_drag_preview.is_some()
+            || self.interaction.context_menu.is_some()
+            || self.interaction.searcher.is_some();
+
+        let marker_budget_limit = if view_interacting {
+            Self::EDGE_MARKER_BUILD_BUDGET_PER_FRAME_INTERACTIVE
+        } else {
+            Self::EDGE_MARKER_BUILD_BUDGET_PER_FRAME_IDLE
+        };
+        let mut marker_budget = WorkBudget::new(marker_budget_limit);
         let mut marker_budget_skipped: u32 = 0;
 
         for edge in edges_normal
@@ -9561,7 +9592,12 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                 lh.0 /= zoom;
             }
 
-            let mut label_budget = WorkBudget::new(Self::EDGE_LABEL_BUILD_BUDGET_PER_FRAME);
+            let label_budget_limit = if view_interacting {
+                Self::EDGE_LABEL_BUILD_BUDGET_PER_FRAME_INTERACTIVE
+            } else {
+                Self::EDGE_LABEL_BUILD_BUDGET_PER_FRAME_IDLE
+            };
+            let mut label_budget = WorkBudget::new(label_budget_limit);
             let mut label_budget_skipped: u32 = 0;
             for (from, to, route, label, _selected, _hovered) in edge_labels {
                 let (pos, normal) = match route {
@@ -9660,7 +9696,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                             key,
                             frame_id,
                             label_budget.used().saturating_add(label_budget_skipped),
-                            Self::EDGE_LABEL_BUILD_BUDGET_PER_FRAME,
+                            label_budget_limit,
                             label_budget.used(),
                             label_budget_skipped,
                         );
@@ -9680,7 +9716,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                         key,
                         frame_id,
                         marker_budget.used().saturating_add(marker_budget_skipped),
-                        Self::EDGE_MARKER_BUILD_BUDGET_PER_FRAME,
+                        marker_budget_limit,
                         marker_budget.used(),
                         marker_budget_skipped,
                     );
