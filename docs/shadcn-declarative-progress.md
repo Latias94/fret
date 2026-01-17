@@ -187,7 +187,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | Registry name | Rust module | Status | Audit | Notes |
 | --- | --- | --- | --- | --- |
 | accordion | `accordion` | Present | Unreviewed | Selection model drives open/close; no animation yet |
-| alert | `alert` | Present | Unreviewed |  |
+| alert | `alert` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`alert-demo`) |
 | alert-dialog | `alert_dialog` | Present | In review | Audit: `docs/audits/shadcn-alert-dialog.md`; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` |
 | aspect-ratio | `aspect_ratio` | Present | Unreviewed |  |
 | avatar | `avatar` | Present | Unreviewed |  |
@@ -199,7 +199,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | card | `card` | Present | Unreviewed |  |
 | carousel | `carousel` | Defer | Unreviewed | Not editor-critical |
 | chart | `chart` | Defer | Unreviewed | Not editor-critical |
-| checkbox | `checkbox` | Present | Unreviewed |  |
+| checkbox | `checkbox` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`checkbox-demo`) |
 | collapsible | `collapsible` | Present | Unreviewed | Headless open/close + a11y semantics |
 | command | `command` | Present | In review | `CommandPalette` provides cmdk-style active-descendant navigation + filtering/scoring (value + keywords), plus group/separator/empty + checkmark/shortcut; audit: `docs/audits/shadcn-command.md`; shadcn-web gates: `web_vs_fret_command_dialog_*` |
 | context-menu | `context_menu` | Present | In review | Right click + (macOS) ctrl-click + Shift+F10; anchors to click position for web/Radix parity; audit: `docs/audits/shadcn-context-menu.md`; gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`, `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs` |
@@ -210,7 +210,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | field | `field` | Present | Unreviewed | Repo-specific "form field" primitives |
 | form | `form` | Present | Unreviewed |  |
 | hover-card | `hover_card` | Present | In review | Hover intent + anchored placement; supports custom anchor via `HoverCard::anchor_element(...)`; audit: `docs/audits/shadcn-hover-card.md` |
-| input | `input` | Present | Unreviewed |  |
+| input | `input` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`input-demo`) |
 | input-group | `input_group` | Present | Unreviewed | Composition over `input` + slots/icons |
 | input-otp | `input_otp` | Present | Unreviewed | Slots rendered over transparent `TextInput`; digits-only clamping; a11y TBD |
 | item | `item` | Present | Unreviewed | Repo-specific list/item recipes aligned with shadcn style |
@@ -222,7 +222,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | pagination | `pagination` | Present | Unreviewed |  |
 | popover | `popover` | Present | Pass | Anchored placement + click-through outside press dismissal (ADR 0069); non-modal (no focus trap); audit: `docs/audits/shadcn-popover.md` |
 | progress | `progress` | Present | In review | shadcn-web gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`progress-demo`) |
-| radio-group | `radio_group` | Present | Unreviewed |  |
+| radio-group | `radio_group` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`radio-group-demo`) |
 | resizable | `resizable` | Present | Unreviewed | Runtime-owned drag + layout; multi-panel group; a11y TBD |
 | scroll-area | `scroll_area` | Present | Unreviewed | Declarative wrapper over `Scroll` + styling |
 | select | `select` | Present | In review | Anchored placement supports `side`/`align` + offsets; roving navigation supports `loop` default; audit: `docs/audits/shadcn-select.md` |
@@ -230,14 +230,14 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | sheet | `sheet` | Present | In review | Audit: `docs/audits/shadcn-sheet.md`; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` |
 | sidebar | `sidebar` | Present | Unreviewed |  |
 | skeleton | `skeleton` | Present | Unreviewed |  |
-| slider | `slider` | Present | Unreviewed | Declarative composition over primitives (PointerRegion hooks + bounds); a11y TBD |
+| slider | `slider` | Present | In review | Declarative composition over primitives (PointerRegion hooks + bounds); a11y TBD; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`slider-demo`) |
 | sonner | `sonner` | Present | In review | Toast store + overlay layer + timers; upsert-by-id; swipe-to-dismiss; hover pause/resume; max-toasts eviction; action/cancel; manual promise handle; audit: `docs/audits/shadcn-sonner.md` |
 | spinner | `spinner` | Present | Unreviewed |  |
-| switch | `switch` | Present | Unreviewed |  |
+| switch | `switch` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`switch-demo`) |
 | table | `table` | Present | Unreviewed |  |
 | tabs | `tabs` | Present | Unreviewed |  |
-| textarea | `textarea` | Present | Unreviewed | Wrapper over declarative `TextArea` (runtime `TextArea` engine); a11y TBD |
-| toggle | `toggle` | Present | Unreviewed |  |
+| textarea | `textarea` | Present | In review | Wrapper over declarative `TextArea` (runtime `TextArea` engine); a11y TBD; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`textarea-demo`) |
+| toggle | `toggle` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`toggle-demo`) |
 | toggle-group | `toggle_group` | Present | Unreviewed |  |
 | tooltip | `tooltip` | Present | In review | Hover intent + placement; rendered via overlay root (not clipped); audit: `docs/audits/shadcn-tooltip.md` |
 
