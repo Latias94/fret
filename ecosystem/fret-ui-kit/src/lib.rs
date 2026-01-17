@@ -54,8 +54,8 @@ pub use window_overlays::TOAST_VIEWPORT_FOCUS_COMMAND;
 ///
 /// Recommended: `use fret_ui_kit::prelude::*;`
 pub mod prelude {
-    pub use crate::declarative::CachedSubtreeExt;
     pub use crate::declarative::prelude::*;
+    pub use crate::declarative::{CachedSubtreeExt, CachedSubtreeProps};
     pub use crate::declarative::{stack, style};
 
     #[cfg(feature = "icons")]

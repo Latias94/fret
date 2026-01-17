@@ -33,7 +33,7 @@ pub mod tree;
 pub mod viewport_surface;
 pub mod visually_hidden;
 
-pub use cached_subtree::CachedSubtreeExt;
+pub use cached_subtree::{CachedSubtreeExt, CachedSubtreeProps};
 pub use model_watch::ModelWatchExt;
 
 #[cfg(test)]
