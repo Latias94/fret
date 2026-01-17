@@ -547,6 +547,7 @@ fn mount_element<H: UiHost>(
         window_frame.children.insert(node, children);
 
         mark_existing_declarative_subtree_seen(ui, window_state, root_id, frame_id, node);
+        inherit_observations_for_existing_subtree(window_state, window_frame, node);
         collect_scroll_handle_bindings_for_existing_subtree(window_frame, scroll_bindings, node);
         return node;
     }
@@ -688,6 +689,27 @@ fn collect_scroll_handle_bindings_for_existing_subtree(
     while let Some(node) = stack.pop() {
         if let Some(record) = window_frame.instances.get(&node) {
             collect_scroll_handle_bindings(record.element, &record.instance, out);
+        }
+
+        if let Some(children) = window_frame.children.get(&node) {
+            for &child in children {
+                stack.push(child);
+            }
+        }
+    }
+}
+
+fn inherit_observations_for_existing_subtree(
+    window_state: &mut crate::elements::WindowElementState,
+    window_frame: &WindowFrame,
+    root: NodeId,
+) {
+    let mut stack: Vec<NodeId> = vec![root];
+    while let Some(node) = stack.pop() {
+        if let Some(record) = window_frame.instances.get(&node) {
+            let element = record.element;
+            window_state.touch_observed_models_for_element_if_recorded(element);
+            window_state.touch_observed_globals_for_element_if_recorded(element);
         }
 
         if let Some(children) = window_frame.children.get(&node) {
