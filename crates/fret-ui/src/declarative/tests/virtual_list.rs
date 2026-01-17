@@ -611,6 +611,102 @@ fn virtual_list_probe_layout_does_not_consume_deferred_scroll_request() {
 }
 
 #[test]
+fn virtual_list_scroll_to_item_triggers_layout_even_without_other_invalidations() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(50.0)),
+    );
+    let mut text = FakeTextService::default();
+    let mut list_element_id: Option<crate::elements::GlobalElementId> = None;
+
+    fn build_list(
+        cx: &mut ElementContext<'_, TestHost>,
+        list_element_id: &mut Option<crate::elements::GlobalElementId>,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+    ) -> crate::element::AnyElement {
+        let list = cx.virtual_list(
+            500,
+            crate::element::VirtualListOptions::new(Px(10.0), 0),
+            scroll_handle,
+            |cx, items| {
+                items
+                    .iter()
+                    .copied()
+                    .map(|item| cx.keyed(item.key, |cx| cx.text("row")))
+                    .collect()
+            },
+        );
+        *list_element_id = Some(list.id);
+        list
+    }
+
+    // Frame 0: establish viewport height.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-scroll-invalidation",
+        |cx| vec![build_list(cx, &mut list_element_id, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    // Frame 1: mount list with known viewport height.
+    app.advance_frame();
+    let prev_list_element_id = list_element_id;
+    list_element_id = None;
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-scroll-invalidation",
+        |cx| vec![build_list(cx, &mut list_element_id, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(
+        prev_list_element_id, list_element_id,
+        "virtual list element id should be stable across frames"
+    );
+    let list_element_id = list_element_id.expect("list element id");
+
+    // Without touching the UI tree, request a deferred scroll-to-item.
+    let target = 80usize;
+    scroll_handle.scroll_to_item(target, crate::scroll::ScrollStrategy::Start);
+    assert_eq!(
+        scroll_handle.deferred_scroll_to_item(),
+        Some((target, crate::scroll::ScrollStrategy::Start))
+    );
+
+    // Frame 2: layout should still run for the list (consuming the deferred scroll request).
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert!(scroll_handle.deferred_scroll_to_item().is_none());
+    assert!(
+        scroll_handle.offset().y.0 > 0.01,
+        "expected scroll offset to change"
+    );
+    let offset_y = crate::elements::with_element_state(
+        &mut app,
+        window,
+        list_element_id,
+        crate::element::VirtualListState::default,
+        |s| s.offset_y,
+    );
+    assert!(offset_y.0 > 0.01, "expected state offset to change");
+}
+
+#[test]
 fn virtual_list_scroll_to_item_uses_measured_row_heights() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
