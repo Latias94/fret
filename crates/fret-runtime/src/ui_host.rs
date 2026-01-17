@@ -15,6 +15,14 @@ pub trait GlobalsHost {
         init: impl FnOnce() -> T,
         f: impl FnOnce(&mut T, &mut Self) -> R,
     ) -> R;
+
+    fn with_global_mut_untracked<T: Any, R>(
+        &mut self,
+        init: impl FnOnce() -> T,
+        f: impl FnOnce(&mut T, &mut Self) -> R,
+    ) -> R {
+        self.with_global_mut(init, f)
+    }
 }
 
 pub trait ModelsHost: ModelHost {
