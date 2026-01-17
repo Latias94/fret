@@ -650,6 +650,82 @@ impl UiGalleryDriver {
                 Some(Arc::from(line))
             }
         };
+        let unobserved_model_breakdown: Option<Arc<str>> = {
+            let unobserved = state.ui.debug_model_change_unobserved();
+            if unobserved.is_empty() {
+                None
+            } else {
+                let mut line = format!(
+                    "unobs_models={}",
+                    state.ui.debug_stats().model_change_unobserved_models
+                );
+                for entry in unobserved.iter().take(3) {
+                    let type_name = entry.created.map(|c| c.type_name).unwrap_or("<unknown>");
+                    let type_name = type_name.rsplit("::").next().unwrap_or(type_name);
+                    line.push(' ');
+                    line.push_str(&format!("{:?}={}", entry.model, type_name));
+                }
+                Some(Arc::from(line))
+            }
+        };
+
+        let show_debug_hud = debug_on;
+        let debug_hud_lines: Vec<Arc<str>> = if show_debug_hud {
+            let mut lines: Vec<Arc<str>> = Vec::new();
+
+            lines.push(Arc::from(format!(
+                "frame={:?} layout_us={} paint_us={} layout_nodes={}/{} paint_nodes={}/{}",
+                last_debug_stats.frame_id,
+                last_debug_stats.layout_time.as_micros(),
+                last_debug_stats.paint_time.as_micros(),
+                last_debug_stats.layout_nodes_performed,
+                last_debug_stats.layout_nodes_visited,
+                last_debug_stats.paint_nodes_performed,
+                last_debug_stats.paint_nodes,
+            )));
+            lines.push(Arc::from(format!(
+                "paint_cache hits={} misses={} replayed_ops={}",
+                last_debug_stats.paint_cache_hits,
+                last_debug_stats.paint_cache_misses,
+                last_debug_stats.paint_cache_replayed_ops
+            )));
+            lines.push(Arc::from(format!(
+                "view_cache active={} trunc={} relayouts={}",
+                last_debug_stats.view_cache_active as u8,
+                last_debug_stats.view_cache_invalidation_truncations,
+                last_debug_stats.view_cache_contained_relayouts
+            )));
+            lines.push(Arc::from(format!(
+                "changes models={} edges={} roots={} walks={} nodes={}",
+                last_debug_stats.model_change_models,
+                last_debug_stats.model_change_observation_edges,
+                last_debug_stats.model_change_invalidation_roots,
+                last_debug_stats.invalidation_walk_calls_model_change,
+                last_debug_stats.invalidation_walk_nodes_model_change
+            )));
+            lines.push(Arc::from(format!(
+                "globals count={} edges={} roots={} walks={} nodes={}",
+                last_debug_stats.global_change_globals,
+                last_debug_stats.global_change_observation_edges,
+                last_debug_stats.global_change_invalidation_roots,
+                last_debug_stats.invalidation_walk_calls_global_change,
+                last_debug_stats.invalidation_walk_nodes_global_change
+            )));
+
+            if let Some(extra) = cache_root_breakdown.as_ref() {
+                lines.extend(extra.iter().cloned());
+            }
+            if let Some(line) = hot_model_breakdown.as_ref() {
+                lines.push(line.clone());
+            }
+            if let Some(line) = unobserved_model_breakdown.as_ref() {
+                lines.push(line.clone());
+            }
+
+            lines
+        } else {
+            Vec::new()
+        };
         let inspector_status = if app.models().get_copied(&inspector_enabled).unwrap_or(false) {
             let pointer = app
                 .models()
@@ -1009,45 +1085,18 @@ impl UiGalleryDriver {
                             .get_model_copied(&view_cache_cache_shell, Invalidation::Layout)
                             .unwrap_or(false);
 
-                        let mut right_items: Vec<AnyElement> = vec![
-                            cx.text(format!("theme: {}", status_theme.as_ref())),
-                            cx.text(format!(
-                                "view_cache={} shell_cache={} active={} trunc={} relayouts={}",
-                                status_view_cache as u8,
-                                status_cache_shell as u8,
-                                last_debug_stats.view_cache_active as u8,
-                                last_debug_stats.view_cache_invalidation_truncations,
-                                last_debug_stats.view_cache_contained_relayouts
-                            )),
-                            cx.text(format!(
-                                "changes: models={} edges={} roots={} walks={} nodes={}",
-                                last_debug_stats.model_change_models,
-                                last_debug_stats.model_change_observation_edges,
-                                last_debug_stats.model_change_invalidation_roots,
-                                last_debug_stats.invalidation_walk_calls_model_change,
-                                last_debug_stats.invalidation_walk_nodes_model_change
-                            )),
-                            cx.text(format!(
-                                "globals: count={} edges={} roots={} walks={} nodes={}",
-                                last_debug_stats.global_change_globals,
-                                last_debug_stats.global_change_observation_edges,
-                                last_debug_stats.global_change_invalidation_roots,
-                                last_debug_stats.invalidation_walk_calls_global_change,
-                                last_debug_stats.invalidation_walk_nodes_global_change
-                            )),
-                        ];
+                        let mut right_items: Vec<AnyElement> = vec![cx.text(format!(
+                            "theme: {} view_cache={} shell_cache={} layout_us={} paint_us={}",
+                            status_theme.as_ref(),
+                            status_view_cache as u8,
+                            status_cache_shell as u8,
+                            last_debug_stats.layout_time.as_micros(),
+                            last_debug_stats.paint_time.as_micros()
+                        ))];
                         if let Some((cursor, hit, focus)) = inspector_status.as_ref() {
                             right_items.push(cx.text(format!("inspect: {}", cursor.as_ref())));
                             right_items.push(cx.text(format!("inspect: {}", hit.as_ref())));
                             right_items.push(cx.text(format!("inspect: {}", focus.as_ref())));
-                        }
-                        if let Some(lines) = cache_root_breakdown.as_ref() {
-                            for line in lines {
-                                right_items.push(cx.text(format!("hud: {}", line.as_ref())));
-                            }
-                        }
-                        if let Some(line) = hot_model_breakdown.as_ref() {
-                            right_items.push(cx.text(format!("hud: {}", line.as_ref())));
                         }
 
                         WorkspaceStatusBar::new()
@@ -1078,7 +1127,7 @@ impl UiGalleryDriver {
                         .bottom(status_bar)
                         .into_element(cx);
 
-                    let content: Vec<AnyElement> = vec![
+                    let mut content: Vec<AnyElement> = vec![
                         cx.semantics(
                             SemanticsProps {
                                 role: SemanticsRole::Panel,
@@ -1093,6 +1142,69 @@ impl UiGalleryDriver {
                             shadcn::Toaster::new().into_element(cx)
                         },
                     ];
+                    if show_debug_hud {
+                        let debug_hud_lines = debug_hud_lines.clone();
+                        content.push(cx.keyed("ui_gallery.debug_hud", |cx| {
+                            let mut hud_layout = fret_ui::element::LayoutStyle::default();
+                            hud_layout.position = fret_ui::element::PositionStyle::Absolute;
+                            hud_layout.inset.top = Some(Px(8.0));
+                            hud_layout.inset.right = Some(Px(8.0));
+                            hud_layout.size.width = fret_ui::element::Length::Px(Px(520.0));
+                            hud_layout.size.height = fret_ui::element::Length::Px(Px(220.0));
+
+                            let mut gate = fret_ui::element::InteractivityGateProps::default();
+                            gate.layout = hud_layout;
+                            gate.present = true;
+                            gate.interactive = false;
+
+                            cx.interactivity_gate_props(gate, |cx| {
+                                let mut container_props = decl_style::container_props(
+                                    &theme,
+                                    ChromeRefinement::default()
+                                        .bg(ColorRef::Color(theme.color_required("background")))
+                                        .border_1()
+                                        .rounded(Radius::Md)
+                                        .p(Space::N3),
+                                    LayoutRefinement::default().w_full().h_full(),
+                                );
+                                container_props.layout.size.width = fret_ui::element::Length::Fill;
+                                container_props.layout.size.height = fret_ui::element::Length::Fill;
+                                container_props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+                                let body = stack::vstack(
+                                    cx,
+                                    stack::VStackProps::default()
+                                        .layout(LayoutRefinement::default().w_full())
+                                        .gap(Space::N1),
+                                    |cx| {
+                                        debug_hud_lines
+                                            .iter()
+                                            .map(|line| {
+                                                cx.text_props(TextProps {
+                                                    layout: Default::default(),
+                                                    text: line.clone(),
+                                                    style: None,
+                                                    color: Some(theme.color_required("foreground")),
+                                                    wrap: TextWrap::Word,
+                                                    overflow: TextOverflow::Clip,
+                                                })
+                                            })
+                                            .collect()
+                                    },
+                                );
+
+                                vec![cx.container(container_props, |cx| {
+                                    vec![
+                                        shadcn::ScrollArea::new(vec![body])
+                                            .refine_layout(
+                                                LayoutRefinement::default().w_full().h_full(),
+                                            )
+                                            .into_element(cx),
+                                    ]
+                                })]
+                            })
+                        }));
+                    }
 
                     if cx
                         .get_model_copied(&inspector_enabled, Invalidation::Layout)
