@@ -839,6 +839,7 @@ impl Default for FieldSeparator {
 pub struct Field {
     orientation: FieldOrientation,
     children: Vec<AnyElement>,
+    chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
 
@@ -847,6 +848,7 @@ impl Field {
         Self {
             orientation: FieldOrientation::default(),
             children,
+            chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
     }
@@ -861,68 +863,81 @@ impl Field {
         self
     }
 
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let gap = MetricRef::space(Space::N3).resolve(&theme);
-        let layout = decl_style::layout_style(
+        let wrapper = decl_style::container_props(
             &theme,
+            self.chrome,
             LayoutRefinement::default().w_full().merge(self.layout),
         );
 
+        let orientation = self.orientation;
+        let inner_layout =
+            decl_style::layout_style(&theme, LayoutRefinement::default().w_full().min_w_0());
         let children = self.children;
+        let align_horizontal = if children.iter().any(subtree_has_flex_grow) {
+            CrossAlign::Start
+        } else {
+            CrossAlign::Center
+        };
 
-        match self.orientation {
-            FieldOrientation::Vertical => cx.column(
-                ColumnProps {
-                    layout,
-                    gap,
-                    ..Default::default()
-                },
-                move |cx| {
-                    // Upstream `FieldDescription` includes `nth-last-2:-mt-1`.
-                    let len = children.len();
-                    children
-                        .into_iter()
-                        .enumerate()
-                        .map(|(idx, child)| {
-                            if len >= 2 && idx == len - 2 && is_field_description(&theme, &child) {
-                                let layout = decl_style::layout_style(
-                                    &theme,
-                                    LayoutRefinement::default().mt_neg(Space::N1),
-                                );
-                                cx.container(
-                                    ContainerProps {
-                                        layout,
-                                        ..Default::default()
-                                    },
-                                    move |_cx| vec![child],
-                                )
-                            } else {
-                                child
-                            }
-                        })
-                        .collect()
-                },
-            ),
-            FieldOrientation::Horizontal => {
-                let align = if children.iter().any(subtree_has_flex_grow) {
-                    CrossAlign::Start
-                } else {
-                    CrossAlign::Center
-                };
-
-                cx.row(
+        cx.container(wrapper, move |cx| {
+            let inner = match orientation {
+                FieldOrientation::Vertical => cx.column(
+                    ColumnProps {
+                        layout: inner_layout.clone(),
+                        gap,
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        // Upstream `FieldDescription` includes `nth-last-2:-mt-1`.
+                        let len = children.len();
+                        children
+                            .into_iter()
+                            .enumerate()
+                            .map(|(idx, child)| {
+                                if len >= 2
+                                    && idx == len - 2
+                                    && is_field_description(&theme, &child)
+                                {
+                                    let layout = decl_style::layout_style(
+                                        &theme,
+                                        LayoutRefinement::default().mt_neg(Space::N1),
+                                    );
+                                    cx.container(
+                                        ContainerProps {
+                                            layout,
+                                            ..Default::default()
+                                        },
+                                        move |_cx| vec![child],
+                                    )
+                                } else {
+                                    child
+                                }
+                            })
+                            .collect()
+                    },
+                ),
+                FieldOrientation::Horizontal => cx.row(
                     RowProps {
-                        layout,
+                        layout: inner_layout,
                         gap,
                         justify: MainAlign::Start,
-                        align,
+                        align: align_horizontal,
                         ..Default::default()
                     },
                     move |_cx| children,
-                )
-            }
-        }
+                ),
+            };
+
+            vec![inner]
+        })
     }
 }

@@ -3,6 +3,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use fret_canvas::budget::WorkBudget;
 use fret_canvas::cache::{SceneOpTileCache, TileCoord, TileGrid2D};
 use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_canvas::scale::{canvas_units_from_screen_px, effective_scale_factor};
@@ -207,6 +208,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     const EDGE_FOCUS_ANCHOR_BORDER_SCREEN: f32 = 2.0;
     const EDGE_FOCUS_ANCHOR_OFFSET_SCREEN: f32 = 18.0;
     const GRID_TILE_SIZE_SCREEN_PX: f32 = 2048.0;
+    const GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME: u32 = 32;
 
     fn show_toast<H: UiHost>(
         &mut self,
@@ -8786,6 +8788,24 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
             let grid_tiles = TileGrid2D::new(tile_size_canvas);
             grid_tiles.tiles_in_rect(grid_rect, &mut self.grid_tiles_scratch);
 
+            // Prefer building tiles near the viewport center first so partial work degrades
+            // gracefully under budget pressure.
+            if !self.grid_tiles_scratch.is_empty() && tile_size_canvas.is_finite() {
+                let cx_tile = (viewport_rect.origin.x.0 + 0.5 * viewport_rect.size.width.0)
+                    / tile_size_canvas;
+                let cy_tile = (viewport_rect.origin.y.0 + 0.5 * viewport_rect.size.height.0)
+                    / tile_size_canvas;
+                let center_tile = TileCoord {
+                    x: cx_tile.floor() as i32,
+                    y: cy_tile.floor() as i32,
+                };
+                self.grid_tiles_scratch.sort_unstable_by_key(|t| {
+                    let dx = (t.x - center_tile.x).abs() as u32;
+                    let dy = (t.y - center_tile.y).abs() as u32;
+                    dx.saturating_add(dy)
+                });
+            }
+
             let major_color = self.style.grid_major_color;
             let minor_color = self.style.grid_minor_color;
             let spacing_bits = spacing.to_bits();
@@ -8851,6 +8871,8 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                 ops
             };
 
+            let mut tile_budget = WorkBudget::new(Self::GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME);
+            let mut skipped_tiles: u32 = 0;
             for tile in self.grid_tiles_scratch.iter().copied() {
                 let tile_origin = tile.origin(tile_size_canvas);
 
@@ -8876,9 +8898,19 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                     continue;
                 }
 
+                if !tile_budget.try_consume(1) {
+                    skipped_tiles = skipped_tiles.saturating_add(1);
+                    continue;
+                }
+
                 let ops = tile_ops_for_key(tile);
                 cx.scene.replay_ops_translated(&ops, tile_origin);
                 self.grid_scene_cache.store_ops(key, ops);
+            }
+
+            if skipped_tiles > 0 {
+                // Continue warming tiles incrementally to avoid a single frame spike.
+                cx.request_redraw();
             }
         }
 

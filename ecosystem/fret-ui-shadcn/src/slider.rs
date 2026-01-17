@@ -107,6 +107,7 @@ pub struct Slider {
     min_steps_between_thumbs: u32,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     style: Option<SliderStyle>,
@@ -122,6 +123,7 @@ impl Slider {
             min_steps_between_thumbs: 0,
             disabled: false,
             a11y_label: None,
+            test_id: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             style: None,
@@ -168,6 +170,11 @@ impl Slider {
         self
     }
 
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.chrome = self.chrome.merge(style);
         self
@@ -193,6 +200,7 @@ impl Slider {
             self.min_steps_between_thumbs,
             self.disabled,
             self.a11y_label,
+            self.test_id,
             self.chrome,
             self.layout,
             self.style,
@@ -209,6 +217,7 @@ pub fn slider<H: UiHost>(
     min_steps_between_thumbs: u32,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     style: Option<SliderStyle>,
@@ -287,6 +296,7 @@ pub fn slider<H: UiHost>(
         let mut semantics =
             radix_slider::slider_root_semantics(a11y_label.clone(), active_value, disabled);
         semantics.layout = semantics_layout;
+        semantics.test_id = test_id.clone();
 
         let min_value = min;
         let max_value = max;

@@ -1086,6 +1086,14 @@ impl NavigationMenu {
                             move |_cx| vec![content],
                         );
 
+                        if viewport_enabled {
+                            radix_navigation_menu::navigation_menu_register_viewport_panel_id(
+                                cx,
+                                root_id,
+                                panel.id,
+                            );
+                        }
+
                         let mut children = Vec::new();
                         if indicator_enabled && indicator_size.0 > 0.0 {
                             let indicator = popper_content::popper_wrapper_panel_at(
