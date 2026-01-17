@@ -8720,20 +8720,6 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
             cx.app
                 .with_global_mut(CanvasCacheStatsRegistry::default, |registry, _app| {
                     registry.record_path_cache(key, frame_id, entries, stats);
-
-                    let tile_entries = self.grid_scene_cache.entries_len();
-                    let tile_stats = self.grid_scene_cache.stats();
-                    let tile_key = CanvasCacheKey {
-                        window: window.data().as_ffi(),
-                        node: cx.node.data().as_ffi(),
-                        name: "fret-node.canvas.grid_tiles",
-                    };
-                    registry.record_scene_op_tile_cache(
-                        tile_key,
-                        frame_id,
-                        tile_entries,
-                        tile_stats,
-                    );
                 });
         }
         for id in self.text_blobs.drain(..) {
@@ -8913,6 +8899,31 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
             if skipped_tiles > 0 {
                 // Continue warming tiles incrementally to avoid a single frame spike.
                 cx.request_redraw();
+            }
+
+            if let Some(window) = cx.window {
+                let frame_id = cx.app.frame_id().0;
+                let tile_entries = self.grid_scene_cache.entries_len();
+                let tile_stats = self.grid_scene_cache.stats();
+                let requested_tiles = self.grid_tiles_scratch.len();
+                let tile_key = CanvasCacheKey {
+                    window: window.data().as_ffi(),
+                    node: cx.node.data().as_ffi(),
+                    name: "fret-node.canvas.grid_tiles",
+                };
+                cx.app
+                    .with_global_mut(CanvasCacheStatsRegistry::default, |registry, _app| {
+                        registry.record_scene_op_tile_cache_with_budget(
+                            tile_key,
+                            frame_id,
+                            tile_entries,
+                            requested_tiles,
+                            Self::GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME,
+                            tile_budget.used(),
+                            skipped_tiles,
+                            tile_stats,
+                        );
+                    });
             }
         }
 

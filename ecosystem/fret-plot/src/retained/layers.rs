@@ -61,6 +61,10 @@ fn report_layer_tile_cache_stats<H: UiHost>(
     cx: &mut PaintCx<'_, H>,
     layer_name: &'static str,
     cache: &SceneOpTileCache<u64>,
+    requested_tiles: usize,
+    budget_limit: u32,
+    budget_used: u32,
+    skipped_tiles: u32,
 ) {
     let Some(window) = cx.window else {
         return;
@@ -75,7 +79,16 @@ fn report_layer_tile_cache_stats<H: UiHost>(
 
     cx.app
         .with_global_mut(CanvasCacheStatsRegistry::default, |registry, _app| {
-            registry.record_scene_op_tile_cache(key, frame_id, cache.entries_len(), cache.stats());
+            registry.record_scene_op_tile_cache_with_budget(
+                key,
+                frame_id,
+                cache.entries_len(),
+                requested_tiles,
+                budget_limit,
+                budget_used,
+                skipped_tiles,
+                cache.stats(),
+            );
         });
 }
 
@@ -4873,7 +4886,15 @@ impl PlotLayer for HeatmapPlotLayer {
             self.tile_ops_cache.store_ops(key, ops);
         }
 
-        report_layer_tile_cache_stats(cx, "fret-plot.heatmap.tiles", &self.tile_ops_cache);
+        report_layer_tile_cache_stats(
+            cx,
+            "fret-plot.heatmap.tiles",
+            &self.tile_ops_cache,
+            self.tile_scratch.len(),
+            TILE_BUILD_BUDGET_TILES_PER_FRAME,
+            tile_budget.used(),
+            skipped_tiles,
+        );
         if skipped_tiles > 0 {
             // Continue warming tiles incrementally to avoid a single frame spike.
             cx.request_redraw();
@@ -5417,7 +5438,15 @@ impl PlotLayer for Histogram2DPlotLayer {
             self.tile_ops_cache.store_ops(key, ops);
         }
 
-        report_layer_tile_cache_stats(cx, "fret-plot.histogram2d.tiles", &self.tile_ops_cache);
+        report_layer_tile_cache_stats(
+            cx,
+            "fret-plot.histogram2d.tiles",
+            &self.tile_ops_cache,
+            self.tile_scratch.len(),
+            TILE_BUILD_BUDGET_TILES_PER_FRAME,
+            tile_budget.used(),
+            skipped_tiles,
+        );
         if skipped_tiles > 0 {
             // Continue warming tiles incrementally to avoid a single frame spike.
             cx.request_redraw();
