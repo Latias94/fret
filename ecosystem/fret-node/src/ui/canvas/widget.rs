@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 
 use fret_canvas::budget::{InteractionBudget, WorkBudget};
 use fret_canvas::cache::{
-    SceneOpTileCache, TileCacheKeyBuilder, TileCoord, TileGrid2D, tile_cache_key,
+    SceneOpTileCache, TileCacheKeyBuilder, TileCoord, TileGrid2D, warm_scene_op_tiles_u64,
 };
 use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_canvas::scale::{canvas_units_from_screen_px, effective_scale_factor};
@@ -8892,24 +8892,17 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                 b.add_u32(minor_color.a.to_bits());
                 b.finish()
             };
-            for tile in self.grid_tiles_scratch.iter().copied() {
-                let tile_origin = tile.origin(tile_size_canvas);
-
-                let key = tile_cache_key(base_key, tile);
-
-                if self.grid_scene_cache.try_replay(key, cx.scene, tile_origin) {
-                    continue;
-                }
-
-                if !tile_budget.try_consume(1) {
-                    skipped_tiles = skipped_tiles.saturating_add(1);
-                    continue;
-                }
-
-                let ops = tile_ops_for_key(tile);
-                cx.scene.replay_ops_translated(&ops, tile_origin);
-                self.grid_scene_cache.store_ops(key, ops);
-            }
+            let warmup = warm_scene_op_tiles_u64(
+                &mut self.grid_scene_cache,
+                cx.scene,
+                &self.grid_tiles_scratch,
+                base_key,
+                1,
+                &mut tile_budget,
+                |tile| tile.origin(tile_size_canvas),
+                tile_ops_for_key,
+            );
+            skipped_tiles = warmup.skipped_tiles;
 
             if skipped_tiles > 0 {
                 // Continue warming tiles incrementally to avoid a single frame spike.
@@ -11802,12 +11795,6 @@ mod tests {
             self.globals
                 .get(&TypeId::of::<T>())
                 .and_then(|b| b.downcast_ref::<T>())
-        }
-
-        fn global_mut<T: Any>(&mut self) -> Option<&mut T> {
-            self.globals
-                .get_mut(&TypeId::of::<T>())
-                .and_then(|b| b.downcast_mut::<T>())
         }
 
         fn with_global_mut<T: Any, R>(
