@@ -8,6 +8,47 @@ use crate::layout_engine::build_viewport_flow_subtree;
 use crate::layout_pass::LayoutPassKind;
 
 impl<H: UiHost> UiTree<H> {
+    fn invalidate_scroll_handle_bindings_for_changed_handles(
+        &mut self,
+        app: &mut H,
+        pass_kind: LayoutPassKind,
+    ) {
+        if pass_kind != LayoutPassKind::Final {
+            return;
+        }
+        let Some(window) = self.window else {
+            return;
+        };
+
+        let changed = crate::declarative::frame::take_changed_scroll_handle_keys(app, window);
+        if changed.is_empty() {
+            return;
+        }
+
+        let mut visited = HashMap::<NodeId, u8>::new();
+        for handle_key in changed {
+            let bound = crate::declarative::frame::bound_elements_for_scroll_handle(
+                &mut *app, window, handle_key,
+            );
+            if bound.is_empty() {
+                continue;
+            }
+            for element in bound {
+                let Some(node) = crate::declarative::node_for_element_in_window_frame(
+                    &mut *app, window, element,
+                ) else {
+                    continue;
+                };
+                self.mark_invalidation_dedup_with_source(
+                    node,
+                    Invalidation::Layout,
+                    &mut visited,
+                    UiDebugInvalidationSource::Other,
+                );
+            }
+        }
+    }
+
     fn invalidate_virtual_lists_with_deferred_scroll_requests(
         &mut self,
         app: &mut H,
@@ -147,6 +188,8 @@ impl<H: UiHost> UiTree<H> {
             .visible_layers_in_paint_order()
             .map(|layer| self.layers[layer].root)
             .collect();
+
+        self.invalidate_scroll_handle_bindings_for_changed_handles(app, pass_kind);
 
         let (layout_engine_solves_start, layout_engine_solve_time_start) = {
             self.begin_layout_engine_frame(app);

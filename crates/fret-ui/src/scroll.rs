@@ -15,6 +15,7 @@ struct ScrollHandleState {
     offset: Point,
     viewport: Size,
     content: Size,
+    revision: u64,
 }
 
 /// A lightweight imperative handle for driving scroll state.
@@ -33,6 +34,10 @@ impl ScrollHandle {
 
     pub fn offset(&self) -> Point {
         self.state.borrow().offset
+    }
+
+    pub fn revision(&self) -> u64 {
+        self.state.borrow().revision
     }
 
     pub fn max_offset(&self) -> Point {
@@ -59,9 +64,24 @@ impl ScrollHandle {
     }
 
     pub fn set_offset(&self, offset: Point) {
-        let clamped = self.clamp_offset(offset);
         let mut state = self.state.borrow_mut();
-        state.offset = clamped;
+        let clamped = {
+            let max_x = (state.content.width.0 - state.viewport.width.0).max(0.0);
+            let max_y = (state.content.height.0 - state.viewport.height.0).max(0.0);
+            let clamp_x = state.viewport.width.0 > 0.0 && state.content.width.0 > 0.0;
+            let clamp_y = state.viewport.height.0 > 0.0 && state.content.height.0 > 0.0;
+
+            let x = offset.x.0.max(0.0);
+            let y = offset.y.0.max(0.0);
+            Point::new(
+                Px(if clamp_x { x.min(max_x) } else { x }),
+                Px(if clamp_y { y.min(max_y) } else { y }),
+            )
+        };
+        if state.offset != clamped {
+            state.offset = clamped;
+            state.revision = state.revision.saturating_add(1);
+        }
     }
 
     pub fn scroll_to_offset(&self, offset: Point) {
@@ -74,10 +94,14 @@ impl ScrollHandle {
 
     pub fn set_viewport_size(&self, viewport: Size) {
         let mut state = self.state.borrow_mut();
-        state.viewport = Size::new(
+        let next = Size::new(
             Px(viewport.width.0.max(0.0)),
             Px(viewport.height.0.max(0.0)),
         );
+        if state.viewport != next {
+            state.viewport = next;
+            state.revision = state.revision.saturating_add(1);
+        }
     }
 
     pub fn content_size(&self) -> Size {
@@ -86,7 +110,11 @@ impl ScrollHandle {
 
     pub fn set_content_size(&self, content: Size) {
         let mut state = self.state.borrow_mut();
-        state.content = Size::new(Px(content.width.0.max(0.0)), Px(content.height.0.max(0.0)));
+        let next = Size::new(Px(content.width.0.max(0.0)), Px(content.height.0.max(0.0)));
+        if state.content != next {
+            state.content = next;
+            state.revision = state.revision.saturating_add(1);
+        }
     }
 
     pub fn scroll_to_range_y(&self, start_y: Px, end_y: Px, strategy: ScrollStrategy) {

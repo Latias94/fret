@@ -108,6 +108,13 @@ pub(crate) fn element_record_for_node<H: UiHost>(
     })
 }
 
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct ScrollHandleBinding {
+    pub handle_key: usize,
+    pub element: GlobalElementId,
+    pub revision: u64,
+}
+
 #[derive(Default)]
 pub(crate) struct ScrollHandleRegistry {
     pub(super) windows: HashMap<AppWindowId, WindowScrollHandleRegistry>,
@@ -116,6 +123,8 @@ pub(crate) struct ScrollHandleRegistry {
 pub(crate) struct WindowScrollHandleRegistry {
     pub(super) frame_id: FrameId,
     pub(super) by_handle: HashMap<usize, Vec<GlobalElementId>>,
+    pub(super) current_revision: HashMap<usize, u64>,
+    pub(super) last_revision: HashMap<usize, u64>,
 }
 
 impl Default for WindowScrollHandleRegistry {
@@ -123,6 +132,8 @@ impl Default for WindowScrollHandleRegistry {
         Self {
             frame_id: FrameId(0),
             by_handle: HashMap::new(),
+            current_revision: HashMap::new(),
+            last_revision: HashMap::new(),
         }
     }
 }
@@ -134,6 +145,7 @@ fn prepare_window_scroll_registry_for_frame(
     if registry.frame_id != frame_id {
         registry.frame_id = frame_id;
         registry.by_handle.clear();
+        registry.current_revision.clear();
     }
 }
 
@@ -141,18 +153,24 @@ pub(crate) fn register_scroll_handle_bindings_batch<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
     frame_id: FrameId,
-    bindings: impl IntoIterator<Item = (usize, GlobalElementId)>,
+    bindings: impl IntoIterator<Item = ScrollHandleBinding>,
 ) {
     app.with_global_mut(ScrollHandleRegistry::default, |registry, _app| {
         let window_registry = registry.windows.entry(window).or_default();
         prepare_window_scroll_registry_for_frame(window_registry, frame_id);
 
-        for (handle_key, element) in bindings {
+        for binding in bindings {
+            let handle_key = binding.handle_key;
+            let element = binding.element;
             window_registry
                 .by_handle
                 .entry(handle_key)
                 .or_default()
                 .push(element);
+            window_registry
+                .current_revision
+                .entry(handle_key)
+                .or_insert(binding.revision);
         }
     });
 }
@@ -169,6 +187,27 @@ pub(crate) fn bound_elements_for_scroll_handle<H: UiHost>(
             .and_then(|window_registry| window_registry.by_handle.get(&handle_key))
             .cloned()
             .unwrap_or_default()
+    })
+}
+
+pub(crate) fn take_changed_scroll_handle_keys<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+) -> Vec<usize> {
+    app.with_global_mut(ScrollHandleRegistry::default, |registry, _app| {
+        let Some(window_registry) = registry.windows.get_mut(&window) else {
+            return Vec::new();
+        };
+
+        let mut changed: Vec<usize> = Vec::new();
+        for (&handle_key, &revision) in window_registry.current_revision.iter() {
+            let prev = window_registry.last_revision.get(&handle_key).copied();
+            if prev != Some(revision) {
+                changed.push(handle_key);
+            }
+            window_registry.last_revision.insert(handle_key, revision);
+        }
+        changed
     })
 }
 

@@ -143,7 +143,7 @@ pub fn render_root<H: UiHost>(
 
         let window_state = runtime.for_window_mut(window);
         let root_id = crate::elements::global_root(window, root_name);
-        let mut scroll_bindings: Vec<(usize, GlobalElementId)> = Vec::new();
+        let mut scroll_bindings: Vec<crate::declarative::frame::ScrollHandleBinding> = Vec::new();
 
         let root_node = window_state
             .node_entry(root_id)
@@ -306,7 +306,7 @@ fn render_dismissible_root_impl<
 
         let window_state = runtime.for_window_mut(window);
         let root_id = crate::elements::global_root(window, root_name);
-        let mut scroll_bindings: Vec<(usize, GlobalElementId)> = Vec::new();
+        let mut scroll_bindings: Vec<crate::declarative::frame::ScrollHandleBinding> = Vec::new();
 
         let root_node = window_state
             .node_entry(root_id)
@@ -422,7 +422,7 @@ fn mount_element<H: UiHost>(
     window_state: &mut crate::elements::WindowElementState,
     window_frame: &mut WindowFrame,
     element: AnyElement,
-    scroll_bindings: &mut Vec<(usize, GlobalElementId)>,
+    scroll_bindings: &mut Vec<crate::declarative::frame::ScrollHandleBinding>,
     pending_invalidations: &mut HashMap<NodeId, u8>,
 ) -> NodeId {
     let id = element.id;
@@ -681,7 +681,7 @@ fn mark_existing_declarative_subtree_seen<H: UiHost>(
 
 fn collect_scroll_handle_bindings_for_existing_subtree(
     window_frame: &WindowFrame,
-    out: &mut Vec<(usize, GlobalElementId)>,
+    out: &mut Vec<crate::declarative::frame::ScrollHandleBinding>,
     root: NodeId,
 ) {
     let mut stack: Vec<NodeId> = vec![root];
@@ -701,22 +701,39 @@ fn collect_scroll_handle_bindings_for_existing_subtree(
 fn collect_scroll_handle_bindings(
     element: GlobalElementId,
     instance: &ElementInstance,
-    out: &mut Vec<(usize, GlobalElementId)>,
+    out: &mut Vec<crate::declarative::frame::ScrollHandleBinding>,
 ) {
     match instance {
         ElementInstance::VirtualList(props) => {
-            out.push((props.scroll_handle.base_handle().binding_key(), element));
+            let handle = props.scroll_handle.base_handle();
+            out.push(crate::declarative::frame::ScrollHandleBinding {
+                handle_key: handle.binding_key(),
+                element,
+                revision: handle.revision(),
+            });
         }
         ElementInstance::Scroll(props) => {
             if let Some(handle) = props.scroll_handle.as_ref() {
-                out.push((handle.binding_key(), element));
+                out.push(crate::declarative::frame::ScrollHandleBinding {
+                    handle_key: handle.binding_key(),
+                    element,
+                    revision: handle.revision(),
+                });
             }
         }
         ElementInstance::WheelRegion(props) => {
-            out.push((props.scroll_handle.binding_key(), element));
+            out.push(crate::declarative::frame::ScrollHandleBinding {
+                handle_key: props.scroll_handle.binding_key(),
+                element,
+                revision: props.scroll_handle.revision(),
+            });
         }
         ElementInstance::Scrollbar(props) => {
-            out.push((props.scroll_handle.binding_key(), element));
+            out.push(crate::declarative::frame::ScrollHandleBinding {
+                handle_key: props.scroll_handle.binding_key(),
+                element,
+                revision: props.scroll_handle.revision(),
+            });
         }
         _ => {}
     }

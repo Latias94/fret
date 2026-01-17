@@ -4832,6 +4832,118 @@ fn scroll_thumb_drag_updates_offset() {
 }
 
 #[test]
+fn scroll_handle_set_offset_triggers_layout_without_manual_invalidate() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    fn build_root(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: crate::scroll::ScrollHandle,
+    ) -> Vec<AnyElement> {
+        let mut scroll_layout = crate::element::LayoutStyle::default();
+        scroll_layout.size.width = crate::element::Length::Fill;
+        scroll_layout.size.height = crate::element::Length::Fill;
+        scroll_layout.overflow = crate::element::Overflow::Clip;
+
+        vec![cx.scroll(
+            crate::element::ScrollProps {
+                layout: scroll_layout,
+                scroll_handle: Some(scroll_handle),
+                ..Default::default()
+            },
+            |cx| {
+                vec![cx.column(
+                    crate::element::ColumnProps {
+                        gap: Px(0.0),
+                        ..Default::default()
+                    },
+                    |cx| {
+                        vec![
+                            cx.text("a"),
+                            cx.text("b"),
+                            cx.text("c"),
+                            cx.text("d"),
+                            cx.text("e"),
+                            cx.text("f"),
+                        ]
+                    },
+                )]
+            },
+        )]
+    }
+
+    // Frame 0: establish viewport and content extent.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp-scroll-handle-set-offset",
+        |cx| build_root(cx, scroll_handle.clone()),
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    app.advance_frame();
+
+    // Frame 1: stable mount (no intentional invalidations).
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp-scroll-handle-set-offset",
+        |cx| build_root(cx, scroll_handle.clone()),
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let scroll_node = ui.children(root)[0];
+    let column_node = ui.children(scroll_node)[0];
+    let before = ui.debug_node_bounds(column_node).expect("column bounds");
+
+    // Outside the UI runtime, programmatically update the handle.
+    scroll_handle.set_offset(fret_core::Point::new(Px(0.0), Px(20.0)));
+    app.advance_frame();
+
+    // Frame 2: the scroll change should invalidate bound nodes implicitly via handle bindings.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp-scroll-handle-set-offset",
+        |cx| build_root(cx, scroll_handle.clone()),
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let scroll_node = ui.children(root)[0];
+    let column_node = ui.children(scroll_node)[0];
+    let after = ui
+        .debug_node_bounds(column_node)
+        .expect("column bounds after offset");
+
+    assert!(
+        after.origin.y.0 < before.origin.y.0,
+        "expected content to move up after programmatic scroll: before={:?} after={:?}",
+        before.origin.y,
+        after.origin.y
+    );
+}
+
+#[test]
 fn scroll_thumb_drag_updates_offset_horizontal() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
