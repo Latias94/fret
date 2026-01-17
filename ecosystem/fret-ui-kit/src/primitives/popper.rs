@@ -5,7 +5,8 @@
 
 use fret_core::{Edges, Point, Px, Rect, Size};
 use fret_ui::overlay_placement::{
-    AnchoredPanelLayout, AnchoredPanelOptions, CollisionOptions, anchored_panel_layout_sized_ex,
+    AnchoredPanelLayout, AnchoredPanelOptions, CollisionOptions, anchored_panel_layout_ex,
+    anchored_panel_layout_sized_ex,
 };
 
 pub use fret_ui::overlay_placement::{
@@ -177,6 +178,30 @@ pub fn popper_content_layout_sized(
         placement.side,
         placement.align,
         placement.options(),
+    )
+}
+
+/// Computes a Radix-style `PopperContent` layout without clamping the panel size to available space.
+///
+/// This matches Radix/Floating UI behavior for primitives that allow the floating rect to overflow
+/// the viewport while preserving its intrinsic size (e.g. NavigationMenu viewport in mobile mode).
+pub fn popper_content_layout_unclamped(
+    outer: Rect,
+    anchor: Rect,
+    desired: Size,
+    placement: PopperContentPlacement,
+) -> AnchoredPanelLayout {
+    let mut options = placement.options();
+    // Allow the panel to overflow the collision boundary on the main axis (no shift/clamp).
+    options.shift.main_axis = false;
+    anchored_panel_layout_ex(
+        outer,
+        anchor,
+        desired,
+        placement.side_offset,
+        placement.side,
+        placement.align,
+        options,
     )
 }
 
