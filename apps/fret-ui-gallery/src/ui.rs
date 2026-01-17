@@ -3,6 +3,7 @@ use fret_markdown as markdown;
 use fret_ui::Theme;
 use fret_ui::elements::ContinuousFrames;
 use fret_ui::scroll::VirtualListScrollHandle;
+use fret_ui_kit::declarative::CachedSubtreeExt as _;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 use time::Date;
@@ -813,7 +814,7 @@ fn preview_view_cache(
     };
 
     let subtree = if cache_inner {
-        cx.view_cache(fret_ui::element::ViewCacheProps::default(), subtree_body)
+        cx.cached_subtree(subtree_body)
     } else {
         shadcn::Card::new(vec![
             shadcn::CardHeader::new(vec![
