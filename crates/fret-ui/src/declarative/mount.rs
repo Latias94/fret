@@ -1,8 +1,10 @@
+use super::frame::layout_style_for_instance;
 use super::frame::{
     DismissibleLayerProps, ElementFrame, ElementInstance, ElementRecord, WindowFrame,
 };
 use super::host_widget::ElementHostWidget;
 use super::prelude::*;
+use std::collections::HashMap;
 
 pub struct RenderRootContext<'a, H: UiHost> {
     pub ui: &'a mut UiTree<H>,
@@ -174,6 +176,7 @@ pub fn render_root<H: UiHost>(
         app.with_global_mut(ElementFrame::default, |frame, _app| {
             let window_frame = frame.windows.entry(window).or_default();
             prepare_window_frame_for_frame(window_frame, frame_id);
+            let mut pending_invalidations: HashMap<NodeId, u8> = HashMap::new();
 
             window_frame.instances.insert(
                 root_node,
@@ -194,10 +197,13 @@ pub fn render_root<H: UiHost>(
                     window_frame,
                     child,
                     &mut scroll_bindings,
+                    &mut pending_invalidations,
                 ));
             }
             ui.set_children(root_node, mounted_children.clone());
             window_frame.children.insert(root_node, mounted_children);
+
+            apply_pending_invalidations(ui, pending_invalidations);
         });
 
         crate::declarative::frame::register_scroll_handle_bindings_batch(
@@ -333,6 +339,7 @@ fn render_dismissible_root_impl<
         app.with_global_mut(ElementFrame::default, |frame, _app| {
             let window_frame = frame.windows.entry(window).or_default();
             prepare_window_frame_for_frame(window_frame, frame_id);
+            let mut pending_invalidations: HashMap<NodeId, u8> = HashMap::new();
 
             window_frame.instances.insert(
                 root_node,
@@ -353,9 +360,12 @@ fn render_dismissible_root_impl<
                     window_frame,
                     child,
                     &mut scroll_bindings,
+                    &mut pending_invalidations,
                 ));
             }
             ui.set_children(root_node, mounted_children);
+
+            apply_pending_invalidations(ui, pending_invalidations);
         });
 
         crate::declarative::frame::register_scroll_handle_bindings_batch(
@@ -413,6 +423,7 @@ fn mount_element<H: UiHost>(
     window_frame: &mut WindowFrame,
     element: AnyElement,
     scroll_bindings: &mut Vec<(usize, GlobalElementId)>,
+    pending_invalidations: &mut HashMap<NodeId, u8>,
 ) -> NodeId {
     let id = element.id;
     let reuse_view_cache = matches!(&element.kind, ElementKind::ViewCache(_))
@@ -512,6 +523,17 @@ fn mount_element<H: UiHost>(
 
     collect_scroll_handle_bindings(id, &instance, scroll_bindings);
 
+    let previous_instance = window_frame.instances.get(&node).map(|r| &r.instance);
+    if !reuse_view_cache {
+        let mask = declarative_instance_change_mask(previous_instance, &instance);
+        if mask != 0 {
+            pending_invalidations
+                .entry(node)
+                .and_modify(|m| *m |= mask)
+                .or_insert(mask);
+        }
+    }
+
     window_frame.instances.insert(
         node,
         ElementRecord {
@@ -540,12 +562,92 @@ fn mount_element<H: UiHost>(
             window_frame,
             child,
             scroll_bindings,
+            pending_invalidations,
         ));
     }
     ui.set_children(node, child_nodes.clone());
     window_frame.children.insert(node, child_nodes);
 
     node
+}
+
+const INVALIDATION_HIT_TEST: u8 = 1 << 0;
+const INVALIDATION_LAYOUT: u8 = 1 << 1;
+const INVALIDATION_PAINT: u8 = 1 << 2;
+
+fn declarative_instance_change_mask(
+    previous: Option<&ElementInstance>,
+    next: &ElementInstance,
+) -> u8 {
+    let Some(previous) = previous else {
+        return INVALIDATION_HIT_TEST | INVALIDATION_LAYOUT | INVALIDATION_PAINT;
+    };
+
+    if std::mem::discriminant(previous) != std::mem::discriminant(next) {
+        return INVALIDATION_HIT_TEST | INVALIDATION_LAYOUT | INVALIDATION_PAINT;
+    }
+
+    let mut layout_changed = layout_style_for_instance(previous) != layout_style_for_instance(next);
+    let mut paint_changed = false;
+
+    match (previous, next) {
+        (ElementInstance::Text(a), ElementInstance::Text(b)) => {
+            if a.text != b.text
+                || a.style != b.style
+                || a.color != b.color
+                || a.wrap != b.wrap
+                || a.overflow != b.overflow
+            {
+                layout_changed = true;
+                paint_changed = true;
+            }
+        }
+        (ElementInstance::StyledText(a), ElementInstance::StyledText(b)) => {
+            if a.rich != b.rich
+                || a.style != b.style
+                || a.color != b.color
+                || a.wrap != b.wrap
+                || a.overflow != b.overflow
+            {
+                layout_changed = true;
+                paint_changed = true;
+            }
+        }
+        (ElementInstance::SelectableText(a), ElementInstance::SelectableText(b)) => {
+            if a.rich != b.rich
+                || a.style != b.style
+                || a.color != b.color
+                || a.wrap != b.wrap
+                || a.overflow != b.overflow
+            {
+                layout_changed = true;
+                paint_changed = true;
+            }
+        }
+        _ => {}
+    }
+
+    if layout_changed {
+        return INVALIDATION_HIT_TEST | INVALIDATION_LAYOUT | INVALIDATION_PAINT;
+    }
+    if paint_changed {
+        return INVALIDATION_PAINT;
+    }
+    0
+}
+
+fn apply_pending_invalidations<H: UiHost>(ui: &mut UiTree<H>, pending: HashMap<NodeId, u8>) {
+    for (node, mask) in pending {
+        if (mask & INVALIDATION_HIT_TEST) != 0 {
+            ui.invalidate(node, Invalidation::HitTest);
+        }
+        if (mask & INVALIDATION_LAYOUT) != 0 {
+            ui.invalidate(node, Invalidation::Layout);
+        }
+        if (mask & INVALIDATION_PAINT) != 0 {
+            ui.invalidate(node, Invalidation::Paint);
+        }
+    }
 }
 
 fn mark_existing_declarative_subtree_seen<H: UiHost>(

@@ -142,7 +142,7 @@ impl Default for PointerRegionProps {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct LayoutStyle {
     pub size: SizeStyle,
     pub flex: FlexItemStyle,
@@ -223,7 +223,7 @@ pub struct GridLine {
     pub span: Option<u16>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SizeStyle {
     pub width: Length,
     pub height: Length,
@@ -246,7 +246,7 @@ impl Default for SizeStyle {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct FlexItemStyle {
     pub grow: f32,
     pub shrink: f32,
@@ -267,7 +267,7 @@ impl Default for FlexItemStyle {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub enum Length {
     #[default]
     Auto,
