@@ -751,12 +751,23 @@ fn web_portal_slot_heights(theme: &WebGoldenTheme, slots: &[&str]) -> Vec<f32> {
 }
 
 fn fret_menu_item_heights_in_menus(snap: &fret_core::SemanticsSnapshot) -> Vec<f32> {
+    let debug = std::env::var("FRET_DEBUG_MENU_SEMANTICS")
+        .ok()
+        .is_some_and(|v| v == "1");
     let menus: Vec<_> = snap
         .nodes
         .iter()
         .filter(|n| n.role == SemanticsRole::Menu)
         .collect();
     if menus.is_empty() {
+        if debug {
+            let mut roles: std::collections::BTreeMap<String, usize> =
+                std::collections::BTreeMap::new();
+            for n in &snap.nodes {
+                *roles.entry(format!("{:?}", n.role)).or_insert(0) += 1;
+            }
+            eprintln!("fret_menu_item_heights_in_menus: no Menu nodes; roles={roles:?}");
+        }
         return Vec::new();
     }
 
@@ -766,7 +777,8 @@ fn fret_menu_item_heights_in_menus(snap: &fret_core::SemanticsSnapshot) -> Vec<f
             .any(|menu| fret_rect_contains(menu.bounds, node.bounds))
     };
 
-    snap.nodes
+    let items: Vec<_> = snap
+        .nodes
         .iter()
         .filter(|n| {
             matches!(
@@ -776,6 +788,30 @@ fn fret_menu_item_heights_in_menus(snap: &fret_core::SemanticsSnapshot) -> Vec<f
                     | SemanticsRole::MenuItemRadio
             )
         })
+        .collect();
+
+    if debug {
+        eprintln!(
+            "fret_menu_item_heights_in_menus: menus={} items={}",
+            menus.len(),
+            items.len()
+        );
+        for (idx, menu) in menus.iter().take(2).enumerate() {
+            eprintln!("  menu[{idx}] bounds={:?}", menu.bounds);
+        }
+        for (idx, item) in items.iter().take(6).enumerate() {
+            eprintln!(
+                "  item[{idx}] role={:?} label={:?} bounds={:?} in_menu={}",
+                item.role,
+                item.label.as_deref(),
+                item.bounds,
+                menu_contains(item)
+            );
+        }
+    }
+
+    items
+        .into_iter()
         .filter(|n| menu_contains(n))
         .map(|n| n.bounds.size.height.0)
         .collect()
