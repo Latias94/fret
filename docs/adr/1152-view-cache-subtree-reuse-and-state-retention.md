@@ -29,6 +29,7 @@ To preserve correctness and developer experience:
 1. Cache-hit decisions are based on `UiTree` invalidation state of the existing cache-root `NodeId`.
 2. Cache hits must keep per-element state alive by touching the recorded state keys for the cache root.
 3. Mount must reuse the existing retained subtree and re-collect per-frame scroll handle bindings for the reused subtree.
+4. Cache hits must keep dependency tracking alive by inheriting previously recorded per-element model/global observations for the reused subtree.
 
 ## Detailed Design
 
@@ -61,6 +62,7 @@ When mounting a `ViewCache` element whose `GlobalElementId` is marked as reused 
 - do not remount children from the (empty) element tree,
 - keep the existing retained `UiTree` children unchanged,
 - mark the entire subtree “seen” for the current frame (`last_seen_frame`) to avoid GC,
+- inherit previously recorded model/global observations for the subtree so model changes continue to invalidate correctly without re-running render,
 - re-collect scroll handle bindings from the existing subtree using the persisted `ElementFrame` instance records.
 
 ### 4) Per-frame `ElementFrame` persistence
@@ -92,4 +94,3 @@ Evidence anchors:
 - State key tracking + touch helpers: `crates/fret-ui/src/elements/runtime.rs` (`WindowElementState::*view_cache*`)
 - Mount-time subtree reuse: `crates/fret-ui/src/declarative/mount.rs` (`mount_element`, subtree helpers)
 - Conformance test: `crates/fret-ui/src/declarative/tests/view_cache.rs`
-
