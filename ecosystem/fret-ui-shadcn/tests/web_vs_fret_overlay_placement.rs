@@ -1,10 +1,14 @@
 use fret_app::App;
 use fret_core::{
-    AppWindowId, Edges, Event, FrameId, KeyCode, Modifiers, MouseButton, Point, PointerEvent,
-    PointerType, Px, Rect, SemanticsRole, Size as CoreSize,
+    AppWindowId, Edges, Event, FontId, FontWeight, FrameId, KeyCode, Modifiers, MouseButton, Point,
+    PointerEvent, PointerType, Px, Rect, SemanticsRole, Size as CoreSize, TextOverflow, TextStyle,
+    TextWrap,
 };
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length};
+use fret_ui::element::{
+    AnyElement, ColumnProps, ContainerProps, CrossAlign, GridProps, LayoutStyle, Length, MainAlign,
+    MarginEdge, TextProps,
+};
 use fret_ui::elements::{GlobalElementId, bounds_for_element};
 use fret_ui::tree::UiTree;
 use fret_ui::{ElementContext, UiHost};
@@ -110,6 +114,204 @@ fn pad_root<H: UiHost>(cx: &mut ElementContext<'_, H>, pad: Px, child: AnyElemen
             ..Default::default()
         },
         move |_cx| vec![child],
+    )
+}
+
+fn shadcn_text_style(size: Px, line_height: Px, weight: FontWeight) -> TextStyle {
+    TextStyle {
+        font: FontId::default(),
+        size,
+        weight,
+        slant: Default::default(),
+        line_height: Some(line_height),
+        letter_spacing_em: None,
+    }
+}
+
+fn shadcn_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+    style: TextStyle,
+) -> AnyElement {
+    cx.text_props(TextProps {
+        layout: LayoutStyle::default(),
+        text: text.into(),
+        style: Some(style),
+        color: None,
+        wrap: TextWrap::Word,
+        overflow: TextOverflow::Clip,
+    })
+}
+
+fn shadcn_text_with_layout<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+    style: TextStyle,
+    layout: LayoutStyle,
+) -> AnyElement {
+    cx.text_props(TextProps {
+        layout,
+        text: text.into(),
+        style: Some(style),
+        color: None,
+        wrap: TextWrap::Word,
+        overflow: TextOverflow::Clip,
+    })
+}
+
+fn shadcn_nav_menu_demo_home_panel<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    model: Model<Option<Arc<str>>>,
+) -> AnyElement {
+    let gap = Px(8.0); // Tailwind `gap-2` (0.5rem).
+
+    let link_title_style = shadcn_text_style(Px(14.0), Px(14.0), FontWeight::MEDIUM); // text-sm leading-none font-medium
+    let link_desc_style = shadcn_text_style(Px(14.0), Px(19.25), FontWeight::NORMAL); // text-sm leading-snug
+
+    let tile_title_style = shadcn_text_style(Px(18.0), Px(28.0), FontWeight::MEDIUM); // text-lg font-medium
+    let tile_desc_style = shadcn_text_style(Px(14.0), Px(17.5), FontWeight::NORMAL); // text-sm leading-tight
+
+    let tile = cx.container(
+        ContainerProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Fill; // `w-full`
+                layout
+            },
+            padding: Edges::all(Px(16.0)), // p-4
+            ..Default::default()
+        },
+        move |cx| {
+            vec![cx.column(
+                ColumnProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout
+                    },
+                    // NavigationMenuLink: `gap-1` + title: `mb-2` => 12px total.
+                    gap: Px(4.0),
+                    padding: Edges::all(Px(0.0)),
+                    justify: MainAlign::End, // `justify-end`
+                    align: CrossAlign::Stretch,
+                },
+                move |cx| {
+                    vec![
+                        shadcn_text_with_layout(cx, "shadcn/ui", tile_title_style, {
+                            let mut layout = LayoutStyle::default();
+                            layout.margin.bottom = MarginEdge::Px(Px(8.0)); // mb-2
+                            layout
+                        }),
+                        shadcn_text(
+                            cx,
+                            "Beautifully designed components built with Tailwind CSS.",
+                            tile_desc_style,
+                        ),
+                    ]
+                },
+            )]
+        },
+    );
+
+    fn list_item<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        model: Model<Option<Arc<str>>>,
+        title: &'static str,
+        description: &'static str,
+        title_style: &TextStyle,
+        desc_style: &TextStyle,
+    ) -> AnyElement {
+        let title = Arc::<str>::from(title);
+        let description = Arc::<str>::from(description);
+        let label = title.clone();
+        let title_style = title_style.clone();
+        let desc_style = desc_style.clone();
+
+        let body = cx.container(
+            ContainerProps {
+                layout: LayoutStyle::default(),
+                padding: Edges::all(Px(8.0)), // NavigationMenuLink: p-2
+                ..Default::default()
+            },
+            move |cx| {
+                let desc_style = desc_style.clone();
+                vec![cx.column(
+                    ColumnProps {
+                        layout: LayoutStyle::default(),
+                        gap: Px(4.0), // NavigationMenuLink: gap-1
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Stretch,
+                    },
+                    move |cx| {
+                        let desc_style = desc_style.clone();
+                        let desc_box = cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.height =
+                                        Length::Px(Px(desc_style.line_height.unwrap().0 * 2.0));
+                                    layout.overflow = fret_ui::element::Overflow::Clip;
+                                    layout
+                                },
+                                padding: Edges::all(Px(0.0)),
+                                ..Default::default()
+                            },
+                            move |cx| vec![shadcn_text(cx, description.clone(), desc_style)],
+                        );
+
+                        vec![shadcn_text(cx, title.clone(), title_style), desc_box]
+                    },
+                )]
+            },
+        );
+
+        fret_ui_shadcn::NavigationMenuLink::new(model, vec![body])
+            .label(label)
+            .into_element(cx)
+    }
+
+    let intro = list_item(
+        cx,
+        model.clone(),
+        "Introduction",
+        "Re-usable components built using Radix UI and Tailwind CSS.",
+        &link_title_style,
+        &link_desc_style,
+    );
+    let install = list_item(
+        cx,
+        model.clone(),
+        "Installation",
+        "How to install dependencies and structure your app.",
+        &link_title_style,
+        &link_desc_style,
+    );
+    let typography = list_item(
+        cx,
+        model,
+        "Typography",
+        "Styles for headings, paragraphs, lists...etc",
+        &link_title_style,
+        &link_desc_style,
+    );
+
+    cx.grid(
+        GridProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                // Match the extracted shadcn web golden (mobile viewport content width).
+                layout.size.width = Length::Px(Px(271.76044));
+                layout
+            },
+            cols: 1,
+            rows: None,
+            gap,
+            padding: Edges::all(Px(0.0)),
+            justify: MainAlign::Start,
+            align: CrossAlign::Stretch,
+        },
+        move |_cx| vec![tile, intro, install, typography],
     )
 }
 
@@ -4783,9 +4985,6 @@ fn web_vs_fret_navigation_menu_demo_home_mobile_viewport_height_matches() {
         web_find_by_data_slot_and_state(&theme.root, "navigation-menu-viewport", "open")
             .expect("web viewport slot=navigation-menu-viewport state=open");
 
-    let placeholder_w = (web_viewport.rect.w - 18.0).max(0.0);
-    let placeholder_h = (web_viewport.rect.h - 16.0).max(0.0);
-
     let web_side = infer_side(web_trigger.rect, web_viewport.rect);
     let web_align = infer_align(web_side, web_trigger.rect, web_viewport.rect);
     let expected_gap = rect_main_gap(web_side, web_trigger.rect, web_viewport.rect);
@@ -4813,31 +5012,14 @@ fn web_vs_fret_navigation_menu_demo_home_mobile_viewport_height_matches() {
         FrameId(1),
         true,
         |cx| {
-            let placeholder = cx.container(
-                ContainerProps {
-                    layout: {
-                        let mut layout = LayoutStyle::default();
-                        layout.size.width = Length::Px(Px(placeholder_w));
-                        layout.size.height = Length::Px(Px(placeholder_h));
-                        layout
-                    },
-                    padding: Edges::all(Px(0.0)),
-                    ..Default::default()
-                },
-                |_cx| Vec::new(),
-            );
             let items = vec![
-                fret_ui_shadcn::NavigationMenuItem::new("home", "Home", vec![placeholder]),
                 fret_ui_shadcn::NavigationMenuItem::new(
-                    "components",
-                    "Components",
-                    vec![cx.text("Components")],
+                    "home",
+                    "Home",
+                    vec![shadcn_nav_menu_demo_home_panel(cx, model.clone())],
                 ),
-                fret_ui_shadcn::NavigationMenuItem::new(
-                    "with-icon",
-                    "With Icon",
-                    vec![cx.text("With Icon")],
-                ),
+                fret_ui_shadcn::NavigationMenuItem::new("components", "Components", Vec::new()),
+                fret_ui_shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
             ];
 
             let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
@@ -4908,31 +5090,14 @@ fn web_vs_fret_navigation_menu_demo_home_mobile_viewport_height_matches() {
             FrameId(2 + tick),
             request_semantics,
             |cx| {
-                let placeholder = cx.container(
-                    ContainerProps {
-                        layout: {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Px(Px(placeholder_w));
-                            layout.size.height = Length::Px(Px(placeholder_h));
-                            layout
-                        },
-                        padding: Edges::all(Px(0.0)),
-                        ..Default::default()
-                    },
-                    |_cx| Vec::new(),
-                );
                 let items = vec![
-                    fret_ui_shadcn::NavigationMenuItem::new("home", "Home", vec![placeholder]),
                     fret_ui_shadcn::NavigationMenuItem::new(
-                        "components",
-                        "Components",
-                        vec![cx.text("Components")],
+                        "home",
+                        "Home",
+                        vec![shadcn_nav_menu_demo_home_panel(cx, model.clone())],
                     ),
-                    fret_ui_shadcn::NavigationMenuItem::new(
-                        "with-icon",
-                        "With Icon",
-                        vec![cx.text("With Icon")],
-                    ),
+                    fret_ui_shadcn::NavigationMenuItem::new("components", "Components", Vec::new()),
+                    fret_ui_shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
                 ];
 
                 let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
@@ -4979,6 +5144,16 @@ fn web_vs_fret_navigation_menu_demo_home_mobile_viewport_height_matches() {
         w: viewport_bounds.size.width.0,
         h: viewport_bounds.size.height.0,
     };
+
+    let debug = std::env::var("FRET_DEBUG_NAV_MENU_MOBILE")
+        .ok()
+        .is_some_and(|v| v == "1");
+    if debug {
+        eprintln!(
+            "nav-menu home-mobile web viewport={:?} web trigger={:?} fret viewport={:?} fret trigger={:?}",
+            web_viewport.rect, web_trigger.rect, fret_viewport, fret_trigger
+        );
+    }
 
     let actual_gap = rect_main_gap(web_side, fret_trigger, fret_viewport);
     let actual_cross = rect_cross_delta(web_side, web_align, fret_trigger, fret_viewport);

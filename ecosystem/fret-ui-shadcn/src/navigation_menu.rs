@@ -826,7 +826,7 @@ impl NavigationMenu {
                 }
 
                 let fallback = measured.unwrap_or(estimated);
-                let content_size = if viewport_enabled {
+                let mut content_size = if viewport_enabled {
                     radix_navigation_menu::navigation_menu_viewport_size_for_transition(
                         cx,
                         root_id,
