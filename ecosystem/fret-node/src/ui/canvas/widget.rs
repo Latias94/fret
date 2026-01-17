@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 
 use fret_canvas::budget::{InteractionBudget, WorkBudget};
 use fret_canvas::cache::{
-    SceneOpTileCache, TileCacheKeyBuilder, TileCoord, TileGrid2D, tile_cache_key,
+    SceneOpTileCache, TileCacheKeyBuilder, TileCoord, TileGrid2D, warm_scene_op_tiles_u64,
 };
 use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_canvas::scale::{canvas_units_from_screen_px, effective_scale_factor};
@@ -213,6 +213,32 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     const GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME: InteractionBudget = InteractionBudget::new(32, 8);
     const EDGE_MARKER_BUILD_BUDGET_PER_FRAME: InteractionBudget = InteractionBudget::new(96, 24);
     const EDGE_LABEL_BUILD_BUDGET_PER_FRAME: InteractionBudget = InteractionBudget::new(16, 4);
+
+    fn view_interacting(&self) -> bool {
+        self.interaction.viewport_move_debounce.is_some()
+            || self.interaction.panning
+            || self.interaction.pan_inertia.is_some()
+            || self.interaction.pending_marquee.is_some()
+            || self.interaction.marquee.is_some()
+            || self.interaction.pending_node_drag.is_some()
+            || self.interaction.node_drag.is_some()
+            || self.interaction.pending_group_drag.is_some()
+            || self.interaction.group_drag.is_some()
+            || self.interaction.pending_group_resize.is_some()
+            || self.interaction.group_resize.is_some()
+            || self.interaction.pending_node_resize.is_some()
+            || self.interaction.node_resize.is_some()
+            || self.interaction.pending_wire_drag.is_some()
+            || self.interaction.wire_drag.is_some()
+            || self.interaction.suspended_wire_drag.is_some()
+            || self.interaction.pending_edge_insert_drag.is_some()
+            || self.interaction.edge_insert_drag.is_some()
+            || self.interaction.edge_drag.is_some()
+            || self.interaction.pending_insert_node_drag.is_some()
+            || self.interaction.insert_node_drag_preview.is_some()
+            || self.interaction.context_menu.is_some()
+            || self.interaction.searcher.is_some()
+    }
 
     fn show_toast<H: UiHost>(
         &mut self,
@@ -8709,29 +8735,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
         cx.observe_model(&self.view_state, Invalidation::Paint);
         let snapshot = self.sync_view_state(cx.app);
 
-        let view_interacting = self.interaction.viewport_move_debounce.is_some()
-            || self.interaction.panning
-            || self.interaction.pan_inertia.is_some()
-            || self.interaction.pending_marquee.is_some()
-            || self.interaction.marquee.is_some()
-            || self.interaction.pending_node_drag.is_some()
-            || self.interaction.node_drag.is_some()
-            || self.interaction.pending_group_drag.is_some()
-            || self.interaction.group_drag.is_some()
-            || self.interaction.pending_group_resize.is_some()
-            || self.interaction.group_resize.is_some()
-            || self.interaction.pending_node_resize.is_some()
-            || self.interaction.node_resize.is_some()
-            || self.interaction.pending_wire_drag.is_some()
-            || self.interaction.wire_drag.is_some()
-            || self.interaction.suspended_wire_drag.is_some()
-            || self.interaction.pending_edge_insert_drag.is_some()
-            || self.interaction.edge_insert_drag.is_some()
-            || self.interaction.edge_drag.is_some()
-            || self.interaction.pending_insert_node_drag.is_some()
-            || self.interaction.insert_node_drag_preview.is_some()
-            || self.interaction.context_menu.is_some()
-            || self.interaction.searcher.is_some();
+        let view_interacting = self.view_interacting();
 
         self.paint_cache.begin_frame();
         self.grid_scene_cache.begin_frame();
@@ -8801,24 +8805,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
 
             let grid_tiles = TileGrid2D::new(tile_size_canvas);
             grid_tiles.tiles_in_rect(grid_rect, &mut self.grid_tiles_scratch);
-
-            // Prefer building tiles near the viewport center first so partial work degrades
-            // gracefully under budget pressure.
-            if !self.grid_tiles_scratch.is_empty() && tile_size_canvas.is_finite() {
-                let cx_tile = (viewport_rect.origin.x.0 + 0.5 * viewport_rect.size.width.0)
-                    / tile_size_canvas;
-                let cy_tile = (viewport_rect.origin.y.0 + 0.5 * viewport_rect.size.height.0)
-                    / tile_size_canvas;
-                let center_tile = TileCoord {
-                    x: cx_tile.floor() as i32,
-                    y: cy_tile.floor() as i32,
-                };
-                self.grid_tiles_scratch.sort_unstable_by_key(|t| {
-                    let dx = (t.x - center_tile.x).abs() as u32;
-                    let dy = (t.y - center_tile.y).abs() as u32;
-                    dx.saturating_add(dy)
-                });
-            }
+            grid_tiles.sort_tiles_center_first(viewport_rect, &mut self.grid_tiles_scratch);
 
             let major_color = self.style.grid_major_color;
             let minor_color = self.style.grid_minor_color;
@@ -8905,24 +8892,17 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                 b.add_u32(minor_color.a.to_bits());
                 b.finish()
             };
-            for tile in self.grid_tiles_scratch.iter().copied() {
-                let tile_origin = tile.origin(tile_size_canvas);
-
-                let key = tile_cache_key(base_key, tile);
-
-                if self.grid_scene_cache.try_replay(key, cx.scene, tile_origin) {
-                    continue;
-                }
-
-                if !tile_budget.try_consume(1) {
-                    skipped_tiles = skipped_tiles.saturating_add(1);
-                    continue;
-                }
-
-                let ops = tile_ops_for_key(tile);
-                cx.scene.replay_ops_translated(&ops, tile_origin);
-                self.grid_scene_cache.store_ops(key, ops);
-            }
+            let warmup = warm_scene_op_tiles_u64(
+                &mut self.grid_scene_cache,
+                cx.scene,
+                &self.grid_tiles_scratch,
+                base_key,
+                1,
+                &mut tile_budget,
+                |tile| tile.origin(tile_size_canvas),
+                tile_ops_for_key,
+            );
+            skipped_tiles = warmup.skipped_tiles;
 
             if skipped_tiles > 0 {
                 // Continue warming tiles incrementally to avoid a single frame spike.
@@ -11815,12 +11795,6 @@ mod tests {
             self.globals
                 .get(&TypeId::of::<T>())
                 .and_then(|b| b.downcast_ref::<T>())
-        }
-
-        fn global_mut<T: Any>(&mut self) -> Option<&mut T> {
-            self.globals
-                .get_mut(&TypeId::of::<T>())
-                .and_then(|b| b.downcast_mut::<T>())
         }
 
         fn with_global_mut<T: Any, R>(

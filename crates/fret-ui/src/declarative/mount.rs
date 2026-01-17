@@ -69,7 +69,7 @@ pub(crate) fn with_window_frame<H: UiHost, R>(
     window: AppWindowId,
     f: impl FnOnce(Option<&WindowFrame>) -> R,
 ) -> R {
-    app.with_global_mut(ElementFrame::default, |frame, _app| {
+    app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
         f(frame.windows.get(&window))
     })
 }
@@ -124,19 +124,21 @@ pub fn render_root<H: UiHost>(
     ui.begin_debug_frame_if_needed(frame_id);
 
     let ui_ref: &UiTree<H> = &*ui;
-    let children = app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, app| {
-        let mut should_reuse_view_cache = |node: NodeId| ui_ref.should_reuse_view_cache_node(node);
-        let mut cx = crate::elements::ElementContext::new_for_root_name(
-            app, runtime, window, bounds, root_name,
-        );
-        cx.set_view_cache_should_reuse(&mut should_reuse_view_cache);
-        cx.sync_focused_element_from_focused_node(focused);
-        cx.dismissible_clear_on_dismiss_request();
-        cx.dismissible_clear_on_pointer_move();
-        render(&mut cx)
-    });
+    let children =
+        app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, app| {
+            let mut should_reuse_view_cache =
+                |node: NodeId| ui_ref.should_reuse_view_cache_node(node);
+            let mut cx = crate::elements::ElementContext::new_for_root_name(
+                app, runtime, window, bounds, root_name,
+            );
+            cx.set_view_cache_should_reuse(&mut should_reuse_view_cache);
+            cx.sync_focused_element_from_focused_node(focused);
+            cx.dismissible_clear_on_dismiss_request();
+            cx.dismissible_clear_on_pointer_move();
+            render(&mut cx)
+        });
 
-    app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, app| {
+    app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, app| {
         runtime.prepare_window_for_frame(window, frame_id);
         let lag = runtime.gc_lag_frames();
         let cutoff = frame_id.0.saturating_sub(lag);
@@ -173,7 +175,7 @@ pub fn render_root<H: UiHost>(
             },
         );
 
-        app.with_global_mut(ElementFrame::default, |frame, _app| {
+        app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
             let window_frame = frame.windows.entry(window).or_default();
             prepare_window_frame_for_frame(window_frame, frame_id);
             let mut pending_invalidations: HashMap<NodeId, u8> = HashMap::new();
@@ -234,7 +236,7 @@ pub fn render_root<H: UiHost>(
 
         for node in stale_nodes {
             let removed = ui.remove_subtree(services, node);
-            app.with_global_mut(ElementFrame::default, |frame, _app| {
+            app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
                 let window_frame = frame.windows.entry(window).or_default();
                 for removed in removed {
                     window_frame.instances.remove(&removed);
@@ -287,19 +289,21 @@ fn render_dismissible_root_impl<
     ui.begin_debug_frame_if_needed(frame_id);
 
     let ui_ref: &UiTree<H> = &*ui;
-    let children = app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, app| {
-        let mut should_reuse_view_cache = |node: NodeId| ui_ref.should_reuse_view_cache_node(node);
-        let mut cx = crate::elements::ElementContext::new_for_root_name(
-            app, runtime, window, bounds, root_name,
-        );
-        cx.set_view_cache_should_reuse(&mut should_reuse_view_cache);
-        cx.sync_focused_element_from_focused_node(focused);
-        cx.dismissible_clear_on_dismiss_request();
-        cx.dismissible_clear_on_pointer_move();
-        render(&mut cx)
-    });
+    let children =
+        app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, app| {
+            let mut should_reuse_view_cache =
+                |node: NodeId| ui_ref.should_reuse_view_cache_node(node);
+            let mut cx = crate::elements::ElementContext::new_for_root_name(
+                app, runtime, window, bounds, root_name,
+            );
+            cx.set_view_cache_should_reuse(&mut should_reuse_view_cache);
+            cx.sync_focused_element_from_focused_node(focused);
+            cx.dismissible_clear_on_dismiss_request();
+            cx.dismissible_clear_on_pointer_move();
+            render(&mut cx)
+        });
 
-    app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, app| {
+    app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, app| {
         runtime.prepare_window_for_frame(window, frame_id);
         let lag = runtime.gc_lag_frames();
         let cutoff = frame_id.0.saturating_sub(lag);
@@ -336,7 +340,7 @@ fn render_dismissible_root_impl<
             },
         );
 
-        app.with_global_mut(ElementFrame::default, |frame, _app| {
+        app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
             let window_frame = frame.windows.entry(window).or_default();
             prepare_window_frame_for_frame(window_frame, frame_id);
             let mut pending_invalidations: HashMap<NodeId, u8> = HashMap::new();
@@ -396,7 +400,7 @@ fn render_dismissible_root_impl<
 
         for node in stale_nodes {
             let removed = ui.remove_subtree(services, node);
-            app.with_global_mut(ElementFrame::default, |frame, _app| {
+            app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
                 let window_frame = frame.windows.entry(window).or_default();
                 for removed in removed {
                     window_frame.instances.remove(&removed);
@@ -426,8 +430,27 @@ fn mount_element<H: UiHost>(
     pending_invalidations: &mut HashMap<NodeId, u8>,
 ) -> NodeId {
     let id = element.id;
-    let reuse_view_cache = matches!(&element.kind, ElementKind::ViewCache(_))
-        && window_state.should_reuse_view_cache_root(id);
+    let view_cache_props = match &element.kind {
+        ElementKind::ViewCache(props) => Some(*props),
+        _ => None,
+    };
+    let reuse_view_cache =
+        view_cache_props.is_some() && window_state.should_reuse_view_cache_root(id);
+
+    let span = if view_cache_props.is_some() && tracing::enabled!(tracing::Level::TRACE) {
+        tracing::trace_span!(
+            "ui.cache_root.mount",
+            element = ?id,
+            cache_hit = reuse_view_cache,
+            contained_layout = view_cache_props
+                .map(|p| p.contained_layout)
+                .unwrap_or(false),
+        )
+    } else {
+        tracing::Span::none()
+    };
+    let _span_guard = span.enter();
+
     let node = window_state
         .node_entry(id)
         .map(|e| e.node)
@@ -458,6 +481,16 @@ fn mount_element<H: UiHost>(
 
     match &element.kind {
         ElementKind::ViewCache(props) => {
+            if tracing::enabled!(tracing::Level::TRACE) {
+                let reuse_span = tracing::trace_span!(
+                    "ui.cache_root.reuse",
+                    node = ?node,
+                    element = ?id,
+                    cache_hit = reuse_view_cache,
+                    contained_layout = props.contained_layout,
+                );
+                let _reuse_guard = reuse_span.enter();
+            }
             ui.set_node_view_cache_flags(node, true, props.contained_layout);
             ui.debug_record_view_cache_root(node, reuse_view_cache, props.contained_layout);
         }

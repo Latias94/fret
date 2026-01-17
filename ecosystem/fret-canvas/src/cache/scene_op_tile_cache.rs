@@ -5,6 +5,8 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::Hash;
 use std::hash::Hasher;
 
+use crate::budget::WorkBudget;
+
 /// 2D tile coordinate for canvas-space tiling.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TileCoord {
@@ -120,6 +122,94 @@ impl TileGrid2D {
                 out.push(TileCoord { x, y });
             }
         }
+    }
+
+    /// Sort tiles so those nearest the rect center come first.
+    ///
+    /// This is useful for incremental warmup under a per-frame budget: partial work tends to
+    /// prioritize the visible center area and degrades more gracefully.
+    pub fn sort_tiles_center_first(&self, rect: Rect, tiles: &mut [TileCoord]) {
+        if tiles.len() <= 1 {
+            return;
+        }
+
+        let s = self.tile_size_canvas;
+        if !s.is_finite() || s <= 0.0 {
+            return;
+        }
+
+        let center_x = rect.origin.x.0 + 0.5 * rect.size.width.0;
+        let center_y = rect.origin.y.0 + 0.5 * rect.size.height.0;
+        if !center_x.is_finite() || !center_y.is_finite() {
+            return;
+        }
+
+        let center_tile = TileCoord {
+            x: (center_x / s).floor() as i32,
+            y: (center_y / s).floor() as i32,
+        };
+
+        tiles.sort_unstable_by_key(|t| {
+            let dx = (i64::from(t.x) - i64::from(center_tile.x)).unsigned_abs();
+            let dy = (i64::from(t.y) - i64::from(center_tile.y)).unsigned_abs();
+            dx.saturating_add(dy).min(u64::from(u32::MAX)) as u32
+        });
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SceneOpTileWarmupOutcome {
+    pub requested_tiles: usize,
+    pub built_tiles: u32,
+    pub skipped_tiles: u32,
+}
+
+/// Warm a tile cache incrementally under a per-frame budget.
+///
+/// This helper is policy-light:
+/// - Callers choose the tile list ordering (e.g. center-first).
+/// - Callers define how replay deltas and tile ops are computed.
+/// - One budget "unit" typically corresponds to building one tile (configurable via `units_per_tile`).
+pub fn warm_scene_op_tiles_u64<ReplayDeltaForTile, OpsForTile>(
+    cache: &mut SceneOpTileCache<u64>,
+    scene: &mut Scene,
+    tiles: &[TileCoord],
+    base_key: u64,
+    units_per_tile: u32,
+    budget: &mut WorkBudget,
+    mut replay_delta_for_tile: ReplayDeltaForTile,
+    mut ops_for_tile: OpsForTile,
+) -> SceneOpTileWarmupOutcome
+where
+    ReplayDeltaForTile: FnMut(TileCoord) -> Point,
+    OpsForTile: FnMut(TileCoord) -> Vec<SceneOp>,
+{
+    let mut built_tiles: u32 = 0;
+    let mut skipped_tiles: u32 = 0;
+
+    for tile in tiles.iter().copied() {
+        let key = tile_cache_key(base_key, tile);
+        let replay_delta = replay_delta_for_tile(tile);
+
+        if cache.try_replay(key, scene, replay_delta) {
+            continue;
+        }
+
+        if !budget.try_consume(units_per_tile) {
+            skipped_tiles = skipped_tiles.saturating_add(1);
+            continue;
+        }
+
+        let ops = ops_for_tile(tile);
+        scene.replay_ops_translated(&ops, replay_delta);
+        cache.store_ops(key, ops);
+        built_tiles = built_tiles.saturating_add(1);
+    }
+
+    SceneOpTileWarmupOutcome {
+        requested_tiles: tiles.len(),
+        built_tiles,
+        skipped_tiles,
     }
 }
 
@@ -321,5 +411,79 @@ mod tests {
         cache.store_ops(3, Vec::new());
         cache.prune(999, 1);
         assert_eq!(cache.entries_len(), 1);
+    }
+
+    #[test]
+    fn warm_scene_op_tiles_respects_budget_and_hits_cache() {
+        let tiles = [TileCoord { x: 0, y: 0 }];
+        let base_key = 123u64;
+
+        let mut cache: SceneOpTileCache<u64> = SceneOpTileCache::default();
+        cache.begin_frame();
+
+        let mut scene = Scene::default();
+        let mut budget = WorkBudget::new(0);
+
+        let out = warm_scene_op_tiles_u64(
+            &mut cache,
+            &mut scene,
+            &tiles,
+            base_key,
+            1,
+            &mut budget,
+            |_tile| Point::new(Px(0.0), Px(0.0)),
+            |_tile| panic!("should not build ops when budget is exhausted"),
+        );
+        assert_eq!(out.requested_tiles, 1);
+        assert_eq!(out.built_tiles, 0);
+        assert_eq!(out.skipped_tiles, 1);
+
+        let mut scene = Scene::default();
+        let mut budget = WorkBudget::new(1);
+        let out = warm_scene_op_tiles_u64(
+            &mut cache,
+            &mut scene,
+            &tiles,
+            base_key,
+            1,
+            &mut budget,
+            |_tile| Point::new(Px(0.0), Px(0.0)),
+            |_tile| {
+                vec![SceneOp::Quad {
+                    order: DrawOrder(0),
+                    rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(1.0), Px(1.0))),
+                    background: Color {
+                        r: 1.0,
+                        g: 1.0,
+                        b: 1.0,
+                        a: 1.0,
+                    },
+                    border: fret_core::Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: fret_core::Corners::all(Px(0.0)),
+                }]
+            },
+        );
+        assert_eq!(out.built_tiles, 1);
+        assert_eq!(out.skipped_tiles, 0);
+        assert_eq!(cache.entries_len(), 1);
+        assert_eq!(scene.ops_len(), 1);
+
+        cache.begin_frame();
+        let mut scene = Scene::default();
+        let mut budget = WorkBudget::new(0);
+        let out = warm_scene_op_tiles_u64(
+            &mut cache,
+            &mut scene,
+            &tiles,
+            base_key,
+            1,
+            &mut budget,
+            |_tile| Point::new(Px(0.0), Px(0.0)),
+            |_tile| panic!("should hit cache and never rebuild ops"),
+        );
+        assert_eq!(out.built_tiles, 0);
+        assert_eq!(out.skipped_tiles, 0);
+        assert_eq!(scene.ops_len(), 1);
     }
 }

@@ -7,7 +7,8 @@
 
 use fret_canvas::budget::WorkBudget;
 use fret_canvas::cache::{
-    PathCache, SceneOpTileCache, TileCacheKeyBuilder, TileCoord, TileGrid2D, tile_cache_key,
+    PathCache, SceneOpTileCache, TileCacheKeyBuilder, TileCoord, TileGrid2D,
+    warm_scene_op_tiles_u64,
 };
 use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_core::geometry::{Corners, Edges, Point, Px, Rect, Size};
@@ -4790,23 +4791,7 @@ impl PlotLayer for HeatmapPlotLayer {
 
         let tile_grid = TileGrid2D::new(TILE_SIZE_CANVAS);
         tile_grid.tiles_in_rect(view_rect_world, &mut self.tile_scratch);
-
-        // Prefer building tiles near the viewport center first so partial work degrades gracefully.
-        if !self.tile_scratch.is_empty() && TILE_SIZE_CANVAS.is_finite() && TILE_SIZE_CANVAS > 0.0 {
-            let center_world_x = view_rect_world.origin.x.0 + 0.5 * view_rect_world.size.width.0;
-            let center_world_y = view_rect_world.origin.y.0 + 0.5 * view_rect_world.size.height.0;
-            if center_world_x.is_finite() && center_world_y.is_finite() {
-                let center_tile = TileCoord {
-                    x: (center_world_x / TILE_SIZE_CANVAS).floor() as i32,
-                    y: (center_world_y / TILE_SIZE_CANVAS).floor() as i32,
-                };
-                self.tile_scratch.sort_unstable_by_key(|t| {
-                    let dx = (t.x - center_tile.x).abs() as u32;
-                    let dy = (t.y - center_tile.y).abs() as u32;
-                    dx.saturating_add(dy)
-                });
-            }
-        }
+        tile_grid.sort_tiles_center_first(view_rect_world, &mut self.tile_scratch);
 
         let base_key = {
             let mut b = TileCacheKeyBuilder::new("fret-plot.heatmap.tile.v1");
@@ -4834,57 +4819,53 @@ impl PlotLayer for HeatmapPlotLayer {
 
         let mut tile_budget = WorkBudget::new(TILE_BUILD_BUDGET_TILES_PER_FRAME);
         let mut skipped_tiles: u32 = 0;
-        for tile in self.tile_scratch.iter().copied() {
-            let tile_origin_world = tile.origin(TILE_SIZE_CANVAS);
-            let tile_rect_world = Rect::new(
-                tile_origin_world,
-                Size::new(Px(TILE_SIZE_CANVAS), Px(TILE_SIZE_CANVAS)),
-            );
-
-            let key = tile_cache_key(base_key, tile);
-
-            let screen_tile_origin = Point::new(
-                Px(tile_origin_world.x.0 - translation_x),
-                Px(tile_origin_world.y.0 - translation_y),
-            );
-            let replay_delta = Point::new(
-                Px(plot_origin_x + screen_tile_origin.x.0),
-                Px(plot_origin_y + screen_tile_origin.y.0),
-            );
-
-            if self.tile_ops_cache.try_replay(key, cx.scene, replay_delta) {
-                continue;
-            }
-
-            if !tile_budget.try_consume(1) {
-                skipped_tiles = skipped_tiles.saturating_add(1);
-                continue;
-            }
-
-            let ops = grid_heatmap_tile_ops(
-                tile_rect_world,
-                tile_origin_world,
-                scale_x,
-                scale_y,
-                x_scale,
-                y_scale,
-                model.data_bounds,
-                model.cols,
-                model.rows,
-                dx,
-                dy,
-                model.value_min,
-                denom,
-                grid_cols,
-                grid_rows,
-                values,
-                scale,
-                &heatmap_color,
-            );
-
-            cx.scene.replay_ops_translated(&ops, replay_delta);
-            self.tile_ops_cache.store_ops(key, ops);
-        }
+        let warmup = warm_scene_op_tiles_u64(
+            &mut self.tile_ops_cache,
+            cx.scene,
+            &self.tile_scratch,
+            base_key,
+            1,
+            &mut tile_budget,
+            |tile| {
+                let tile_origin_world = tile.origin(TILE_SIZE_CANVAS);
+                let screen_tile_origin = Point::new(
+                    Px(tile_origin_world.x.0 - translation_x),
+                    Px(tile_origin_world.y.0 - translation_y),
+                );
+                Point::new(
+                    Px(plot_origin_x + screen_tile_origin.x.0),
+                    Px(plot_origin_y + screen_tile_origin.y.0),
+                )
+            },
+            |tile| {
+                let tile_origin_world = tile.origin(TILE_SIZE_CANVAS);
+                let tile_rect_world = Rect::new(
+                    tile_origin_world,
+                    Size::new(Px(TILE_SIZE_CANVAS), Px(TILE_SIZE_CANVAS)),
+                );
+                grid_heatmap_tile_ops(
+                    tile_rect_world,
+                    tile_origin_world,
+                    scale_x,
+                    scale_y,
+                    x_scale,
+                    y_scale,
+                    model.data_bounds,
+                    model.cols,
+                    model.rows,
+                    dx,
+                    dy,
+                    model.value_min,
+                    denom,
+                    grid_cols,
+                    grid_rows,
+                    values,
+                    scale,
+                    &heatmap_color,
+                )
+            },
+        );
+        skipped_tiles = warmup.skipped_tiles;
 
         report_layer_tile_cache_stats(
             cx,
@@ -5342,23 +5323,7 @@ impl PlotLayer for Histogram2DPlotLayer {
 
         let tile_grid = TileGrid2D::new(TILE_SIZE_CANVAS);
         tile_grid.tiles_in_rect(view_rect_world, &mut self.tile_scratch);
-
-        // Prefer building tiles near the viewport center first so partial work degrades gracefully.
-        if !self.tile_scratch.is_empty() && TILE_SIZE_CANVAS.is_finite() && TILE_SIZE_CANVAS > 0.0 {
-            let center_world_x = view_rect_world.origin.x.0 + 0.5 * view_rect_world.size.width.0;
-            let center_world_y = view_rect_world.origin.y.0 + 0.5 * view_rect_world.size.height.0;
-            if center_world_x.is_finite() && center_world_y.is_finite() {
-                let center_tile = TileCoord {
-                    x: (center_world_x / TILE_SIZE_CANVAS).floor() as i32,
-                    y: (center_world_y / TILE_SIZE_CANVAS).floor() as i32,
-                };
-                self.tile_scratch.sort_unstable_by_key(|t| {
-                    let dx = (t.x - center_tile.x).abs() as u32;
-                    let dy = (t.y - center_tile.y).abs() as u32;
-                    dx.saturating_add(dy)
-                });
-            }
-        }
+        tile_grid.sort_tiles_center_first(view_rect_world, &mut self.tile_scratch);
 
         let base_key = {
             let mut b = TileCacheKeyBuilder::new("fret-plot.histogram2d.tile.v1");
@@ -5386,57 +5351,53 @@ impl PlotLayer for Histogram2DPlotLayer {
 
         let mut tile_budget = WorkBudget::new(TILE_BUILD_BUDGET_TILES_PER_FRAME);
         let mut skipped_tiles: u32 = 0;
-        for tile in self.tile_scratch.iter().copied() {
-            let tile_origin_world = tile.origin(TILE_SIZE_CANVAS);
-            let tile_rect_world = Rect::new(
-                tile_origin_world,
-                Size::new(Px(TILE_SIZE_CANVAS), Px(TILE_SIZE_CANVAS)),
-            );
-
-            let key = tile_cache_key(base_key, tile);
-
-            let screen_tile_origin = Point::new(
-                Px(tile_origin_world.x.0 - translation_x),
-                Px(tile_origin_world.y.0 - translation_y),
-            );
-            let replay_delta = Point::new(
-                Px(plot_origin_x + screen_tile_origin.x.0),
-                Px(plot_origin_y + screen_tile_origin.y.0),
-            );
-
-            if self.tile_ops_cache.try_replay(key, cx.scene, replay_delta) {
-                continue;
-            }
-
-            if !tile_budget.try_consume(1) {
-                skipped_tiles = skipped_tiles.saturating_add(1);
-                continue;
-            }
-
-            let ops = grid_heatmap_tile_ops(
-                tile_rect_world,
-                tile_origin_world,
-                scale_x,
-                scale_y,
-                x_scale,
-                y_scale,
-                model.data_bounds,
-                model.cols,
-                model.rows,
-                dx,
-                dy,
-                model.value_min,
-                denom,
-                grid_cols,
-                grid_rows,
-                values,
-                scale,
-                &heatmap_color,
-            );
-
-            cx.scene.replay_ops_translated(&ops, replay_delta);
-            self.tile_ops_cache.store_ops(key, ops);
-        }
+        let warmup = warm_scene_op_tiles_u64(
+            &mut self.tile_ops_cache,
+            cx.scene,
+            &self.tile_scratch,
+            base_key,
+            1,
+            &mut tile_budget,
+            |tile| {
+                let tile_origin_world = tile.origin(TILE_SIZE_CANVAS);
+                let screen_tile_origin = Point::new(
+                    Px(tile_origin_world.x.0 - translation_x),
+                    Px(tile_origin_world.y.0 - translation_y),
+                );
+                Point::new(
+                    Px(plot_origin_x + screen_tile_origin.x.0),
+                    Px(plot_origin_y + screen_tile_origin.y.0),
+                )
+            },
+            |tile| {
+                let tile_origin_world = tile.origin(TILE_SIZE_CANVAS);
+                let tile_rect_world = Rect::new(
+                    tile_origin_world,
+                    Size::new(Px(TILE_SIZE_CANVAS), Px(TILE_SIZE_CANVAS)),
+                );
+                grid_heatmap_tile_ops(
+                    tile_rect_world,
+                    tile_origin_world,
+                    scale_x,
+                    scale_y,
+                    x_scale,
+                    y_scale,
+                    model.data_bounds,
+                    model.cols,
+                    model.rows,
+                    dx,
+                    dy,
+                    model.value_min,
+                    denom,
+                    grid_cols,
+                    grid_rows,
+                    values,
+                    scale,
+                    &heatmap_color,
+                )
+            },
+        );
+        skipped_tiles = warmup.skipped_tiles;
 
         report_layer_tile_cache_stats(
             cx,
