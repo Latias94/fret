@@ -214,6 +214,32 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     const EDGE_MARKER_BUILD_BUDGET_PER_FRAME: InteractionBudget = InteractionBudget::new(96, 24);
     const EDGE_LABEL_BUILD_BUDGET_PER_FRAME: InteractionBudget = InteractionBudget::new(16, 4);
 
+    fn view_interacting(&self) -> bool {
+        self.interaction.viewport_move_debounce.is_some()
+            || self.interaction.panning
+            || self.interaction.pan_inertia.is_some()
+            || self.interaction.pending_marquee.is_some()
+            || self.interaction.marquee.is_some()
+            || self.interaction.pending_node_drag.is_some()
+            || self.interaction.node_drag.is_some()
+            || self.interaction.pending_group_drag.is_some()
+            || self.interaction.group_drag.is_some()
+            || self.interaction.pending_group_resize.is_some()
+            || self.interaction.group_resize.is_some()
+            || self.interaction.pending_node_resize.is_some()
+            || self.interaction.node_resize.is_some()
+            || self.interaction.pending_wire_drag.is_some()
+            || self.interaction.wire_drag.is_some()
+            || self.interaction.suspended_wire_drag.is_some()
+            || self.interaction.pending_edge_insert_drag.is_some()
+            || self.interaction.edge_insert_drag.is_some()
+            || self.interaction.edge_drag.is_some()
+            || self.interaction.pending_insert_node_drag.is_some()
+            || self.interaction.insert_node_drag_preview.is_some()
+            || self.interaction.context_menu.is_some()
+            || self.interaction.searcher.is_some()
+    }
+
     fn show_toast<H: UiHost>(
         &mut self,
         host: &mut H,
@@ -8709,29 +8735,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
         cx.observe_model(&self.view_state, Invalidation::Paint);
         let snapshot = self.sync_view_state(cx.app);
 
-        let view_interacting = self.interaction.viewport_move_debounce.is_some()
-            || self.interaction.panning
-            || self.interaction.pan_inertia.is_some()
-            || self.interaction.pending_marquee.is_some()
-            || self.interaction.marquee.is_some()
-            || self.interaction.pending_node_drag.is_some()
-            || self.interaction.node_drag.is_some()
-            || self.interaction.pending_group_drag.is_some()
-            || self.interaction.group_drag.is_some()
-            || self.interaction.pending_group_resize.is_some()
-            || self.interaction.group_resize.is_some()
-            || self.interaction.pending_node_resize.is_some()
-            || self.interaction.node_resize.is_some()
-            || self.interaction.pending_wire_drag.is_some()
-            || self.interaction.wire_drag.is_some()
-            || self.interaction.suspended_wire_drag.is_some()
-            || self.interaction.pending_edge_insert_drag.is_some()
-            || self.interaction.edge_insert_drag.is_some()
-            || self.interaction.edge_drag.is_some()
-            || self.interaction.pending_insert_node_drag.is_some()
-            || self.interaction.insert_node_drag_preview.is_some()
-            || self.interaction.context_menu.is_some()
-            || self.interaction.searcher.is_some();
+        let view_interacting = self.view_interacting();
 
         self.paint_cache.begin_frame();
         self.grid_scene_cache.begin_frame();
