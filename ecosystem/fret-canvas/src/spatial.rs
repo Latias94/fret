@@ -207,15 +207,28 @@ impl<T: Copy + Eq + Hash> GridIndexWithBackrefs<T> {
         };
 
         let (cx0, cx1, cy0, cy1) = cell_range_for_aabb(min_x, min_y, max_x, max_y, self.cell_size);
-        let mut keys = Vec::new();
-        for y in cy0..=cy1 {
-            for x in cx0..=cx1 {
-                keys.push(cell_key(Cell { x, y }));
+
+        // Avoid allocating a temporary `keys` buffer by comparing the expected cell sequence
+        // directly against the stored backrefs. `insert_aabb` emits entries in y-major order.
+        let cols = cx1.saturating_sub(cx0).saturating_add(1).max(0) as usize;
+        let rows = cy1.saturating_sub(cy0).saturating_add(1).max(0) as usize;
+        let expected_len = cols.saturating_mul(rows);
+
+        let mut same = existing.len() == expected_len;
+        if same {
+            let mut i = 0usize;
+            'cells: for y in cy0..=cy1 {
+                for x in cx0..=cx1 {
+                    let key = cell_key(Cell { x, y });
+                    if existing[i].0 != key {
+                        same = false;
+                        break 'cells;
+                    }
+                    i += 1;
+                }
             }
         }
 
-        let same =
-            existing.len() == keys.len() && existing.iter().map(|e| e.0).eq(keys.iter().copied());
         if same {
             return;
         }
