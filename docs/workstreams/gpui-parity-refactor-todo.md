@@ -41,15 +41,18 @@ These are implemented today (not just ADR intent). Keep this list short and evid
 
 ## Phase 0 〞 Instrumentation and Regression Harnesses
 
-- [ ] Add a cache-root perf breakdown to the HUD (hits/misses/replayed_ops per cache root).
-- [ ] Add tracing spans for layout/paint per cache root (opt-in, low overhead).
+- [x] Add a cache-root perf breakdown to the HUD (hits/misses/replayed_ops per cache root).
+  - Evidence: `crates/fret-ui/src/tree/mod.rs`, `apps/fret-ui-gallery/src/driver.rs`.
+- [x] Add tracing spans for layout/paint per cache root (opt-in, low overhead).
+  - Evidence: `crates/fret-ui/src/tree/layout.rs`, `crates/fret-ui/src/tree/paint.rs`.
 - [x] Add a "nested cache roots correctness" test harness (unit tests in `crates/fret-ui/src/tree/tests/`).
   - Evidence: `crates/fret-ui/src/tree/tests/view_cache.rs`.
-- [ ] Add an overlay torture-test demo scenario (popover/menu/tooltip + outside-press + focus trap).
-  - Note: UI gallery covers many overlay types, but we still want a deterministic “torture” harness + scripts.
-- [ ] Add a virtual list torture-test demo scenario (10k+ rows, selection + hover + inline text input).
-  - Partial: perf/stability stress exists, but it does not yet cover the full interaction surface.
-  - Evidence (perf): `apps/fret-examples/src/virtual_list_stress_demo.rs`.
+- [x] Add an overlay torture-test demo scenario (popover/menu/tooltip + outside-press + focus trap).
+  - Evidence: `tools/diag-scripts/ui-gallery-overlay-torture.json`, `apps/fretboard/src/diag.rs`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`, `apps/fret-ui-gallery/src/ui.rs`.
+- [x] Add a virtual list torture-test demo scenario (10k+ rows, selection + hover + inline text input).
+  - Evidence: `apps/fret-ui-gallery/src/ui.rs`, `apps/fret-ui-gallery/src/spec.rs`,
+    `tools/diag-scripts/ui-gallery-virtual-list-torture.json`.
 
 ## Phase 1 〞 Cache Roots (ViewCache) Closed Loop (Paint Stream)
 
