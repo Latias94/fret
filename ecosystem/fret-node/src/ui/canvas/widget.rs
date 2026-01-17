@@ -211,6 +211,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     const EDGE_FOCUS_ANCHOR_OFFSET_SCREEN: f32 = 18.0;
     const GRID_TILE_SIZE_SCREEN_PX: f32 = 2048.0;
     const GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME: u32 = 32;
+    const EDGE_MARKER_BUILD_BUDGET_PER_FRAME: u32 = 96;
+    const EDGE_LABEL_BUILD_BUDGET_PER_FRAME: u32 = 16;
 
     fn show_toast<H: UiHost>(
         &mut self,
@@ -9405,6 +9407,9 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
             }
         }
 
+        let mut marker_budget = WorkBudget::new(Self::EDGE_MARKER_BUILD_BUDGET_PER_FRAME);
+        let mut marker_budget_skipped: u32 = 0;
+
         for edge in edges_normal
             .into_iter()
             .chain(edges_selected)
@@ -9430,7 +9435,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
             }
 
             if let Some(marker) = edge.end_marker.as_ref() {
-                if let Some(path) = self.paint_cache.edge_end_marker_path(
+                let (path, skipped_by_budget) = self.paint_cache.edge_end_marker_path_budgeted(
                     cx.services,
                     edge.route,
                     edge.from,
@@ -9439,7 +9444,12 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                     cx.scale_factor,
                     marker,
                     self.style.pin_radius,
-                ) {
+                    &mut marker_budget,
+                );
+                if skipped_by_budget {
+                    marker_budget_skipped = marker_budget_skipped.saturating_add(1);
+                }
+                if let Some(path) = path {
                     cx.scene.push(SceneOp::Path {
                         order: DrawOrder(2),
                         origin: Point::new(Px(0.0), Px(0.0)),
@@ -9450,7 +9460,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
             }
 
             if let Some(marker) = edge.start_marker.as_ref() {
-                if let Some(path) = self.paint_cache.edge_start_marker_path(
+                let (path, skipped_by_budget) = self.paint_cache.edge_start_marker_path_budgeted(
                     cx.services,
                     edge.route,
                     edge.from,
@@ -9459,7 +9469,12 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                     cx.scale_factor,
                     marker,
                     self.style.pin_radius,
-                ) {
+                    &mut marker_budget,
+                );
+                if skipped_by_budget {
+                    marker_budget_skipped = marker_budget_skipped.saturating_add(1);
+                }
+                if let Some(path) = path {
                     cx.scene.push(SceneOp::Path {
                         order: DrawOrder(2),
                         origin: Point::new(Px(0.0), Px(0.0)),
@@ -9468,6 +9483,10 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                     });
                 }
             }
+        }
+
+        if marker_budget_skipped > 0 {
+            cx.request_redraw();
         }
 
         let prune = snapshot.interaction.paint_cache_prune;
@@ -9542,6 +9561,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                 lh.0 /= zoom;
             }
 
+            let mut label_budget = WorkBudget::new(Self::EDGE_LABEL_BUILD_BUDGET_PER_FRAME);
             for (from, to, route, label, _selected, _hovered) in edge_labels {
                 let (pos, normal) = match route {
                     EdgeRouteKind::Bezier => {
@@ -9579,12 +9599,21 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                     overflow: TextOverflow::Ellipsis,
                     scale_factor: cx.scale_factor * zoom,
                 };
-                let (blob, metrics) = self.paint_cache.text_blob(
+
+                let (prepared, skipped_by_budget) = self.paint_cache.text_blob_budgeted(
                     cx.services,
                     label.clone(),
                     &edge_text_style,
                     constraints,
+                    &mut label_budget,
                 );
+                if skipped_by_budget {
+                    cx.request_redraw();
+                    break;
+                }
+                let Some((blob, metrics)) = prepared else {
+                    continue;
+                };
 
                 let pad = pad_screen / z;
                 let w = metrics.size.width.0.max(0.0);

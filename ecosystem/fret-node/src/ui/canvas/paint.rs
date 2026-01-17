@@ -10,6 +10,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
+use fret_canvas::budget::WorkBudget;
 use fret_canvas::cache::CacheStats;
 use fret_canvas::cache::PathCache;
 use fret_core::{
@@ -344,7 +345,7 @@ impl CanvasPaintCache {
         }
     }
 
-    pub(crate) fn edge_end_marker_path(
+    pub(crate) fn edge_end_marker_path_budgeted(
         &mut self,
         services: &mut dyn fret_core::UiServices,
         route: EdgeRouteKind,
@@ -354,8 +355,9 @@ impl CanvasPaintCache {
         scale_factor: f32,
         marker: &EdgeMarker,
         pin_radius_screen: f32,
-    ) -> Option<PathId> {
-        self.marker_path(
+        budget: &mut WorkBudget,
+    ) -> (Option<PathId>, bool) {
+        self.marker_path_budgeted(
             services,
             MarkerSide::End,
             route,
@@ -365,10 +367,11 @@ impl CanvasPaintCache {
             scale_factor,
             marker,
             pin_radius_screen,
+            budget,
         )
     }
 
-    pub(crate) fn edge_start_marker_path(
+    pub(crate) fn edge_start_marker_path_budgeted(
         &mut self,
         services: &mut dyn fret_core::UiServices,
         route: EdgeRouteKind,
@@ -378,8 +381,9 @@ impl CanvasPaintCache {
         scale_factor: f32,
         marker: &EdgeMarker,
         pin_radius_screen: f32,
-    ) -> Option<PathId> {
-        self.marker_path(
+        budget: &mut WorkBudget,
+    ) -> (Option<PathId>, bool) {
+        self.marker_path_budgeted(
             services,
             MarkerSide::Start,
             route,
@@ -389,10 +393,11 @@ impl CanvasPaintCache {
             scale_factor,
             marker,
             pin_radius_screen,
+            budget,
         )
     }
 
-    fn marker_path(
+    fn marker_path_budgeted(
         &mut self,
         services: &mut dyn fret_core::UiServices,
         side: MarkerSide,
@@ -403,7 +408,8 @@ impl CanvasPaintCache {
         scale_factor: f32,
         marker: &EdgeMarker,
         pin_radius_screen: f32,
-    ) -> Option<PathId> {
+        budget: &mut WorkBudget,
+    ) -> (Option<PathId>, bool) {
         let zoom = if zoom.is_finite() && zoom > 0.0 {
             zoom
         } else {
@@ -414,7 +420,7 @@ impl CanvasPaintCache {
             || !to.x.0.is_finite()
             || !to.y.0.is_finite()
         {
-            return None;
+            return (None, false);
         }
 
         let q = |v: f32, step: f32| -> i64 {
@@ -443,6 +449,17 @@ impl CanvasPaintCache {
         };
 
         let cache_key = stable_path_key(2, &key);
+        let constraints = PathConstraints {
+            scale_factor: scale_factor * zoom,
+        };
+        if let Some((id, _metrics)) = self.paths.get(cache_key, constraints) {
+            return (Some(id), false);
+        }
+
+        if !budget.try_consume(1) {
+            return (None, true);
+        }
+
         let zoom = zoom.max(1.0e-6);
         let dir = match side {
             MarkerSide::Start => edge_route_start_tangent(route, from, to, zoom),
@@ -451,7 +468,7 @@ impl CanvasPaintCache {
 
         let len = (dir.x.0 * dir.x.0 + dir.y.0 * dir.y.0).sqrt();
         if !len.is_finite() || len <= 1.0e-6 {
-            return None;
+            return (None, false);
         }
         let ux = dir.x.0 / len;
         let uy = dir.y.0 / len;
@@ -494,11 +511,9 @@ impl CanvasPaintCache {
                     cache_key,
                     &commands,
                     PathStyle::Fill(FillStyle::default()),
-                    PathConstraints {
-                        scale_factor: scale_factor * zoom,
-                    },
+                    constraints,
                 );
-                Some(id)
+                (Some(id), false)
             }
         }
     }
@@ -622,6 +637,72 @@ impl CanvasPaintCache {
             },
         );
         metrics
+    }
+
+    pub(crate) fn text_blob_budgeted(
+        &mut self,
+        services: &mut dyn fret_core::UiServices,
+        text: impl Into<Arc<str>>,
+        style: &TextStyle,
+        constraints: TextConstraints,
+        budget: &mut WorkBudget,
+    ) -> (Option<(TextBlobId, TextMetrics)>, bool) {
+        let text: Arc<str> = text.into();
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        text.as_ref().hash(&mut hasher);
+        let text_hash = hasher.finish();
+
+        let q = |v: f32, step: f32| -> i64 {
+            if !v.is_finite() {
+                return 0;
+            }
+            (v / step).round() as i64
+        };
+
+        let max_width = constraints.max_width.map(|w| w.0.max(0.0)).unwrap_or(0.0);
+
+        let key = TextBlobKey {
+            text_hash,
+            text_len: text.len().min(u32::MAX as usize) as u32,
+            text: text.clone(),
+            font: style.font.clone(),
+            size: q(style.size.0.max(0.0), 0.01),
+            weight: style.weight.0,
+            slant: match style.slant {
+                fret_core::TextSlant::Normal => 0,
+                fret_core::TextSlant::Italic => 1,
+                fret_core::TextSlant::Oblique => 2,
+            },
+            line_height: q(style.line_height.map(|v| v.0).unwrap_or(0.0).max(0.0), 0.01),
+            letter_spacing_em: q(style.letter_spacing_em.unwrap_or(0.0), 0.0001),
+            max_width: q(max_width, 0.01),
+            wrap: constraints.wrap,
+            overflow: constraints.overflow,
+            scale_factor: q(constraints.scale_factor.max(0.0), 0.0001),
+        };
+
+        let now = self.frame;
+        if let Some(entry) = self.text_blobs.get_mut(&key) {
+            entry.last_used_frame = now;
+            return (Some((entry.id, entry.metrics)), false);
+        }
+
+        if !budget.try_consume(1) {
+            return (None, true);
+        }
+
+        let (id, metrics) = services
+            .text()
+            .prepare_str(text.as_ref(), style, constraints);
+        self.text_blobs.insert(
+            key,
+            TextBlobEntry {
+                id,
+                metrics,
+                last_used_frame: now,
+            },
+        );
+        (Some((id, metrics)), false)
     }
 }
 
