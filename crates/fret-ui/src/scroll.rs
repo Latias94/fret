@@ -15,6 +15,7 @@ struct ScrollHandleState {
     offset: Point,
     viewport: Size,
     content: Size,
+    revision: u64,
 }
 
 /// A lightweight imperative handle for driving scroll state.
@@ -33,6 +34,16 @@ impl ScrollHandle {
 
     pub fn offset(&self) -> Point {
         self.state.borrow().offset
+    }
+
+    /// Monotonic revision counter that increments when the scroll offset changes via
+    /// [`ScrollHandle::set_offset`] (or helpers that call it).
+    ///
+    /// The declarative runtime uses this to detect out-of-band scroll changes (e.g.
+    /// component-driven "scroll into view") and invalidate the bound scroll nodes, even when the
+    /// element instances themselves did not change.
+    pub fn revision(&self) -> u64 {
+        self.state.borrow().revision
     }
 
     pub fn max_offset(&self) -> Point {
@@ -61,7 +72,22 @@ impl ScrollHandle {
     pub fn set_offset(&self, offset: Point) {
         let clamped = self.clamp_offset(offset);
         let mut state = self.state.borrow_mut();
+        if (state.offset.x.0 - clamped.x.0).abs() <= 0.01
+            && (state.offset.y.0 - clamped.y.0).abs() <= 0.01
+        {
+            return;
+        }
         state.offset = clamped;
+        state.revision = state.revision.wrapping_add(1);
+    }
+
+    /// Internal offset setter used by the runtime during layout passes.
+    ///
+    /// Unlike [`ScrollHandle::set_offset`], this does **not** bump the handle revision because the
+    /// runtime is already invalidating and recomputing layout/paint in the same frame.
+    pub(crate) fn set_offset_internal(&self, offset: Point) {
+        let clamped = self.clamp_offset(offset);
+        self.state.borrow_mut().offset = clamped;
     }
 
     pub fn scroll_to_offset(&self, offset: Point) {

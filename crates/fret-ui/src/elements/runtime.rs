@@ -112,6 +112,7 @@ pub struct WindowElementState {
     pub(super) observed_models: HashMap<GlobalElementId, Vec<(ModelId, Invalidation)>>,
     pub(super) observed_globals: HashMap<GlobalElementId, Vec<(TypeId, Invalidation)>>,
     pub(super) timer_targets: HashMap<TimerToken, GlobalElementId>,
+    scroll_handle_revisions: HashMap<usize, u64>,
     nodes: HashMap<GlobalElementId, NodeEntry>,
     root_bounds: HashMap<GlobalElementId, Rect>,
     prev_bounds: HashMap<GlobalElementId, Rect>,
@@ -184,6 +185,14 @@ impl WindowElementState {
                 .entries
                 .retain(|_, v| v.last_seen_frame.0 >= cutoff);
         }
+    }
+
+    pub(crate) fn last_scroll_handle_revision(&self, handle_key: usize) -> Option<u64> {
+        self.scroll_handle_revisions.get(&handle_key).copied()
+    }
+
+    pub(crate) fn record_scroll_handle_revision(&mut self, handle_key: usize, revision: u64) {
+        self.scroll_handle_revisions.insert(handle_key, revision);
     }
 
     fn advance_element_state_buffers(&mut self, lag_frames: u64) {
@@ -336,12 +345,20 @@ impl WindowElementState {
         self.prev_bounds.get(&element).copied()
     }
 
+    pub(crate) fn current_bounds(&self, element: GlobalElementId) -> Option<Rect> {
+        self.cur_bounds.get(&element).copied()
+    }
+
     pub(crate) fn record_visual_bounds(&mut self, element: GlobalElementId, bounds: Rect) {
         self.cur_visual_bounds.insert(element, bounds);
     }
 
     pub(crate) fn last_visual_bounds(&self, element: GlobalElementId) -> Option<Rect> {
         self.prev_visual_bounds.get(&element).copied()
+    }
+
+    pub(crate) fn current_visual_bounds(&self, element: GlobalElementId) -> Option<Rect> {
+        self.cur_visual_bounds.get(&element).copied()
     }
 
     pub(crate) fn wants_continuous_frames(&self) -> bool {

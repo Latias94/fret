@@ -144,6 +144,7 @@ pub fn render_root<H: UiHost>(
         let window_state = runtime.for_window_mut(window);
         let root_id = crate::elements::global_root(window, root_name);
         let mut scroll_bindings: Vec<(usize, GlobalElementId)> = Vec::new();
+        let mut scroll_handle_revisions_seen: HashMap<usize, u64> = HashMap::new();
 
         let root_node = window_state
             .node_entry(root_id)
@@ -197,6 +198,7 @@ pub fn render_root<H: UiHost>(
                     window_frame,
                     child,
                     &mut scroll_bindings,
+                    &mut scroll_handle_revisions_seen,
                     &mut pending_invalidations,
                 ));
             }
@@ -212,6 +214,9 @@ pub fn render_root<H: UiHost>(
             frame_id,
             scroll_bindings,
         );
+        for (handle_key, revision) in scroll_handle_revisions_seen {
+            window_state.record_scroll_handle_revision(handle_key, revision);
+        }
 
         // Record the root's coordinate space for placement/collision logic (anchored overlays).
         window_state.set_root_bounds(root_id, bounds);
@@ -307,6 +312,7 @@ fn render_dismissible_root_impl<
         let window_state = runtime.for_window_mut(window);
         let root_id = crate::elements::global_root(window, root_name);
         let mut scroll_bindings: Vec<(usize, GlobalElementId)> = Vec::new();
+        let mut scroll_handle_revisions_seen: HashMap<usize, u64> = HashMap::new();
 
         let root_node = window_state
             .node_entry(root_id)
@@ -360,6 +366,7 @@ fn render_dismissible_root_impl<
                     window_frame,
                     child,
                     &mut scroll_bindings,
+                    &mut scroll_handle_revisions_seen,
                     &mut pending_invalidations,
                 ));
             }
@@ -374,6 +381,9 @@ fn render_dismissible_root_impl<
             frame_id,
             scroll_bindings,
         );
+        for (handle_key, revision) in scroll_handle_revisions_seen {
+            window_state.record_scroll_handle_revision(handle_key, revision);
+        }
 
         // Record the root's coordinate space for placement/collision logic (anchored overlays).
         window_state.set_root_bounds(root_id, bounds);
@@ -423,6 +433,7 @@ fn mount_element<H: UiHost>(
     window_frame: &mut WindowFrame,
     element: AnyElement,
     scroll_bindings: &mut Vec<(usize, GlobalElementId)>,
+    scroll_handle_revisions_seen: &mut HashMap<usize, u64>,
     pending_invalidations: &mut HashMap<NodeId, u8>,
 ) -> NodeId {
     let id = element.id;
@@ -445,6 +456,7 @@ fn mount_element<H: UiHost>(
             );
             node
         });
+    ui.set_node_element(node, Some(id));
 
     window_state.set_node_entry(
         id,
@@ -521,7 +533,15 @@ fn mount_element<H: UiHost>(
         ElementKind::Scrollbar(p) => ElementInstance::Scrollbar(p),
     };
 
-    collect_scroll_handle_bindings(id, &instance, scroll_bindings);
+    collect_scroll_handle_bindings_and_revisions(
+        id,
+        &instance,
+        scroll_bindings,
+        &*window_state,
+        scroll_handle_revisions_seen,
+        pending_invalidations,
+        node,
+    );
 
     let previous_instance = window_frame.instances.get(&node).map(|r| &r.instance);
     if !reuse_view_cache {
@@ -547,7 +567,14 @@ fn mount_element<H: UiHost>(
         window_frame.children.insert(node, children);
 
         mark_existing_declarative_subtree_seen(ui, window_state, root_id, frame_id, node);
-        collect_scroll_handle_bindings_for_existing_subtree(window_frame, scroll_bindings, node);
+        collect_scroll_handle_bindings_for_existing_subtree(
+            window_frame,
+            &*window_state,
+            scroll_bindings,
+            scroll_handle_revisions_seen,
+            pending_invalidations,
+            node,
+        );
         return node;
     }
 
@@ -562,6 +589,7 @@ fn mount_element<H: UiHost>(
             window_frame,
             child,
             scroll_bindings,
+            scroll_handle_revisions_seen,
             pending_invalidations,
         ));
     }
@@ -716,13 +744,24 @@ fn mark_existing_declarative_subtree_seen<H: UiHost>(
 
 fn collect_scroll_handle_bindings_for_existing_subtree(
     window_frame: &WindowFrame,
+    window_state: &crate::elements::WindowElementState,
     out: &mut Vec<(usize, GlobalElementId)>,
+    scroll_handle_revisions_seen: &mut HashMap<usize, u64>,
+    pending_invalidations: &mut HashMap<NodeId, u8>,
     root: NodeId,
 ) {
     let mut stack: Vec<NodeId> = vec![root];
     while let Some(node) = stack.pop() {
         if let Some(record) = window_frame.instances.get(&node) {
-            collect_scroll_handle_bindings(record.element, &record.instance, out);
+            collect_scroll_handle_bindings_and_revisions(
+                record.element,
+                &record.instance,
+                out,
+                window_state,
+                scroll_handle_revisions_seen,
+                pending_invalidations,
+                node,
+            );
         }
 
         if let Some(children) = window_frame.children.get(&node) {
@@ -733,24 +772,46 @@ fn collect_scroll_handle_bindings_for_existing_subtree(
     }
 }
 
-fn collect_scroll_handle_bindings(
+fn collect_scroll_handle_bindings_and_revisions(
     element: GlobalElementId,
     instance: &ElementInstance,
     out: &mut Vec<(usize, GlobalElementId)>,
+    window_state: &crate::elements::WindowElementState,
+    scroll_handle_revisions_seen: &mut HashMap<usize, u64>,
+    pending_invalidations: &mut HashMap<NodeId, u8>,
+    node: NodeId,
 ) {
+    let mut observe = |handle: &crate::scroll::ScrollHandle| {
+        let handle_key = handle.binding_key();
+        let revision = handle.revision();
+        scroll_handle_revisions_seen.insert(handle_key, revision);
+
+        if window_state.last_scroll_handle_revision(handle_key) != Some(revision) {
+            let mask = INVALIDATION_HIT_TEST | INVALIDATION_LAYOUT | INVALIDATION_PAINT;
+            pending_invalidations
+                .entry(node)
+                .and_modify(|m| *m |= mask)
+                .or_insert(mask);
+        }
+    };
+
     match instance {
         ElementInstance::VirtualList(props) => {
+            observe(props.scroll_handle.base_handle());
             out.push((props.scroll_handle.base_handle().binding_key(), element));
         }
         ElementInstance::Scroll(props) => {
             if let Some(handle) = props.scroll_handle.as_ref() {
+                observe(handle);
                 out.push((handle.binding_key(), element));
             }
         }
         ElementInstance::WheelRegion(props) => {
+            observe(&props.scroll_handle);
             out.push((props.scroll_handle.binding_key(), element));
         }
         ElementInstance::Scrollbar(props) => {
+            observe(&props.scroll_handle);
             out.push((props.scroll_handle.binding_key(), element));
         }
         _ => {}
