@@ -537,3 +537,61 @@ fn web_vs_fret_slider_demo_thumb_chrome_matches() {
         assert_close(&format!("slider radius[{idx}]"), *corner, web_radius, 1.0);
     }
 }
+
+#[test]
+fn web_vs_fret_radio_group_demo_control_chrome_matches() {
+    let web = read_web_golden("radio-group-demo");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_radio = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs.get("role").is_some_and(|v| v == "radio")
+            && n.id.as_deref() == Some("r1")
+            && (n.rect.w - 16.0).abs() <= 0.1
+            && (n.rect.h - 16.0).abs() <= 0.1
+    })
+    .expect("web radio control node");
+
+    let web_border = web_border_width_px(web_radio).expect("web borderTopWidth px");
+    let web_radius = web_corner_radius_effective_px(web_radio).expect("web radius px");
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let items = vec![
+            fret_ui_shadcn::RadioGroupItem::new("default", "Default"),
+            fret_ui_shadcn::RadioGroupItem::new("comfortable", "Comfortable"),
+            fret_ui_shadcn::RadioGroupItem::new("compact", "Compact"),
+        ];
+
+        let group = items.into_iter().fold(
+            fret_ui_shadcn::RadioGroup::uncontrolled(Some("default")).a11y_label("Options"),
+            |group, item| group.item(item),
+        );
+
+        vec![group.into_element(cx)]
+    });
+
+    let radio_row = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::RadioButton && n.label.as_deref() == Some("Default"))
+        .or_else(|| {
+            snap.nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::RadioButton)
+        })
+        .expect("fret radio semantics node");
+
+    let target = Rect::new(radio_row.bounds.origin, CoreSize::new(Px(16.0), Px(16.0)));
+    let quad = find_best_quad(&scene, target).expect("painted quad for radio control");
+
+    for (idx, edge) in quad.border.iter().enumerate() {
+        assert_close(&format!("radio border[{idx}]"), *edge, web_border, 0.6);
+    }
+    for (idx, corner) in quad.corners.iter().enumerate() {
+        assert_close(&format!("radio radius[{idx}]"), *corner, web_radius, 1.0);
+    }
+}
