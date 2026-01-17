@@ -10,6 +10,7 @@
 
 mod path_cache;
 mod scene_op_cache;
+mod scene_op_tile_cache;
 mod svg_cache;
 
 pub use crate::text::TextCache;
@@ -38,4 +39,5 @@ pub struct CacheStats {
 
 pub use path_cache::*;
 pub use scene_op_cache::*;
+pub use scene_op_tile_cache::*;
 pub use svg_cache::*;
