@@ -184,3 +184,130 @@ fn view_cache_inherits_model_observations_on_cache_hit_layout() {
         "expected invalidation to disable view-cache reuse and re-run the child render closure"
     );
 }
+
+#[test]
+fn view_cache_does_not_rerender_for_unrelated_model_changes() {
+    let mut app = TestHost::new();
+    let observed = app.models_mut().insert(0u32);
+    let unrelated = app.models_mut().insert(0u32);
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let renders = Arc::new(AtomicUsize::new(0));
+    let mut root: Option<NodeId> = None;
+
+    fn build_cached(
+        cx: &mut ElementContext<'_, TestHost>,
+        renders: &Arc<AtomicUsize>,
+        observed: &fret_runtime::Model<u32>,
+    ) -> AnyElement {
+        cx.view_cache(crate::element::ViewCacheProps::default(), |cx| {
+            renders.fetch_add(1, Ordering::SeqCst);
+            cx.observe_model(observed, Invalidation::Layout);
+            let v = cx.app.models().get_copied(observed).unwrap_or_default();
+            vec![cx.text(format!("Value {v}"))]
+        })
+    }
+
+    for frame in 0..3 {
+        let root_node = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "view-cache-unrelated-model",
+            |cx| vec![build_cached(cx, &renders, &observed)],
+        );
+        root.get_or_insert(root_node);
+        if frame == 0 {
+            ui.set_root(root_node);
+        }
+
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        app.advance_frame();
+
+        if frame == 1 {
+            let _ = unrelated.update(&mut app, |v, _cx| *v += 1);
+            let changed = app.take_changed_models();
+            assert!(
+                !ui.propagate_model_changes(&mut app, &changed),
+                "unrelated model changes should not invalidate the cached subtree"
+            );
+        }
+    }
+
+    assert_eq!(
+        renders.load(Ordering::SeqCst),
+        1,
+        "unrelated model changes should not force re-running the cached subtree render closure"
+    );
+}
+
+#[test]
+fn view_cache_is_disabled_under_inspection() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+    ui.set_inspection_active(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let renders = Arc::new(AtomicUsize::new(0));
+    let mut root: Option<NodeId> = None;
+
+    for frame in 0..3 {
+        let root_node = {
+            let renders = renders.clone();
+            render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                "view-cache-inspection-disabled",
+                move |cx| {
+                    vec![
+                        cx.view_cache(crate::element::ViewCacheProps::default(), |cx| {
+                            renders.fetch_add(1, Ordering::SeqCst);
+                            vec![cx.text("leaf")]
+                        }),
+                    ]
+                },
+            )
+        };
+
+        root.get_or_insert(root_node);
+        if frame == 0 {
+            ui.set_root(root_node);
+        }
+
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        app.advance_frame();
+    }
+
+    assert_eq!(
+        renders.load(Ordering::SeqCst),
+        3,
+        "view cache should be disabled under inspection, forcing subtree execution"
+    );
+}
