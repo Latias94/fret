@@ -180,6 +180,18 @@ impl PreparedPlotTransform {
         let px = self.viewport_origin_y + (ny * self.viewport_h);
         px.is_finite().then_some(Px(px as f32))
     }
+
+    pub fn data_to_px(self, p: DataPoint) -> Point {
+        let vx = self.x_scale.to_axis(p.x).unwrap_or(f64::NAN);
+        let vy = self.y_scale.to_axis(p.y).unwrap_or(f64::NAN);
+
+        let nx = (vx - self.x0) * self.inv_w;
+        let ny = 1.0 - (vy - self.y0) * self.inv_h;
+
+        let x = self.viewport_origin_x + (nx * self.viewport_w);
+        let y = self.viewport_origin_y + (ny * self.viewport_h);
+        Point::new(Px(x as f32), Px(y as f32))
+    }
 }
 
 impl PlotTransform {

@@ -45,7 +45,7 @@ use super::state::{
 use super::style::{LinePlotStyle, MouseReadoutMode, SeriesTooltipMode};
 use super::{AreaPlotModel, LinePlotModel};
 
-use crate::cartesian::{AxisScale, DataPoint, DataRect, PlotTransform};
+use crate::cartesian::{AxisScale, DataPoint, DataRect, PlotTransform, PreparedPlotTransform};
 use crate::input_map::{ModifierKey, ModifiersMask, PlotInputMap};
 use crate::plot::axis::{AxisLabelFormat, AxisLabelFormatter, AxisTicks, axis_ticks_scaled};
 use crate::plot::colormap::ColorMapId;
@@ -5370,50 +5370,57 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 let marker_len = Px(8.0);
 
                 let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size);
-                let transform_x = PlotTransform {
+                let transform_x: Option<PreparedPlotTransform> = PlotTransform {
                     viewport: local_viewport,
                     data: view_bounds,
                     x_scale: self.x_scale,
                     y_scale: self.y_scale,
-                };
+                }
+                .prepare();
 
-                let transform_for_y_axis = |axis: YAxis| -> Option<PlotTransform> {
+                let transform_for_y_axis = |axis: YAxis| -> Option<PreparedPlotTransform> {
                     match axis {
-                        YAxis::Left => Some(PlotTransform {
+                        YAxis::Left => PlotTransform {
                             viewport: local_viewport,
                             data: view_bounds,
                             x_scale: self.x_scale,
                             y_scale: self.y_scale,
-                        }),
-                        YAxis::Right if self.show_y2_axis => {
-                            view_bounds_y2.map(|b| PlotTransform {
+                        }
+                        .prepare(),
+                        YAxis::Right if self.show_y2_axis => view_bounds_y2.and_then(|b| {
+                            PlotTransform {
                                 viewport: local_viewport,
                                 data: b,
                                 x_scale: self.x_scale,
                                 y_scale: self.y2_scale,
-                            })
-                        }
-                        YAxis::Right2 if self.show_y3_axis => {
-                            view_bounds_y3.map(|b| PlotTransform {
+                            }
+                            .prepare()
+                        }),
+                        YAxis::Right2 if self.show_y3_axis => view_bounds_y3.and_then(|b| {
+                            PlotTransform {
                                 viewport: local_viewport,
                                 data: b,
                                 x_scale: self.x_scale,
                                 y_scale: self.y3_scale,
-                            })
-                        }
-                        YAxis::Right3 if self.show_y4_axis => {
-                            view_bounds_y4.map(|b| PlotTransform {
+                            }
+                            .prepare()
+                        }),
+                        YAxis::Right3 if self.show_y4_axis => view_bounds_y4.and_then(|b| {
+                            PlotTransform {
                                 viewport: local_viewport,
                                 data: b,
                                 x_scale: self.x_scale,
                                 y_scale: self.y4_scale,
-                            })
-                        }
+                            }
+                            .prepare()
+                        }),
                         _ => None,
                     }
                 };
 
-                if !overlays.inf_lines_x.is_empty() {
+                if !overlays.inf_lines_x.is_empty()
+                    && let Some(transform_x) = transform_x
+                {
                     for line in &overlays.inf_lines_x {
                         if !line.x.is_finite() {
                             continue;
@@ -5549,7 +5556,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     }
                 }
 
-                if !overlays.drag_lines_x.is_empty() {
+                if !overlays.drag_lines_x.is_empty()
+                    && let Some(transform_x) = transform_x
+                {
                     for line in &overlays.drag_lines_x {
                         let mut x = line.x;
                         if let Some(DragCapture::LineX { id, current_x, .. }) = self.drag_capture
@@ -5719,6 +5728,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     let mut drafts: Vec<OverlayDraft> = Vec::new();
 
                     for line in &overlays.drag_lines_x {
+                        let Some(transform_x) = transform_x else {
+                            break;
+                        };
                         let mut x = line.x;
                         if let Some(DragCapture::LineX { id, current_x, .. }) = self.drag_capture
                             && id == line.id
@@ -5852,6 +5864,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
 
                         let x_value = current.x;
                         let y_value = current.y;
+                        let Some(transform_x) = transform_x else {
+                            continue;
+                        };
                         let Some(x_px) = transform_x.data_x_to_px(x_value) else {
                             continue;
                         };
@@ -5912,36 +5927,38 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         });
                     }
 
-                    for tag in &overlays.tags_x {
-                        if !tag.x.is_finite() {
-                            continue;
-                        }
-                        let Some(x_px) = transform_x.data_x_to_px(tag.x) else {
-                            continue;
-                        };
-                        let x = Px((layout.plot.origin.x.0 + x_px.0).round());
+                    if let Some(transform_x) = transform_x {
+                        for tag in &overlays.tags_x {
+                            if !tag.x.is_finite() {
+                                continue;
+                            }
+                            let Some(x_px) = transform_x.data_x_to_px(tag.x) else {
+                                continue;
+                            };
+                            let x = Px((layout.plot.origin.x.0 + x_px.0).round());
 
-                        let value = tag
-                            .show_value
-                            .then(|| self.tooltip_x_labels.format(tag.x, x_span))
-                            .unwrap_or_default();
-                        let text = match (&tag.label, tag.show_value) {
-                            (Some(label), true) => format!("{label}: {value}"),
-                            (Some(label), false) => label.clone(),
-                            (None, true) => value,
-                            (None, false) => String::new(),
-                        };
-                        if text.is_empty() {
-                            continue;
-                        }
+                            let value = tag
+                                .show_value
+                                .then(|| self.tooltip_x_labels.format(tag.x, x_span))
+                                .unwrap_or_default();
+                            let text = match (&tag.label, tag.show_value) {
+                                (Some(label), true) => format!("{label}: {value}"),
+                                (Some(label), false) => label.clone(),
+                                (None, true) => value,
+                                (None, false) => String::new(),
+                            };
+                            if text.is_empty() {
+                                continue;
+                            }
 
-                        drafts.push(OverlayDraft {
-                            text,
-                            placement: OverlayPlacement::TagX {
-                                x,
-                                color: tag.color.unwrap_or(annotation_stroke),
-                            },
-                        });
+                            drafts.push(OverlayDraft {
+                                text,
+                                placement: OverlayPlacement::TagX {
+                                    x,
+                                    color: tag.color.unwrap_or(annotation_stroke),
+                                },
+                            });
+                        }
                     }
 
                     for tag in &overlays.tags_y {
@@ -6968,84 +6985,96 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         let y3_ticks = &self.axis_ticks_y3;
         let y4_ticks = &self.axis_ticks_y4;
 
-        let transform_y1 = PlotTransform {
+        let transform_y1: Option<PreparedPlotTransform> = PlotTransform {
             viewport: layout.plot,
             data: view_bounds,
             x_scale: self.x_scale,
             y_scale: self.y_scale,
-        };
-        let transform_y2 = view_bounds_y2.map(|b| PlotTransform {
-            viewport: layout.plot,
-            data: b,
-            x_scale: self.x_scale,
-            y_scale: self.y2_scale,
-        });
-        let transform_y3 = view_bounds_y3.map(|b| PlotTransform {
-            viewport: layout.plot,
-            data: b,
-            x_scale: self.x_scale,
-            y_scale: self.y3_scale,
-        });
-        let transform_y4 = view_bounds_y4.map(|b| PlotTransform {
-            viewport: layout.plot,
-            data: b,
-            x_scale: self.x_scale,
-            y_scale: self.y4_scale,
-        });
-
-        for (i, label) in self.axis_labels_x.iter().enumerate() {
-            if label.metrics.size.width.0 <= 0.0 {
-                continue;
-            }
-            let Some(v) = x_ticks.get(i).copied() else {
-                continue;
-            };
-            let Some(x) = transform_y1.data_x_to_px(v) else {
-                continue;
-            };
-            let x = Px(x.0.round());
-
-            let top = layout.x_axis.origin.y.0 + 2.0;
-            let origin = Point::new(
-                Px(x.0 - (label.metrics.size.width.0 * 0.5)),
-                Px(top + label.metrics.baseline.0),
-            );
-
-            cx.scene.push(SceneOp::Text {
-                order: DrawOrder(11),
-                origin,
-                text: label.blob,
-                color: label_color,
-            });
         }
-
-        for (i, label) in self.axis_labels_y.iter().enumerate() {
-            if label.metrics.size.width.0 <= 0.0 {
-                continue;
+        .prepare();
+        let transform_y2: Option<PreparedPlotTransform> = view_bounds_y2.and_then(|b| {
+            PlotTransform {
+                viewport: layout.plot,
+                data: b,
+                x_scale: self.x_scale,
+                y_scale: self.y2_scale,
             }
-            let Some(v) = y_ticks.get(i).copied() else {
-                continue;
-            };
-            let Some(y) = transform_y1.data_y_to_px(v) else {
-                continue;
-            };
-            let y = Px(y.0.round());
+            .prepare()
+        });
+        let transform_y3: Option<PreparedPlotTransform> = view_bounds_y3.and_then(|b| {
+            PlotTransform {
+                viewport: layout.plot,
+                data: b,
+                x_scale: self.x_scale,
+                y_scale: self.y3_scale,
+            }
+            .prepare()
+        });
+        let transform_y4: Option<PreparedPlotTransform> = view_bounds_y4.and_then(|b| {
+            PlotTransform {
+                viewport: layout.plot,
+                data: b,
+                x_scale: self.x_scale,
+                y_scale: self.y4_scale,
+            }
+            .prepare()
+        });
 
-            let origin_x = layout.y_axis_left.origin.x.0 + layout.y_axis_left.size.width.0
-                - label.metrics.size.width.0
-                - 4.0;
-            let top = y.0 - (label.metrics.size.height.0 * 0.5);
-            let origin = Point::new(
-                Px(origin_x.max(layout.y_axis_left.origin.x.0)),
-                Px(top + label.metrics.baseline.0),
-            );
+        if let Some(transform_y1) = transform_y1 {
+            for (i, label) in self.axis_labels_x.iter().enumerate() {
+                if label.metrics.size.width.0 <= 0.0 {
+                    continue;
+                }
+                let Some(v) = x_ticks.get(i).copied() else {
+                    continue;
+                };
+                let Some(x) = transform_y1.data_x_to_px(v) else {
+                    continue;
+                };
+                let x = Px(x.0.round());
 
-            cx.scene.push(SceneOp::Text {
-                order: DrawOrder(11),
-                origin,
-                text: label.blob,
-                color: label_color,
-            });
+                let top = layout.x_axis.origin.y.0 + 2.0;
+                let origin = Point::new(
+                    Px(x.0 - (label.metrics.size.width.0 * 0.5)),
+                    Px(top + label.metrics.baseline.0),
+                );
+
+                cx.scene.push(SceneOp::Text {
+                    order: DrawOrder(11),
+                    origin,
+                    text: label.blob,
+                    color: label_color,
+                });
+            }
+
+            for (i, label) in self.axis_labels_y.iter().enumerate() {
+                if label.metrics.size.width.0 <= 0.0 {
+                    continue;
+                }
+                let Some(v) = y_ticks.get(i).copied() else {
+                    continue;
+                };
+                let Some(y) = transform_y1.data_y_to_px(v) else {
+                    continue;
+                };
+                let y = Px(y.0.round());
+
+                let origin_x = layout.y_axis_left.origin.x.0 + layout.y_axis_left.size.width.0
+                    - label.metrics.size.width.0
+                    - 4.0;
+                let top = y.0 - (label.metrics.size.height.0 * 0.5);
+                let origin = Point::new(
+                    Px(origin_x.max(layout.y_axis_left.origin.x.0)),
+                    Px(top + label.metrics.baseline.0),
+                );
+
+                cx.scene.push(SceneOp::Text {
+                    order: DrawOrder(11),
+                    origin,
+                    text: label.blob,
+                    color: label_color,
+                });
+            }
         }
 
         if self.show_y2_axis {
