@@ -5,7 +5,7 @@
 //! - concrete 2D plot layers (line/scatter/bars/area/shaded/heatmap/etc),
 //! - convenience `*PlotCanvas` aliases for `PlotCanvas<L>`.
 
-use fret_canvas::budget::WorkBudget;
+use fret_canvas::budget::{InteractionBudget, WorkBudget};
 use fret_canvas::cache::{
     PathCache, SceneOpTileCache, TileCacheKeyBuilder, TileCoord, TileGrid2D,
     warm_scene_op_tiles_u64,
@@ -995,6 +995,7 @@ pub struct PlotPaintArgs<'a> {
     pub y4_scale: AxisScale,
     pub style: LinePlotStyle,
     pub hidden: &'a HashSet<SeriesId>,
+    pub view_interacting: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -1823,6 +1824,7 @@ impl PlotLayer for LinePlotLayer {
             y4_scale,
             style,
             hidden,
+            ..
         } = args;
 
         let scale_factor_bits = cx.scale_factor.to_bits();
@@ -2117,6 +2119,7 @@ impl PlotLayer for StemsPlotLayer {
             y4_scale,
             style,
             hidden,
+            ..
         } = args;
 
         let scale_factor_bits = cx.scale_factor.to_bits();
@@ -2580,6 +2583,7 @@ impl PlotLayer for ScatterPlotLayer {
             y4_scale,
             style,
             hidden,
+            ..
         } = args;
 
         let scale_factor_bits = cx.scale_factor.to_bits();
@@ -2883,6 +2887,7 @@ impl PlotLayer for ErrorBarsPlotLayer {
             y4_scale,
             style,
             hidden,
+            ..
         } = args;
 
         let scale_factor_bits = cx.scale_factor.to_bits();
@@ -3193,6 +3198,7 @@ impl PlotLayer for CandlestickPlotLayer {
             y4_scale,
             style,
             hidden,
+            ..
         } = args;
 
         let scale_factor_bits = cx.scale_factor.to_bits();
@@ -3704,6 +3710,7 @@ impl PlotLayer for StairsPlotLayer {
             y4_scale,
             style,
             hidden,
+            ..
         } = args;
 
         let scale_factor_bits = cx.scale_factor.to_bits();
@@ -4049,6 +4056,7 @@ impl PlotLayer for HistogramPlotLayer {
             y4_scale,
             style,
             hidden,
+            ..
         } = args;
 
         let scale_factor_bits = cx.scale_factor.to_bits();
@@ -4457,6 +4465,7 @@ impl PlotLayer for BarsPlotLayer {
             y4_scale,
             style,
             hidden,
+            ..
         } = args;
 
         let scale_factor_bits = cx.scale_factor.to_bits();
@@ -4677,7 +4686,8 @@ impl PlotLayer for HeatmapPlotLayer {
         plot_origin: Point,
     ) -> bool {
         const TILE_SIZE_CANVAS: f32 = 512.0;
-        const TILE_BUILD_BUDGET_TILES_PER_FRAME: u32 = 8;
+        const TILE_BUILD_BUDGET_TILES_PER_FRAME_IDLE: u32 = 8;
+        const TILE_BUILD_BUDGET_TILES_PER_FRAME_INTERACTIVE: u32 = 2;
         const TILE_MAX_AGE_FRAMES: u64 = 240;
         const TILE_MAX_ENTRIES: usize = 512;
 
@@ -4688,6 +4698,7 @@ impl PlotLayer for HeatmapPlotLayer {
             x_scale,
             y_scale,
             style,
+            view_interacting,
             ..
         } = args;
 
@@ -4817,8 +4828,12 @@ impl PlotLayer for HeatmapPlotLayer {
         let translation_x = translation.x.0;
         let translation_y = translation.y.0;
 
-        let mut tile_budget = WorkBudget::new(TILE_BUILD_BUDGET_TILES_PER_FRAME);
-        let mut skipped_tiles: u32 = 0;
+        let tile_budget_limit = InteractionBudget::new(
+            TILE_BUILD_BUDGET_TILES_PER_FRAME_IDLE,
+            TILE_BUILD_BUDGET_TILES_PER_FRAME_INTERACTIVE,
+        )
+        .select(view_interacting);
+        let mut tile_budget = WorkBudget::new(tile_budget_limit);
         let warmup = warm_scene_op_tiles_u64(
             &mut self.tile_ops_cache,
             cx.scene,
@@ -4865,14 +4880,14 @@ impl PlotLayer for HeatmapPlotLayer {
                 )
             },
         );
-        skipped_tiles = warmup.skipped_tiles;
+        let skipped_tiles = warmup.skipped_tiles;
 
         report_layer_tile_cache_stats(
             cx,
             "fret-plot.heatmap.tiles",
             &self.tile_ops_cache,
             self.tile_scratch.len(),
-            TILE_BUILD_BUDGET_TILES_PER_FRAME,
+            tile_budget_limit,
             tile_budget.used(),
             skipped_tiles,
         );
@@ -5208,7 +5223,8 @@ impl PlotLayer for Histogram2DPlotLayer {
         plot_origin: Point,
     ) -> bool {
         const TILE_SIZE_CANVAS: f32 = 512.0;
-        const TILE_BUILD_BUDGET_TILES_PER_FRAME: u32 = 8;
+        const TILE_BUILD_BUDGET_TILES_PER_FRAME_IDLE: u32 = 8;
+        const TILE_BUILD_BUDGET_TILES_PER_FRAME_INTERACTIVE: u32 = 2;
         const TILE_MAX_AGE_FRAMES: u64 = 240;
         const TILE_MAX_ENTRIES: usize = 512;
 
@@ -5219,6 +5235,7 @@ impl PlotLayer for Histogram2DPlotLayer {
             x_scale,
             y_scale,
             style,
+            view_interacting,
             ..
         } = args;
 
@@ -5349,8 +5366,12 @@ impl PlotLayer for Histogram2DPlotLayer {
         let translation_x = translation.x.0;
         let translation_y = translation.y.0;
 
-        let mut tile_budget = WorkBudget::new(TILE_BUILD_BUDGET_TILES_PER_FRAME);
-        let mut skipped_tiles: u32 = 0;
+        let tile_budget_limit = InteractionBudget::new(
+            TILE_BUILD_BUDGET_TILES_PER_FRAME_IDLE,
+            TILE_BUILD_BUDGET_TILES_PER_FRAME_INTERACTIVE,
+        )
+        .select(view_interacting);
+        let mut tile_budget = WorkBudget::new(tile_budget_limit);
         let warmup = warm_scene_op_tiles_u64(
             &mut self.tile_ops_cache,
             cx.scene,
@@ -5397,14 +5418,14 @@ impl PlotLayer for Histogram2DPlotLayer {
                 )
             },
         );
-        skipped_tiles = warmup.skipped_tiles;
+        let skipped_tiles = warmup.skipped_tiles;
 
         report_layer_tile_cache_stats(
             cx,
             "fret-plot.histogram2d.tiles",
             &self.tile_ops_cache,
             self.tile_scratch.len(),
-            TILE_BUILD_BUDGET_TILES_PER_FRAME,
+            tile_budget_limit,
             tile_budget.used(),
             skipped_tiles,
         );
@@ -5799,6 +5820,7 @@ impl PlotLayer for AreaPlotLayer {
             y4_scale,
             style,
             hidden,
+            ..
         } = args;
 
         let scale_factor_bits = cx.scale_factor.to_bits();
@@ -6302,6 +6324,7 @@ impl PlotLayer for ShadedPlotLayer {
             y4_scale,
             style,
             hidden,
+            ..
         } = args;
 
         let scale_factor_bits = cx.scale_factor.to_bits();

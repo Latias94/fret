@@ -700,6 +700,14 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         self
     }
 
+    fn view_interacting(&self) -> bool {
+        self.pan_start_pos.is_some()
+            || self.box_zoom_start.is_some()
+            || self.query_drag_start.is_some()
+            || self.drag_capture.is_some()
+            || self.drag_output.is_some()
+    }
+
     fn apply_box_select_modifiers(
         plot_size: Size,
         start: Point,
@@ -1758,6 +1766,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
                 y4_scale: self.y4_scale,
                 style,
                 hidden,
+                view_interacting: self.view_interacting(),
             },
         )
     }
@@ -1799,6 +1808,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
                 y4_scale: self.y4_scale,
                 style,
                 hidden,
+                view_interacting: self.view_interacting(),
             },
         )
     }
@@ -5032,6 +5042,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             y4_scale: self.y4_scale,
                             style: resolved_style,
                             hidden,
+                            view_interacting: self.view_interacting(),
                         },
                         layout.plot.origin,
                     )
