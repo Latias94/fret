@@ -1158,6 +1158,13 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub fn set_children(&mut self, parent: NodeId, children: Vec<NodeId>) {
+        let Some(existing_children) = self.nodes.get(parent).map(|n| n.children.as_slice()) else {
+            return;
+        };
+        if existing_children == children.as_slice() {
+            return;
+        }
+
         let Some(old_children) = self
             .nodes
             .get_mut(parent)
