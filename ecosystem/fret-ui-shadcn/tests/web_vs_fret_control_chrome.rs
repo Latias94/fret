@@ -33,6 +33,8 @@ struct WebNode {
     id: Option<String>,
     #[serde(default)]
     attrs: BTreeMap<String, String>,
+    #[serde(default)]
+    text: Option<String>,
     rect: WebRect,
     #[serde(rename = "computedStyle", default)]
     computed_style: BTreeMap<String, String>,
@@ -212,6 +214,13 @@ fn setup_app_with_shadcn_theme(app: &mut App) {
 fn render_and_paint(
     render: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
 ) -> (fret_core::SemanticsSnapshot, Scene) {
+    render_and_paint_in_bounds(CoreSize::new(Px(1024.0), Px(768.0)), render)
+}
+
+fn render_and_paint_in_bounds(
+    size: CoreSize,
+    render: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
+) -> (fret_core::SemanticsSnapshot, Scene) {
     let window = AppWindowId::default();
     let mut app = App::new();
     setup_app_with_shadcn_theme(&mut app);
@@ -220,10 +229,7 @@ fn render_and_paint(
     ui.set_window(window);
     let mut services = FakeServices;
 
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(1024.0), Px(768.0)),
-    );
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
 
     let root = fret_ui::declarative::render_root(
         &mut ui,
@@ -298,6 +304,164 @@ fn web_vs_fret_input_demo_control_chrome_matches() {
     for (idx, corner) in quad.corners.iter().enumerate() {
         assert_close(&format!("input radius[{idx}]"), *corner, web_radius, 1.0);
     }
+}
+
+#[test]
+fn web_vs_fret_badge_demo_chrome_matches() {
+    let web = read_web_golden("badge-demo");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_badge = find_first(&theme.root, &|n| {
+        n.tag == "span" && n.text.as_deref() == Some("Badge")
+    })
+    .expect("web badge node");
+
+    let web_border = web_border_width_px(web_badge).expect("web borderTopWidth px");
+    let web_radius = web_corner_radius_effective_px(web_badge).expect("web radius px");
+    let web_w = web_badge.rect.w;
+    let web_h = web_badge.rect.h;
+
+    let (_snap, scene) = render_and_paint(|cx| {
+        vec![
+            fret_ui_shadcn::Badge::new("Badge")
+                .refine_layout(
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_w)))
+                        .h_px(fret_ui_kit::MetricRef::Px(Px(web_h))),
+                )
+                .into_element(cx),
+        ]
+    });
+
+    let target = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(web_w), Px(web_h)),
+    );
+    let quad = find_best_quad(&scene, target).expect("painted quad for badge");
+
+    assert_close("badge width", quad.rect.size.width.0, web_w, 1.0);
+    assert_close("badge height", quad.rect.size.height.0, web_h, 1.0);
+    for (idx, edge) in quad.border.iter().enumerate() {
+        assert_close(&format!("badge border[{idx}]"), *edge, web_border, 0.6);
+    }
+    for (idx, corner) in quad.corners.iter().enumerate() {
+        assert_close(&format!("badge radius[{idx}]"), *corner, web_radius, 1.0);
+    }
+}
+
+#[test]
+fn web_vs_fret_kbd_demo_key_chrome_matches() {
+    let web = read_web_golden("kbd-demo");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_kbd = find_first(&theme.root, &|n| {
+        n.tag == "kbd" && n.text.as_deref() == Some("B")
+    })
+    .expect("web kbd node (B)");
+
+    let web_border = web_border_width_px(web_kbd).expect("web borderTopWidth px");
+    let web_radius = web_corner_radius_effective_px(web_kbd).expect("web radius px");
+    let web_w = web_kbd.rect.w;
+    let web_h = web_kbd.rect.h;
+
+    let (_snap, scene) =
+        render_and_paint(|cx| vec![fret_ui_shadcn::Kbd::new("B").into_element(cx)]);
+
+    let target = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(web_w), Px(web_h)),
+    );
+    let quad = find_best_quad(&scene, target).expect("painted quad for kbd");
+
+    assert_close("kbd width", quad.rect.size.width.0, web_w, 1.0);
+    assert_close("kbd height", quad.rect.size.height.0, web_h, 1.0);
+    for (idx, edge) in quad.border.iter().enumerate() {
+        assert_close(&format!("kbd border[{idx}]"), *edge, web_border, 0.6);
+    }
+    for (idx, corner) in quad.corners.iter().enumerate() {
+        assert_close(&format!("kbd radius[{idx}]"), *corner, web_radius, 1.0);
+    }
+}
+
+#[test]
+fn web_vs_fret_separator_demo_geometry_matches() {
+    let web = read_web_golden("separator-demo");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_sep_h = find_first(&theme.root, &|n| {
+        n.tag == "div" && (n.rect.h - 1.0).abs() <= 0.1
+    })
+    .expect("web horizontal separator node");
+    let web_sep_v = find_first(&theme.root, &|n| {
+        n.tag == "div" && (n.rect.w - 1.0).abs() <= 0.1
+    })
+    .expect("web vertical separator node");
+
+    // Horizontal separator: fill width at y=0.
+    let (_snap, scene) =
+        render_and_paint_in_bounds(CoreSize::new(Px(web_sep_h.rect.w), Px(80.0)), |cx| {
+            vec![
+                fret_ui_shadcn::Separator::new()
+                    .orientation(fret_ui_shadcn::SeparatorOrientation::Horizontal)
+                    .into_element(cx),
+            ]
+        });
+    let target = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(web_sep_h.rect.w), Px(web_sep_h.rect.h)),
+    );
+    let quad = find_best_quad(&scene, target).expect("painted quad for horizontal separator");
+    assert_close(
+        "separator horizontal width",
+        quad.rect.size.width.0,
+        web_sep_h.rect.w,
+        1.0,
+    );
+    assert_close(
+        "separator horizontal height",
+        quad.rect.size.height.0,
+        web_sep_h.rect.h,
+        0.6,
+    );
+
+    // Vertical separator: fill height at y=0.
+    let (_snap, scene) =
+        render_and_paint_in_bounds(CoreSize::new(Px(80.0), Px(web_sep_v.rect.h)), |cx| {
+            vec![
+                fret_ui_shadcn::Separator::new()
+                    .orientation(fret_ui_shadcn::SeparatorOrientation::Vertical)
+                    .into_element(cx),
+            ]
+        });
+    let target = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(web_sep_v.rect.w), Px(web_sep_v.rect.h)),
+    );
+    let quad = find_best_quad(&scene, target).expect("painted quad for vertical separator");
+    assert_close(
+        "separator vertical width",
+        quad.rect.size.width.0,
+        web_sep_v.rect.w,
+        0.6,
+    );
+    assert_close(
+        "separator vertical height",
+        quad.rect.size.height.0,
+        web_sep_v.rect.h,
+        1.0,
+    );
 }
 
 #[test]
