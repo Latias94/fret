@@ -628,6 +628,19 @@ impl UiGalleryDriver {
         } else {
             None
         };
+        let hot_model_breakdown: Option<Arc<str>> = {
+            let hotspots = state.ui.debug_model_change_hotspots();
+            if hotspots.is_empty() {
+                None
+            } else {
+                let mut line = String::from("hot_models");
+                for hs in hotspots.iter().take(3) {
+                    line.push(' ');
+                    line.push_str(&format!("{:?}={}", hs.model, hs.observation_edges));
+                }
+                Some(Arc::from(line))
+            }
+        };
         let inspector_status = if app.models().get_copied(&inspector_enabled).unwrap_or(false) {
             let pointer = app
                 .models()
@@ -1023,6 +1036,9 @@ impl UiGalleryDriver {
                             for line in lines {
                                 right_items.push(cx.text(format!("hud: {}", line.as_ref())));
                             }
+                        }
+                        if let Some(line) = hot_model_breakdown.as_ref() {
+                            right_items.push(cx.text(format!("hud: {}", line.as_ref())));
                         }
 
                         WorkspaceStatusBar::new()

@@ -183,6 +183,12 @@ pub struct UiDebugFrameStats {
     pub captured: Option<NodeId>,
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+pub struct UiDebugModelChangeHotspot {
+    pub model: ModelId,
+    pub observation_edges: u32,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UiDebugInvalidationSource {
     ModelChange,
@@ -507,6 +513,7 @@ pub struct UiTree<H: UiHost> {
     debug_view_cache_roots: Vec<DebugViewCacheRootRecord>,
     debug_paint_cache_replays: HashMap<NodeId, u32>,
     debug_invalidation_walks: Vec<UiDebugInvalidationWalk>,
+    debug_model_change_hotspots: Vec<UiDebugModelChangeHotspot>,
 
     view_cache_enabled: bool,
     paint_cache_policy: PaintCachePolicy,
@@ -549,6 +556,7 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_view_cache_roots: Vec::new(),
             debug_paint_cache_replays: HashMap::new(),
             debug_invalidation_walks: Vec::new(),
+            debug_model_change_hotspots: Vec::new(),
             view_cache_enabled: false,
             paint_cache_policy: PaintCachePolicy::Auto,
             inspection_active: false,
@@ -632,6 +640,7 @@ impl<H: UiHost> UiTree<H> {
         self.debug_view_cache_roots.clear();
         self.debug_paint_cache_replays.clear();
         self.debug_invalidation_walks.clear();
+        self.debug_model_change_hotspots.clear();
     }
 
     pub(crate) fn debug_record_view_cache_root(
@@ -797,6 +806,13 @@ impl<H: UiHost> UiTree<H> {
             return &[];
         }
         self.debug_invalidation_walks.as_slice()
+    }
+
+    pub fn debug_model_change_hotspots(&self) -> &[UiDebugModelChangeHotspot] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_model_change_hotspots.as_slice()
     }
 
     pub fn captured_for(&self, pointer_id: PointerId) -> Option<NodeId> {
@@ -2003,6 +2019,9 @@ impl<H: UiHost> UiTree<H> {
             return false;
         }
         self.begin_debug_frame_if_needed(app.frame_id());
+        if self.debug_enabled {
+            self.debug_model_change_hotspots.clear();
+        }
 
         if changed.len() == 1 {
             let model = changed[0];
@@ -2018,6 +2037,10 @@ impl<H: UiHost> UiTree<H> {
                     self.debug_stats.model_change_models = 1;
                     self.debug_stats.model_change_observation_edges =
                         masks.len().min(u32::MAX as usize) as u32;
+                    self.debug_model_change_hotspots = vec![UiDebugModelChangeHotspot {
+                        model,
+                        observation_edges: masks.len().min(u32::MAX as usize) as u32,
+                    }];
                 }
                 return self.propagate_observation_masks(
                     app,
@@ -2031,8 +2054,10 @@ impl<H: UiHost> UiTree<H> {
             HashMap::with_capacity(changed.len().saturating_mul(8));
         let mut observation_edges_scanned = 0usize;
         for &model in changed {
+            let mut edges = 0usize;
             if let Some(nodes) = self.observed_in_layout.by_model.get(&model) {
                 observation_edges_scanned = observation_edges_scanned.saturating_add(nodes.len());
+                edges = edges.saturating_add(nodes.len());
                 for (&node, &mask) in nodes {
                     combined
                         .entry(node)
@@ -2042,12 +2067,20 @@ impl<H: UiHost> UiTree<H> {
             }
             if let Some(nodes) = self.observed_in_paint.by_model.get(&model) {
                 observation_edges_scanned = observation_edges_scanned.saturating_add(nodes.len());
+                edges = edges.saturating_add(nodes.len());
                 for (&node, &mask) in nodes {
                     combined
                         .entry(node)
                         .and_modify(|m| *m = m.union(mask))
                         .or_insert(mask);
                 }
+            }
+            if self.debug_enabled && edges > 0 {
+                self.debug_model_change_hotspots
+                    .push(UiDebugModelChangeHotspot {
+                        model,
+                        observation_edges: edges.min(u32::MAX as usize) as u32,
+                    });
             }
         }
 
@@ -2057,6 +2090,10 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.model_change_models = changed.len().min(u32::MAX as usize) as u32;
             self.debug_stats.model_change_observation_edges =
                 observation_edges_scanned.min(u32::MAX as usize) as u32;
+
+            self.debug_model_change_hotspots
+                .sort_by(|a, b| b.observation_edges.cmp(&a.observation_edges));
+            self.debug_model_change_hotspots.truncate(5);
         }
         self.propagate_observation_masks(
             app,
