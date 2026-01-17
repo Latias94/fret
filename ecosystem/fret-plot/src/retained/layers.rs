@@ -4686,8 +4686,6 @@ impl PlotLayer for HeatmapPlotLayer {
         plot_origin: Point,
     ) -> bool {
         const TILE_SIZE_CANVAS: f32 = 512.0;
-        const TILE_BUILD_BUDGET_TILES_PER_FRAME_IDLE: u32 = 8;
-        const TILE_BUILD_BUDGET_TILES_PER_FRAME_INTERACTIVE: u32 = 2;
         const TILE_MAX_AGE_FRAMES: u64 = 240;
         const TILE_MAX_ENTRIES: usize = 512;
 
@@ -4829,8 +4827,8 @@ impl PlotLayer for HeatmapPlotLayer {
         let translation_y = translation.y.0;
 
         let tile_budget_limit = InteractionBudget::new(
-            TILE_BUILD_BUDGET_TILES_PER_FRAME_IDLE,
-            TILE_BUILD_BUDGET_TILES_PER_FRAME_INTERACTIVE,
+            style.tile_warmup_tiles_per_frame_idle,
+            style.tile_warmup_tiles_per_frame_interactive,
         )
         .select(view_interacting);
         let mut tile_budget = WorkBudget::new(tile_budget_limit);
@@ -5223,8 +5221,6 @@ impl PlotLayer for Histogram2DPlotLayer {
         plot_origin: Point,
     ) -> bool {
         const TILE_SIZE_CANVAS: f32 = 512.0;
-        const TILE_BUILD_BUDGET_TILES_PER_FRAME_IDLE: u32 = 8;
-        const TILE_BUILD_BUDGET_TILES_PER_FRAME_INTERACTIVE: u32 = 2;
         const TILE_MAX_AGE_FRAMES: u64 = 240;
         const TILE_MAX_ENTRIES: usize = 512;
 
@@ -5367,8 +5363,8 @@ impl PlotLayer for Histogram2DPlotLayer {
         let translation_y = translation.y.0;
 
         let tile_budget_limit = InteractionBudget::new(
-            TILE_BUILD_BUDGET_TILES_PER_FRAME_IDLE,
-            TILE_BUILD_BUDGET_TILES_PER_FRAME_INTERACTIVE,
+            style.tile_warmup_tiles_per_frame_idle,
+            style.tile_warmup_tiles_per_frame_interactive,
         )
         .select(view_interacting);
         let mut tile_budget = WorkBudget::new(tile_budget_limit);
