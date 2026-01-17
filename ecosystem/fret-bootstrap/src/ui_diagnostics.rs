@@ -1713,6 +1713,27 @@ pub struct UiCacheStatsV1 {
     pub release_evict: u64,
 }
 
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+pub struct UiSceneOpTileCacheStatsV1 {
+    pub calls: u64,
+    pub hits: u64,
+    pub misses: u64,
+    pub stored_tiles: u64,
+    pub recorded_ops: u64,
+    pub replayed_ops: u64,
+    pub clear_calls: u64,
+    pub prune_calls: u64,
+    pub evict_calls: u64,
+    pub evict_prune_age: u64,
+    pub evict_prune_budget: u64,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiSceneOpTileCacheSnapshotV1 {
+    pub entries: usize,
+    pub stats: UiSceneOpTileCacheStatsV1,
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UiCanvasCacheEntryV1 {
     pub node: u64,
@@ -1723,6 +1744,8 @@ pub struct UiCanvasCacheEntryV1 {
     pub svg: Option<UiCacheKindSnapshotV1>,
     #[serde(default)]
     pub text: Option<UiCacheKindSnapshotV1>,
+    #[serde(default)]
+    pub scene_op_tiles: Option<UiSceneOpTileCacheSnapshotV1>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -1834,6 +1857,22 @@ fn canvas_cache_stats_for_window(app: &App, window: u64) -> Vec<UiCanvasCacheEnt
                     release_prune_budget: s.stats.release_prune_budget,
                     release_clear: s.stats.release_clear,
                     release_evict: s.stats.release_evict,
+                },
+            }),
+            scene_op_tiles: snap.scene_op_tiles.map(|s| UiSceneOpTileCacheSnapshotV1 {
+                entries: s.entries,
+                stats: UiSceneOpTileCacheStatsV1 {
+                    calls: s.stats.calls,
+                    hits: s.stats.hits,
+                    misses: s.stats.misses,
+                    stored_tiles: s.stats.stored_tiles,
+                    recorded_ops: s.stats.recorded_ops,
+                    replayed_ops: s.stats.replayed_ops,
+                    clear_calls: s.stats.clear_calls,
+                    prune_calls: s.stats.prune_calls,
+                    evict_calls: s.stats.evict_calls,
+                    evict_prune_age: s.stats.evict_prune_age,
+                    evict_prune_budget: s.stats.evict_prune_budget,
                 },
             }),
         })
@@ -2311,7 +2350,15 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub model_change_invalidation_roots: u32,
     #[serde(default)]
+    pub model_change_models: u32,
+    #[serde(default)]
+    pub model_change_observation_edges: u32,
+    #[serde(default)]
     pub global_change_invalidation_roots: u32,
+    #[serde(default)]
+    pub global_change_globals: u32,
+    #[serde(default)]
+    pub global_change_observation_edges: u32,
     #[serde(default)]
     pub invalidation_walk_nodes: u32,
     #[serde(default)]
@@ -2362,7 +2409,11 @@ impl UiFrameStatsV1 {
             layout_engine_solve_time_us: stats.layout_engine_solve_time.as_micros() as u64,
             layout_engine_widget_fallback_solves: stats.layout_engine_widget_fallback_solves,
             model_change_invalidation_roots: stats.model_change_invalidation_roots,
+            model_change_models: stats.model_change_models,
+            model_change_observation_edges: stats.model_change_observation_edges,
             global_change_invalidation_roots: stats.global_change_invalidation_roots,
+            global_change_globals: stats.global_change_globals,
+            global_change_observation_edges: stats.global_change_observation_edges,
             invalidation_walk_nodes: stats.invalidation_walk_nodes,
             invalidation_walk_calls: stats.invalidation_walk_calls,
             invalidation_walk_nodes_model_change: stats.invalidation_walk_nodes_model_change,

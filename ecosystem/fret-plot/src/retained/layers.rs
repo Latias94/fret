@@ -54,6 +54,28 @@ fn report_layer_path_cache_stats<H: UiHost>(
         });
 }
 
+fn report_layer_tile_cache_stats<H: UiHost>(
+    cx: &mut PaintCx<'_, H>,
+    layer_name: &'static str,
+    cache: &SceneOpTileCache<u64>,
+) {
+    let Some(window) = cx.window else {
+        return;
+    };
+
+    let frame_id = cx.app.frame_id().0;
+    let key = CanvasCacheKey {
+        window: window.data().as_ffi(),
+        node: cx.node.data().as_ffi(),
+        name: layer_name,
+    };
+
+    cx.app
+        .with_global_mut(CanvasCacheStatsRegistry::default, |registry, _app| {
+            registry.record_scene_op_tile_cache(key, frame_id, cache.entries_len(), cache.stats());
+        });
+}
+
 struct ResolvedSeriesStyle {
     stroke_color: Color,
     stroke_width: Px,
@@ -4831,6 +4853,7 @@ impl PlotLayer for HeatmapPlotLayer {
             self.tile_ops_cache.store_ops(key, ops);
         }
 
+        report_layer_tile_cache_stats(cx, "fret-plot.heatmap.tiles", &self.tile_ops_cache);
         true
     }
 
@@ -5353,6 +5376,7 @@ impl PlotLayer for Histogram2DPlotLayer {
             self.tile_ops_cache.store_ops(key, ops);
         }
 
+        report_layer_tile_cache_stats(cx, "fret-plot.histogram2d.tiles", &self.tile_ops_cache);
         true
     }
 

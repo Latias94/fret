@@ -43,6 +43,7 @@ pub(super) struct ActiveModal {
     pub(super) initial_focus: Option<GlobalElementId>,
     pub(super) open: bool,
     pub(super) restore_focus: Option<NodeId>,
+    pub(super) pending_initial_focus: bool,
 }
 
 pub(super) struct ActiveTooltip {
@@ -163,8 +164,9 @@ fn apply_overlay_layer_state<H: UiHost>(
         }
         OverlayLayerKind::Modal => {
             ui.set_layer_visible(layer, st.present);
-            // Modal barrier semantics are authoritative while the layer is present:
-            // the barrier must keep blocking underlay input even when the modal is closing.
+            // For modal overlays, `present` is the authority for input gating. Even when a modal
+            // is closing (`interactive=false` but `present=true` for an exit transition), the
+            // layer must remain hit-testable to keep the underlay inert and prevent click-through.
             ui.set_layer_hit_testable(layer, st.present);
             ui.set_layer_wants_pointer_down_outside_events(layer, false);
         }

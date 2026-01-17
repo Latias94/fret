@@ -62,7 +62,9 @@ pub fn apply_initial_focus_for_overlay<H: UiHost>(
         return true;
     }
 
-    if let Some(node) = ui.first_focusable_descendant_including_declarative(app, window, root) {
+    if let Some(node) =
+        ui.first_focusable_descendant_including_declarative_present_only(app, window, root)
+    {
         ui.set_focus(Some(node));
         return true;
     }
