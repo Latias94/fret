@@ -5,6 +5,7 @@
 //! - concrete 2D plot layers (line/scatter/bars/area/shaded/heatmap/etc),
 //! - convenience `*PlotCanvas` aliases for `PlotCanvas<L>`.
 
+use fret_canvas::budget::WorkBudget;
 use fret_canvas::cache::{PathCache, SceneOpTileCache, TileCoord, TileGrid2D};
 use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_core::geometry::{Corners, Edges, Point, Px, Rect, Size};
@@ -4660,6 +4661,7 @@ impl PlotLayer for HeatmapPlotLayer {
         plot_origin: Point,
     ) -> bool {
         const TILE_SIZE_CANVAS: f32 = 512.0;
+        const TILE_BUILD_BUDGET_TILES_PER_FRAME: u32 = 8;
         const TILE_MAX_AGE_FRAMES: u64 = 240;
         const TILE_MAX_ENTRIES: usize = 512;
 
@@ -4774,6 +4776,23 @@ impl PlotLayer for HeatmapPlotLayer {
         let tile_grid = TileGrid2D::new(TILE_SIZE_CANVAS);
         tile_grid.tiles_in_rect(view_rect_world, &mut self.tile_scratch);
 
+        // Prefer building tiles near the viewport center first so partial work degrades gracefully.
+        if !self.tile_scratch.is_empty() && TILE_SIZE_CANVAS.is_finite() && TILE_SIZE_CANVAS > 0.0 {
+            let center_world_x = view_rect_world.origin.x.0 + 0.5 * view_rect_world.size.width.0;
+            let center_world_y = view_rect_world.origin.y.0 + 0.5 * view_rect_world.size.height.0;
+            if center_world_x.is_finite() && center_world_y.is_finite() {
+                let center_tile = TileCoord {
+                    x: (center_world_x / TILE_SIZE_CANVAS).floor() as i32,
+                    y: (center_world_y / TILE_SIZE_CANVAS).floor() as i32,
+                };
+                self.tile_scratch.sort_unstable_by_key(|t| {
+                    let dx = (t.x - center_tile.x).abs() as u32;
+                    let dy = (t.y - center_tile.y).abs() as u32;
+                    dx.saturating_add(dy)
+                });
+            }
+        }
+
         use std::collections::hash_map::DefaultHasher;
 
         let base_key = {
@@ -4801,6 +4820,8 @@ impl PlotLayer for HeatmapPlotLayer {
         let translation_x = translation.x.0;
         let translation_y = translation.y.0;
 
+        let mut tile_budget = WorkBudget::new(TILE_BUILD_BUDGET_TILES_PER_FRAME);
+        let mut skipped_tiles: u32 = 0;
         for tile in self.tile_scratch.iter().copied() {
             let tile_origin_world = tile.origin(TILE_SIZE_CANVAS);
             let tile_rect_world = Rect::new(
@@ -4825,6 +4846,11 @@ impl PlotLayer for HeatmapPlotLayer {
             );
 
             if self.tile_ops_cache.try_replay(key, cx.scene, replay_delta) {
+                continue;
+            }
+
+            if !tile_budget.try_consume(1) {
+                skipped_tiles = skipped_tiles.saturating_add(1);
                 continue;
             }
 
@@ -4854,6 +4880,10 @@ impl PlotLayer for HeatmapPlotLayer {
         }
 
         report_layer_tile_cache_stats(cx, "fret-plot.heatmap.tiles", &self.tile_ops_cache);
+        if skipped_tiles > 0 {
+            // Continue warming tiles incrementally to avoid a single frame spike.
+            cx.request_redraw();
+        }
         true
     }
 
@@ -5182,6 +5212,7 @@ impl PlotLayer for Histogram2DPlotLayer {
         plot_origin: Point,
     ) -> bool {
         const TILE_SIZE_CANVAS: f32 = 512.0;
+        const TILE_BUILD_BUDGET_TILES_PER_FRAME: u32 = 8;
         const TILE_MAX_AGE_FRAMES: u64 = 240;
         const TILE_MAX_ENTRIES: usize = 512;
 
@@ -5297,6 +5328,23 @@ impl PlotLayer for Histogram2DPlotLayer {
         let tile_grid = TileGrid2D::new(TILE_SIZE_CANVAS);
         tile_grid.tiles_in_rect(view_rect_world, &mut self.tile_scratch);
 
+        // Prefer building tiles near the viewport center first so partial work degrades gracefully.
+        if !self.tile_scratch.is_empty() && TILE_SIZE_CANVAS.is_finite() && TILE_SIZE_CANVAS > 0.0 {
+            let center_world_x = view_rect_world.origin.x.0 + 0.5 * view_rect_world.size.width.0;
+            let center_world_y = view_rect_world.origin.y.0 + 0.5 * view_rect_world.size.height.0;
+            if center_world_x.is_finite() && center_world_y.is_finite() {
+                let center_tile = TileCoord {
+                    x: (center_world_x / TILE_SIZE_CANVAS).floor() as i32,
+                    y: (center_world_y / TILE_SIZE_CANVAS).floor() as i32,
+                };
+                self.tile_scratch.sort_unstable_by_key(|t| {
+                    let dx = (t.x - center_tile.x).abs() as u32;
+                    let dy = (t.y - center_tile.y).abs() as u32;
+                    dx.saturating_add(dy)
+                });
+            }
+        }
+
         use std::collections::hash_map::DefaultHasher;
 
         let base_key = {
@@ -5324,6 +5372,8 @@ impl PlotLayer for Histogram2DPlotLayer {
         let translation_x = translation.x.0;
         let translation_y = translation.y.0;
 
+        let mut tile_budget = WorkBudget::new(TILE_BUILD_BUDGET_TILES_PER_FRAME);
+        let mut skipped_tiles: u32 = 0;
         for tile in self.tile_scratch.iter().copied() {
             let tile_origin_world = tile.origin(TILE_SIZE_CANVAS);
             let tile_rect_world = Rect::new(
@@ -5348,6 +5398,11 @@ impl PlotLayer for Histogram2DPlotLayer {
             );
 
             if self.tile_ops_cache.try_replay(key, cx.scene, replay_delta) {
+                continue;
+            }
+
+            if !tile_budget.try_consume(1) {
+                skipped_tiles = skipped_tiles.saturating_add(1);
                 continue;
             }
 
@@ -5377,6 +5432,10 @@ impl PlotLayer for Histogram2DPlotLayer {
         }
 
         report_layer_tile_cache_stats(cx, "fret-plot.histogram2d.tiles", &self.tile_ops_cache);
+        if skipped_tiles > 0 {
+            // Continue warming tiles incrementally to avoid a single frame spike.
+            cx.request_redraw();
+        }
         true
     }
 
