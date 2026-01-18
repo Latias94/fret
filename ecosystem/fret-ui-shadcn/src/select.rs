@@ -688,6 +688,12 @@ fn select_impl<H: UiHost>(
     arrow_size_override: Option<Px>,
     arrow_padding_override: Option<Px>,
 ) -> AnyElement {
+    let chrome = ChromeRefinement::default()
+        .pl(Space::N2p5)
+        .pr(Space::N2)
+        .py(Space::N2)
+        .merge(chrome);
+
     cx.scope(|cx| {
         fn find_item_label(entries: &[SelectEntry], value: &str) -> Option<Arc<str>> {
             for entry in entries {
@@ -779,14 +785,12 @@ fn select_impl<H: UiHost>(
             .metric_by_key("component.select.min_width")
             .unwrap_or(Px(128.0));
 
-        let mut trigger_layout = decl_style::layout_style(
+        let trigger_layout = decl_style::layout_style(
             &theme,
             LayoutRefinement::default()
-                .min_h(MetricRef::Px(resolved.min_height))
+                .h_px(MetricRef::Px(resolved.min_height))
                 .merge(layout),
         );
-        trigger_layout.size.height = Length::Auto;
-        trigger_layout.size.min_height = Some(resolved.min_height);
 
         let border = resolved.border_color;
         let border_focus = resolved.border_color_focused;
