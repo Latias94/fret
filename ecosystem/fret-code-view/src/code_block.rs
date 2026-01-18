@@ -855,10 +855,6 @@ fn render_code_block_text<H: UiHost>(
         },
     );
 
-    if !scrollbar_x_visible {
-        return scroll;
-    }
-
     let scrollbar_w = theme.metric_required("metric.scrollbar.width");
     let thumb = theme.color_required("scrollbar.thumb.background");
     let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
@@ -890,18 +886,22 @@ fn render_code_block_text<H: UiHost>(
                 ..Default::default()
             };
 
+            let scrollbar = cx.scrollbar(ScrollbarProps {
+                layout: scrollbar_layout,
+                axis: ScrollbarAxis::Horizontal,
+                scroll_target: Some(scroll_id),
+                scroll_handle: handle,
+                style: ScrollbarStyle {
+                    thumb,
+                    thumb_hover,
+                    ..Default::default()
+                },
+            });
+
             vec![
                 scroll,
-                cx.scrollbar(ScrollbarProps {
-                    layout: scrollbar_layout,
-                    axis: ScrollbarAxis::Horizontal,
-                    scroll_target: Some(scroll_id),
-                    scroll_handle: handle,
-                    style: ScrollbarStyle {
-                        thumb,
-                        thumb_hover,
-                        ..Default::default()
-                    },
+                cx.opacity(if scrollbar_x_visible { 1.0 } else { 0.0 }, move |cx| {
+                    vec![cx.interactivity_gate(true, scrollbar_x_visible, |_cx| vec![scrollbar])]
                 }),
             ]
         },
