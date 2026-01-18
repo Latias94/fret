@@ -824,6 +824,7 @@ impl<H: UiHost> UiTree<H> {
                 crate::elements::update_hovered_pressable(app, window, hovered_pressable);
             if prev_node.is_some() || next_node.is_some() {
                 needs_redraw = true;
+                self.debug_record_hover_edge_pressable();
                 if let Some(node) = prev_node {
                     self.mark_invalidation_dedup_with_source(
                         node,
@@ -1012,6 +1013,7 @@ impl<H: UiHost> UiTree<H> {
                 crate::elements::update_hovered_hover_region(app, window, hovered_hover_region);
             if prev_node.is_some() || next_node.is_some() {
                 needs_redraw = true;
+                self.debug_record_hover_edge_hover_region();
                 if let Some(node) = prev_node {
                     self.mark_invalidation_dedup_with_source(
                         node,

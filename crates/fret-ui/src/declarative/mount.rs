@@ -586,6 +586,12 @@ fn mount_element<H: UiHost>(
     if !reuse_view_cache {
         let mask = declarative_instance_change_mask(previous_instance, &instance);
         if mask != 0 {
+            ui.debug_record_hover_declarative_invalidation(
+                node,
+                (mask & INVALIDATION_HIT_TEST) != 0,
+                (mask & INVALIDATION_LAYOUT) != 0,
+                (mask & INVALIDATION_PAINT) != 0,
+            );
             pending_invalidations
                 .entry(node)
                 .and_modify(|m| *m |= mask)

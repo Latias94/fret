@@ -69,6 +69,7 @@ pub use text_input_style::TextInputStyle;
 pub use theme::{Theme, ThemeConfig, ThemeSnapshot};
 pub use theme_keys::{ThemeColorKey, ThemeMetricKey};
 pub use tree::{
-    PaintCachePolicy, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiLayerId, UiTree,
+    PaintCachePolicy, UiDebugFrameStats, UiDebugHitTest,
+    UiDebugHoverDeclarativeInvalidationHotspot, UiDebugLayerInfo, UiLayerId, UiTree,
 };
 pub use widget::Invalidation;
