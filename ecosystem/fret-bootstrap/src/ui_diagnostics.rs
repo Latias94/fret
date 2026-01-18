@@ -277,9 +277,7 @@ impl UiDiagnosticsService {
             }
         }
 
-        self.pending_script.is_some()
-            || self.active_scripts.contains_key(&window)
-            || self.pick_armed_run_id.is_some()
+        self.pick_armed_run_id.is_some()
             || grace > 0
             || self.inspect_enabled
             || self.inspect_toast.contains_key(&window)
@@ -3840,6 +3838,32 @@ mod tests {
         let mut n = semantics_node(id, parent, role, bounds, label);
         n.test_id = Some(test_id.to_string());
         n
+    }
+
+    #[test]
+    fn scripts_do_not_force_inspection_active() {
+        let mut svc = UiDiagnosticsService::default();
+        svc.cfg.enabled = true;
+        svc.inspect_enabled = false;
+        svc.pick_armed_run_id = None;
+        svc.pending_pick = None;
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock should be >= UNIX_EPOCH")
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("fret-diag-test-{}", unique));
+        svc.cfg.pick_trigger_path = dir.join("pick.touch");
+        svc.cfg.inspect_trigger_path = dir.join("inspect.touch");
+        svc.cfg.inspect_path = dir.join("inspect.json");
+        svc.pending_script = Some(UiActionScriptV1 {
+            schema_version: 1,
+            steps: Vec::new(),
+        });
+
+        assert!(
+            !svc.wants_inspection_active(AppWindowId::default()),
+            "scripts should not force inspection_active (allows view cache/paint cache during perf triage)"
+        );
     }
 
     #[test]
