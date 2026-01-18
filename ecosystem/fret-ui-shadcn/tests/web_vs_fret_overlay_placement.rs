@@ -7212,11 +7212,75 @@ fn web_vs_fret_dialog_demo_overlay_center_matches() {
 }
 
 #[test]
+fn web_vs_fret_dialog_demo_overlay_center_matches_tiny_viewport() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Dialog, DialogContent};
+
+    assert_centered_overlay_placement_matches(
+        "dialog-demo.vp1440x240",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Dialog::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    Button::new("Open Dialog")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| {
+                    DialogContent::new(vec![cx.text("Edit profile")])
+                        .refine_layout(
+                            fret_ui_kit::LayoutRefinement::default()
+                                .max_w(fret_ui_kit::MetricRef::Px(Px(425.0))),
+                        )
+                        .into_element(cx)
+                },
+            )
+        },
+    );
+}
+
+#[test]
 fn web_vs_fret_command_dialog_overlay_center_matches() {
     use fret_ui_shadcn::{Button, CommandDialog, CommandItem};
 
     assert_centered_overlay_placement_matches(
         "command-dialog",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            #[derive(Default)]
+            struct Models {
+                query: Option<Model<String>>,
+            }
+
+            let existing = cx.with_state(Models::default, |st| st.query.clone());
+            let query = if let Some(existing) = existing {
+                existing
+            } else {
+                let model = cx.app.models_mut().insert(String::new());
+                cx.with_state(Models::default, |st| st.query = Some(model.clone()));
+                model
+            };
+
+            let items = vec![
+                CommandItem::new("Calendar"),
+                CommandItem::new("Search Emoji"),
+                CommandItem::new("Calculator"),
+            ];
+
+            CommandDialog::new(open.clone(), query, items)
+                .into_element(cx, |cx| Button::new("Open").into_element(cx))
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_command_dialog_overlay_center_matches_tiny_viewport() {
+    use fret_ui_shadcn::{Button, CommandDialog, CommandItem};
+
+    assert_centered_overlay_placement_matches(
+        "command-dialog.vp1440x240",
         "dialog",
         SemanticsRole::Dialog,
         |cx, open| {
@@ -7272,11 +7336,58 @@ fn web_vs_fret_alert_dialog_demo_overlay_center_matches() {
 }
 
 #[test]
+fn web_vs_fret_alert_dialog_demo_overlay_center_matches_tiny_viewport() {
+    use fret_ui_shadcn::{AlertDialog, AlertDialogContent, Button, ButtonVariant};
+
+    assert_centered_overlay_placement_matches(
+        "alert-dialog-demo.vp1440x240",
+        "alertdialog",
+        SemanticsRole::AlertDialog,
+        |cx, open| {
+            AlertDialog::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    Button::new("Show Dialog")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| {
+                    AlertDialogContent::new(vec![cx.text("Are you absolutely sure?")])
+                        .into_element(cx)
+                },
+            )
+        },
+    );
+}
+
+#[test]
 fn web_vs_fret_sheet_demo_overlay_insets_match() {
     use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent};
 
     assert_viewport_anchored_overlay_placement_matches(
         "sheet-demo",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Sheet::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    Button::new("Open")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| SheetContent::new(vec![cx.text("Edit profile")]).into_element(cx),
+            )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_sheet_demo_overlay_insets_match_tiny_viewport() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent};
+
+    assert_viewport_anchored_overlay_placement_matches(
+        "sheet-demo.vp1440x240",
         "dialog",
         SemanticsRole::Dialog,
         |cx, open| {
