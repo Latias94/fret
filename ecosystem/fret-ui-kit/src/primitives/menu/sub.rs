@@ -950,14 +950,25 @@ pub fn handle_dismissible_pointer_move(
 
     let mut did_update_grace_intent = false;
     if let Some(grace) = grace {
+        // Hit-testing and layout rounding can produce 1px overlaps between adjacent menu items,
+        // especially when borders are present. Radix's DOM-driven hover logic effectively treats
+        // the "exit" boundary as half-open; bias our exit detection by trimming the bottom/right
+        // edge by 1px so moving onto the next item reliably arms the pointer-grace corridor.
+        let exit_reference = Rect {
+            origin: grace.reference.origin,
+            size: Size::new(
+                Px((grace.reference.size.width.0 - 1.0).max(0.0)),
+                Px((grace.reference.size.height.0 - 1.0).max(0.0)),
+            ),
+        };
         if grace.floating.contains(mv.position) {
             cancel_timer(host, &models.pointer_grace_timer);
             let _ = host
                 .models_mut()
                 .update(&models.pointer_grace_intent, |v| *v = None);
             did_update_grace_intent = true;
-        } else if prev_pointer.is_some_and(|prev| grace.reference.contains(prev))
-            && !grace.reference.contains(mv.position)
+        } else if prev_pointer.is_some_and(|prev| exit_reference.contains(prev))
+            && !exit_reference.contains(mv.position)
         {
             let submenu_open = host
                 .models_mut()
