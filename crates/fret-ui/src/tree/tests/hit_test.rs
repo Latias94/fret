@@ -740,3 +740,134 @@ fn hit_test_layers_cached_reuses_path_and_respects_layer_order() {
         "overlay root should win when it hits before the base root"
     );
 }
+
+#[test]
+fn hit_test_works_with_view_cache_root_and_prepaint_reuse_under_render_transform() {
+    struct TransformedOverlayRoot;
+
+    impl<H: UiHost> Widget<H> for TransformedOverlayRoot {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            false
+        }
+
+        fn render_transform(&self, _bounds: Rect) -> Option<Transform2D> {
+            let center = Point::new(Px(5.0), Px(5.0));
+            let rotate = Transform2D::rotation_about_degrees(90.0, center);
+            let translate = Transform2D::translation(Point::new(Px(40.0), Px(0.0)));
+            Some(translate * rotate)
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let Some(&child) = cx.children.first() else {
+                return cx.available;
+            };
+            let child_bounds = Rect::new(cx.bounds.origin, Size::new(Px(10.0), Px(10.0)));
+            let _ = cx.layout_in(child, child_bounds);
+            cx.available
+        }
+
+        fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+            let Some(&child) = cx.children.first() else {
+                return;
+            };
+            let child_bounds = Rect::new(cx.bounds.origin, Size::new(Px(10.0), Px(10.0)));
+            cx.paint(child, child_bounds);
+        }
+    }
+
+    struct CountNormalDown {
+        normal: Model<u32>,
+    }
+
+    impl<H: UiHost> Widget<H> for CountNormalDown {
+        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Normal {
+                return;
+            }
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&self.normal, |v: &mut u32| *v += 1);
+                cx.stop_propagation();
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let window = AppWindowId::default();
+
+    let mut app = crate::test_host::TestHost::new();
+    let underlay_down = app.models_mut().insert(0u32);
+    let overlay_down = app.models_mut().insert(0u32);
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let underlay = ui.create_node(CountNormalDown {
+        normal: underlay_down.clone(),
+    });
+    ui.set_root(underlay);
+
+    let overlay_root = ui.create_node(TransformedOverlayRoot);
+    ui.set_node_view_cache_flags(overlay_root, true, false);
+    let overlay_leaf = ui.create_node(CountNormalDown {
+        normal: overlay_down.clone(),
+    });
+    ui.add_child(overlay_root, overlay_leaf);
+    ui.push_overlay_root_ex(overlay_root, false, true);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+
+    // Frame 0: establish prepaint interaction recording.
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Frame 1: reuse the cached interaction range for the overlay cache root.
+    app.advance_frame();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert!(
+        ui.debug_stats().interaction_cache_hits >= 1,
+        "expected prepaint interaction cache to hit for clean view-cache roots"
+    );
+
+    // This window-space point maps to local (6, 5) inside the overlay leaf after rotation+translation.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(45.0), Px(6.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(app.models().get_copied(&overlay_down), Some(1));
+    assert_eq!(app.models().get_copied(&underlay_down), Some(0));
+
+    // Clicking outside the overlay leaf should hit the underlay.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(app.models().get_copied(&overlay_down), Some(1));
+    assert_eq!(app.models().get_copied(&underlay_down), Some(1));
+}
