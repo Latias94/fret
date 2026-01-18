@@ -255,7 +255,7 @@ Current layout gates include:
 - `table-demo`: header/body/footer row heights + caption gap (Table recipe conformance).
 - `data-table-demo`: row height + checkbox/action button sizing (Table + Checkbox + Button icon sizing).
 - `data-table-demo.empty`: empty-state `td` spans full table width (colSpan) + `h-24` height.
-- `typography-table`: 2-column typography table geometry (row heights + cell rects) + `even:bg-muted` background (paint-backed) using the prose typography baseline.
+- `typography-table`: 2-column typography table geometry (row heights + cell rects) + `even:bg-muted` background (paint-backed) using the prose typography baseline (light+dark).
 - `scroll-area-demo` / `scroll-area-horizontal-demo`: thumb bounds + (paint-backed) thumb background/alpha in hover-visible states.
 
 ## Options
