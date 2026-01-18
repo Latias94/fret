@@ -578,7 +578,7 @@ fn preview_intro(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElem
                 .bg(ColorRef::Color(theme.color_required("muted")))
                 .rounded(Radius::Md)
                 .p(Space::N4),
-            LayoutRefinement::default().w_full(),
+            LayoutRefinement::default().w_full().min_w_0(),
         );
         cx.container(props, |cx| {
             vec![cx.text("Phase 1: fixed two-pane layout + hardcoded docs strings (focus on validating component usability). Docking/multi-window views will come later.")]
