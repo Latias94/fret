@@ -296,6 +296,8 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         }
     }
 
+    seed_syntax_colors(&mut colors);
+
     ThemeConfig {
         name: format!("shadcn/new-york-v4/{}/{}", base.as_str(), scheme.as_str()),
         author: Some("shadcn/ui".to_string()),
@@ -303,6 +305,79 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         colors,
         metrics,
     }
+}
+
+fn seed_syntax_colors(colors: &mut HashMap<String, String>) {
+    fn pick(colors: &HashMap<String, String>, keys: &[&str]) -> Option<String> {
+        for &key in keys {
+            if let Some(value) = colors.get(key) {
+                return Some(value.clone());
+            }
+        }
+        None
+    }
+
+    fn insert_if_missing(colors: &mut HashMap<String, String>, key: &str, value: Option<String>) {
+        if colors.contains_key(key) {
+            return;
+        }
+        if let Some(value) = value {
+            colors.insert(key.to_string(), value);
+        }
+    }
+
+    // These keys are consumed by `fret-code-view` for tree-sitter highlight tags (ADR 0100).
+    // We derive a small palette from the base shadcn `chart-*` tokens.
+    insert_if_missing(
+        colors,
+        "color.syntax.comment",
+        pick(colors, &["muted-foreground"]),
+    );
+    insert_if_missing(
+        colors,
+        "color.syntax.keyword",
+        pick(colors, &["chart-3", "primary"]),
+    );
+    insert_if_missing(
+        colors,
+        "color.syntax.function",
+        pick(colors, &["chart-1", "primary"]),
+    );
+    insert_if_missing(
+        colors,
+        "color.syntax.type",
+        pick(colors, &["chart-4", "accent-foreground", "foreground"]),
+    );
+    insert_if_missing(
+        colors,
+        "color.syntax.string",
+        pick(colors, &["chart-2", "foreground"]),
+    );
+    insert_if_missing(
+        colors,
+        "color.syntax.constant",
+        pick(colors, &["chart-5", "primary"]),
+    );
+    insert_if_missing(
+        colors,
+        "color.syntax.number",
+        pick(colors, &["chart-5", "primary"]),
+    );
+    insert_if_missing(
+        colors,
+        "color.syntax.operator",
+        pick(colors, &["muted-foreground", "foreground"]),
+    );
+    insert_if_missing(
+        colors,
+        "color.syntax.punctuation",
+        pick(colors, &["muted-foreground", "foreground"]),
+    );
+    insert_if_missing(
+        colors,
+        "color.syntax.variable",
+        pick(colors, &["foreground"]),
+    );
 }
 
 /// Apply a shadcn preset into the global `Theme`.

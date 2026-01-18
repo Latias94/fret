@@ -485,9 +485,7 @@ pub fn code_block_with_header_slots<H: UiHost>(
                 && options.copy_button_placement == CodeBlockCopyButtonPlacement::Overlay
             {
                 let el = render_copy_button_overlay(cx, &theme, feedback.clone(), code.clone());
-                out.push(cx.opacity(if copy_visible { 1.0 } else { 0.0 }, |cx| {
-                    vec![cx.interactivity_gate(true, copy_visible, |_cx| vec![el])]
-                }));
+                out.push(cx.opacity(if copy_visible { 1.0 } else { 0.0 }, |_cx| vec![el]));
             }
             out
         })]
@@ -569,9 +567,7 @@ fn render_code_block_header<H: UiHost>(
                 right.extend(header.right.iter().cloned());
                 if let Some(copy) = copy {
                     let el = render_copy_button(cx, theme, copy.feedback, copy.code);
-                    right.push(cx.opacity(if copy.visible { 1.0 } else { 0.0 }, |cx| {
-                        vec![cx.interactivity_gate(true, copy.visible, |_cx| vec![el])]
-                    }));
+                    right.push(cx.opacity(if copy.visible { 1.0 } else { 0.0 }, |_cx| vec![el]));
                 }
 
                 vec![
@@ -900,8 +896,8 @@ fn render_code_block_text<H: UiHost>(
 
             vec![
                 scroll,
-                cx.opacity(if scrollbar_x_visible { 1.0 } else { 0.0 }, move |cx| {
-                    vec![cx.interactivity_gate(true, scrollbar_x_visible, |_cx| vec![scrollbar])]
+                cx.opacity(if scrollbar_x_visible { 1.0 } else { 0.0 }, move |_cx| {
+                    vec![scrollbar]
                 }),
             ]
         },
