@@ -510,7 +510,8 @@ pub fn render<H: UiHost>(
             let opening = open_now && (!entry.open || created);
             if opening {
                 should_focus_initial = true;
-                entry.restore_focus = restore_focus;
+                entry.restore_focus = restore_focus
+                    .or_else(|| fret_ui::elements::node_for_element(app, window, trigger));
             }
             entry.open = open_now;
             entry.last_focus = focus_now;
