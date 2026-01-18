@@ -25,6 +25,12 @@ use fret_ui::elements::GlobalElementId;
 #[derive(Default)]
 struct FakeServices;
 
+fn begin_frame(app: &mut App, window: AppWindowId) {
+    let next = FrameId(app.frame_id().0.saturating_add(1));
+    app.set_frame_id(next);
+    super::begin_frame(app, window);
+}
+
 impl TextService for FakeServices {
     fn prepare(
         &mut self,
@@ -2631,8 +2637,11 @@ fn non_modal_overlay_restores_focus_when_focus_is_missing_on_unmount() {
 
     ui.set_focus(None);
 
-    // Third frame: do not request the popover (present=false / unmounted), and expect focus to
-    // be restored to the trigger since focus is missing.
+    // Close the overlay so the cached request is no longer synthesized.
+    let _ = app.models_mut().update(&open, |v| *v = false);
+
+    // Third frame: do not request the popover (unmounted), and expect focus to be restored to
+    // the trigger since focus is missing.
     begin_frame(&mut app, window);
     let _ = render_base_with_trigger(
         &mut ui,
