@@ -314,6 +314,13 @@ Goal: converge toward GPUI’s “request_layout / prepaint / paint” separatio
 
 This aligns directly with ADR 0055’s “multi-stream” direction.
 
+Incremental on-ramp (semantics-preserving, before full prepaint):
+
+- Introduce cached hit-test path reuse for pointer-move routing, with conservative fallbacks to full hit-testing.
+- This is a deliberately small “interaction range reuse” step that exercises the correctness constraints we will need
+  once interaction output becomes replayable per cache root.
+  - Evidence: `crates/fret-ui/src/tree/hit_test.rs`, `crates/fret-ui/src/tree/dispatch.rs`.
+
 ### MVP4 — Authoring Density + Adoption (ecosystem, ongoing)
 
 Goal: make the new contracts the “default obvious” way to build UI while keeping `crates/fret-ui` mechanism-only.
