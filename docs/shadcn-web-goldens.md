@@ -226,8 +226,10 @@ Overlay chrome conformance (border, radii, and selected colors):
 `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
 
 This suite compares web computed styles against the Fret paint scene for overlay surfaces. It
-currently gates border widths + corner radii broadly, and additionally asserts background/border
-colors for the `dialog-demo` (`dialog-content`) and `sheet-demo` (`sheet-content`) surfaces.
+currently gates border widths + corner radii broadly, and additionally asserts selected surface
+colors (background + border) derived from web `computedStyle` for a growing set of portal-backed
+overlay surfaces (`dialog-content`, `sheet-content`, `popover-content`, `dropdown-menu-content`,
+`drawer-content`) across light/dark themes when available.
 
 ## Layout conformance (geometry-first)
 

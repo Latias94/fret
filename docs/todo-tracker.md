@@ -189,6 +189,11 @@ It complements (but does not replace) ADRs:
     - Done: Added explicit portal size gates (`portal_w`/`portal_h`) for `Menu` and `ListBox`
       overlays in `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` and aligned
       shadcn Select listbox sizing via a width probe (longest item label + padding).
+    - Added shadcn-web tiny-viewport (`vp1440x240`) open goldens for common overlay recipes and
+      extended Fret gates for placement/insets + menu sizing signals. Extended overlay chrome gates
+      to assert `computedStyle`-derived surface colors (background + border) for `dialog-content`,
+      `sheet-content`, `popover-content`, `dropdown-menu-content`, and `drawer-content` (light/dark
+      where available).
   - Goldens to expand:
     - `goldens/shadcn-web/v4/new-york-v4/*.open.json`: add open snapshots for pages that require non-click input and/or submenu open states.
   - Fret gates to add:
