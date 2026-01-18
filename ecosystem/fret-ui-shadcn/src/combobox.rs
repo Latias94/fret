@@ -261,7 +261,7 @@ fn combobox_with_patch<H: UiHost>(
     cx.scope(|cx| {
         let theme = Theme::global(&*cx.app).clone();
         let selected = cx.watch_model(&model).cloned().unwrap_or_default();
-        let is_open = cx.watch_model(&open).copied().unwrap_or(false);
+        let is_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
 
         let query_model = if let Some(q) = query {
             cx.with_state(ComboboxState::default, |st| st.query = Some(q.clone()));

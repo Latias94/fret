@@ -65,6 +65,18 @@ pub(super) struct ActiveHoverOverlay {
 #[derive(Default)]
 pub(super) struct WindowOverlays {
     pub(super) windows: HashMap<AppWindowId, WindowOverlayFrame>,
+    /// Last-known request declarations for a given window/id.
+    ///
+    /// These are persisted across frames so per-frame request lists can be treated as an
+    /// optimization rather than a hard requirement. This is critical when view caching skips
+    /// rerendering the subtree that normally emits overlay requests.
+    pub(super) cached_popover_requests:
+        HashMap<(AppWindowId, GlobalElementId), DismissiblePopoverRequest>,
+    /// See `cached_popover_requests`.
+    pub(super) cached_modal_requests: HashMap<(AppWindowId, GlobalElementId), ModalRequest>,
+    /// See `cached_popover_requests`.
+    pub(super) cached_toast_layer_requests:
+        HashMap<(AppWindowId, GlobalElementId), ToastLayerRequest>,
     pub(super) popovers: HashMap<(AppWindowId, GlobalElementId), ActivePopover>,
     pub(super) modals: HashMap<(AppWindowId, GlobalElementId), ActiveModal>,
     pub(super) hover_overlays: HashMap<(AppWindowId, GlobalElementId), ActiveHoverOverlay>,

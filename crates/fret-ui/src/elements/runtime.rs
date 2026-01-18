@@ -309,6 +309,10 @@ impl WindowElementState {
         self.view_cache_reuse_roots.contains(&root)
     }
 
+    pub(crate) fn current_view_cache_root(&self) -> Option<GlobalElementId> {
+        self.view_cache_stack.last().copied()
+    }
+
     pub(super) fn touch_state_key(&mut self, key: (GlobalElementId, TypeId)) {
         let Some(value) = self.take_state_box(&key) else {
             return;

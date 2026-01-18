@@ -728,7 +728,7 @@ fn select_impl<H: UiHost>(
 
         let theme = Theme::global(&*cx.app).clone();
         let selected = cx.watch_model(&model).cloned().unwrap_or_default();
-        let is_open = cx.watch_model(&open).copied().unwrap_or(false);
+        let is_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
         let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
             cx,
             is_open,
@@ -2218,7 +2218,11 @@ mod tests {
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let select = Select::new_controllable(cx, None, Some("alpha"), None, true);
             let value = cx.watch_model(&select.model).cloned().unwrap_or_default();
-            let open = cx.watch_model(&select.open).copied().unwrap_or(false);
+            let open = cx
+                .watch_model(&select.open)
+                .layout()
+                .copied()
+                .unwrap_or(false);
 
             assert_eq!(value.as_deref(), Some("alpha"));
             assert!(open);

@@ -1092,7 +1092,7 @@ impl MenubarMenuEntries {
                     open.clone(),
                 ));
 
-                let is_open = cx.watch_model(&open).copied().unwrap_or(false);
+                let is_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
                 let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
                     cx,
                     is_open,

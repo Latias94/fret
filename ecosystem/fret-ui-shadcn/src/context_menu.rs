@@ -2026,7 +2026,11 @@ impl ContextMenu {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
             let submenu_max_height_metric = theme.metric_by_key("component.context_menu.max_height");
-            let is_open = cx.watch_model(&self.open).copied().unwrap_or(false);
+            let is_open = cx
+                .watch_model(&self.open)
+                .layout()
+                .copied()
+                .unwrap_or(false);
             let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
                 cx,
                 is_open,

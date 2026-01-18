@@ -329,7 +329,10 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn observe_model_id(&mut self, model: ModelId, invalidation: Invalidation) {
-        let id = self.root_id();
+        let id = self
+            .window_state
+            .current_view_cache_root()
+            .unwrap_or_else(|| self.root_id());
         let list = self
             .window_state
             .observed_models_next
@@ -349,7 +352,10 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn observe_global_id(&mut self, global: TypeId, invalidation: Invalidation) {
-        let id = self.root_id();
+        let id = self
+            .window_state
+            .current_view_cache_root()
+            .unwrap_or_else(|| self.root_id());
         let list = self
             .window_state
             .observed_globals_next
@@ -575,6 +581,10 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             let children = if reuse {
                 cx.window_state.mark_view_cache_reuse_root(id);
                 cx.window_state.touch_view_cache_state_keys_if_recorded(id);
+                cx.window_state
+                    .touch_observed_models_for_element_if_recorded(id);
+                cx.window_state
+                    .touch_observed_globals_for_element_if_recorded(id);
                 Vec::new()
             } else {
                 cx.window_state.begin_view_cache_scope(id);
