@@ -133,7 +133,7 @@ If you also extract open overlay states (`--modes=open` or `--open`), you will g
 `*.open.json` files alongside the base closed-mode goldens. In this repo, the current snapshot is:
 
 - `370` closed-mode files (`*.json`, excluding `*.open.json`)
-- `53` open-mode files (`*.open.json`)
+- `56` open-mode files (`*.open.json`)
 
 Note: `*.open.json` also matches the glob `*.json`, so "total .json files" will include open-mode
 snapshots unless you exclude `*.open.json`.
@@ -172,6 +172,10 @@ Constrained viewport (useful for clamping/placement regressions):
 `node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 navigation-menu-demo --modes=open --update --viewportW=1440 --viewportH=320 --openAction=click --openVariants="components-vp1440x320=[data-fret-golden-target] li:nth-of-type(2) [data-slot='navigation-menu-trigger'];list-vp1440x320=[data-fret-golden-target] li:nth-of-type(4) [data-slot='navigation-menu-trigger'];simple-vp1440x320=[data-fret-golden-target] li:nth-of-type(5) [data-slot='navigation-menu-trigger'];with-icon-vp1440x320=[data-fret-golden-target] li:nth-of-type(6) [data-slot='navigation-menu-trigger']"`
 
 `node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 navigation-menu-demo --modes=open --update --viewportW=375 --viewportH=320 --openAction=click --openVariants="home-mobile-vp375x320=[data-fret-golden-target] li:nth-of-type(1) [data-slot='navigation-menu-trigger']"`
+
+Other constrained overlay variants (useful for tight-height flip/shift behavior):
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 popover-demo hover-card-demo tooltip-demo --modes=open --update --viewportW=1440 --viewportH=240 --openVariants="vp1440x240=[data-fret-golden-target] [data-slot$='trigger']"`
 
 
 Output directory (default):
