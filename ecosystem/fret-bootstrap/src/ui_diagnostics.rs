@@ -1430,6 +1430,10 @@ impl UiDiagnosticsService {
                     return;
                 }
             };
+        if self.last_pick_trigger_mtime.is_none() {
+            self.last_pick_trigger_mtime = Some(modified);
+            return;
+        }
         if self
             .last_pick_trigger_mtime
             .is_some_and(|prev| prev >= modified)
@@ -1463,6 +1467,10 @@ impl UiDiagnosticsService {
                     return;
                 }
             };
+        if self.last_inspect_trigger_mtime.is_none() {
+            self.last_inspect_trigger_mtime = Some(modified);
+            return;
+        }
         if self
             .last_inspect_trigger_mtime
             .is_some_and(|prev| prev >= modified)
@@ -3864,6 +3872,57 @@ mod tests {
             !svc.wants_inspection_active(AppWindowId::default()),
             "scripts should not force inspection_active (allows view cache/paint cache during perf triage)"
         );
+    }
+
+    #[test]
+    fn pick_trigger_is_baselined_on_first_poll() {
+        let mut svc = UiDiagnosticsService::default();
+        svc.cfg.enabled = true;
+        svc.pick_armed_run_id = None;
+
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock should be >= UNIX_EPOCH")
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("fret-diag-test-{}", unique));
+        std::fs::create_dir_all(&dir).expect("create temp test dir");
+        svc.cfg.pick_trigger_path = dir.join("pick.touch");
+        std::fs::write(&svc.cfg.pick_trigger_path, []).expect("create pick.touch");
+
+        svc.last_pick_trigger_mtime = None;
+        svc.poll_pick_trigger();
+
+        assert!(
+            svc.pick_armed_run_id.is_none(),
+            "the first observed pick.touch mtime should be baselined, not treated as a pick trigger"
+        );
+        assert!(svc.last_pick_trigger_mtime.is_some());
+    }
+
+    #[test]
+    fn inspect_trigger_is_baselined_on_first_poll() {
+        let mut svc = UiDiagnosticsService::default();
+        svc.cfg.enabled = true;
+        svc.inspect_enabled = false;
+
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock should be >= UNIX_EPOCH")
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("fret-diag-test-{}", unique));
+        std::fs::create_dir_all(&dir).expect("create temp test dir");
+        svc.cfg.inspect_trigger_path = dir.join("inspect.touch");
+        svc.cfg.inspect_path = dir.join("inspect.json");
+        std::fs::write(&svc.cfg.inspect_trigger_path, []).expect("create inspect.touch");
+
+        svc.last_inspect_trigger_mtime = None;
+        svc.poll_inspect_trigger();
+
+        assert!(
+            !svc.inspect_enabled,
+            "the first observed inspect.touch mtime should be baselined, not treated as an inspect trigger"
+        );
+        assert!(svc.last_inspect_trigger_mtime.is_some());
     }
 
     #[test]
