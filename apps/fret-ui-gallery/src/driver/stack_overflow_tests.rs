@@ -106,7 +106,7 @@ fn nav_to_datatable_does_not_stack_overflow_without_gc_sweep() {
 
     let mut app = build_app();
     app.set_frame_id(FrameId(1));
-    app.with_global_mut(ElementRuntime::new, |runtime, _app| {
+    app.with_global_mut_untracked(ElementRuntime::new, |runtime, _app| {
         runtime.set_gc_lag_frames(10_000);
     });
 
@@ -143,7 +143,7 @@ fn nav_to_datatable_does_not_stack_overflow_with_immediate_gc_sweep() {
 
     let mut app = build_app();
     app.set_frame_id(FrameId(1));
-    app.with_global_mut(ElementRuntime::new, |runtime, _app| {
+    app.with_global_mut_untracked(ElementRuntime::new, |runtime, _app| {
         runtime.set_gc_lag_frames(0);
     });
 
@@ -194,7 +194,7 @@ fn nav_to_datatable_does_not_stack_overflow_with_wgpu_renderer_services() {
 
     let mut app = build_app();
     app.set_frame_id(FrameId(1));
-    app.with_global_mut(ElementRuntime::new, |runtime, _app| {
+    app.with_global_mut_untracked(ElementRuntime::new, |runtime, _app| {
         runtime.set_gc_lag_frames(0);
     });
 
@@ -301,7 +301,7 @@ fn nav_to_datatable_repro_on_small_stack() {
 
             let mut app = build_app();
             app.set_frame_id(FrameId(1));
-            app.with_global_mut(ElementRuntime::new, |runtime, _app| {
+            app.with_global_mut_untracked(ElementRuntime::new, |runtime, _app| {
                 let lag = std::env::var("FRET_UI_GALLERY_SMALL_STACK_GC_LAG")
                     .ok()
                     .and_then(|v| v.parse::<u64>().ok())

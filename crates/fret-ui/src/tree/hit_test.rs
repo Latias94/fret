@@ -44,8 +44,16 @@ impl<H: UiHost> UiTree<H> {
             .map(|w| w.hit_test_children(n.bounds, position))
             .unwrap_or(true);
         if hit_test_children {
+            let child_position = if let Some(w) = widget
+                && let Some(t) = w.children_render_transform(n.bounds)
+                && let Some(inv) = t.inverse()
+            {
+                inv.apply_point(position)
+            } else {
+                position
+            };
             for &child in n.children.iter().rev() {
-                if let Some(hit) = self.hit_test_node(child, position) {
+                if let Some(hit) = self.hit_test_node(child, child_position) {
                     return Some(hit);
                 }
             }

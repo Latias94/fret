@@ -26,7 +26,14 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let mut visited = HashMap::<NodeId, u8>::new();
-        for handle_key in changed {
+        for change in changed {
+            let inv = match change.kind {
+                crate::declarative::frame::ScrollHandleChangeKind::Layout => Invalidation::Layout,
+                crate::declarative::frame::ScrollHandleChangeKind::HitTestOnly => {
+                    Invalidation::HitTestOnly
+                }
+            };
+            let handle_key = change.handle_key;
             let bound = crate::declarative::frame::bound_elements_for_scroll_handle(
                 &mut *app, window, handle_key,
             );
@@ -39,11 +46,12 @@ impl<H: UiHost> UiTree<H> {
                 ) else {
                     continue;
                 };
-                self.mark_invalidation_dedup_with_source(
+                self.mark_invalidation_dedup_with_detail(
                     node,
-                    Invalidation::Layout,
+                    inv,
                     &mut visited,
                     UiDebugInvalidationSource::Other,
+                    UiDebugInvalidationDetail::ScrollHandle,
                 );
             }
         }
@@ -478,6 +486,7 @@ impl<H: UiHost> UiTree<H> {
         );
 
         let mut engine = self.take_layout_engine();
+        engine.set_measure_profiling_enabled(self.debug_enabled);
 
         // Phase 1: request/build for stable identity, even if we later skip compute/apply.
         for &root in roots {
@@ -511,10 +520,70 @@ impl<H: UiHost> UiTree<H> {
                 continue;
             }
 
+            let solves_before = engine.solve_count();
+            let solve_time_before = engine.last_solve_time();
             let _ =
                 engine.compute_root_for_node_with_measure_if_needed(root, available, sf, |n, c| {
                     self.measure_in(app, services, n, c, sf)
                 });
+            if self.debug_enabled && engine.solve_count() > solves_before {
+                let elapsed = engine.last_solve_time().saturating_sub(solve_time_before);
+                let top_measures = engine
+                    .last_solve_measure_hotspots()
+                    .iter()
+                    .map(|h| {
+                        let mut element: Option<GlobalElementId> = None;
+                        let mut element_kind: Option<&'static str> = None;
+                        if let Some(record) =
+                            crate::declarative::frame::element_record_for_node(app, window, h.node)
+                        {
+                            element = Some(record.element);
+                            element_kind = Some(record.instance.kind_name());
+                        }
+                        let top_children = self
+                            .debug_take_top_measure_children(h.node, 3)
+                            .into_iter()
+                            .map(|(child, r)| {
+                                let mut child_element: Option<GlobalElementId> = None;
+                                let mut child_kind: Option<&'static str> = None;
+                                if let Some(record) =
+                                    crate::declarative::frame::element_record_for_node(
+                                        app, window, child,
+                                    )
+                                {
+                                    child_element = Some(record.element);
+                                    child_kind = Some(record.instance.kind_name());
+                                }
+                                super::UiDebugLayoutEngineMeasureChildHotspot {
+                                    child,
+                                    measure_time: r.total_time,
+                                    calls: r.calls,
+                                    element: child_element,
+                                    element_kind: child_kind,
+                                }
+                            })
+                            .collect();
+                        super::UiDebugLayoutEngineMeasureHotspot {
+                            node: h.node,
+                            measure_time: h.total_time,
+                            calls: h.calls,
+                            cache_hits: h.cache_hits,
+                            element,
+                            element_kind,
+                            top_children,
+                        }
+                    })
+                    .collect();
+                self.debug_record_layout_engine_solve(
+                    engine.last_solve_root().unwrap_or(root),
+                    elapsed,
+                    engine.last_solve_measure_calls(),
+                    engine.last_solve_measure_cache_hits(),
+                    engine.last_solve_measure_time(),
+                    top_measures,
+                );
+                self.debug_measure_children.clear();
+            }
 
             self.maybe_dump_taffy_subtree(app, window, &engine, root, bounds, sf);
         }
@@ -572,6 +641,7 @@ impl<H: UiHost> UiTree<H> {
                 && let Some(window) = window
             {
                 let mut engine = self.take_layout_engine();
+                engine.set_measure_profiling_enabled(self.debug_enabled);
 
                 // Phase 1: request/build newly registered viewport roots for stable identity,
                 // regardless of whether they will be computed this frame.
@@ -606,12 +676,74 @@ impl<H: UiHost> UiTree<H> {
                         AvailableSpace::Definite(item.bounds.size.height),
                     );
 
+                    let solves_before = engine.solve_count();
+                    let solve_time_before = engine.last_solve_time();
                     let _ = engine.compute_root_for_node_with_measure_if_needed(
                         item.root,
                         available,
                         sf,
                         |n, c| self.measure_in(app, services, n, c, sf),
                     );
+                    if self.debug_enabled && engine.solve_count() > solves_before {
+                        let elapsed = engine.last_solve_time().saturating_sub(solve_time_before);
+                        let top_measures = engine
+                            .last_solve_measure_hotspots()
+                            .iter()
+                            .map(|h| {
+                                let mut element: Option<GlobalElementId> = None;
+                                let mut element_kind: Option<&'static str> = None;
+                                if let Some(record) =
+                                    crate::declarative::frame::element_record_for_node(
+                                        app, window, h.node,
+                                    )
+                                {
+                                    element = Some(record.element);
+                                    element_kind = Some(record.instance.kind_name());
+                                }
+                                let top_children = self
+                                    .debug_take_top_measure_children(h.node, 3)
+                                    .into_iter()
+                                    .map(|(child, r)| {
+                                        let mut child_element: Option<GlobalElementId> = None;
+                                        let mut child_kind: Option<&'static str> = None;
+                                        if let Some(record) =
+                                            crate::declarative::frame::element_record_for_node(
+                                                app, window, child,
+                                            )
+                                        {
+                                            child_element = Some(record.element);
+                                            child_kind = Some(record.instance.kind_name());
+                                        }
+                                        super::UiDebugLayoutEngineMeasureChildHotspot {
+                                            child,
+                                            measure_time: r.total_time,
+                                            calls: r.calls,
+                                            element: child_element,
+                                            element_kind: child_kind,
+                                        }
+                                    })
+                                    .collect();
+                                super::UiDebugLayoutEngineMeasureHotspot {
+                                    node: h.node,
+                                    measure_time: h.total_time,
+                                    calls: h.calls,
+                                    cache_hits: h.cache_hits,
+                                    element,
+                                    element_kind,
+                                    top_children,
+                                }
+                            })
+                            .collect();
+                        self.debug_record_layout_engine_solve(
+                            engine.last_solve_root().unwrap_or(item.root),
+                            elapsed,
+                            engine.last_solve_measure_calls(),
+                            engine.last_solve_measure_cache_hits(),
+                            engine.last_solve_measure_time(),
+                            top_measures,
+                        );
+                        self.debug_measure_children.clear();
+                    }
 
                     self.maybe_dump_taffy_subtree(app, window, &engine, item.root, item.bounds, sf);
                 }
@@ -714,6 +846,7 @@ impl<H: UiHost> UiTree<H> {
         };
 
         let mut engine = self.take_layout_engine();
+        engine.set_measure_profiling_enabled(self.debug_enabled);
         crate::layout_engine::build_viewport_flow_subtree(
             &mut engine,
             app,
@@ -815,6 +948,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let mut engine = self.take_layout_engine();
+        engine.set_measure_profiling_enabled(self.debug_enabled);
         for &(root, root_bounds) in &batch {
             crate::layout_engine::build_viewport_flow_subtree(
                 &mut engine,
@@ -879,6 +1013,7 @@ impl<H: UiHost> UiTree<H> {
                 view_cache_active = self.view_cache_active(),
                 contained_layout = view_cache.contained_layout,
                 invalidated = invalidated_for_pass,
+                frame_id = app.frame_id().0,
             )
         } else {
             tracing::Span::none()

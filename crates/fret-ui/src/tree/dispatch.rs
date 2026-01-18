@@ -5,14 +5,16 @@ use std::collections::HashMap;
 struct PendingInvalidation {
     inv: Invalidation,
     source: UiDebugInvalidationSource,
+    detail: UiDebugInvalidationDetail,
 }
 
 impl<H: UiHost> UiTree<H> {
     fn invalidation_rank(inv: Invalidation) -> u8 {
         match inv {
             Invalidation::Paint => 1,
-            Invalidation::Layout => 2,
-            Invalidation::HitTest => 3,
+            Invalidation::HitTestOnly => 2,
+            Invalidation::Layout => 3,
+            Invalidation::HitTest => 4,
         }
     }
 
@@ -50,14 +52,28 @@ impl<H: UiHost> UiTree<H> {
         node: NodeId,
         inv: Invalidation,
         source: UiDebugInvalidationSource,
+        detail: UiDebugInvalidationDetail,
     ) {
         pending
             .entry(node)
             .and_modify(|cur| {
                 cur.inv = Self::stronger_invalidation(cur.inv, inv);
                 cur.source = Self::stronger_invalidation_source(cur.source, source);
+                cur.detail = if cur.source == UiDebugInvalidationSource::Other {
+                    match (cur.detail, detail) {
+                        (UiDebugInvalidationDetail::Unknown, d) => d,
+                        (d, UiDebugInvalidationDetail::Unknown) => d,
+                        (d, _) => d,
+                    }
+                } else {
+                    UiDebugInvalidationDetail::from_source(cur.source)
+                };
             })
-            .or_insert(PendingInvalidation { inv, source });
+            .or_insert(PendingInvalidation {
+                inv,
+                source,
+                detail,
+            });
     }
 
     fn node_depth_for_invalidation_order(&self, node: NodeId) -> u32 {
@@ -87,7 +103,13 @@ impl<H: UiHost> UiTree<H> {
             std::cmp::Reverse(self.node_depth_for_invalidation_order(*node))
         });
         for (node, pending) in entries {
-            self.mark_invalidation_dedup_with_source(node, pending.inv, visited, pending.source);
+            self.mark_invalidation_dedup_with_detail(
+                node,
+                pending.inv,
+                visited,
+                pending.source,
+                pending.detail,
+            );
         }
     }
 
@@ -312,6 +334,7 @@ impl<H: UiHost> UiTree<H> {
                         id,
                         inv,
                         UiDebugInvalidationSource::Other,
+                        UiDebugInvalidationDetail::Unknown,
                     );
                 }
 
@@ -324,6 +347,9 @@ impl<H: UiHost> UiTree<H> {
                             prev,
                             Invalidation::Paint,
                             UiDebugInvalidationSource::Focus,
+                            UiDebugInvalidationDetail::from_source(
+                                UiDebugInvalidationSource::Focus,
+                            ),
                         );
                     }
                     self.focus = Some(focus);
@@ -332,6 +358,7 @@ impl<H: UiHost> UiTree<H> {
                         focus,
                         Invalidation::Paint,
                         UiDebugInvalidationSource::Focus,
+                        UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Focus),
                     );
                     self.scroll_node_into_view(app, focus);
                 }
@@ -412,6 +439,7 @@ impl<H: UiHost> UiTree<H> {
                     id,
                     inv,
                     UiDebugInvalidationSource::Other,
+                    UiDebugInvalidationDetail::Unknown,
                 );
             }
 
@@ -424,6 +452,7 @@ impl<H: UiHost> UiTree<H> {
                         prev,
                         Invalidation::Paint,
                         UiDebugInvalidationSource::Focus,
+                        UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Focus),
                     );
                 }
                 self.focus = Some(focus);
@@ -432,6 +461,7 @@ impl<H: UiHost> UiTree<H> {
                     focus,
                     Invalidation::Paint,
                     UiDebugInvalidationSource::Focus,
+                    UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Focus),
                 );
                 self.scroll_node_into_view(app, focus);
             }
@@ -541,9 +571,21 @@ impl<H: UiHost> UiTree<H> {
             let changed = crate::focus_visible::update_for_event(app, window, event);
             if changed {
                 if let Some(focus) = self.focus {
-                    self.invalidate(focus, Invalidation::Paint);
+                    self.mark_invalidation_dedup_with_detail(
+                        focus,
+                        Invalidation::Paint,
+                        &mut invalidation_visited,
+                        UiDebugInvalidationSource::Other,
+                        UiDebugInvalidationDetail::FocusVisiblePolicy,
+                    );
                 } else {
-                    self.invalidate(base_root, Invalidation::Paint);
+                    self.mark_invalidation_dedup_with_detail(
+                        base_root,
+                        Invalidation::Paint,
+                        &mut invalidation_visited,
+                        UiDebugInvalidationSource::Other,
+                        UiDebugInvalidationDetail::FocusVisiblePolicy,
+                    );
                 }
                 app.request_redraw(window);
             }
@@ -551,9 +593,21 @@ impl<H: UiHost> UiTree<H> {
             let changed = crate::input_modality::update_for_event(app, window, event);
             if changed {
                 if let Some(focus) = self.focus {
-                    self.invalidate(focus, Invalidation::Paint);
+                    self.mark_invalidation_dedup_with_detail(
+                        focus,
+                        Invalidation::Paint,
+                        &mut invalidation_visited,
+                        UiDebugInvalidationSource::Other,
+                        UiDebugInvalidationDetail::InputModalityPolicy,
+                    );
                 } else {
-                    self.invalidate(base_root, Invalidation::Paint);
+                    self.mark_invalidation_dedup_with_detail(
+                        base_root,
+                        Invalidation::Paint,
+                        &mut invalidation_visited,
+                        UiDebugInvalidationSource::Other,
+                        UiDebugInvalidationDetail::InputModalityPolicy,
+                    );
                 }
                 app.request_redraw(window);
             }
@@ -1580,6 +1634,7 @@ impl<H: UiHost> UiTree<H> {
                         id,
                         inv,
                         UiDebugInvalidationSource::Other,
+                        UiDebugInvalidationDetail::Unknown,
                     );
                 }
             }
@@ -1631,6 +1686,7 @@ impl<H: UiHost> UiTree<H> {
                     id,
                     inv,
                     UiDebugInvalidationSource::Other,
+                    UiDebugInvalidationDetail::Unknown,
                 );
             }
 
@@ -1774,6 +1830,16 @@ impl<H: UiHost> UiTree<H> {
                 node,
                 Self::event_with_mapped_position(event, mapped_pos, mapped_delta),
             ));
+
+            // Map into the child's coordinate space for the next node in the chain.
+            if let Some(t) = self.node_children_render_transform(node)
+                && let Some(inv) = t.inverse()
+            {
+                mapped_pos = inv.apply_point(mapped_pos);
+                if let Some(d) = mapped_delta {
+                    mapped_delta = Some(Self::apply_vector(inv, d));
+                }
+            }
         }
 
         out.reverse();

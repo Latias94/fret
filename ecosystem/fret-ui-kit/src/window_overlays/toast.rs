@@ -764,7 +764,7 @@ struct ToastService {
 }
 
 pub fn toast_store<H: UiHost>(app: &mut H) -> Model<ToastStore> {
-    app.with_global_mut(ToastService::default, |svc, app| {
+    app.with_global_mut_untracked(ToastService::default, |svc, app| {
         svc.store
             .get_or_insert_with(|| app.models_mut().insert(ToastStore::default()))
             .clone()

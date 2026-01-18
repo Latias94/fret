@@ -635,6 +635,14 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 self.drain_effects(event_loop);
             }
             WindowEvent::RedrawRequested => {
+                let redraw_span = tracing::info_span!(
+                    "fret.runner.redraw",
+                    window = ?app_window,
+                    tick_id = self.app.tick_id().0,
+                    frame_id = self.app.frame_id().0,
+                );
+                let _redraw_guard = redraw_span.enter();
+
                 let hitch_config = redraw_hitch_config();
                 let hitch_total_started = hitch_config.map(|_| Instant::now());
                 let mut hitch_prepare_ms: Option<u64> = None;
@@ -662,6 +670,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         .is_some_and(|r| r.begin_capture_if_requested());
 
                     let prepare_started = hitch_config.map(|_| Instant::now());
+                    let prepare_span = tracing::info_span!("fret.runner.prepare");
+                    let _prepare_guard = prepare_span.enter();
                     // Apply any pending window-side state (IME/cursor) once per frame, similar to
                     // Dear ImGui's backend `prepare_frame` pattern.
                     state.platform.prepare_frame(state.window.as_ref());
@@ -689,6 +699,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     }
 
                     let render_started = hitch_config.map(|_| Instant::now());
+                    let render_span = tracing::info_span!(
+                        "fret.runner.render",
+                        bounds = ?bounds,
+                        scale_factor = scale_factor,
+                    );
+                    let _render_guard = render_span.enter();
                     self.driver.render(WinitRenderContext {
                         app: &mut self.app,
                         services: renderer as &mut dyn fret_core::UiServices,
@@ -723,6 +739,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     }
 
                     let record_started = hitch_config.map(|_| Instant::now());
+                    let record_span = tracing::info_span!(
+                        "fret.runner.record",
+                        scene_ops = state.scene.ops_len(),
+                    );
+                    let _record_guard = record_span.enter();
                     let engine_frame = self.driver.record_engine_frame(
                         &mut self.app,
                         app_window,
@@ -759,7 +780,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     }
 
                     let present_started = hitch_config.map(|_| Instant::now());
+                    let present_span = tracing::info_span!("fret.runner.present");
+                    let _present_guard = present_span.enter();
                     let draw_result = state.surface.present_with(&context.queue, |view| {
+                        let render_scene_span = tracing::info_span!("fret.runner.render_scene");
+                        let _render_scene_guard = render_scene_span.enter();
                         let ui_cmd = renderer.render_scene(
                             &context.device,
                             &context.queue,

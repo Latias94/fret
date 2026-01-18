@@ -97,12 +97,6 @@ mod tests {
             self.globals.get(&TypeId::of::<T>())?.downcast_ref::<T>()
         }
 
-        fn global_mut<T: Any>(&mut self) -> Option<&mut T> {
-            self.globals
-                .get_mut(&TypeId::of::<T>())?
-                .downcast_mut::<T>()
-        }
-
         fn with_global_mut<T: Any, R>(
             &mut self,
             init: impl FnOnce() -> T,

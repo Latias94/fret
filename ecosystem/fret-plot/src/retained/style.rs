@@ -174,6 +174,12 @@ pub struct LinePlotStyle {
     pub heatmap_colorbar_width: Px,
     pub heatmap_colorbar_padding: Px,
     pub heatmap_colorbar_steps: usize,
+
+    /// Maximum number of scene-op tiles to build per frame for tiled scene caches (e.g.
+    /// heatmap/histogram2d). The plot uses a smaller budget while interacting to stay responsive,
+    /// then continues warming tiles while idle.
+    pub tile_warmup_tiles_per_frame_idle: u32,
+    pub tile_warmup_tiles_per_frame_interactive: u32,
 }
 
 impl Default for LinePlotStyle {
@@ -217,6 +223,9 @@ impl Default for LinePlotStyle {
             heatmap_colorbar_width: Px(14.0),
             heatmap_colorbar_padding: Px(8.0),
             heatmap_colorbar_steps: 64,
+
+            tile_warmup_tiles_per_frame_idle: 8,
+            tile_warmup_tiles_per_frame_interactive: 2,
         }
     }
 }

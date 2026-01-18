@@ -15,6 +15,11 @@ pub enum Invalidation {
     Layout,
     Paint,
     HitTest,
+    /// Recompute hit-testing and repaint, without forcing a layout pass.
+    ///
+    /// This is intended for state changes that affect coordinate mapping (e.g. scrolling) but do
+    /// not change layout geometry.
+    HitTestOnly,
 }
 
 pub struct EventCx<'a, H: UiHost> {
@@ -197,7 +202,11 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
     /// cannot short-circuit the widget `paint()` pass on the next frame.
     pub fn request_animation_frame(&mut self) {
         // Ensure animation-frame requests trigger a paint pass even when paint caching is enabled.
-        self.tree.invalidate(self.node, Invalidation::Paint);
+        self.tree.invalidate_with_detail(
+            self.node,
+            Invalidation::Paint,
+            crate::tree::UiDebugInvalidationDetail::AnimationFrameRequest,
+        );
         let Some(window) = self.window else {
             return;
         };
@@ -347,7 +356,11 @@ impl<'a, H: UiHost> MeasureCx<'a, H> {
     /// widget `paint()` on the next frame.
     pub fn request_animation_frame(&mut self) {
         // Ensure animation-frame requests trigger a paint pass even when paint caching is enabled.
-        self.tree.invalidate(self.node, Invalidation::Paint);
+        self.tree.invalidate_with_detail(
+            self.node,
+            Invalidation::Paint,
+            crate::tree::UiDebugInvalidationDetail::AnimationFrameRequest,
+        );
         let Some(window) = self.window else {
             return;
         };
@@ -363,13 +376,28 @@ impl<'a, H: UiHost> MeasureCx<'a, H> {
     }
 
     pub fn measure_in(&mut self, child: NodeId, constraints: LayoutConstraints) -> Size {
-        self.tree.measure_in(
+        if !self.tree.debug_enabled() {
+            return self.tree.measure_in(
+                self.app,
+                self.services,
+                child,
+                constraints,
+                self.scale_factor,
+            );
+        }
+
+        let started = fret_core::time::Instant::now();
+        let size = self.tree.measure_in(
             self.app,
             self.services,
             child,
             constraints,
             self.scale_factor,
-        )
+        );
+        let elapsed = started.elapsed();
+        self.tree
+            .debug_record_measure_child(self.node, child, elapsed);
+        size
     }
 }
 
@@ -416,7 +444,11 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
     /// while it remains active.
     pub fn request_animation_frame(&mut self) {
         // Ensure animation-frame requests trigger a paint pass even when paint caching is enabled.
-        self.tree.invalidate(self.node, Invalidation::Paint);
+        self.tree.invalidate_with_detail(
+            self.node,
+            Invalidation::Paint,
+            crate::tree::UiDebugInvalidationDetail::AnimationFrameRequest,
+        );
         let Some(window) = self.window else {
             return;
         };
@@ -432,6 +464,16 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
     }
 
     pub fn paint(&mut self, child: NodeId, bounds: Rect) {
+        let child_transform = self.tree.node_children_render_transform(self.node);
+        if let Some(transform) = child_transform {
+            self.scene
+                .push(fret_core::SceneOp::PushTransform { transform });
+        }
+
+        let accumulated = child_transform
+            .map(|t| self.accumulated_transform.compose(t))
+            .unwrap_or(self.accumulated_transform);
+
         self.tree.paint_node(
             self.app,
             self.services,
@@ -439,8 +481,12 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
             bounds,
             self.scene,
             self.scale_factor,
-            self.accumulated_transform,
-        )
+            accumulated,
+        );
+
+        if child_transform.is_some() {
+            self.scene.push(fret_core::SceneOp::PopTransform);
+        }
     }
 
     /// Paint all child nodes using their last computed layout bounds.
@@ -629,6 +675,16 @@ pub trait Widget<H: UiHost> {
     ///   untransformed behavior.
     /// - Paint caching may be disabled for nodes that return a transform, depending on runtime policy.
     fn render_transform(&self, _bounds: Rect) -> Option<Transform2D> {
+        None
+    }
+    /// Optional affine transform applied to children only (not to this node's own bounds).
+    ///
+    /// This is intended for behaviors like scrolling where the viewport bounds are fixed, but the
+    /// content subtree is translated.
+    ///
+    /// The transform is expressed in the same coordinate space as `bounds` (logical px,
+    /// window-local).
+    fn children_render_transform(&self, _bounds: Rect) -> Option<Transform2D> {
         None
     }
     /// Whether hit-testing should be clipped to `bounds`.

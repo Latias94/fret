@@ -5479,15 +5479,14 @@ mod tests {
     #[test]
     fn series_color_respects_theme_palette_when_style_is_fixed() {
         let mut app = fret_app::App::new();
-        let theme = Theme::global_mut(&mut app);
-
         let mut cfg = fret_ui::ThemeConfig::default();
         cfg.colors
             .insert("chart.palette.0".to_string(), "#FF0000".to_string());
         cfg.colors
             .insert("chart.palette.1".to_string(), "#00FF00".to_string());
-        theme.apply_config(&cfg);
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
 
+        let theme = Theme::global(&app);
         let style = ChartStyle::from_theme(theme);
         let mut canvas = ChartCanvas::new(multi_axis_spec()).expect("spec should be valid");
         canvas.set_style(style);
@@ -5505,15 +5504,14 @@ mod tests {
     #[test]
     fn series_color_follows_series_order_not_series_id() {
         let mut app = fret_app::App::new();
-        let theme = Theme::global_mut(&mut app);
-
         let mut cfg = fret_ui::ThemeConfig::default();
         cfg.colors
             .insert("chart.palette.0".to_string(), "#FF0000".to_string());
         cfg.colors
             .insert("chart.palette.1".to_string(), "#00FF00".to_string());
-        theme.apply_config(&cfg);
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
 
+        let theme = Theme::global(&app);
         let style = ChartStyle::from_theme(theme);
 
         let mut spec = multi_axis_spec();

@@ -554,13 +554,6 @@ impl Theme {
         }
     }
 
-    pub fn global_mut<H: UiHost>(app: &mut H) -> &mut Theme {
-        if app.global::<Theme>().is_none() {
-            app.set_global(default_theme().clone());
-        }
-        app.global_mut::<Theme>().expect("theme global exists")
-    }
-
     pub fn with_global_mut<H: UiHost, R>(app: &mut H, f: impl FnOnce(&mut Theme) -> R) -> R {
         app.with_global_mut(|| default_theme().clone(), |theme, _app| f(theme))
     }

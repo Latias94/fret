@@ -134,7 +134,7 @@ impl UiGalleryDriver {
         let hit_barrier = hit.as_ref().and_then(|h| h.barrier_root);
 
         let (focused_node, focused_element, hovered_pressable, pressed_pressable) = app
-            .with_global_mut(fret_ui::ElementRuntime::new, |runtime, _| {
+            .with_global_mut_untracked(fret_ui::ElementRuntime::new, |runtime, _| {
                 let state = runtime.diagnostics_snapshot(window);
                 (
                     ui.focus(),
@@ -145,18 +145,18 @@ impl UiGalleryDriver {
             });
 
         let hit_element = hit_node.and_then(|node| {
-            app.with_global_mut(fret_ui::ElementRuntime::new, |runtime, _| {
+            app.with_global_mut_untracked(fret_ui::ElementRuntime::new, |runtime, _| {
                 runtime.element_for_node(window, node)
             })
         });
 
         let hit_path = hit_element.and_then(|element| {
-            app.with_global_mut(fret_ui::ElementRuntime::new, |runtime, _| {
+            app.with_global_mut_untracked(fret_ui::ElementRuntime::new, |runtime, _| {
                 runtime.debug_path_for_element(window, element)
             })
         });
         let focused_path = focused_element.and_then(|element| {
-            app.with_global_mut(fret_ui::ElementRuntime::new, |runtime, _| {
+            app.with_global_mut_untracked(fret_ui::ElementRuntime::new, |runtime, _| {
                 runtime.debug_path_for_element(window, element)
             })
         });
@@ -656,7 +656,7 @@ impl UiGalleryDriver {
             let max_items = 3usize;
             for (index, root) in last_cache_roots.iter().take(max_items).enumerate() {
                 let element_path = root.element.and_then(|element| {
-                    app.with_global_mut(fret_ui::ElementRuntime::new, |runtime, _| {
+                    app.with_global_mut_untracked(fret_ui::ElementRuntime::new, |runtime, _| {
                         runtime.debug_path_for_element(window, element)
                     })
                 });
@@ -1397,15 +1397,6 @@ mod stack_overflow_tests;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn run() -> anyhow::Result<()> {
-    let _ = tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::from_default_env()
-                .add_directive("fret=info".parse().unwrap())
-                .add_directive("fret_render=info".parse().unwrap())
-                .add_directive("fret_launch=info".parse().unwrap()),
-        )
-        .try_init();
-
     let app = build_app();
     let config = build_runner_config();
 
@@ -1439,6 +1430,11 @@ impl WinitAppDriver for UiGalleryDriver {
         changed: &[fret_app::ModelId],
     ) {
         context
+            .app
+            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+                svc.record_model_changes(context.window, changed);
+            });
+        context
             .state
             .ui
             .propagate_model_changes(context.app, changed);
@@ -1449,6 +1445,11 @@ impl WinitAppDriver for UiGalleryDriver {
         context: WinitWindowContext<'_, Self::WindowState>,
         changed: &[std::any::TypeId],
     ) {
+        context
+            .app
+            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+                svc.record_global_changes(app, context.window, changed);
+            });
         context
             .state
             .ui
@@ -1699,15 +1700,16 @@ impl WinitAppDriver for UiGalleryDriver {
 
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let consumed = app.with_global_mut(UiDiagnosticsService::default, |svc, app| {
-                if !svc.is_enabled() {
-                    return false;
-                }
-                if svc.maybe_intercept_event_for_inspect_shortcuts(app, window, event) {
-                    return true;
-                }
-                svc.maybe_intercept_event_for_picking(app, window, event)
-            });
+            let consumed =
+                app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+                    if !svc.is_enabled() {
+                        return false;
+                    }
+                    if svc.maybe_intercept_event_for_inspect_shortcuts(app, window, event) {
+                        return true;
+                    }
+                    svc.maybe_intercept_event_for_picking(app, window, event)
+                });
             if consumed {
                 return;
             }
@@ -1741,7 +1743,7 @@ impl WinitAppDriver for UiGalleryDriver {
         #[cfg(not(target_arch = "wasm32"))]
         {
             let inspection_active = app
-                .with_global_mut(UiDiagnosticsService::default, |svc, _app| {
+                .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
                     svc.wants_inspection_active(window)
                 });
             state.ui.set_inspection_active(inspection_active);
@@ -1755,7 +1757,7 @@ impl WinitAppDriver for UiGalleryDriver {
         #[cfg(not(target_arch = "wasm32"))]
         {
             let semantics_snapshot = state.ui.semantics_snapshot();
-            let drive = app.with_global_mut(UiDiagnosticsService::default, |svc, app| {
+            let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
                 let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
                 svc.drive_script_for_window(window, semantics_snapshot, element_runtime)
             });
@@ -1824,7 +1826,7 @@ impl WinitAppDriver for UiGalleryDriver {
 
         #[cfg(not(target_arch = "wasm32"))]
         {
-            app.with_global_mut(UiDiagnosticsService::default, |svc, app| {
+            app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
                 let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
                 svc.record_snapshot(
                     app,

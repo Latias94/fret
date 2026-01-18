@@ -44,6 +44,7 @@ pub(super) struct ElementHostWidget {
     svg_cache: SvgCache,
     canvas_cache: crate::canvas::CanvasCache,
     render_transform: Option<fret_core::Transform2D>,
+    scroll_child_transform: Option<ScrollChildTransform>,
     hit_testable: bool,
     hit_test_children: bool,
     focus_traversal_children: bool,
@@ -59,6 +60,12 @@ pub(super) struct ElementHostWidget {
     resizable_panel_group: Option<crate::resizable_panel_group::BoundResizablePanelGroup>,
 }
 
+#[derive(Debug, Clone)]
+struct ScrollChildTransform {
+    handle: crate::scroll::ScrollHandle,
+    axis: crate::element::ScrollAxis,
+}
+
 impl ElementHostWidget {
     pub(super) fn new(element: GlobalElementId) -> Self {
         Self {
@@ -67,6 +74,7 @@ impl ElementHostWidget {
             svg_cache: SvgCache::default(),
             canvas_cache: crate::canvas::CanvasCache::default(),
             render_transform: None,
+            scroll_child_transform: None,
             hit_testable: true,
             hit_test_children: true,
             focus_traversal_children: true,
@@ -227,6 +235,24 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         self.render_transform
     }
 
+    fn children_render_transform(&self, _bounds: Rect) -> Option<fret_core::Transform2D> {
+        let scroll = self.scroll_child_transform.as_ref()?;
+        let offset = scroll.handle.offset();
+        let offset_x = if scroll.axis.scroll_x() {
+            Px(-offset.x.0)
+        } else {
+            Px(0.0)
+        };
+        let offset_y = if scroll.axis.scroll_y() {
+            Px(-offset.y.0)
+        } else {
+            Px(0.0)
+        };
+
+        let transform = fret_core::Transform2D::translation(Point::new(offset_x, offset_y));
+        (transform != fret_core::Transform2D::IDENTITY).then_some(transform)
+    }
+
     fn clip_hit_test_corner_radii(&self, _bounds: Rect) -> Option<fret_core::Corners> {
         self.clip_hit_test_corner_radii
     }
@@ -293,7 +319,20 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 };
 
                 crate::widget::ScrollIntoViewResult::Handled {
-                    did_scroll: scroll_handle_into_view_y(&handle, cx.bounds, descendant_bounds),
+                    did_scroll: {
+                        // Scroll content is translated at paint/input time (children-only transform),
+                        // so `descendant_bounds` is expressed in the unscrolled content coordinate
+                        // space. Map the viewport into that same space before computing the delta.
+                        let offset = handle.offset();
+                        let viewport_in_content = Rect::new(
+                            Point::new(
+                                Px(cx.bounds.origin.x.0 + offset.x.0),
+                                Px(cx.bounds.origin.y.0 + offset.y.0),
+                            ),
+                            cx.bounds.size,
+                        );
+                        scroll_handle_into_view_y(&handle, viewport_in_content, descendant_bounds)
+                    },
                 }
             }
             ElementInstance::VirtualList(props) => crate::widget::ScrollIntoViewResult::Handled {

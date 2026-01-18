@@ -4461,7 +4461,9 @@ fn scroll_wheel_updates_offset_and_shifts_child_bounds() {
 
     let scroll_node = ui.children(root)[0];
     let column_node = ui.children(scroll_node)[0];
-    let before = ui.debug_node_bounds(column_node).expect("column bounds");
+    let before = ui
+        .debug_node_visual_bounds(column_node)
+        .expect("column visual bounds");
     #[cfg(feature = "layout-engine-v2")]
     assert!(
         ui.layout_engine_has_node(column_node),
@@ -4483,8 +4485,8 @@ fn scroll_wheel_updates_offset_and_shifts_child_bounds() {
 
     ui.layout_all(&mut app, &mut text, bounds, 1.0);
     let after = ui
-        .debug_node_bounds(column_node)
-        .expect("column bounds after scroll");
+        .debug_node_visual_bounds(column_node)
+        .expect("column visual bounds after scroll");
 
     assert!(
         after.origin.y.0 < before.origin.y.0,
@@ -4537,7 +4539,9 @@ fn scroll_translation_does_not_force_layout_engine_solves() {
 
     let scroll_node = ui.children(root)[0];
     let column_node = ui.children(scroll_node)[0];
-    let before = ui.debug_node_bounds(column_node).expect("column bounds");
+    let before = ui
+        .debug_node_visual_bounds(column_node)
+        .expect("column visual bounds");
 
     let wheel_pos = fret_core::Point::new(Px(5.0), Px(5.0));
     ui.dispatch_event(
@@ -4554,8 +4558,8 @@ fn scroll_translation_does_not_force_layout_engine_solves() {
 
     ui.layout_all(&mut app, &mut text, bounds, 1.0);
     let after = ui
-        .debug_node_bounds(column_node)
-        .expect("column bounds after scroll");
+        .debug_node_visual_bounds(column_node)
+        .expect("column visual bounds after scroll");
 
     assert!(
         after.origin.y.0 < before.origin.y.0,
@@ -4750,7 +4754,9 @@ fn scroll_thumb_drag_updates_offset() {
     let scroll_node = ui.children(stack_node)[0];
     let scrollbar_node = ui.children(stack_node)[1];
     let column_node = ui.children(scroll_node)[0];
-    let before = ui.debug_node_bounds(column_node).expect("column bounds");
+    let before = ui
+        .debug_node_visual_bounds(column_node)
+        .expect("column visual bounds");
 
     // Click/drag the scrollbar thumb down (thumb starts at the top at offset=0).
     let scrollbar_bounds = ui
@@ -4816,12 +4822,10 @@ fn scroll_thumb_drag_updates_offset() {
         scroll_handle.offset().y
     );
 
-    ui.invalidate(scroll_node, Invalidation::Layout);
-
     ui.layout_all(&mut app, &mut text, bounds, 1.0);
     let after = ui
-        .debug_node_bounds(column_node)
-        .expect("column bounds after drag");
+        .debug_node_visual_bounds(column_node)
+        .expect("column visual bounds after drag");
 
     assert!(
         after.origin.y.0 < before.origin.y.0,
@@ -4832,7 +4836,7 @@ fn scroll_thumb_drag_updates_offset() {
 }
 
 #[test]
-fn scroll_handle_set_offset_triggers_layout_without_manual_invalidate() {
+fn scroll_handle_set_offset_triggers_visual_scroll_without_manual_invalidate() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
     let window = AppWindowId::default();
@@ -4910,7 +4914,9 @@ fn scroll_handle_set_offset_triggers_layout_without_manual_invalidate() {
 
     let scroll_node = ui.children(root)[0];
     let column_node = ui.children(scroll_node)[0];
-    let before = ui.debug_node_bounds(column_node).expect("column bounds");
+    let before = ui
+        .debug_node_visual_bounds(column_node)
+        .expect("column visual bounds");
 
     // Outside the UI runtime, programmatically update the handle.
     scroll_handle.set_offset(fret_core::Point::new(Px(0.0), Px(20.0)));
@@ -4932,8 +4938,8 @@ fn scroll_handle_set_offset_triggers_layout_without_manual_invalidate() {
     let scroll_node = ui.children(root)[0];
     let column_node = ui.children(scroll_node)[0];
     let after = ui
-        .debug_node_bounds(column_node)
-        .expect("column bounds after offset");
+        .debug_node_visual_bounds(column_node)
+        .expect("column visual bounds after offset");
 
     assert!(
         after.origin.y.0 < before.origin.y.0,
@@ -5040,7 +5046,9 @@ fn scroll_thumb_drag_updates_offset_horizontal() {
     let scroll_node = ui.children(stack_node)[0];
     let scrollbar_node = ui.children(stack_node)[1];
     let content_node = ui.children(scroll_node)[0];
-    let before = ui.debug_node_bounds(content_node).expect("content bounds");
+    let before = ui
+        .debug_node_visual_bounds(content_node)
+        .expect("content visual bounds");
 
     let scrollbar_bounds = ui
         .debug_node_bounds(scrollbar_node)
@@ -5095,12 +5103,10 @@ fn scroll_thumb_drag_updates_offset_horizontal() {
         scroll_handle.offset().x
     );
 
-    ui.invalidate(scroll_node, Invalidation::Layout);
-
     ui.layout_all(&mut app, &mut text, bounds, 1.0);
     let after = ui
-        .debug_node_bounds(content_node)
-        .expect("content bounds after drag");
+        .debug_node_visual_bounds(content_node)
+        .expect("content visual bounds after drag");
 
     assert!(
         after.origin.x.0 < before.origin.x.0,

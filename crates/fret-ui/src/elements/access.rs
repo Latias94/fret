@@ -17,7 +17,7 @@ pub fn with_element_state<H: UiHost, S: Any, R>(
     f: impl FnOnce(&mut S) -> R,
 ) -> R {
     let frame_id = app.frame_id();
-    app.with_global_mut(ElementRuntime::new, |runtime, _app| {
+    app.with_global_mut_untracked(ElementRuntime::new, |runtime, _app| {
         runtime.prepare_window_for_frame(window, frame_id);
         let window_state = runtime.for_window_mut(window);
 
@@ -45,7 +45,7 @@ pub(crate) fn observed_models_for_element<H: UiHost>(
     element: GlobalElementId,
 ) -> Vec<(ModelId, Invalidation)> {
     let frame_id = app.frame_id();
-    app.with_global_mut(ElementRuntime::new, |runtime, _app| {
+    app.with_global_mut_untracked(ElementRuntime::new, |runtime, _app| {
         runtime.prepare_window_for_frame(window, frame_id);
         runtime
             .for_window_mut(window)
@@ -76,7 +76,7 @@ pub(crate) fn with_window_state<H: UiHost, R>(
     f: impl FnOnce(&mut WindowElementState) -> R,
 ) -> R {
     let frame_id = app.frame_id();
-    app.with_global_mut(ElementRuntime::new, |runtime, _app| {
+    app.with_global_mut_untracked(ElementRuntime::new, |runtime, _app| {
         runtime.prepare_window_for_frame(window, frame_id);
         let window_state = runtime.for_window_mut(window);
         f(window_state)
@@ -184,7 +184,7 @@ pub fn take_element_state<H: UiHost, S: Any>(
     window: AppWindowId,
     element: GlobalElementId,
 ) -> Option<S> {
-    app.with_global_mut(ElementRuntime::new, |runtime, app| {
+    app.with_global_mut_untracked(ElementRuntime::new, |runtime, app| {
         runtime.prepare_window_for_frame(window, app.frame_id());
         let window_state = runtime.for_window_mut(window);
         let key = (element, TypeId::of::<S>());

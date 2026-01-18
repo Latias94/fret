@@ -8,7 +8,6 @@ use crate::{CommandRegistry, DragKindId, DragSession, Effect, ModelHost, ModelId
 pub trait GlobalsHost {
     fn set_global<T: Any>(&mut self, value: T);
     fn global<T: Any>(&self) -> Option<&T>;
-    fn global_mut<T: Any>(&mut self) -> Option<&mut T>;
 
     fn with_global_mut<T: Any, R>(
         &mut self,
@@ -16,6 +15,12 @@ pub trait GlobalsHost {
         f: impl FnOnce(&mut T, &mut Self) -> R,
     ) -> R;
 
+    /// Like [`GlobalsHost::with_global_mut`], but does not participate in the host's "global
+    /// changed" tracking mechanism.
+    ///
+    /// This is intended for frame-local caches/registries that should not schedule redraw or UI
+    /// invalidation by themselves. Hosts can override this to implement an actual untracked path.
+    #[inline]
     fn with_global_mut_untracked<T: Any, R>(
         &mut self,
         init: impl FnOnce() -> T,

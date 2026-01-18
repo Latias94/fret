@@ -21,6 +21,14 @@ struct NodeContext {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct LayoutId(TaffyNodeId);
 
+#[derive(Debug, Clone, Copy, Default)]
+pub struct LayoutEngineMeasureHotspot {
+    pub node: NodeId,
+    pub total_time: Duration,
+    pub calls: u64,
+    pub cache_hits: u64,
+}
+
 pub struct TaffyLayoutEngine {
     tree: TaffyTree<NodeContext>,
     node_to_layout: HashMap<NodeId, LayoutId>,
@@ -35,6 +43,13 @@ pub struct TaffyLayoutEngine {
     solve_scale_factor: f32,
     frame_id: Option<FrameId>,
     last_solve_time: Duration,
+    last_solve_root: Option<NodeId>,
+    last_solve_elapsed: Duration,
+    last_solve_measure_calls: u64,
+    last_solve_measure_cache_hits: u64,
+    measure_profiling_enabled: bool,
+    last_solve_measure_time: Duration,
+    last_solve_measure_hotspots: Vec<LayoutEngineMeasureHotspot>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -62,6 +77,13 @@ impl Default for TaffyLayoutEngine {
             solve_scale_factor: 1.0,
             frame_id: None,
             last_solve_time: Duration::default(),
+            last_solve_root: None,
+            last_solve_elapsed: Duration::default(),
+            last_solve_measure_calls: 0,
+            last_solve_measure_cache_hits: 0,
+            measure_profiling_enabled: false,
+            last_solve_measure_time: Duration::default(),
+            last_solve_measure_hotspots: Vec::new(),
         }
     }
 }
@@ -84,6 +106,12 @@ impl TaffyLayoutEngine {
             self.root_solve_keys.clear();
             self.solve_scale_factor = 1.0;
             self.last_solve_time = Duration::default();
+            self.last_solve_root = None;
+            self.last_solve_elapsed = Duration::default();
+            self.last_solve_measure_calls = 0;
+            self.last_solve_measure_cache_hits = 0;
+            self.last_solve_measure_time = Duration::default();
+            self.last_solve_measure_hotspots.clear();
         }
     }
 
@@ -136,6 +164,34 @@ impl TaffyLayoutEngine {
 
     pub fn last_solve_time(&self) -> Duration {
         self.last_solve_time
+    }
+
+    pub fn last_solve_root(&self) -> Option<NodeId> {
+        self.last_solve_root
+    }
+
+    pub fn last_solve_elapsed(&self) -> Duration {
+        self.last_solve_elapsed
+    }
+
+    pub fn last_solve_measure_calls(&self) -> u64 {
+        self.last_solve_measure_calls
+    }
+
+    pub fn last_solve_measure_cache_hits(&self) -> u64 {
+        self.last_solve_measure_cache_hits
+    }
+
+    pub fn last_solve_measure_time(&self) -> Duration {
+        self.last_solve_measure_time
+    }
+
+    pub fn last_solve_measure_hotspots(&self) -> &[LayoutEngineMeasureHotspot] {
+        self.last_solve_measure_hotspots.as_slice()
+    }
+
+    pub fn set_measure_profiling_enabled(&mut self, enabled: bool) {
+        self.measure_profiling_enabled = enabled;
     }
 
     pub fn child_layout_rect_if_solved(&self, parent: NodeId, child: NodeId) -> Option<Rect> {
@@ -327,6 +383,22 @@ impl TaffyLayoutEngine {
         };
         self.solve_scale_factor = sf;
 
+        let span = if tracing::enabled!(tracing::Level::TRACE) {
+            tracing::trace_span!(
+                "fret.ui.layout_engine.solve",
+                root = tracing::field::Empty,
+                frame_id = self.frame_id.map(|f| f.0).unwrap_or(0),
+                scale_factor = sf,
+                elapsed_us = tracing::field::Empty,
+                measure_calls = tracing::field::Empty,
+                measure_cache_hits = tracing::field::Empty,
+                measure_us = tracing::field::Empty,
+            )
+        } else {
+            tracing::Span::none()
+        };
+        let _span_guard = span.enter();
+
         let taffy_available = taffy::geometry::Size {
             width: match available.width {
                 AvailableSpace::Definite(px) => taffy::style::AvailableSpace::Definite(px.0 * sf),
@@ -340,7 +412,20 @@ impl TaffyLayoutEngine {
             },
         };
 
+        let mut measure_calls: u64 = 0;
+        let mut measure_cache_hits: u64 = 0;
         let mut measure_cache: HashMap<MeasureKey, taffy::geometry::Size<f32>> = HashMap::new();
+        let enable_profile = self.measure_profiling_enabled;
+        let mut measure_time = Duration::default();
+
+        #[derive(Debug, Clone, Copy, Default)]
+        struct MeasureNodeProfile {
+            total_time: Duration,
+            calls: u64,
+            cache_hits: u64,
+        }
+
+        let mut by_node: HashMap<NodeId, MeasureNodeProfile> = HashMap::new();
         self.tree
             .compute_layout_with_measure(
                 root.0,
@@ -353,6 +438,7 @@ impl TaffyLayoutEngine {
                         return taffy::geometry::Size::default();
                     }
 
+                    measure_calls = measure_calls.saturating_add(1);
                     let key = MeasureKey {
                         node: ctx.node,
                         known_w: known.width.map(|v| v.to_bits()),
@@ -361,6 +447,11 @@ impl TaffyLayoutEngine {
                         avail_h: avail_key(avail.height),
                     };
                     if let Some(size) = measure_cache.get(&key) {
+                        measure_cache_hits = measure_cache_hits.saturating_add(1);
+                        if enable_profile {
+                            let profile = by_node.entry(ctx.node).or_default();
+                            profile.cache_hits = profile.cache_hits.saturating_add(1);
+                        }
                         return *size;
                     }
 
@@ -395,7 +486,20 @@ impl TaffyLayoutEngine {
                         ),
                     );
 
-                    let s = measure(ctx.node, constraints);
+                    let (s, elapsed) = if enable_profile {
+                        let measure_started = Instant::now();
+                        let size = measure(ctx.node, constraints);
+                        (size, measure_started.elapsed())
+                    } else {
+                        (measure(ctx.node, constraints), Duration::default())
+                    };
+
+                    if enable_profile {
+                        measure_time += elapsed;
+                        let profile = by_node.entry(ctx.node).or_default();
+                        profile.total_time += elapsed;
+                        profile.calls = profile.calls.saturating_add(1);
+                    }
                     let out = taffy::geometry::Size {
                         width: s.width.0 * sf,
                         height: s.height.0 * sf,
@@ -407,7 +511,29 @@ impl TaffyLayoutEngine {
             .ok();
 
         self.solve_generation = self.solve_generation.saturating_add(1);
+        self.last_solve_measure_calls = measure_calls;
+        self.last_solve_measure_cache_hits = measure_cache_hits;
+        self.last_solve_measure_time = measure_time;
+        if enable_profile {
+            const MAX_HOTSPOTS: usize = 8;
+            let mut hotspots: Vec<LayoutEngineMeasureHotspot> = by_node
+                .into_iter()
+                .map(|(node, p)| LayoutEngineMeasureHotspot {
+                    node,
+                    total_time: p.total_time,
+                    calls: p.calls,
+                    cache_hits: p.cache_hits,
+                })
+                .collect();
+            hotspots.sort_by_key(|h| std::cmp::Reverse(h.total_time));
+            hotspots.truncate(MAX_HOTSPOTS);
+            self.last_solve_measure_hotspots = hotspots;
+        } else {
+            self.last_solve_measure_hotspots.clear();
+        }
         if let Some(root_node) = self.node_for_layout_id(root) {
+            span.record("root", tracing::field::debug(root_node));
+            self.last_solve_root = Some(root_node);
             self.mark_solved_subtree(root_node);
             fn key_bits(axis: AvailableSpace) -> u64 {
                 match axis {
@@ -424,8 +550,15 @@ impl TaffyLayoutEngine {
                     scale_bits: self.solve_scale_factor.to_bits(),
                 },
             );
+        } else {
+            self.last_solve_root = None;
         }
-        self.last_solve_time += started.elapsed();
+        self.last_solve_elapsed = started.elapsed();
+        span.record("elapsed_us", self.last_solve_elapsed.as_micros() as u64);
+        span.record("measure_calls", measure_calls);
+        span.record("measure_cache_hits", measure_cache_hits);
+        span.record("measure_us", measure_time.as_micros() as u64);
+        self.last_solve_time += self.last_solve_elapsed;
     }
 
     pub fn compute_root(

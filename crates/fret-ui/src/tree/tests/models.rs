@@ -72,6 +72,7 @@ fn debug_invalidation_walks_record_model_change_root() {
         walks.iter().any(|w| {
             w.root == node
                 && w.source == UiDebugInvalidationSource::ModelChange
+                && w.detail == UiDebugInvalidationDetail::ModelObservation
                 && w.inv == Invalidation::Layout
                 && w.walked_nodes > 0
         }),

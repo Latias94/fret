@@ -11,7 +11,7 @@ pub fn with_element_cx<H: UiHost, R>(
     root_name: &str,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    app.with_global_mut(ElementRuntime::new, |runtime, app| {
+    app.with_global_mut_untracked(ElementRuntime::new, |runtime, app| {
         let mut cx = ElementContext::new_for_root_name(app, runtime, window, bounds, root_name);
         f(&mut cx)
     })
@@ -22,7 +22,7 @@ pub fn root_bounds_for_element<H: UiHost>(
     window: AppWindowId,
     element: GlobalElementId,
 ) -> Option<Rect> {
-    app.with_global_mut(ElementRuntime::new, |runtime, _app| {
+    app.with_global_mut_untracked(ElementRuntime::new, |runtime, _app| {
         let state = runtime.for_window_mut(window);
         let root = state.node_entry(element).map(|e| e.root)?;
         state.root_bounds(root)

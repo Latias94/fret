@@ -65,7 +65,7 @@ fn portal_subtree_resets_state_on_node_kind_change() {
 
     let next_instance2 = next_instance.clone();
     let last_instance2 = last_instance.clone();
-    let mut portal = NodeGraphPortalHost::new(
+    let portal = NodeGraphPortalHost::new(
         graph.clone(),
         view.clone(),
         measured,

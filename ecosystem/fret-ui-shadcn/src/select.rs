@@ -1028,6 +1028,26 @@ fn select_impl<H: UiHost>(
                 let debug_item_aligned = std::env::var("FRET_DEBUG_SELECT_ITEM_ALIGNED")
                     .ok()
                     .is_some_and(|v| v == "1");
+                if debug_item_aligned {
+                    eprintln!(
+                        "select trigger chrome: padding(l={}, r={}, t={}, b={}) border_w={} min_h={}",
+                        resolved.padding.left.0,
+                        resolved.padding.right.0,
+                        resolved.padding.top.0,
+                        resolved.padding.bottom.0,
+                        resolved.border_width.0,
+                        resolved.min_height.0
+                    );
+                    eprintln!(
+                        "select trigger theme metrics: metric.padding.sm={:?} metric.padding.md={:?} component.input.padding_x={:?} component.input.padding_y={:?} component.size.md.input.px={:?} component.size.md.input.py={:?}",
+                        theme.metric_by_key("metric.padding.sm").map(|v| v.0),
+                        theme.metric_by_key("metric.padding.md").map(|v| v.0),
+                        theme.metric_by_key("component.input.padding_x").map(|v| v.0),
+                        theme.metric_by_key("component.input.padding_y").map(|v| v.0),
+                        theme.metric_by_key("component.size.md.input.px").map(|v| v.0),
+                        theme.metric_by_key("component.size.md.input.py").map(|v| v.0),
+                    );
+                }
 
                 // Anchor bounds are derived from the previous layout pass. When `open=true` before
                 // the first layout (or immediately after a large tree change), the anchor may be

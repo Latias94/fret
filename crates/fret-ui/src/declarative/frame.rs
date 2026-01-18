@@ -61,6 +61,49 @@ pub(crate) enum ElementInstance {
     Scrollbar(crate::element::ScrollbarProps),
 }
 
+impl ElementInstance {
+    pub fn kind_name(&self) -> &'static str {
+        match self {
+            Self::Container(_) => "Container",
+            Self::Semantics(_) => "Semantics",
+            Self::SemanticFlex(_) => "SemanticFlex",
+            Self::FocusScope(_) => "FocusScope",
+            Self::InteractivityGate(_) => "InteractivityGate",
+            Self::Opacity(_) => "Opacity",
+            Self::EffectLayer(_) => "EffectLayer",
+            Self::ViewCache(_) => "ViewCache",
+            Self::VisualTransform(_) => "VisualTransform",
+            Self::RenderTransform(_) => "RenderTransform",
+            Self::Anchored(_) => "Anchored",
+            Self::Pressable(_) => "Pressable",
+            Self::PointerRegion(_) => "PointerRegion",
+            Self::InternalDragRegion(_) => "InternalDragRegion",
+            Self::DismissibleLayer(_) => "DismissibleLayer",
+            Self::RovingFlex(_) => "RovingFlex",
+            Self::Stack(_) => "Stack",
+            Self::Spacer(_) => "Spacer",
+            Self::Text(_) => "Text",
+            Self::StyledText(_) => "StyledText",
+            Self::SelectableText(_) => "SelectableText",
+            Self::TextInput(_) => "TextInput",
+            Self::TextArea(_) => "TextArea",
+            Self::ResizablePanelGroup(_) => "ResizablePanelGroup",
+            Self::VirtualList(_) => "VirtualList",
+            Self::Flex(_) => "Flex",
+            Self::Grid(_) => "Grid",
+            Self::Image(_) => "Image",
+            Self::Canvas(_) => "Canvas",
+            Self::ViewportSurface(_) => "ViewportSurface",
+            Self::SvgIcon(_) => "SvgIcon",
+            Self::Spinner(_) => "Spinner",
+            Self::HoverRegion(_) => "HoverRegion",
+            Self::WheelRegion(_) => "WheelRegion",
+            Self::Scroll(_) => "Scroll",
+            Self::Scrollbar(_) => "Scrollbar",
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct ElementRecord {
     pub element: GlobalElementId,
@@ -99,7 +142,7 @@ pub(crate) fn element_record_for_node<H: UiHost>(
     window: AppWindowId,
     node: NodeId,
 ) -> Option<ElementRecord> {
-    app.with_global_mut(ElementFrame::default, |frame, _app| {
+    app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
         frame
             .windows
             .get(&window)
@@ -125,6 +168,9 @@ pub(crate) struct WindowScrollHandleRegistry {
     pub(super) by_handle: HashMap<usize, Vec<GlobalElementId>>,
     pub(super) handles: HashMap<usize, crate::scroll::ScrollHandle>,
     pub(super) last_revision: HashMap<usize, u64>,
+    pub(super) last_offset: HashMap<usize, fret_core::Point>,
+    pub(super) last_viewport: HashMap<usize, fret_core::Size>,
+    pub(super) last_content: HashMap<usize, fret_core::Size>,
 }
 
 impl Default for WindowScrollHandleRegistry {
@@ -134,6 +180,9 @@ impl Default for WindowScrollHandleRegistry {
             by_handle: HashMap::new(),
             handles: HashMap::new(),
             last_revision: HashMap::new(),
+            last_offset: HashMap::new(),
+            last_viewport: HashMap::new(),
+            last_content: HashMap::new(),
         }
     }
 }
@@ -155,7 +204,7 @@ pub(crate) fn register_scroll_handle_bindings_batch<H: UiHost>(
     frame_id: FrameId,
     bindings: impl IntoIterator<Item = ScrollHandleBinding>,
 ) {
-    app.with_global_mut(ScrollHandleRegistry::default, |registry, _app| {
+    app.with_global_mut_untracked(ScrollHandleRegistry::default, |registry, _app| {
         let window_registry = registry.windows.entry(window).or_default();
         prepare_window_scroll_registry_for_frame(window_registry, frame_id);
 
@@ -178,7 +227,7 @@ pub(crate) fn bound_elements_for_scroll_handle<H: UiHost>(
     window: AppWindowId,
     handle_key: usize,
 ) -> Vec<GlobalElementId> {
-    app.with_global_mut(ScrollHandleRegistry::default, |registry, _app| {
+    app.with_global_mut_untracked(ScrollHandleRegistry::default, |registry, _app| {
         registry
             .windows
             .get(&window)
@@ -191,18 +240,43 @@ pub(crate) fn bound_elements_for_scroll_handle<H: UiHost>(
 pub(crate) fn take_changed_scroll_handle_keys<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
-) -> Vec<usize> {
-    app.with_global_mut(ScrollHandleRegistry::default, |registry, _app| {
+) -> Vec<ScrollHandleChange> {
+    app.with_global_mut_untracked(ScrollHandleRegistry::default, |registry, _app| {
         let Some(window_registry) = registry.windows.get_mut(&window) else {
             return Vec::new();
         };
 
-        let mut changed: Vec<usize> = Vec::new();
+        let mut changed: Vec<ScrollHandleChange> = Vec::new();
         for (&handle_key, handle) in window_registry.handles.iter() {
             let revision = handle.revision();
             let prev = window_registry.last_revision.get(&handle_key).copied();
             if prev != Some(revision) {
-                changed.push(handle_key);
+                let offset = handle.offset();
+                let viewport = handle.viewport_size();
+                let content = handle.content_size();
+
+                let prev_offset = window_registry.last_offset.get(&handle_key).copied();
+                let prev_viewport = window_registry.last_viewport.get(&handle_key).copied();
+                let prev_content = window_registry.last_content.get(&handle_key).copied();
+
+                let offset_changed = prev_offset != Some(offset);
+                let viewport_changed = prev_viewport != Some(viewport);
+                let content_changed = prev_content != Some(content);
+
+                // If the revision changed but none of the observable values changed, treat it as
+                // layout-affecting (e.g. deferred scroll-to-item requests that are consumed during
+                // layout).
+                let kind = if viewport_changed || content_changed || (!offset_changed) {
+                    ScrollHandleChangeKind::Layout
+                } else {
+                    ScrollHandleChangeKind::HitTestOnly
+                };
+
+                changed.push(ScrollHandleChange { handle_key, kind });
+
+                window_registry.last_offset.insert(handle_key, offset);
+                window_registry.last_viewport.insert(handle_key, viewport);
+                window_registry.last_content.insert(handle_key, content);
             }
             window_registry.last_revision.insert(handle_key, revision);
         }
@@ -210,11 +284,23 @@ pub(crate) fn take_changed_scroll_handle_keys<H: UiHost>(
     })
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ScrollHandleChangeKind {
+    Layout,
+    HitTestOnly,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct ScrollHandleChange {
+    pub handle_key: usize,
+    pub kind: ScrollHandleChangeKind,
+}
+
 pub(crate) fn element_id_map_for_window<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
 ) -> HashMap<u64, NodeId> {
-    app.with_global_mut(ElementFrame::default, |frame, _app| {
+    app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
         frame
             .windows
             .get(&window)

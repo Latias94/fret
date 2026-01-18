@@ -430,6 +430,11 @@ fn mount_element<H: UiHost>(
     pending_invalidations: &mut HashMap<NodeId, u8>,
 ) -> NodeId {
     let id = element.id;
+    let existing_node_entry = window_state.node_entry(id);
+    let had_existing_node_entry = existing_node_entry.is_some();
+    let had_existing_node = existing_node_entry
+        .map(|e| ui.node_exists(e.node))
+        .unwrap_or(false);
     let view_cache_props = match &element.kind {
         ElementKind::ViewCache(props) => Some(*props),
         _ => None,
@@ -441,10 +446,12 @@ fn mount_element<H: UiHost>(
         tracing::trace_span!(
             "ui.cache_root.mount",
             element = ?id,
+            node = tracing::field::Empty,
             cache_hit = reuse_view_cache,
             contained_layout = view_cache_props
                 .map(|p| p.contained_layout)
                 .unwrap_or(false),
+            frame_id = frame_id.0,
         )
     } else {
         tracing::Span::none()
@@ -479,20 +486,28 @@ fn mount_element<H: UiHost>(
         },
     );
 
+    if view_cache_props.is_some() && tracing::enabled!(tracing::Level::TRACE) {
+        span.record("node", tracing::field::debug(node));
+    }
+
     match &element.kind {
         ElementKind::ViewCache(props) => {
-            if tracing::enabled!(tracing::Level::TRACE) {
-                let reuse_span = tracing::trace_span!(
-                    "ui.cache_root.reuse",
-                    node = ?node,
-                    element = ?id,
-                    cache_hit = reuse_view_cache,
-                    contained_layout = props.contained_layout,
-                );
-                let _reuse_guard = reuse_span.enter();
-            }
             ui.set_node_view_cache_flags(node, true, props.contained_layout);
-            ui.debug_record_view_cache_root(node, reuse_view_cache, props.contained_layout);
+            let reuse_reason = if !had_existing_node_entry {
+                crate::tree::UiDebugCacheRootReuseReason::FirstMount
+            } else if !had_existing_node {
+                crate::tree::UiDebugCacheRootReuseReason::NodeRecreated
+            } else if reuse_view_cache {
+                crate::tree::UiDebugCacheRootReuseReason::MarkedReuseRoot
+            } else {
+                crate::tree::UiDebugCacheRootReuseReason::NotMarkedReuseRoot
+            };
+            ui.debug_record_view_cache_root(
+                node,
+                reuse_view_cache,
+                props.contained_layout,
+                reuse_reason,
+            );
         }
         _ => {
             ui.set_node_view_cache_flags(node, false, false);
@@ -577,6 +592,23 @@ fn mount_element<H: UiHost>(
     );
 
     if reuse_view_cache {
+        let reuse_span = if tracing::enabled!(tracing::Level::TRACE) {
+            tracing::trace_span!(
+                "ui.cache_root.reuse",
+                element = ?id,
+                node = ?node,
+                cache_hit = true,
+                contained_layout = view_cache_props
+                    .map(|p| p.contained_layout)
+                    .unwrap_or(false),
+                frame_id = frame_id.0,
+                reason = "marked_reuse_root",
+            )
+        } else {
+            tracing::Span::none()
+        };
+        let _reuse_guard = reuse_span.enter();
+
         let children = ui.children(node);
         window_frame.children.insert(node, children);
 
@@ -586,22 +618,58 @@ fn mount_element<H: UiHost>(
         return node;
     }
 
-    let mut child_nodes: Vec<NodeId> = Vec::with_capacity(element.children.len());
-    for child in element.children {
-        child_nodes.push(mount_element(
-            ui,
-            _window,
-            root_id,
-            frame_id,
-            window_state,
-            window_frame,
-            child,
-            scroll_bindings,
-            pending_invalidations,
-        ));
+    if view_cache_props.is_some() {
+        let reuse_span = if tracing::enabled!(tracing::Level::TRACE) {
+            tracing::trace_span!(
+                "ui.cache_root.reuse",
+                element = ?id,
+                node = ?node,
+                cache_hit = false,
+                contained_layout = view_cache_props
+                    .map(|p| p.contained_layout)
+                    .unwrap_or(false),
+                frame_id = frame_id.0,
+                reason = "not_marked_reuse_root",
+            )
+        } else {
+            tracing::Span::none()
+        };
+        let _reuse_guard = reuse_span.enter();
+
+        let mut child_nodes: Vec<NodeId> = Vec::with_capacity(element.children.len());
+        for child in element.children {
+            child_nodes.push(mount_element(
+                ui,
+                _window,
+                root_id,
+                frame_id,
+                window_state,
+                window_frame,
+                child,
+                scroll_bindings,
+                pending_invalidations,
+            ));
+        }
+        ui.set_children(node, child_nodes.clone());
+        window_frame.children.insert(node, child_nodes);
+    } else {
+        let mut child_nodes: Vec<NodeId> = Vec::with_capacity(element.children.len());
+        for child in element.children {
+            child_nodes.push(mount_element(
+                ui,
+                _window,
+                root_id,
+                frame_id,
+                window_state,
+                window_frame,
+                child,
+                scroll_bindings,
+                pending_invalidations,
+            ));
+        }
+        ui.set_children(node, child_nodes.clone());
+        window_frame.children.insert(node, child_nodes);
     }
-    ui.set_children(node, child_nodes.clone());
-    window_frame.children.insert(node, child_nodes);
 
     node
 }

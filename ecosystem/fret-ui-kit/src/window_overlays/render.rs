@@ -55,27 +55,28 @@ pub fn render<H: UiHost>(
         .global::<WindowMetricsService>()
         .and_then(|svc| svc.scale_factor(window));
 
-    let (focus_lost, resized) = app.with_global_mut(WindowOverlays::default, |overlays, _app| {
-        let w = overlays.windows.entry(window).or_default();
+    let (focus_lost, resized) =
+        app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+            let w = overlays.windows.entry(window).or_default();
 
-        let bounds_changed = w.last_bounds.is_some_and(|last| last.size != bounds.size);
-        let scale_changed = w
-            .last_scale_factor
-            .is_some_and(|last| Some(last) != scale_factor_now);
-        let resized = bounds_changed || scale_changed;
+            let bounds_changed = w.last_bounds.is_some_and(|last| last.size != bounds.size);
+            let scale_changed = w
+                .last_scale_factor
+                .is_some_and(|last| Some(last) != scale_factor_now);
+            let resized = bounds_changed || scale_changed;
 
-        let focus_lost = matches!((w.last_focused, focused_now), (Some(true), Some(false)));
+            let focus_lost = matches!((w.last_focused, focused_now), (Some(true), Some(false)));
 
-        w.last_bounds = Some(bounds);
-        if let Some(focused_now) = focused_now {
-            w.last_focused = Some(focused_now);
-        }
-        if let Some(scale_factor_now) = scale_factor_now {
-            w.last_scale_factor = Some(scale_factor_now);
-        }
+            w.last_bounds = Some(bounds);
+            if let Some(focused_now) = focused_now {
+                w.last_focused = Some(focused_now);
+            }
+            if let Some(scale_factor_now) = scale_factor_now {
+                w.last_scale_factor = Some(scale_factor_now);
+            }
 
-        (focus_lost, resized)
-    });
+            (focus_lost, resized)
+        });
 
     let dock_drag_affects_window = app.drag(fret_core::PointerId(0)).is_some_and(|d| {
         d.kind == DRAG_KIND_DOCK_PANEL && (d.source_window == window || d.current_window == window)
@@ -87,7 +88,7 @@ pub fn render<H: UiHost>(
         hover_overlay_requests,
         tooltip_requests,
         toast_requests,
-    ) = app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+    ) = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
         overlays
             .windows
             .get_mut(&window)
@@ -155,7 +156,7 @@ pub fn render<H: UiHost>(
         let mut should_focus_initial = false;
         let mut pending_initial_focus = false;
         let mut layer: Option<UiLayerId> = None;
-        app.with_global_mut(WindowOverlays::default, |overlays, app| {
+        app.with_global_mut_untracked(WindowOverlays::default, |overlays, app| {
             let mut created = false;
             let entry = overlays.modals.entry(key).or_insert_with(|| {
                 created = true;
@@ -219,7 +220,7 @@ pub fn render<H: UiHost>(
         let enforce_focus_containment = open_now && !focus_in_layer;
 
         if should_focus_initial || pending_initial_focus || enforce_focus_containment {
-            let focus = app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+            let focus = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
                 overlays.modals.get(&key).and_then(|p| p.initial_focus)
             });
             let applied =
@@ -228,7 +229,7 @@ pub fn render<H: UiHost>(
                 ui.set_focus(Some(root));
             }
             if applied {
-                app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+                app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
                     if let Some(entry) = overlays.modals.get_mut(&key) {
                         entry.pending_initial_focus = false;
                     }
@@ -327,7 +328,7 @@ pub fn render<H: UiHost>(
         let restore_focus = ui.focus();
 
         let mut should_focus_initial = false;
-        app.with_global_mut(WindowOverlays::default, |overlays, app| {
+        app.with_global_mut_untracked(WindowOverlays::default, |overlays, app| {
             let mut created = false;
             let entry = overlays.popovers.entry(key).or_insert_with(|| {
                 created = true;
@@ -451,7 +452,7 @@ pub fn render<H: UiHost>(
         });
 
         if should_focus_initial {
-            let focus = app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+            let focus = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
                 overlays.popovers.get(&key).and_then(|p| p.initial_focus)
             });
             focus_scope_prim::apply_initial_focus_for_overlay(ui, app, window, root, focus);
@@ -464,7 +465,7 @@ pub fn render<H: UiHost>(
         GlobalElementId,
         bool,
         Option<NodeId>,
-    )> = app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+    )> = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
         let mut out: Vec<(
             UiLayerId,
             Option<UiLayerId>,
@@ -488,7 +489,7 @@ pub fn render<H: UiHost>(
     });
 
     let to_hide_modals: Vec<(UiLayerId, Option<GlobalElementId>, Option<NodeId>)> = app
-        .with_global_mut(WindowOverlays::default, |overlays, _app| {
+        .with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
             overlays
                 .modals
                 .iter()
@@ -580,7 +581,7 @@ pub fn render<H: UiHost>(
         );
 
         let key = (window, req.id);
-        app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+        app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
             let entry = overlays
                 .hover_overlays
                 .entry(key)
@@ -596,7 +597,7 @@ pub fn render<H: UiHost>(
     }
 
     let to_hide_hover_overlays: Vec<(UiLayerId, GlobalElementId)> =
-        app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+        app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
             overlays
                 .hover_overlays
                 .iter()
@@ -646,7 +647,7 @@ pub fn render<H: UiHost>(
         );
 
         let key = (window, req.id);
-        app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+        app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
             let entry = overlays
                 .tooltips
                 .entry(key)
@@ -662,7 +663,7 @@ pub fn render<H: UiHost>(
     }
 
     let to_hide_tooltips: Vec<UiLayerId> =
-        app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+        app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
             overlays
                 .tooltips
                 .iter()
@@ -1462,7 +1463,7 @@ pub fn render<H: UiHost>(
             .unwrap_or(false);
 
         let key = (window, req.id);
-        app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+        app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
             let entry = overlays
                 .toast_layers
                 .entry(key)
@@ -1476,7 +1477,7 @@ pub fn render<H: UiHost>(
     }
 
     let to_hide_toast_layers: Vec<UiLayerId> =
-        app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+        app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
             overlays
                 .toast_layers
                 .iter()

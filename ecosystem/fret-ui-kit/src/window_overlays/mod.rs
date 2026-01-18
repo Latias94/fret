@@ -58,7 +58,7 @@ pub fn try_handle_window_command<H: UiHost>(
         return false;
     }
 
-    let layer = app.with_global_mut(state::WindowOverlays::default, |overlays, _app| {
+    let layer = app.with_global_mut_untracked(state::WindowOverlays::default, |overlays, _app| {
         overlays
             .toast_layers
             .iter()
@@ -77,10 +77,18 @@ pub fn try_handle_window_command<H: UiHost>(
     };
 
     if let Some(prev) = ui.focus() {
-        ui.invalidate(prev, Invalidation::Paint);
+        ui.invalidate_with_source(
+            prev,
+            Invalidation::Paint,
+            fret_ui::tree::UiDebugInvalidationSource::Focus,
+        );
     }
     ui.set_focus(Some(root));
-    ui.invalidate(root, Invalidation::Paint);
+    ui.invalidate_with_source(
+        root,
+        Invalidation::Paint,
+        fret_ui::tree::UiDebugInvalidationSource::Focus,
+    );
     app.request_redraw(window);
     true
 }

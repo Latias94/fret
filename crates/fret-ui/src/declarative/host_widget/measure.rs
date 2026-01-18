@@ -442,12 +442,12 @@ impl ElementHostWidget {
         let child_constraints = LayoutConstraints::new(
             LayoutSize::new(None, None),
             LayoutSize::new(
-                if props.axis.scroll_x() {
+                if props.axis.scroll_x() && props.probe_unbounded {
                     AvailableSpace::MaxContent
                 } else {
                     cx.constraints.available.width
                 },
-                if props.axis.scroll_y() {
+                if props.axis.scroll_y() && props.probe_unbounded {
                     AvailableSpace::MaxContent
                 } else {
                     cx.constraints.available.height

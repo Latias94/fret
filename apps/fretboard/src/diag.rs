@@ -639,6 +639,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 None
             };
 
+            let mut perf_json_rows: Vec<serde_json::Value> = Vec::new();
             let mut overall_worst: Option<(u64, PathBuf, PathBuf)> = None;
 
             for src in scripts {
@@ -727,28 +728,49 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
                     let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
 
-                    println!(
-                        "PERF {} sort={} top.us(total/layout/paint)={}/{}/{} top.tick={} top.frame={} bundle={}",
-                        src.display(),
-                        sort.as_str(),
-                        top_total,
-                        top_layout,
-                        top_paint,
-                        top_tick,
-                        top_frame,
-                        bundle_path.display(),
-                    );
+                    if stats_json {
+                        perf_json_rows.push(serde_json::json!({
+                            "script": src.display().to_string(),
+                            "sort": sort.as_str(),
+                            "top_total_time_us": top_total,
+                            "top_layout_time_us": top_layout,
+                            "top_paint_time_us": top_paint,
+                            "top_tick_id": top_tick,
+                            "top_frame_id": top_frame,
+                            "bundle": bundle_path.display().to_string(),
+                        }));
+                    } else {
+                        println!(
+                            "PERF {} sort={} top.us(total/layout/paint)={}/{}/{} top.tick={} top.frame={} bundle={}",
+                            src.display(),
+                            sort.as_str(),
+                            top_total,
+                            top_layout,
+                            top_paint,
+                            top_tick,
+                            top_frame,
+                            bundle_path.display(),
+                        );
+                    }
 
                     match &overall_worst {
                         Some((prev_us, _, _)) if *prev_us >= top_total => {}
                         _ => overall_worst = Some((top_total, src.clone(), bundle_path)),
                     }
                 } else {
-                    println!(
-                        "PERF {} sort={} (no last_bundle_dir recorded)",
-                        src.display(),
-                        sort.as_str()
-                    );
+                    if stats_json {
+                        perf_json_rows.push(serde_json::json!({
+                            "script": src.display().to_string(),
+                            "sort": sort.as_str(),
+                            "error": "no_last_bundle_dir",
+                        }));
+                    } else {
+                        println!(
+                            "PERF {} sort={} (no last_bundle_dir recorded)",
+                            src.display(),
+                            sort.as_str()
+                        );
+                    }
                 }
 
                 if !reuse_process {
@@ -758,7 +780,25 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
             kill_launched_demo(&mut child);
 
-            if let Some((us, src, bundle)) = overall_worst {
+            if stats_json {
+                let worst = overall_worst.as_ref().map(|(us, src, bundle)| {
+                    serde_json::json!({
+                        "script": src.display().to_string(),
+                        "top_total_time_us": us,
+                        "bundle": bundle.display().to_string(),
+                    })
+                });
+                let payload = serde_json::json!({
+                    "schema_version": 1,
+                    "sort": sort.as_str(),
+                    "rows": perf_json_rows,
+                    "worst_overall": worst,
+                });
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string())
+                );
+            } else if let Some((us, src, bundle)) = overall_worst {
                 println!(
                     "PERF worst overall: {} us={} bundle={}",
                     src.display(),
@@ -1165,6 +1205,9 @@ struct BundleStatsReport {
     sum_layout_time_us: u64,
     sum_paint_time_us: u64,
     sum_total_time_us: u64,
+    sum_cache_roots: u64,
+    sum_cache_roots_reused: u64,
+    sum_cache_replayed_ops: u64,
     sum_invalidation_walk_calls: u64,
     sum_invalidation_walk_nodes: u64,
     sum_model_change_invalidation_roots: u64,
@@ -1176,6 +1219,8 @@ struct BundleStatsReport {
     max_invalidation_walk_nodes: u32,
     max_model_change_invalidation_roots: u32,
     max_global_change_invalidation_roots: u32,
+    global_type_hotspots: Vec<BundleStatsGlobalTypeHotspot>,
+    model_source_hotspots: Vec<BundleStatsModelSourceHotspot>,
     top: Vec<BundleStatsSnapshotRow>,
 }
 
@@ -1195,6 +1240,7 @@ struct BundleStatsSnapshotRow {
     layout_engine_solve_time_us: u64,
     changed_models: u32,
     changed_globals: u32,
+    changed_global_types_sample: Vec<String>,
     propagated_model_change_models: u32,
     propagated_model_change_observation_edges: u32,
     propagated_model_change_unobserved_models: u32,
@@ -1216,8 +1262,15 @@ struct BundleStatsSnapshotRow {
     invalidation_walk_calls_other: u32,
     invalidation_walk_nodes_other: u32,
     top_invalidation_walks: Vec<BundleStatsInvalidationWalk>,
+    cache_roots: u32,
+    cache_roots_reused: u32,
+    cache_replayed_ops: u64,
+    top_cache_roots: Vec<BundleStatsCacheRoot>,
+    top_layout_engine_solves: Vec<BundleStatsLayoutEngineSolve>,
     model_change_hotspots: Vec<BundleStatsModelChangeHotspot>,
     model_change_unobserved: Vec<BundleStatsModelChangeUnobserved>,
+    global_change_hotspots: Vec<BundleStatsGlobalChangeHotspot>,
+    global_change_unobserved: Vec<BundleStatsGlobalChangeUnobserved>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -1226,6 +1279,7 @@ struct BundleStatsInvalidationWalk {
     root_element: Option<u64>,
     kind: Option<String>,
     source: Option<String>,
+    detail: Option<String>,
     walked_nodes: u32,
     truncated_at: Option<u64>,
     root_role: Option<String>,
@@ -1233,9 +1287,58 @@ struct BundleStatsInvalidationWalk {
 }
 
 #[derive(Debug, Default, Clone)]
+struct BundleStatsCacheRoot {
+    root_node: u64,
+    element: Option<u64>,
+    reused: bool,
+    contained_layout: bool,
+    paint_replayed_ops: u32,
+    reuse_reason: Option<String>,
+    root_role: Option<String>,
+    root_test_id: Option<String>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct BundleStatsLayoutEngineSolve {
+    root_node: u64,
+    solve_time_us: u64,
+    measure_calls: u64,
+    measure_cache_hits: u64,
+    measure_time_us: u64,
+    top_measures: Vec<BundleStatsLayoutEngineMeasureHotspot>,
+    root_role: Option<String>,
+    root_test_id: Option<String>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct BundleStatsLayoutEngineMeasureHotspot {
+    node: u64,
+    measure_time_us: u64,
+    calls: u64,
+    cache_hits: u64,
+    element: Option<u64>,
+    element_kind: Option<String>,
+    top_children: Vec<BundleStatsLayoutEngineMeasureChildHotspot>,
+    role: Option<String>,
+    test_id: Option<String>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct BundleStatsLayoutEngineMeasureChildHotspot {
+    child: u64,
+    measure_time_us: u64,
+    calls: u64,
+    element: Option<u64>,
+    element_kind: Option<String>,
+    role: Option<String>,
+    test_id: Option<String>,
+}
+
+#[derive(Debug, Default, Clone)]
 struct BundleStatsModelChangeHotspot {
     model: u64,
     observation_edges: u32,
+    changed_at: Option<String>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -1243,6 +1346,32 @@ struct BundleStatsModelChangeUnobserved {
     model: u64,
     created_type: Option<String>,
     created_at: Option<String>,
+    changed_at: Option<String>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct BundleStatsGlobalChangeHotspot {
+    type_name: String,
+    observation_edges: u32,
+    changed_at: Option<String>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct BundleStatsGlobalChangeUnobserved {
+    type_name: String,
+    changed_at: Option<String>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct BundleStatsGlobalTypeHotspot {
+    type_name: String,
+    count: u64,
+}
+
+#[derive(Debug, Default, Clone)]
+struct BundleStatsModelSourceHotspot {
+    source: String,
+    count: u64,
 }
 
 impl BundleStatsReport {
@@ -1267,6 +1396,10 @@ impl BundleStatsReport {
             self.max_total_time_us, self.max_layout_time_us, self.max_paint_time_us
         );
         println!(
+            "cache roots sum: roots={} reused={} replayed_ops={}",
+            self.sum_cache_roots, self.sum_cache_roots_reused, self.sum_cache_replayed_ops
+        );
+        println!(
             "invalidation sum: calls={} nodes={}",
             self.sum_invalidation_walk_calls, self.sum_invalidation_walk_nodes
         );
@@ -1283,6 +1416,23 @@ impl BundleStatsReport {
             self.max_model_change_invalidation_roots, self.max_global_change_invalidation_roots
         );
 
+        if !self.global_type_hotspots.is_empty() {
+            let items: Vec<String> = self
+                .global_type_hotspots
+                .iter()
+                .map(|h| format!("{}={}", h.type_name, h.count))
+                .collect();
+            println!("changed_globals_top: {}", items.join(" | "));
+        }
+        if !self.model_source_hotspots.is_empty() {
+            let items: Vec<String> = self
+                .model_source_hotspots
+                .iter()
+                .map(|h| format!("{}={}", h.source, h.count))
+                .collect();
+            println!("changed_models_top: {}", items.join(" | "));
+        }
+
         if self.top.is_empty() {
             return;
         }
@@ -1294,7 +1444,7 @@ impl BundleStatsReport {
                 .map(|v| v.to_string())
                 .unwrap_or_else(|| "-".to_string());
             println!(
-                "  window={} tick={} frame={} ts={} time.us(total/layout/paint)={}/{}/{} layout.solve_us={} paint.cache_misses={} layout.nodes={} paint.nodes={} inv.calls={} inv.nodes={} by_src.calls(hover/focus/other)={}/{}/{} by_src.nodes(hover/focus/other)={}/{}/{} roots.model={} roots.global={} changed.models={} changed.globals={} propagated.models={} propagated.edges={} unobs.models={} propagated.globals={} propagated.global_edges={} unobs.globals={}",
+                "  window={} tick={} frame={} ts={} time.us(total/layout/paint)={}/{}/{} layout.solve_us={} paint.cache_misses={} layout.nodes={} paint.nodes={} cache_roots={} cache.reused={} cache.replayed_ops={} inv.calls={} inv.nodes={} by_src.calls(hover/focus/other)={}/{}/{} by_src.nodes(hover/focus/other)={}/{}/{} roots.model={} roots.global={} changed.models={} changed.globals={} propagated.models={} propagated.edges={} unobs.models={} propagated.globals={} propagated.global_edges={} unobs.globals={}",
                 row.window,
                 row.tick_id,
                 row.frame_id,
@@ -1306,6 +1456,9 @@ impl BundleStatsReport {
                 row.paint_cache_misses,
                 row.layout_nodes_performed,
                 row.paint_nodes_performed,
+                row.cache_roots,
+                row.cache_roots_reused,
+                row.cache_replayed_ops,
                 row.invalidation_walk_calls,
                 row.invalidation_walk_nodes,
                 row.invalidation_walk_calls_hover,
@@ -1338,6 +1491,11 @@ impl BundleStatsReport {
                             w.kind.as_deref().unwrap_or("?"),
                             w.root_node
                         );
+                        if let Some(detail) = w.detail.as_deref()
+                            && !detail.is_empty()
+                        {
+                            s.push_str(&format!(" detail={detail}"));
+                        }
                         if let Some(test_id) = w.root_test_id.as_deref()
                             && !test_id.is_empty()
                         {
@@ -1359,12 +1517,130 @@ impl BundleStatsReport {
                     .collect();
                 println!("    top_walks: {}", items.join(" | "));
             }
+            if !row.top_cache_roots.is_empty() {
+                let items: Vec<String> = row
+                    .top_cache_roots
+                    .iter()
+                    .take(3)
+                    .map(|c| {
+                        let mut s = format!(
+                            "ops={} reused={} root={} reason={}",
+                            c.paint_replayed_ops,
+                            c.reused,
+                            c.root_node,
+                            c.reuse_reason.as_deref().unwrap_or("?")
+                        );
+                        if let Some(test_id) = c.root_test_id.as_deref()
+                            && !test_id.is_empty()
+                        {
+                            s.push_str(&format!(" test_id={test_id}"));
+                        }
+                        if let Some(role) = c.root_role.as_deref()
+                            && !role.is_empty()
+                        {
+                            s.push_str(&format!(" role={role}"));
+                        }
+                        if let Some(el) = c.element {
+                            s.push_str(&format!(" element={el}"));
+                        }
+                        s
+                    })
+                    .collect();
+                println!("    top_cache_roots: {}", items.join(" | "));
+            }
+            if !row.top_layout_engine_solves.is_empty() {
+                let items: Vec<String> = row
+                    .top_layout_engine_solves
+                    .iter()
+                    .take(3)
+                    .map(|s| {
+                        let mut out = format!(
+                            "us={} measure.us={} measure.calls={} hits={} root={}",
+                            s.solve_time_us,
+                            s.measure_time_us,
+                            s.measure_calls,
+                            s.measure_cache_hits,
+                            s.root_node
+                        );
+                        if let Some(test_id) = s.root_test_id.as_deref()
+                            && !test_id.is_empty()
+                        {
+                            out.push_str(&format!(" test_id={test_id}"));
+                        }
+                        if let Some(role) = s.root_role.as_deref()
+                            && !role.is_empty()
+                        {
+                            out.push_str(&format!(" role={role}"));
+                        }
+                        if let Some(m) = s.top_measures.first() {
+                            if m.measure_time_us > 0 && m.node != 0 {
+                                out.push_str(&format!(
+                                    " top_measure.us={} node={}",
+                                    m.measure_time_us, m.node
+                                ));
+                                if let Some(kind) = m.element_kind.as_deref()
+                                    && !kind.is_empty()
+                                {
+                                    out.push_str(&format!(" kind={kind}"));
+                                }
+                                if let Some(el) = m.element {
+                                    out.push_str(&format!(" element={el}"));
+                                }
+                                if let Some(test_id) = m.test_id.as_deref()
+                                    && !test_id.is_empty()
+                                {
+                                    out.push_str(&format!(" test_id={test_id}"));
+                                }
+                                if let Some(role) = m.role.as_deref()
+                                    && !role.is_empty()
+                                {
+                                    out.push_str(&format!(" role={role}"));
+                                }
+                                if let Some(c) = m.top_children.first() {
+                                    if c.measure_time_us > 0 && c.child != 0 {
+                                        out.push_str(&format!(
+                                            " child.us={} child={}",
+                                            c.measure_time_us, c.child
+                                        ));
+                                        if let Some(kind) = c.element_kind.as_deref()
+                                            && !kind.is_empty()
+                                        {
+                                            out.push_str(&format!(" child.kind={kind}"));
+                                        }
+                                        if let Some(el) = c.element {
+                                            out.push_str(&format!(" child.element={el}"));
+                                        }
+                                        if let Some(test_id) = c.test_id.as_deref()
+                                            && !test_id.is_empty()
+                                        {
+                                            out.push_str(&format!(" child.test_id={test_id}"));
+                                        }
+                                        if let Some(role) = c.role.as_deref()
+                                            && !role.is_empty()
+                                        {
+                                            out.push_str(&format!(" child.role={role}"));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        out
+                    })
+                    .collect();
+                println!("    top_layout_engine_solves: {}", items.join(" | "));
+            }
             if !row.model_change_hotspots.is_empty() {
                 let items: Vec<String> = row
                     .model_change_hotspots
                     .iter()
                     .take(3)
-                    .map(|h| format!("{}={}", h.model, h.observation_edges))
+                    .map(|h| {
+                        let mut s = format!("{}={}", h.model, h.observation_edges);
+                        if let Some(at) = h.changed_at.as_deref() {
+                            s.push_str(&format!("@{}", at));
+                        }
+                        s
+                    })
                     .collect();
                 println!("    hot_models: {}", items.join(" | "));
             }
@@ -1381,10 +1657,49 @@ impl BundleStatsReport {
                         if let Some(at) = u.created_at.as_deref() {
                             s.push_str(&format!("@{}", at));
                         }
+                        if let Some(at) = u.changed_at.as_deref() {
+                            s.push_str(&format!(" changed@{}", at));
+                        }
                         s
                     })
                     .collect();
                 println!("    unobs_models: {}", items.join(" | "));
+            }
+            if !row.global_change_hotspots.is_empty() {
+                let items: Vec<String> = row
+                    .global_change_hotspots
+                    .iter()
+                    .take(3)
+                    .map(|h| {
+                        let mut s = format!("{}={}", h.type_name, h.observation_edges);
+                        if let Some(at) = h.changed_at.as_deref() {
+                            s.push_str(&format!("@{}", at));
+                        }
+                        s
+                    })
+                    .collect();
+                println!("    hot_globals: {}", items.join(" | "));
+            }
+            if !row.global_change_unobserved.is_empty() {
+                let items: Vec<String> = row
+                    .global_change_unobserved
+                    .iter()
+                    .take(3)
+                    .map(|u| {
+                        let mut s = u.type_name.clone();
+                        if let Some(at) = u.changed_at.as_deref() {
+                            s.push_str(&format!("@{}", at));
+                        }
+                        s
+                    })
+                    .collect();
+                println!("    unobs_globals: {}", items.join(" | "));
+            }
+            if !row.changed_global_types_sample.is_empty() {
+                println!(
+                    "    changed_globals: {}",
+                    row.changed_global_types_sample.join(" | ")
+                );
             }
         }
     }
@@ -1426,6 +1741,15 @@ impl BundleStatsReport {
         sum.insert(
             "total_time_us".to_string(),
             Value::from(self.sum_total_time_us),
+        );
+        sum.insert("cache_roots".to_string(), Value::from(self.sum_cache_roots));
+        sum.insert(
+            "cache_roots_reused".to_string(),
+            Value::from(self.sum_cache_roots_reused),
+        );
+        sum.insert(
+            "cache_replayed_ops".to_string(),
+            Value::from(self.sum_cache_replayed_ops),
         );
         sum.insert(
             "invalidation_walk_calls".to_string(),
@@ -1476,6 +1800,35 @@ impl BundleStatsReport {
         );
         root.insert("max".to_string(), Value::Object(max));
 
+        let global_type_hotspots = self
+            .global_type_hotspots
+            .iter()
+            .map(|h| {
+                let mut obj = Map::new();
+                obj.insert("type_name".to_string(), Value::from(h.type_name.clone()));
+                obj.insert("count".to_string(), Value::from(h.count));
+                Value::Object(obj)
+            })
+            .collect::<Vec<_>>();
+        root.insert(
+            "global_type_hotspots".to_string(),
+            Value::Array(global_type_hotspots),
+        );
+        let model_source_hotspots = self
+            .model_source_hotspots
+            .iter()
+            .map(|h| {
+                let mut obj = Map::new();
+                obj.insert("source".to_string(), Value::from(h.source.clone()));
+                obj.insert("count".to_string(), Value::from(h.count));
+                Value::Object(obj)
+            })
+            .collect::<Vec<_>>();
+        root.insert(
+            "model_source_hotspots".to_string(),
+            Value::Array(model_source_hotspots),
+        );
+
         let top = self
             .top
             .iter()
@@ -1516,6 +1869,15 @@ impl BundleStatsReport {
                     "layout_engine_solve_time_us".to_string(),
                     Value::from(row.layout_engine_solve_time_us),
                 );
+                obj.insert("cache_roots".to_string(), Value::from(row.cache_roots));
+                obj.insert(
+                    "cache_roots_reused".to_string(),
+                    Value::from(row.cache_roots_reused),
+                );
+                obj.insert(
+                    "cache_replayed_ops".to_string(),
+                    Value::from(row.cache_replayed_ops),
+                );
                 obj.insert(
                     "changed_models".to_string(),
                     Value::from(row.changed_models),
@@ -1523,6 +1885,16 @@ impl BundleStatsReport {
                 obj.insert(
                     "changed_globals".to_string(),
                     Value::from(row.changed_globals),
+                );
+                obj.insert(
+                    "changed_global_types_sample".to_string(),
+                    Value::Array(
+                        row.changed_global_types_sample
+                            .iter()
+                            .cloned()
+                            .map(Value::from)
+                            .collect(),
+                    ),
                 );
                 obj.insert(
                     "propagated_model_change_models".to_string(),
@@ -1623,6 +1995,10 @@ impl BundleStatsReport {
                             "source".to_string(),
                             w.source.clone().map(Value::from).unwrap_or(Value::Null),
                         );
+                        w_obj.insert(
+                            "detail".to_string(),
+                            w.detail.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
                         w_obj.insert("walked_nodes".to_string(), Value::from(w.walked_nodes));
                         w_obj.insert(
                             "truncated_at".to_string(),
@@ -1645,6 +2021,156 @@ impl BundleStatsReport {
                 obj.insert(
                     "top_invalidation_walks".to_string(),
                     Value::Array(top_invalidation_walks),
+                );
+
+                let top_cache_roots = row
+                    .top_cache_roots
+                    .iter()
+                    .map(|c| {
+                        let mut c_obj = Map::new();
+                        c_obj.insert("root_node".to_string(), Value::from(c.root_node));
+                        c_obj.insert(
+                            "element".to_string(),
+                            c.element.map(Value::from).unwrap_or(Value::Null),
+                        );
+                        c_obj.insert("reused".to_string(), Value::from(c.reused));
+                        c_obj.insert(
+                            "contained_layout".to_string(),
+                            Value::from(c.contained_layout),
+                        );
+                        c_obj.insert(
+                            "paint_replayed_ops".to_string(),
+                            Value::from(c.paint_replayed_ops),
+                        );
+                        c_obj.insert(
+                            "reuse_reason".to_string(),
+                            c.reuse_reason
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        c_obj.insert(
+                            "root_role".to_string(),
+                            c.root_role.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        c_obj.insert(
+                            "root_test_id".to_string(),
+                            c.root_test_id
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        Value::Object(c_obj)
+                    })
+                    .collect::<Vec<_>>();
+                obj.insert("top_cache_roots".to_string(), Value::Array(top_cache_roots));
+
+                let top_layout_engine_solves = row
+                    .top_layout_engine_solves
+                    .iter()
+                    .map(|s| {
+                        let mut s_obj = Map::new();
+                        s_obj.insert("root_node".to_string(), Value::from(s.root_node));
+                        s_obj.insert("solve_time_us".to_string(), Value::from(s.solve_time_us));
+                        s_obj.insert("measure_calls".to_string(), Value::from(s.measure_calls));
+                        s_obj.insert(
+                            "measure_cache_hits".to_string(),
+                            Value::from(s.measure_cache_hits),
+                        );
+                        s_obj.insert(
+                            "measure_time_us".to_string(),
+                            Value::from(s.measure_time_us),
+                        );
+                        let top_measures = s
+                            .top_measures
+                            .iter()
+                            .map(|m| {
+                                let mut m_obj = Map::new();
+                                m_obj.insert("node".to_string(), Value::from(m.node));
+                                m_obj.insert(
+                                    "measure_time_us".to_string(),
+                                    Value::from(m.measure_time_us),
+                                );
+                                m_obj.insert("calls".to_string(), Value::from(m.calls));
+                                m_obj.insert("cache_hits".to_string(), Value::from(m.cache_hits));
+                                m_obj.insert(
+                                    "element".to_string(),
+                                    m.element.map(Value::from).unwrap_or(Value::Null),
+                                );
+                                m_obj.insert(
+                                    "element_kind".to_string(),
+                                    m.element_kind
+                                        .clone()
+                                        .map(Value::from)
+                                        .unwrap_or(Value::Null),
+                                );
+                                m_obj.insert(
+                                    "role".to_string(),
+                                    m.role.clone().map(Value::from).unwrap_or(Value::Null),
+                                );
+                                m_obj.insert(
+                                    "test_id".to_string(),
+                                    m.test_id.clone().map(Value::from).unwrap_or(Value::Null),
+                                );
+                                let top_children = m
+                                    .top_children
+                                    .iter()
+                                    .map(|c| {
+                                        let mut c_obj = Map::new();
+                                        c_obj.insert("child".to_string(), Value::from(c.child));
+                                        c_obj.insert(
+                                            "measure_time_us".to_string(),
+                                            Value::from(c.measure_time_us),
+                                        );
+                                        c_obj.insert("calls".to_string(), Value::from(c.calls));
+                                        c_obj.insert(
+                                            "element".to_string(),
+                                            c.element.map(Value::from).unwrap_or(Value::Null),
+                                        );
+                                        c_obj.insert(
+                                            "element_kind".to_string(),
+                                            c.element_kind
+                                                .clone()
+                                                .map(Value::from)
+                                                .unwrap_or(Value::Null),
+                                        );
+                                        c_obj.insert(
+                                            "role".to_string(),
+                                            c.role.clone().map(Value::from).unwrap_or(Value::Null),
+                                        );
+                                        c_obj.insert(
+                                            "test_id".to_string(),
+                                            c.test_id
+                                                .clone()
+                                                .map(Value::from)
+                                                .unwrap_or(Value::Null),
+                                        );
+                                        Value::Object(c_obj)
+                                    })
+                                    .collect::<Vec<_>>();
+                                m_obj
+                                    .insert("top_children".to_string(), Value::Array(top_children));
+                                Value::Object(m_obj)
+                            })
+                            .collect::<Vec<_>>();
+                        s_obj.insert("top_measures".to_string(), Value::Array(top_measures));
+                        s_obj.insert(
+                            "root_role".to_string(),
+                            s.root_role.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        s_obj.insert(
+                            "root_test_id".to_string(),
+                            s.root_test_id
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        Value::Object(s_obj)
+                    })
+                    .collect::<Vec<_>>();
+                obj.insert(
+                    "top_layout_engine_solves".to_string(),
+                    Value::Array(top_layout_engine_solves),
                 );
 
                 let model_change_hotspots = row
@@ -1690,6 +2216,46 @@ impl BundleStatsReport {
                     Value::Array(model_change_unobserved),
                 );
 
+                let global_change_hotspots = row
+                    .global_change_hotspots
+                    .iter()
+                    .map(|h| {
+                        let mut h_obj = Map::new();
+                        h_obj.insert("type_name".to_string(), Value::from(h.type_name.clone()));
+                        h_obj.insert(
+                            "observation_edges".to_string(),
+                            Value::from(h.observation_edges),
+                        );
+                        h_obj.insert(
+                            "changed_at".to_string(),
+                            h.changed_at.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        Value::Object(h_obj)
+                    })
+                    .collect::<Vec<_>>();
+                obj.insert(
+                    "global_change_hotspots".to_string(),
+                    Value::Array(global_change_hotspots),
+                );
+
+                let global_change_unobserved = row
+                    .global_change_unobserved
+                    .iter()
+                    .map(|u| {
+                        let mut u_obj = Map::new();
+                        u_obj.insert("type_name".to_string(), Value::from(u.type_name.clone()));
+                        u_obj.insert(
+                            "changed_at".to_string(),
+                            u.changed_at.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        Value::Object(u_obj)
+                    })
+                    .collect::<Vec<_>>();
+                obj.insert(
+                    "global_change_unobserved".to_string(),
+                    Value::Array(global_change_unobserved),
+                );
+
                 Value::Object(obj)
             })
             .collect::<Vec<_>>();
@@ -1724,6 +2290,10 @@ fn bundle_stats_from_json(
     out.windows = windows.len().min(u32::MAX as usize) as u32;
 
     let mut rows: Vec<BundleStatsSnapshotRow> = Vec::new();
+    let mut global_type_counts: std::collections::HashMap<String, u64> =
+        std::collections::HashMap::new();
+    let mut model_source_counts: std::collections::HashMap<String, u64> =
+        std::collections::HashMap::new();
     for w in windows {
         let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
         let snaps = w
@@ -1739,12 +2309,48 @@ fn bundle_stats_from_json(
                 .map(|v| v.len())
                 .unwrap_or(0)
                 .min(u32::MAX as usize) as u32;
-            let changed_globals = s
+            let changed_globals_arr = s
                 .get("changed_globals")
                 .and_then(|v| v.as_array())
-                .map(|v| v.len())
-                .unwrap_or(0)
-                .min(u32::MAX as usize) as u32;
+                .map(|v| v.as_slice())
+                .unwrap_or(&[]);
+            let changed_globals = changed_globals_arr.len().min(u32::MAX as usize) as u32;
+            let mut changed_global_types_sample: Vec<String> = Vec::new();
+            for (idx, g) in changed_globals_arr.iter().enumerate() {
+                let Some(ty) = g.as_str() else {
+                    continue;
+                };
+                *global_type_counts.entry(ty.to_string()).or_insert(0) += 1;
+                if idx < 6 {
+                    changed_global_types_sample.push(ty.to_string());
+                }
+            }
+
+            if let Some(arr) = s
+                .get("changed_model_sources_top")
+                .and_then(|v| v.as_array())
+            {
+                for item in arr {
+                    let Some(type_name) = item.get("type_name").and_then(|v| v.as_str()) else {
+                        continue;
+                    };
+                    let Some(at) = item.get("changed_at").and_then(|v| v.as_object()) else {
+                        continue;
+                    };
+                    let Some(file) = at.get("file").and_then(|v| v.as_str()) else {
+                        continue;
+                    };
+                    let Some(line) = at.get("line").and_then(|v| v.as_u64()) else {
+                        continue;
+                    };
+                    let Some(column) = at.get("column").and_then(|v| v.as_u64()) else {
+                        continue;
+                    };
+                    let count = item.get("count").and_then(|v| v.as_u64()).unwrap_or(0);
+                    let key = format!("{}@{}:{}:{}", type_name, file, line, column);
+                    *model_source_counts.entry(key).or_insert(0) += count;
+                }
+            }
 
             if changed_models > 0 {
                 out.snapshots_with_model_changes =
@@ -1913,12 +2519,24 @@ fn bundle_stats_from_json(
                 .min(u32::MAX as u64) as u32;
 
             let top_invalidation_walks = snapshot_top_invalidation_walks(s, 3);
+            let (cache_roots, cache_roots_reused, cache_replayed_ops, top_cache_roots) =
+                snapshot_cache_root_stats(s, 3);
+            let top_layout_engine_solves = snapshot_layout_engine_solves(s, 3);
             let model_change_hotspots = snapshot_model_change_hotspots(s, 3);
             let model_change_unobserved = snapshot_model_change_unobserved(s, 3);
+            let global_change_hotspots = snapshot_global_change_hotspots(s, 3);
+            let global_change_unobserved = snapshot_global_change_unobserved(s, 3);
 
             out.sum_layout_time_us = out.sum_layout_time_us.saturating_add(layout_time_us);
             out.sum_paint_time_us = out.sum_paint_time_us.saturating_add(paint_time_us);
             out.sum_total_time_us = out.sum_total_time_us.saturating_add(total_time_us);
+            out.sum_cache_roots = out.sum_cache_roots.saturating_add(cache_roots as u64);
+            out.sum_cache_roots_reused = out
+                .sum_cache_roots_reused
+                .saturating_add(cache_roots_reused as u64);
+            out.sum_cache_replayed_ops = out
+                .sum_cache_replayed_ops
+                .saturating_add(cache_replayed_ops);
             out.sum_invalidation_walk_calls = out
                 .sum_invalidation_walk_calls
                 .saturating_add(invalidation_walk_calls as u64);
@@ -1961,6 +2579,7 @@ fn bundle_stats_from_json(
                 layout_engine_solve_time_us,
                 changed_models,
                 changed_globals,
+                changed_global_types_sample,
                 propagated_model_change_models,
                 propagated_model_change_observation_edges,
                 propagated_model_change_unobserved_models,
@@ -1982,8 +2601,15 @@ fn bundle_stats_from_json(
                 invalidation_walk_calls_other,
                 invalidation_walk_nodes_other,
                 top_invalidation_walks,
+                cache_roots,
+                cache_roots_reused,
+                cache_replayed_ops,
+                top_cache_roots,
+                top_layout_engine_solves,
                 model_change_hotspots,
                 model_change_unobserved,
+                global_change_hotspots,
+                global_change_unobserved,
             });
         }
     }
@@ -2015,6 +2641,26 @@ fn bundle_stats_from_json(
             });
         }
     }
+    let mut hotspots: Vec<BundleStatsGlobalTypeHotspot> = global_type_counts
+        .into_iter()
+        .map(|(type_name, count)| BundleStatsGlobalTypeHotspot { type_name, count })
+        .collect();
+    hotspots.sort_by(|a, b| {
+        b.count
+            .cmp(&a.count)
+            .then_with(|| a.type_name.cmp(&b.type_name))
+    });
+    hotspots.truncate(top);
+    out.global_type_hotspots = hotspots;
+
+    let mut model_hotspots: Vec<BundleStatsModelSourceHotspot> = model_source_counts
+        .into_iter()
+        .map(|(source, count)| BundleStatsModelSourceHotspot { source, count })
+        .collect();
+    model_hotspots.sort_by(|a, b| b.count.cmp(&a.count).then_with(|| a.source.cmp(&b.source)));
+    model_hotspots.truncate(top);
+    out.model_source_hotspots = model_hotspots;
+
     out.top = rows.into_iter().take(top).collect();
     Ok(out)
 }
@@ -2046,6 +2692,10 @@ fn snapshot_top_invalidation_walks(
                 .get("source")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string()),
+            detail: w
+                .get("detail")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
             walked_nodes: w
                 .get("walked_nodes")
                 .and_then(|v| v.as_u64())
@@ -2064,6 +2714,186 @@ fn snapshot_top_invalidation_walks(
         let (role, test_id) = snapshot_lookup_semantics(snapshot, walk.root_node);
         walk.root_role = role;
         walk.root_test_id = test_id;
+    }
+
+    out
+}
+
+fn snapshot_cache_root_stats(
+    snapshot: &serde_json::Value,
+    max: usize,
+) -> (u32, u32, u64, Vec<BundleStatsCacheRoot>) {
+    let roots = snapshot
+        .get("debug")
+        .and_then(|v| v.get("cache_roots"))
+        .and_then(|v| v.as_array())
+        .map(|v| v.as_slice())
+        .unwrap_or(&[]);
+
+    if roots.is_empty() {
+        return (0, 0, 0, Vec::new());
+    }
+
+    let mut reused: u32 = 0;
+    let mut replayed_ops_sum: u64 = 0;
+
+    let mut out: Vec<BundleStatsCacheRoot> = roots
+        .iter()
+        .map(|r| {
+            let root_node = r.get("root").and_then(|v| v.as_u64()).unwrap_or(0);
+            let paint_replayed_ops = r
+                .get("paint_replayed_ops")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let reused_flag = r.get("reused").and_then(|v| v.as_bool()).unwrap_or(false);
+            if reused_flag {
+                reused = reused.saturating_add(1);
+            }
+            replayed_ops_sum = replayed_ops_sum.saturating_add(paint_replayed_ops as u64);
+
+            let (role, test_id) = snapshot_lookup_semantics(snapshot, root_node);
+            BundleStatsCacheRoot {
+                root_node,
+                element: r.get("element").and_then(|v| v.as_u64()),
+                reused: reused_flag,
+                contained_layout: r
+                    .get("contained_layout")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false),
+                paint_replayed_ops,
+                reuse_reason: r
+                    .get("reuse_reason")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                root_role: role,
+                root_test_id: test_id,
+            }
+        })
+        .collect();
+
+    out.sort_by(|a, b| b.paint_replayed_ops.cmp(&a.paint_replayed_ops));
+    out.truncate(max);
+
+    (
+        roots.len().min(u32::MAX as usize) as u32,
+        reused,
+        replayed_ops_sum,
+        out,
+    )
+}
+
+fn snapshot_layout_engine_solves(
+    snapshot: &serde_json::Value,
+    max: usize,
+) -> Vec<BundleStatsLayoutEngineSolve> {
+    let solves = snapshot
+        .get("debug")
+        .and_then(|v| v.get("layout_engine_solves"))
+        .and_then(|v| v.as_array())
+        .map(|v| v.as_slice())
+        .unwrap_or(&[]);
+
+    if solves.is_empty() {
+        return Vec::new();
+    }
+
+    let mut out: Vec<BundleStatsLayoutEngineSolve> = solves
+        .iter()
+        .map(|s| {
+            let top_measures = s
+                .get("top_measures")
+                .and_then(|v| v.as_array())
+                .map(|v| v.as_slice())
+                .unwrap_or(&[]);
+            let mut top_measures: Vec<BundleStatsLayoutEngineMeasureHotspot> = top_measures
+                .iter()
+                .take(3)
+                .map(|m| {
+                    let children = m
+                        .get("top_children")
+                        .and_then(|v| v.as_array())
+                        .map(|v| v.as_slice())
+                        .unwrap_or(&[]);
+                    let mut top_children: Vec<BundleStatsLayoutEngineMeasureChildHotspot> =
+                        children
+                            .iter()
+                            .take(3)
+                            .map(|c| BundleStatsLayoutEngineMeasureChildHotspot {
+                                child: c.get("child").and_then(|v| v.as_u64()).unwrap_or(0),
+                                measure_time_us: c
+                                    .get("measure_time_us")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                                calls: c.get("calls").and_then(|v| v.as_u64()).unwrap_or(0),
+                                element: c.get("element").and_then(|v| v.as_u64()),
+                                element_kind: c
+                                    .get("element_kind")
+                                    .and_then(|v| v.as_str())
+                                    .map(|s| s.to_string()),
+                                role: None,
+                                test_id: None,
+                            })
+                            .collect();
+
+                    for item in &mut top_children {
+                        let (role, test_id) = snapshot_lookup_semantics(snapshot, item.child);
+                        item.role = role;
+                        item.test_id = test_id;
+                    }
+
+                    BundleStatsLayoutEngineMeasureHotspot {
+                        node: m.get("node").and_then(|v| v.as_u64()).unwrap_or(0),
+                        measure_time_us: m
+                            .get("measure_time_us")
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(0),
+                        calls: m.get("calls").and_then(|v| v.as_u64()).unwrap_or(0),
+                        cache_hits: m.get("cache_hits").and_then(|v| v.as_u64()).unwrap_or(0),
+                        element: m.get("element").and_then(|v| v.as_u64()),
+                        element_kind: m
+                            .get("element_kind")
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.to_string()),
+                        top_children,
+                        role: None,
+                        test_id: None,
+                    }
+                })
+                .collect();
+
+            for item in &mut top_measures {
+                let (role, test_id) = snapshot_lookup_semantics(snapshot, item.node);
+                item.role = role;
+                item.test_id = test_id;
+            }
+
+            BundleStatsLayoutEngineSolve {
+                root_node: s.get("root_node").and_then(|v| v.as_u64()).unwrap_or(0),
+                solve_time_us: s.get("solve_time_us").and_then(|v| v.as_u64()).unwrap_or(0),
+                measure_calls: s.get("measure_calls").and_then(|v| v.as_u64()).unwrap_or(0),
+                measure_cache_hits: s
+                    .get("measure_cache_hits")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0),
+                measure_time_us: s
+                    .get("measure_time_us")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0),
+                top_measures,
+                root_role: None,
+                root_test_id: None,
+            }
+        })
+        .collect();
+
+    out.sort_by(|a, b| b.solve_time_us.cmp(&a.solve_time_us));
+    out.truncate(max);
+
+    for item in &mut out {
+        let (role, test_id) = snapshot_lookup_semantics(snapshot, item.root_node);
+        item.root_role = role;
+        item.root_test_id = test_id;
     }
 
     out
@@ -2089,6 +2919,15 @@ fn snapshot_model_change_hotspots(
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0)
                 .min(u32::MAX as u64) as u32,
+            changed_at: h
+                .get("changed_at")
+                .and_then(|v| v.as_object())
+                .and_then(|m| {
+                    let file = m.get("file").and_then(|v| v.as_str())?;
+                    let line = m.get("line").and_then(|v| v.as_u64())?;
+                    let column = m.get("column").and_then(|v| v.as_u64())?;
+                    Some(format!("{}:{}:{}", file, line, column))
+                }),
         })
         .collect()
 }
@@ -2114,6 +2953,84 @@ fn snapshot_model_change_unobserved(
                 .map(|s| s.to_string()),
             created_at: u
                 .get("created_at")
+                .and_then(|v| v.as_object())
+                .and_then(|m| {
+                    let file = m.get("file").and_then(|v| v.as_str())?;
+                    let line = m.get("line").and_then(|v| v.as_u64())?;
+                    let column = m.get("column").and_then(|v| v.as_u64())?;
+                    Some(format!("{}:{}:{}", file, line, column))
+                }),
+            changed_at: u
+                .get("changed_at")
+                .and_then(|v| v.as_object())
+                .and_then(|m| {
+                    let file = m.get("file").and_then(|v| v.as_str())?;
+                    let line = m.get("line").and_then(|v| v.as_u64())?;
+                    let column = m.get("column").and_then(|v| v.as_u64())?;
+                    Some(format!("{}:{}:{}", file, line, column))
+                }),
+        })
+        .collect()
+}
+
+fn snapshot_global_change_hotspots(
+    snapshot: &serde_json::Value,
+    max: usize,
+) -> Vec<BundleStatsGlobalChangeHotspot> {
+    let hotspots = snapshot
+        .get("debug")
+        .and_then(|v| v.get("global_change_hotspots"))
+        .and_then(|v| v.as_array())
+        .map_or(&[][..], |v| v);
+
+    hotspots
+        .iter()
+        .take(max)
+        .map(|h| BundleStatsGlobalChangeHotspot {
+            type_name: h
+                .get("type_name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("?")
+                .to_string(),
+            observation_edges: h
+                .get("observation_edges")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32,
+            changed_at: h
+                .get("changed_at")
+                .and_then(|v| v.as_object())
+                .and_then(|m| {
+                    let file = m.get("file").and_then(|v| v.as_str())?;
+                    let line = m.get("line").and_then(|v| v.as_u64())?;
+                    let column = m.get("column").and_then(|v| v.as_u64())?;
+                    Some(format!("{}:{}:{}", file, line, column))
+                }),
+        })
+        .collect()
+}
+
+fn snapshot_global_change_unobserved(
+    snapshot: &serde_json::Value,
+    max: usize,
+) -> Vec<BundleStatsGlobalChangeUnobserved> {
+    let unobserved = snapshot
+        .get("debug")
+        .and_then(|v| v.get("global_change_unobserved"))
+        .and_then(|v| v.as_array())
+        .map_or(&[][..], |v| v);
+
+    unobserved
+        .iter()
+        .take(max)
+        .map(|u| BundleStatsGlobalChangeUnobserved {
+            type_name: u
+                .get("type_name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("?")
+                .to_string(),
+            changed_at: u
+                .get("changed_at")
                 .and_then(|v| v.as_object())
                 .and_then(|m| {
                     let file = m.get("file").and_then(|v| v.as_str())?;
