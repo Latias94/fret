@@ -252,8 +252,8 @@ Typical pattern:
 
 For overlay anchoring and transformed widgets, always distinguish:
 
-- layout bounds: `bounds_for_element(...)`
-- visual bounds (post-transform AABB): `visual_bounds_for_element(...)`
+- layout bounds (most recently recorded): `bounds_for_element(...)`
+- visual bounds (post-transform AABB, most recently recorded): `visual_bounds_for_element(...)`
 
 Reference tests (anchored overlays): `crates/fret-ui/src/declarative/tests/anchored.rs`.
 

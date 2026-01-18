@@ -35,6 +35,44 @@ pub(crate) fn layout_children_from_engine_if_solved<H: UiHost>(
     Some(cx.available)
 }
 
+fn apply_container_insets(style: &mut Style, props: &crate::element::ContainerProps, sf: f32) {
+    fn adjust_border_box_dimension(dim: &mut Dimension, inset: f32) {
+        let length_tag = Dimension::length(0.0).tag();
+        if dim.tag() != length_tag {
+            return;
+        }
+        let value = dim.value();
+        *dim = Dimension::length((value - inset).max(0.0));
+    }
+
+    style.padding = TaffyRect {
+        left: LengthPercentage::length(scale_nonneg_px(props.padding.left, sf)),
+        right: LengthPercentage::length(scale_nonneg_px(props.padding.right, sf)),
+        top: LengthPercentage::length(scale_nonneg_px(props.padding.top, sf)),
+        bottom: LengthPercentage::length(scale_nonneg_px(props.padding.bottom, sf)),
+    };
+    style.border = TaffyRect {
+        left: LengthPercentage::length(scale_nonneg_px(props.border.left, sf)),
+        right: LengthPercentage::length(scale_nonneg_px(props.border.right, sf)),
+        top: LengthPercentage::length(scale_nonneg_px(props.border.top, sf)),
+        bottom: LengthPercentage::length(scale_nonneg_px(props.border.bottom, sf)),
+    };
+
+    // Tailwind preflight uses `box-sizing: border-box`, meaning `width`/`min-width`/etc are
+    // specified on the border box. Taffy applies padding/border outside of the content box, so we
+    // subtract insets here to keep border-box sizing consistent with shadcn-web geometry.
+    // Taffy models padding as part of the resolved box size, but border is applied outside of it.
+    // Subtract border thickness from size constraints so `h-*`/`w-*` and `min-*` tokens line up
+    // with Tailwind's `border-box` sizing (padding included; border included).
+    let inset_w = scale_nonneg_px(props.border.left, sf) + scale_nonneg_px(props.border.right, sf);
+    let inset_h = scale_nonneg_px(props.border.top, sf) + scale_nonneg_px(props.border.bottom, sf);
+
+    adjust_border_box_dimension(&mut style.min_size.width, inset_w);
+    adjust_border_box_dimension(&mut style.min_size.height, inset_h);
+    adjust_border_box_dimension(&mut style.max_size.width, inset_w);
+    adjust_border_box_dimension(&mut style.max_size.height, inset_h);
+}
+
 pub(crate) fn build_flow_subtree<H: UiHost>(
     engine: &mut TaffyLayoutEngine,
     app: &mut H,
@@ -219,12 +257,7 @@ fn build_flow_subtree_impl<H: UiHost>(
                 None
             }
         }) {
-            style.padding = TaffyRect {
-                left: LengthPercentage::length(scale_nonneg_px(props.padding.left, sf)),
-                right: LengthPercentage::length(scale_nonneg_px(props.padding.right, sf)),
-                top: LengthPercentage::length(scale_nonneg_px(props.padding.top, sf)),
-                bottom: LengthPercentage::length(scale_nonneg_px(props.padding.bottom, sf)),
-            };
+            apply_container_insets(&mut style, &props, sf);
         }
 
         engine.set_style(node, style);
@@ -278,12 +311,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             );
 
             if let ElementInstance::Container(p) = &instance {
-                style.padding = TaffyRect {
-                    left: LengthPercentage::length(scale_nonneg_px(p.padding.left, sf)),
-                    right: LengthPercentage::length(scale_nonneg_px(p.padding.right, sf)),
-                    top: LengthPercentage::length(scale_nonneg_px(p.padding.top, sf)),
-                    bottom: LengthPercentage::length(scale_nonneg_px(p.padding.bottom, sf)),
-                };
+                apply_container_insets(&mut style, p, sf);
             }
 
             engine.set_style(node, style);
@@ -526,12 +554,7 @@ fn build_flow_subtree_impl<H: UiHost>(
                     None
                 }
             }) {
-                style.padding = TaffyRect {
-                    left: LengthPercentage::length(scale_nonneg_px(props.padding.left, sf)),
-                    right: LengthPercentage::length(scale_nonneg_px(props.padding.right, sf)),
-                    top: LengthPercentage::length(scale_nonneg_px(props.padding.top, sf)),
-                    bottom: LengthPercentage::length(scale_nonneg_px(props.padding.bottom, sf)),
-                };
+                apply_container_insets(&mut style, &props, sf);
             }
 
             let children = tree.children(node).to_vec();

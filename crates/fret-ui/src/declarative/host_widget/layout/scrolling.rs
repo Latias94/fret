@@ -92,12 +92,12 @@ impl ElementHostWidget {
             fret_core::Axis::Vertical => {
                 props
                     .scroll_handle
-                    .set_offset(fret_core::Point::new(prev_offset.x, offset));
+                    .set_offset_internal(fret_core::Point::new(prev_offset.x, offset));
             }
             fret_core::Axis::Horizontal => {
                 props
                     .scroll_handle
-                    .set_offset(fret_core::Point::new(offset, prev_offset.y));
+                    .set_offset_internal(fret_core::Point::new(offset, prev_offset.y));
             }
         }
 
@@ -187,12 +187,12 @@ impl ElementHostWidget {
                             fret_core::Axis::Vertical => {
                                 props
                                     .scroll_handle
-                                    .set_offset(fret_core::Point::new(prev.x, offset));
+                                    .set_offset_internal(fret_core::Point::new(prev.x, offset));
                             }
                             fret_core::Axis::Horizontal => {
                                 props
                                     .scroll_handle
-                                    .set_offset(fret_core::Point::new(offset, prev.y));
+                                    .set_offset_internal(fret_core::Point::new(offset, prev.y));
                             }
                         }
                     }
@@ -230,12 +230,12 @@ impl ElementHostWidget {
             fret_core::Axis::Vertical => {
                 props
                     .scroll_handle
-                    .set_offset(fret_core::Point::new(prev_offset.x, clamped));
+                    .set_offset_internal(fret_core::Point::new(prev_offset.x, clamped));
             }
             fret_core::Axis::Horizontal => {
                 props
                     .scroll_handle
-                    .set_offset(fret_core::Point::new(clamped, prev_offset.y));
+                    .set_offset_internal(fret_core::Point::new(clamped, prev_offset.y));
             }
         }
         offset = clamped;
@@ -375,7 +375,7 @@ impl ElementHostWidget {
                     handle.set_viewport_size(desired);
                     handle.set_content_size(Size::new(content_w, content_h));
                     let prev = handle.offset();
-                    handle.set_offset(prev);
+                    handle.set_offset_internal(prev);
                 }
                 handle
             },

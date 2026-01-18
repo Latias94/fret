@@ -41,6 +41,12 @@ impl ScrollHandle {
         self.state.borrow().offset
     }
 
+    /// Monotonic revision counter that increments when the scroll offset changes via
+    /// [`ScrollHandle::set_offset`] (or helpers that call it).
+    ///
+    /// The declarative runtime uses this to detect out-of-band scroll changes (e.g.
+    /// component-driven "scroll into view") and invalidate the bound scroll nodes, even when the
+    /// element instances themselves did not change.
     pub fn revision(&self) -> u64 {
         self.state.borrow().revision
     }
@@ -69,24 +75,24 @@ impl ScrollHandle {
     }
 
     pub fn set_offset(&self, offset: Point) {
+        let clamped = self.clamp_offset(offset);
         let mut state = self.state.borrow_mut();
-        let clamped = {
-            let max_x = (state.content.width.0 - state.viewport.width.0).max(0.0);
-            let max_y = (state.content.height.0 - state.viewport.height.0).max(0.0);
-            let clamp_x = state.viewport.width.0 > 0.0 && state.content.width.0 > 0.0;
-            let clamp_y = state.viewport.height.0 > 0.0 && state.content.height.0 > 0.0;
-
-            let x = offset.x.0.max(0.0);
-            let y = offset.y.0.max(0.0);
-            Point::new(
-                Px(if clamp_x { x.min(max_x) } else { x }),
-                Px(if clamp_y { y.min(max_y) } else { y }),
-            )
-        };
-        if state.offset != clamped {
-            state.offset = clamped;
-            state.revision = state.revision.saturating_add(1);
+        if (state.offset.x.0 - clamped.x.0).abs() <= 0.01
+            && (state.offset.y.0 - clamped.y.0).abs() <= 0.01
+        {
+            return;
         }
+        state.offset = clamped;
+        state.revision = state.revision.saturating_add(1);
+    }
+
+    /// Internal offset setter used by the runtime during layout passes.
+    ///
+    /// Unlike [`ScrollHandle::set_offset`], this does **not** bump the handle revision because the
+    /// runtime is already invalidating and recomputing layout/paint in the same frame.
+    pub(crate) fn set_offset_internal(&self, offset: Point) {
+        let clamped = self.clamp_offset(offset);
+        self.state.borrow_mut().offset = clamped;
     }
 
     pub fn scroll_to_offset(&self, offset: Point) {

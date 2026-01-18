@@ -1,5 +1,5 @@
 use crate::{
-    SvgFit,
+    Px, SvgFit,
     geometry::{Corners, Edges, Point, Rect, Transform2D},
     ids::{ImageId, PathId, RenderTargetId, SvgId, TextBlobId},
 };
@@ -469,6 +469,40 @@ impl SceneRecording {
     }
 
     pub fn push(&mut self, op: SceneOp) {
+        // Clamp quad corner radii to the local rect size (CSS-style effective border radius).
+        //
+        // Browsers constrain border radii to half the corresponding box dimension. Many shadcn
+        // components use `rounded-full`, which maps to an arbitrarily large radius that becomes
+        // `min(width, height) / 2` in practice. Keeping this normalization at the scene layer makes
+        // renderer backends and scripted tests agree on the effective shape.
+        let op = match op {
+            SceneOp::Quad {
+                order,
+                rect,
+                background,
+                border,
+                border_color,
+                mut corner_radii,
+            } => {
+                let max = rect.size.width.0.min(rect.size.height.0) * 0.5;
+                let max = if max.is_finite() { max.max(0.0) } else { 0.0 };
+                corner_radii.top_left = Px(corner_radii.top_left.0.min(max));
+                corner_radii.top_right = Px(corner_radii.top_right.0.min(max));
+                corner_radii.bottom_left = Px(corner_radii.bottom_left.0.min(max));
+                corner_radii.bottom_right = Px(corner_radii.bottom_right.0.min(max));
+
+                SceneOp::Quad {
+                    order,
+                    rect,
+                    background,
+                    border,
+                    border_color,
+                    corner_radii,
+                }
+            }
+            other => other,
+        };
+
         self.fingerprint = mix_scene_op(self.fingerprint, op);
         self.ops.push(op);
     }

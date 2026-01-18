@@ -163,10 +163,12 @@ impl ElementHostWidget {
 
         match instance {
             ElementInstance::Container(props) => {
-                let pad_left = props.padding.left.0.max(0.0);
-                let pad_right = props.padding.right.0.max(0.0);
-                let pad_top = props.padding.top.0.max(0.0);
-                let pad_bottom = props.padding.bottom.0.max(0.0);
+                // Tailwind/shadcn assume `box-sizing: border-box` by default. Model borders as part
+                // of the container's layout insets so child placement matches web geometry.
+                let pad_left = props.padding.left.0.max(0.0) + props.border.left.0.max(0.0);
+                let pad_right = props.padding.right.0.max(0.0) + props.border.right.0.max(0.0);
+                let pad_top = props.padding.top.0.max(0.0) + props.border.top.0.max(0.0);
+                let pad_bottom = props.padding.bottom.0.max(0.0) + props.border.bottom.0.max(0.0);
                 let pad_w = pad_left + pad_right;
                 let pad_h = pad_top + pad_bottom;
                 if let Some(size) = try_layout_children_from_engine_or_manual_absolute(

@@ -37,7 +37,7 @@ pub fn node_for_element<H: UiHost>(
     with_window_state(app, window, |st| st.node_entry(element).map(|e| e.node))
 }
 
-/// Returns the last frame's bounds for a declarative element, if available.
+/// Returns the most recent recorded bounds for a declarative element, if available.
 ///
 /// This is a cross-frame geometry query intended for component-layer policies (e.g. anchored
 /// overlays) that need a stable anchor rect. The value is updated during layout.
@@ -46,11 +46,14 @@ pub fn bounds_for_element<H: UiHost>(
     window: AppWindowId,
     element: GlobalElementId,
 ) -> Option<Rect> {
-    with_window_state(app, window, |st| st.last_bounds(element))
+    with_window_state(app, window, |st| {
+        st.last_bounds(element)
+            .or_else(|| st.current_bounds(element))
+    })
 }
 
-/// Returns the last frame's **visual** bounds (post-`render_transform` AABB) for a declarative
-/// element, if available.
+/// Returns the most recent recorded **visual** bounds (post-`render_transform` AABB) for a
+/// declarative element, if available.
 ///
 /// This is a cross-frame geometry query intended for component-layer anchored overlay policies
 /// that must track render transforms (ADR 0083) while keeping layout authoritative.
@@ -59,7 +62,10 @@ pub fn visual_bounds_for_element<H: UiHost>(
     window: AppWindowId,
     element: GlobalElementId,
 ) -> Option<Rect> {
-    with_window_state(app, window, |st| st.last_visual_bounds(element))
+    with_window_state(app, window, |st| {
+        st.last_visual_bounds(element)
+            .or_else(|| st.current_visual_bounds(element))
+    })
 }
 
 pub(crate) fn record_bounds_for_element<H: UiHost>(

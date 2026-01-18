@@ -168,7 +168,7 @@ pub use item::{
     Item, ItemActions, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemHeader, ItemMedia,
     ItemMediaVariant, ItemSeparator, ItemSize, ItemTitle, ItemVariant, item_group,
 };
-pub use kbd::Kbd;
+pub use kbd::{Kbd, KbdGroup};
 pub use label::Label;
 pub use menubar::{
     Menubar, MenubarCheckboxItem, MenubarEntry, MenubarGroup, MenubarItem, MenubarLabel,

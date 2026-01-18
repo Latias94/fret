@@ -488,7 +488,7 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
             return Vec::new();
         };
 
-        let popper_layout = popper::popper_content_layout_sized(
+        let popper_layout = popper::popper_content_layout_unclamped(
             overlay::outer_bounds_with_window_margin(cx.bounds, args.window_margin),
             anchor,
             args.content_size,

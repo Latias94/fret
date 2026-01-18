@@ -1435,14 +1435,14 @@ async function resolveCssInjectionUrls(style: string, baseUrl: string) {
     cssFiles.push(url)
   }
 
-  const entryCss =
-    entry.entryCSSFiles?.["[project]/apps/v4/app/layout"] ??
-    entry.entryCSSFiles?.[`[project]/apps/v4/app/(view)/view/[style]/[name]/page`]
-
-  if (Array.isArray(entryCss)) {
-    for (const item of entryCss) {
-      if (typeof item?.path === "string") {
-        add(item.path)
+  const entryCssFiles = entry.entryCSSFiles as Record<string, unknown> | undefined
+  if (entryCssFiles) {
+    for (const value of Object.values(entryCssFiles)) {
+      if (!Array.isArray(value)) continue
+      for (const item of value) {
+        if (typeof (item as any)?.path === "string") {
+          add((item as any).path)
+        }
       }
     }
   }

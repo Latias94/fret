@@ -34,13 +34,24 @@ Quickstart (PowerShell):
 
 4) Build + start a shadcn production server (Terminal A):
 
-`pnpm -C repo-ref/ui/apps/v4 build`
+Important: `pnpm -C repo-ref/ui/apps/v4 build` currently defaults to Turbopack and may fail to
+resolve some transitive Radix deps under pnpm on Windows. Prefer a webpack production build:
+
+`cd repo-ref/ui/apps/v4; $env:NEXT_PUBLIC_APP_URL='http://localhost:4020'; $env:NEXT_PUBLIC_V0_URL='https://v0.dev'; pnpm exec next build --webpack`
 
 `$env:NEXT_PUBLIC_APP_URL='http://localhost:4020'; pnpm -C repo-ref/ui/apps/v4 exec next start -p 4020`
+
+Alternatively, use the repo helper:
+
+`powershell -File goldens/shadcn-web/scripts/serve-v4.ps1 -Port 4020`
 
 5) Extract JSON goldens (Terminal B):
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts button-default tabs-demo --update --baseUrl=http://localhost:4020`
+
+Single-command alternative (starts/stops a production server in-process):
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 button-default tabs-demo --update`
 
 Extract *all* routable new-york-v4 pages (block+component+example):
 

@@ -110,7 +110,6 @@ impl<H: UiHost> UiTree<H> {
         };
 
         let mut viewport_cursor: usize = 0;
-
         if pass_kind == LayoutPassKind::Final {
             self.expand_view_cache_layout_invalidations_if_needed();
         }

@@ -500,6 +500,12 @@ fn combobox_with_patch<H: UiHost>(
                     let available_h =
                         radix_popover::popover_popper_vars(outer, anchor, desired_w, placement)
                             .available_height;
+                    // `popover_popper_vars` reports the available height for the popover *border box*
+                    // (Radix `--radix-popover-content-available-height`). The combobox list lives
+                    // inside a PopoverContent container with a `border-1`, so subtract that inset
+                    // to keep the inner list from overflowing in tight viewports.
+                    let popover_border_h = Px(2.0);
+                    let available_h = Px((available_h.0 - popover_border_h.0).max(0.0));
 
                     let transparent = Color::TRANSPARENT;
                     let list = if search_enabled {

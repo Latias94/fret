@@ -1,10 +1,12 @@
 use std::sync::Arc;
 
-use fret_core::{FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
-use fret_ui::element::{AnyElement, TextProps};
+use fret_core::{FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_ui::element::{
+    AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, TextProps,
+};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
 #[derive(Debug, Clone)]
 pub struct Kbd {
@@ -56,16 +58,19 @@ fn kbd_with_patch<H: UiHost>(
     let theme = Theme::global(&*cx.app).clone();
 
     let bg = theme.color_required("muted");
-    let border = theme.color_required("border");
 
     let chrome = ChromeRefinement::default()
-        .px(Space::N1p5)
+        .px(Space::N1)
         .py(Space::N0p5)
         .rounded(Radius::Sm)
-        .border_1()
         .bg(ColorRef::Color(bg))
-        .border_color(ColorRef::Color(border))
         .merge(chrome_override);
+
+    let layout_override = LayoutRefinement::default()
+        .h_px(MetricRef::Px(Px(20.0)))
+        .min_h(MetricRef::Px(Px(20.0)))
+        .min_w(MetricRef::Px(Px(20.0)))
+        .merge(layout_override);
 
     let props = decl_style::container_props(&theme, chrome, layout_override);
 
@@ -81,20 +86,80 @@ fn kbd_with_patch<H: UiHost>(
         .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
     cx.container(props, |cx| {
-        vec![cx.text_props(TextProps {
-            layout: Default::default(),
-            text,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: px,
-                weight: FontWeight::MEDIUM,
-                slant: Default::default(),
-                line_height: Some(line_height),
-                letter_spacing_em: None,
-            }),
-            color: Some(fg),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-        })]
+        vec![cx.flex(
+            FlexProps {
+                layout: LayoutStyle::default(),
+                direction: fret_core::Axis::Horizontal,
+                gap: Px(0.0),
+                padding: fret_core::Edges::all(Px(0.0)),
+                justify: MainAlign::Center,
+                align: CrossAlign::Center,
+                wrap: false,
+            },
+            move |cx| {
+                vec![cx.text_props(TextProps {
+                    layout: LayoutStyle {
+                        size: fret_ui::element::SizeStyle {
+                            width: Length::Auto,
+                            height: Length::Px(line_height),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    text: text.clone(),
+                    style: Some(TextStyle {
+                        font: FontId::default(),
+                        size: px,
+                        weight: FontWeight::MEDIUM,
+                        slant: Default::default(),
+                        line_height: Some(line_height),
+                        letter_spacing_em: None,
+                    }),
+                    color: Some(fg),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                })]
+            },
+        )]
     })
+}
+
+#[derive(Debug, Clone)]
+pub struct KbdGroup {
+    children: Vec<AnyElement>,
+    layout: LayoutRefinement,
+}
+
+impl KbdGroup {
+    pub fn new(children: Vec<AnyElement>) -> Self {
+        Self {
+            children,
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let gap = MetricRef::space(Space::N1).resolve(&theme);
+        let children = self.children;
+        let layout = decl_style::layout_style(&theme, self.layout);
+
+        cx.flex(
+            FlexProps {
+                layout,
+                direction: fret_core::Axis::Horizontal,
+                gap,
+                padding: fret_core::Edges::all(Px(0.0)),
+                justify: MainAlign::Start,
+                align: CrossAlign::Center,
+                wrap: false,
+            },
+            move |_cx| children,
+        )
+    }
 }

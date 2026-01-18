@@ -475,6 +475,7 @@ fn mount_element<H: UiHost>(
             );
             node
         });
+    ui.set_node_element(node, Some(id));
 
     window_state.set_node_entry(
         id,
@@ -693,6 +694,41 @@ fn declarative_instance_change_mask(
     let mut paint_changed = false;
 
     match (previous, next) {
+        (ElementInstance::InteractivityGate(a), ElementInstance::InteractivityGate(b)) => {
+            // Presence/interactivity gates affect layout participation, hit-testing, focus traversal,
+            // and semantics inclusion. Even when the wrapper layout is unchanged, we need a layout
+            // refresh so the host widget can recompute its derived flags.
+            if a.present != b.present || a.interactive != b.interactive {
+                layout_changed = true;
+                paint_changed = true;
+            }
+        }
+        (ElementInstance::Opacity(a), ElementInstance::Opacity(b)) => {
+            if a.opacity != b.opacity {
+                paint_changed = true;
+            }
+        }
+        (ElementInstance::VisualTransform(a), ElementInstance::VisualTransform(b)) => {
+            if a.transform != b.transform {
+                paint_changed = true;
+            }
+        }
+        (ElementInstance::RenderTransform(a), ElementInstance::RenderTransform(b)) => {
+            // Render transforms affect paint and hit-testing. We treat them as a layout refresh so
+            // the retained tree updates its per-node transform stack for hit-test/debug queries.
+            if a.transform != b.transform {
+                layout_changed = true;
+                paint_changed = true;
+            }
+        }
+        (ElementInstance::Anchored(a), ElementInstance::Anchored(b)) => {
+            // Anchored placement is resolved during layout and affects the render transform stack.
+            // Treat any meaningful input change as requiring a layout refresh.
+            if a.outer_margin != b.outer_margin || a.anchor != b.anchor || a.options != b.options {
+                layout_changed = true;
+                paint_changed = true;
+            }
+        }
         (ElementInstance::Text(a), ElementInstance::Text(b)) => {
             if a.text != b.text
                 || a.style != b.style

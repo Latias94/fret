@@ -223,7 +223,6 @@ pub struct UiDebugGlobalChangeHotspot {
 pub struct UiDebugGlobalChangeUnobserved {
     pub global: TypeId,
 }
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UiDebugInvalidationSource {
     ModelChange,
@@ -1053,7 +1052,6 @@ impl<H: UiHost> UiTree<H> {
         }
         self.debug_model_change_unobserved.as_slice()
     }
-
     pub fn debug_global_change_hotspots(&self) -> &[UiDebugGlobalChangeHotspot] {
         if !self.debug_enabled {
             return &[];
@@ -1067,7 +1065,6 @@ impl<H: UiHost> UiTree<H> {
         }
         self.debug_global_change_unobserved.as_slice()
     }
-
     pub fn captured_for(&self, pointer_id: PointerId) -> Option<NodeId> {
         self.captured.get(&pointer_id).copied()
     }

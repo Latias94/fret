@@ -116,6 +116,15 @@ fn drawer_vertical_max_height(viewport_height: Px) -> Px {
     Px(cap.min(by_gap))
 }
 
+fn drawer_drag_snap_height(drawer_height: Px, side: DrawerSide) -> Px {
+    // DrawerContent applies a 1px border on the edge that meets the viewport.
+    // The snap-point math should be based on the border-box height, so account for that inset.
+    match side {
+        DrawerSide::Bottom | DrawerSide::Top => Px(drawer_height.0 + 1.0),
+        DrawerSide::Left | DrawerSide::Right => drawer_height,
+    }
+}
+
 /// shadcn/ui `DrawerContent` (v4).
 #[derive(Debug, Clone)]
 pub struct DrawerContent {
@@ -545,7 +554,7 @@ impl Drawer {
 
                 if needs_init {
                     if let Some(bounds) = cx.last_bounds_for_element(content.id) {
-                        let drawer_h = bounds.size.height;
+                        let drawer_h = drawer_drag_snap_height(bounds.size.height, side);
                         let points = snap_points.as_ref().expect("snap points");
                         let mut idx = default_snap_point_index
                             .unwrap_or_else(|| points.len().saturating_sub(1));
@@ -668,7 +677,7 @@ impl Drawer {
 
                 host.release_pointer_capture();
                 let bounds = host.bounds();
-                let drawer_h = bounds.size.height;
+                let drawer_h = drawer_drag_snap_height(bounds.size.height, side);
                 let offset = host
                     .models_mut()
                     .read(&offset_for_up, |v| *v)

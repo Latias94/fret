@@ -177,11 +177,14 @@ impl WindowElementState {
         );
         self.observed_globals_next.clear();
 
+        // Keep cross-frame geometry queries stable even when layout/paint skips subtrees due to
+        // caching: seed the current-frame maps from the previous-frame maps, and overwrite entries
+        // opportunistically as bounds are recorded this frame.
         std::mem::swap(&mut self.prev_bounds, &mut self.cur_bounds);
-        self.cur_bounds.clear();
+        self.cur_bounds.clone_from(&self.prev_bounds);
 
         std::mem::swap(&mut self.prev_visual_bounds, &mut self.cur_visual_bounds);
-        self.cur_visual_bounds.clear();
+        self.cur_visual_bounds.clone_from(&self.prev_visual_bounds);
 
         self.focused_element = None;
 
@@ -370,12 +373,20 @@ impl WindowElementState {
         self.prev_bounds.get(&element).copied()
     }
 
+    pub(crate) fn current_bounds(&self, element: GlobalElementId) -> Option<Rect> {
+        self.cur_bounds.get(&element).copied()
+    }
+
     pub(crate) fn record_visual_bounds(&mut self, element: GlobalElementId, bounds: Rect) {
         self.cur_visual_bounds.insert(element, bounds);
     }
 
     pub(crate) fn last_visual_bounds(&self, element: GlobalElementId) -> Option<Rect> {
         self.prev_visual_bounds.get(&element).copied()
+    }
+
+    pub(crate) fn current_visual_bounds(&self, element: GlobalElementId) -> Option<Rect> {
+        self.cur_visual_bounds.get(&element).copied()
     }
 
     pub(crate) fn wants_continuous_frames(&self) -> bool {
