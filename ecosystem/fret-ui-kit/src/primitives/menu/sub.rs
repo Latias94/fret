@@ -82,14 +82,20 @@ impl Default for MenuSubmenuConfig {
 
 /// Return the default submenu floating bounds (Radix Menu-like: side=Right, align=Start, offset=2px).
 pub fn default_submenu_bounds(outer: Rect, trigger_anchor: Rect, desired: Size) -> Rect {
-    anchored_panel_bounds_sized(
-        outer,
-        trigger_anchor,
-        desired,
-        Px(2.0),
-        Side::Right,
-        Align::Start,
-    )
+    // Radix `MenuSubContent` hard-codes `align="start"` and relies on Popper's collision logic to
+    // flip the alignment when the submenu would overflow the viewport on the cross axis.
+    //
+    // We approximate that behavior here by flipping to `Align::End` when the desired height does
+    // not fit below the trigger (LTR: side=Right).
+    let desired_h = desired.height.0.max(0.0);
+    let outer_bottom = outer.origin.y.0 + outer.size.height.0.max(0.0);
+    let trigger_top = trigger_anchor.origin.y.0;
+    let align = if trigger_top + desired_h > outer_bottom {
+        Align::End
+    } else {
+        Align::Start
+    };
+    anchored_panel_bounds_sized(outer, trigger_anchor, desired, Px(2.0), Side::Right, align)
 }
 
 /// Estimate a scrollable menu panel viewport height for `row_count` rows.
