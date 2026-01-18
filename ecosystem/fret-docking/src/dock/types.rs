@@ -18,6 +18,30 @@ pub(super) enum DockDropTarget {
     Float { window: AppWindowId },
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub(super) enum DockDropIntent {
+    None,
+    MovePanel {
+        source_window: AppWindowId,
+        panel: PanelKey,
+        target_window: AppWindowId,
+        target_tabs: DockNodeId,
+        zone: DropZone,
+        insert_index: Option<usize>,
+    },
+    FloatPanelInWindow {
+        source_window: AppWindowId,
+        panel: PanelKey,
+        target_window: AppWindowId,
+        rect: Rect,
+    },
+    RequestFloatPanelToNewWindow {
+        source_window: AppWindowId,
+        panel: PanelKey,
+        anchor: Option<fret_core::WindowAnchor>,
+    },
+}
+
 #[derive(Debug, Clone, Copy)]
 pub(super) struct DividerDragState {
     pub(super) split: DockNodeId,

@@ -191,6 +191,19 @@ pub struct UiDebugFrameStats {
     pub invalidation_walk_nodes_other: u32,
     /// Invalidation walks attributed to all other sources.
     pub invalidation_walk_calls_other: u32,
+    /// Count of hover target changes for `Pressable` instances during the current frame.
+    pub hover_pressable_target_changes: u32,
+    /// Count of hover target changes for `HoverRegion` instances during the current frame.
+    pub hover_hover_region_target_changes: u32,
+    /// Count of declarative instance changes that happened in a frame that also observed a hover
+    /// target change.
+    pub hover_declarative_instance_changes: u32,
+    /// Count of declarative `HitTest` invalidations attributed to hover during the current frame.
+    pub hover_declarative_hit_test_invalidations: u32,
+    /// Count of declarative `Layout` invalidations attributed to hover during the current frame.
+    pub hover_declarative_layout_invalidations: u32,
+    /// Count of declarative `Paint` invalidations attributed to hover during the current frame.
+    pub hover_declarative_paint_invalidations: u32,
     /// Whether view-cache mode is active for this frame.
     pub view_cache_active: bool,
     /// How many invalidation walks were truncated by a view-cache boundary.
@@ -199,6 +212,22 @@ pub struct UiDebugFrameStats {
     pub view_cache_contained_relayouts: u32,
     pub focus: Option<NodeId>,
     pub captured: Option<NodeId>,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct UiDebugHoverDeclarativeInvalidationHotspot {
+    pub node: NodeId,
+    pub element: Option<GlobalElementId>,
+    pub hit_test: u32,
+    pub layout: u32,
+    pub paint: u32,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct UiDebugHoverDeclarativeInvalidationCounts {
+    hit_test: u32,
+    layout: u32,
+    paint: u32,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -650,6 +679,9 @@ pub struct UiTree<H: UiHost> {
     debug_model_change_unobserved: Vec<UiDebugModelChangeUnobserved>,
     debug_global_change_hotspots: Vec<UiDebugGlobalChangeHotspot>,
     debug_global_change_unobserved: Vec<UiDebugGlobalChangeUnobserved>,
+    debug_hover_edge_this_frame: bool,
+    debug_hover_declarative_invalidations:
+        HashMap<NodeId, UiDebugHoverDeclarativeInvalidationCounts>,
 
     view_cache_enabled: bool,
     paint_cache_policy: PaintCachePolicy,
@@ -703,6 +735,8 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_model_change_unobserved: Vec::new(),
             debug_global_change_hotspots: Vec::new(),
             debug_global_change_unobserved: Vec::new(),
+            debug_hover_edge_this_frame: false,
+            debug_hover_declarative_invalidations: HashMap::new(),
             view_cache_enabled: false,
             paint_cache_policy: PaintCachePolicy::Auto,
             inspection_active: false,
@@ -791,6 +825,12 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.invalidation_walk_calls_focus = 0;
         self.debug_stats.invalidation_walk_nodes_other = 0;
         self.debug_stats.invalidation_walk_calls_other = 0;
+        self.debug_stats.hover_pressable_target_changes = 0;
+        self.debug_stats.hover_hover_region_target_changes = 0;
+        self.debug_stats.hover_declarative_instance_changes = 0;
+        self.debug_stats.hover_declarative_hit_test_invalidations = 0;
+        self.debug_stats.hover_declarative_layout_invalidations = 0;
+        self.debug_stats.hover_declarative_paint_invalidations = 0;
         self.debug_stats.view_cache_active = self.view_cache_active();
         self.debug_stats.view_cache_invalidation_truncations = 0;
         self.debug_stats.view_cache_contained_relayouts = 0;
@@ -804,6 +844,68 @@ impl<H: UiHost> UiTree<H> {
         self.debug_model_change_unobserved.clear();
         self.debug_global_change_hotspots.clear();
         self.debug_global_change_unobserved.clear();
+        self.debug_hover_edge_this_frame = false;
+        self.debug_hover_declarative_invalidations.clear();
+    }
+
+    pub(crate) fn debug_record_hover_edge_pressable(&mut self) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_hover_edge_this_frame = true;
+        self.debug_stats.hover_pressable_target_changes = self
+            .debug_stats
+            .hover_pressable_target_changes
+            .saturating_add(1);
+    }
+
+    pub(crate) fn debug_record_hover_edge_hover_region(&mut self) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_hover_edge_this_frame = true;
+        self.debug_stats.hover_hover_region_target_changes = self
+            .debug_stats
+            .hover_hover_region_target_changes
+            .saturating_add(1);
+    }
+
+    pub(crate) fn debug_record_hover_declarative_invalidation(
+        &mut self,
+        node: NodeId,
+        hit_test: bool,
+        layout: bool,
+        paint: bool,
+    ) {
+        if !self.debug_enabled || !self.debug_hover_edge_this_frame {
+            return;
+        }
+
+        self.debug_stats.hover_declarative_instance_changes = self
+            .debug_stats
+            .hover_declarative_instance_changes
+            .saturating_add(1);
+
+        self.debug_stats.hover_declarative_hit_test_invalidations = self
+            .debug_stats
+            .hover_declarative_hit_test_invalidations
+            .saturating_add(hit_test as u32);
+        self.debug_stats.hover_declarative_layout_invalidations = self
+            .debug_stats
+            .hover_declarative_layout_invalidations
+            .saturating_add(layout as u32);
+        self.debug_stats.hover_declarative_paint_invalidations = self
+            .debug_stats
+            .hover_declarative_paint_invalidations
+            .saturating_add(paint as u32);
+
+        let entry = self
+            .debug_hover_declarative_invalidations
+            .entry(node)
+            .or_default();
+        entry.hit_test = entry.hit_test.saturating_add(hit_test as u32);
+        entry.layout = entry.layout.saturating_add(layout as u32);
+        entry.paint = entry.paint.saturating_add(paint as u32);
     }
 
     pub(crate) fn debug_record_measure_child(
@@ -1041,6 +1143,39 @@ impl<H: UiHost> UiTree<H> {
 
     pub fn debug_stats(&self) -> UiDebugFrameStats {
         self.debug_stats
+    }
+
+    pub fn debug_hover_declarative_invalidation_hotspots(
+        &self,
+        max: usize,
+    ) -> Vec<UiDebugHoverDeclarativeInvalidationHotspot> {
+        if !self.debug_enabled || max == 0 {
+            return Vec::new();
+        }
+
+        let mut out: Vec<UiDebugHoverDeclarativeInvalidationHotspot> = self
+            .debug_hover_declarative_invalidations
+            .iter()
+            .map(
+                |(&node, counts)| UiDebugHoverDeclarativeInvalidationHotspot {
+                    node,
+                    element: self.nodes.get(node).and_then(|n| n.element),
+                    hit_test: counts.hit_test,
+                    layout: counts.layout,
+                    paint: counts.paint,
+                },
+            )
+            .collect();
+
+        out.sort_by_key(|hs| {
+            (
+                std::cmp::Reverse(hs.layout),
+                std::cmp::Reverse(hs.hit_test),
+                std::cmp::Reverse(hs.paint),
+            )
+        });
+        out.truncate(max);
+        out
     }
 
     pub fn debug_invalidation_walks(&self) -> &[UiDebugInvalidationWalk] {

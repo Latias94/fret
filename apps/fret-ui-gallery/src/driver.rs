@@ -810,6 +810,36 @@ impl UiGalleryDriver {
                 last_debug_stats.invalidation_walk_calls_global_change,
                 last_debug_stats.invalidation_walk_nodes_global_change
             )));
+            lines.push(Arc::from(format!(
+                "hover edges pressable={} region={} decl inst={} hit={} layout={} paint={}",
+                last_debug_stats.hover_pressable_target_changes,
+                last_debug_stats.hover_hover_region_target_changes,
+                last_debug_stats.hover_declarative_instance_changes,
+                last_debug_stats.hover_declarative_hit_test_invalidations,
+                last_debug_stats.hover_declarative_layout_invalidations,
+                last_debug_stats.hover_declarative_paint_invalidations,
+            )));
+
+            let hover_hotspots = state.ui.debug_hover_declarative_invalidation_hotspots(3);
+            for (index, hs) in hover_hotspots.iter().enumerate() {
+                let element_path = hs.element.and_then(|element| {
+                    app.with_global_mut_untracked(fret_ui::ElementRuntime::new, |runtime, _| {
+                        runtime.debug_path_for_element(window, element)
+                    })
+                });
+
+                lines.push(Arc::from(format!(
+                    "hover_decl[{index}] node={:?} hit={} layout={} paint={} el={} {}",
+                    hs.node,
+                    hs.hit_test,
+                    hs.layout,
+                    hs.paint,
+                    hs.element
+                        .map(|id| format!("{:#x}", id.0))
+                        .unwrap_or_else(|| "<none>".to_string()),
+                    element_path.as_deref().unwrap_or(""),
+                )));
+            }
 
             if let Some(extra) = cache_root_breakdown.as_ref() {
                 lines.extend(extra.iter().cloned());

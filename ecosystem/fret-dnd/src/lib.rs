@@ -6,6 +6,7 @@
 
 pub mod activation;
 pub mod collision;
+pub mod frame;
 pub mod modifier;
 pub mod rect_index;
 pub mod registry;
@@ -16,6 +17,7 @@ pub use activation::{ActivationConstraint, PointerSensor, SensorEvent, SensorOut
 pub use collision::{
     CollisionStrategy, DndCollision, closest_center_collisions, pointer_within_collisions,
 };
+pub use frame::{DndFrameOutput, compute_dnd_frame};
 pub use modifier::{Axis, axis_lock, clamp_rect_translation};
 pub use rect_index::RectDroppableIndex;
 pub use registry::{DndItemId, Draggable, Droppable, RegistrySnapshot};

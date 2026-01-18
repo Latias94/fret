@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use fret_core::{AppWindowId, PointerId};
+use crate::layout::SplitSide;
+use fret_core::{AppWindowId, Axis, Point, PointerId, Rect};
 use fret_runtime::DragKindId;
 
 /// Drag kind for cross-pane workspace tab drags.
@@ -15,6 +16,133 @@ pub enum WorkspaceTabDropZone {
     Down,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WorkspaceTabInsertionSide {
+    Before,
+    After,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct WorkspaceTabHitRect {
+    pub id: Arc<str>,
+    pub rect: Rect,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum WorkspaceTabDropIntent {
+    None,
+    MoveToPane {
+        source: Arc<str>,
+        dragged_tab: Arc<str>,
+        target: Arc<str>,
+    },
+    InsertToPane {
+        source: Arc<str>,
+        dragged_tab: Arc<str>,
+        target: Arc<str>,
+        target_tab: Arc<str>,
+        side: WorkspaceTabInsertionSide,
+    },
+    SplitAndMove {
+        source: Arc<str>,
+        dragged_tab: Arc<str>,
+        target: Arc<str>,
+        axis: Axis,
+        side: SplitSide,
+    },
+}
+
+pub fn resolve_workspace_tab_drop_intent(
+    state: &WorkspaceTabDragState,
+    target_pane: &Arc<str>,
+    zone: WorkspaceTabDropZone,
+) -> WorkspaceTabDropIntent {
+    let Some(source) = state.source_pane.clone() else {
+        return WorkspaceTabDropIntent::None;
+    };
+    let Some(dragged_tab) = state.dragged_tab.clone() else {
+        return WorkspaceTabDropIntent::None;
+    };
+
+    match zone {
+        WorkspaceTabDropZone::Center => {
+            if source.as_ref() == target_pane.as_ref() {
+                return WorkspaceTabDropIntent::None;
+            }
+
+            match (state.hovered_tab.clone(), state.hovered_tab_side) {
+                (Some(target_tab), Some(side)) => WorkspaceTabDropIntent::InsertToPane {
+                    source,
+                    dragged_tab,
+                    target: target_pane.clone(),
+                    target_tab,
+                    side,
+                },
+                _ => WorkspaceTabDropIntent::MoveToPane {
+                    source,
+                    dragged_tab,
+                    target: target_pane.clone(),
+                },
+            }
+        }
+        WorkspaceTabDropZone::Left => WorkspaceTabDropIntent::SplitAndMove {
+            source,
+            dragged_tab,
+            target: target_pane.clone(),
+            axis: Axis::Horizontal,
+            side: SplitSide::First,
+        },
+        WorkspaceTabDropZone::Right => WorkspaceTabDropIntent::SplitAndMove {
+            source,
+            dragged_tab,
+            target: target_pane.clone(),
+            axis: Axis::Horizontal,
+            side: SplitSide::Second,
+        },
+        WorkspaceTabDropZone::Up => WorkspaceTabDropIntent::SplitAndMove {
+            source,
+            dragged_tab,
+            target: target_pane.clone(),
+            axis: Axis::Vertical,
+            side: SplitSide::First,
+        },
+        WorkspaceTabDropZone::Down => WorkspaceTabDropIntent::SplitAndMove {
+            source,
+            dragged_tab,
+            target: target_pane.clone(),
+            axis: Axis::Vertical,
+            side: SplitSide::Second,
+        },
+    }
+}
+
+pub fn compute_tab_drop_target(
+    pointer: Point,
+    dragged_tab: &str,
+    rects: &[WorkspaceTabHitRect],
+) -> Option<(Arc<str>, WorkspaceTabInsertionSide)> {
+    let mut filtered: Vec<&WorkspaceTabHitRect> = rects
+        .iter()
+        .filter(|r| r.id.as_ref() != dragged_tab)
+        .collect();
+
+    if filtered.is_empty() {
+        return None;
+    }
+
+    filtered.sort_by(|a, b| a.rect.origin.x.0.total_cmp(&b.rect.origin.x.0));
+
+    for r in &filtered {
+        let mid_x = r.rect.origin.x.0 + (r.rect.size.width.0 * 0.5);
+        if pointer.x.0 < mid_x {
+            return Some((r.id.clone(), WorkspaceTabInsertionSide::Before));
+        }
+    }
+
+    let last = filtered.last()?;
+    Some((last.id.clone(), WorkspaceTabInsertionSide::After))
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct WorkspaceTabDragState {
     pub pointer: Option<PointerId>,
@@ -23,4 +151,77 @@ pub struct WorkspaceTabDragState {
     pub dragged_tab: Option<Arc<str>>,
     pub hovered_pane: Option<Arc<str>>,
     pub hovered_zone: Option<WorkspaceTabDropZone>,
+    pub hovered_tab: Option<Arc<str>>,
+    pub hovered_tab_side: Option<WorkspaceTabInsertionSide>,
+    pub hovered_pane_tab_rects: Vec<WorkspaceTabHitRect>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn arc(s: &str) -> Arc<str> {
+        Arc::<str>::from(s)
+    }
+
+    #[test]
+    fn resolve_workspace_tab_drop_intent_prefers_cached_tab_insertion() {
+        let state = WorkspaceTabDragState {
+            source_pane: Some(arc("p1")),
+            dragged_tab: Some(arc("t1")),
+            hovered_tab: Some(arc("t2")),
+            hovered_tab_side: Some(WorkspaceTabInsertionSide::Before),
+            ..Default::default()
+        };
+
+        let intent =
+            resolve_workspace_tab_drop_intent(&state, &arc("p2"), WorkspaceTabDropZone::Center);
+        assert_eq!(
+            intent,
+            WorkspaceTabDropIntent::InsertToPane {
+                source: arc("p1"),
+                dragged_tab: arc("t1"),
+                target: arc("p2"),
+                target_tab: arc("t2"),
+                side: WorkspaceTabInsertionSide::Before,
+            }
+        );
+    }
+
+    #[test]
+    fn resolve_workspace_tab_drop_intent_falls_back_to_move_to_pane() {
+        let state = WorkspaceTabDragState {
+            source_pane: Some(arc("p1")),
+            dragged_tab: Some(arc("t1")),
+            hovered_tab: None,
+            hovered_tab_side: None,
+            ..Default::default()
+        };
+
+        let intent =
+            resolve_workspace_tab_drop_intent(&state, &arc("p2"), WorkspaceTabDropZone::Center);
+        assert_eq!(
+            intent,
+            WorkspaceTabDropIntent::MoveToPane {
+                source: arc("p1"),
+                dragged_tab: arc("t1"),
+                target: arc("p2"),
+            }
+        );
+    }
+
+    #[test]
+    fn resolve_workspace_tab_drop_intent_noop_when_dropping_on_same_pane_center() {
+        let state = WorkspaceTabDragState {
+            source_pane: Some(arc("p1")),
+            dragged_tab: Some(arc("t1")),
+            hovered_tab: Some(arc("t2")),
+            hovered_tab_side: Some(WorkspaceTabInsertionSide::After),
+            ..Default::default()
+        };
+
+        let intent =
+            resolve_workspace_tab_drop_intent(&state, &arc("p1"), WorkspaceTabDropZone::Center);
+        assert_eq!(intent, WorkspaceTabDropIntent::None);
+    }
 }

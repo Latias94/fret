@@ -60,7 +60,7 @@ pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M: NodeGraphCanvas
         canvas.interaction.pending_insert_node_drag = None;
         if let Some(window) = cx.window {
             let dnd = ui_dnd::dnd_service_model_global(cx.app);
-            ui_dnd::clear_pending_pointer(
+            ui_dnd::clear_pointer(
                 cx.app.models_mut(),
                 &dnd,
                 window,
@@ -99,12 +99,13 @@ pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M: NodeGraphCanvas
         0,
         false,
     );
-    let update = ui_dnd::update_pending_drag_move(
+    let update = ui_dnd::handle_pointer_move_or_init_in_scope(
         cx.app.models_mut(),
         &dnd,
         window,
         frame_id,
         DRAG_KIND_INSERT_NODE,
+        ui_dnd::DND_SCOPE_DEFAULT,
         pointer_id,
         pending.start_tick,
         start_window,
@@ -127,7 +128,7 @@ pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M: NodeGraphCanvas
             candidate: pending.candidate.clone(),
         },
     );
-    ui_dnd::clear_pending_pointer(
+    ui_dnd::clear_pointer(
         cx.app.models_mut(),
         &dnd,
         window,
