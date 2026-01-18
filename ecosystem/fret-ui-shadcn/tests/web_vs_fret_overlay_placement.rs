@@ -3628,8 +3628,18 @@ fn web_vs_fret_combobox_demo_listbox_height_matches() {
 }
 
 #[test]
+fn web_vs_fret_combobox_demo_constrained_viewport_listbox_height_matches() {
+    assert_combobox_demo_listbox_height_matches("combobox-demo.vp1440x320");
+}
+
+#[test]
 fn web_vs_fret_combobox_demo_small_viewport_listbox_height_matches() {
     assert_combobox_demo_listbox_height_matches("combobox-demo.vp375x320");
+}
+
+#[test]
+fn web_vs_fret_combobox_demo_tiny_viewport_listbox_height_matches() {
+    assert_combobox_demo_listbox_height_matches("combobox-demo.vp1440x240");
 }
 
 fn assert_point_anchored_overlay_placement_matches(
