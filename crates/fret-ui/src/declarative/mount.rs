@@ -439,7 +439,7 @@ fn mount_element<H: UiHost>(
         ElementKind::ViewCache(props) => Some(*props),
         _ => None,
     };
-    let reuse_view_cache =
+    let mut reuse_view_cache =
         view_cache_props.is_some() && window_state.should_reuse_view_cache_root(id);
 
     let span = if view_cache_props.is_some() && tracing::enabled!(tracing::Level::TRACE) {
@@ -486,6 +486,13 @@ fn mount_element<H: UiHost>(
         },
     );
 
+    if reuse_view_cache
+        && view_cache_root_needs_layout_for_deferred_scroll_requests(window_frame, node)
+    {
+        reuse_view_cache = false;
+        ui.invalidate(node, Invalidation::Layout);
+    }
+
     if view_cache_props.is_some() && tracing::enabled!(tracing::Level::TRACE) {
         span.record("node", tracing::field::debug(node));
     }
@@ -493,6 +500,9 @@ fn mount_element<H: UiHost>(
     match &element.kind {
         ElementKind::ViewCache(props) => {
             ui.set_node_view_cache_flags(node, true, props.contained_layout);
+            if !reuse_view_cache {
+                ui.set_node_view_cache_needs_rerender(node, false);
+            }
             let reuse_reason = if !had_existing_node_entry {
                 crate::tree::UiDebugCacheRootReuseReason::FirstMount
             } else if !had_existing_node {
@@ -834,6 +844,28 @@ fn collect_scroll_handle_bindings_for_existing_subtree(
             }
         }
     }
+}
+
+fn view_cache_root_needs_layout_for_deferred_scroll_requests(
+    window_frame: &WindowFrame,
+    root: NodeId,
+) -> bool {
+    let mut stack: Vec<NodeId> = vec![root];
+    while let Some(node) = stack.pop() {
+        if let Some(record) = window_frame.instances.get(&node)
+            && let ElementInstance::VirtualList(props) = &record.instance
+            && props.scroll_handle.deferred_scroll_to_item().is_some()
+        {
+            return true;
+        }
+
+        if let Some(children) = window_frame.children.get(&node) {
+            for &child in children {
+                stack.push(child);
+            }
+        }
+    }
+    false
 }
 
 fn inherit_observations_for_existing_subtree(

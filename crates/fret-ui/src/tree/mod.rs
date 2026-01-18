@@ -96,6 +96,7 @@ struct Node<H: UiHost> {
     invalidation: InvalidationFlags,
     paint_cache: Option<PaintCacheEntry>,
     view_cache: ViewCacheFlags,
+    view_cache_needs_rerender: bool,
 }
 
 impl<H: UiHost> Node<H> {
@@ -114,6 +115,7 @@ impl<H: UiHost> Node<H> {
             },
             paint_cache: None,
             view_cache: ViewCacheFlags::default(),
+            view_cache_needs_rerender: false,
         }
     }
 
@@ -942,6 +944,9 @@ impl<H: UiHost> UiTree<H> {
         if !n.view_cache.enabled {
             return false;
         }
+        if n.view_cache_needs_rerender {
+            return false;
+        }
         // View-cache reuse is an authoring-level "skip re-render" decision, not a "skip repaint"
         // decision: paint invalidations (e.g. hover/focus) should not force a child render pass.
         !n.invalidation.layout
@@ -958,6 +963,12 @@ impl<H: UiHost> UiTree<H> {
                 enabled,
                 contained_layout,
             };
+        }
+    }
+
+    pub(crate) fn set_node_view_cache_needs_rerender(&mut self, node: NodeId, needs: bool) {
+        if let Some(n) = self.nodes.get_mut(node) {
+            n.view_cache_needs_rerender = needs;
         }
     }
 
