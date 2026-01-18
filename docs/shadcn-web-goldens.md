@@ -249,6 +249,7 @@ geometry contract (for example: ScrollArea thumb background/alpha in hover-visib
 Current layout gates include:
 
 - `table-demo`: header/body/footer row heights + caption gap (Table recipe conformance).
+- `data-table-demo`: row height + checkbox/action button sizing (Table + Checkbox + Button icon sizing).
 - `scroll-area-demo` / `scroll-area-horizontal-demo`: thumb bounds + (paint-backed) thumb background/alpha in hover-visible states.
 
 ## Options

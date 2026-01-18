@@ -7436,3 +7436,172 @@ fn web_vs_fret_layout_table_demo_row_heights_and_caption_gap() {
         1.0,
     );
 }
+
+#[test]
+fn web_vs_fret_layout_data_table_demo_row_height_and_action_button_size() {
+    let web = read_web_golden("data-table-demo");
+    let theme = web_theme(&web);
+
+    let web_header_row = find_first(&theme.root, &|n| n.tag == "thead")
+        .and_then(|thead| thead.children.iter().find(|n| n.tag == "tr"))
+        .expect("web header tr");
+    let web_body_row = find_first(&theme.root, &|n| n.tag == "tbody")
+        .and_then(|tbody| tbody.children.iter().find(|n| n.tag == "tr"))
+        .expect("web body tr");
+
+    let web_select_row = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs.get("role").is_some_and(|r| r == "checkbox")
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|v| v == "Select row")
+    })
+    .expect("web select row checkbox");
+
+    let web_open_menu = find_first(&theme.root, &|n| {
+        n.tag == "button" && contains_text(n, "Open menu")
+    })
+    .expect("web open menu button");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let mut services = StyleAwareServices::default();
+    let snap = run_fret_root_with_services(bounds, &mut services, |cx| {
+        let header_select_all: Model<bool> = cx.app.models_mut().insert(false);
+        let row_select: Model<bool> = cx.app.models_mut().insert(false);
+
+        let select_all = fret_ui_shadcn::Checkbox::new(header_select_all)
+            .a11y_label("Select all")
+            .into_element(cx);
+        let select_row = fret_ui_shadcn::Checkbox::new(row_select)
+            .a11y_label("Select row")
+            .into_element(cx);
+
+        let open_menu = fret_ui_shadcn::Button::new("Open menu")
+            .variant(fret_ui_shadcn::ButtonVariant::Ghost)
+            .size(fret_ui_shadcn::ButtonSize::IconSm)
+            .children(vec![fret_ui_shadcn::Spinner::new()
+                .speed(0.0)
+                .into_element(cx)])
+            .into_element(cx);
+
+        let header_row = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:data-table-demo:header-row")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![
+                    fret_ui_shadcn::TableRow::new(
+                        5,
+                        vec![
+                            fret_ui_shadcn::TableCell::new(select_all.clone()).into_element(cx),
+                            fret_ui_shadcn::TableHead::new("Status").into_element(cx),
+                            fret_ui_shadcn::TableHead::new("Email").into_element(cx),
+                            fret_ui_shadcn::TableHead::new("Amount").into_element(cx),
+                            fret_ui_shadcn::TableHead::new("").into_element(cx),
+                        ],
+                    )
+                    .into_element(cx),
+                ]
+            },
+        );
+
+        let body_row = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:data-table-demo:row-0")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![
+                    fret_ui_shadcn::TableRow::new(
+                        5,
+                        vec![
+                            fret_ui_shadcn::TableCell::new(select_row.clone()).into_element(cx),
+                            fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "success"))
+                                .into_element(cx),
+                            fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "ken99@example.com"))
+                                .into_element(cx),
+                            fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "$316.00"))
+                                .into_element(cx),
+                            fret_ui_shadcn::TableCell::new(open_menu.clone()).into_element(cx),
+                        ],
+                    )
+                    .into_element(cx),
+                ]
+            },
+        );
+
+        vec![
+            fret_ui_shadcn::Table::new(vec![
+                fret_ui_shadcn::TableHeader::new(vec![header_row]).into_element(cx),
+                fret_ui_shadcn::TableBody::new(vec![body_row]).into_element(cx),
+            ])
+            .into_element(cx),
+        ]
+    });
+
+    let header_row = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:data-table-demo:header-row"),
+    )
+    .expect("fret header row");
+    let body_row = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:data-table-demo:row-0"),
+    )
+    .expect("fret body row");
+
+    let select_row = find_semantics(&snap, SemanticsRole::Checkbox, Some("Select row"))
+        .or_else(|| find_semantics(&snap, SemanticsRole::Checkbox, None))
+        .expect("fret select row checkbox");
+    let open_menu = find_semantics(&snap, SemanticsRole::Button, Some("Open menu"))
+        .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
+        .expect("fret open menu button");
+
+    assert_close_px(
+        "data-table-demo header row height",
+        header_row.bounds.size.height,
+        web_header_row.rect.h,
+        1.0,
+    );
+    assert_close_px(
+        "data-table-demo row height",
+        body_row.bounds.size.height,
+        web_body_row.rect.h,
+        2.0,
+    );
+
+    assert_close_px(
+        "data-table-demo select row checkbox width",
+        select_row.bounds.size.width,
+        web_select_row.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "data-table-demo select row checkbox height",
+        select_row.bounds.size.height,
+        web_select_row.rect.h,
+        1.0,
+    );
+
+    assert_close_px(
+        "data-table-demo open menu button width",
+        open_menu.bounds.size.width,
+        web_open_menu.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "data-table-demo open menu button height",
+        open_menu.bounds.size.height,
+        web_open_menu.rect.h,
+        1.0,
+    );
+}

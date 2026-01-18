@@ -203,6 +203,8 @@ It complements (but does not replace) ADRs:
       in hover-visible states (light/dark), and aligned the shadcn ScrollArea default thumb alpha to 1.0.
     - Added `table-demo` layout conformance gates (header/body/footer row heights + caption gap) and aligned
       shadcn `TableRow` height behavior by removing the unconditional `min_h=40` default.
+    - Added `data-table-demo` layout conformance gates for row height and key control sizing
+      (checkbox 16x16, action button 32x32).
   - Goldens to expand:
     - `goldens/shadcn-web/v4/new-york-v4/*.open.json`: add open snapshots for pages that require non-click input and/or submenu open states.
   - Fret gates to add:
