@@ -95,7 +95,9 @@ impl Default for ScrollAreaScrollbar {
         Self {
             orientation: ScrollAreaScrollbarOrientation::default(),
             track_padding: ScrollbarStyle::default().track_padding,
-            thumb_idle_alpha: ScrollbarStyle::default().thumb_idle_alpha,
+            // shadcn/ui v4 `ScrollAreaThumb` uses `bg-border` directly (no opacity modifier).
+            // Keep the default thumb alpha at 1.0 for 1:1 web conformance.
+            thumb_idle_alpha: 1.0,
         }
     }
 }
