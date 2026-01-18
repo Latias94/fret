@@ -133,7 +133,7 @@ If you also extract open overlay states (`--modes=open` or `--open`), you will g
 `*.open.json` files alongside the base closed-mode goldens. In this repo, the current snapshot is:
 
 - `370` closed-mode files (`*.json`, excluding `*.open.json`)
-- `64` open-mode files (`*.open.json`)
+- `66` open-mode files (`*.open.json`)
 
 Note: `*.open.json` also matches the glob `*.json`, so "total .json files" will include open-mode
 snapshots unless you exclude `*.open.json`.
