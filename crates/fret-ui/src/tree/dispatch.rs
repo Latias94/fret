@@ -1015,7 +1015,7 @@ impl<H: UiHost> UiTree<H> {
                 if let Some(node) = prev_node {
                     self.mark_invalidation_dedup_with_source(
                         node,
-                        Invalidation::Layout,
+                        Invalidation::Paint,
                         &mut invalidation_visited,
                         UiDebugInvalidationSource::Hover,
                     );
@@ -1023,7 +1023,7 @@ impl<H: UiHost> UiTree<H> {
                 if let Some(node) = next_node {
                     self.mark_invalidation_dedup_with_source(
                         node,
-                        Invalidation::Layout,
+                        Invalidation::Paint,
                         &mut invalidation_visited,
                         UiDebugInvalidationSource::Hover,
                     );
