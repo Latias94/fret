@@ -50,6 +50,22 @@ fn text_base_style(theme: &Theme) -> TextStyle {
     }
 }
 
+fn text_prose_style(theme: &Theme) -> TextStyle {
+    let size = theme
+        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_PROSE_PX)
+        .unwrap_or_else(|| Px(font_size(theme).0 + 2.0));
+    let line_height = theme
+        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_PROSE_LINE_HEIGHT)
+        .unwrap_or_else(|| Px(font_line_height(theme).0 + 4.0));
+
+    TextStyle {
+        font: FontId::default(),
+        size,
+        line_height: Some(line_height),
+        ..Default::default()
+    }
+}
+
 /// Declarative text helper that matches Tailwind's `truncate` semantics:
 /// - `whitespace-nowrap`
 /// - `text-overflow: ellipsis`
@@ -118,6 +134,79 @@ pub fn text_base<H: UiHost>(
         style: Some(text_base_style(&theme)),
         color: None,
         wrap: TextWrap::Word,
+        overflow: TextOverflow::Clip,
+    })
+}
+
+/// Declarative text helper intended for typography pages (`prose`-like body copy).
+///
+/// This uses a larger baseline than `text_base` so examples like `typography-table` can match
+/// upstream web goldens (16px / 24px by default under the shadcn theme).
+pub fn text_prose<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app).clone();
+    cx.text_props(TextProps {
+        layout: LayoutStyle::default(),
+        text: text.into(),
+        style: Some(text_prose_style(&theme)),
+        color: None,
+        wrap: TextWrap::Word,
+        overflow: TextOverflow::Clip,
+    })
+}
+
+/// Bold variant of [`text_prose`], intended for typography table headers (`<th className=\"... font-bold\">`).
+pub fn text_prose_bold<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app).clone();
+    let mut style = text_prose_style(&theme);
+    style.weight = fret_core::FontWeight::BOLD;
+
+    cx.text_props(TextProps {
+        layout: LayoutStyle::default(),
+        text: text.into(),
+        style: Some(style),
+        color: None,
+        wrap: TextWrap::Word,
+        overflow: TextOverflow::Clip,
+    })
+}
+
+/// `text_prose` variant that forces single-line layout (`whitespace-nowrap`-like behavior).
+pub fn text_prose_nowrap<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app).clone();
+    cx.text_props(TextProps {
+        layout: LayoutStyle::default(),
+        text: text.into(),
+        style: Some(text_prose_style(&theme)),
+        color: None,
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+    })
+}
+
+/// Bold variant of [`text_prose_nowrap`].
+pub fn text_prose_bold_nowrap<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app).clone();
+    let mut style = text_prose_style(&theme);
+    style.weight = fret_core::FontWeight::BOLD;
+
+    cx.text_props(TextProps {
+        layout: LayoutStyle::default(),
+        text: text.into(),
+        style: Some(style),
+        color: None,
+        wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
     })
 }

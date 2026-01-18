@@ -157,6 +157,12 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
     metrics
         .entry(theme_tokens::metric::COMPONENT_TEXT_BASE_LINE_HEIGHT.to_string())
         .or_insert(20.0);
+    metrics
+        .entry(theme_tokens::metric::COMPONENT_TEXT_PROSE_PX.to_string())
+        .or_insert(16.0);
+    metrics
+        .entry(theme_tokens::metric::COMPONENT_TEXT_PROSE_LINE_HEIGHT.to_string())
+        .or_insert(24.0);
 
     metrics
         .entry("component.ring.width".to_string())
