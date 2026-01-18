@@ -133,7 +133,7 @@ If you also extract open overlay states (`--modes=open` or `--open`), you will g
 `*.open.json` files alongside the base closed-mode goldens. In this repo, the current snapshot is:
 
 - `370` closed-mode files (`*.json`, excluding `*.open.json`)
-- `56` open-mode files (`*.open.json`)
+- `60` open-mode files (`*.open.json`)
 
 Note: `*.open.json` also matches the glob `*.json`, so "total .json files" will include open-mode
 snapshots unless you exclude `*.open.json`.
@@ -175,7 +175,11 @@ Constrained viewport (useful for clamping/placement regressions):
 
 Other constrained overlay variants (useful for tight-height flip/shift behavior):
 
-`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 popover-demo hover-card-demo tooltip-demo --modes=open --update --viewportW=1440 --viewportH=240 --openVariants="vp1440x240=[data-fret-golden-target] [data-slot$='trigger']"`
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 popover-demo hover-card-demo tooltip-demo alert-dialog-demo dialog-demo sheet-demo --modes=open --update --viewportW=1440 --viewportH=240 --openVariants="vp1440x240=[data-fret-golden-target] [data-slot$='trigger']"`
+
+Note: `command-dialog` uses a different trigger selector:
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 command-dialog --modes=open --update --viewportW=1440 --viewportH=240 --openVariants="vp1440x240=[data-fret-golden-target] [data-state='closed'][aria-haspopup]"`
 
 
 Output directory (default):
