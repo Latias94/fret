@@ -2679,6 +2679,46 @@ fn web_vs_fret_select_panel_chrome_matches() {
 }
 
 #[test]
+fn web_vs_fret_select_scrollable_surface_colors_match_web() {
+    assert_overlay_surface_colors_match(
+        "select-scrollable",
+        "select-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::ListBox,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        |cx, open| {
+            let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+            fret_ui_shadcn::Select::new(value, open.clone())
+                .a11y_label("Select")
+                .item(fret_ui_shadcn::SelectItem::new("one", "One"))
+                .item(fret_ui_shadcn::SelectItem::new("two", "Two"))
+                .into_element(cx)
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_select_scrollable_surface_colors_match_web_dark() {
+    assert_overlay_surface_colors_match(
+        "select-scrollable",
+        "select-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::ListBox,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        |cx, open| {
+            let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+            fret_ui_shadcn::Select::new(value, open.clone())
+                .a11y_label("Select")
+                .item(fret_ui_shadcn::SelectItem::new("one", "One"))
+                .item(fret_ui_shadcn::SelectItem::new("two", "Two"))
+                .into_element(cx)
+        },
+    );
+}
+
+#[test]
 fn web_vs_fret_tooltip_panel_chrome_matches() {
     assert_hover_overlay_chrome_matches(
         "tooltip-demo",
