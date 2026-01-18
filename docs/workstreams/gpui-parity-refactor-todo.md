@@ -121,6 +121,10 @@ Goal: make caching a closed loop across paint + interaction (+ semantics later),
   - Progress: hit-testing remains correct under render transforms when the overlay root is a view-cache root and prepaint interaction ranges are reused.
   - Evidence: `crates/fret-ui/src/tree/tests/outside_press.rs` (`outside_press_observer_works_with_view_cache_root_and_prepaint_reuse`),
     `crates/fret-ui/src/tree/tests/hit_test.rs` (`hit_test_works_with_view_cache_root_and_prepaint_reuse_under_render_transform`).
+- [x] GPUI-MVP3-rt-004 Use prepainted hit-test caches for routing hot paths.
+  - Touches: `crates/fret-ui/src/tree/prepaint.rs`, `crates/fret-ui/src/tree/hit_test.rs`, `crates/fret-ui/src/tree/mod.rs`
+  - Progress: prepaint caches and replays inverse transforms + clip metadata per node; hit-testing reuses it when nodes are clean and inspection is inactive.
+  - Evidence: `crates/fret-ui/src/tree/prepaint.rs` (`apply_interaction_record`), `crates/fret-ui/src/tree/hit_test.rs` (`prepaint_hit_test` fast path).
 
 ## MVP4 — Migration + Adoption (Ecosystem + Demos)
 
