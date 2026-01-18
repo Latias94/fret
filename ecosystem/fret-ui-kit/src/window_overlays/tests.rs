@@ -2631,8 +2631,12 @@ fn non_modal_overlay_restores_focus_when_focus_is_missing_on_unmount() {
 
     ui.set_focus(None);
 
-    // Third frame: do not request the popover (present=false / unmounted), and expect focus to
-    // be restored to the trigger since focus is missing.
+    // Third frame: close the popover, then stop requesting it.
+    //
+    // With cached request declarations (for view caching), an open overlay can be synthesized even
+    // if the subtree that emits requests is skipped for a frame. To model a true unmount, ensure
+    // `open=false` so the cached request is not synthesized.
+    let _ = app.models_mut().update(&open, |v| *v = false);
     begin_frame(&mut app, window);
     let _ = render_base_with_trigger(
         &mut ui,
