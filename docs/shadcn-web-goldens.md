@@ -229,8 +229,8 @@ This suite compares web computed styles against the Fret paint scene for overlay
 currently gates border widths + corner radii broadly, and additionally asserts selected surface
 colors (background + border) derived from web `computedStyle` for a growing set of overlay
 surfaces (`dialog-content`, `sheet-content`, `popover-content`, `dropdown-menu-content`,
-`context-menu-content`, `menubar-content`, `navigation-menu-content`, `drawer-content`) across
-light/dark themes when available.
+`context-menu-content`, `menubar-content`, `navigation-menu-content`, `select-content`,
+`drawer-content`) across light/dark themes when available.
 
 ## Layout conformance (geometry-first)
 
