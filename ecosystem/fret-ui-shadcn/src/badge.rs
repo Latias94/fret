@@ -119,13 +119,6 @@ fn badge_with_patch<H: UiHost>(
             .overflow_hidden()
             .merge(layout_override),
     );
-    // Treat borders as part of the component's "outer size" to match the web box model:
-    // shadcn uses `border` + `px-*`/`py-*` (border-box sizing). Our `ContainerProps.border` is a
-    // paint-time concern, so we include the border thickness in layout padding.
-    props.padding.top = Px((props.padding.top.0 + props.border.top.0).max(0.0));
-    props.padding.right = Px((props.padding.right.0 + props.border.right.0).max(0.0));
-    props.padding.bottom = Px((props.padding.bottom.0 + props.border.bottom.0).max(0.0));
-    props.padding.left = Px((props.padding.left.0 + props.border.left.0).max(0.0));
 
     let text_px = theme
         .metric_by_key("component.badge.text_px")
