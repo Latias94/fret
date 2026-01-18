@@ -258,6 +258,7 @@ pub struct UiDebugGlobalChangeUnobserved {
 pub enum UiDebugInvalidationSource {
     ModelChange,
     GlobalChange,
+    Notify,
     Hover,
     Focus,
     Other,
@@ -268,6 +269,7 @@ pub enum UiDebugInvalidationDetail {
     Unknown,
     ModelObservation,
     GlobalObservation,
+    NotifyCall,
     HoverEvent,
     FocusEvent,
     ScrollHandle,
@@ -281,6 +283,7 @@ impl UiDebugInvalidationDetail {
         match source {
             UiDebugInvalidationSource::ModelChange => Self::ModelObservation,
             UiDebugInvalidationSource::GlobalChange => Self::GlobalObservation,
+            UiDebugInvalidationSource::Notify => Self::NotifyCall,
             UiDebugInvalidationSource::Hover => Self::HoverEvent,
             UiDebugInvalidationSource::Focus => Self::FocusEvent,
             UiDebugInvalidationSource::Other => Self::Unknown,
@@ -292,6 +295,7 @@ impl UiDebugInvalidationDetail {
             Self::Unknown => None,
             Self::ModelObservation => Some("model_observation"),
             Self::GlobalObservation => Some("global_observation"),
+            Self::NotifyCall => Some("notify_call"),
             Self::HoverEvent => Some("hover_event"),
             Self::FocusEvent => Some("focus_event"),
             Self::ScrollHandle => Some("scroll_handle"),
@@ -2130,6 +2134,12 @@ impl<H: UiHost> UiTree<H> {
                     .invalidation_walk_calls_global_change
                     .saturating_add(1);
             }
+            UiDebugInvalidationSource::Notify => {
+                self.debug_stats.invalidation_walk_calls_other = self
+                    .debug_stats
+                    .invalidation_walk_calls_other
+                    .saturating_add(1);
+            }
             UiDebugInvalidationSource::Hover => {
                 self.debug_stats.invalidation_walk_calls_hover = self
                     .debug_stats
@@ -2168,6 +2178,12 @@ impl<H: UiHost> UiTree<H> {
                 self.debug_stats.invalidation_walk_nodes_global_change = self
                     .debug_stats
                     .invalidation_walk_nodes_global_change
+                    .saturating_add(1);
+            }
+            UiDebugInvalidationSource::Notify => {
+                self.debug_stats.invalidation_walk_nodes_other = self
+                    .debug_stats
+                    .invalidation_walk_nodes_other
                     .saturating_add(1);
             }
             UiDebugInvalidationSource::Hover => {
@@ -2229,6 +2245,9 @@ impl<H: UiHost> UiTree<H> {
                             .saturating_add(1);
                     }
                     hit_cache_root = Some(id);
+                    if source == UiDebugInvalidationSource::Notify {
+                        n.view_cache_needs_rerender = true;
+                    }
                     break;
                 }
                 current = n.parent;
@@ -2334,6 +2353,9 @@ impl<H: UiHost> UiTree<H> {
                             .debug_stats
                             .view_cache_invalidation_truncations
                             .saturating_add(1);
+                    }
+                    if source == UiDebugInvalidationSource::Notify {
+                        n.view_cache_needs_rerender = true;
                     }
                     hit_cache_root = Some(id);
                     break;

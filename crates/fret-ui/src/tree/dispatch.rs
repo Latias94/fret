@@ -28,10 +28,11 @@ impl<H: UiHost> UiTree<H> {
 
     fn invalidation_source_rank(source: UiDebugInvalidationSource) -> u8 {
         match source {
-            UiDebugInvalidationSource::ModelChange => 5,
-            UiDebugInvalidationSource::GlobalChange => 4,
-            UiDebugInvalidationSource::Hover => 3,
-            UiDebugInvalidationSource::Focus => 2,
+            UiDebugInvalidationSource::ModelChange => 6,
+            UiDebugInvalidationSource::GlobalChange => 5,
+            UiDebugInvalidationSource::Hover => 4,
+            UiDebugInvalidationSource::Focus => 3,
+            UiDebugInvalidationSource::Notify => 2,
             UiDebugInvalidationSource::Other => 1,
         }
     }
@@ -294,39 +295,46 @@ impl<H: UiHost> UiTree<H> {
         if event_position(event).is_some() {
             let chain = self.build_mapped_event_chain(start, event);
             for (node_id, event_for_node) in chain {
-                let (invalidations, requested_focus, requested_capture, stop_propagation) = self
-                    .with_widget_mut(node_id, |widget, tree| {
-                        let (children, bounds) = tree
-                            .nodes
-                            .get(node_id)
-                            .map(|n| (n.children.as_slice(), n.bounds))
-                            .unwrap_or((&[][..], Rect::default()));
-                        let mut cx = EventCx {
-                            app,
-                            services: &mut *services,
-                            node: node_id,
-                            window: tree.window,
-                            pointer_id: pointer_id_for_capture,
-                            input_ctx: input_ctx.clone(),
-                            children,
-                            focus: tree.focus,
-                            captured: pointer_id_for_capture
-                                .and_then(|p| tree.captured.get(&p).copied()),
-                            bounds,
-                            invalidations: Vec::new(),
-                            requested_focus: None,
-                            requested_capture: None,
-                            requested_cursor: None,
-                            stop_propagation: false,
-                        };
-                        widget.event(&mut cx, &event_for_node);
-                        (
-                            cx.invalidations,
-                            cx.requested_focus,
-                            cx.requested_capture,
-                            cx.stop_propagation,
-                        )
-                    });
+                let (
+                    invalidations,
+                    requested_focus,
+                    requested_capture,
+                    notify_requested,
+                    stop_propagation,
+                ) = self.with_widget_mut(node_id, |widget, tree| {
+                    let (children, bounds) = tree
+                        .nodes
+                        .get(node_id)
+                        .map(|n| (n.children.as_slice(), n.bounds))
+                        .unwrap_or((&[][..], Rect::default()));
+                    let mut cx = EventCx {
+                        app,
+                        services: &mut *services,
+                        node: node_id,
+                        window: tree.window,
+                        pointer_id: pointer_id_for_capture,
+                        input_ctx: input_ctx.clone(),
+                        children,
+                        focus: tree.focus,
+                        captured: pointer_id_for_capture
+                            .and_then(|p| tree.captured.get(&p).copied()),
+                        bounds,
+                        invalidations: Vec::new(),
+                        requested_focus: None,
+                        requested_capture: None,
+                        requested_cursor: None,
+                        notify_requested: false,
+                        stop_propagation: false,
+                    };
+                    widget.event(&mut cx, &event_for_node);
+                    (
+                        cx.invalidations,
+                        cx.requested_focus,
+                        cx.requested_capture,
+                        cx.notify_requested,
+                        cx.stop_propagation,
+                    )
+                });
 
                 for (id, inv) in invalidations {
                     Self::pending_invalidation_merge(
@@ -335,6 +343,16 @@ impl<H: UiHost> UiTree<H> {
                         inv,
                         UiDebugInvalidationSource::Other,
                         UiDebugInvalidationDetail::Unknown,
+                    );
+                }
+
+                if notify_requested {
+                    Self::pending_invalidation_merge(
+                        &mut pending_invalidations,
+                        node_id,
+                        Invalidation::Paint,
+                        UiDebugInvalidationSource::Notify,
+                        UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Notify),
                     );
                 }
 
@@ -397,41 +415,48 @@ impl<H: UiHost> UiTree<H> {
 
         let mut node_id = start;
         loop {
-            let (invalidations, requested_focus, requested_capture, stop_propagation, parent) =
-                self.with_widget_mut(node_id, |widget, tree| {
-                    let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
-                    let (children, bounds) = tree
-                        .nodes
-                        .get(node_id)
-                        .map(|n| (n.children.as_slice(), n.bounds))
-                        .unwrap_or((&[][..], Rect::default()));
-                    let mut cx = EventCx {
-                        app,
-                        services: &mut *services,
-                        node: node_id,
-                        window: tree.window,
-                        pointer_id: pointer_id_for_capture,
-                        input_ctx: input_ctx.clone(),
-                        children,
-                        focus: tree.focus,
-                        captured: pointer_id_for_capture
-                            .and_then(|p| tree.captured.get(&p).copied()),
-                        bounds,
-                        invalidations: Vec::new(),
-                        requested_focus: None,
-                        requested_capture: None,
-                        requested_cursor: None,
-                        stop_propagation: false,
-                    };
-                    widget.event(&mut cx, event);
-                    (
-                        cx.invalidations,
-                        cx.requested_focus,
-                        cx.requested_capture,
-                        cx.stop_propagation,
-                        parent,
-                    )
-                });
+            let (
+                invalidations,
+                requested_focus,
+                requested_capture,
+                notify_requested,
+                stop_propagation,
+                parent,
+            ) = self.with_widget_mut(node_id, |widget, tree| {
+                let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
+                let (children, bounds) = tree
+                    .nodes
+                    .get(node_id)
+                    .map(|n| (n.children.as_slice(), n.bounds))
+                    .unwrap_or((&[][..], Rect::default()));
+                let mut cx = EventCx {
+                    app,
+                    services: &mut *services,
+                    node: node_id,
+                    window: tree.window,
+                    pointer_id: pointer_id_for_capture,
+                    input_ctx: input_ctx.clone(),
+                    children,
+                    focus: tree.focus,
+                    captured: pointer_id_for_capture.and_then(|p| tree.captured.get(&p).copied()),
+                    bounds,
+                    invalidations: Vec::new(),
+                    requested_focus: None,
+                    requested_capture: None,
+                    requested_cursor: None,
+                    notify_requested: false,
+                    stop_propagation: false,
+                };
+                widget.event(&mut cx, event);
+                (
+                    cx.invalidations,
+                    cx.requested_focus,
+                    cx.requested_capture,
+                    cx.notify_requested,
+                    cx.stop_propagation,
+                    parent,
+                )
+            });
 
             for (id, inv) in invalidations {
                 Self::pending_invalidation_merge(
@@ -440,6 +465,16 @@ impl<H: UiHost> UiTree<H> {
                     inv,
                     UiDebugInvalidationSource::Other,
                     UiDebugInvalidationDetail::Unknown,
+                );
+            }
+
+            if notify_requested {
+                Self::pending_invalidation_merge(
+                    &mut pending_invalidations,
+                    node_id,
+                    Invalidation::Paint,
+                    UiDebugInvalidationSource::Notify,
+                    UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Notify),
                 );
             }
 
@@ -1141,6 +1176,7 @@ impl<H: UiHost> UiTree<H> {
                     requested_focus,
                     requested_capture,
                     requested_cursor,
+                    notify_requested,
                     stop_propagation,
                 ) = self.with_widget_mut(node_id, |widget, tree| {
                     let (children, bounds) = tree
@@ -1164,6 +1200,7 @@ impl<H: UiHost> UiTree<H> {
                         requested_focus: None,
                         requested_capture: None,
                         requested_cursor: None,
+                        notify_requested: false,
                         stop_propagation: false,
                     };
                     widget.event(&mut cx, &event_for_node);
@@ -1172,6 +1209,7 @@ impl<H: UiHost> UiTree<H> {
                         cx.requested_focus,
                         cx.requested_capture,
                         cx.requested_cursor,
+                        cx.notify_requested,
                         cx.stop_propagation,
                     )
                 });
@@ -1179,12 +1217,20 @@ impl<H: UiHost> UiTree<H> {
                 if !invalidations.is_empty()
                     || requested_focus.is_some()
                     || requested_capture.is_some()
+                    || notify_requested
                 {
                     needs_redraw = true;
                 }
 
                 for (id, inv) in invalidations {
                     self.mark_invalidation(id, inv);
+                }
+                if notify_requested {
+                    self.mark_invalidation_with_source(
+                        node_id,
+                        Invalidation::Paint,
+                        UiDebugInvalidationSource::Notify,
+                    );
                 }
 
                 if let Some(focus) = requested_focus
@@ -1235,6 +1281,7 @@ impl<H: UiHost> UiTree<H> {
                     requested_focus,
                     requested_capture,
                     requested_cursor,
+                    notify_requested,
                     stop_propagation,
                     parent,
                 ) = self.with_widget_mut(node_id, |widget, tree| {
@@ -1260,6 +1307,7 @@ impl<H: UiHost> UiTree<H> {
                         requested_focus: None,
                         requested_capture: None,
                         requested_cursor: None,
+                        notify_requested: false,
                         stop_propagation: false,
                     };
                     widget.event(&mut cx, event);
@@ -1268,6 +1316,7 @@ impl<H: UiHost> UiTree<H> {
                         cx.requested_focus,
                         cx.requested_capture,
                         cx.requested_cursor,
+                        cx.notify_requested,
                         cx.stop_propagation,
                         parent,
                     )
@@ -1276,12 +1325,20 @@ impl<H: UiHost> UiTree<H> {
                 if !invalidations.is_empty()
                     || requested_focus.is_some()
                     || requested_capture.is_some()
+                    || notify_requested
                 {
                     needs_redraw = true;
                 }
 
                 for (id, inv) in invalidations {
                     self.mark_invalidation(id, inv);
+                }
+                if notify_requested {
+                    self.mark_invalidation_with_source(
+                        node_id,
+                        Invalidation::Paint,
+                        UiDebugInvalidationSource::Notify,
+                    );
                 }
 
                 if let Some(focus) = requested_focus
@@ -1596,7 +1653,73 @@ impl<H: UiHost> UiTree<H> {
         if event_position(event).is_some() {
             let chain = self.build_mapped_event_chain(start, event);
             for (node_id, event_for_node) in chain {
-                let (invalidations, _parent) = self.with_widget_mut(node_id, |widget, tree| {
+                let (invalidations, notify_requested, _parent) =
+                    self.with_widget_mut(node_id, |widget, tree| {
+                        let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
+                        let (children, bounds) = tree
+                            .nodes
+                            .get(node_id)
+                            .map(|n| (n.children.as_slice(), n.bounds))
+                            .unwrap_or((&[][..], Rect::default()));
+                        let mut observer_ctx = input_ctx.clone();
+                        observer_ctx.dispatch_phase = InputDispatchPhase::Observer;
+                        let mut cx = EventCx {
+                            app,
+                            services: &mut *services,
+                            node: node_id,
+                            window: tree.window,
+                            pointer_id: pointer_id_for_capture,
+                            input_ctx: observer_ctx,
+                            children,
+                            focus: tree.focus,
+                            captured: pointer_id_for_capture
+                                .and_then(|p| tree.captured.get(&p).copied()),
+                            bounds,
+                            invalidations: Vec::new(),
+                            requested_focus: None,
+                            requested_capture: None,
+                            requested_cursor: None,
+                            notify_requested: false,
+                            stop_propagation: false,
+                        };
+                        widget.event(&mut cx, &event_for_node);
+
+                        // Observer dispatch must not mutate routing state (capture/focus/propagation). It
+                        // exists to allow click-through outside-press policies, not to intercept input.
+                        (cx.invalidations, cx.notify_requested, parent)
+                    });
+
+                for (id, inv) in invalidations {
+                    Self::pending_invalidation_merge(
+                        &mut pending_invalidations,
+                        id,
+                        inv,
+                        UiDebugInvalidationSource::Other,
+                        UiDebugInvalidationDetail::Unknown,
+                    );
+                }
+
+                if notify_requested {
+                    Self::pending_invalidation_merge(
+                        &mut pending_invalidations,
+                        node_id,
+                        Invalidation::Paint,
+                        UiDebugInvalidationSource::Notify,
+                        UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Notify),
+                    );
+                }
+            }
+            self.apply_pending_invalidations(
+                std::mem::take(&mut pending_invalidations),
+                invalidation_visited,
+            );
+            return;
+        }
+
+        let mut node_id = start;
+        loop {
+            let (invalidations, notify_requested, parent) =
+                self.with_widget_mut(node_id, |widget, tree| {
                     let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
                     let (children, bounds) = tree
                         .nodes
@@ -1621,66 +1744,15 @@ impl<H: UiHost> UiTree<H> {
                         requested_focus: None,
                         requested_capture: None,
                         requested_cursor: None,
+                        notify_requested: false,
                         stop_propagation: false,
                     };
-                    widget.event(&mut cx, &event_for_node);
+                    widget.event(&mut cx, event);
 
                     // Observer dispatch must not mutate routing state (capture/focus/propagation). It
                     // exists to allow click-through outside-press policies, not to intercept input.
-                    (cx.invalidations, parent)
+                    (cx.invalidations, cx.notify_requested, parent)
                 });
-
-                for (id, inv) in invalidations {
-                    Self::pending_invalidation_merge(
-                        &mut pending_invalidations,
-                        id,
-                        inv,
-                        UiDebugInvalidationSource::Other,
-                        UiDebugInvalidationDetail::Unknown,
-                    );
-                }
-            }
-            self.apply_pending_invalidations(
-                std::mem::take(&mut pending_invalidations),
-                invalidation_visited,
-            );
-            return;
-        }
-
-        let mut node_id = start;
-        loop {
-            let (invalidations, parent) = self.with_widget_mut(node_id, |widget, tree| {
-                let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
-                let (children, bounds) = tree
-                    .nodes
-                    .get(node_id)
-                    .map(|n| (n.children.as_slice(), n.bounds))
-                    .unwrap_or((&[][..], Rect::default()));
-                let mut observer_ctx = input_ctx.clone();
-                observer_ctx.dispatch_phase = InputDispatchPhase::Observer;
-                let mut cx = EventCx {
-                    app,
-                    services: &mut *services,
-                    node: node_id,
-                    window: tree.window,
-                    pointer_id: pointer_id_for_capture,
-                    input_ctx: observer_ctx,
-                    children,
-                    focus: tree.focus,
-                    captured: pointer_id_for_capture.and_then(|p| tree.captured.get(&p).copied()),
-                    bounds,
-                    invalidations: Vec::new(),
-                    requested_focus: None,
-                    requested_capture: None,
-                    requested_cursor: None,
-                    stop_propagation: false,
-                };
-                widget.event(&mut cx, event);
-
-                // Observer dispatch must not mutate routing state (capture/focus/propagation). It
-                // exists to allow click-through outside-press policies, not to intercept input.
-                (cx.invalidations, parent)
-            });
 
             for (id, inv) in invalidations {
                 Self::pending_invalidation_merge(
@@ -1689,6 +1761,16 @@ impl<H: UiHost> UiTree<H> {
                     inv,
                     UiDebugInvalidationSource::Other,
                     UiDebugInvalidationDetail::Unknown,
+                );
+            }
+
+            if notify_requested {
+                Self::pending_invalidation_merge(
+                    &mut pending_invalidations,
+                    node_id,
+                    Invalidation::Paint,
+                    UiDebugInvalidationSource::Notify,
+                    UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Notify),
                 );
             }
 

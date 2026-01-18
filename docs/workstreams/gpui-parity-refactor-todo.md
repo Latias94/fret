@@ -73,9 +73,12 @@ Goal: make hover/focus/pressed “cheap by default” and stop subtree shape thr
 
 Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental model (ADR 0180).
 
-- [ ] GPUI-MVP2-rt-001 Define `ViewId` and `notify` API shape at the `fret-ui` / `fret-app` boundary.
+- [~] GPUI-MVP2-rt-001 Define `ViewId` and `notify` API shape at the `fret-ui` / `fret-app` boundary.
   - Touches: `crates/fret-ui/src/element.rs`, `crates/fret-ui/src/elements/*`, `crates/fret-app/src/app.rs`
   - Reference: `repo-ref/zed/crates/gpui/src/window.rs` (`WindowInvalidator`, `dirty_views`)
+  - Progress: `EventCx::notify()` exists and marks the nearest cache root as `view_cache_needs_rerender` via a dedicated invalidation source.
+  - Evidence: `crates/fret-ui/src/widget.rs` (`EventCx::notify`), `crates/fret-ui/src/tree/mod.rs` (`UiDebugInvalidationSource::Notify`),
+    `crates/fret-ui/src/tree/tests/view_cache.rs` (`view_cache_notify_marks_cache_root_needs_rerender`).
 - [ ] GPUI-MVP2-rt-002 Track per-window dirty view set and coalesce redraw scheduling.
   - Touches: `crates/fret-ui/src/tree/mod.rs`, runner glue in `crates/fret-launch/` if needed
   - Done when: repeated `notify` calls are coalesced; diagnostics can list dirty views (debug-only).

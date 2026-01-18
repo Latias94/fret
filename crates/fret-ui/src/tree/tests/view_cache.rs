@@ -168,6 +168,35 @@ fn view_cache_nested_boundaries_invalidate_ancestor_cache_roots() {
 }
 
 #[test]
+fn view_cache_notify_marks_cache_root_needs_rerender() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+
+    let root = ui.create_node(TestStack::default());
+    let boundary = ui.create_node(TestStack::default());
+    let leaf = ui.create_node(TestStack::default());
+
+    ui.set_root(root);
+    ui.set_children(root, vec![boundary]);
+    ui.set_children(boundary, vec![leaf]);
+
+    ui.nodes[boundary].view_cache.enabled = true;
+    ui.nodes[boundary].view_cache.contained_layout = true;
+
+    for id in [root, boundary, leaf] {
+        ui.nodes[id].invalidation.clear();
+        ui.nodes[id].view_cache_needs_rerender = false;
+    }
+
+    ui.mark_invalidation_with_source(leaf, Invalidation::Paint, UiDebugInvalidationSource::Notify);
+
+    assert!(ui.nodes[boundary].invalidation.paint);
+    assert!(ui.nodes[boundary].view_cache_needs_rerender);
+    assert!(!ui.should_reuse_view_cache_node(boundary));
+}
+
+#[test]
 fn view_cache_uplifts_observations_to_nearest_root_and_invalidates_ancestor_roots() {
     let mut app = crate::test_host::TestHost::new();
     let model = app.models_mut().insert(0u32);

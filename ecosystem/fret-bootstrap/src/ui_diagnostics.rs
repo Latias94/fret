@@ -2539,6 +2539,7 @@ impl UiInvalidationWalkV1 {
             fret_ui::tree::UiDebugInvalidationSource::GlobalChange => {
                 UiInvalidationSourceV1::GlobalChange
             }
+            fret_ui::tree::UiDebugInvalidationSource::Notify => UiInvalidationSourceV1::Other,
             fret_ui::tree::UiDebugInvalidationSource::Hover => UiInvalidationSourceV1::Hover,
             fret_ui::tree::UiDebugInvalidationSource::Focus => UiInvalidationSourceV1::Focus,
             fret_ui::tree::UiDebugInvalidationSource::Other => UiInvalidationSourceV1::Other,

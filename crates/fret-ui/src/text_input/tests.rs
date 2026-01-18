@@ -85,6 +85,7 @@ fn event_cx<'a>(
         requested_focus: None,
         requested_capture: None,
         requested_cursor: None,
+        notify_requested: false,
         stop_propagation: false,
     }
 }
