@@ -383,6 +383,7 @@ impl TableHead {
 #[derive(Debug, Clone)]
 pub struct TableCell {
     child: AnyElement,
+    col_span: Option<u16>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
@@ -391,9 +392,19 @@ impl TableCell {
     pub fn new(child: AnyElement) -> Self {
         Self {
             child,
+            col_span: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
+    }
+
+    /// Sets `colSpan` semantics for the underlying grid-backed table layout.
+    ///
+    /// Note: This only affects placement within Fret's `Grid` implementation; it does not imply
+    /// HTML table semantics, and column sizing remains a separate concern.
+    pub fn col_span(mut self, span: u16) -> Self {
+        self.col_span = Some(span.max(1));
+        self
     }
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
@@ -413,7 +424,10 @@ impl TableCell {
 
         let chrome = ChromeRefinement::default().px(px).py(py).merge(self.chrome);
         let layout = LayoutRefinement::default().w_full().merge(self.layout);
-        let props = decl_style::container_props(&theme, chrome, layout);
+        let mut props = decl_style::container_props(&theme, chrome, layout);
+        if let Some(span) = self.col_span {
+            props.layout.grid.column.span = Some(span);
+        }
         let child = self.child;
         cx.container(props, move |cx| {
             let layout = decl_style::layout_style(&theme, LayoutRefinement::default().w_full());

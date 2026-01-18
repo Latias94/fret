@@ -7332,10 +7332,7 @@ fn web_vs_fret_layout_table_demo_row_heights_and_caption_gap() {
                         4,
                         vec![
                             fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "Total"))
-                                .into_element(cx),
-                            fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, ""))
-                                .into_element(cx),
-                            fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, ""))
+                                .col_span(3)
                                 .into_element(cx),
                             fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "$2,500.00"))
                                 .into_element(cx),
