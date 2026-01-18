@@ -2,10 +2,7 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 
 use fret_core::{AppWindowId, Point, PointerId, Rect};
-use fret_dnd::{
-    PointerSensor, SensorEvent, closest_center_collisions, compute_autoscroll,
-    pointer_within_collisions,
-};
+use fret_dnd::{PointerSensor, SensorEvent, compute_dnd_frame};
 use fret_runtime::{DragKindId, FrameId, ModelStore, TickId};
 
 use super::service::{DndServiceModel, update_dnd};
@@ -120,20 +117,13 @@ fn update_from_sensor_event_in_scope(
         let sensor = sensor.handle(sensor_event);
 
         let snapshot = dnd.registry.snapshot_for_frame(window, frame_id, scope);
-        let collisions = match collision_strategy {
-            CollisionStrategy::PointerWithin => pointer_within_collisions(snapshot, position),
-            CollisionStrategy::ClosestCenter => closest_center_collisions(snapshot, position),
-        };
-        let over = collisions.first().map(|c| c.id);
-
-        let autoscroll =
-            autoscroll.and_then(|(container, cfg)| compute_autoscroll(cfg, container, position));
+        let frame = compute_dnd_frame(snapshot, position, collision_strategy, autoscroll);
 
         DndUpdate {
             sensor,
-            collisions,
-            over,
-            autoscroll,
+            collisions: frame.collisions,
+            over: frame.over,
+            autoscroll: frame.autoscroll,
         }
     })
     .unwrap_or_else(DndUpdate::pending)
@@ -305,20 +295,13 @@ pub fn handle_pointer_move_or_init_in_scope(
         });
 
         let snapshot = dnd.registry.snapshot_for_frame(window, frame_id, scope);
-        let collisions = match collision_strategy {
-            CollisionStrategy::PointerWithin => pointer_within_collisions(snapshot, position),
-            CollisionStrategy::ClosestCenter => closest_center_collisions(snapshot, position),
-        };
-        let over = collisions.first().map(|c| c.id);
-
-        let autoscroll =
-            autoscroll.and_then(|(container, cfg)| compute_autoscroll(cfg, container, position));
+        let frame = compute_dnd_frame(snapshot, position, collision_strategy, autoscroll);
 
         DndUpdate {
             sensor,
-            collisions,
-            over,
-            autoscroll,
+            collisions: frame.collisions,
+            over: frame.over,
+            autoscroll: frame.autoscroll,
         }
     })
     .unwrap_or_else(DndUpdate::pending)
