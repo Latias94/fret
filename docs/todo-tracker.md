@@ -192,8 +192,9 @@ It complements (but does not replace) ADRs:
     - Added shadcn-web tiny-viewport (`vp1440x240`) open goldens for common overlay recipes and
       extended Fret gates for placement/insets + menu sizing signals. Extended overlay chrome gates
       to assert `computedStyle`-derived surface colors (background + border) for `dialog-content`,
-      `sheet-content`, `popover-content`, `dropdown-menu-content`, `context-menu-content`, and
-      `drawer-content` (light/dark where available).
+      `sheet-content`, `popover-content`, `dropdown-menu-content`, `context-menu-content`,
+      `menubar-content`, `navigation-menu-content`, and `drawer-content` (light/dark where
+      available).
   - Goldens to expand:
     - `goldens/shadcn-web/v4/new-york-v4/*.open.json`: add open snapshots for pages that require non-click input and/or submenu open states.
   - Fret gates to add:
