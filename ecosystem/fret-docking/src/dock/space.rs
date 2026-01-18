@@ -757,6 +757,119 @@ impl<H: UiHost> Widget<H> for DockSpace {
             })
         }
 
+        fn resolve_dock_drop_intent<F>(
+            target: Option<DockDropTarget>,
+            drag: &DockDragSnapshot,
+            target_window: fret_core::AppWindowId,
+            dock_bounds: Rect,
+            window_bounds: Rect,
+            position: Point,
+            allow_tear_off: bool,
+            mark_drag_tear_off_requested: bool,
+            default_floating_rect_for_panel: F,
+        ) -> DockDropIntent
+        where
+            F: FnOnce(&PanelKey, Point, Point, Rect) -> Rect,
+        {
+            match target {
+                Some(DockDropTarget::Dock(target)) => DockDropIntent::MovePanel {
+                    source_window: drag.source_window,
+                    panel: drag.panel.clone(),
+                    target_window,
+                    target_tabs: target.tabs,
+                    zone: target.zone,
+                    insert_index: target.insert_index,
+                },
+                Some(DockDropTarget::Float { .. }) => {
+                    let wants_tear_off = allow_tear_off
+                        && (!window_bounds.contains(position)
+                            || float_zone(dock_bounds).contains(position));
+                    if wants_tear_off {
+                        if drag.tear_off_requested || mark_drag_tear_off_requested {
+                            DockDropIntent::None
+                        } else {
+                            DockDropIntent::RequestFloatPanelToNewWindow {
+                                source_window: drag.source_window,
+                                panel: drag.panel.clone(),
+                                anchor: Some(fret_core::WindowAnchor {
+                                    window: target_window,
+                                    position: drag.grab_offset,
+                                }),
+                            }
+                        }
+                    } else {
+                        let rect = default_floating_rect_for_panel(
+                            &drag.panel,
+                            position,
+                            drag.grab_offset,
+                            window_bounds,
+                        );
+                        DockDropIntent::FloatPanelInWindow {
+                            source_window: drag.source_window,
+                            panel: drag.panel.clone(),
+                            target_window,
+                            rect,
+                        }
+                    }
+                }
+                None => DockDropIntent::None,
+            }
+        }
+
+        fn apply_dock_drop_intent(
+            intent: DockDropIntent,
+            pending_effects: &mut Vec<Effect>,
+            invalidate_layout: &mut bool,
+        ) {
+            match intent {
+                DockDropIntent::None => {}
+                DockDropIntent::MovePanel {
+                    source_window,
+                    panel,
+                    target_window,
+                    target_tabs,
+                    zone,
+                    insert_index,
+                } => {
+                    pending_effects.push(Effect::Dock(DockOp::MovePanel {
+                        source_window,
+                        panel,
+                        target_window,
+                        target_tabs,
+                        zone,
+                        insert_index,
+                    }));
+                    *invalidate_layout = true;
+                }
+                DockDropIntent::FloatPanelInWindow {
+                    source_window,
+                    panel,
+                    target_window,
+                    rect,
+                } => {
+                    pending_effects.push(Effect::Dock(DockOp::FloatPanelInWindow {
+                        source_window,
+                        panel,
+                        target_window,
+                        rect,
+                    }));
+                    *invalidate_layout = true;
+                }
+                DockDropIntent::RequestFloatPanelToNewWindow {
+                    source_window,
+                    panel,
+                    anchor,
+                } => {
+                    pending_effects.push(Effect::Dock(DockOp::RequestFloatPanelToNewWindow {
+                        source_window,
+                        panel,
+                        anchor,
+                    }));
+                    *invalidate_layout = true;
+                }
+            }
+        }
+
         let pointer_id: fret_core::PointerId = match event {
             fret_core::Event::Pointer(fret_core::PointerEvent::Move { pointer_id, .. })
             | fret_core::Event::Pointer(fret_core::PointerEvent::Down { pointer_id, .. })
@@ -1599,55 +1712,45 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     && let Some(drag) = dock_drag.as_ref()
                                 {
                                     if drag.dragging {
-                                        match dock.hover.clone() {
-                                            Some(DockDropTarget::Dock(target)) => {
-                                                pending_effects.push(Effect::Dock(
-                                                    DockOp::MovePanel {
-                                                        source_window: drag.source_window,
-                                                        panel: drag.panel.clone(),
-                                                        target_window: self.window,
-                                                        target_tabs: target.tabs,
-                                                        zone: target.zone,
-                                                        insert_index: target.insert_index,
-                                                    },
-                                                ));
-                                                invalidate_layout = true;
-                                            }
-                                            Some(DockDropTarget::Float { .. }) => {
-                                                if allow_tear_off {
-                                                    pending_effects.push(Effect::Dock(
-                                                        DockOp::RequestFloatPanelToNewWindow {
-                                                            source_window: drag.source_window,
-                                                            panel: drag.panel.clone(),
-                                                            anchor: Some(fret_core::WindowAnchor {
-                                                                window: self.window,
-                                                                position: drag.grab_offset,
-                                                            }),
-                                                        },
-                                                    ));
-                                                    invalidate_layout = true;
-                                                }
-                                            }
-                                            None => {
-                                                if allow_tear_off && {
-                                                    !window_bounds.contains(*position)
-                                                        || float_zone(dock_bounds)
-                                                            .contains(*position)
-                                                } {
-                                                    pending_effects.push(Effect::Dock(
-                                                        DockOp::RequestFloatPanelToNewWindow {
-                                                            source_window: drag.source_window,
-                                                            panel: drag.panel.clone(),
-                                                            anchor: Some(fret_core::WindowAnchor {
-                                                                window: self.window,
-                                                                position: drag.grab_offset,
-                                                            }),
-                                                        },
-                                                    ));
-                                                    invalidate_layout = true;
-                                                }
-                                            }
+                                        let target = dock.hover.clone().or_else(|| {
+                                            (!window_bounds.contains(*position)
+                                                || float_zone(dock_bounds).contains(*position))
+                                            .then_some(DockDropTarget::Float {
+                                                window: self.window,
+                                            })
+                                        });
+
+                                        let intent = resolve_dock_drop_intent(
+                                            target,
+                                            drag,
+                                            self.window,
+                                            dock_bounds,
+                                            window_bounds,
+                                            *position,
+                                            allow_tear_off,
+                                            mark_drag_tear_off_requested,
+                                            |panel, position, grab_offset, window_bounds| {
+                                                self.default_floating_rect_for_panel(
+                                                    panel,
+                                                    position,
+                                                    grab_offset,
+                                                    window_bounds,
+                                                )
+                                            },
+                                        );
+
+                                        if let DockDropIntent::RequestFloatPanelToNewWindow {
+                                            ..
+                                        } = intent
+                                        {
+                                            mark_drag_tear_off_requested = true;
                                         }
+
+                                        apply_dock_drop_intent(
+                                            intent,
+                                            &mut pending_effects,
+                                            &mut invalidate_layout,
+                                        );
                                     }
 
                                     dock.hover = None;
@@ -1803,110 +1906,37 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             &self.tab_widths,
                                             position,
                                         );
-                                        match target {
-                                            Some(DockDropTarget::Dock(target)) => {
-                                                pending_effects.push(Effect::Dock(
-                                                    DockOp::MovePanel {
-                                                        source_window: drag.source_window,
-                                                        panel: drag.panel.clone(),
-                                                        target_window: self.window,
-                                                        target_tabs: target.tabs,
-                                                        zone: target.zone,
-                                                        insert_index: target.insert_index,
-                                                    },
-                                                ));
-                                                invalidate_layout = true;
-                                            }
-                                            Some(DockDropTarget::Float { .. }) => {
-                                                let wants_tear_off = allow_tear_off
-                                                    && (!window_bounds.contains(position)
-                                                        || float_zone(dock_bounds)
-                                                            .contains(position));
-                                                if wants_tear_off {
-                                                    // Avoid requesting the same tear-off twice for a
-                                                    // single dock drag session. The runner may deliver
-                                                    // `Drop` via multiple routes (e.g. device events
-                                                    // outside windows), but the window creation request
-                                                    // should remain idempotent at the UI layer.
-                                                    if !drag.tear_off_requested
-                                                        && !mark_drag_tear_off_requested
-                                                    {
-                                                        mark_drag_tear_off_requested = true;
-                                                        pending_effects.push(Effect::Dock(
-                                                            DockOp::RequestFloatPanelToNewWindow {
-                                                                source_window: drag.source_window,
-                                                                panel: drag.panel.clone(),
-                                                                anchor: Some(
-                                                                    fret_core::WindowAnchor {
-                                                                        window: self.window,
-                                                                        position: drag.grab_offset,
-                                                                    },
-                                                                ),
-                                                            },
-                                                        ));
-                                                    }
-                                                } else {
-                                                    let rect = self
-                                                        .default_floating_rect_for_panel(
-                                                            &drag.panel,
-                                                            position,
-                                                            drag.grab_offset,
-                                                            window_bounds,
-                                                        );
-                                                    pending_effects.push(Effect::Dock(
-                                                        DockOp::FloatPanelInWindow {
-                                                            source_window: drag.source_window,
-                                                            panel: drag.panel.clone(),
-                                                            target_window: self.window,
-                                                            rect,
-                                                        },
-                                                    ));
-                                                }
-                                                invalidate_layout = true;
-                                            }
-                                            None => {
-                                                if !window_bounds.contains(position)
-                                                    || float_zone(dock_bounds).contains(position)
-                                                {
-                                                    if allow_tear_off {
-                                                        if !drag.tear_off_requested
-                                                            && !mark_drag_tear_off_requested
-                                                        {
-                                                            mark_drag_tear_off_requested = true;
-                                                            pending_effects.push(Effect::Dock(
-                                                            DockOp::RequestFloatPanelToNewWindow {
-                                                                source_window: drag.source_window,
-                                                                panel: drag.panel.clone(),
-                                                                anchor: Some(
-                                                                    fret_core::WindowAnchor {
-                                                                        window: self.window,
-                                                                        position: drag.grab_offset,
-                                                                    },
-                                                                ),
-                                                            },
-                                                        ));
-                                                        }
-                                                    } else {
-                                                        let rect = self
-                                                            .default_floating_rect_for_panel(
-                                                                &drag.panel,
-                                                                position,
-                                                                drag.grab_offset,
-                                                                window_bounds,
-                                                            );
-                                                        pending_effects.push(Effect::Dock(
-                                                            DockOp::FloatPanelInWindow {
-                                                                source_window: drag.source_window,
-                                                                panel: drag.panel.clone(),
-                                                                target_window: self.window,
-                                                                rect,
-                                                            },
-                                                        ));
-                                                    }
-                                                    invalidate_layout = true;
-                                                }
-                                            }
+                                        let intent = resolve_dock_drop_intent(
+                                            target,
+                                            drag,
+                                            self.window,
+                                            dock_bounds,
+                                            window_bounds,
+                                            position,
+                                            allow_tear_off,
+                                            mark_drag_tear_off_requested,
+                                            |panel, position, grab_offset, window_bounds| {
+                                                self.default_floating_rect_for_panel(
+                                                    panel,
+                                                    position,
+                                                    grab_offset,
+                                                    window_bounds,
+                                                )
+                                            },
+                                        );
+
+                                        if let DockDropIntent::RequestFloatPanelToNewWindow {
+                                            ..
+                                        } = intent
+                                        {
+                                            mark_drag_tear_off_requested = true;
                                         }
+
+                                        apply_dock_drop_intent(
+                                            intent,
+                                            &mut pending_effects,
+                                            &mut invalidate_layout,
+                                        );
                                     }
 
                                     dock.hover = None;
