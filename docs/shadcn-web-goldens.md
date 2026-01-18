@@ -221,6 +221,14 @@ This suite asserts portal wrapper placement (side/align/gap) and also includes e
 menu sizing signals such as per-item heights, content insets, and Select listbox width (including
 constrained-viewport variants that force max-height/scroll behavior).
 
+Overlay chrome conformance (border, radii, and selected colors):
+
+`cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
+
+This suite compares web computed styles against the Fret paint scene for overlay surfaces. It
+currently gates border widths + corner radii broadly, and additionally asserts background/border
+colors for the `dialog-demo` (`dialog-content`) and `sheet-demo` (`sheet-content`) surfaces.
+
 ## Layout conformance (geometry-first)
 
 For layout-engine refactors, prefer geometry-first assertions (rects + spacing invariants) over
