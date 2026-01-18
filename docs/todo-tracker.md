@@ -220,6 +220,24 @@ It complements (but does not replace) ADRs:
   - ADRs: `docs/adr/0028-declarative-elements-and-element-state.md`, `docs/adr/0015-frame-lifecycle-and-submission-order.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
   - TODO: add a tiny regression harness in `fret-demo` and lock this down with a deterministic first-frame draw rule.
 
+## P0 - Performance / Invalidation & Cache Boundaries
+
+- **Enforce "hover/focus/pressed is Paint-only" across primitives and ecosystem**
+  - Goal: pointer hover changes should not trigger `Invalidation::Layout` (avoid view-cache busting and layout solve churn).
+  - ADRs: `docs/adr/0051-model-observation-and-ui-invalidation-propagation.md`, `docs/adr/1152-cache-roots-and-cached-subtree-semantics-v1.md`
+  - TODO:
+    - add a diagnostic report for "Hover → Layout invalidations" (top offenders + element paths);
+    - add a regression test that a `HoverRegion` toggle only invalidates paint unless a component opts in;
+    - document an authoring rule: do not change subtree root kind/shape on hover; use `Opacity` or `InteractivityGate`.
+
+- **Standardize stable identity (keying) + cache boundaries for expensive subtrees**
+  - Goal: ensure per-frame rebuild does not allocate/re-measure large subtrees unnecessarily (markdown/code-view/tab strips/lists).
+  - ADRs: `docs/adr/1152-view-cache-subtree-reuse-and-state-retention.md`, `docs/adr/1155-cache-root-tracing-contract-v1.md`
+  - TODO:
+    - require `cx.keyed(...)` for list-like rendering and block rendering (e.g. Markdown blocks via `BlockId`);
+    - promote `ViewCache` usage in demos for heavy blocks (Markdown, code-view) and audit hover does not bust cache roots;
+    - add a small "cache boundary checklist" for component authors (what must be inside/outside a cache root).
+
 ## P1 - Accessibility (A11y) Conformance
 
 - **Define minimum semantics for text fields (value/selection/composition)**
