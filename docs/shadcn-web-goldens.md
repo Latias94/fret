@@ -243,6 +243,9 @@ surface styling.
 For layout-engine refactors, prefer geometry-first assertions (rects + spacing invariants) over
 pixel diffs. See: `docs/audits/shadcn-web-layout-conformance.md`.
 
+This suite also includes a few paint-backed checks where upstream styling is effectively part of the
+geometry contract (for example: ScrollArea thumb background/alpha in hover-visible states).
+
 ## Options
 
 - `--style=new-york-v4`

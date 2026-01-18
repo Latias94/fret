@@ -199,6 +199,8 @@ It complements (but does not replace) ADRs:
     - Extended overlay chrome gates to cover constrained-viewport submenu keyboard variants
       (`*.submenu-kbd-vp1440x240.open.json`) for `dropdown-menu-sub-content`, `context-menu-sub-content`,
       and `menubar-sub-content`.
+    - Extended ScrollArea conformance to gate thumb background/alpha against web `computedStyle`
+      in hover-visible states (light/dark), and aligned the shadcn ScrollArea default thumb alpha to 1.0.
   - Goldens to expand:
     - `goldens/shadcn-web/v4/new-york-v4/*.open.json`: add open snapshots for pages that require non-click input and/or submenu open states.
   - Fret gates to add:
