@@ -109,6 +109,12 @@ Extract a constrained-viewport submenu variant (useful for "submenu flips/clamps
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts dropdown-menu-demo --modes=open --update --baseUrl=http://localhost:4020 --viewportH=320 --openVariants="submenu-kbd-vp1440x320=[data-fret-golden-target] [data-slot='dropdown-menu-trigger']" --openSteps="keys=[data-slot='dropdown-menu-sub-trigger']@ArrowRight"`
 
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 dropdown-menu-demo --modes=open --update --viewportW=1440 --viewportH=240 --openVariants="submenu-kbd-vp1440x240=[data-fret-golden-target] [data-slot='dropdown-menu-trigger']" --openSteps="keys=[data-slot='dropdown-menu-sub-trigger']@ArrowRight"`
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 context-menu-demo --modes=open --update --viewportW=1440 --viewportH=240 --openVariants="submenu-kbd-vp1440x240=[data-fret-golden-target] [data-slot='context-menu-trigger']" --openSteps="keys=[data-slot='context-menu-sub-trigger']@ArrowRight"`
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 menubar-demo --modes=open --update --viewportW=1440 --viewportH=240 --openVariants="submenu-kbd-vp1440x240=[data-fret-golden-target] [aria-haspopup='menu'][data-state='closed']" --openSteps="keys=[data-slot='menubar-sub-trigger']@ArrowRight"`
+
 Extract multiple open variants for a single page (writes `*.{variant}.open.json` alongside the base files):
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts sheet-side --modes=open --update --baseUrl=http://localhost:4020 --openVariants="right=[data-fret-golden-target] button[data-slot='sheet-trigger']:nth-of-type(2);bottom=[data-fret-golden-target] button[data-slot='sheet-trigger']:nth-of-type(3);left=[data-fret-golden-target] button[data-slot='sheet-trigger']:nth-of-type(4)"`
@@ -125,7 +131,7 @@ If you also extract open overlay states (`--modes=open` or `--open`), you will g
 `*.open.json` files alongside the base closed-mode goldens. In this repo, the current snapshot is:
 
 - `370` closed-mode files (`*.json`, excluding `*.open.json`)
-- `49` open-mode files (`*.open.json`)
+- `52` open-mode files (`*.open.json`)
 
 Note: `*.open.json` also matches the glob `*.json`, so "total .json files" will include open-mode
 snapshots unless you exclude `*.open.json`.
