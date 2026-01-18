@@ -1,4 +1,5 @@
 use fret_app::{App, CommandId, Model};
+use fret_core::ImageId;
 use fret_markdown as markdown;
 use fret_ui::Theme;
 use fret_ui::elements::ContinuousFrames;
@@ -208,6 +209,7 @@ pub(crate) fn content_view(
     data_grid_selected_row: Model<Option<u64>>,
     tabs_value: Model<Option<Arc<str>>>,
     accordion_value: Model<Option<Arc<str>>>,
+    avatar_demo_image: Model<Option<ImageId>>,
     progress: Model<f32>,
     checkbox: Model<bool>,
     switch: Model<bool>,
@@ -334,6 +336,7 @@ pub(crate) fn content_view(
         data_grid_selected_row,
         tabs_value,
         accordion_value,
+        avatar_demo_image,
         progress,
         checkbox,
         switch,
@@ -435,6 +438,7 @@ fn page_preview(
     data_grid_selected_row: Model<Option<u64>>,
     tabs_value: Model<Option<Arc<str>>>,
     accordion_value: Model<Option<Arc<str>>>,
+    avatar_demo_image: Model<Option<ImageId>>,
     progress: Model<f32>,
     checkbox: Model<bool>,
     switch: Model<bool>,
@@ -475,7 +479,7 @@ fn page_preview(
         PAGE_BUTTON => preview_button(cx),
         PAGE_CARD => preview_card(cx),
         PAGE_BADGE => preview_badge(cx),
-        PAGE_AVATAR => preview_avatar(cx),
+        PAGE_AVATAR => preview_avatar(cx, avatar_demo_image),
         PAGE_SKELETON => preview_skeleton(cx),
         PAGE_SCROLL_AREA => preview_scroll_area(cx),
         PAGE_TOOLTIP => preview_tooltip(cx),
@@ -1294,15 +1298,22 @@ fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     ]
 }
 
-fn preview_avatar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let a = shadcn::Avatar::new(vec![shadcn::AvatarFallback::new("FR").into_element(cx)])
+fn preview_avatar(
+    cx: &mut ElementContext<'_, App>,
+    avatar_image: Model<Option<ImageId>>,
+) -> Vec<AnyElement> {
+    let a = {
+        let image = shadcn::AvatarImage::model(avatar_image.clone()).into_element(cx);
+        let fallback = shadcn::AvatarFallback::new("FR")
+            .when_image_missing_model(avatar_image.clone())
+            .delay_ms(120)
+            .into_element(cx);
+        shadcn::Avatar::new(vec![image, fallback]).into_element(cx)
+    };
+
+    let b = shadcn::Avatar::new(vec![shadcn::AvatarFallback::new("WK").into_element(cx)])
         .into_element(cx);
-    let b = shadcn::Avatar::new(vec![
-        shadcn::AvatarFallback::new("WK")
-            .delay_ms(250)
-            .into_element(cx),
-    ])
-    .into_element(cx);
+
     let c = shadcn::Avatar::new(vec![shadcn::AvatarFallback::new("?").into_element(cx)])
         .refine_layout(
             LayoutRefinement::default()
