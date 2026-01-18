@@ -11,10 +11,13 @@ use fret_ui::{ElementContext, Invalidation, ResizablePanelGroupStyle, Theme, UiH
 
 use crate::commands::{
     pane_activate_command, pane_move_active_tab_to_command, pane_split_command,
-    tab_activate_command,
+    tab_activate_command, tab_move_active_after_command, tab_move_active_before_command,
 };
 use crate::layout::{SplitSide, WorkspacePaneLayout, WorkspacePaneTree, WorkspaceWindowLayout};
-use crate::tab_drag::{DRAG_KIND_WORKSPACE_TAB, WorkspaceTabDragState, WorkspaceTabDropZone};
+use crate::tab_drag::{
+    DRAG_KIND_WORKSPACE_TAB, WorkspaceTabDragState, WorkspaceTabDropZone,
+    WorkspaceTabInsertionSide, compute_tab_drop_target,
+};
 
 fn fill_layout() -> LayoutStyle {
     let mut layout = LayoutStyle::default();
@@ -387,20 +390,26 @@ where
         if session.kind != DRAG_KIND_WORKSPACE_TAB || !session.dragging {
             return false;
         }
-        if session.source_window != acx.window {
+        if session.current_window != acx.window {
             return false;
         }
+        let session_source_window = session.source_window;
 
         match drag.kind {
             InternalDragKind::Over | InternalDragKind::Enter => {
                 let mut did_clear = false;
                 let _ = host.models_mut().update(&tab_drag_for_root, |st| {
-                    if st.pointer != Some(drag.pointer_id) || st.source_window != Some(acx.window) {
+                    if st.pointer != Some(drag.pointer_id)
+                        || st.source_window != Some(session_source_window)
+                    {
                         return;
                     }
                     if st.hovered_pane.is_some() || st.hovered_zone.is_some() {
                         st.hovered_pane = None;
                         st.hovered_zone = None;
+                        st.hovered_tab = None;
+                        st.hovered_tab_side = None;
+                        st.hovered_pane_tab_rects = Vec::new();
                         did_clear = true;
                     }
                 });
@@ -412,7 +421,9 @@ where
             InternalDragKind::Leave | InternalDragKind::Cancel => {
                 let mut did_clear = false;
                 let _ = host.models_mut().update(&tab_drag_for_root, |st| {
-                    if st.pointer != Some(drag.pointer_id) || st.source_window != Some(acx.window) {
+                    if st.pointer != Some(drag.pointer_id)
+                        || st.source_window != Some(session_source_window)
+                    {
                         return;
                     }
                     *st = WorkspaceTabDragState::default();
@@ -682,16 +693,17 @@ where
             if session.kind != DRAG_KIND_WORKSPACE_TAB || !session.dragging {
                 return false;
             }
-            if session.source_window != acx.window {
+            if session.current_window != acx.window {
                 return false;
             }
+            let session_source_window = session.source_window;
 
             match drag.kind {
                 InternalDragKind::Over | InternalDragKind::Enter => {
                     let mut handled = false;
                     let _ = host.models_mut().update(&tab_drag_model, |st| {
                         if st.pointer != Some(drag.pointer_id)
-                            || st.source_window != Some(acx.window)
+                            || st.source_window != Some(session_source_window)
                         {
                             return;
                         }
@@ -700,6 +712,9 @@ where
                         {
                             st.hovered_pane = Some(pane_id.clone());
                             st.hovered_zone = Some(zone);
+                            st.hovered_tab = None;
+                            st.hovered_tab_side = None;
+                            st.hovered_pane_tab_rects = Vec::new();
                             handled = true;
                         }
                     });
@@ -712,7 +727,7 @@ where
                     let mut cleared = false;
                     let _ = host.models_mut().update(&tab_drag_model, |st| {
                         if st.pointer != Some(drag.pointer_id)
-                            || st.source_window != Some(acx.window)
+                            || st.source_window != Some(session_source_window)
                         {
                             return;
                         }
@@ -721,6 +736,9 @@ where
                         {
                             st.hovered_pane = None;
                             st.hovered_zone = None;
+                            st.hovered_tab = None;
+                            st.hovered_tab_side = None;
+                            st.hovered_pane_tab_rects = Vec::new();
                             cleared = true;
                         }
                     });
@@ -733,7 +751,7 @@ where
                     let mut did_clear = false;
                     let _ = host.models_mut().update(&tab_drag_model, |st| {
                         if st.pointer != Some(drag.pointer_id)
-                            || st.source_window != Some(acx.window)
+                            || st.source_window != Some(session_source_window)
                         {
                             return;
                         }
@@ -751,6 +769,12 @@ where
                             source: Arc<str>,
                             target: Arc<str>,
                         },
+                        InsertToPane {
+                            source: Arc<str>,
+                            target: Arc<str>,
+                            target_tab: Arc<str>,
+                            side: WorkspaceTabInsertionSide,
+                        },
                         SplitAndMove {
                             source: Arc<str>,
                             target: Arc<str>,
@@ -763,7 +787,7 @@ where
                     let mut dragged_tab: Option<Arc<str>> = None;
                     let _ = host.models_mut().update(&tab_drag_model, |st| {
                         if st.pointer != Some(drag.pointer_id)
-                            || st.source_window != Some(acx.window)
+                            || st.source_window != Some(session_source_window)
                         {
                             return;
                         }
@@ -782,10 +806,27 @@ where
                         match zone {
                             WorkspaceTabDropZone::Center => {
                                 if source.as_ref() != pane_id.as_ref() {
-                                    action = Some(DropAction::MoveToPane {
-                                        source,
-                                        target: pane_id.clone(),
+                                    let insertion = dragged_tab.as_deref().and_then(|dragged| {
+                                        compute_tab_drop_target(
+                                            drag.position,
+                                            dragged,
+                                            &st.hovered_pane_tab_rects,
+                                        )
                                     });
+
+                                    if let Some((target_tab, side)) = insertion {
+                                        action = Some(DropAction::InsertToPane {
+                                            source,
+                                            target: pane_id.clone(),
+                                            target_tab,
+                                            side,
+                                        });
+                                    } else {
+                                        action = Some(DropAction::MoveToPane {
+                                            source,
+                                            target: pane_id.clone(),
+                                        });
+                                    }
                                 }
                             }
                             WorkspaceTabDropZone::Left => {
@@ -834,11 +875,52 @@ where
                             if let Some(cmd) = pane_activate_command(source.as_ref()) {
                                 host.dispatch_command(Some(acx.window), cmd);
                             }
+                            if let Some(tab) = dragged_tab.as_ref() {
+                                if let Some(cmd) = tab_activate_command(tab.as_ref()) {
+                                    host.dispatch_command(Some(acx.window), cmd);
+                                }
+                            }
                             if let Some(cmd) = pane_move_active_tab_to_command(target.as_ref()) {
                                 host.dispatch_command(Some(acx.window), cmd);
                             } else if let Some(cmd) = move_tab_cmd.clone() {
                                 host.dispatch_command(Some(acx.window), cmd);
                             }
+                            host.request_redraw(acx.window);
+                            true
+                        }
+                        DropAction::InsertToPane {
+                            source,
+                            target,
+                            target_tab,
+                            side,
+                        } => {
+                            if let Some(cmd) = pane_activate_command(source.as_ref()) {
+                                host.dispatch_command(Some(acx.window), cmd);
+                            }
+                            let Some(tab) = dragged_tab.as_ref() else {
+                                return false;
+                            };
+                            if let Some(cmd) = tab_activate_command(tab.as_ref()) {
+                                host.dispatch_command(Some(acx.window), cmd);
+                            }
+                            if let Some(cmd) = pane_move_active_tab_to_command(target.as_ref()) {
+                                host.dispatch_command(Some(acx.window), cmd);
+                            } else if let Some(cmd) = move_tab_cmd.clone() {
+                                host.dispatch_command(Some(acx.window), cmd);
+                            }
+
+                            let cmd = match side {
+                                WorkspaceTabInsertionSide::Before => {
+                                    tab_move_active_before_command(target_tab.as_ref())
+                                }
+                                WorkspaceTabInsertionSide::After => {
+                                    tab_move_active_after_command(target_tab.as_ref())
+                                }
+                            };
+                            if let Some(cmd) = cmd {
+                                host.dispatch_command(Some(acx.window), cmd);
+                            }
+
                             host.request_redraw(acx.window);
                             true
                         }

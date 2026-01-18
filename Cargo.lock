@@ -1581,6 +1581,7 @@ dependencies = [
  "fret-core",
  "fret-runtime",
  "fret-ui",
+ "fret-ui-kit",
  "fret-ui-shadcn",
  "serde",
 ]
