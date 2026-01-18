@@ -1760,6 +1760,8 @@ fn assert_viewport_anchored_overlay_placement_matches(
 
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
+    let viewport_w = theme.viewport.map(|v| v.w).unwrap_or(1440.0);
+    let viewport_h = theme.viewport.map(|v| v.h).unwrap_or(900.0);
 
     let web_portal_index = theme
         .portals
@@ -1774,8 +1776,8 @@ fn assert_viewport_anchored_overlay_placement_matches(
 
     let expected_left = web_portal.rect.x;
     let expected_top = web_portal.rect.y;
-    let expected_right = 1440.0 - rect_right(web_portal.rect);
-    let expected_bottom = 900.0 - rect_bottom(web_portal.rect);
+    let expected_right = viewport_w - rect_right(web_portal.rect);
+    let expected_bottom = viewport_h - rect_bottom(web_portal.rect);
 
     let anchor_tol = 2.0;
     let anchor_left = expected_left.abs() <= anchor_tol;
@@ -1854,8 +1856,8 @@ fn assert_viewport_anchored_overlay_placement_matches(
             let score_for = |r: WebRect| {
                 let left = r.x;
                 let top = r.y;
-                let right = 1440.0 - rect_right(r);
-                let bottom = 900.0 - rect_bottom(r);
+                let right = viewport_w - rect_right(r);
+                let bottom = viewport_h - rect_bottom(r);
 
                 let mut score = 0.0;
                 if anchor_left {
@@ -1892,8 +1894,8 @@ fn assert_viewport_anchored_overlay_placement_matches(
 
     let actual_left = fret_portal.x;
     let actual_top = fret_portal.y;
-    let actual_right = 1440.0 - rect_right(fret_portal);
-    let actual_bottom = 900.0 - rect_bottom(fret_portal);
+    let actual_right = viewport_w - rect_right(fret_portal);
+    let actual_bottom = viewport_h - rect_bottom(fret_portal);
 
     if debug {
         eprintln!(
@@ -7583,6 +7585,28 @@ fn web_vs_fret_sheet_side_left_overlay_insets_match_tiny_viewport() {
                         .into_element(cx)
                 },
                 |cx| SheetContent::new(vec![cx.text("Edit profile")]).into_element(cx),
+            )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_drawer_demo_overlay_insets_match_tiny_viewport() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Drawer, DrawerContent};
+
+    assert_viewport_anchored_overlay_placement_matches(
+        "drawer-demo.vp1440x240",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Drawer::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    Button::new("Open Drawer")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| DrawerContent::new(vec![cx.text("Drawer content")]).into_element(cx),
             )
         },
     );
