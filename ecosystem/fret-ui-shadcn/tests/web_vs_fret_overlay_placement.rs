@@ -3275,6 +3275,118 @@ fn web_vs_fret_select_scrollable_small_viewport_listbox_width_matches() {
     assert_select_scrollable_listbox_width_matches("select-scrollable.vp1440x450");
 }
 
+fn web_portal_first_node_by_role<'a>(theme: &'a WebGoldenTheme, role: &str) -> &'a WebNode {
+    for portal in &theme.portals {
+        if let Some(found) = find_first(portal, &|n| n.attrs.get("role").is_some_and(|v| v == role))
+        {
+            return found;
+        }
+    }
+    for wrapper in &theme.portal_wrappers {
+        if let Some(found) =
+            find_first(wrapper, &|n| n.attrs.get("role").is_some_and(|v| v == role))
+        {
+            return found;
+        }
+    }
+    panic!("missing web portal node with role={role}")
+}
+
+fn assert_combobox_demo_listbox_height_matches(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let web_listbox = web_portal_first_node_by_role(theme, "listbox");
+    let expected_h = web_listbox.rect.h;
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(theme);
+
+    let value: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    let render = |cx: &mut ElementContext<'_, App>| {
+        use fret_ui_shadcn::{Combobox, ComboboxItem};
+
+        let items = vec![
+            ComboboxItem::new("apple", "Apple"),
+            ComboboxItem::new("banana", "Banana"),
+            ComboboxItem::new("blueberry", "Blueberry"),
+            ComboboxItem::new("grapes", "Grapes"),
+            ComboboxItem::new("pineapple", "Pineapple"),
+        ];
+
+        Combobox::new(value.clone(), open.clone())
+            .a11y_label("Select a fruit")
+            .width(Px(200.0))
+            .items(items)
+            .into_element(cx)
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = render(cx);
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let listbox = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::ListBox)
+        .unwrap_or_else(|| panic!("missing fret combobox listbox for {web_name}"));
+
+    assert_close(
+        &format!("{web_name} combobox listbox_h"),
+        listbox.bounds.size.height.0,
+        expected_h,
+        2.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_combobox_demo_listbox_height_matches() {
+    assert_combobox_demo_listbox_height_matches("combobox-demo");
+}
+
+#[test]
+fn web_vs_fret_combobox_demo_small_viewport_listbox_height_matches() {
+    assert_combobox_demo_listbox_height_matches("combobox-demo.vp375x320");
+}
+
 fn assert_point_anchored_overlay_placement_matches(
     web_name: &str,
     web_portal_role: &str,

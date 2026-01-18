@@ -247,7 +247,7 @@ These are shadcn-style surfaces referenced by docs/demos but not part of the `re
 
 | Surface | Rust module | Status | Audit | Notes |
 | --- | --- | --- | --- | --- |
-| combobox | `combobox` | Present | In review | Now implemented as `Popover` + `CommandPalette` recipe; audit: `docs/audits/shadcn-combobox.md` |
+| combobox | `combobox` | Present | In review | Implemented as `Popover` + `CommandPalette` recipe; audit: `docs/audits/shadcn-combobox.md`; gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (web listbox height, open-state goldens: `combobox-demo.open.json`, `combobox-demo.vp375x320.open.json`) |
 | date picker | `date_picker` | Present | Unreviewed | `Popover` + `Calendar` recipe; v1 is single-date selection |
 | data table / datagrid | `data_table` | Present | Unreviewed | Extension surface (not a `registry:ui` item upstream); `DataGrid` defaults to canvas; use `experimental::DataGridElement` for rich per-cell UI |
 | toast | `toast` | Skip | Unreviewed | Upstream `toast` is deprecated in favor of `sonner`; this repo ships `sonner` |

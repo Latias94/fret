@@ -133,6 +133,7 @@ maps naturally to a new ecosystem crate built on top of `fret-ui-shadcn`:
     `crates/fret-ui/src/scroll.rs`, `crates/fret-ui/src/declarative/mount.rs`.
   - (Done) `Select` item-aligned positioning now accounts for viewport padding edge (ports Radix `selectedItem.offsetTop` semantics). Evidence: `ecosystem/fret-ui-headless/src/select_item_aligned.rs` + `ecosystem/fret-ui-kit/src/primitives/select.rs`.
   - (Done) `Button` shadcn variant styles are gated against `shadcn-web` computed styles (including `lab()` normalization to linear sRGB). Evidence: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_button.rs`.
+  - (Done) `Combobox` (shadcn recipe) listbox height is gated against `shadcn-web` open snapshots. Evidence: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (combobox-demo open variants).
   - (Next) `Select` / listbox width parity: upstream listbox content can grow beyond the trigger
     width (min-width = trigger, but long items expand); Fret currently pins desired width to the
     trigger, so listbox portal `w/h` conformance is not yet gated 1:1.
