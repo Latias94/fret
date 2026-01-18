@@ -903,6 +903,48 @@ fn web_menu_content_inset(menu: &WebNode) -> InsetTriplet {
     }
 }
 
+fn web_first_visible_menu_item_label<'a>(menu: &WebNode, labels: &'a [&'a str]) -> Option<&'a str> {
+    let is_menu_item_role = |node: &WebNode| {
+        matches!(
+            node.attrs.get("role").map(String::as_str),
+            Some("menuitem") | Some("menuitemcheckbox") | Some("menuitemradio")
+        )
+    };
+
+    let eps = 0.01;
+    let menu_left = menu.rect.x;
+    let menu_right = rect_right(menu.rect);
+    let menu_top = menu.rect.y;
+
+    let mut best: Option<(f32, &str)> = None;
+    let mut stack = vec![menu];
+    while let Some(node) = stack.pop() {
+        if is_menu_item_role(node) {
+            let item_left = node.rect.x;
+            let item_right = rect_right(node.rect);
+            let item_top = node.rect.y;
+
+            let within_panel = item_left + eps >= menu_left
+                && item_right <= menu_right + eps
+                && item_top + eps >= menu_top;
+            if within_panel {
+                if let Some(text) = node.text.as_deref() {
+                    if let Some(label) = labels.iter().copied().find(|l| text.starts_with(l)) {
+                        let better = best.is_none_or(|(y, _)| item_top < y);
+                        if better {
+                            best = Some((item_top, label));
+                        }
+                    }
+                }
+            }
+        }
+        for child in &node.children {
+            stack.push(child);
+        }
+    }
+    best.map(|(_, label)| label)
+}
+
 fn web_menu_content_insets_for_slots(theme: &WebGoldenTheme, slots: &[&str]) -> Vec<InsetTriplet> {
     slots
         .iter()
@@ -995,6 +1037,9 @@ fn web_select_content_option_inset(listbox: &WebNode) -> InsetQuad {
 }
 
 fn fret_menu_content_insets(snap: &fret_core::SemanticsSnapshot) -> Vec<InsetTriplet> {
+    let debug = std::env::var("FRET_DEBUG_MENU_SEMANTICS")
+        .ok()
+        .is_some_and(|v| v == "1");
     let is_menu_item = |n: &fret_core::SemanticsNode| {
         matches!(
             n.role,
@@ -1016,6 +1061,29 @@ fn fret_menu_content_insets(snap: &fret_core::SemanticsSnapshot) -> Vec<InsetTri
 
         if items.is_empty() {
             continue;
+        }
+
+        if debug {
+            let mut items_sorted = items.clone();
+            items_sorted.sort_by(|a, b| {
+                a.bounds
+                    .origin
+                    .y
+                    .0
+                    .total_cmp(&b.bounds.origin.y.0)
+                    .then_with(|| a.bounds.origin.x.0.total_cmp(&b.bounds.origin.x.0))
+            });
+            eprintln!(
+                "fret_menu_content_insets: menu bounds={:?} items={}",
+                menu.bounds,
+                items_sorted.len()
+            );
+            for (ix, item) in items_sorted.iter().take(12).enumerate() {
+                eprintln!(
+                    "  item[{ix}] role={:?} label={:?} bounds={:?}",
+                    item.role, item.label, item.bounds
+                );
+            }
         }
 
         let mut min_x = items[0].bounds.origin.x.0;
@@ -2561,11 +2629,34 @@ fn web_vs_fret_dropdown_menu_demo_submenu_small_viewport_overlay_placement_match
 }
 
 #[test]
-fn web_vs_fret_dropdown_menu_demo_submenu_small_viewport_menu_content_insets_match() {
-    let web = read_web_golden_open("dropdown-menu-demo.submenu-kbd-vp1440x320");
+fn web_vs_fret_dropdown_menu_demo_submenu_tiny_viewport_overlay_placement_matches() {
+    assert_dropdown_menu_demo_submenu_overlay_placement_matches(
+        "dropdown-menu-demo.submenu-kbd-vp1440x240",
+    );
+}
+
+fn assert_dropdown_menu_demo_submenu_constrained_menu_content_insets_match(web_name: &str) {
+    let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
     let expected_slots = ["dropdown-menu-content", "dropdown-menu-sub-content"];
     let expected = web_menu_content_insets_for_slots(&theme, &expected_slots);
+    let expected_first_visible_label = web_first_visible_menu_item_label(
+        web_portal_node_by_data_slot(&theme, "dropdown-menu-content"),
+        &[
+            "Profile",
+            "Billing",
+            "Settings",
+            "Keyboard shortcuts",
+            "Team",
+            "Invite users",
+            "New Team",
+            "GitHub",
+            "Support",
+            "API",
+            "Log out",
+        ],
+    )
+    .unwrap_or_else(|| panic!("missing web first visible menu item for {web_name}"));
     let expected_hs: Vec<f32> = expected_slots
         .iter()
         .map(|slot| web_portal_node_by_data_slot(&theme, slot).rect.h)
@@ -2683,32 +2774,64 @@ fn web_vs_fret_dropdown_menu_demo_submenu_small_viewport_menu_content_insets_mat
         Px(root_menu.bounds.origin.y.0 + root_menu.bounds.size.height.0 * 0.5),
     );
 
-    // The web golden scrolls the menu before opening the submenu (via `scrollIntoView` in the
-    // golden extraction openSteps). Replicate the same state by wheel-scrolling the menu.
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::Pointer(PointerEvent::Wheel {
-            pointer_id: fret_core::PointerId::default(),
-            position: wheel_pos,
-            delta: Point::new(Px(0.0), Px(-80.0)),
-            modifiers: Modifiers::default(),
-            pointer_type: PointerType::Mouse,
-        }),
-    );
+    let mut did_match_web_scroll_state = false;
+    for attempt in 0..6 {
+        let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let Some(root_menu) = snap.nodes.iter().find(|n| n.role == SemanticsRole::Menu) else {
+            panic!("fret root menu semantics missing");
+        };
+        let items: Vec<_> = snap
+            .nodes
+            .iter()
+            .filter(|n| n.role == SemanticsRole::MenuItem)
+            .filter(|n| fret_rect_contains(root_menu.bounds, n.bounds))
+            .collect();
+        let first_visible = items
+            .into_iter()
+            .min_by(|a, b| {
+                a.bounds
+                    .origin
+                    .y
+                    .0
+                    .total_cmp(&b.bounds.origin.y.0)
+                    .then_with(|| a.bounds.origin.x.0.total_cmp(&b.bounds.origin.x.0))
+            })
+            .and_then(|n| n.label.as_deref())
+            .unwrap_or("<missing>");
+        if first_visible == expected_first_visible_label {
+            did_match_web_scroll_state = true;
+            break;
+        }
 
-    render_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        FrameId(3),
-        true,
-        |cx| {
-            let el = render(cx);
-            vec![pad_root(cx, Px(0.0), el)]
-        },
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Wheel {
+                pointer_id: fret_core::PointerId::default(),
+                position: wheel_pos,
+                delta: Point::new(Px(0.0), Px(-40.0)),
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(3 + attempt),
+            true,
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+    assert!(
+        did_match_web_scroll_state,
+        "{web_name}: failed to scroll dropdown menu to match first visible item; expected={expected_first_visible_label:?}"
     );
 
     let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
@@ -2778,16 +2901,12 @@ fn web_vs_fret_dropdown_menu_demo_submenu_small_viewport_menu_content_insets_mat
 
     let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
     let actual = fret_menu_content_insets(&snap);
-    assert_sorted_insets_match(
-        "dropdown-menu-demo.submenu-kbd-vp1440x320",
-        &actual,
-        &expected,
-    );
+    assert_sorted_insets_match(web_name, &actual, &expected);
 
     let mut actual_hs = fret_menu_heights(&snap);
     assert!(
         actual_hs.len() == expected_hs.len(),
-        "dropdown-menu-demo.submenu-kbd-vp1440x320 expected {} menus, got {}",
+        "{web_name} expected {} menus, got {}",
         expected_hs.len(),
         actual_hs.len()
     );
@@ -2795,13 +2914,22 @@ fn web_vs_fret_dropdown_menu_demo_submenu_small_viewport_menu_content_insets_mat
     expected_hs.sort_by(|a, b| b.total_cmp(a));
     actual_hs.sort_by(|a, b| b.total_cmp(a));
     for (i, (a, e)) in actual_hs.iter().zip(expected_hs.iter()).enumerate() {
-        assert_close(
-            &format!("dropdown-menu-demo.submenu-kbd-vp1440x320 menu[{i}] height"),
-            *a,
-            *e,
-            2.0,
-        );
+        assert_close(&format!("{web_name} menu[{i}] height"), *a, *e, 2.0);
     }
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_submenu_small_viewport_menu_content_insets_match() {
+    assert_dropdown_menu_demo_submenu_constrained_menu_content_insets_match(
+        "dropdown-menu-demo.submenu-kbd-vp1440x320",
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_submenu_tiny_viewport_menu_content_insets_match() {
+    assert_dropdown_menu_demo_submenu_constrained_menu_content_insets_match(
+        "dropdown-menu-demo.submenu-kbd-vp1440x240",
+    );
 }
 
 #[test]
@@ -4438,8 +4566,14 @@ fn web_vs_fret_context_menu_demo_submenu_small_viewport_overlay_placement_matche
 }
 
 #[test]
-fn web_vs_fret_context_menu_demo_submenu_small_viewport_menu_content_insets_match() {
-    let web = read_web_golden_open("context-menu-demo.submenu-kbd-vp1440x320");
+fn web_vs_fret_context_menu_demo_submenu_tiny_viewport_overlay_placement_matches() {
+    assert_context_menu_demo_submenu_overlay_placement_matches(
+        "context-menu-demo.submenu-kbd-vp1440x240",
+    );
+}
+
+fn assert_context_menu_demo_submenu_constrained_menu_content_insets_match(web_name: &str) {
+    let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
     let expected_slots = ["context-menu-content", "context-menu-sub-content"];
     let expected = web_menu_content_insets_for_slots(&theme, &expected_slots);
@@ -4594,16 +4728,12 @@ fn web_vs_fret_context_menu_demo_submenu_small_viewport_menu_content_insets_matc
 
     let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
     let actual = fret_menu_content_insets(&snap);
-    assert_sorted_insets_match(
-        "context-menu-demo.submenu-kbd-vp1440x320",
-        &actual,
-        &expected,
-    );
+    assert_sorted_insets_match(web_name, &actual, &expected);
 
     let mut actual_hs = fret_menu_heights(&snap);
     assert!(
         actual_hs.len() == expected_hs.len(),
-        "context-menu-demo.submenu-kbd-vp1440x320 expected {} menus, got {}",
+        "{web_name} expected {} menus, got {}",
         expected_hs.len(),
         actual_hs.len()
     );
@@ -4611,13 +4741,22 @@ fn web_vs_fret_context_menu_demo_submenu_small_viewport_menu_content_insets_matc
     expected_hs.sort_by(|a, b| b.total_cmp(a));
     actual_hs.sort_by(|a, b| b.total_cmp(a));
     for (i, (a, e)) in actual_hs.iter().zip(expected_hs.iter()).enumerate() {
-        assert_close(
-            &format!("context-menu-demo.submenu-kbd-vp1440x320 menu[{i}] height"),
-            *a,
-            *e,
-            2.0,
-        );
+        assert_close(&format!("{web_name} menu[{i}] height"), *a, *e, 2.0);
     }
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_submenu_small_viewport_menu_content_insets_match() {
+    assert_context_menu_demo_submenu_constrained_menu_content_insets_match(
+        "context-menu-demo.submenu-kbd-vp1440x320",
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_submenu_tiny_viewport_menu_content_insets_match() {
+    assert_context_menu_demo_submenu_constrained_menu_content_insets_match(
+        "context-menu-demo.submenu-kbd-vp1440x240",
+    );
 }
 
 #[test]
@@ -6798,8 +6937,12 @@ fn web_vs_fret_menubar_demo_submenu_small_viewport_overlay_placement_matches() {
 }
 
 #[test]
-fn web_vs_fret_menubar_demo_submenu_small_viewport_menu_content_insets_match() {
-    let web = read_web_golden_open("menubar-demo.submenu-kbd-vp1440x320");
+fn web_vs_fret_menubar_demo_submenu_tiny_viewport_overlay_placement_matches() {
+    assert_menubar_demo_submenu_overlay_placement_matches("menubar-demo.submenu-kbd-vp1440x240");
+}
+
+fn assert_menubar_demo_submenu_constrained_menu_content_insets_match(web_name: &str) {
+    let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
     let expected_slots = ["menubar-content", "menubar-sub-content"];
     let expected = web_menu_content_insets_for_slots(&theme, &expected_slots);
@@ -6940,12 +7083,12 @@ fn web_vs_fret_menubar_demo_submenu_small_viewport_menu_content_insets_match() {
 
     let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
     let actual = fret_menu_content_insets(&snap);
-    assert_sorted_insets_match("menubar-demo.submenu-kbd-vp1440x320", &actual, &expected);
+    assert_sorted_insets_match(web_name, &actual, &expected);
 
     let mut actual_hs = fret_menu_heights(&snap);
     assert!(
         actual_hs.len() == expected_hs.len(),
-        "menubar-demo.submenu-kbd-vp1440x320 expected {} menus, got {}",
+        "{web_name} expected {} menus, got {}",
         expected_hs.len(),
         actual_hs.len()
     );
@@ -6953,13 +7096,22 @@ fn web_vs_fret_menubar_demo_submenu_small_viewport_menu_content_insets_match() {
     expected_hs.sort_by(|a, b| b.total_cmp(a));
     actual_hs.sort_by(|a, b| b.total_cmp(a));
     for (i, (a, e)) in actual_hs.iter().zip(expected_hs.iter()).enumerate() {
-        assert_close(
-            &format!("menubar-demo.submenu-kbd-vp1440x320 menu[{i}] height"),
-            *a,
-            *e,
-            2.0,
-        );
+        assert_close(&format!("{web_name} menu[{i}] height"), *a, *e, 2.0);
     }
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_submenu_small_viewport_menu_content_insets_match() {
+    assert_menubar_demo_submenu_constrained_menu_content_insets_match(
+        "menubar-demo.submenu-kbd-vp1440x320",
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_submenu_tiny_viewport_menu_content_insets_match() {
+    assert_menubar_demo_submenu_constrained_menu_content_insets_match(
+        "menubar-demo.submenu-kbd-vp1440x240",
+    );
 }
 
 #[test]
