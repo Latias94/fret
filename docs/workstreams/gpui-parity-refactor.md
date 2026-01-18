@@ -15,6 +15,10 @@ Tracking:
 
 - TODO tracker (keep updated during implementation): `docs/workstreams/gpui-parity-refactor-todo.md`
 - Cache roots + cached subtree semantics (ViewCache v1): `docs/adr/1152-cache-roots-and-cached-subtree-semantics-v1.md`
+- GPUI-aligned contract gates (must stay in sync with implementation):
+  - Dirty views + notify: `docs/adr/0180-dirty-views-and-notify-gpui-aligned.md`
+  - Interactivity pseudoclasses + structural stability: `docs/adr/0181-interactivity-pseudoclasses-and-structural-stability.md`
+  - Prepaint + interaction stream range reuse: `docs/adr/0182-prepaint-interaction-stream-and-range-reuse.md`
 
 ---
 
@@ -82,6 +86,28 @@ This plan focuses on refactoring Fret to gain:
 - Preserve ordering semantics (ADR 0002 / ADR 0009).
 - Keep portability boundaries (`fret-runtime` effects, no `wgpu` types in UI runtime).
 
+### 1.4 Contract gates (ADRs)
+
+This workstream is “fearless” in implementation scope, but not in contract hygiene. Any meaningful shifts to
+invalidation/caching/interactivity semantics must be expressed as ADRs, and the refactor should be driven by those ADRs
+as the source of truth:
+
+- View model and identity:
+  - Declarative element tree + externalized state: `docs/adr/0028-declarative-elements-and-element-state.md`
+  - Element identity debug paths: `docs/adr/1151-element-identity-debug-paths-and-frame-staged-element-state.md`
+- Observation and invalidation:
+  - Model observation + propagation (baseline): `docs/adr/0051-model-observation-and-ui-invalidation-propagation.md`
+  - Dirty views + notify (GPUI-aligned target): `docs/adr/0180-dirty-views-and-notify-gpui-aligned.md`
+- Caching:
+  - Paint-stream replay caching: `docs/adr/0055-frame-recording-and-subtree-replay-caching.md`
+  - Cache roots (ViewCache v1): `docs/adr/1152-cache-roots-and-cached-subtree-semantics-v1.md`
+  - View-cache subtree reuse + state retention: `docs/adr/1152-view-cache-subtree-reuse-and-state-retention.md`
+  - Multi-stream prepaint/interaction reuse (GPUI-aligned target): `docs/adr/0182-prepaint-interaction-stream-and-range-reuse.md`
+- Interactivity:
+  - Pseudoclasses + structural stability (paint-only by default): `docs/adr/0181-interactivity-pseudoclasses-and-structural-stability.md`
+- Tooling:
+  - Diagnostics bundle + scripted interaction tests: `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
+
 ---
 
 ## 2. Target Outcomes (What “Parity” Means)
@@ -102,6 +128,30 @@ We should define explicit acceptance thresholds (initial proposal):
   - `UiDebugFrameStats.paint_cache_hits/misses/replayed_ops` trend upward on stable scenes (`crates/fret-ui/src/tree/mod.rs:110`).
 - Large UI surfaces remain stable:
   - 10k-row virtual list: scrolling does not trigger full relayout of unrelated subtree.
+
+### 2.3 Definition of Done (workstream-level)
+
+The refactor is “done enough” when these are true for the stress harnesses in `tools/diag-scripts/`:
+
+- Hover/focus/pressed transitions do not trigger layout invalidation by default (0 layout invalidations attributed to
+  pseudoclass edges in the overlay torture and virtual list torture scripts).
+- View/cache effectiveness is visible:
+  - Stable scenes show high cache root reuse (cache root hits dominate misses) and high paint replayed ops.
+- Invalidation is explainable:
+  - We can answer “why did this view rerender” and “why did this cache root miss” via diagnostics output.
+- Scripted interactions are stable:
+  - Running the same script produces the same high-level hit targets and focus path (within platform tolerance).
+
+### 2.4 Metrics we track (minimum set)
+
+The refactor should always move these metrics in the right direction, as reported by the gallery driver and diagnostics:
+
+- Frame work: layout time, paint time, layout engine solves, cache-root relayout counts.
+  - Evidence surface: `crates/fret-ui/src/tree/mod.rs`, `apps/fret-ui-gallery/src/driver.rs`
+- Caching: paint cache hits/misses/replayed ops, cache root hits and per-root replayed ops.
+  - Evidence surface: `crates/fret-ui/src/tree/mod.rs`, `apps/fret-ui-gallery/src/driver.rs`
+- Invalidation: count of layout invalidations attributed to pseudoclass edges (MVP1), and dirty view reasons (MVP2).
+  - Evidence surface: `docs/adr/0181-interactivity-pseudoclasses-and-structural-stability.md`, `docs/adr/0180-dirty-views-and-notify-gpui-aligned.md`
 
 ---
 
@@ -140,11 +190,27 @@ We should define explicit acceptance thresholds (initial proposal):
   - `repo-ref/zed/crates/gpui/src/view.rs:227` (`detect_accessed_entities`)
   - `repo-ref/zed/crates/gpui/src/view.rs:280` (`reuse_paint`)
 
+### 3.4 Code map (Fret surfaces vs Zed/GPUI references)
+
+This table is intentionally “relative path first”, so that refactors can be scoped and reviewed precisely.
+
+| Concern | Fret (authoritative) | Zed/GPUI reference (non-normative) |
+| --- | --- | --- |
+| View/state authoring | `crates/fret-ui/src/element.rs` (`Render`, `RenderOnce`, `IntoElement`) | `repo-ref/zed/crates/gpui/src/element.rs`, `repo-ref/zed/crates/gpui/src/_ownership_and_data_flow.rs` |
+| Element identity + state | `crates/fret-ui/src/elements/*` (state store, identity, runtime) | `repo-ref/zed/crates/gpui/src/window.rs` (`with_global_id`, `with_element_state`) |
+| Root render + mount reuse | `crates/fret-ui/src/declarative/mount.rs` | `repo-ref/zed/crates/gpui/src/window.rs`, `repo-ref/zed/crates/gpui/src/view.rs` |
+| Node tree (bounds/routing) | `crates/fret-ui/src/tree/{mod.rs,dispatch.rs,hit_test.rs}` | `repo-ref/zed/crates/gpui/src/window.rs` (dispatch + hitboxes), `repo-ref/zed/crates/gpui/src/elements/div.rs` (hitbox hover) |
+| Layout + caches | `crates/fret-ui/src/tree/layout.rs`, `crates/fret-ui/src/declarative/taffy_layout.rs` | `repo-ref/zed/crates/gpui/src/taffy.rs` |
+| Paint + range replay | `crates/fret-ui/src/tree/paint.rs` | `repo-ref/zed/crates/gpui/src/view.rs` (`reuse_paint`) |
+| ViewCache boundaries | `crates/fret-ui/src/element.rs` (`ViewCacheProps`), `crates/fret-ui/src/tree/mod.rs` | `repo-ref/zed/crates/gpui/src/view.rs` (`AnyView::cached`) |
+| Interactivity pseudoclasses | `crates/fret-ui/src/element.rs` (`HoverRegion`, `Opacity`, `InteractivityGate`) | `repo-ref/zed/crates/gpui/src/elements/div.rs` (hover style refinements + notify) |
+| Diagnostics + scripts | `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`, `apps/fretboard/src/diag.rs`, `tools/diag-scripts/*` | `repo-ref/zed/crates/gpui/src/inspector.rs` |
+
 ---
 
 ## 4. Refactor Strategy Overview (Phased, with Explicit Design Decisions)
 
-### Phase 0 — Instrumentation First (1–2 weeks)
+### MVP0 — Instrumentation First (1–2 weeks)
 
 Goal: make it impossible to regress “feel” silently.
 
@@ -158,7 +224,7 @@ Goal: make it impossible to regress “feel” silently.
 
 Deliverable: a repeatable “before/after” baseline (numbers, not vibes).
 
-### Phase 1 — Authoring Density (ecosystem-only, 2–4 weeks)
+### MVP1 — Authoring Density (ecosystem-only, 2–4 weeks)
 
 Goal: writing UI should feel like gpui-component, while keeping runtime mechanism-only.
 
@@ -170,9 +236,16 @@ Goal: writing UI should feel like gpui-component, while keeping runtime mechanis
 
 This is the fastest “experience win” because it reduces boilerplate and forces consistency.
 
-### Phase 2 — View-Level Caching (runtime + ecosystem, 3–6 weeks)
+### MVP2 — Dirty Views + View-Level Caching (runtime + ecosystem, 3–6 weeks)
 
-Goal: promote caching from an internal optimization to a **first-class composition tool**, similar to `AnyView::cached`.
+Goal: promote caching from an internal optimization to a **first-class composition tool**, similar to `AnyView::cached`,
+and converge on the GPUI mental model: `notify -> dirty views -> reuse ranges unless dirty/refreshing/inspecting`.
+
+Contract gates:
+
+- Dirty views + notify (ADR 0180): the authoring-facing primitive for invalidation.
+- Interactivity pseudoclasses (ADR 0181): hover/focus/pressed must be structurally stable and paint-only by default.
+- Cache roots (ADR 1152): correctness-first nested invalidation and attribution.
 
 This is the highest leverage performance refactor.
 
@@ -188,7 +261,7 @@ Proposed ecosystem-facing API surface (runtime internal may differ):
 - `cx.cached(cache_key, |cx| -> Vec<AnyElement>) -> Vec<AnyElement>`
   - where `cache_key` is an explicit, typed key for “layout-affecting inputs”.
 
-### Phase 3 — “Prepaint” + Multi-stream Frame Recording (optional but recommended, 4–8 weeks)
+### MVP3 — “Prepaint” + Multi-stream Frame Recording (optional but recommended, 4–8 weeks)
 
 Goal: converge toward GPUI’s “request_layout / prepaint / paint” separation so that:
 
@@ -197,7 +270,7 @@ Goal: converge toward GPUI’s “request_layout / prepaint / paint” separatio
 
 This aligns directly with ADR 0055’s “multi-stream” direction.
 
-### Phase 4 — Text System & Editor-Grade Inputs (parallel track)
+### MVP4 — Text System & Editor-Grade Inputs (parallel track)
 
 Goal: close the biggest “editor feel” gap (IME, caret geometry, font stacks).
 
