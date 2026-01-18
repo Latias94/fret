@@ -6,8 +6,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use fret_core::{Modifiers, MouseButton, Point, PointerId, Px};
-use fret_runtime::{DragKindId, Model, TickId};
+use fret_core::{Modifiers, MouseButton, PointerId, Px};
+use fret_runtime::{DragKindId, Model};
 use fret_ui::action::{
     OnPointerDown, OnPointerMove, OnPointerUp, PointerDownCx, PointerMoveCx, PointerUpCx,
 };
@@ -44,8 +44,6 @@ impl Default for SortableReorderListProps {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct SortablePointerState {
-    start_tick: TickId,
-    start_position: Point,
     active: DndItemId,
     over: DndItemId,
     dragging: bool,
@@ -152,73 +150,74 @@ pub fn sortable_reorder_list<H: UiHost>(
 
                 host.capture_pointer();
 
+                let _ = dnd::handle_pointer_down_in_scope(
+                    host.models_mut(),
+                    &dnd_on_down,
+                    action_cx.window,
+                    frame_id,
+                    DRAG_KIND_SORTABLE_REORDER,
+                    scope,
+                    down.pointer_id,
+                    down.position,
+                    down.tick_id,
+                    activation,
+                    collision_strategy,
+                    None,
+                );
+
                 let _ = host.models_mut().update(&state_on_down, |st| {
                     st.pointers.insert(
                         down.pointer_id,
                         SortablePointerState {
-                            start_tick: down.tick_id,
-                            start_position: down.position,
                             active: id,
                             over: id,
                             dragging: false,
                         },
                     );
                 });
-                dnd::clear_pending_pointer_in_scope(
-                    host.models_mut(),
-                    &dnd_on_down,
-                    action_cx.window,
-                    DRAG_KIND_SORTABLE_REORDER,
-                    scope,
-                    down.pointer_id,
-                );
                 host.request_redraw(action_cx.window);
                 true
             });
 
             let on_move: OnPointerMove = Arc::new(move |host, _action_cx, mv: PointerMoveCx| {
-                enum MoveOutcome {
-                    Ignore,
-                    Canceled,
-                    Updated,
-                }
-
-                let mut outcome = MoveOutcome::Ignore;
-
-                let mut pointer_state: Option<SortablePointerState> = None;
+                let mut tracked = false;
+                let mut canceled = false;
                 let _ = host.models_mut().update(&state_on_move, |st| {
-                    let Some(state) = st.pointers.get(&mv.pointer_id).copied() else {
-                        return;
-                    };
-
-                    if !mv.buttons.left {
-                        st.pointers.remove(&mv.pointer_id);
-                        outcome = MoveOutcome::Canceled;
+                    if !st.pointers.contains_key(&mv.pointer_id) {
                         return;
                     }
-
-                    pointer_state = Some(state);
+                    tracked = true;
+                    if !mv.buttons.left {
+                        st.pointers.remove(&mv.pointer_id);
+                        canceled = true;
+                    }
                 });
 
-                if matches!(outcome, MoveOutcome::Canceled) {
-                    dnd::clear_pending_pointer_in_scope(
+                if !tracked {
+                    return false;
+                }
+
+                if canceled {
+                    let _ = dnd::handle_pointer_cancel_in_scope(
                         host.models_mut(),
                         &dnd_on_move,
                         _action_cx.window,
+                        frame_id,
                         DRAG_KIND_SORTABLE_REORDER,
                         scope,
                         mv.pointer_id,
+                        mv.position,
+                        mv.tick_id,
+                        activation,
+                        collision_strategy,
+                        None,
                     );
                     host.release_pointer_capture();
                     host.request_redraw(_action_cx.window);
                     return true;
                 }
 
-                let Some(pointer_state) = pointer_state else {
-                    return false;
-                };
-
-                let dnd_update = dnd::update_pending_drag_move_in_scope(
+                let dnd_update = dnd::handle_pointer_move_in_scope(
                     host.models_mut(),
                     &dnd_on_move,
                     _action_cx.window,
@@ -226,8 +225,6 @@ pub fn sortable_reorder_list<H: UiHost>(
                     DRAG_KIND_SORTABLE_REORDER,
                     scope,
                     mv.pointer_id,
-                    pointer_state.start_tick,
-                    pointer_state.start_position,
                     mv.position,
                     mv.tick_id,
                     activation,
@@ -247,30 +244,11 @@ pub fn sortable_reorder_list<H: UiHost>(
                         if let Some(over) = dnd_update.over {
                             state.over = over;
                         }
-                        outcome = MoveOutcome::Updated;
                     });
+                    host.request_redraw(_action_cx.window);
+                    return true;
                 }
-
-                match outcome {
-                    MoveOutcome::Ignore => false,
-                    MoveOutcome::Canceled => {
-                        dnd::clear_pending_pointer_in_scope(
-                            host.models_mut(),
-                            &dnd_on_move,
-                            _action_cx.window,
-                            DRAG_KIND_SORTABLE_REORDER,
-                            scope,
-                            mv.pointer_id,
-                        );
-                        host.release_pointer_capture();
-                        host.request_redraw(_action_cx.window);
-                        true
-                    }
-                    MoveOutcome::Updated => {
-                        host.request_redraw(_action_cx.window);
-                        true
-                    }
-                }
+                false
             });
 
             let on_up: OnPointerUp = Arc::new(move |host, action_cx, up: PointerUpCx| {
@@ -296,13 +274,19 @@ pub fn sortable_reorder_list<H: UiHost>(
                     return false;
                 }
 
-                dnd::clear_pending_pointer_in_scope(
+                let _ = dnd::handle_pointer_up_in_scope(
                     host.models_mut(),
                     &dnd_on_up,
                     action_cx.window,
+                    frame_id,
                     DRAG_KIND_SORTABLE_REORDER,
                     scope,
                     up.pointer_id,
+                    up.position,
+                    up.tick_id,
+                    activation,
+                    collision_strategy,
+                    None,
                 );
                 host.release_pointer_capture();
 
@@ -413,7 +397,7 @@ mod tests {
     use fret_app::App;
     use fret_core::{
         AppWindowId, Modifiers, MouseButtons, PathCommand, PathConstraints, PathId, PathMetrics,
-        PathService, PathStyle, PointerType, Rect, Size, SvgId, SvgService, TextBlobId,
+        PathService, PathStyle, Point, PointerType, Rect, Size, SvgId, SvgService, TextBlobId,
         TextConstraints, TextInput, TextMetrics, TextService,
     };
     use fret_runtime::{FrameId, TickId};
