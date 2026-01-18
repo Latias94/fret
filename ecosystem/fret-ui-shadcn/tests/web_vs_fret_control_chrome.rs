@@ -111,6 +111,16 @@ fn web_corner_radius_effective_px(node: &WebNode) -> Option<f32> {
     Some(raw.min(max))
 }
 
+fn web_corner_radius_effective_px_for(node: &WebNode, key: &str) -> Option<f32> {
+    let raw = node
+        .computed_style
+        .get(key)
+        .map(String::as_str)
+        .and_then(parse_px)?;
+    let max = node.rect.w.min(node.rect.h) * 0.5;
+    Some(raw.min(max))
+}
+
 #[derive(Debug, Clone, Copy)]
 struct PaintedQuad {
     #[allow(dead_code)]
@@ -465,6 +475,171 @@ fn web_vs_fret_separator_demo_geometry_matches() {
 }
 
 #[test]
+fn web_vs_fret_toggle_group_demo_chrome_matches() {
+    let debug = std::env::var("FRET_DEBUG_TOGGLE_GROUP_CHROME").is_ok();
+    let web = read_web_golden("toggle-group-demo");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_group = find_first(&theme.root, &|n| {
+        if n.tag != "div" {
+            return false;
+        }
+        if n.attrs.get("role").map(String::as_str) != Some("group") {
+            return false;
+        }
+        if n.children.len() != 3 {
+            return false;
+        }
+        n.children.iter().all(|c| {
+            c.tag == "button"
+                && c.attrs
+                    .get("aria-label")
+                    .map(String::as_str)
+                    .is_some_and(|v| v.starts_with("Toggle "))
+        })
+    })
+    .expect("web toggle group node");
+
+    let web_items = web_group
+        .children
+        .iter()
+        .filter(|n| n.tag == "button")
+        .collect::<Vec<_>>();
+    assert_eq!(web_items.len(), 3, "expected 3 toggle group items");
+
+    let (_snap, scene) = render_and_paint(|cx| {
+        use fret_icons::ids::ui as icon_ids;
+
+        let i1 = fret_ui_shadcn::ToggleGroupItem::new(
+            "bold",
+            vec![fret_ui_shadcn::icon::icon(cx, icon_ids::CHECK.clone())],
+        )
+        .a11y_label("Toggle bold");
+        let i2 = fret_ui_shadcn::ToggleGroupItem::new(
+            "italic",
+            vec![fret_ui_shadcn::icon::icon(cx, icon_ids::CHEVRON_UP.clone())],
+        )
+        .a11y_label("Toggle italic");
+        let i3 = fret_ui_shadcn::ToggleGroupItem::new(
+            "strike",
+            vec![fret_ui_shadcn::icon::icon(cx, icon_ids::CLOSE.clone())],
+        )
+        .a11y_label("Toggle strikethrough");
+
+        vec![
+            fret_ui_shadcn::ToggleGroup::single_uncontrolled::<&str>(None)
+                .variant(fret_ui_shadcn::ToggleVariant::Outline)
+                .items([i1, i2, i3])
+                .into_element(cx),
+        ]
+    });
+
+    for (idx, web_item) in web_items.into_iter().enumerate() {
+        let web_w = web_item.rect.w;
+        let web_h = web_item.rect.h;
+        let target = Rect::new(
+            Point::new(Px(web_item.rect.x), Px(web_item.rect.y)),
+            CoreSize::new(Px(web_w), Px(web_h)),
+        );
+        let quad = find_best_quad(&scene, target).expect("painted quad for toggle group item");
+
+        if debug {
+            eprintln!(
+                "toggle-group item[{idx}] web_rect=({},{} {}x{}) quad_rect=({},{} {}x{}) border={:?} corners={:?}",
+                web_item.rect.x,
+                web_item.rect.y,
+                web_item.rect.w,
+                web_item.rect.h,
+                quad.rect.origin.x.0,
+                quad.rect.origin.y.0,
+                quad.rect.size.width.0,
+                quad.rect.size.height.0,
+                quad.border,
+                quad.corners,
+            );
+        }
+
+        assert_close(
+            &format!("toggle-group item[{idx}] width"),
+            quad.rect.size.width.0,
+            web_w,
+            1.0,
+        );
+        assert_close(
+            &format!("toggle-group item[{idx}] height"),
+            quad.rect.size.height.0,
+            web_h,
+            1.0,
+        );
+
+        let web_border_top = web_item
+            .computed_style
+            .get("borderTopWidth")
+            .map(String::as_str)
+            .and_then(parse_px)
+            .expect("borderTopWidth px");
+        let web_border_right = web_item
+            .computed_style
+            .get("borderRightWidth")
+            .map(String::as_str)
+            .and_then(parse_px)
+            .expect("borderRightWidth px");
+        let web_border_bottom = web_item
+            .computed_style
+            .get("borderBottomWidth")
+            .map(String::as_str)
+            .and_then(parse_px)
+            .expect("borderBottomWidth px");
+        let web_border_left = web_item
+            .computed_style
+            .get("borderLeftWidth")
+            .map(String::as_str)
+            .and_then(parse_px)
+            .expect("borderLeftWidth px");
+        let expected_border = [
+            web_border_top,
+            web_border_right,
+            web_border_bottom,
+            web_border_left,
+        ];
+
+        for (edge_idx, (actual, expected)) in quad.border.iter().zip(expected_border).enumerate() {
+            assert_close(
+                &format!("toggle-group item[{idx}] border[{edge_idx}]"),
+                *actual,
+                expected,
+                0.6,
+            );
+        }
+
+        let expected_corners = [
+            web_corner_radius_effective_px_for(web_item, "borderTopLeftRadius")
+                .expect("borderTopLeftRadius px"),
+            web_corner_radius_effective_px_for(web_item, "borderTopRightRadius")
+                .expect("borderTopRightRadius px"),
+            web_corner_radius_effective_px_for(web_item, "borderBottomRightRadius")
+                .expect("borderBottomRightRadius px"),
+            web_corner_radius_effective_px_for(web_item, "borderBottomLeftRadius")
+                .expect("borderBottomLeftRadius px"),
+        ];
+        for (corner_idx, (actual, expected)) in
+            quad.corners.iter().zip(expected_corners).enumerate()
+        {
+            assert_close(
+                &format!("toggle-group item[{idx}] radius[{corner_idx}]"),
+                *actual,
+                expected,
+                1.0,
+            );
+        }
+    }
+}
+
+#[test]
 fn web_vs_fret_button_demo_control_chrome_matches() {
     let web = read_web_golden("button-demo");
     let theme = web
@@ -755,6 +930,7 @@ fn web_vs_fret_slider_demo_thumb_chrome_matches() {
 
 #[test]
 fn web_vs_fret_radio_group_demo_control_chrome_matches() {
+    let debug = std::env::var("FRET_DEBUG_RADIO_CHROME").is_ok();
     let web = read_web_golden("radio-group-demo");
     let theme = web
         .themes
@@ -802,6 +978,72 @@ fn web_vs_fret_radio_group_demo_control_chrome_matches() {
 
     let target = Rect::new(radio_row.bounds.origin, CoreSize::new(Px(16.0), Px(16.0)));
     let quad = find_best_quad(&scene, target).expect("painted quad for radio control");
+    if debug {
+        eprintln!(
+            "radio target origin=({},{}), quad_rect=({},{} {}x{}), border={:?}, corners={:?}",
+            target.origin.x.0,
+            target.origin.y.0,
+            quad.rect.origin.x.0,
+            quad.rect.origin.y.0,
+            quad.rect.size.width.0,
+            quad.rect.size.height.0,
+            quad.border,
+            quad.corners,
+        );
+
+        let mut candidates: Vec<PaintedQuad> = Vec::new();
+        for op in scene.ops() {
+            let SceneOp::Quad {
+                rect,
+                border,
+                corner_radii,
+                ..
+            } = *op
+            else {
+                continue;
+            };
+            let score = (rect.origin.x.0 - target.origin.x.0).abs()
+                + (rect.origin.y.0 - target.origin.y.0).abs()
+                + (rect.size.width.0 - target.size.width.0).abs()
+                + (rect.size.height.0 - target.size.height.0).abs();
+            if score <= 8.0 {
+                candidates.push(PaintedQuad {
+                    rect,
+                    border: [border.top.0, border.right.0, border.bottom.0, border.left.0],
+                    corners: [
+                        corner_radii.top_left.0,
+                        corner_radii.top_right.0,
+                        corner_radii.bottom_right.0,
+                        corner_radii.bottom_left.0,
+                    ],
+                });
+            }
+        }
+        candidates.sort_by(|a, b| {
+            let score_a = (a.rect.origin.x.0 - target.origin.x.0).abs()
+                + (a.rect.origin.y.0 - target.origin.y.0).abs()
+                + (a.rect.size.width.0 - target.size.width.0).abs()
+                + (a.rect.size.height.0 - target.size.height.0).abs();
+            let score_b = (b.rect.origin.x.0 - target.origin.x.0).abs()
+                + (b.rect.origin.y.0 - target.origin.y.0).abs()
+                + (b.rect.size.width.0 - target.size.width.0).abs()
+                + (b.rect.size.height.0 - target.size.height.0).abs();
+            score_a
+                .partial_cmp(&score_b)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        for (idx, cand) in candidates.into_iter().take(6).enumerate() {
+            eprintln!(
+                "radio cand[{idx}] rect=({},{} {}x{}) border={:?} corners={:?}",
+                cand.rect.origin.x.0,
+                cand.rect.origin.y.0,
+                cand.rect.size.width.0,
+                cand.rect.size.height.0,
+                cand.border,
+                cand.corners,
+            );
+        }
+    }
 
     for (idx, edge) in quad.border.iter().enumerate() {
         assert_close(&format!("radio border[{idx}]"), *edge, web_border, 0.6);

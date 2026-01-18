@@ -197,8 +197,10 @@ fn rect_area(rect: Rect) -> f32 {
 }
 
 fn find_best_chrome_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
-    let mut best_containing: Option<PaintedQuad> = None;
-    let mut best_area = f32::INFINITY;
+    let mut best_containing_border: Option<PaintedQuad> = None;
+    let mut best_containing_border_area = f32::INFINITY;
+    let mut best_containing_background: Option<PaintedQuad> = None;
+    let mut best_containing_background_area = f32::INFINITY;
 
     for op in scene.ops() {
         let SceneOp::Quad {
@@ -220,30 +222,38 @@ fn find_best_chrome_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
 
         if rect_contains(rect, target) {
             let area = rect_area(rect);
-            if area < best_area {
-                best_area = area;
-                best_containing = Some(PaintedQuad {
-                    rect,
-                    border,
-                    corners: [
-                        corner_radii.top_left.0,
-                        corner_radii.top_right.0,
-                        corner_radii.bottom_right.0,
-                        corner_radii.bottom_left.0,
-                    ],
-                });
+            let quad = PaintedQuad {
+                rect,
+                border,
+                corners: [
+                    corner_radii.top_left.0,
+                    corner_radii.top_right.0,
+                    corner_radii.bottom_right.0,
+                    corner_radii.bottom_left.0,
+                ],
+            };
+            if has_border(&border) {
+                if area < best_containing_border_area {
+                    best_containing_border_area = area;
+                    best_containing_border = Some(quad);
+                }
+            } else if area < best_containing_background_area {
+                best_containing_background_area = area;
+                best_containing_background = Some(quad);
             }
         }
     }
 
-    if best_containing.is_some() {
-        return best_containing;
+    if best_containing_border.is_some() || best_containing_background.is_some() {
+        return best_containing_border.or(best_containing_background);
     }
 
     // Fallback: if containment matching fails (e.g. semantics bounds already include the border),
     // use a best-effort score match.
-    let mut best: Option<PaintedQuad> = None;
-    let mut best_score = f32::INFINITY;
+    let mut best_border: Option<PaintedQuad> = None;
+    let mut best_border_score = f32::INFINITY;
+    let mut best_background: Option<PaintedQuad> = None;
+    let mut best_background_score = f32::INFINITY;
     for op in scene.ops() {
         let SceneOp::Quad {
             rect,
@@ -267,22 +277,29 @@ fn find_best_chrome_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
             + (rect.size.width.0 - target.size.width.0).abs()
             + (rect.size.height.0 - target.size.height.0).abs();
 
-        if score < best_score {
-            best_score = score;
-            best = Some(PaintedQuad {
-                rect,
-                border,
-                corners: [
-                    corner_radii.top_left.0,
-                    corner_radii.top_right.0,
-                    corner_radii.bottom_right.0,
-                    corner_radii.bottom_left.0,
-                ],
-            });
+        let quad = PaintedQuad {
+            rect,
+            border,
+            corners: [
+                corner_radii.top_left.0,
+                corner_radii.top_right.0,
+                corner_radii.bottom_right.0,
+                corner_radii.bottom_left.0,
+            ],
+        };
+
+        if has_border(&border) {
+            if score < best_border_score {
+                best_border_score = score;
+                best_border = Some(quad);
+            }
+        } else if score < best_background_score {
+            best_background_score = score;
+            best_background = Some(quad);
         }
     }
 
-    best
+    best_border.or(best_background)
 }
 
 struct FakeServices;
@@ -471,6 +488,8 @@ fn assert_overlay_chrome_matches(
     let web_portal = find_portal_by_role(theme, web_portal_role).expect("web portal root by role");
     let web_border = web_border_widths_px(web_portal).expect("web border widths px");
     let web_radius = web_corner_radii_effective_px(web_portal).expect("web radius px");
+    let web_w = web_portal.rect.w;
+    let web_h = web_portal.rect.h;
 
     let window = AppWindowId::default();
     let mut app = App::new();
@@ -517,8 +536,12 @@ fn assert_overlay_chrome_matches(
     let overlay = largest_semantics_node(&snap, fret_role)
         .unwrap_or_else(|| panic!("missing fret semantics node: {fret_role:?}"));
 
-    let quad =
+    let mut quad =
         find_best_chrome_quad(&scene, overlay.bounds).expect("painted quad for overlay panel");
+    if has_border(&web_border) && !has_border(&quad.border) {
+        quad = find_best_chrome_quad_by_size(&scene, web_w, web_h, web_border)
+            .unwrap_or_else(|| panic!("painted border quad for overlay panel ({web_name})"));
+    }
     for (idx, edge) in quad.border.iter().enumerate() {
         assert_close(
             &format!("{web_name} border[{idx}]"),
