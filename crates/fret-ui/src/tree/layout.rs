@@ -155,6 +155,10 @@ impl<H: UiHost> UiTree<H> {
             self.refresh_semantics_snapshot(app);
         }
 
+        if pass_kind == LayoutPassKind::Final {
+            self.prepaint_after_layout(app, scale_factor);
+        }
+
         self.flush_deferred_cleanup(services);
 
         if let Some(started) = started {

@@ -27,6 +27,7 @@ mod layers;
 mod layout;
 mod paint;
 mod paint_cache;
+mod prepaint;
 mod semantics;
 mod shortcuts;
 
@@ -95,6 +96,7 @@ struct Node<H: UiHost> {
     measured_size: Size,
     invalidation: InvalidationFlags,
     paint_cache: Option<PaintCacheEntry>,
+    interaction_cache: Option<prepaint::InteractionCacheEntry>,
     view_cache: ViewCacheFlags,
     view_cache_needs_rerender: bool,
 }
@@ -120,6 +122,7 @@ impl<H: UiHost> Node<H> {
                 hit_test: true,
             },
             paint_cache: None,
+            interaction_cache: None,
             view_cache: ViewCacheFlags::default(),
             view_cache_needs_rerender: false,
         }
@@ -138,14 +141,20 @@ impl<H: UiHost> Node<H> {
 pub struct UiDebugFrameStats {
     pub frame_id: FrameId,
     pub layout_time: Duration,
+    pub prepaint_time: Duration,
     pub paint_time: Duration,
     pub layout_nodes_visited: u32,
     pub layout_nodes_performed: u32,
+    pub prepaint_nodes_visited: u32,
     pub paint_nodes: u32,
     pub paint_nodes_performed: u32,
     pub paint_cache_hits: u32,
     pub paint_cache_misses: u32,
     pub paint_cache_replayed_ops: u32,
+    pub interaction_cache_hits: u32,
+    pub interaction_cache_misses: u32,
+    pub interaction_cache_replayed_records: u32,
+    pub interaction_records: u32,
     /// Number of layout engine root solves performed during the current frame.
     pub layout_engine_solves: u64,
     /// Total time spent in layout engine solves during the current frame.
@@ -707,6 +716,7 @@ pub struct UiTree<H: UiHost> {
     paint_cache_policy: PaintCachePolicy,
     inspection_active: bool,
     paint_cache: PaintCacheState,
+    interaction_cache: prepaint::InteractionCacheState,
 
     dirty_cache_roots: HashSet<NodeId>,
     dirty_cache_root_reasons:
@@ -768,6 +778,7 @@ impl<H: UiHost> Default for UiTree<H> {
             paint_cache_policy: PaintCachePolicy::Auto,
             inspection_active: false,
             paint_cache: PaintCacheState::default(),
+            interaction_cache: prepaint::InteractionCacheState::default(),
             dirty_cache_roots: HashSet::new(),
             dirty_cache_root_reasons: HashMap::new(),
             last_redraw_request_tick: None,
