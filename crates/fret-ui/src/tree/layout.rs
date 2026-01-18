@@ -325,6 +325,9 @@ impl<H: UiHost> UiTree<H> {
                 pass_kind,
                 viewport_cursor,
             );
+            if let Some(node) = self.nodes.get_mut(root) {
+                node.view_cache_needs_rerender = true;
+            }
         }
     }
 

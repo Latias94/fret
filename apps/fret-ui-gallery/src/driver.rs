@@ -1,5 +1,8 @@
 use fret_app::{App, CommandId, CommandMeta, Effect, Model, WindowRequest};
-use fret_core::{AppWindowId, Event, SemanticsRole, UiServices};
+use fret_core::{
+    AlphaMode, AppWindowId, Event, ImageColorInfo, ImageId, ImageUploadToken, SemanticsRole,
+    UiServices,
+};
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
     WinitRunnerConfig, WinitWindowContext,
@@ -99,6 +102,8 @@ struct UiGalleryWindowState {
     data_grid_selected_row: Model<Option<u64>>,
     tabs_value: Model<Option<Arc<str>>>,
     accordion_value: Model<Option<Arc<str>>>,
+    avatar_demo_image: Model<Option<ImageId>>,
+    avatar_demo_image_token: Option<ImageUploadToken>,
     progress: Model<f32>,
     checkbox: Model<bool>,
     switch: Model<bool>,
@@ -119,6 +124,37 @@ struct UiGalleryWindowState {
 struct UiGalleryDriver;
 
 impl UiGalleryDriver {
+    fn generate_avatar_demo_image_rgba8(width: u32, height: u32) -> Vec<u8> {
+        let mut out = vec![0u8; (width as usize) * (height as usize) * 4];
+        let w = (width.saturating_sub(1)).max(1) as f32;
+        let h = (height.saturating_sub(1)).max(1) as f32;
+
+        for y in 0..height {
+            for x in 0..width {
+                let idx = ((y as usize) * (width as usize) + (x as usize)) * 4;
+                let fx = x as f32 / w;
+                let fy = y as f32 / h;
+
+                let cx = fx - 0.5;
+                let cy = fy - 0.5;
+                let d = (cx * cx + cy * cy).sqrt().min(1.0);
+                let highlight = (1.0 - d).powf(1.6);
+
+                let r = (40.0 + 140.0 * fx + 60.0 * highlight).min(255.0) as u8;
+                let g = (55.0 + 110.0 * (1.0 - fy) + 70.0 * highlight).min(255.0) as u8;
+                let b = (90.0 + 110.0 * (0.5 + 0.5 * (fx - fy)).abs() + 80.0 * highlight).min(255.0)
+                    as u8;
+
+                out[idx] = r;
+                out[idx + 1] = g;
+                out[idx + 2] = b;
+                out[idx + 3] = 255;
+            }
+        }
+
+        out
+    }
+
     fn compute_inspector_status(
         app: &mut App,
         ui: &UiTree<App>,
@@ -269,6 +305,19 @@ impl UiGalleryDriver {
         let accordion_value = app
             .models_mut()
             .insert(Option::<Arc<str>>::Some(Arc::from("item-1")));
+
+        let avatar_demo_image = app.models_mut().insert(None::<ImageId>);
+        let avatar_demo_image_token = app.next_image_upload_token();
+        app.push_effect(Effect::ImageRegisterRgba8 {
+            window,
+            token: avatar_demo_image_token,
+            width: 96,
+            height: 96,
+            bytes: Self::generate_avatar_demo_image_rgba8(96, 96),
+            color_info: ImageColorInfo::srgb_rgba(),
+            alpha_mode: AlphaMode::Opaque,
+        });
+
         let progress = app.models_mut().insert(35.0f32);
         let checkbox = app.models_mut().insert(false);
         let switch = app.models_mut().insert(true);
@@ -348,6 +397,8 @@ impl UiGalleryDriver {
             data_grid_selected_row,
             tabs_value,
             accordion_value,
+            avatar_demo_image,
+            avatar_demo_image_token: Some(avatar_demo_image_token),
             progress,
             checkbox,
             switch,
@@ -608,6 +659,7 @@ impl UiGalleryDriver {
         let data_grid_selected_row = state.data_grid_selected_row.clone();
         let tabs_value = state.tabs_value.clone();
         let accordion_value = state.accordion_value.clone();
+        let avatar_demo_image = state.avatar_demo_image.clone();
         let progress = state.progress.clone();
         let checkbox = state.checkbox.clone();
         let switch = state.switch.clone();
@@ -938,6 +990,7 @@ impl UiGalleryDriver {
                                             data_grid_selected_row.clone(),
                                             tabs_value.clone(),
                                             accordion_value.clone(),
+                                            avatar_demo_image.clone(),
                                             progress.clone(),
                                             checkbox.clone(),
                                             switch.clone(),
@@ -1009,6 +1062,7 @@ impl UiGalleryDriver {
                                         data_grid_selected_row.clone(),
                                         tabs_value.clone(),
                                         accordion_value.clone(),
+                                        avatar_demo_image.clone(),
                                         progress.clone(),
                                         checkbox.clone(),
                                         switch.clone(),
@@ -1716,6 +1770,22 @@ impl WinitAppDriver for UiGalleryDriver {
         }
 
         match event {
+            Event::ImageRegistered { token, image, .. } => {
+                if state.avatar_demo_image_token == Some(*token) {
+                    state.avatar_demo_image_token = None;
+                    let _ = app
+                        .models_mut()
+                        .update(&state.avatar_demo_image, |v| *v = Some(*image));
+                    app.request_redraw(window);
+                }
+            }
+            Event::ImageRegisterFailed { token, message } => {
+                if state.avatar_demo_image_token == Some(*token) {
+                    state.avatar_demo_image_token = None;
+                    tracing::error!(message, "ui-gallery avatar demo image register failed");
+                    app.request_redraw(window);
+                }
+            }
             Event::WindowCloseRequested => {
                 app.push_effect(Effect::Window(WindowRequest::Close(window)));
             }
