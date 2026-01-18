@@ -846,7 +846,18 @@ impl<H: UiHost> UiTree<H> {
             && matches!(event, Event::Pointer(_))
             && let Some(pos) = event_position(event)
         {
-            let hit = self.hit_test_layers(&active_layers, pos);
+            // Hit-testing is performance-sensitive (especially for pointer move), but must remain
+            // correct across discrete interactions like clicks where the pointer position can jump
+            // substantially between events.
+            //
+            // For now, only allow cached hit-test reuse for pointer-move events; other pointer
+            // events clear the cache and rebuild it from a full hit-test pass.
+            let hit = if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
+                self.hit_test_layers_cached(&active_layers, pos)
+            } else {
+                self.hit_test_path_cache = None;
+                self.hit_test_layers_cached(&active_layers, pos)
+            };
 
             if matches!(event, Event::Pointer(PointerEvent::Down { .. })) && captured.is_none() {
                 pointer_down_outside = self.dispatch_pointer_down_outside(
@@ -1098,7 +1109,13 @@ impl<H: UiHost> UiTree<H> {
         } else if let Some(target) = internal_drag_target {
             Some(target)
         } else if let Some(pos) = event_position(event) {
-            let hit = self.hit_test_layers(&active_layers, pos);
+            // See the cached hit-test reuse note above.
+            let hit = if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
+                self.hit_test_layers_cached(&active_layers, pos)
+            } else {
+                self.hit_test_path_cache = None;
+                self.hit_test_layers_cached(&active_layers, pos)
+            };
 
             let hit = if matches!(event, Event::InternalDrag(_)) {
                 (|| {

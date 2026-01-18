@@ -99,6 +99,12 @@ struct Node<H: UiHost> {
     view_cache_needs_rerender: bool,
 }
 
+#[derive(Debug, Clone)]
+struct HitTestPathCache {
+    layer_root: NodeId,
+    path: Vec<NodeId>,
+}
+
 impl<H: UiHost> Node<H> {
     fn new(widget: impl Widget<H> + 'static) -> Self {
         Self {
@@ -664,6 +670,7 @@ pub struct UiTree<H: UiHost> {
     focus: Option<NodeId>,
     captured: HashMap<PointerId, NodeId>,
     last_pointer_move_hit: Option<NodeId>,
+    hit_test_path_cache: Option<HitTestPathCache>,
     last_internal_drag_target: Option<NodeId>,
     window: Option<AppWindowId>,
     ime_allowed: bool,
@@ -727,6 +734,7 @@ impl<H: UiHost> Default for UiTree<H> {
             focus: None,
             captured: HashMap::new(),
             last_pointer_move_hit: None,
+            hit_test_path_cache: None,
             last_internal_drag_target: None,
             window: None,
             ime_allowed: false,

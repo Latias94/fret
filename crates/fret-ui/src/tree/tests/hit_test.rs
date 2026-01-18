@@ -697,3 +697,46 @@ fn modal_barrier_fallback_delivers_transformed_event_coordinates() {
         "expected barrier fallback to map pointer coordinates through render_transform"
     );
 }
+
+#[test]
+fn hit_test_layers_cached_reuses_path_and_respects_layer_order() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+
+    let base_root = ui.create_node(TestStack::default());
+    let base_leaf = ui.create_node(TestStack::default());
+    ui.set_root(base_root);
+    ui.set_children(base_root, vec![base_leaf]);
+
+    let overlay_root = ui.create_node(TestStack::default());
+    let overlay_leaf = ui.create_node(TestStack::default());
+    ui.set_children(overlay_root, vec![overlay_leaf]);
+
+    let base_bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    let overlay_bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(50.0), Px(50.0)));
+    for id in [base_root, base_leaf] {
+        ui.nodes[id].bounds = base_bounds;
+    }
+    for id in [overlay_root, overlay_leaf] {
+        ui.nodes[id].bounds = overlay_bounds;
+    }
+
+    let layers = [overlay_root, base_root];
+
+    assert_eq!(
+        ui.hit_test_layers_cached(&layers, Point::new(Px(75.0), Px(75.0))),
+        Some(base_leaf),
+    );
+    assert_eq!(
+        ui.hit_test_layers_cached(&layers, Point::new(Px(76.0), Px(76.0))),
+        Some(base_leaf),
+        "expected cached-path hit-test to stay stable within the same subtree"
+    );
+    assert_eq!(
+        ui.hit_test_layers_cached(&layers, Point::new(Px(25.0), Px(25.0))),
+        Some(overlay_leaf),
+        "overlay root should win when it hits before the base root"
+    );
+}
