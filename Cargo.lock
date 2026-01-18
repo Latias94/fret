@@ -1007,6 +1007,7 @@ dependencies = [
  "fret-syntax",
  "fret-ui",
  "fret-ui-kit",
+ "fret-ui-shadcn",
 ]
 
 [[package]]
