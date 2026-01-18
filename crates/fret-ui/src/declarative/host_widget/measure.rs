@@ -3,7 +3,7 @@ use super::super::prelude::*;
 use super::ElementHostWidget;
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 use crate::widget::MeasureCx;
-use fret_core::{TextStyle, TextWrap};
+use fret_core::{FrameId, TextStyle, TextWrap};
 
 fn default_text_style(theme: crate::ThemeSnapshot) -> TextStyle {
     TextStyle {
@@ -116,6 +116,26 @@ fn taffy_available_space_to_runtime(space: TaffyAvailableSpace) -> AvailableSpac
         TaffyAvailableSpace::Definite(v) => AvailableSpace::Definite(Px(v)),
         TaffyAvailableSpace::MinContent => AvailableSpace::MinContent,
         TaffyAvailableSpace::MaxContent => AvailableSpace::MaxContent,
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ScrollMeasureKey {
+    avail_w: u64,
+    avail_h: u64,
+}
+
+#[derive(Debug, Default, Clone)]
+struct ScrollMeasureCacheState {
+    frame_id: FrameId,
+    entries: Vec<(ScrollMeasureKey, Size)>,
+}
+
+fn available_space_cache_key(space: AvailableSpace) -> u64 {
+    match space {
+        AvailableSpace::Definite(px) => (0 << 62) | (px.0.to_bits() as u64),
+        AvailableSpace::MinContent => 1 << 62,
+        AvailableSpace::MaxContent => 2 << 62,
     }
 }
 
@@ -439,6 +459,30 @@ impl ElementHostWidget {
         window: AppWindowId,
         props: crate::element::ScrollProps,
     ) -> Size {
+        let width_determined = match props.layout.size.width {
+            Length::Px(_) => true,
+            Length::Fill => {
+                cx.constraints.known.width.is_some()
+                    || cx.constraints.available.width.definite().is_some()
+            }
+            Length::Auto => false,
+        };
+        let height_determined = match props.layout.size.height {
+            Length::Px(_) => true,
+            Length::Fill => {
+                cx.constraints.known.height.is_some()
+                    || cx.constraints.available.height.definite().is_some()
+            }
+            Length::Auto => false,
+        };
+        if width_determined && height_determined {
+            return clamp_to_constraints_in_measure(
+                available_px_or_zero(cx.constraints),
+                props.layout,
+                cx.constraints,
+            );
+        }
+
         let child_constraints = LayoutConstraints::new(
             LayoutSize::new(None, None),
             LayoutSize::new(
@@ -454,7 +498,68 @@ impl ElementHostWidget {
                 },
             ),
         );
-        let max_child = max_non_absolute_children(cx, window, child_constraints);
+        let ignore_width_in_cache_key =
+            matches!(props.axis, crate::element::ScrollAxis::Y) && props.probe_unbounded;
+        let ignore_height_in_cache_key =
+            matches!(props.axis, crate::element::ScrollAxis::X) && props.probe_unbounded;
+
+        let key = ScrollMeasureKey {
+            avail_w: if ignore_width_in_cache_key {
+                0
+            } else {
+                available_space_cache_key(child_constraints.available.width)
+            },
+            avail_h: if ignore_height_in_cache_key {
+                0
+            } else {
+                available_space_cache_key(child_constraints.available.height)
+            },
+        };
+        let frame_id = cx.app.frame_id();
+
+        let cached = crate::elements::with_element_state(
+            &mut *cx.app,
+            window,
+            self.element,
+            ScrollMeasureCacheState::default,
+            |state| {
+                if state.frame_id != frame_id {
+                    state.frame_id = frame_id;
+                    state.entries.clear();
+                }
+                state
+                    .entries
+                    .iter()
+                    .find_map(|(k, v)| (*k == key).then_some(*v))
+            },
+        );
+        let max_child = if let Some(cached) = cached {
+            cached
+        } else {
+            let measured = max_non_absolute_children(cx, window, child_constraints);
+            crate::elements::with_element_state(
+                &mut *cx.app,
+                window,
+                self.element,
+                ScrollMeasureCacheState::default,
+                |state| {
+                    if state.frame_id != frame_id {
+                        state.frame_id = frame_id;
+                        state.entries.clear();
+                    }
+                    if let Some((_k, v)) = state.entries.iter_mut().find(|(k, _)| *k == key) {
+                        *v = measured;
+                    } else {
+                        if state.entries.len() >= 8 {
+                            state.entries.remove(0);
+                        }
+                        state.entries.push((key, measured));
+                    }
+                },
+            );
+            measured
+        };
+
         clamp_to_constraints_in_measure(max_child, props.layout, cx.constraints)
     }
 
