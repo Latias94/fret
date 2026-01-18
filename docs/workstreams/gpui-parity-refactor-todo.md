@@ -52,9 +52,10 @@ Goal: make hover/focus/pressed “cheap by default” and stop subtree shape thr
 - [ ] GPUI-MVP1-ui-001 Add debug attribution for “hover caused layout invalidation”.
   - Touches: `crates/fret-ui/src/tree/dispatch.rs`, `crates/fret-ui/src/tree/mod.rs`
   - Done when: overlay torture + virtual list torture run with 0 hover-attributed layout invalidations (except explicitly whitelisted components).
-- [ ] GPUI-MVP1-eco-002 Refactor top hover offenders to be structurally stable.
+- [x] GPUI-MVP1-eco-002 Refactor top hover offenders to be structurally stable.
   - Start with: `ecosystem/fret-ui-shadcn/src/scroll_area.rs`, `ecosystem/fret-ui-shadcn/src/*scroll*`
   - Done when: no hover-driven `set_children` churn in these components (verified via diagnostics + manual UX sanity).
+  - Evidence: `ecosystem/fret-ui-shadcn/src/scroll_area.rs`
 - [ ] GPUI-MVP1-eco-003 Write “pseudoclass rules of thumb” for component authors.
   - Touches: `docs/component-author-guide.md` or a dedicated addendum under `docs/workstreams/`
   - Done when: the guidance includes examples for scrollbar fade, hover toolbars, and focus rings without layout shifts.
