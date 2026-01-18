@@ -716,7 +716,7 @@ mod tests {
         PathStyle, Point, Px, Rect, SemanticsRole, SvgId, SvgService, TextBlobId, TextConstraints,
         TextMetrics, TextService, TextStyle as CoreTextStyle,
     };
-    use fret_runtime::FrameId;
+    use fret_runtime::{FrameId, TickId};
     use fret_ui::element::{
         ContainerProps, LayoutStyle, Length, PositionStyle, PressableProps, SemanticsProps,
         TextProps,
@@ -876,6 +876,7 @@ mod tests {
 
         // Frame 1: establish bounds for the anchor + element/node mappings.
         app.set_frame_id(FrameId(1));
+        app.set_tick_id(TickId(1));
         render_hover_card_frame(
             &mut ui,
             &mut app,
@@ -903,6 +904,7 @@ mod tests {
 
         // Frame 2: hover should request the overlay and mount the content.
         app.set_frame_id(FrameId(2));
+        app.set_tick_id(TickId(2));
         render_hover_card_frame(
             &mut ui,
             &mut app,
@@ -916,21 +918,51 @@ mod tests {
         ui.request_semantics_snapshot();
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
+        // The hover card uses a render-transform for shadcn-style open motion. Semantics bounds
+        // track the transformed geometry, so advance a few frames to reach steady state before
+        // asserting placement.
+        let settle_frames: u64 = overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+        for step in 0..settle_frames {
+            let tick = 3 + step;
+            app.set_frame_id(FrameId(tick));
+            app.set_tick_id(TickId(tick));
+            render_hover_card_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                anchor_id.clone(),
+                trigger_id.clone(),
+                content_id.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
         let content_element = content_id.get().expect("content element id");
 
-        let anchor_bounds = Rect::new(
-            Point::new(Px(240.0), Px(120.0)),
-            fret_core::Size::new(Px(50.0), Px(10.0)),
-        );
+        let anchor_element = anchor_id.get().expect("anchor element id");
+        let anchor_bounds =
+            fret_ui::elements::visual_bounds_for_element(&mut app, window, anchor_element)
+                .or_else(|| fret_ui::elements::bounds_for_element(&mut app, window, anchor_element))
+                .expect("anchor bounds");
+        let desired = fret_core::Size::new(Px(256.0), Px(120.0));
 
-        let expected = overlay_placement::anchored_panel_bounds_sized(
+        let layout = popper::popper_content_layout_sized(
             bounds,
             anchor_bounds,
-            fret_core::Size::new(Px(256.0), Px(120.0)),
-            Px(8.0),
-            overlay_placement::Side::Bottom,
-            overlay_placement::Align::Start,
+            desired,
+            popper::PopperContentPlacement::new(
+                direction_prim::LayoutDirection::default(),
+                overlay_placement::Side::Bottom,
+                overlay_placement::Align::Start,
+                Px(8.0),
+            )
+            .with_shift_cross_axis(true),
         );
+        let expected = layout.rect;
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
         let content_node = fret_ui::elements::node_for_element(&mut app, window, content_element)

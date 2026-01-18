@@ -883,7 +883,7 @@ mod tests {
         Point, Px, Rect, SemanticsRole, Size as CoreSize, SvgId, SvgService, TextBlobId,
         TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
     };
-    use fret_runtime::FrameId;
+    use fret_runtime::{FrameId, TickId};
     use fret_ui::element::{
         ContainerProps, FlexProps, LayoutStyle, Length, PressableA11y, PressableProps,
         SemanticsProps, TextProps,
@@ -3785,6 +3785,7 @@ mod tests {
 
         // Frame 1: establish bounds for the anchor + element/node mappings.
         app.set_frame_id(FrameId(1));
+        app.set_tick_id(TickId(1));
         render_frame(
             &mut ui,
             &mut app,
@@ -3811,6 +3812,7 @@ mod tests {
 
         // Frame 2: hover should open the tooltip, and placement should use the anchor override.
         app.set_frame_id(FrameId(2));
+        app.set_tick_id(TickId(2));
         render_frame(
             &mut ui,
             &mut app,
@@ -3821,15 +3823,33 @@ mod tests {
             trigger_id.clone(),
             content_id.clone(),
         );
+
+        // Tooltip uses render-transform motion on open; advance a few frames to reach steady state.
+        let settle_frames: u64 = crate::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+        for step in 0..settle_frames {
+            let tick = 3 + step;
+            app.set_frame_id(FrameId(tick));
+            app.set_tick_id(TickId(tick));
+            render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                anchor_id.clone(),
+                trigger_id.clone(),
+                content_id.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
         ui.request_semantics_snapshot();
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         let content_element = content_id.get().expect("content element id");
 
-        let anchor_bounds = Rect::new(
-            Point::new(Px(240.0), Px(120.0)),
-            CoreSize::new(Px(50.0), Px(10.0)),
-        );
+        let anchor_element = anchor_id.get().expect("anchor element id");
+        let anchor_bounds = fret_ui::elements::bounds_for_element(&mut app, window, anchor_element)
+            .expect("anchor bounds");
 
         let expected = anchored_panel_bounds_sized(
             bounds,

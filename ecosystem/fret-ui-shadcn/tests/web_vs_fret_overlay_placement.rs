@@ -1408,52 +1408,25 @@ fn assert_overlay_placement_matches(
     );
 
     let _ = app.models_mut().update(&open, |v| *v = true);
-    let build_frame2 = build.clone();
-    render_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        FrameId(2),
-        false,
-        |cx| {
-            let content = build_frame2(cx, &open);
-            vec![pad_root(cx, Px(0.0), content)]
-        },
-    );
-
-    let build_frame3 = build.clone();
-    render_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        FrameId(3),
-        false,
-        |cx| {
-            let content = build_frame3(cx, &open);
-            vec![pad_root(cx, Px(0.0), content)]
-        },
-    );
-
-    // Some Radix-ish overlays (notably Select item-aligned) need a fully-mounted frame before
-    // placement can converge (we rely on last-frame bounds for item alignment inputs).
-    let build_frame4 = build.clone();
-    render_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        FrameId(4),
-        true,
-        |cx| {
-            let content = build_frame4(cx, &open);
-            vec![pad_root(cx, Px(0.0), content)]
-        },
-    );
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for step in 0..=settle_frames {
+        let frame = 2 + step;
+        let request_semantics = step == settle_frames;
+        let build_frame = build.clone();
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            request_semantics,
+            |cx| {
+                let content = build_frame(cx, &open);
+                vec![pad_root(cx, Px(0.0), content)]
+            },
+        );
+    }
 
     let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
 
@@ -1615,50 +1588,25 @@ fn assert_centered_overlay_placement_matches(
     );
 
     let _ = app.models_mut().update(&open, |v| *v = true);
-    let build_frame2 = build.clone();
-    render_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        FrameId(2),
-        false,
-        |cx| {
-            let content = build_frame2(cx, &open);
-            vec![pad_root(cx, Px(0.0), content)]
-        },
-    );
-
-    let build_frame3 = build.clone();
-    render_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        FrameId(3),
-        false,
-        |cx| {
-            let content = build_frame3(cx, &open);
-            vec![pad_root(cx, Px(0.0), content)]
-        },
-    );
-
-    let build_frame4 = build.clone();
-    render_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        FrameId(4),
-        true,
-        |cx| {
-            let content = build_frame4(cx, &open);
-            vec![pad_root(cx, Px(0.0), content)]
-        },
-    );
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for step in 0..=settle_frames {
+        let frame = 2 + step;
+        let request_semantics = step == settle_frames;
+        let build_frame = build.clone();
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            request_semantics,
+            |cx| {
+                let content = build_frame(cx, &open);
+                vec![pad_root(cx, Px(0.0), content)]
+            },
+        );
+    }
 
     let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
 
@@ -1794,8 +1742,9 @@ fn assert_viewport_anchored_overlay_placement_matches(
     );
 
     let _ = app.models_mut().update(&open, |v| *v = true);
-    for frame_id in 2..=4 {
-        let request_semantics = frame_id == 4;
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_500 + 2;
+    for frame_id in 2..=(2 + settle_frames) {
+        let request_semantics = frame_id == 2 + settle_frames;
         let build_frame = build.clone();
         render_frame(
             &mut ui,
@@ -1803,7 +1752,7 @@ fn assert_viewport_anchored_overlay_placement_matches(
             &mut services,
             window,
             bounds,
-            FrameId(frame_id as u64),
+            FrameId(frame_id),
             request_semantics,
             |cx| {
                 let content = build_frame(cx, &open);
@@ -2217,7 +2166,8 @@ fn web_vs_fret_dropdown_menu_demo_small_viewport_menu_item_height_matches() {
         },
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
-    for frame in 2..=4 {
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for frame in 2..=(2 + settle_frames) {
         render_frame(
             &mut ui,
             &mut app,
@@ -2225,7 +2175,7 @@ fn web_vs_fret_dropdown_menu_demo_small_viewport_menu_item_height_matches() {
             window,
             bounds,
             FrameId(frame),
-            frame == 4,
+            frame == 2 + settle_frames,
             |cx| {
                 let el = render(cx);
                 vec![pad_root(cx, Px(0.0), el)]
@@ -2339,7 +2289,8 @@ fn web_vs_fret_dropdown_menu_demo_small_viewport_menu_content_insets_match() {
         },
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
-    for frame in 2..=4 {
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for frame in 2..=(2 + settle_frames) {
         render_frame(
             &mut ui,
             &mut app,
@@ -2347,7 +2298,7 @@ fn web_vs_fret_dropdown_menu_demo_small_viewport_menu_content_insets_match() {
             window,
             bounds,
             FrameId(frame),
-            frame == 4,
+            frame == 2 + settle_frames,
             |cx| {
                 let el = render(cx);
                 vec![pad_root(cx, Px(0.0), el)]
