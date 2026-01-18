@@ -87,6 +87,12 @@ Extract a constrained-viewport open variant (useful for max-height/clamp/scroll 
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts dropdown-menu-demo --modes=open --update --baseUrl=http://localhost:4020 --viewportH=320 --openVariants="vp1440x320=[data-fret-golden-target] [aria-haspopup='menu'][data-state='closed']"`
 
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 dropdown-menu-demo --modes=open --update --viewportW=1440 --viewportH=240 --openVariants="vp1440x240=[data-fret-golden-target] [data-state='closed'][aria-haspopup]"`
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 context-menu-demo --modes=open --update --viewportW=1440 --viewportH=240 --openVariants="vp1440x240=[data-fret-golden-target] [data-slot='context-menu-trigger']"`
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 menubar-demo --modes=open --update --viewportW=1440 --viewportH=240 --openVariants="vp1440x240=[data-fret-golden-target] [data-slot='menubar-trigger']"`
+
 `node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 select-scrollable --modes=open --update --viewportH=240 --openVariants="vp1440x240=[data-fret-golden-target] [role='combobox'][aria-expanded='false']"`
 
 Extract ScrollArea hover/scrolled variants (useful for scrollbar + thumb geometry):
