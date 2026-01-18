@@ -702,6 +702,61 @@ impl<H: UiHost> Widget<H> for DockSpace {
             (root, dock_bounds)
         }
 
+        fn compute_dock_drop_target(
+            graph: &DockGraph,
+            window: fret_core::AppWindowId,
+            root: DockNodeId,
+            dock_bounds: Rect,
+            window_bounds: Rect,
+            tab_scroll: &HashMap<DockNodeId, Px>,
+            tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
+            position: Point,
+        ) -> Option<DockDropTarget> {
+            if !window_bounds.contains(position) || float_zone(dock_bounds).contains(position) {
+                return Some(DockDropTarget::Float { window });
+            }
+
+            let (layout_root, layout_bounds) =
+                layout_context_for_position(graph, window, root, dock_bounds, position);
+            if !layout_bounds.contains(position) {
+                return None;
+            }
+
+            let layout = compute_layout_map(graph, layout_root, layout_bounds);
+            dock_drop_target_via_dnd(graph, &layout, tab_scroll, tab_widths, position)
+                .map(DockDropTarget::Dock)
+        }
+
+        fn resolve_dock_drop_target(
+            prev_hover: Option<DockDropTarget>,
+            invert_docking: bool,
+            window: fret_core::AppWindowId,
+            graph: &DockGraph,
+            root: DockNodeId,
+            dock_bounds: Rect,
+            window_bounds: Rect,
+            tab_scroll: &HashMap<DockNodeId, Px>,
+            tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
+            position: Point,
+        ) -> Option<DockDropTarget> {
+            if invert_docking {
+                return Some(DockDropTarget::Float { window });
+            }
+
+            prev_hover.or_else(|| {
+                compute_dock_drop_target(
+                    graph,
+                    window,
+                    root,
+                    dock_bounds,
+                    window_bounds,
+                    tab_scroll,
+                    tab_widths,
+                    position,
+                )
+            })
+        }
+
         let pointer_id: fret_core::PointerId = match event {
             fret_core::Event::Pointer(fret_core::PointerEvent::Move { pointer_id, .. })
             | fret_core::Event::Pointer(fret_core::PointerEvent::Down { pointer_id, .. })
@@ -1694,41 +1749,18 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         }
 
                                         if !requested_tear_off {
-                                            let wants_float = invert_docking
-                                                || !window_bounds.contains(position)
-                                                || float_zone(dock_bounds).contains(position);
-
-                                            if wants_float {
-                                                dock.hover = Some(DockDropTarget::Float {
-                                                    window: self.window,
-                                                });
-                                            } else {
-                                                let (layout_root, layout_bounds) =
-                                                    layout_context_for_position(
-                                                        &dock.graph,
-                                                        self.window,
-                                                        root,
-                                                        dock_bounds,
-                                                        position,
-                                                    );
-                                                if layout_bounds.contains(position) {
-                                                    let layout = compute_layout_map(
-                                                        &dock.graph,
-                                                        layout_root,
-                                                        layout_bounds,
-                                                    );
-                                                    dock.hover = dock_drop_target_via_dnd(
-                                                        &dock.graph,
-                                                        &layout,
-                                                        &self.tab_scroll,
-                                                        &self.tab_widths,
-                                                        position,
-                                                    )
-                                                    .map(DockDropTarget::Dock);
-                                                } else {
-                                                    dock.hover = None;
-                                                }
-                                            }
+                                            dock.hover = resolve_dock_drop_target(
+                                                None,
+                                                invert_docking,
+                                                self.window,
+                                                &dock.graph,
+                                                root,
+                                                dock_bounds,
+                                                window_bounds,
+                                                &self.tab_scroll,
+                                                &self.tab_widths,
+                                                position,
+                                            );
                                         }
                                     } else {
                                         dock.hover = None;
@@ -1759,47 +1791,18 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     }
 
                                     if dragging {
-                                        let mut target = prev_hover.clone();
-                                        if target.is_none() {
-                                            if !window_bounds.contains(position)
-                                                || float_zone(dock_bounds).contains(position)
-                                            {
-                                                target = Some(DockDropTarget::Float {
-                                                    window: self.window,
-                                                });
-                                            } else {
-                                                let (layout_root, layout_bounds) =
-                                                    layout_context_for_position(
-                                                        &dock.graph,
-                                                        self.window,
-                                                        root,
-                                                        dock_bounds,
-                                                        position,
-                                                    );
-                                                if layout_bounds.contains(position) {
-                                                    let layout = compute_layout_map(
-                                                        &dock.graph,
-                                                        layout_root,
-                                                        layout_bounds,
-                                                    );
-                                                    target = dock_drop_target_via_dnd(
-                                                        &dock.graph,
-                                                        &layout,
-                                                        &self.tab_scroll,
-                                                        &self.tab_widths,
-                                                        position,
-                                                    )
-                                                    .map(DockDropTarget::Dock);
-                                                }
-                                            }
-                                        }
-
-                                        if invert_docking {
-                                            target = Some(DockDropTarget::Float {
-                                                window: self.window,
-                                            });
-                                        }
-
+                                        let target = resolve_dock_drop_target(
+                                            prev_hover.clone(),
+                                            invert_docking,
+                                            self.window,
+                                            &dock.graph,
+                                            root,
+                                            dock_bounds,
+                                            window_bounds,
+                                            &self.tab_scroll,
+                                            &self.tab_widths,
+                                            position,
+                                        );
                                         match target {
                                             Some(DockDropTarget::Dock(target)) => {
                                                 pending_effects.push(Effect::Dock(
