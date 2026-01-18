@@ -295,5 +295,13 @@ fn view_cache_uplifts_observations_to_nearest_root_and_invalidates_ancestor_root
 
     assert!(ui.nodes[inner].invalidation.paint);
     assert!(ui.nodes[outer].invalidation.paint);
+    assert!(
+        ui.nodes[inner].view_cache_needs_rerender,
+        "model change should mark nearest cache root as dirty"
+    );
+    assert!(
+        ui.nodes[outer].view_cache_needs_rerender,
+        "nested cache-root correctness requires dirty propagation to ancestor cache roots"
+    );
     assert!(!ui.nodes[root].invalidation.paint);
 }

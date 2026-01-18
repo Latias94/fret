@@ -818,6 +818,15 @@ struct MeasureStackKey {
 }
 
 impl<H: UiHost> UiTree<H> {
+    fn invalidation_source_marks_view_dirty(source: UiDebugInvalidationSource) -> bool {
+        matches!(
+            source,
+            UiDebugInvalidationSource::Notify
+                | UiDebugInvalidationSource::ModelChange
+                | UiDebugInvalidationSource::GlobalChange
+        )
+    }
+
     pub(crate) fn request_redraw_coalesced(&mut self, app: &mut H) {
         let Some(window) = self.window else {
             return;
@@ -2323,7 +2332,7 @@ impl<H: UiHost> UiTree<H> {
                     }
                     hit_cache_root = Some(id);
                     did_stop = true;
-                    if source == UiDebugInvalidationSource::Notify {
+                    if Self::invalidation_source_marks_view_dirty(source) {
                         n.view_cache_needs_rerender = true;
                         mark_dirty = true;
                     }
@@ -2367,7 +2376,7 @@ impl<H: UiHost> UiTree<H> {
                     && n.view_cache.enabled
                 {
                     n.invalidation.mark(inv);
-                    if source == UiDebugInvalidationSource::Notify {
+                    if Self::invalidation_source_marks_view_dirty(source) {
                         n.view_cache_needs_rerender = true;
                         mark_dirty = true;
                     }
@@ -2455,7 +2464,7 @@ impl<H: UiHost> UiTree<H> {
                             .view_cache_invalidation_truncations
                             .saturating_add(1);
                     }
-                    if source == UiDebugInvalidationSource::Notify {
+                    if Self::invalidation_source_marks_view_dirty(source) {
                         n.view_cache_needs_rerender = true;
                         mark_dirty = true;
                     }
@@ -2500,7 +2509,7 @@ impl<H: UiHost> UiTree<H> {
                 if self.nodes.get(id).is_some_and(|n| n.view_cache.enabled) {
                     let mut mark_dirty = false;
                     if let Some(n) = self.nodes.get_mut(id) {
-                        if source == UiDebugInvalidationSource::Notify {
+                        if Self::invalidation_source_marks_view_dirty(source) {
                             n.view_cache_needs_rerender = true;
                             mark_dirty = true;
                         }

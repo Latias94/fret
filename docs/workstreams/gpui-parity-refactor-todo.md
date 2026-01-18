@@ -90,7 +90,9 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
   - Touches: `crates/fret-ui/src/tree/mod.rs`, `crates/fret-ui/src/declarative/mount.rs`
   - Done when: a notified view never reuses cached ranges; a clean view reliably reuses them.
   - Progress: `notify` marks the nearest cache root as `view_cache_needs_rerender`, which disables view-cache reuse for that root.
-  - Evidence: `crates/fret-ui/src/tree/mod.rs` (`should_reuse_view_cache_node`), `crates/fret-ui/src/widget.rs` (`EventCx::notify`).
+  - Progress: model/global observation invalidation also marks cache roots dirty (`view_cache_needs_rerender`) so reuse is disabled on data changes.
+  - Evidence: `crates/fret-ui/src/tree/mod.rs` (`should_reuse_view_cache_node`, `invalidation_source_marks_view_dirty`), `crates/fret-ui/src/widget.rs` (`EventCx::notify`),
+    `crates/fret-ui/src/tree/tests/view_cache.rs` (`view_cache_uplifts_observations_to_nearest_root_and_invalidates_ancestor_roots`).
 
 ## MVP3 — Prepaint + Interaction Stream Range Reuse
 
